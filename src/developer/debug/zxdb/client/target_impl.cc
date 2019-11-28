@@ -14,7 +14,6 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system_impl.h"
-#include "src/developer/debug/zxdb/client/target_observer.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -49,9 +48,8 @@ void TargetImpl::ProcessCreatedInJob(uint64_t koid, const std::string& process_n
   state_ = State::kRunning;
   process_ = CreateProcessImpl(koid, process_name, Process::StartType::kAttach);
 
-  system_->NotifyDidCreateProcess(process_.get());
-  for (auto& observer : observers())
-    observer.DidCreateProcess(this, process_.get(), true);
+  for (auto& observer : session()->process_observers())
+    observer.DidCreateProcess(process_.get(), true);
 }
 
 void TargetImpl::ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name) {
@@ -60,9 +58,9 @@ void TargetImpl::ProcessCreatedAsComponent(uint64_t koid, const std::string& pro
 
   state_ = State::kRunning;
   process_ = CreateProcessImpl(koid, process_name, Process::StartType::kComponent);
-  system_->NotifyDidCreateProcess(process_.get());
-  for (auto& observer : observers())
-    observer.DidCreateProcess(this, process_.get(), false);
+
+  for (auto& observer : session()->process_observers())
+    observer.DidCreateProcess(process_.get(), false);
 }
 
 void TargetImpl::CreateProcessForTesting(uint64_t koid, const std::string& process_name) {
@@ -73,7 +71,7 @@ void TargetImpl::CreateProcessForTesting(uint64_t koid, const std::string& proce
 
 void TargetImpl::ImplicitlyDetach() {
   if (GetProcess()) {
-    OnKillOrDetachReply(TargetObserver::DestroyReason::kDetach, Err(), 0,
+    OnKillOrDetachReply(ProcessObserver::DestroyReason::kDetach, Err(), 0,
                         [](fxl::WeakPtr<Target>, const Err&) {});
   }
 }
@@ -132,7 +130,7 @@ void TargetImpl::Kill(Callback callback) {
       request, [callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::KillReply reply) mutable {
         if (weak_target) {
-          weak_target->OnKillOrDetachReply(TargetObserver::DestroyReason::kKill, err, reply.status,
+          weak_target->OnKillOrDetachReply(ProcessObserver::DestroyReason::kKill, err, reply.status,
                                            std::move(callback));
         } else {
           // The reply that the process was launched came after the local objects were destroyed.
@@ -180,7 +178,7 @@ void TargetImpl::Detach(Callback callback) {
       request, [callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::DetachReply reply) mutable {
         if (weak_target) {
-          weak_target->OnKillOrDetachReply(TargetObserver::DestroyReason::kDetach, err,
+          weak_target->OnKillOrDetachReply(ProcessObserver::DestroyReason::kDetach, err,
                                            reply.status, std::move(callback));
         } else {
           // The reply that the process was launched came after the local objects were destroyed.
@@ -194,11 +192,8 @@ void TargetImpl::OnProcessExiting(int return_code) {
   FXL_DCHECK(state_ == State::kRunning);
   state_ = State::kNone;
 
-  system_->NotifyWillDestroyProcess(process_.get());
-  for (auto& observer : observers()) {
-    observer.WillDestroyProcess(this, process_.get(), TargetObserver::DestroyReason::kExit,
-                                return_code);
-  }
+  for (auto& observer : session()->process_observers())
+    observer.WillDestroyProcess(process_.get(), ProcessObserver::DestroyReason::kExit, return_code);
 
   process_.reset();
 }
@@ -249,9 +244,8 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64
     callback(GetWeakPtr(), issue_err);
 
   if (state_ == State::kRunning) {
-    system_->NotifyDidCreateProcess(process_.get());
-    for (auto& observer : observers())
-      observer.DidCreateProcess(this, process_.get(), false);
+    for (auto& observer : session()->process_observers())
+      observer.DidCreateProcess(process_.get(), false);
   }
 }
 
@@ -296,7 +290,7 @@ void TargetImpl::HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc:
   callback(GetWeakPtr(), err);
 }
 
-void TargetImpl::OnKillOrDetachReply(TargetObserver::DestroyReason reason, const Err& err,
+void TargetImpl::OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
                                      int32_t status, Callback callback) {
   FXL_DCHECK(process_.get());  // Should have a process.
 
@@ -309,18 +303,18 @@ void TargetImpl::OnKillOrDetachReply(TargetObserver::DestroyReason reason, const
     // Error from detaching.
     // TODO(davemoore): Not sure what state the target should be if we error upon detach.
     issue_err = Err(fxl::StringPrintf("Error %sing, status = %s.",
-                                      TargetObserver::DestroyReasonToString(reason),
+                                      ProcessObserver::DestroyReasonToString(reason),
                                       debug_ipc::ZxStatusToString(status)));
   } else {
     // Successfully detached.
     state_ = State::kNone;
-    system_->NotifyWillDestroyProcess(process_.get());
 
     // Keep the process alive for the observer call, but remove it from the target as per the
     // observer specification.
-    std::unique_ptr<ProcessImpl> doomed_process = std::move(process_);
-    for (auto& observer : observers())
-      observer.WillDestroyProcess(this, doomed_process.get(), reason, 0);
+    for (auto& observer : session()->process_observers())
+      observer.WillDestroyProcess(process_.get(), reason, 0);
+
+    process_.reset();
   }
 
   callback(GetWeakPtr(), issue_err);

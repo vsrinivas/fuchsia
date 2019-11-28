@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/system_observer.h"
 #include "src/developer/debug/zxdb/client/target_observer.h"
+#include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/symbols/resolve_options.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -23,7 +24,10 @@ namespace zxdb {
 
 class BreakpointLocationImpl;
 
-class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemObserver {
+class BreakpointImpl : public Breakpoint,
+                       public TargetObserver,
+                       public ProcessObserver,
+                       public ThreadObserver {
  public:
   // The controller can be null in which case it will perform the default behavior. The controller
   // must outlive the breakpoint.
@@ -57,15 +61,18 @@ class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemO
   friend BreakpointLocationImpl;
   struct ProcessRecord;
 
+  // TargetObserver.
+  void WillDestroyTarget(Target* target) override;
+
   // ProcessObserver.
-  void WillDestroyThread(Process* process, Thread* thread) override;
+  void DidCreateProcess(Process* process, bool autoattached) override;
+  void WillDestroyProcess(Process* process, ProcessObserver::DestroyReason reason,
+                          int exit_code) override;
   void DidLoadModuleSymbols(Process* process, LoadedModuleSymbols* module) override;
   void WillUnloadModuleSymbols(Process* process, LoadedModuleSymbols* module) override;
 
-  // SystemObserver.
-  void WillDestroyTarget(Target* target) override;
-  void GlobalDidCreateProcess(Process* process) override;
-  void GlobalWillDestroyProcess(Process* process) override;
+  // ThreadObserver.
+  void WillDestroyThread(Thread* thread) override;
 
   void SyncBackend(fit::callback<void(const Err&)> callback = {});
   void SendBackendAddOrChange(fit::callback<void(const Err&)> callback);
@@ -110,6 +117,11 @@ class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemO
   std::map<Process*, ProcessRecord> procs_;
 
   fxl::WeakPtrFactory<BreakpointImpl> impl_weak_factory_;
+
+  // Set when we're a thread-scoped breakpoint and so are registered as a thread observer. There
+  // are potentially a lot of threads and breakpoints, and thread-scoped breakpoints are rare, so
+  // we don't regiter for these unless necessary.
+  bool registered_as_thread_observer_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BreakpointImpl);
 };

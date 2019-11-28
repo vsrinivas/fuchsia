@@ -4,16 +4,19 @@
 
 #include "src/developer/debug/zxdb/client/test_thread_observer.h"
 
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
 TestThreadObserver::TestThreadObserver(Thread* thread) : thread_(thread) {
-  thread->AddObserver(this);
+  thread->session()->thread_observers().AddObserver(this);
 }
 
-TestThreadObserver::~TestThreadObserver() { thread_->RemoveObserver(this); }
+TestThreadObserver::~TestThreadObserver() {
+  thread_->session()->thread_observers().RemoveObserver(this);
+}
 
 void TestThreadObserver::OnThreadStopped(
     Thread* thread, debug_ipc::ExceptionType type,

@@ -187,7 +187,7 @@ SystemImpl::~SystemImpl() {
     // target owns the process. Because this class sends the target notifications, force the process
     // destruction before doing anything.
     target->ImplicitlyDetach();
-    for (auto& observer : observers())
+    for (auto& observer : session()->target_observers())
       observer.WillDestroyTarget(target.get());
   }
 
@@ -205,16 +205,6 @@ ProcessImpl* SystemImpl::ProcessImplFromKoid(uint64_t koid) const {
       return process;
   }
   return nullptr;
-}
-
-void SystemImpl::NotifyDidCreateProcess(Process* process) {
-  for (auto& observer : observers())
-    observer.GlobalDidCreateProcess(process);
-}
-
-void SystemImpl::NotifyWillDestroyProcess(Process* process) {
-  for (auto& observer : observers())
-    observer.GlobalWillDestroyProcess(process);
 }
 
 std::vector<TargetImpl*> SystemImpl::GetTargetImpls() const {
@@ -601,7 +591,7 @@ void SystemImpl::AddNewTarget(std::unique_ptr<TargetImpl> target) {
   Target* for_observers = target.get();
 
   targets_.push_back(std::move(target));
-  for (auto& observer : observers())
+  for (auto& observer : session()->target_observers())
     observer.DidCreateTarget(for_observers);
 }
 

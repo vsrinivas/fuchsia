@@ -100,7 +100,8 @@ BreakpointImpl::BreakpointImpl(Session* session, bool is_internal)
       is_internal_(is_internal),
       backend_id_(next_breakpoint_id++),
       impl_weak_factory_(this) {
-  session->system().AddObserver(this);
+  session->process_observers().AddObserver(this);
+  session->target_observers().AddObserver(this);
 }
 
 BreakpointImpl::~BreakpointImpl() {
@@ -110,13 +111,10 @@ BreakpointImpl::~BreakpointImpl() {
     SendBackendRemove(fit::callback<void(const Err&)>());
   }
 
-  session()->system().RemoveObserver(this);
-  for (auto& pair : procs_) {
-    if (pair.second.observing) {
-      pair.first->RemoveObserver(this);
-      pair.second.observing = false;
-    }
-  }
+  session()->target_observers().RemoveObserver(this);
+  session()->process_observers().RemoveObserver(this);
+  if (registered_as_thread_observer_)
+    session()->thread_observers().RemoveObserver(this);
 }
 
 BreakpointSettings BreakpointImpl::GetSettings() const { return settings_; }
@@ -137,6 +135,15 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
     Process* process = target->GetProcess();
     if (process && CouldApplyToProcess(process))
       changed |= RegisterProcess(process);
+  }
+
+  // Add or remove thread notifications as required.
+  if (settings_.scope_thread && !registered_as_thread_observer_) {
+    session()->thread_observers().AddObserver(this);
+    registered_as_thread_observer_ = true;
+  } else if (!settings_.scope_thread && registered_as_thread_observer_) {
+    session()->thread_observers().RemoveObserver(this);
+    registered_as_thread_observer_ = false;
   }
 
   SyncBackend(std::move(callback));
@@ -171,22 +178,56 @@ void BreakpointImpl::UpdateStats(const debug_ipc::BreakpointStats& stats) { stat
 
 void BreakpointImpl::BackendBreakpointRemoved() { backend_installed_ = false; }
 
-void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
-  if (settings_.scope_thread == thread) {
-    // When the thread is destroyed that the breakpoint is associated with, disable the breakpoint
-    // and convert to a target-scoped breakpoint. This will preserve its state without us having to
-    // maintain some "defunct thread" association. The user can associate it with a new thread and
-    // re-enable as desired.
-    settings_.scope = BreakpointSettings::Scope::kTarget;
-    settings_.scope_target = process->GetTarget();
+void BreakpointImpl::WillDestroyTarget(Target* target) {
+  if (target == settings_.scope_target) {
+    // As with threads going away, when the target goes away for a target-scoped breakpoint, convert
+    // to a disabled system-wide breakpoint.
+    settings_.scope = BreakpointSettings::Scope::kSystem;
+    settings_.scope_target = nullptr;
     settings_.scope_thread = nullptr;
     settings_.enabled = false;
   }
 }
 
+void BreakpointImpl::DidCreateProcess(Process* process, bool autoattached) {
+  if (CouldApplyToProcess(process)) {
+    if (RegisterProcess(process)) {
+      SyncBackend();
+
+      for (auto& observer : session()->breakpoint_observers())
+        observer.OnBreakpointMatched(this, false);
+    }
+  }
+}
+
+void BreakpointImpl::WillDestroyProcess(Process* process, ProcessObserver::DestroyReason,
+                                        int exit_code) {
+  auto found = procs_.find(process);
+  if (found == procs_.end())
+    return;
+
+  // Only need to update the backend if there was an enabled address associated with this process.
+  bool send_update = found->second.HasEnabledLocation();
+
+  // When the process exits, disable breakpoints that are entirely address-based since the addresses
+  // will normally change when a process is loaded.
+  if (AllLocationsAddresses()) {
+    // Should only have one process for address-based breakpoints.
+    FXL_DCHECK(procs_.size() == 1u);
+    FXL_DCHECK(process->GetTarget() == settings_.scope_target);
+    settings_.enabled = false;
+  }
+
+  procs_.erase(found);
+
+  // Needs to be done after the ProcessRecord is removed.
+  if (send_update)
+    SyncBackend();
+}
+
 void BreakpointImpl::DidLoadModuleSymbols(Process* process, LoadedModuleSymbols* module) {
-  // Should only get this notification for relevant processes.
-  FXL_DCHECK(CouldApplyToProcess(process));
+  if (!CouldApplyToProcess(process))
+    return;  // Irrelevant process.
 
   FindNameContext find_context(process->GetSymbols());
 
@@ -210,53 +251,22 @@ void BreakpointImpl::WillUnloadModuleSymbols(Process* process, LoadedModuleSymbo
   // that range.
 }
 
-void BreakpointImpl::WillDestroyTarget(Target* target) {
-  if (target == settings_.scope_target) {
-    // As with threads going away, when the target goes away for a target-scoped breakpoint, convert
-    // to a disabled system-wide breakpoint.
-    settings_.scope = BreakpointSettings::Scope::kSystem;
-    settings_.scope_target = nullptr;
+void BreakpointImpl::WillDestroyThread(Thread* thread) {
+  if (settings_.scope_thread == thread) {
+    // When the thread is destroyed that the breakpoint is associated with, disable the breakpoint
+    // and convert to a target-scoped breakpoint. This will preserve its state without us having to
+    // maintain some "defunct thread" association. The user can associate it with a new thread and
+    // re-enable as desired.
+    settings_.scope = BreakpointSettings::Scope::kTarget;
+    settings_.scope_target = thread->GetProcess()->GetTarget();
     settings_.scope_thread = nullptr;
     settings_.enabled = false;
+
+    // Don't need more thread notifications.
+    FXL_DCHECK(registered_as_thread_observer_);
+    session()->thread_observers().RemoveObserver(this);
+    registered_as_thread_observer_ = false;
   }
-}
-
-void BreakpointImpl::GlobalDidCreateProcess(Process* process) {
-  if (CouldApplyToProcess(process)) {
-    if (RegisterProcess(process)) {
-      SyncBackend();
-
-      for (auto& observer : session()->breakpoint_observers())
-        observer.OnBreakpointMatched(this, false);
-    }
-  }
-}
-
-void BreakpointImpl::GlobalWillDestroyProcess(Process* process) {
-  auto found = procs_.find(process);
-  if (found == procs_.end())
-    return;
-
-  if (found->second.observing)
-    process->RemoveObserver(this);
-
-  // Only need to update the backend if there was an enabled address associated with this process.
-  bool send_update = found->second.HasEnabledLocation();
-
-  // When the process exits, disable breakpoints that are entirely address-based since the addresses
-  // will normally change when a process is loaded.
-  if (AllLocationsAddresses()) {
-    // Should only have one process for address-based breakpoints.
-    FXL_DCHECK(procs_.size() == 1u);
-    FXL_DCHECK(process->GetTarget() == settings_.scope_target);
-    settings_.enabled = false;
-  }
-
-  procs_.erase(found);
-
-  // Needs to be done after the ProcessRecord is removed.
-  if (send_update)
-    SyncBackend();
 }
 
 void BreakpointImpl::SyncBackend(fit::callback<void(const Err&)> callback) {
@@ -395,11 +405,6 @@ bool BreakpointImpl::HasEnabledLocation() const {
 }
 
 bool BreakpointImpl::RegisterProcess(Process* process) {
-  if (!procs_[process].observing) {
-    procs_[process].observing = true;
-    process->AddObserver(this);
-  }
-
   // Clear existing locations for this process.
   ProcessRecord& record = procs_[process];
   bool changed = !record.locs.empty();

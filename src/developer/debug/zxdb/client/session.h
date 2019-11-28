@@ -29,10 +29,13 @@ namespace zxdb {
 class ArchInfo;
 class BreakpointObserver;
 class ProcessImpl;
+class ProcessObserver;
 class RemoteAPI;
 class RemoteAPIImpl;
 class RemoteAPITest;
+class TargetObserver;
 class ThreadImpl;
+class ThreadObserver;
 
 // The session object manages the connection with the remote debug agent.
 class Session : public SettingStoreObserver {
@@ -120,6 +123,9 @@ class Session : public SettingStoreObserver {
   const ArchInfo* arch_info() const { return arch_info_.get(); }
 
   // Observer list getters.
+  fxl::ObserverList<TargetObserver>& target_observers() { return target_observers_; }
+  fxl::ObserverList<ProcessObserver>& process_observers() { return process_observers_; }
+  fxl::ObserverList<ThreadObserver>& thread_observers() { return thread_observers_; }
   fxl::ObserverList<BreakpointObserver>& breakpoint_observers() { return breakpoint_observers_; }
   fxl::ObserverList<FilterObserver>& filter_observers() { return filter_observers_; }
   fxl::ObserverList<DownloadObserver>& download_observers() { return download_observers_; }
@@ -207,6 +213,9 @@ class Session : public SettingStoreObserver {
   bool is_minidump_ = false;
 
   // Observers.
+  fxl::ObserverList<TargetObserver> target_observers_;
+  fxl::ObserverList<ProcessObserver> process_observers_;
+  fxl::ObserverList<ThreadObserver> thread_observers_;
   fxl::ObserverList<BreakpointObserver> breakpoint_observers_;
   fxl::ObserverList<FilterObserver> filter_observers_;
   fxl::ObserverList<DownloadObserver> download_observers_;

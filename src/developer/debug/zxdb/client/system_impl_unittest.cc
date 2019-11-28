@@ -10,9 +10,11 @@
 #include "src/developer/debug/zxdb/client/job_context_impl.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system_observer.h"
+#include "src/developer/debug/zxdb/client/target_observer.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 
 namespace zxdb {
@@ -52,7 +54,6 @@ class APISink : public MockRemoteAPI {
   size_t info_count_ = 0;
   std::vector<ProcessInfo> next_infos_;
   std::vector<debug_ipc::AttachRequest> attach_requests_;
-
 };
 
 class SystemImplTest : public RemoteAPITest {
@@ -74,19 +75,28 @@ class SystemImplTest : public RemoteAPITest {
 };
 
 // We need a RAII-esque wrapper because observers are supposed to outlive the system.
-class MockSystemObserver : public SystemObserver {
+class MockSystemObserver : public TargetObserver, public ProcessObserver {
  public:
-  MockSystemObserver(SystemImpl* system) : system_(system) { system_->AddObserver(this); }
-  ~MockSystemObserver() { system_->RemoveObserver(this); }
+  explicit MockSystemObserver(Session* session) : session_(session) {
+    session->target_observers().AddObserver(this);
+    session->process_observers().AddObserver(this);
+  }
+  ~MockSystemObserver() {
+    session_->process_observers().RemoveObserver(this);
+    session_->target_observers().RemoveObserver(this);
+  }
 
-  void DidCreateTarget(Target* target) override { target_create_count_++; }
-  void GlobalDidCreateProcess(Process* process) override { process_create_count_++; }
+  // TargetObserver.
+  void DidCreateTarget(Target*) override { target_create_count_++; }
+
+  // ProcessObserver.
+  void DidCreateProcess(Process*, bool) override { process_create_count_++; }
 
   int target_create_count() const { return target_create_count_; }
   int process_create_count() const { return process_create_count_; }
 
  private:
-  SystemImpl* system_ = nullptr;
+  Session* session_ = nullptr;
 
   int target_create_count_ = 0;
   int process_create_count_ = 0;
@@ -137,7 +147,7 @@ TEST_F(SystemImplTest, GlobalContinue) {
 
 TEST_F(SystemImplTest, FilterMatchesAndRematching) {
   SystemImpl& system = session().system_impl();
-  MockSystemObserver system_observer(&system);
+  MockSystemObserver system_observer(&session());
 
   constexpr uint64_t kJobKoid = 0x1234;
   JobContextImpl job(&session().system_impl(), false);
@@ -195,7 +205,7 @@ TEST_F(SystemImplTest, FilterMatchesAndRematching) {
 
 TEST_F(SystemImplTest, ExistenProcessShouldCreateTarget) {
   SystemImpl& system = session().system_impl();
-  MockSystemObserver system_observer(&system);
+  MockSystemObserver system_observer(&session());
 
   constexpr uint64_t kJobKoid = 0x1234;
   JobContextImpl job(&session().system_impl(), false);

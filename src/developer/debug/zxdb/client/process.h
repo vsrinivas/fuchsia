@@ -50,9 +50,6 @@ class Process : public ClientObject {
   Process(Session* session, StartType);
   ~Process() override;
 
-  void AddObserver(ProcessObserver* observer);
-  void RemoveObserver(ProcessObserver* observer);
-
   fxl::WeakPtr<Process> GetWeakPtr();
 
   // Returns the target associated with this process. Guaranteed non-null.
@@ -142,15 +139,12 @@ class Process : public ClientObject {
   const containers::circular_deque<uint8_t>& get_stderr() const { return stderr_; }
 
  protected:
-  fxl::ObserverList<ProcessObserver>& observers() { return observers_; }
-
   containers::circular_deque<uint8_t> stdout_;
   containers::circular_deque<uint8_t> stderr_;
 
  private:
   StartType start_type_;
 
-  fxl::ObserverList<ProcessObserver> observers_;
   fxl::WeakPtrFactory<Process> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Process);

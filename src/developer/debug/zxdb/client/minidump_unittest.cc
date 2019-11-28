@@ -19,10 +19,7 @@
 
 namespace zxdb {
 
-class MinidumpTest : public testing::Test,
-                     public ProcessObserver,
-                     public ThreadObserver,
-                     public SystemObserver {
+class MinidumpTest : public testing::Test, public ThreadObserver, public SystemObserver {
  public:
   MinidumpTest();
   virtual ~MinidumpTest();
@@ -38,15 +35,9 @@ class MinidumpTest : public testing::Test,
                  void (RemoteAPI::*handler)(const RequestType&,
                                             fit::callback<void(const Err&, ReplyType)>));
 
-  // ProcessObserver implementation.
-  void DidCreateThread(Process*, Thread* thread) override;
-
   // ThreadObserver implementation.
   void OnThreadStopped(Thread*, debug_ipc::ExceptionType type,
                        const std::vector<fxl::WeakPtr<Breakpoint>>&) override;
-
-  // SystemObserver implementation.
-  void GlobalDidCreateProcess(Process* process) override;
 
  private:
   debug_ipc::ExceptionType last_hit_ = debug_ipc::ExceptionType::kNone;
@@ -57,10 +48,13 @@ class MinidumpTest : public testing::Test,
 MinidumpTest::MinidumpTest() {
   loop_.Init();
   session_ = std::make_unique<Session>();
-  session().system().AddObserver(this);
+  session().thread_observers().AddObserver(this);
 }
 
-MinidumpTest::~MinidumpTest() { loop_.Cleanup(); }
+MinidumpTest::~MinidumpTest() {
+  session().thread_observers().RemoveObserver(this);
+  loop_.Cleanup();
+}
 
 Err MinidumpTest::TryOpen(const std::string& filename) {
   static auto data_dir = std::filesystem::path(GetSelfPath()).parent_path() / "test_data" / "zxdb";
@@ -86,14 +80,10 @@ void MinidumpTest::DoRequest(
   loop().RunUntilNoTasks();
 }
 
-void MinidumpTest::DidCreateThread(Process*, Thread* thread) { thread->AddObserver(this); }
-
 void MinidumpTest::OnThreadStopped(Thread*, debug_ipc::ExceptionType type,
                                    const std::vector<fxl::WeakPtr<Breakpoint>>&) {
   last_hit_ = type;
 }
-
-void MinidumpTest::GlobalDidCreateProcess(Process* process) { process->AddObserver(this); }
 
 template <typename Data>
 std::vector<uint8_t> AsData(Data d) {

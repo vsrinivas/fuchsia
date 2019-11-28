@@ -22,7 +22,6 @@ namespace zxdb {
 class Err;
 class Process;
 class System;
-class TargetObserver;
 class TargetSymbols;
 
 // A Target represents the abstract idea of a process that can be debugged. This is as opposed to a
@@ -62,9 +61,6 @@ class Target : public ClientObject {
   };
 
   ~Target() override;
-
-  void AddObserver(TargetObserver* observer);
-  void RemoveObserver(TargetObserver* observer);
 
   fxl::WeakPtr<Target> GetWeakPtr();
 
@@ -109,12 +105,9 @@ class Target : public ClientObject {
  protected:
   explicit Target(Session* session);
 
-  fxl::ObserverList<TargetObserver>& observers() { return observers_; }
-
   SettingStore settings_;
 
  private:
-  fxl::ObserverList<TargetObserver> observers_;
   fxl::WeakPtrFactory<Target> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Target);

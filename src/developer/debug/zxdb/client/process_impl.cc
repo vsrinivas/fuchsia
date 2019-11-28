@@ -38,8 +38,8 @@ ProcessImpl::~ProcessImpl() {
 
   // Send notifications for all destroyed threads.
   for (const auto& thread : threads_) {
-    for (auto& observer : observers())
-      observer.WillDestroyThread(this, thread.second.get());
+    for (auto& observer : session()->thread_observers())
+      observer.WillDestroyThread(thread.second.get());
   }
 }
 
@@ -201,8 +201,8 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool r
   Thread* thread_ptr = thread.get();
   threads_[record.thread_koid] = std::move(thread);
 
-  for (auto& observer : observers())
-    observer.DidCreateThread(this, thread_ptr);
+  for (auto& observer : session()->thread_observers())
+    observer.DidCreateThread(thread_ptr);
 
   if (resume)
     thread_ptr->Continue();
@@ -216,8 +216,8 @@ void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
     return;
   }
 
-  for (auto& observer : observers())
-    observer.WillDestroyThread(this, found->second.get());
+  for (auto& observer : session()->thread_observers())
+    observer.WillDestroyThread(found->second.get());
 
   threads_.erase(found);
 }
@@ -293,17 +293,17 @@ void ProcessImpl::UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_
 }
 
 void ProcessImpl::DidLoadModuleSymbols(LoadedModuleSymbols* module) {
-  for (auto& observer : observers())
+  for (auto& observer : session()->process_observers())
     observer.DidLoadModuleSymbols(this, module);
 }
 
 void ProcessImpl::WillUnloadModuleSymbols(LoadedModuleSymbols* module) {
-  for (auto& observer : observers())
+  for (auto& observer : session()->process_observers())
     observer.WillUnloadModuleSymbols(this, module);
 }
 
 void ProcessImpl::OnSymbolLoadFailure(const Err& err) {
-  for (auto& observer : observers())
+  for (auto& observer : session()->process_observers())
     observer.OnSymbolLoadFailure(this, err);
 }
 

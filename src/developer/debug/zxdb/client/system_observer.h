@@ -18,21 +18,11 @@ class SymbolServer;
 
 class SystemObserver {
  public:
-  // Called immediately after creation / before destruction of a target.
-  virtual void DidCreateTarget(Target* target) {}
-  virtual void WillDestroyTarget(Target* target) {}
-
   // Called immediately after creation of a job context.
   virtual void DidCreateJobContext(JobContext* job_context) {}
 
   // Called immediately after createion of a symbol server.
   virtual void DidCreateSymbolServer(SymbolServer* server) {}
-
-  // It can be common to want to watch for all Process creation and destruction events. For
-  // convenience, these allow that without having to track each Target and register as an observer
-  // on them individually.
-  virtual void GlobalDidCreateProcess(Process* process) {}
-  virtual void GlobalWillDestroyProcess(Process* process) {}
 
   // Called immediately after creation / before destruction of a breakpoint.
   virtual void DidCreateBreakpoint(Breakpoint* breakpoint) {}

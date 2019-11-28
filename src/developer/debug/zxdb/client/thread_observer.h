@@ -13,9 +13,11 @@ namespace zxdb {
 class Breakpoint;
 class Thread;
 
-// Note: thread lifetime notifications are on the ProcessObserver.
 class ThreadObserver {
  public:
+  virtual void DidCreateThread(Thread* thread) {}
+  virtual void WillDestroyThread(Thread* thread) {}
+
   // Notification that a thread has stopped. The thread and all breakpoint statistics will be
   // up-to-date. The parameter lists any breakpoints that caused this thread stop (there can be more
   // than one at the same address). These are weak pointers because other observers could possibly

@@ -34,10 +34,6 @@ class SystemImpl final : public System,
 
   ProcessImpl* ProcessImplFromKoid(uint64_t koid) const;
 
-  // Broadcasts the global process notifications.
-  void NotifyDidCreateProcess(Process* process);
-  void NotifyWillDestroyProcess(Process* process);
-
   std::vector<TargetImpl*> GetTargetImpls() const;
 
   // Like CreateNewTarget byt returns the implementation.

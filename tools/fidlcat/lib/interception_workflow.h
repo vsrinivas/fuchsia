@@ -16,7 +16,6 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/session.h"
-#include "src/developer/debug/zxdb/client/system_observer.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -64,35 +63,12 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver {
 
 class InterceptingProcessObserver : public zxdb::ProcessObserver {
  public:
-  explicit InterceptingProcessObserver(InterceptionWorkflow* workflow) : dispatcher_(workflow) {}
+  explicit InterceptingProcessObserver(InterceptionWorkflow* workflow) : workflow_(workflow) {}
 
-  InterceptingProcessObserver(const InterceptingProcessObserver&) = delete;
-  InterceptingProcessObserver& operator=(const InterceptingProcessObserver&) = delete;
-
-  virtual void DidCreateThread(zxdb::Process* process, zxdb::Thread* thread) override {
-    thread->AddObserver(&dispatcher_);
-  }
-
-  virtual ~InterceptingProcessObserver() {}
-
-  InterceptingThreadObserver& thread_observer() { return dispatcher_; }
+  void DidCreateProcess(zxdb::Process* process, bool autoattached) override;
+  void WillDestroyProcess(zxdb::Process* process, DestroyReason reason, int exit_code) override;
 
  private:
-  InterceptingThreadObserver dispatcher_;
-};
-
-class InterceptingSystemObserver : public zxdb::SystemObserver {
- public:
-  explicit InterceptingSystemObserver(InterceptionWorkflow* workflow)
-      : dispatcher_(workflow), workflow_(workflow) {}
-
-  void GlobalDidCreateProcess(zxdb::Process* process) override;
-  void GlobalWillDestroyProcess(zxdb::Process* process) override;
-
-  InterceptingProcessObserver& process_observer() { return dispatcher_; }
-
- private:
-  InterceptingProcessObserver dispatcher_;
   InterceptionWorkflow* workflow_;
 };
 
@@ -173,7 +149,7 @@ class InterceptionWorkflow {
     return syscall_decoder_dispatcher_.get();
   }
 
-  InterceptingSystemObserver& system_observer() { return system_observer_; }
+  InterceptingThreadObserver& thread_observer() { return thread_observer_; }
 
   InterceptionWorkflow(const InterceptionWorkflow&) = delete;
   InterceptionWorkflow& operator=(const InterceptionWorkflow&) = delete;
@@ -192,7 +168,8 @@ class InterceptionWorkflow {
 
   std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher_;
 
-  InterceptingSystemObserver system_observer_;
+  InterceptingProcessObserver process_observer_;
+  InterceptingThreadObserver thread_observer_;
 };
 
 }  // namespace fidlcat

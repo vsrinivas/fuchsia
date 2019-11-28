@@ -378,9 +378,8 @@ void InterceptionWorkflowTest::PerformFunctionTest(ProcessController* controller
   SyscallDecoderDispatcher* dispatcher = controller->workflow().syscall_decoder_dispatcher();
   for (const auto& syscall : dispatcher->syscalls()) {
     if (syscall->name() == syscall_name) {
-      dispatcher->DecodeSyscall(
-          &controller->workflow().system_observer().process_observer().thread_observer(),
-          threads_[kFirstThreadKoid], syscall.get());
+      dispatcher->DecodeSyscall(&controller->workflow().thread_observer(),
+                                threads_[kFirstThreadKoid], syscall.get());
     }
   }
 
@@ -395,11 +394,7 @@ ProcessController::ProcessController(InterceptionWorkflowTest* remote_api, zxdb:
   thread_koids_[kSecondPid] = kSecondThreadKoid;
 }
 
-ProcessController::~ProcessController() {
-  for (zxdb::Process* process : processes_) {
-    process->RemoveObserver(&workflow_.system_observer_.process_observer());
-  }
-}
+ProcessController::~ProcessController() {}
 
 void ProcessController::InjectProcesses(zxdb::Session& session) {
   for (auto process_koid : process_koids_) {

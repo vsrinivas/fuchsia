@@ -10,10 +10,6 @@ Process::Process(Session* session, StartType start_type)
     : ClientObject(session), start_type_(start_type), weak_factory_(this) {}
 Process::~Process() = default;
 
-void Process::AddObserver(ProcessObserver* observer) { observers_.AddObserver(observer); }
-
-void Process::RemoveObserver(ProcessObserver* observer) { observers_.RemoveObserver(observer); }
-
 fxl::WeakPtr<Process> Process::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 const char* Process::StartTypeToString(Process::StartType start_type) {

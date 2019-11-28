@@ -297,7 +297,7 @@ void ThreadImpl::OnException(debug_ipc::ExceptionType type,
 
   if (should_stop) {
     // Stay stopped and notify the observers.
-    for (auto& observer : observers())
+    for (auto& observer : session()->thread_observers())
       observer.OnThreadStopped(this, type, external_breakpoints);
   } else {
     // Controllers all say to continue.
@@ -343,7 +343,7 @@ Location ThreadImpl::GetSymbolizedLocationForStackFrame(const debug_ipc::StackFr
 
 void ThreadImpl::ClearFrames() {
   if (stack_.ClearFrames()) {
-    for (auto& observer : observers())
+    for (auto& observer : session()->thread_observers())
       observer.OnThreadFramesInvalidated(this);
   }
 }

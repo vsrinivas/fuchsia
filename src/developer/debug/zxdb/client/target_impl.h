@@ -6,8 +6,8 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TARGET_IMPL_H_
 
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/target.h"
-#include "src/developer/debug/zxdb/client/target_observer.h"
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -76,7 +76,7 @@ class TargetImpl : public Target {
   void HandleAttachStatus(Callback callback, uint64_t koid, debug_ipc::zx_status_t status,
                           const std::string& process_name);
 
-  void OnKillOrDetachReply(TargetObserver::DestroyReason reason, const Err& err,
+  void OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
                            debug_ipc::zx_status_t status, Callback callback);
 
   // Actual creation that unified common behaviour.

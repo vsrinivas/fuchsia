@@ -145,12 +145,14 @@ void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::Thread* thread,
   });
 }
 
-void InterceptingSystemObserver::GlobalDidCreateProcess(zxdb::Process* process) {
+void InterceptingProcessObserver::DidCreateProcess(zxdb::Process* process, bool autoattached) {
   workflow_->syscall_decoder_dispatcher()->AddLaunchedProcess(process->GetKoid());
   workflow_->SetBreakpoints(process);
 }
 
-void InterceptingSystemObserver::GlobalWillDestroyProcess(zxdb::Process* process) {
+void InterceptingProcessObserver::WillDestroyProcess(zxdb::Process* process,
+                                                     ProcessObserver::DestroyReason reason,
+                                                     int exit_code) {
   workflow_->ProcessDetached(process->GetKoid());
 }
 
@@ -159,8 +161,10 @@ InterceptionWorkflow::InterceptionWorkflow()
       delete_session_(true),
       loop_(new debug_ipc::PlatformMessageLoop()),
       delete_loop_(true),
-      system_observer_(this) {
-  session_->system().AddObserver(&system_observer_);
+      process_observer_(this),
+      thread_observer_(this) {
+  session_->process_observers().AddObserver(&process_observer_);
+  session_->thread_observers().AddObserver(&thread_observer_);
 }
 
 InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
@@ -169,12 +173,15 @@ InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
       delete_session_(false),
       loop_(loop),
       delete_loop_(false),
-      system_observer_(this) {
-  session_->system().AddObserver(&system_observer_);
+      process_observer_(this),
+      thread_observer_(this) {
+  session_->process_observers().AddObserver(&process_observer_);
+  session_->thread_observers().AddObserver(&thread_observer_);
 }
 
 InterceptionWorkflow::~InterceptionWorkflow() {
-  session_->system().RemoveObserver(&system_observer_);
+  session_->thread_observers().RemoveObserver(&thread_observer_);
+  session_->process_observers().RemoveObserver(&process_observer_);
   if (delete_session_) {
     delete session_;
   }
@@ -365,7 +372,6 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
   }
   configured_processes_.emplace(process->GetKoid());
 
-  process->AddObserver(&system_observer_.process_observer());
   syscall_decoder_dispatcher()->ProcessMonitored(process->GetName(), process->GetKoid(), "");
 
   for (auto& syscall : syscall_decoder_dispatcher()->syscalls()) {

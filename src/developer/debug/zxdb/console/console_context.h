@@ -147,9 +147,7 @@ class ConsoleContext : public ProcessObserver,
   void HandleProcessesInLimbo(const std::vector<debug_ipc::ProcessRecord>&) override;
 
   // SystemObserver implementation:
-  void DidCreateTarget(Target* target) override;
   void DidCreateJobContext(JobContext* job_context) override;
-  void WillDestroyTarget(Target* target) override;
   void DidCreateBreakpoint(Breakpoint* breakpoint) override;
   void WillDestroyBreakpoint(Breakpoint* breakpoint) override;
   void DidCreateFilter(Filter* filter) override;
@@ -157,17 +155,17 @@ class ConsoleContext : public ProcessObserver,
   void OnSymbolIndexingInformation(const std::string& msg) override;
 
   // TargetObserver implementation:
-  void DidCreateProcess(Target* target, Process* process,
-                        bool autoattached_to_new_process) override;
-  void WillDestroyProcess(Target* target, Process* process, DestroyReason reason,
-                          int exit_code) override;
+  void DidCreateTarget(Target* target) override;
+  void WillDestroyTarget(Target* target) override;
 
   // ProcessObserver implementation:
-  void DidCreateThread(Process* process, Thread* thread) override;
-  void WillDestroyThread(Process* process, Thread* thread) override;
+  void DidCreateProcess(Process* process, bool autoattached_to_new_process) override;
+  void WillDestroyProcess(Process* process, DestroyReason reason, int exit_code) override;
   void OnSymbolLoadFailure(Process* process, const Err& err) override;
 
   // ThreadObserver implementation:
+  void DidCreateThread(Thread* thread) override;
+  void WillDestroyThread(Thread* thread) override;
   void OnThreadStopped(Thread* thread, debug_ipc::ExceptionType type,
                        const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
   void OnThreadFramesInvalidated(Thread* thread) override;

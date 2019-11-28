@@ -90,10 +90,6 @@ Target::Target(Session* session)
 
 Target::~Target() = default;
 
-void Target::AddObserver(TargetObserver* observer) { observers_.AddObserver(observer); }
-
-void Target::RemoveObserver(TargetObserver* observer) { observers_.RemoveObserver(observer); }
-
 fxl::WeakPtr<Target> Target::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 fxl::RefPtr<SettingSchema> Target::GetSchema() {

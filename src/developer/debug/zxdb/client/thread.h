@@ -35,9 +35,6 @@ class Thread : public ClientObject {
   explicit Thread(Session* session);
   ~Thread() override;
 
-  void AddObserver(ThreadObserver* observer);
-  void RemoveObserver(ThreadObserver* observer);
-
   fxl::WeakPtr<Thread> GetWeakPtr();
 
   // Guaranteed non-null.
@@ -106,12 +103,9 @@ class Thread : public ClientObject {
   SettingStore& settings() { return settings_; }
 
  protected:
-  fxl::ObserverList<ThreadObserver>& observers() { return observers_; }
-
   SettingStore settings_;
 
  private:
-  fxl::ObserverList<ThreadObserver> observers_;
   fxl::WeakPtrFactory<Thread> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Thread);

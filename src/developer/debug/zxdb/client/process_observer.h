@@ -12,14 +12,22 @@ class LoadedModuleSymbols;
 class Process;
 class Thread;
 
-// Note: process creation and destruction events are on the TargetObserver.
 class ProcessObserver {
  public:
-  // Called immediately after creating a new thread or attaching to the process.
-  virtual void DidCreateThread(Process* process, Thread* thread) {}
+  // Reason for destroying a process object.
+  enum class DestroyReason { kExit, kDetach, kKill };
+  static const char* DestroyReasonToString(DestroyReason);
 
-  // Called immediately before destroying an existing thread.
-  virtual void WillDestroyThread(Process* process, Thread* thread) {}
+  // The |autoattached| flag will be set when this process is a result of attaching automatically to
+  // a new process in a job. The process in this state will exist but will not have started running
+  // yet.
+  virtual void DidCreateProcess(Process* process, bool autoattached) {}
+
+  // Called after detaching from or destroying a process. The Process object will still exist on the
+  // Target but the Target will report |state == kNone|.
+  //
+  // The exit code will only have meaning when reason == kExit, otherwise it will be 0.
+  virtual void WillDestroyProcess(Process* process, DestroyReason reason, int exit_code) {}
 
   // Notification that a module with symbols is ready to use.
   //

@@ -32,6 +32,11 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
   session->AddObserver(this);
   session->AddDownloadObserver(this);
   session->AddBreakpointObserver(this);
+
+  session->target_observers().AddObserver(this);
+  session->process_observers().AddObserver(this);
+  session->thread_observers().AddObserver(this);
+
   session->system().AddObserver(this);
 
   // Pick up any previously created targets. This will normally just be the
@@ -49,18 +54,10 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
 ConsoleContext::~ConsoleContext() {
   // Unregister for all observers.
   session_->system().RemoveObserver(this);
+  session_->target_observers().RemoveObserver(this);
+  session_->process_observers().RemoveObserver(this);
+  session_->thread_observers().RemoveObserver(this);
   session_->RemoveBreakpointObserver(this);
-
-  for (auto& target_pair : id_to_target_) {
-    target_pair.second.target->RemoveObserver(this);
-
-    Process* process = target_pair.second.target->GetProcess();
-    if (process)
-      process->RemoveObserver(this);
-
-    for (auto& thread_pair : target_pair.second.id_to_thread)
-      thread_pair.second.thread->RemoveObserver(this);
-  }
 }
 
 int ConsoleContext::IdForTarget(const Target* target) const {
@@ -451,24 +448,6 @@ void ConsoleContext::HandleProcessesInLimbo(
   Console::get()->Output(std::move(out));
 }
 
-void ConsoleContext::DidCreateTarget(Target* target) {
-  target->AddObserver(this);
-
-  int new_id = next_target_id_;
-  next_target_id_++;
-
-  TargetRecord record;
-  record.target_id = new_id;
-  record.target = target;
-
-  id_to_target_[new_id] = std::move(record);
-  target_to_id_[target] = new_id;
-
-  // Set the active target only if there's none already.
-  if (active_target_id_ == 0)
-    active_target_id_ = new_id;
-}
-
 void ConsoleContext::DidCreateJobContext(JobContext* job_context) {
   // TODO(anmittal): Add observer if required.
   int new_id = next_job_context_id_;
@@ -484,37 +463,6 @@ void ConsoleContext::DidCreateJobContext(JobContext* job_context) {
   // Set the active job_context only if there's none already.
   if (active_job_context_id_ == 0)
     active_job_context_id_ = new_id;
-}
-
-void ConsoleContext::WillDestroyTarget(Target* target) {
-  target->RemoveObserver(this);
-
-  TargetRecord* record = GetTargetRecord(target);
-  if (!record) {
-    FXL_NOTREACHED();
-    return;
-  }
-
-  if (active_target_id_ == record->target_id) {
-    // Need to update the default target ID.
-    if (id_to_target_.empty()) {
-      // This should only happen in the shutting-down case.
-      active_target_id_ = 0;
-    } else {
-      // Just pick the first target to be the active one. It might be nice to
-      // have an ordering of which one the user had selected previously in
-      // case they're toggling between two.
-      active_target_id_ = id_to_target_.begin()->first;
-    }
-  }
-
-  // There should be no threads by the time we erase the target mapping.
-  FXL_DCHECK(record->id_to_thread.empty());
-  FXL_DCHECK(record->thread_to_id.empty());
-
-  target_to_id_.erase(target);
-  id_to_target_.erase(record->target_id);
-  // *record is now invalid.
 }
 
 void ConsoleContext::DidCreateBreakpoint(Breakpoint* breakpoint) {
@@ -566,15 +514,57 @@ void ConsoleContext::OnSymbolIndexingInformation(const std::string& msg) {
   console->Output(OutputBuffer(Syntax::kComment, msg));
 }
 
-void ConsoleContext::DidCreateProcess(Target* target, Process* process,
-                                      bool autoattached_to_new_process) {
+void ConsoleContext::DidCreateTarget(Target* target) {
+  int new_id = next_target_id_;
+  next_target_id_++;
+
+  TargetRecord record;
+  record.target_id = new_id;
+  record.target = target;
+
+  id_to_target_[new_id] = std::move(record);
+  target_to_id_[target] = new_id;
+
+  // Set the active target only if there's none already.
+  if (active_target_id_ == 0)
+    active_target_id_ = new_id;
+}
+
+void ConsoleContext::WillDestroyTarget(Target* target) {
   TargetRecord* record = GetTargetRecord(target);
   if (!record) {
     FXL_NOTREACHED();
     return;
   }
 
-  process->AddObserver(this);
+  if (active_target_id_ == record->target_id) {
+    // Need to update the default target ID.
+    if (id_to_target_.empty()) {
+      // This should only happen in the shutting-down case.
+      active_target_id_ = 0;
+    } else {
+      // Just pick the first target to be the active one. It might be nice to
+      // have an ordering of which one the user had selected previously in
+      // case they're toggling between two.
+      active_target_id_ = id_to_target_.begin()->first;
+    }
+  }
+
+  // There should be no threads by the time we erase the target mapping.
+  FXL_DCHECK(record->id_to_thread.empty());
+  FXL_DCHECK(record->thread_to_id.empty());
+
+  target_to_id_.erase(target);
+  id_to_target_.erase(record->target_id);
+  // *record is now invalid.
+}
+
+void ConsoleContext::DidCreateProcess(Process* process, bool autoattached_to_new_process) {
+  TargetRecord* record = GetTargetRecord(process->GetTarget());
+  if (!record) {
+    FXL_NOTREACHED();
+    return;
+  }
 
   // Restart the thread ID counting when the process starts in case this
   // target was previously running (we want to restart numbering every time).
@@ -590,7 +580,7 @@ void ConsoleContext::DidCreateProcess(Target* target, Process* process,
       out.Append("Launched ");
       break;
   }
-  out.Append(FormatTarget(this, target));
+  out.Append(FormatTarget(this, process->GetTarget()));
 
   bool pause_on_attach =
       session()->system().settings().GetBool(ClientSettings::System::kPauseOnAttach);
@@ -603,9 +593,8 @@ void ConsoleContext::DidCreateProcess(Target* target, Process* process,
   Console::get()->Output(out);
 }
 
-void ConsoleContext::WillDestroyProcess(Target* target, Process* process, DestroyReason reason,
-                                        int exit_code) {
-  TargetRecord* record = GetTargetRecord(target);
+void ConsoleContext::WillDestroyProcess(Process* process, DestroyReason reason, int exit_code) {
+  TargetRecord* record = GetTargetRecord(process->GetTarget());
   if (!record) {
     FXL_NOTREACHED();
     return;
@@ -616,13 +605,13 @@ void ConsoleContext::WillDestroyProcess(Target* target, Process* process, Destro
   Console* console = Console::get();
   std::string msg;
   switch (reason) {
-    case TargetObserver::DestroyReason::kExit:
+    case ProcessObserver::DestroyReason::kExit:
       msg = fxl::StringPrintf("Process %d exited with code %d.", process_index, exit_code);
       break;
-    case TargetObserver::DestroyReason::kDetach:
+    case ProcessObserver::DestroyReason::kDetach:
       msg = fxl::StringPrintf("Process %d detached.", process_index);
       break;
-    case TargetObserver::DestroyReason::kKill:
+    case ProcessObserver::DestroyReason::kKill:
       msg = fxl::StringPrintf("Process %d killed.", process_index);
       break;
   }
@@ -630,14 +619,12 @@ void ConsoleContext::WillDestroyProcess(Target* target, Process* process, Destro
   console->Output(msg);
 }
 
-void ConsoleContext::DidCreateThread(Process* process, Thread* thread) {
-  TargetRecord* record = GetTargetRecord(process->GetTarget());
+void ConsoleContext::DidCreateThread(Thread* thread) {
+  TargetRecord* record = GetTargetRecord(thread->GetProcess()->GetTarget());
   if (!record) {
     FXL_NOTREACHED();
     return;
   }
-
-  thread->AddObserver(this);
 
   int thread_id = record->next_thread_id;
   record->next_thread_id++;
@@ -652,14 +639,12 @@ void ConsoleContext::DidCreateThread(Process* process, Thread* thread) {
     record->active_thread_id = thread_id;
 }
 
-void ConsoleContext::WillDestroyThread(Process* process, Thread* thread) {
-  TargetRecord* record = GetTargetRecord(process->GetTarget());
+void ConsoleContext::WillDestroyThread(Thread* thread) {
+  TargetRecord* record = GetTargetRecord(thread->GetProcess()->GetTarget());
   if (!record) {
     FXL_NOTREACHED();
     return;
   }
-
-  thread->RemoveObserver(this);
 
   auto found_thread_to_id = record->thread_to_id.find(thread);
   if (found_thread_to_id == record->thread_to_id.end()) {

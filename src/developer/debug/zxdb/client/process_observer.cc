@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/client/target_observer.h"
+#include "src/developer/debug/zxdb/client/process_observer.h"
 
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
 // static
-const char* TargetObserver::DestroyReasonToString(DestroyReason reason) {
+const char* ProcessObserver::DestroyReasonToString(DestroyReason reason) {
   switch (reason) {
     case DestroyReason::kExit:
       return "Exit";

@@ -198,9 +198,9 @@ TEST_F(SessionTest, MultiBreakpointStop) {
 
   // Thread with observer.
   constexpr uint64_t kThreadKoid = 5678;
-  Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
+  InjectThread(kProcessKoid, kThreadKoid);
   SessionThreadObserver thread_observer;
-  thread->AddObserver(&thread_observer);
+  session().thread_observers().AddObserver(&thread_observer);
 
   // An internal breakpoint.
   Breakpoint* bp_internal = session().system().CreateNewInternalBreakpoint();
@@ -245,7 +245,7 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   EXPECT_TRUE(sink()->set_breakpoint_ids().empty());
 
   // Cleanup.
-  thread->RemoveObserver(&thread_observer);
+  session().thread_observers().RemoveObserver(&thread_observer);
 }
 
 // Tests that one shot breakpoints get deleted when the agent notifies us that the breakpoint was
