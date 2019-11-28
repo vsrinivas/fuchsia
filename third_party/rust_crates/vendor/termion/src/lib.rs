@@ -8,14 +8,16 @@
 //!
 //! Supports Redox, Mac OS X, and Linux (or, in general, ANSI terminals).
 //!
-//! For more information refer to the [README](https://github.com/ticki/termion).
+//! For more information refer to the [README](https://github.com/redox-os/termion).
 #![warn(missing_docs)]
+
+extern crate numtoa;
 
 #[cfg(target_os = "redox")]
 #[path="sys/redox/mod.rs"]
 mod sys;
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "redox")))]
 #[path="sys/unix/mod.rs"]
 mod sys;
 

@@ -4,7 +4,7 @@ bitflags! {
     /// Signals that can be waited upon.
     ///
     /// See
-    /// [Objects and signals](https://fuchsia.dev/fuchsia-src/concepts/kernel/concepts#objects_and_signals).
+    /// [Objects and signals](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Objects-and-Signals)
     /// in the Zircon kernel documentation. Note: the names of signals are still in flux.
     #[repr(C)]
     pub struct Signals: zx_signals_t {

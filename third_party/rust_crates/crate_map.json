@@ -261,6 +261,11 @@
             "package_name": "num-traits"
         },
         {
+            "crate_name": "numtoa",
+            "crate_type": "lib",
+            "package_name": "numtoa"
+        },
+        {
             "crate_name": "once_cell",
             "crate_type": "lib",
             "package_name": "once_cell"
@@ -464,6 +469,11 @@
             "crate_name": "tempfile",
             "crate_type": "lib",
             "package_name": "tempfile"
+        },
+        {
+            "crate_name": "termion",
+            "crate_type": "lib",
+            "package_name": "termion"
         },
         {
             "crate_name": "textwrap",
@@ -723,6 +733,11 @@
             "package_name": "num"
         },
         {
+            "crate_name": "numtoa",
+            "crate_type": "lib",
+            "package_name": "numtoa"
+        },
+        {
             "crate_name": "once_cell",
             "crate_type": "lib",
             "package_name": "once_cell"
@@ -871,6 +886,11 @@
             "crate_name": "tempfile",
             "crate_type": "lib",
             "package_name": "tempfile"
+        },
+        {
+            "crate_name": "termion",
+            "crate_type": "lib",
+            "package_name": "termion"
         },
         {
             "crate_name": "timebomb",
