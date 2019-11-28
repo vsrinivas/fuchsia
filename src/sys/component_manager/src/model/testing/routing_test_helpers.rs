@@ -508,12 +508,6 @@ impl RoutingTest {
                 out_dir.get_or_insert(OutDir::new()).add_directory_proxy(test_dir_proxy)
             }
         }
-        for runner in decl.runners.iter() {
-            if runner.source == cm_rust::RunnerSource::Self_ {
-                out_dir.get_or_insert(OutDir::new()).add_runner_service(runner.source_path.clone())
-            }
-        }
-
         // Add any user-specific DirectoryEntry objects into the outgoing namespace.
         for (path, entry) in outgoing_paths.drain() {
             out_dir.get_or_insert(OutDir::new()).add_entry(path, entry)
@@ -938,16 +932,6 @@ impl OutDir {
             CapabilityPath::try_from("/svc/file").unwrap(),
             read_only(|| Ok(b"hippos".to_vec())),
         );
-    }
-
-    /// Adds a file entry providing a ComponentRunner service.
-    pub fn add_runner_service(&mut self, service_path: CapabilityPath) {
-        // Add a runner service at the given path.
-        //
-        // TODO(fxb/4761): We use an _echo service_ here for now, but should actually
-        // be exposing a ComponentRunner service. None of our tests notice yet,
-        // though.
-        self.add_entry(service_path, DirectoryBroker::new(Box::new(Self::echo_server_fn)));
     }
 
     /// Adds the given directory proxy at location "/data".

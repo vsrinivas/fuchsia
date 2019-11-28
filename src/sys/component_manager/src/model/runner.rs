@@ -99,12 +99,7 @@ impl Runner for NullRunner {
 }
 
 /// A runner provided by another component.
-///
-/// Currently, this is just a stub, and not actually implemented.
-///
-/// TODO(fxb/4761): Implement.
 pub struct RemoteRunner {
-    #[allow(dead_code)]
     client: fsys::ComponentRunnerProxy,
 }
 
@@ -112,14 +107,25 @@ impl RemoteRunner {
     pub fn new(client: fsys::ComponentRunnerProxy) -> RemoteRunner {
         RemoteRunner { client }
     }
+
+    async fn start_async(
+        &self,
+        start_info: fsys::ComponentStartInfo,
+        server_end: ServerEnd<fsys::ComponentControllerMarker>,
+    ) -> Result<(), RunnerError> {
+        self.client
+            .start(start_info, server_end)
+            .map_err(|e| RunnerError::runner_connection_error(e))?;
+        Ok(())
+    }
 }
 
 impl Runner for RemoteRunner {
     fn start(
         &self,
-        _start_info: fsys::ComponentStartInfo,
-        _server_end: ServerEnd<fsys::ComponentControllerMarker>,
+        start_info: fsys::ComponentStartInfo,
+        server_end: ServerEnd<fsys::ComponentControllerMarker>,
     ) -> BoxFuture<Result<(), RunnerError>> {
-        Box::pin(async { Err(RunnerError::Unsupported) })
+        Box::pin(self.start_async(start_info, server_end))
     }
 }

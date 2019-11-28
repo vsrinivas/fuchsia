@@ -23,7 +23,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon as zx,
-    futures::{future::BoxFuture, lock::Mutex, TryStreamExt},
+    futures::{future::BoxFuture, lock::Mutex, stream::StreamExt, TryStreamExt},
     log::*,
     matches::assert_matches,
     std::{
@@ -1848,20 +1848,23 @@ async fn use_runner_from_grandparent() {
         ),
     ];
 
-    // Try to bind "c:0". We expect to invoke a custom runner, which will
-    // return "RunnerError::Unsupported" at this time.
-    //
-    // TODO(fxb/4761): Implement support for custom runners, turning this
-    // error into a success.
-    let universe = RoutingTest::new("a", components).await;
+    // Set up the system.
+    let (runner_service, mut receiver) =
+        create_service_directory_entry::<fsys::ComponentRunnerMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "a" exposes a runner service.
+        .add_outgoing_path("a", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
+        .build()
+        .await;
+
+    // Bind "c:0". We expect to see a call to our runner service for the new component.
+    universe.bind_instance(&vec!["b:0", "c:0"].into()).await.unwrap();
     assert_matches!(
-        universe
-            .bind_instance(&vec!["b:0", "c:0"].into())
-            .await
-            .expect_err("expected bind to fail")
-            .downcast::<ModelError>(),
-        Ok(ModelError::RunnerError { err: RunnerError::Unsupported })
-    );
+        receiver.next().await,
+        Some(fsys::ComponentRunnerRequest::Start {
+            start_info: fsys::ComponentStartInfo { resolved_url: Some(url), .. },
+            ..
+        }) if url == "test:///c_resolved");
 }
 
 ///   a
@@ -1927,20 +1930,23 @@ async fn use_runner_from_silbing() {
         ),
     ];
 
-    // Try to bind "b:0". We expect to invoke a custom runner, which will
-    // return "RunnerError::Unsupported" at this time.
-    //
-    // TODO(fxb/4761): Implement support for custom runners, turning this
-    // error into a success.
-    let universe = RoutingTest::new("a", components).await;
+    // Set up the system.
+    let (runner_service, mut receiver) =
+        create_service_directory_entry::<fsys::ComponentRunnerMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "r" exposes a runner service.
+        .add_outgoing_path("r", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
+        .build()
+        .await;
+
+    // Bind "b:0". We expect to see a call to our runner service for the new component.
+    universe.bind_instance(&vec!["b:0"].into()).await.unwrap();
     assert_matches!(
-        universe
-            .bind_instance(&vec!["b:0"].into())
-            .await
-            .expect_err("expected bind to fail")
-            .downcast::<ModelError>(),
-        Ok(ModelError::RunnerError { err: RunnerError::Unsupported })
-    );
+        receiver.next().await,
+        Some(fsys::ComponentRunnerRequest::Start {
+            start_info: fsys::ComponentStartInfo { resolved_url: Some(url), .. },
+            ..
+        }) if url == "test:///b_resolved");
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

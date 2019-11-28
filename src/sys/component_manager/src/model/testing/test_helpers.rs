@@ -5,12 +5,14 @@
 use {
     crate::model::*,
     cm_rust::ComponentDecl,
+    fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo as echo, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
         DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    files_async, fuchsia_zircon as zx,
+    files_async, fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::TryStreamExt,
     std::collections::HashSet,
     std::path::Path,
     std::sync::Arc,
@@ -134,4 +136,37 @@ pub async fn call_echo<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> Str
     let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
     let res = echo_proxy.echo_string(Some("hippos")).await;
     res.expect("failed to use echo service").expect("no result from echo")
+}
+
+/// Create a `DirectoryEntry` and `Channel` pair. The created `DirectoryEntry`
+/// provides the service `S`, sending all requests to the returned channel.
+pub fn create_service_directory_entry<S>() -> (
+    impl fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry + 'static,
+    futures::channel::mpsc::Receiver<fidl::endpoints::Request<S>>,
+)
+where
+    S: fidl::endpoints::ServiceMarker,
+    fidl::endpoints::Request<S>: Send,
+{
+    use futures::sink::SinkExt;
+    let (sender, receiver) = futures::channel::mpsc::channel(0);
+    let entry = directory_broker::DirectoryBroker::new(Box::new(
+        move |_flags: u32,
+              _mode: u32,
+              _relative_path: String,
+              server_end: ServerEnd<fidl_fuchsia_io::NodeMarker>| {
+            let mut sender = sender.clone();
+            fasync::spawn(async move {
+                // Convert the stream into a channel of the correct service.
+                let server_end: ServerEnd<S> = ServerEnd::new(server_end.into_channel());
+                let mut stream: S::RequestStream = server_end.into_stream().unwrap();
+
+                // Keep handling requests until the stream closes or the handler returns an error.
+                while let Ok(Some(request)) = stream.try_next().await {
+                    sender.send(request).await.unwrap();
+                }
+            });
+        },
+    ));
+    (entry, receiver)
 }
