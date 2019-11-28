@@ -66,11 +66,7 @@ base_package_labels += [
   "//src/developer/feedback/feedback_agent",
   "//src/diagnostics/archivist",
   "//src/identity/bin:core",
-
-  # TODO(dalesat): Part of soft transition...remove
   "//src/media/audio/bundles:audio_config",
-
-  "//src/media/audio/bundles:config",
   "//src/recovery/factory_reset",
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_deprecated_shell_allowlist",

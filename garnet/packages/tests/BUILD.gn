@@ -333,6 +333,7 @@ group("all") {
     ":linux_runner",
     ":log_listener",
     ":magma",
+    ":media",
     ":memory_metrics",
     ":netemul",
     ":netfilter",
@@ -384,6 +385,7 @@ group("all") {
     ":url",
     ":uuid",
     ":vfs_cpp",
+    ":virtual_audio",
     ":vulkan",
     ":wayland",
     ":webpki_roots_fuchsia",
@@ -704,6 +706,18 @@ group("log_listener") {
   public_deps = [
     "//garnet/bin/log_listener:log_listener_tests",
     "//garnet/packages/prod:log_listener",
+  ]
+}
+
+group("media") {
+  testonly = true
+  public_deps = [
+    ":virtual_audio",
+    "//sdk/lib/media/cpp:media_lib_timeline_tests",
+    "//src/media:tests",
+    "//src/media/codec/codecs:tests",
+    "//src/media/lib/codec_impl:tests",
+    "//src/media/playback/mediaplayer:tests",
   ]
 }
 
@@ -1094,6 +1108,14 @@ group("wayland") {
   testonly = true
   public_deps = [
     "//garnet/bin/wayland:wayland_tests",
+  ]
+}
+
+group("virtual_audio") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/config:virtual_audio",
+    "//src/media/audio/virtual_audio_service",
   ]
 }
 

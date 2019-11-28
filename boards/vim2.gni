@@ -6,7 +6,7 @@ import("//boards/arm64.gni")
 
 board_name = "vim2"
 
-board_package_labels += [ "//src/media/audio/bundles:vim2_media_config" ]
+board_package_labels += [ "//garnet/packages/config:vim2_media_config" ]
 
 # partitions for fx flash to flash
 zircon_a_partition = "boot"

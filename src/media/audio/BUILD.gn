@@ -10,9 +10,7 @@ group("audio") {
     ":tests",
     "audio",
     "audio_core",
-    "config",
     "drivers",
-    "examples",
     "lib",
     "tools",
     "vim2_media_config",
@@ -26,6 +24,7 @@ fuzzers_package("audio_fuzzers") {
 
 group("tests") {
   testonly = true
+
   deps = [
     ":audio_fuzzers",
     "audio:tests",
@@ -33,5 +32,12 @@ group("tests") {
     "drivers:tests",
     "lib:tests",
     "lib/audio_test_devmgr",
+  ]
+}
+
+group("examples") {
+  testonly = true
+  deps = [
+    "//src/media/audio/examples",
   ]
 }

@@ -8,7 +8,6 @@ board_package_labels = [
   # Include all drivers for now.
   "//garnet/packages/prod:drivers",
   "//src/connectivity/management/integration_tests:verify_cmdline_params_zedboot",
-  "//src/media/audio/bundles:virtual_audio_driver",
 ]
 
 # Fuchsia does not have a deterministic ordering for bringing up PCI devices, so the

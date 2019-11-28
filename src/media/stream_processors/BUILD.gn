@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("stream_processors") {
-  testonly = true
   deps = [
-    ":tests",
     "fuchsia-stream-processors",
   ]
 }

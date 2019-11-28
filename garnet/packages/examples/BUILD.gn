@@ -90,6 +90,8 @@ group("all") {
     "//garnet/packages/examples:http",
     "//garnet/packages/examples:inspection",
     "//garnet/packages/examples:intl",
+    "//garnet/packages/examples:media",
+    "//garnet/packages/examples:mediaplayer",
     "//garnet/packages/examples:netstack",
     "//garnet/packages/examples:overnet",
     "//garnet/packages/examples:rust",
@@ -163,6 +165,26 @@ group("overnet") {
   public_deps = [
     "//src/connectivity/overnet/examples/echo:overnet-echo",
     "//src/connectivity/overnet/examples/interface_passing:overnet-interface-passing",
+  ]
+}
+
+group("mediaplayer") {
+  testonly = true
+  public_deps = [
+    "//src/media/playback/examples",
+  ]
+}
+
+group("media") {
+  testonly = true
+  public_deps = [
+    "//garnet/examples/media:use_h264_decoder_secure_input_output_test",
+    "//garnet/examples/media:use_h264_decoder_secure_output_test",
+    "//garnet/examples/media:use_h264_decoder_test",
+    "//garnet/examples/media:use_media_decoder",
+    "//garnet/examples/media:use_vp9_decoder_secure_output_test",
+    "//garnet/examples/media:use_vp9_decoder_test",
+    "//src/media:examples",
   ]
 }
 
