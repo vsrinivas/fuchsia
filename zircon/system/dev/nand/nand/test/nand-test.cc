@@ -7,11 +7,14 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <atomic>
 #include <memory>
 #include <utility>
 
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -65,6 +68,7 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
     static_cast<uint8_t*>(out_oob_buffer)[0] = 'o';
     *out_ecc_correct = ecc_bits_;
 
+    fbl::AutoLock al(&lock_);
     last_op_.type = OperationType::kRead;
     last_op_.nandpage = nandpage;
 
@@ -87,6 +91,7 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
       result_ = ZX_ERR_IO;
     }
 
+    fbl::AutoLock al(&lock_);
     last_op_.type = OperationType::kWrite;
     last_op_.nandpage = nandpage;
 
@@ -94,12 +99,16 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
   }
 
   zx_status_t RawNandEraseBlock(uint32_t nandpage) {
+    fbl::AutoLock al(&lock_);
     last_op_.type = OperationType::kErase;
     last_op_.nandpage = nandpage;
     return result_;
   }
 
-  const LastOperation& last_op() { return last_op_; }
+  LastOperation last_op() {
+    fbl::AutoLock al(&lock_);
+    return last_op_;
+  }
 
  private:
   raw_nand_protocol_t proto_;
@@ -107,7 +116,8 @@ class FakeRawNand : public ddk::RawNandProtocol<FakeRawNand> {
   zx_status_t result_ = ZX_OK;
   uint32_t ecc_bits_ = 0;
 
-  LastOperation last_op_ = {};
+  fbl::Mutex lock_;
+  LastOperation last_op_ TA_GUARDED(lock_) = {};
 };
 
 class NandTest : public zxtest::Test {
