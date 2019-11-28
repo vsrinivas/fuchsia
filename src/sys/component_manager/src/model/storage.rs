@@ -247,7 +247,7 @@ mod tests {
     use super::*;
     use {
         crate::{
-            model::testing::routing_test_helpers::RoutingTest,
+            model::testing::routing_test_helpers::{RoutingTest, RoutingTestBuilder},
             model::testing::test_helpers::{self, default_component_decl},
         },
         cm_rust::*,
@@ -356,14 +356,27 @@ mod tests {
         assert_eq!(test_helpers::list_directory(&dir).await, Vec::<String>::new());
         test_helpers::write_file(&dir, "file", "hippos").await;
         assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
+    }
 
-        // Error -- tried to open nonexistent storage.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn open_isolated_storage_failure_test() {
+        let components = vec![("a", default_component_decl())];
+
+        // Create a universe with a single component, whose outgoing directory service
+        // simply closes the channel of incoming reuqests.
+        let test = RoutingTestBuilder::new("a", components)
+            .set_component_outgoing_host_fn("a", Box::new(|_| {}))
+            .build()
+            .await;
+
+        // Try to open the storage. We expect an error.
         let root_moniker = vec![].into();
         let root_realm = test.model.look_up_realm(&root_moniker).await.expect("lookup failed");
+        let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
         let err = open_isolated_storage(
             &test.model,
             root_realm,
-            &dir_source_path,
+            &CapabilityPath::try_from("/data").unwrap(),
             fsys::StorageType::Data,
             &relative_moniker,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
