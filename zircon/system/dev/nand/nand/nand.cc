@@ -197,9 +197,13 @@ zx_status_t NandDevice::WorkerThread() {
     if (shutdown_) {
       break;
     }
-    auto txn = txn_queue_.pop();
+    nand::BorrowedOperationQueue<> queue(std::move(txn_queue_));
     al.release();
-    DoIo(*std::move(txn));
+    auto txn = queue.pop();
+    while(txn != std::nullopt) {
+      DoIo(*std::move(txn));
+      txn = queue.pop();
+    }
   }
 
   zxlogf(TRACE, "nand: worker thread terminated\n");
