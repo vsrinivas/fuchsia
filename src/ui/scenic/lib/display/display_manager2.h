@@ -26,6 +26,7 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
       std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller,
       std::unique_ptr<DisplayControllerListener> controller_listener);
 
+  // |fuchsia::ui::display::DisplayManager|
   void AddDisplayListener(fidl::InterfaceHandle<fuchsia::ui::display::DisplayListener>
                               display_listener_interface_handle) override;
 
@@ -38,7 +39,7 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
   DisplayManager2& operator=(DisplayManager2&&) = delete;
 
  private:
-  struct DisplayInfoHolder {
+  struct DisplayInfoPrivate {
     // |id| assigned by the DisplayController.
     uint64_t id = 0;
 
@@ -49,54 +50,42 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
     fuchsia::ui::display::Info info;
   };
 
-  class DisplayControllerHolder {
-   public:
-    DisplayControllerHolder(
-        std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller,
-        std::unique_ptr<DisplayControllerListener> listener,
-        std::vector<DisplayInfoHolder> displays, bool has_ownership);
-    ~DisplayControllerHolder();
+  struct DisplayControllerPrivate {
+    std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller;
+    std::unique_ptr<DisplayControllerListener> listener;
+    std::vector<DisplayInfoPrivate> displays;
 
-    const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& controller() const {
-      return controller_;
-    }
-    DisplayControllerListener* listener() const { return listener_.get(); }
-    const std::vector<DisplayInfoHolder>& displays() const { return displays_; }
-
-    void set_has_ownership(bool has_ownership) { has_ownership_ = has_ownership; }
-    bool has_ownership() const { return has_ownership_; }
-
-    void AddDisplay(DisplayInfoHolder display);
-    bool HasDisplayWithId(uint64_t display_id);
-    std::optional<DisplayInfoHolder> RemoveDisplayWithId(uint64_t display_id);
-
-   private:
-    std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller_;
-    std::unique_ptr<DisplayControllerListener> listener_;
-    std::vector<DisplayInfoHolder> displays_;
-
-    // Stores the latest value of the ClientOwnershipChange event from the
+    // The latest value of the ClientOwnershipChange event from the
     // display controller.
-    bool has_ownership_ = false;
+    bool has_ownership = false;
   };
+  using DisplayControllerPrivateUniquePtr =
+      std::unique_ptr<DisplayControllerPrivate, std::function<void(DisplayControllerPrivate*)>>;
 
-  void RemoveOnInvalid(DisplayControllerHolder* dc);
-  void OnDisplaysChanged(DisplayControllerHolder* dc,
+  void RemoveOnInvalid(DisplayControllerPrivate* dc);
+  void OnDisplaysChanged(DisplayControllerPrivate* dc,
                          std::vector<fuchsia::hardware::display::Info> displays_added,
                          std::vector<uint64_t> displays_removed);
-  void OnDisplayOwnershipChanged(DisplayControllerHolder* dc, bool has_ownership);
+  void OnDisplayOwnershipChanged(DisplayControllerPrivate* dc, bool has_ownership);
 
-  static DisplayInfoHolder NewDisplayInfoHolder(
+  static DisplayInfoPrivate NewDisplayInfoPrivate(
       fuchsia::hardware::display::Info hardware_display_info,
       std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller);
   static void InvokeDisplayAddedForListener(
       const fidl::InterfacePtr<fuchsia::ui::display::DisplayListener>& listener,
-      const DisplayInfoHolder& display_info_holder);
+      const DisplayInfoPrivate& display_info_private);
   static void InvokeDisplayOwnershipChangedForListener(
       const fidl::InterfacePtr<fuchsia::ui::display::DisplayListener>& listener,
-      DisplayControllerHolder* dc, bool has_ownership);
+      DisplayControllerPrivate* dc, bool has_ownership);
 
-  std::vector<std::unique_ptr<DisplayControllerHolder>> display_controllers_;
+  // Helper functions for lists of DisplayInfoPrivate.
+  static bool HasDisplayWithId(const std::vector<DisplayManager2::DisplayInfoPrivate>& displays,
+                               uint64_t display_id);
+
+  static std::optional<DisplayManager2::DisplayInfoPrivate> RemoveDisplayWithId(
+      std::vector<DisplayInfoPrivate>* displays, uint64_t display_id);
+
+  std::vector<DisplayControllerPrivateUniquePtr> display_controllers_private_;
   fidl::InterfacePtrSet<fuchsia::ui::display::DisplayListener> display_listeners_;
   std::string last_error_;
 };

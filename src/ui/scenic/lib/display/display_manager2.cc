@@ -36,59 +36,26 @@ static fuchsia::ui::display::DisplayRef DuplicateDisplayRef(
   return display_ref;
 }
 
-DisplayManager2::DisplayControllerHolder::DisplayControllerHolder(
-    std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller,
-    std::unique_ptr<DisplayControllerListener> listener, std::vector<DisplayInfoHolder> displays,
-    bool has_ownership)
-    : controller_(controller),
-      listener_(std::move(listener)),
-      displays_(std::move(displays)),
-      has_ownership_(has_ownership) {}
-
-DisplayManager2::DisplayControllerHolder::~DisplayControllerHolder() {
-  // Explicitly clear callbacks immediately before destruction, since the callbacks
-  // capture a pointer to |this|.
-  listener_->ClearCallbacks();
-}
-
-void DisplayManager2::DisplayControllerHolder::AddDisplay(DisplayInfoHolder display) {
-  displays_.push_back(std::move(display));
-}
-
-bool DisplayManager2::DisplayControllerHolder::HasDisplayWithId(uint64_t display_id) {
-  auto display_it = std::find_if(
-      displays_.begin(), displays_.end(),
-      [display_id](DisplayInfoHolder& display_info) { return display_info.id == display_id; });
-  return display_it != displays_.end();
-}
-
-std::optional<DisplayManager2::DisplayInfoHolder>
-DisplayManager2::DisplayControllerHolder::RemoveDisplayWithId(uint64_t display_id) {
-  auto display_it = std::find_if(
-      displays_.begin(), displays_.end(),
-      [display_id](DisplayInfoHolder& display_info) { return display_info.id == display_id; });
-  if (display_it != displays_.end()) {
-    auto removed_display = std::make_optional<DisplayInfoHolder>(std::move(*display_it));
-    displays_.erase(display_it);
-    return removed_display;
-  } else {
-    return std::optional<DisplayInfoHolder>();
-  }
-}
-
 DisplayManager2::DisplayManager2() {}
 
 void DisplayManager2::AddDisplayController(
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller,
     std::unique_ptr<DisplayControllerListener> controller_listener) {
-  auto display_controller_holder = std::make_unique<DisplayControllerHolder>(
-      std::move(controller), std::move(controller_listener),
-      /*displays=*/std::vector<DisplayInfoHolder>(),
-      /*has_ownership=*/false);
+  auto display_controller_private = DisplayControllerPrivateUniquePtr(
+      new DisplayControllerPrivate{.controller = std::move(controller),
+                                   .listener = std::move(controller_listener),
+                                   .displays = std::vector<DisplayInfoPrivate>(),
+                                   .has_ownership = false},
+      [](DisplayControllerPrivate* dc) {
+        if (dc->listener) {
+          dc->listener->ClearCallbacks();
+        }
+        delete dc;
+      });
 
-  DisplayControllerHolder* dc = display_controller_holder.get();
+  DisplayControllerPrivate* dc = display_controller_private.get();
 
-  display_controllers_.push_back(std::move(display_controller_holder));
+  display_controllers_private_.push_back(std::move(display_controller_private));
 
   auto on_invalid_cb = [this, dc]() { RemoveOnInvalid(dc); };
 
@@ -102,27 +69,50 @@ void DisplayManager2::AddDisplayController(
   };
 
   // Note: These callbacks are all cleared in the destructor for |dc|.
-  dc->listener()->InitializeCallbacks(std::move(on_invalid_cb), std::move(displays_changed_cb),
-                                      std::move(display_ownership_changed_cb));
+  dc->listener->InitializeCallbacks(std::move(on_invalid_cb), std::move(displays_changed_cb),
+                                    std::move(display_ownership_changed_cb));
 }
 
 void DisplayManager2::InvokeDisplayAddedForListener(
     const fidl::InterfacePtr<fuchsia::ui::display::DisplayListener>& listener,
-    const DisplayInfoHolder& display_info_holder) {
-  auto display_info_clone = fidl::Clone(display_info_holder.info);
+    const DisplayInfoPrivate& display_info_private) {
+  auto display_info_clone = fidl::Clone(display_info_private.info);
   display_info_clone.set_display_ref(DuplicateDisplayRef(display_info_clone.display_ref()));
   listener->OnDisplayAdded(std::move(display_info_clone));
 }
 
+bool DisplayManager2::HasDisplayWithId(
+    const std::vector<DisplayManager2::DisplayInfoPrivate>& displays, uint64_t display_id) {
+  auto display_it = std::find_if(displays.begin(), displays.end(),
+                                 [display_id](const DisplayInfoPrivate& display_info) {
+                                   return display_info.id == display_id;
+                                 });
+  return display_it != displays.end();
+}
+
+std::optional<DisplayManager2::DisplayInfoPrivate> DisplayManager2::RemoveDisplayWithId(
+    std::vector<DisplayInfoPrivate>* displays, uint64_t display_id) {
+  auto display_it = std::find_if(
+      displays->begin(), displays->end(),
+      [display_id](DisplayInfoPrivate& display_info) { return display_info.id == display_id; });
+  if (display_it != displays->end()) {
+    auto removed_display = std::make_optional<DisplayInfoPrivate>(std::move(*display_it));
+    displays->erase(display_it);
+    return removed_display;
+  } else {
+    return std::optional<DisplayInfoPrivate>();
+  }
+}
+
 void DisplayManager2::InvokeDisplayOwnershipChangedForListener(
     const fidl::InterfacePtr<fuchsia::ui::display::DisplayListener>& listener,
-    DisplayControllerHolder* dc, bool has_ownership) {
-  if (dc->displays().empty()) {
+    DisplayControllerPrivate* dc, bool has_ownership) {
+  if (dc->displays.empty()) {
     return;
   }
   std::vector<fuchsia::ui::display::DisplayRef> display_refs;
-  for (auto& display_info_holder : dc->displays()) {
-    display_refs.push_back(DuplicateDisplayRef(display_info_holder.info.display_ref()));
+  for (auto& display_info_private : dc->displays) {
+    display_refs.push_back(DuplicateDisplayRef(display_info_private.info.display_ref()));
   }
   listener->OnDisplayOwnershipChanged(std::move(display_refs), has_ownership);
 }
@@ -133,24 +123,23 @@ void DisplayManager2::AddDisplayListener(
   fuchsia::ui::display::DisplayListenerPtr display_listener =
       display_listener_interface_handle.Bind();
 
-  for (auto& display_controller : display_controllers_) {
+  for (auto& display_controller : display_controllers_private_) {
     // Deliver OnDisplayAdded events for all the displays that currently exist.
-    for (auto& display : display_controller->displays()) {
+    for (auto& display : display_controller->displays) {
       InvokeDisplayAddedForListener(display_listener, display);
     }
 
     // Notify the client if we have ownership of the display controller.
-    bool has_ownership = display_controller->has_ownership();
-    if (has_ownership) {
+    if (display_controller->has_ownership) {
       InvokeDisplayOwnershipChangedForListener(display_listener, display_controller.get(),
-                                               has_ownership);
+                                               display_controller->has_ownership);
     }
   }
 
   display_listeners_.AddInterfacePtr(std::move(display_listener));
 }
 
-DisplayManager2::DisplayInfoHolder DisplayManager2::NewDisplayInfoHolder(
+DisplayManager2::DisplayInfoPrivate DisplayManager2::NewDisplayInfoPrivate(
     fuchsia::hardware::display::Info hardware_display_info,
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller) {
   fuchsia::ui::display::Info display_info;
@@ -159,49 +148,48 @@ DisplayManager2::DisplayInfoHolder DisplayManager2::NewDisplayInfoHolder(
   display_info.set_manufacturer_name(hardware_display_info.manufacturer_name);
   display_info.set_monitor_name(hardware_display_info.monitor_name);
 
-  return DisplayInfoHolder{hardware_display_info.id, std::move(controller),
-                           std::move(display_info)};
+  return DisplayInfoPrivate{hardware_display_info.id, std::move(controller),
+                            std::move(display_info)};
 }
 
 void DisplayManager2::OnDisplaysChanged(
-    DisplayControllerHolder* dc, std::vector<fuchsia::hardware::display::Info> displays_added,
+    DisplayControllerPrivate* dc, std::vector<fuchsia::hardware::display::Info> displays_added,
     std::vector<uint64_t> displays_removed) {
   for (fuchsia::hardware::display::Info& display : displays_added) {
-    if (dc->HasDisplayWithId(display.id)) {
+    if (HasDisplayWithId(dc->displays, display.id)) {
       last_error_ = "DisplayManager: Display added, but a display already exists with same id=" +
                     std::to_string(display.id);
       FXL_LOG(WARNING) << last_error_;
       continue;
     }
-    dc->AddDisplay(NewDisplayInfoHolder(display, dc->controller()));
-    const DisplayInfoHolder& display_info_holder = dc->displays().back();
+    dc->displays.push_back(NewDisplayInfoPrivate(display, dc->controller));
+    const DisplayInfoPrivate& display_info_private = dc->displays.back();
     for (auto& listener : display_listeners_.ptrs()) {
-      InvokeDisplayAddedForListener(*listener, display_info_holder);
+      InvokeDisplayAddedForListener(*listener, display_info_private);
     }
   }
 
   for (uint64_t display_id : displays_removed) {
-    std::optional<DisplayInfoHolder> display_info_opt = dc->RemoveDisplayWithId(display_id);
+    std::optional<DisplayInfoPrivate> display_info = RemoveDisplayWithId(&dc->displays, display_id);
 
-    if (!display_info_opt) {
+    if (!display_info) {
       last_error_ = "DisplayManager: Got a display removed event for invalid display=" +
                     std::to_string(display_id);
       FXL_LOG(WARNING) << last_error_;
       continue;
     }
 
-    fuchsia::ui::display::DisplayRef display_ref =
-        fidl::Clone(display_info_opt->info.display_ref());
+    fuchsia::ui::display::DisplayRef display_ref = fidl::Clone(display_info->info.display_ref());
     for (auto& listener : display_listeners_.ptrs()) {
       (*listener)->OnDisplayRemoved(DuplicateDisplayRef(display_ref));
     }
   }
 }
 
-void DisplayManager2::OnDisplayOwnershipChanged(DisplayControllerHolder* dc, bool has_ownership) {
-  dc->set_has_ownership(has_ownership);
+void DisplayManager2::OnDisplayOwnershipChanged(DisplayControllerPrivate* dc, bool has_ownership) {
+  dc->has_ownership = has_ownership;
 
-  if (dc->displays().empty()) {
+  if (dc->displays.empty()) {
     return;
   }
 
@@ -210,14 +198,13 @@ void DisplayManager2::OnDisplayOwnershipChanged(DisplayControllerHolder* dc, boo
   }
 }
 
-void DisplayManager2::RemoveOnInvalid(DisplayControllerHolder* dc) {
-  auto it =
-      std::find_if(display_controllers_.begin(), display_controllers_.end(),
-                   [dc](std::unique_ptr<DisplayControllerHolder>& p) { return p.get() == dc; });
-  FXL_DCHECK(it != display_controllers_.end());
+void DisplayManager2::RemoveOnInvalid(DisplayControllerPrivate* dc) {
+  auto it = std::find_if(display_controllers_private_.begin(), display_controllers_private_.end(),
+                         [dc](DisplayControllerPrivateUniquePtr& p) { return p.get() == dc; });
+  FXL_DCHECK(it != display_controllers_private_.end());
   auto display_controller = std::move(*it);
-  display_controllers_.erase(it);
-  for (auto& display : display_controller->displays()) {
+  display_controllers_private_.erase(it);
+  for (auto& display : display_controller->displays) {
     for (auto& listener : display_listeners_.ptrs()) {
       (*listener)->OnDisplayRemoved(DuplicateDisplayRef(display.info.display_ref()));
     }
