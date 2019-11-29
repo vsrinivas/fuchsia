@@ -147,8 +147,6 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   inspect_deprecated::Node ledgers_inspect_node_;
   fit::deferred_callback children_manager_retainer_;
 
-  fxl::WeakPtrFactory<LedgerRepositoryImpl> weak_factory_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };
 

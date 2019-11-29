@@ -184,13 +184,40 @@ class FakeUserSync : public sync_coordinator::UserSync {
 
 class FailingDeviceIdManager : public clocks::DeviceIdManager {
  public:
-  ledger::Status OnPageDeleted(coroutine::CoroutineHandler* handler) { return Status::INTERRUPTED; }
+  ledger::Status OnPageDeleted(coroutine::CoroutineHandler* handler) override {
+    return Status::INTERRUPTED;
+  }
 
-  virtual ledger::Status GetNewDeviceId(coroutine::CoroutineHandler* handler,
-                                        clocks::DeviceId* device_id) {
+  ledger::Status GetNewDeviceId(coroutine::CoroutineHandler* handler,
+                                clocks::DeviceId* device_id) override {
     *device_id = clocks::DeviceId{"fingerprint", 1};
     return Status::OK;
   }
+};
+
+// A fake DeviceId manager that yields before returning OK, to allow testing |DeletePageStorage|
+// edge cases with precise interleaving control.
+class YieldingDeviceIdManager : public clocks::DeviceIdManager {
+ public:
+  YieldingDeviceIdManager(coroutine::CoroutineHandler** handler) : handler_(handler) {}
+
+  ledger::Status OnPageDeleted(coroutine::CoroutineHandler* handler) override {
+    *handler_ = handler;
+    if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED)
+      return Status::INTERRUPTED;
+    return Status::OK;
+  }
+
+  ledger::Status GetNewDeviceId(coroutine::CoroutineHandler* handler,
+                                clocks::DeviceId* device_id) override {
+    *device_id = clocks::DeviceId{"fingerprint", 1};
+    return Status::OK;
+  }
+
+ private:
+  // A pointer to a test-controlled variable where the coroutine handler of each OnPageDeleted call
+  // is saved before yielding. This allows the test to resume the coroutine.
+  coroutine::CoroutineHandler** handler_;
 };
 
 class LedgerRepositoryImplTest : public TestWithEnvironment {
@@ -718,6 +745,59 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionNotDoneIfDeviceIdManagerFails) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &predicate));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+}
+
+// Regression test for a use-after-free bug when a page manager is deleted in the middle of
+// DeletePageStorage (fxb/41628).
+TEST_F(LedgerRepositoryImplTest, PageDeletionReopensPageManagerIfClosed) {
+  coroutine::CoroutineHandler* handler = nullptr;
+  std::unique_ptr<storage::fake::FakeDbFactory> db_factory =
+      std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
+  ResetLedgerRepository(std::move(db_factory), [&handler](DbViewFactory* /*dbview_factory*/) {
+    return std::make_unique<YieldingDeviceIdManager>(&handler);
+  });
+  PagePtr page;
+  PageId id = RandomId(environment_);
+  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
+
+  repository_->BindRepository(ledger_repository_ptr.NewRequest());
+
+  // Opens the Ledger and creates LedgerManager.
+  std::string ledger_name = "ledger";
+  ledger::LedgerPtr first_ledger_ptr;
+  ledger_repository_ptr->GetLedger(convert::ToArray(ledger_name), first_ledger_ptr.NewRequest());
+
+  // Opens the page, and get the clock device id.
+  first_ledger_ptr->GetPage(fidl::MakeOptional(id), page.NewRequest());
+  // Make a commit so the page is not synced.
+  page->Put(convert::ToArray("foo"), convert::ToArray("bar"));
+  RunLoopUntilIdle();
+
+  page.Unbind();
+  RunLoopUntilIdle();
+
+  bool called;
+  Status status;
+  repository_->DeletePageStorage(ledger_name, page_id,
+                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  // The call to DeletePageStorage is suspended in the middle of OnPageDeleted calback.
+  EXPECT_FALSE(called);
+
+  // Unbind to ensure automatic clean-up of LedgerManager from LedgerRepository. If
+  // DeletePageStorage keeps a reference to the ledger manager, it will become invalid at this
+  // point, which should trigger a failure when running the test under ASAN.
+  first_ledger_ptr.Unbind();
+  RunLoopUntilIdle();
+
+  // Resume the call and ensure it completes successfully.
+  ASSERT_NE(handler, nullptr);
+  handler->Resume(coroutine::ContinuationStatus::OK);
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 }
 

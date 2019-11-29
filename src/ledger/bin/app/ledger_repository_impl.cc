@@ -62,8 +62,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       inspect_node_(std::move(inspect_node)),
       requests_metric_(
           inspect_node_.CreateUIntMetric(kRequestsInspectPathComponent.ToString(), 0UL)),
-      ledgers_inspect_node_(inspect_node_.CreateChild(kLedgersInspectPathComponent.ToString())),
-      weak_factory_(this) {
+      ledgers_inspect_node_(inspect_node_.CreateChild(kLedgersInspectPathComponent.ToString())) {
   bindings_.SetOnDiscardable([this] { CheckDiscardable(); });
   ledger_managers_.SetOnDiscardable([this] { CheckDiscardable(); });
   disk_cleanup_manager_->SetOnDiscardable([this] { CheckDiscardable(); });
@@ -149,22 +148,23 @@ void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
 void LedgerRepositoryImpl::DeletePageStorage(fxl::StringView ledger_name,
                                              storage::PageIdView page_id,
                                              fit::function<void(Status)> callback) {
-  LedgerManager* ledger_manager;
-  Status status = GetLedgerManager(ledger_name, &ledger_manager);
-  if (status != Status::OK) {
-    callback(status);
-    return;
-  }
-  FXL_DCHECK(ledger_manager);
   coroutine_manager_.StartCoroutine(
-      std::move(callback), [this, page_id, ledger_manager](coroutine::CoroutineHandler* handler) {
+      std::move(callback),
+      [this, page_id, ledger_name = ledger_name.ToString()](coroutine::CoroutineHandler* handler) {
         // We need to increase the DeviceId counter each time a page is created then destroyed.
         // There is no correctness issue with increasing this counter too much. Thus, we increase
         // the counter each time a page is evicted/deleted locally. We have to do it before the page
         // is actually deleted otherwise we risk being interrupted in the middle and not actually
         // increase the counter.
         RETURN_ON_ERROR(device_id_manager_->OnPageDeleted(handler));
-        Status status;
+
+        LedgerManager* ledger_manager;
+        Status status = GetLedgerManager(ledger_name, &ledger_manager);
+        if (status != Status::OK) {
+          return status;
+        }
+        FXL_DCHECK(ledger_manager);
+
         if (coroutine::SyncCall(
                 handler,
                 [ledger_manager, page_id](fit::function<void(Status)> sync_callback) {
