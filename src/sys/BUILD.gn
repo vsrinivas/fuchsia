@@ -29,5 +29,6 @@ group("tests") {
     "run_test_suite:tests",
     "test_manager:tests",
     "timekeeper:tests",
+    "tools/cs2:tests",
   ]
 }

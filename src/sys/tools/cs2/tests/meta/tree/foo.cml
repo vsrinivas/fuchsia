@@ -1,0 +1,16 @@
+// 'foo' is a component with 2 children 'bar' and 'baz'
+// See README.md for the exact tree structure
+{
+    "children": [
+        {
+            "name": "bar",
+            "url": "fuchsia-pkg://fuchsia.com/cs2_test#meta/bar.cm",
+            "startup": "eager",
+        },
+        {
+            "name": "baz",
+            "url": "fuchsia-pkg://fuchsia.com/cs2_test#meta/baz.cm",
+            "startup": "eager",
+        },
+    ]
+}

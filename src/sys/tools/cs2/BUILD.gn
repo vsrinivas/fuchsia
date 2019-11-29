@@ -1,0 +1,50 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("lib") {
+  name = "cs2"
+  edition = "2018"
+}
+
+rustc_binary("bin") {
+  name = "cs2"
+  edition = "2018"
+
+  deps = [
+    ":lib",
+    "//third_party/rust_crates:structopt",
+  ]
+}
+
+package("cs2") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "cs2"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/cs2.cmx")
+      dest = "cs2.cmx"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "tests:cs2_test",
+  ]
+}

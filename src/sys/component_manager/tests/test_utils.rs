@@ -78,8 +78,11 @@ pub struct BlackBoxTest {
     pub breakpoint_system: BreakpointSystemClient,
 
     /// The path from Hub v1 to component manager.
-    /// To get to Hub v2, append "out/hub" to this path.
     pub component_manager_path: PathBuf,
+
+    /// The path from Hub v1 to Hub v2
+    /// To get this path, append "out/hub" to the component manager path.
+    pub hub_v2_path: PathBuf,
 }
 
 impl BlackBoxTest {
@@ -110,6 +113,7 @@ impl BlackBoxTest {
         .await?;
         let component_manager_path = find_component_manager_in_hub(component_manager_url, &label);
         let breakpoint_system = connect_to_breakpoint_system(&component_manager_path).await?;
+        let hub_v2_path = component_manager_path.join("out/hub");
 
         let test = Self {
             env,
@@ -117,6 +121,7 @@ impl BlackBoxTest {
             out_file,
             breakpoint_system,
             component_manager_path,
+            hub_v2_path,
         };
 
         Ok(test)

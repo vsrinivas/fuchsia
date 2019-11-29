@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("cs2_test_bin") {
+  name = "cs2_test"
+  edition = "2018"
+  source_root = "cs2_test.rs"
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//src/sys/component_manager/tests:test_utils",
+    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
+    "//src/sys/tools/cs2:lib",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+test_package("cs2_test") {
+  deps = [
+    ":cs2_test_bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/empty.cml")
+      dest = "empty.cm"
+    },
+    {
+      path = rebase_path("meta/tree/root.cml")
+      dest = "root.cm"
+    },
+    {
+      path = rebase_path("meta/tree/foo.cml")
+      dest = "foo.cm"
+    },
+    {
+      path = rebase_path("meta/tree/bar.cml")
+      dest = "bar.cm"
+    },
+    {
+      path = rebase_path("meta/tree/baz.cml")
+      dest = "baz.cm"
+    },
+  ]
+  tests = [
+    {
+      name = "cs2_test"
+    },
+  ]
+}

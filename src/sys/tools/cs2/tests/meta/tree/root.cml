@@ -1,0 +1,16 @@
+// 'root' is the root component and has two children.
+// See README.md for the exact tree structure
+{
+    "children": [
+        {
+            "name": "foo",
+            "url": "fuchsia-pkg://fuchsia.com/cs2_test#meta/foo.cm",
+            "startup": "eager",
+        },
+        {
+            "name": "bar",
+            "url": "fuchsia-pkg://fuchsia.com/cs2_test#meta/bar.cm",
+            "startup": "eager",
+        },
+    ]
+}
