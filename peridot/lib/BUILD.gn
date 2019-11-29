@@ -10,7 +10,6 @@ group("lib") {
     ":peridot_lib_unittests",
     "base64url",
     "ledger_client",
-    "rapidjson",
     "rng",
     "scoped_tmpfs",
     "util",
