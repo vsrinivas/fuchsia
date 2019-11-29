@@ -432,6 +432,7 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   // Apis intended for use by VmObject
 
+  Lock<Mutex>* object_lock() TA_RET_CAP(object_->lock()) { return object_->lock(); }
   // unmap any pages that map the passed in vmo range. May not intersect with this range
   zx_status_t UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(object_->lock());
   // removes any writeable mappings for the passed in vmo range. May fall back to unmapping pages

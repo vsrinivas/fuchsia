@@ -127,29 +127,21 @@ class VmObjectPaged final : public VmObject {
 
   zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
                             PageRequest* page_request, vm_page_t**, paddr_t*) override
-      // Calls a Locked method of the parent, which confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+      TA_REQ(lock_);
 
   zx_status_t CreateClone(Resizability resizable, CloneType type, uint64_t offset, uint64_t size,
-                          bool copy_name, fbl::RefPtr<VmObject>* child_vmo) override
-      // This function reaches into the created child, which confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+                          bool copy_name, fbl::RefPtr<VmObject>* child_vmo) override;
   // Inserts |hidden_parent| as a hidden parent of |this|. This vmo and |hidden_parent|
   // must have the same lock.
-  void InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden_parent)
-      // This accesses both |this| and |hidden_parent|, which confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  void InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden_parent) TA_REQ(lock_);
 
   void RangeChangeUpdateFromParentLocked(uint64_t offset, uint64_t len, RangeChangeList* list)
-      // Called under the parent's lock, which confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+      TA_REQ(lock_);
 
   uint32_t GetMappingCachePolicy() const override;
   zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
 
-  void RemoveChild(VmObject* child, Guard<Mutex>&& guard) override
-      // Analysis doesn't know that the guard passed to this function is the vmo's lock.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  void RemoveChild(VmObject* child, Guard<Mutex>&& guard) override TA_REQ(lock_);
   bool OnChildAddedLocked() override TA_REQ(lock_);
 
   void DetachSource() override {
@@ -158,9 +150,7 @@ class VmObjectPaged final : public VmObject {
   }
 
   zx_status_t CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,
-                               fbl::RefPtr<VmObject>* child_vmo) override
-      // This function reaches into the created child, which confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+                               fbl::RefPtr<VmObject>* child_vmo) override;
 
   uint32_t ScanForZeroPages(bool reclaim) override;
 
@@ -174,9 +164,7 @@ class VmObjectPaged final : public VmObject {
   //
   // This function should be called at most once, even if the parent changes
   // after initialization.
-  void InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent, uint64_t offset)
-      // Accesses both parent and child, which confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  void InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent, uint64_t offset) TA_REQ(lock_);
 
   static zx_status_t CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                                   fbl::RefPtr<VmObject>* vmo);
@@ -208,13 +196,9 @@ class VmObjectPaged final : public VmObject {
   zx_status_t ZeroRangeLocked(uint64_t offset, uint64_t len, list_node_t* free_list,
                               Guard<fbl::Mutex>* guard) TA_REQ(lock_);
 
-  fbl::RefPtr<PageSource> GetRootPageSourceLocked() const
-      // Walks the parent chain to get the root page source, which confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  fbl::RefPtr<PageSource> GetRootPageSourceLocked() const TA_REQ(lock_);
 
-  bool IsCowClonable() const
-      // Walks the parent chain since the root determines clonability.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  bool IsCowClonableLocked() const TA_REQ(lock_);
 
   // internal check if any pages in a range are pinned
   bool AnyPagesPinnedLocked(uint64_t offset, size_t len) TA_REQ(lock_);
@@ -245,9 +229,7 @@ class VmObjectPaged final : public VmObject {
   //
   // It is an error to call this when |this| has a committed page at |offset|.
   vm_page_t* FindInitialPageContentLocked(uint64_t offset, uint pf_flags, VmObject** owner_out,
-                                          uint64_t* owner_offset_out)
-      // Walks the child chain, which confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+                                          uint64_t* owner_offset_out) TA_REQ(lock_);
 
   // GetPageLocked helper function that 'forks' the page at |offset| of the current vmo. If
   // this function successfully inserts a page into |offset| of the current vmo, it returns
@@ -276,9 +258,7 @@ class VmObjectPaged final : public VmObject {
   // |page| must not be the zero-page, as there is no need to do the complex page
   // fork logic to reduce memory consumption in that case.
   vm_page_t* CloneCowPageLocked(uint64_t offset, list_node_t* free_list, VmObjectPaged* page_owner,
-                                vm_page_t* page, uint64_t owner_offset)
-      // Walking through the ancestors confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+                                vm_page_t* page, uint64_t owner_offset) TA_REQ(lock_);
 
   // This is an optimized wrapper around CloneCowPageLocked for when an initial content page needs
   // to be forked to preserve the COW invariant, but you know you are immediately going to overwrite
@@ -293,9 +273,7 @@ class VmObjectPaged final : public VmObject {
 
   // Returns true if |page| (located at |offset| in this vmo) is only accessible by one
   // child, where 'accessible' is defined by ::CloneCowPageLocked.
-  bool IsUniAccessibleLocked(vm_page_t* page, uint64_t offset) const
-      // Reaching into the children confuses analysis
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  bool IsUniAccessibleLocked(vm_page_t* page, uint64_t offset) const TA_REQ(lock_);
 
   // ::CloneCowPageLocked helper function that ensures contigous vmos remain contiguous.
   //
@@ -310,8 +288,7 @@ class VmObjectPaged final : public VmObject {
   // |this| and |page_owner| that can also no longer see the desired page.
   void ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t page_owner_offset,
                                 VmObjectPaged* last_contig, uint64_t last_contig_offset)
-      // Walking through the ancestors confuses analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+      TA_REQ(lock_);
 
   // Releases this vmo's reference to any ancestor vmo's COW pages, for the range [start, end)
   // in this vmo. This is done by either setting the pages' split bits (if something else
@@ -321,33 +298,25 @@ class VmObjectPaged final : public VmObject {
   // This function recursively invokes itself for regions of the parent vmo which are
   // not accessible by the sibling vmo.
   void ReleaseCowParentPagesLocked(uint64_t start, uint64_t end, list_node_t* free_list)
-      // Walking the clone tree confuses analysis
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+      TA_REQ(lock_);
 
   // Helper function for ReleaseCowParentPagesLocked that processes pages which are visible
   // to both children as well as updates parent_(offset_)limit_.
   void ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t end, list_node_t* free_list)
-      // Calling into the parents confuses analysis
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+      TA_REQ(lock_);
 
   // Updates the parent limits of all children so that they will never be able to
   // see above |new_size| in this vmo, even if the vmo is enlarged in the future.
-  void UpdateChildParentLimitsLocked(uint64_t new_size)
-      // Calling into the children confuses analysis
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  void UpdateChildParentLimitsLocked(uint64_t new_size) TA_REQ(lock_);
 
   // When cleaning up a hidden vmo, merges the hidden vmo's content (e.g. page list, view
   // of the parent) into the remaining child.
-  void MergeContentWithChildLocked(VmObjectPaged* removed, bool removed_left)
-      // Accesses into the child confuse analysis
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  void MergeContentWithChildLocked(VmObjectPaged* removed, bool removed_left) TA_REQ(lock_);
 
   // Only valid to be called when is_slice() is true and returns the first parent of this
   // hierarchy that is not a slice. The offset of this slice within that VmObjectPaged is set as
   // the output.
-  VmObjectPaged* PagedParentOfSliceLocked(uint64_t* offset)
-      // Calling into the parent confuses analysis
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  VmObjectPaged* PagedParentOfSliceLocked(uint64_t* offset) TA_REQ(lock_);
 
   // Zeroes a partial range in a page. May use CallUnlocked on the passed in guard. The page to zero
   // is looked up using page_base_offset, and will be committed if needed. The range of
@@ -360,29 +329,40 @@ class VmObjectPaged final : public VmObject {
   // clarity, whichever child is first in the list is the 'left' child, and whichever
   // child is second is the 'right' child. Children of a paged vmo will always be paged
   // vmos themselves.
-  VmObjectPaged& left_child_locked() TA_REQ(lock_) {
+  VmObjectPaged& left_child_locked() TA_REQ(lock_) TA_ASSERT(left_child_locked().lock()) {
     DEBUG_ASSERT(is_hidden());
     DEBUG_ASSERT(children_list_len_ == 2);
     DEBUG_ASSERT(children_list_.front().is_paged());
-    return static_cast<VmObjectPaged&>(children_list_.front());
+
+    auto& ret = static_cast<VmObjectPaged&>(children_list_.front());
+    AssertHeld(ret.lock_);
+    return ret;
   }
-  VmObjectPaged& right_child_locked() TA_REQ(lock_) {
+  VmObjectPaged& right_child_locked() TA_REQ(lock_) TA_ASSERT(right_child_locked().lock()) {
     DEBUG_ASSERT(is_hidden());
     DEBUG_ASSERT(children_list_len_ == 2);
     DEBUG_ASSERT(children_list_.back().is_paged());
-    return static_cast<VmObjectPaged&>(children_list_.back());
+    auto& ret = static_cast<VmObjectPaged&>(children_list_.back());
+    AssertHeld(ret.lock_);
+    return ret;
   }
-  const VmObjectPaged& left_child_locked() const TA_REQ(lock_) {
+  const VmObjectPaged& left_child_locked() const TA_REQ(lock_)
+      TA_ASSERT(left_child_locked().lock()) {
     DEBUG_ASSERT(is_hidden());
     DEBUG_ASSERT(children_list_len_ == 2);
     DEBUG_ASSERT(children_list_.front().is_paged());
-    return static_cast<const VmObjectPaged&>(children_list_.front());
+    const auto& ret = static_cast<const VmObjectPaged&>(children_list_.front());
+    AssertHeld(ret.lock_);
+    return ret;
   }
-  const VmObjectPaged& right_child_locked() const TA_REQ(lock_) {
+  const VmObjectPaged& right_child_locked() const TA_REQ(lock_)
+      TA_ASSERT(right_child_locked().lock()) {
     DEBUG_ASSERT(is_hidden());
     DEBUG_ASSERT(children_list_len_ == 2);
     DEBUG_ASSERT(children_list_.back().is_paged());
-    return static_cast<const VmObjectPaged&>(children_list_.back());
+    const auto& ret = static_cast<const VmObjectPaged&>(children_list_.back());
+    AssertHeld(ret.lock_);
+    return ret;
   }
 
   // members

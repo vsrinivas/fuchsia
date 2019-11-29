@@ -123,14 +123,15 @@ VmObjectPaged::VmObjectPaged(uint32_t options, uint32_t pmm_alloc_flags, uint64_
 }
 
 void VmObjectPaged::InitializeOriginalParentLocked(fbl::RefPtr<VmObject> parent, uint64_t offset) {
-  DEBUG_ASSERT(lock_.lock().IsHeld());
   DEBUG_ASSERT(parent_ == nullptr);
   DEBUG_ASSERT(original_parent_user_id_ == 0);
 
   if (parent->is_paged()) {
+    AssertHeld(VmObjectPaged::AsVmObjectPaged(parent)->lock_);
     page_list_.InitializeSkew(VmObjectPaged::AsVmObjectPaged(parent)->page_list_.GetSkew(), offset);
   }
 
+  AssertHeld(parent->lock_ref());
   original_parent_user_id_ = parent->user_id_locked();
   parent_ = ktl::move(parent);
 }
@@ -184,7 +185,7 @@ VmObjectPaged::~VmObjectPaged() {
   pmm_free(&list);
 }
 
-uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) TA_NO_THREAD_SAFETY_ANALYSIS {
+uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
   list_node_t free_list;
   list_initialize(&free_list);
   Guard<Mutex> guard{lock()};
@@ -202,6 +203,7 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) TA_NO_THREAD_SAFETY_ANALY
       return 0;
     }
     // Remove write from the mapping to ensure it's not being concurrently modified.
+    AssertHeld(*m.object_lock());
     m.RemoveWriteVmoRangeLocked(0, size());
   }
 
@@ -214,26 +216,27 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) TA_NO_THREAD_SAFETY_ANALY
     if (typed_child.is_slice()) {
       // Slices are strict subsets of their parents so we don't need to bother looking at parent
       // limits etc and can just operate on the entire range.
+      AssertHeld(typed_child.lock_);
       typed_child.RangeChangeUpdateLocked(0, typed_child.size(), RangeChangeOp::RemoveWrite);
     }
   }
 
   uint32_t count = 0;
-  page_list_.ForEveryPage(
-      [&count, &free_list, reclaim, this](auto& p, uint64_t off) TA_NO_THREAD_SAFETY_ANALYSIS {
-        // Pinned pages cannot be decommitted so do not consider them.
-        if (p.IsPage() && p.Page()->object.pin_count == 0 && IsZeroPage(p.Page())) {
-          count++;
-          if (reclaim) {
-            // Need to remove all mappings (include read) ones to this range before we remove the
-            // page.
-            RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
-            list_add_tail(&free_list, &p.ReleasePage()->queue_node);
-            p = VmPageOrMarker::Marker();
-          }
-        }
-        return ZX_ERR_NEXT;
-      });
+  page_list_.ForEveryPage([&count, &free_list, reclaim, this](auto& p, uint64_t off) {
+    // Pinned pages cannot be decommitted so do not consider them.
+    if (p.IsPage() && p.Page()->object.pin_count == 0 && IsZeroPage(p.Page())) {
+      count++;
+      if (reclaim) {
+        // Need to remove all mappings (include read) ones to this range before we remove the
+        // page.
+        AssertHeld(this->lock_);
+        RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
+        list_add_tail(&free_list, &p.ReleasePage()->queue_node);
+        p = VmPageOrMarker::Marker();
+      }
+    }
+    return ZX_ERR_NEXT;
+  });
   // Release the guard so we can free any pages.
   guard.Release();
   pmm_free(&free_list);
@@ -310,12 +313,9 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
 
   // add them to the appropriate range of the object
   VmObjectPaged* vmop = static_cast<VmObjectPaged*>(vmo.get());
+  Guard<Mutex> guard{&vmop->lock_};
   for (uint64_t off = 0; off < size; off += PAGE_SIZE) {
-    // We don't need thread-safety analysis here, since this VMO has not
-    // been shared anywhere yet.
-    VmPageOrMarker* slot = [&vmop, &off]() TA_NO_THREAD_SAFETY_ANALYSIS {
-      return vmop->page_list_.LookupOrAllocate(off);
-    }();
+    VmPageOrMarker* slot = vmop->page_list_.LookupOrAllocate(off);
     if (!slot) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -428,8 +428,10 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
 }
 
 void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden_parent) {
+  AssertHeld(hidden_parent->lock_);
   // Insert the new VmObject |hidden_parent| between between |this| and |parent_|.
   if (parent_) {
+    AssertHeld(parent_->lock_ref());
     hidden_parent->InitializeOriginalParentLocked(parent_, 0);
     parent_->ReplaceChildLocked(this, hidden_parent.get());
   }
@@ -515,6 +517,7 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
   bool notify_one_child;
   {
     Guard<fbl::Mutex> guard{&lock_};
+    AssertHeld(vmo->lock_);
 
     // If this VMO is contiguous then we allow creating an uncached slice as we will never
     // have to perform zeroing of pages. Pages will never be zeroed since contiguous VMOs have
@@ -580,50 +583,54 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
   }
 
   fbl::RefPtr<VmObjectPaged> hidden_parent;
-  switch (type) {
-    case CloneType::CopyOnWrite: {
-      // To create a copy-on-write clone, the kernel creates an artifical parent vmo
-      // called a 'hidden vmo'. The content of the original vmo is moved into the hidden
-      // vmo, and the original vmo becomes a child of the hidden vmo. Then a second child
-      // is created, which is the userspace visible clone.
-      //
-      // Hidden vmos are an implementation detail that are not exposed to userspace.
-
-      if (!IsCowClonable()) {
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-
-      // If this is non-zero, that means that there are pages which hardware can
-      // touch, so the vmo can't be safely cloned.
-      // TODO: consider immediately forking these pages.
-      if (pinned_page_count_) {
-        return ZX_ERR_BAD_STATE;
-      }
-
-      uint32_t options = kHidden;
-      if (is_contiguous()) {
-        options |= kContiguous;
-      }
-
-      // The initial size is 0. It will be initialized as part of the atomic
-      // insertion into the child tree.
-      hidden_parent = fbl::AdoptRef<VmObjectPaged>(
-          new (&ac) VmObjectPaged(options, pmm_alloc_flags_, 0, lock_ptr_, nullptr));
-      if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-      }
-      break;
+  // Optimistically create the hidden parent early as we want to do it outside the lock, but we
+  // need to hold the lock to validate invariants.
+  if (type == CloneType::CopyOnWrite) {
+    uint32_t options = kHidden;
+    if (is_contiguous()) {
+      options |= kContiguous;
     }
-    case CloneType::PrivatePagerCopy:
-      if (!GetRootPageSourceLocked()) {
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      break;
+    // The initial size is 0. It will be initialized as part of the atomic
+    // insertion into the child tree.
+    hidden_parent = fbl::AdoptRef<VmObjectPaged>(
+        new (&ac) VmObjectPaged(options, pmm_alloc_flags_, 0, lock_ptr_, nullptr));
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
+    }
   }
 
   bool notify_one_child;
   {
     Guard<fbl::Mutex> guard{&lock_};
+    AssertHeld(vmo->lock_);
+    switch (type) {
+      case CloneType::CopyOnWrite: {
+        // To create a copy-on-write clone, the kernel creates an artifical parent vmo
+        // called a 'hidden vmo'. The content of the original vmo is moved into the hidden
+        // vmo, and the original vmo becomes a child of the hidden vmo. Then a second child
+        // is created, which is the userspace visible clone.
+        //
+        // Hidden vmos are an implementation detail that are not exposed to userspace.
+
+        if (!IsCowClonableLocked()) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        // If this is non-zero, that means that there are pages which hardware can
+        // touch, so the vmo can't be safely cloned.
+        // TODO: consider immediately forking these pages.
+        if (pinned_page_count_) {
+          return ZX_ERR_BAD_STATE;
+        }
+
+        break;
+      }
+      case CloneType::PrivatePagerCopy:
+        if (!GetRootPageSourceLocked()) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+        break;
+    }
 
     // check that we're not uncached in some way
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
@@ -651,6 +658,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
     } else {
       clone_parent = this;
     }
+    AssertHeld(clone_parent->lock_);
 
     vmo->InitializeOriginalParentLocked(fbl::RefPtr(clone_parent), offset);
 
@@ -702,13 +710,13 @@ bool VmObjectPaged::OnChildAddedLocked() {
 }
 
 void VmObjectPaged::RemoveChild(VmObject* removed, Guard<fbl::Mutex>&& adopt) {
-  if (!is_hidden()) {
-    VmObject::RemoveChild(removed, adopt.take());
-    return;
-  }
-
   DEBUG_ASSERT(adopt.wraps_lock(lock_ptr_->lock.lock()));
   Guard<fbl::Mutex> guard{AdoptLock, ktl::move(adopt)};
+
+  if (!is_hidden()) {
+    VmObject::RemoveChild(removed, guard.take());
+    return;
+  }
 
   // Hidden vmos always have 0 or 2 children, but we can't be here with 0 children.
   DEBUG_ASSERT(children_list_len_ == 2);
@@ -719,6 +727,7 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<fbl::Mutex>&& adopt) {
   DropChildLocked(removed);
   DEBUG_ASSERT(children_list_.front().is_paged());
   VmObjectPaged& child = static_cast<VmObjectPaged&>(children_list_.front());
+  AssertHeld(child.lock_);
 
   // Merge this vmo's content into the remaining child.
   DEBUG_ASSERT(removed->is_paged());
@@ -739,10 +748,12 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<fbl::Mutex>&& adopt) {
     // its child whose user id doesn't match the vmo that was just closed. So walk up the
     // clone chain and attribute each hidden vmo to the vmo we didn't just walk through.
     auto cur = this;
+    AssertHeld(cur->lock_);
     uint64_t user_id_to_skip = page_attribution_user_id_;
     while (cur->parent_ != nullptr) {
       DEBUG_ASSERT(cur->parent_->is_hidden());
       auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+      AssertHeld(parent->lock_);
 
       if (parent->page_attribution_user_id_ == page_attribution_user_id_) {
         uint64_t new_user_id = parent->left_child_locked().page_attribution_user_id_;
@@ -764,6 +775,7 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<fbl::Mutex>&& adopt) {
   // remove ourselves from the clone tree.
   DropChildLocked(&child);
   if (parent_) {
+    AssertHeld(parent_->lock_ref());
     parent_->ReplaceChildLocked(this, &child);
   }
   child.parent_ = ktl::move(parent_);
@@ -771,6 +783,7 @@ void VmObjectPaged::RemoveChild(VmObject* removed, Guard<fbl::Mutex>&& adopt) {
   // We need to proxy the closure down to the original user-visible vmo. To find
   // that, we can walk down the clone tree following the user_id_.
   VmObjectPaged* descendant = &child;
+  AssertHeld(descendant->lock_);
   while (descendant && descendant->user_id_ == user_id_) {
     if (!descendant->is_hidden()) {
       descendant->OnUserChildRemoved(guard.take());
@@ -790,6 +803,8 @@ void VmObjectPaged::MergeContentWithChildLocked(VmObjectPaged* removed, bool rem
   DEBUG_ASSERT(children_list_len_ == 1);
   DEBUG_ASSERT(children_list_.front().is_paged());
   VmObjectPaged& child = static_cast<VmObjectPaged&>(children_list_.front());
+  AssertHeld(child.lock_);
+  AssertHeld(removed->lock_);
 
   list_node freed_pages;
   list_initialize(&freed_pages);
@@ -1278,7 +1293,6 @@ zx_status_t VmObjectPaged::AddPageLocked(VmPageOrMarker* p, uint64_t offset, boo
 }
 
 bool VmObjectPaged::IsUniAccessibleLocked(vm_page_t* page, uint64_t offset) const {
-  DEBUG_ASSERT(lock_.lock().IsHeld());
   DEBUG_ASSERT(page_list_.Lookup(offset)->Page() == page);
 
   if (page->object.cow_right_split || page->object.cow_left_split) {
@@ -1313,10 +1327,12 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
   // path via |stack_.dir_flag|.
   VmObjectPaged* cur = this;
   do {
+    AssertHeld(cur->lock_);
     VmObjectPaged* next = VmObjectPaged::AsVmObjectPaged(cur->parent_);
     // We can't make COW clones of physical vmos, so this can only happen if we
     // somehow don't find |page_owner| in the ancestor chain.
     DEBUG_ASSERT(next);
+    AssertHeld(next->lock_);
 
     next->stack_.dir_flag = &next->left_child_locked() == cur ? StackDir::Left : StackDir::Right;
     if (next->stack_.dir_flag == StackDir::Right) {
@@ -1342,6 +1358,7 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
   do {
     // |target_page| is always located at in |cur| at |cur_offset| at the start of the loop.
     VmObjectPaged* target_page_owner = cur;
+    AssertHeld(target_page_owner->lock_);
     uint64_t target_page_offset = cur_offset;
 
     cur = cur->stack_.dir_flag == StackDir::Left ? &cur->left_child_locked()
@@ -1410,6 +1427,7 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
         DEBUG_ASSERT(cur->mapping_list_len_ == 0);
         VmObjectPaged& other = cur->stack_.dir_flag == StackDir::Left ? cur->right_child_locked()
                                                                       : cur->left_child_locked();
+        AssertHeld(other.lock_);
         RangeChangeList list;
         other.RangeChangeUpdateFromParentLocked(cur_offset, PAGE_SIZE, &list);
         RangeChangeUpdateListLocked(&list, RangeChangeOp::Unmap);
@@ -1459,6 +1477,7 @@ zx_status_t VmObjectPaged::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t
   DEBUG_ASSERT(typed_parent);
 
   if (page_owner != parent_.get()) {
+    AssertHeld(AsVmObjectPaged(parent_)->lock_);
     page = AsVmObjectPaged(parent_)->CloneCowPageLocked(offset + parent_offset_, free_list,
                                                         page_owner, page, owner_offset);
     if (page == nullptr) {
@@ -1490,6 +1509,8 @@ zx_status_t VmObjectPaged::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t
 void VmObjectPaged::ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t page_owner_offset,
                                              VmObjectPaged* last_contig,
                                              uint64_t last_contig_offset) {
+  AssertHeld(page_owner->lock_);
+  AssertHeld(last_contig->lock_);
   // If we're here, then |last_contig| must be contiguous, and all of its
   // ancestors (including |page_owner|) must be contiguous.
   DEBUG_ASSERT(last_contig->is_contiguous());
@@ -1577,10 +1598,12 @@ vm_page_t* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_
   // a committed page or when that offset can't reach into the parent.
   vm_page_t* page = nullptr;
   VmObjectPaged* cur = this;
+  AssertHeld(cur->lock_);
   uint64_t cur_offset = offset;
   while (!page && cur_offset < cur->parent_limit_) {
     // If there's no parent, then parent_limit_ is 0 and we'll never enter the loop
     DEBUG_ASSERT(cur->parent_);
+    AssertHeld(cur->parent_->lock_ref());
 
     uint64_t parent_offset;
     bool overflowed = add_overflow(cur->parent_offset_, cur_offset, &parent_offset);
@@ -1635,7 +1658,6 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
                                          PageRequest* page_request, vm_page_t** const page_out,
                                          paddr_t* const pa_out) {
   canary_.Assert();
-  DEBUG_ASSERT(lock_.lock().IsHeld());
   DEBUG_ASSERT(!is_hidden());
 
   if (offset >= size_) {
@@ -1647,6 +1669,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
   if (is_slice()) {
     uint64_t parent_offset;
     VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
+    AssertHeld(parent->lock_);
     return parent->GetPageLocked(offset + parent_offset, pf_flags, free_list, page_request,
                                  page_out, pa_out);
   }
@@ -1940,11 +1963,8 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
   if (is_slice()) {
     uint64_t parent_offset;
     VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
-    // Use a lambda to escape thread analysis as it does not understand that we are holding the
-    // parents lock right now.
-    return [parent, &free_list, len](uint64_t offset) TA_NO_THREAD_SAFETY_ANALYSIS -> zx_status_t {
-      return parent->DecommitRangeLocked(offset, len, free_list);
-    }(offset + parent_offset);
+    AssertHeld(parent->lock_);
+    return parent->DecommitRangeLocked(offset + parent_offset, len, free_list);
   }
 
   if (parent_ || GetRootPageSourceLocked()) {
@@ -2273,11 +2293,8 @@ zx_status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
   if (is_slice()) {
     uint64_t parent_offset;
     VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
-    // Use a lambda to escape thread analysis as it does not understand that we are holding the
-    // parents lock right now.
-    return [parent, len](uint64_t offset) TA_NO_THREAD_SAFETY_ANALYSIS -> zx_status_t {
-      return parent->PinLocked(offset, len);
-    }(offset + parent_offset);
+    AssertHeld(parent->lock_);
+    return parent->PinLocked(offset + parent_offset, len);
   }
 
   const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
@@ -2322,7 +2339,6 @@ void VmObjectPaged::Unpin(uint64_t offset, uint64_t len) {
 
 void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
   canary_.Assert();
-  DEBUG_ASSERT(lock_.lock().IsHeld());
 
   // verify that the range is within the object
   ASSERT(InRange(offset, len, size_));
@@ -2334,11 +2350,8 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
   if (is_slice()) {
     uint64_t parent_offset;
     VmObjectPaged* parent = PagedParentOfSliceLocked(&parent_offset);
-    // Use a lambda to escape thread analysis as it does not understand that we are holding the
-    // parents lock right now.
-    return [parent, len](uint64_t offset) TA_NO_THREAD_SAFETY_ANALYSIS {
-      parent->UnpinLocked(offset, len);
-    }(offset + parent_offset);
+    AssertHeld(parent->lock_);
+    return parent->UnpinLocked(offset + parent_offset, len);
   }
 
   const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
@@ -2422,10 +2435,12 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
     // subsequent calls to this function. Therefore parent and all ancestors need to have
     // the partial_cow_release_ flag set to prevent fast merge issues in ::RemoveChild.
     auto cur = this;
+    AssertHeld(cur->lock_);
     uint64_t cur_start = start;
     uint64_t cur_end = end;
     while (cur->parent_ && cur_start < cur_end) {
       auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+      AssertHeld(parent->lock_);
       parent->partial_cow_release_ = true;
       cur_start = fbl::max(cur_start + cur->parent_offset_, parent->parent_start_limit_);
       cur_end = fbl::min(cur_end + cur->parent_offset_, parent->parent_limit_);
@@ -2437,6 +2452,7 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
   // Free any pages that were already split into the other child. For pages that haven't been split
   // into the other child, we need to ensure they're univisible.
   auto parent = VmObjectPaged::AsVmObjectPaged(parent_);
+  AssertHeld(parent->lock_);
   parent->page_list_.RemovePages(
       [skip_split_bits, left = this == &parent->left_child_locked()](
           const VmPageOrMarker& page_or_mark, auto offset) -> bool {
@@ -2490,6 +2506,7 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
   uint64_t cur_end = root_end;
 
   do {
+    AssertHeld(cur->lock_);
     uint64_t start = fbl::max(cur_start, cur->parent_start_limit_);
     uint64_t end = fbl::min(cur_end, cur->parent_limit_);
 
@@ -2498,8 +2515,10 @@ void VmObjectPaged::ReleaseCowParentPagesLocked(uint64_t root_start, uint64_t ro
       DEBUG_ASSERT(cur->parent_->is_hidden());
 
       auto parent = VmObjectPaged::AsVmObjectPaged(cur->parent_);
+      AssertHeld(parent->lock_);
       bool left = cur == &parent->left_child_locked();
       auto& other = left ? parent->right_child_locked() : parent->left_child_locked();
+      AssertHeld(other.lock_);
 
       // Compute the range in the parent that cur no longer will be able to see.
       uint64_t parent_range_start, parent_range_end;
@@ -2666,6 +2685,7 @@ void VmObjectPaged::UpdateChildParentLimitsLocked(uint64_t new_size) {
   for (auto& c : children_list_) {
     DEBUG_ASSERT(c.is_paged());
     VmObjectPaged& child = static_cast<VmObjectPaged&>(c);
+    AssertHeld(child.lock_);
     if (new_size < child.parent_offset_) {
       child.parent_limit_ = 0;
     } else {
@@ -2841,6 +2861,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t
         return ZX_ERR_NEXT;
       },
       [this, lookup_fn, context, start_page_offset](uint64_t gap_start, uint64_t gap_end) {
+        AssertHeld(this->lock_);
         // If some page was missing from our list, run the more expensive
         // GetPageLocked to see if our parent has it.
         for (uint64_t off = gap_start; off < gap_end; off += PAGE_SIZE) {
@@ -3073,6 +3094,7 @@ void VmObjectPaged::RangeChangeUpdateFromParentLocked(const uint64_t offset, con
 
 fbl::RefPtr<PageSource> VmObjectPaged::GetRootPageSourceLocked() const {
   auto vm_object = this;
+  AssertHeld(vm_object->lock_);
   while (vm_object->parent_) {
     vm_object = VmObjectPaged::AsVmObjectPaged(vm_object->parent_);
     if (!vm_object) {
@@ -3082,9 +3104,7 @@ fbl::RefPtr<PageSource> VmObjectPaged::GetRootPageSourceLocked() const {
   return vm_object->page_source_;
 }
 
-bool VmObjectPaged::IsCowClonable() const {
-  Guard<fbl::Mutex> guard{&lock_};
-
+bool VmObjectPaged::IsCowClonableLocked() const {
   // Copy-on-write clones of pager vmos aren't supported as we can't
   // efficiently make an immutable snapshot.
   if (page_source_) {
@@ -3106,6 +3126,7 @@ bool VmObjectPaged::IsCowClonable() const {
     if (!p || p->page_source_) {
       return false;
     }
+    AssertHeld(p->lock_);
     parent = p->parent_;
   }
   return true;
@@ -3116,6 +3137,7 @@ VmObjectPaged* VmObjectPaged::PagedParentOfSliceLocked(uint64_t* offset) {
   VmObjectPaged* cur = this;
   uint64_t off = 0;
   while (cur->is_slice()) {
+    AssertHeld(cur->lock_);
     off += cur->parent_offset_;
     DEBUG_ASSERT(cur->parent_);
     DEBUG_ASSERT(cur->parent_->is_paged());

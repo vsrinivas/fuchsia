@@ -236,8 +236,8 @@ class VmObject : public fbl::RefCounted<VmObject>,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  Lock<Mutex>* lock() TA_RET_CAP(lock_) { return &lock_; }
-  Lock<Mutex>& lock_ref() TA_RET_CAP(lock_) { return lock_; }
+  Lock<Mutex>* lock() const TA_RET_CAP(lock_) { return &lock_; }
+  Lock<Mutex>& lock_ref() const TA_RET_CAP(lock_) { return lock_; }
 
   void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
   void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
@@ -352,9 +352,7 @@ class VmObject : public fbl::RefCounted<VmObject>,
   void RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) TA_REQ(lock_);
 
   // Given an initial list of VmObject's performs RangeChangeUpdate on it until the list is empty.
-  static void RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp op)
-      // Reaches into many children, which confuses the safety analysis.
-      TA_NO_THREAD_SAFETY_ANALYSIS;
+  static void RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp op);
 
   // magic value
   fbl::Canary<fbl::magic("VMO_")> canary_;

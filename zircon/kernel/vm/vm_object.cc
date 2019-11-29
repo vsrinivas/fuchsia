@@ -92,14 +92,12 @@ uint64_t VmObject::user_id_locked() const { return user_id_; }
 
 void VmObject::AddMappingLocked(VmMapping* r) {
   canary_.Assert();
-  DEBUG_ASSERT(lock_.lock().IsHeld());
   mapping_list_.push_front(r);
   mapping_list_len_++;
 }
 
 void VmObject::RemoveMappingLocked(VmMapping* r) {
   canary_.Assert();
-  DEBUG_ASSERT(lock_.lock().IsHeld());
   mapping_list_.erase(*r);
   DEBUG_ASSERT(mapping_list_len_ > 0);
   mapping_list_len_--;
@@ -175,7 +173,6 @@ void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {
 
 bool VmObject::AddChildLocked(VmObject* o) {
   canary_.Assert();
-  DEBUG_ASSERT(lock_.lock().IsHeld());
   children_list_.push_front(o);
   children_list_len_++;
 
@@ -261,6 +258,7 @@ uint32_t VmObject::num_user_children() const {
 void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp op) {
   while (!list->is_empty()) {
     VmObject* object = list->pop_front();
+    AssertHeld(object->lock_);
 
     // offsets for vmos needn't be aligned, but vmars use aligned offsets
     const uint64_t aligned_offset = ROUNDDOWN(object->range_change_offset_, PAGE_SIZE);
@@ -270,6 +268,7 @@ void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp 
 
     // other mappings may have covered this offset into the vmo, so unmap those ranges
     for (auto& m : object->mapping_list_) {
+      AssertHeld(*m.object_lock());
       if (op == RangeChangeOp::Unmap) {
         m.UnmapVmoRangeLocked(aligned_offset, aligned_len);
       } else if (op == RangeChangeOp::RemoveWrite) {
@@ -285,6 +284,7 @@ void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp 
       // will be paged.
       DEBUG_ASSERT(c.is_paged());
       VmObjectPaged& child = static_cast<VmObjectPaged&>(c);
+      AssertHeld(child.lock_);
       child.RangeChangeUpdateFromParentLocked(object->range_change_offset_,
                                               object->range_change_len_, list);
     }
@@ -293,7 +293,6 @@ void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp 
 
 void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) {
   canary_.Assert();
-  DEBUG_ASSERT(lock_.lock().IsHeld());
 
   RangeChangeList list;
   this->range_change_offset_ = offset;
