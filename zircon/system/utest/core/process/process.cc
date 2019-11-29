@@ -201,36 +201,6 @@ TEST(ProcessTest, KillProcessViaThreadKill) {
   EXPECT_OK(zx_handle_close(thread));
 }
 
-TEST(ProcessTest, KillProcessViaVmarDestroy) {
-  zx_handle_t event;
-  ASSERT_OK(zx_event_create(0u, &event));
-
-  zx_handle_t proc;
-  zx_handle_t vmar;
-  ASSERT_OK(zx_process_create(zx_job_default(), "ttp", 3u, 0, &proc, &vmar));
-
-  zx_handle_t thread;
-  ASSERT_OK(zx_thread_create(proc, "th", 2u, 0u, &thread));
-
-  // Make the process busy-wait rather than using a vDSO call because
-  // if it maps in the vDSO then zx_vmar_destroy is prohibited.
-  EXPECT_OK(start_mini_process_etc(proc, thread, vmar, event, true, nullptr));
-
-  // Destroying the root VMAR should cause the process to terminate.
-  test_exceptions::ExceptionCatcher catcher(*zx::unowned_process(proc));
-  EXPECT_OK(zx_vmar_destroy(vmar));
-  EXPECT_OK(catcher.ExpectException());
-
-  zx_signals_t signals;
-  EXPECT_OK(zx_object_wait_one(proc, ZX_TASK_TERMINATED, ZX_TIME_INFINITE, &signals));
-  signals &= ZX_TASK_TERMINATED;
-  EXPECT_EQ(signals, ZX_TASK_TERMINATED);
-
-  EXPECT_OK(zx_handle_close(proc));
-  EXPECT_OK(zx_handle_close(vmar));
-  EXPECT_OK(zx_handle_close(thread));
-}
-
 zx_status_t dup_send_handle(zx_handle_t channel, zx_handle_t handle) {
   zx_handle_t dup;
   zx_status_t st = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &dup);
@@ -846,6 +816,25 @@ TEST(ProcessTest, ProcessWaitAsyncCancelSelf) {
   ASSERT_OK(process.kill());
   zx_signals_t pending;
   ASSERT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &pending));
+}
+
+TEST(ProcessTest, ForbidDestroyRootVmar) {
+  zx::process process;
+  zx::vmar vmar;
+
+  constexpr const char kProcessName[] = "test_process";
+  ASSERT_OK(zx::process::create(*zx::job::default_job(), kProcessName, sizeof(kProcessName), 0,
+                                &process, &vmar));
+
+  // Attempt to destroy the vmar. We accept this call either succeeding or not being supported, as
+  // long as our future get_info call doesn't cause a kernel panic.
+  zx_status_t result = vmar.destroy();
+  ASSERT_TRUE(result == ZX_OK || result == ZX_ERR_NOT_SUPPORTED);
+
+  // Query the address space.
+  zx_info_maps_t map;
+  size_t actual, avail;
+  ASSERT_OK(process.get_info(ZX_INFO_PROCESS_MAPS, &map, sizeof(map), &actual, &avail));
 }
 
 }  // namespace

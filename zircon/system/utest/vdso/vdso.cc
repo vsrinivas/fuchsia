@@ -124,8 +124,6 @@ bool vdso_map_change_test() {
 
   // Implicit unmapping by destroying a containing VMAR is forbidden.
   EXPECT_EQ(vdso_vmar.destroy(), ZX_ERR_ACCESS_DENIED, "zx_vmar_destroy to unmap vDSO");
-  EXPECT_EQ(scratch.root_vmar().destroy(), ZX_ERR_ACCESS_DENIED,
-            "zx_vmar_destroy on root to unmap vDSO");
 
   END_TEST;
 }

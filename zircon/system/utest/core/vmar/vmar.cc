@@ -56,7 +56,7 @@ bool check_pages_mapped(zx_handle_t process, uintptr_t base, uint64_t bitmap, si
   return true;
 }
 
-bool destroy_root_test() {
+bool destroy_test() {
   BEGIN_TEST;
 
   zx_handle_t process;
@@ -65,14 +65,20 @@ bool destroy_root_test() {
                               &vmar),
             ZX_OK);
 
-  EXPECT_EQ(zx_vmar_destroy(vmar), ZX_OK);
+  zx_handle_t sub_vmar;
+  uintptr_t sub_region_addr;
+  ASSERT_EQ(zx_vmar_allocate(vmar, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, 1024 * PAGE_SIZE,
+                             &sub_vmar, &sub_region_addr),
+            ZX_OK);
+  EXPECT_EQ(zx_vmar_destroy(sub_vmar), ZX_OK);
 
   zx_handle_t region;
   uintptr_t region_addr;
-  EXPECT_EQ(zx_vmar_allocate(vmar, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, 10 * PAGE_SIZE,
+  EXPECT_EQ(zx_vmar_allocate(sub_vmar, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, 10 * PAGE_SIZE,
                              &region, &region_addr),
             ZX_ERR_BAD_STATE);
 
+  EXPECT_EQ(zx_handle_close(sub_vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
 
@@ -2082,7 +2088,7 @@ bool concurrent_unmap_read_memory() {
 }  // namespace
 
 BEGIN_TEST_CASE(vmar_tests)
-RUN_TEST(destroy_root_test);
+RUN_TEST(destroy_test);
 RUN_TEST(basic_allocate_test);
 RUN_TEST(allocate_oob_test);
 RUN_TEST(allocate_unsatisfiable_test);

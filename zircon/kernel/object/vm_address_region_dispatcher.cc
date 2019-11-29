@@ -155,6 +155,11 @@ zx_status_t VmAddressRegionDispatcher::Allocate(size_t offset, size_t size, uint
 zx_status_t VmAddressRegionDispatcher::Destroy() {
   canary_.Assert();
 
+  // Disallow destroying the root vmar of an aspace as this violates the aspace invariants.
+  if (vmar()->aspace()->RootVmar().get() == vmar().get()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   return vmar_->Destroy();
 }
 
