@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//garnet/public/build/fostr/fostr_fidl.gni")
 import("//src/ledger/bin/fidl/syncable/syncable.gni")
 
 fidl("fidl") {
