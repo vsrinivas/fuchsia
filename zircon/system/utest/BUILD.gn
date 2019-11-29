@@ -80,6 +80,7 @@ if (current_cpu != "") {
       "$zx/system/dev/lib/as370:syn-audio-in-test",
       "$zx/system/dev/lib/device-protocol-pci:device-protocol-pci-test",
       "$zx/system/dev/lib/device-protocol-pdev:device-protocol-pdev-test",
+      "$zx/system/dev/lib/dma-buffer:dma-buffer-test",
       "$zx/system/dev/lib/fake-bti/test:fake-bti",
       "$zx/system/dev/lib/fake-mmio-reg:fake-mmio-reg-test",
       "$zx/system/dev/lib/mock-mmio-reg:mock-mmio-reg-test",

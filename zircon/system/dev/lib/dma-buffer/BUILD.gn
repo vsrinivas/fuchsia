@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("dma-buffer") {
+  sdk = "shared"
+  sdk_headers = [ "lib/dma-buffer/buffer.h" ]
+  shared = true
+  sources = [
+    "dma-buffer.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+}
+
+zx_test("dma-buffer-test") {
+  output_name = "dma-buffer-test"
+  sources = [
+    "dma-buffer-test.cc",
+    "dma-buffer.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
