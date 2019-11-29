@@ -4,8 +4,8 @@
 
 #include "src/ledger/bin/storage/public/types.h"
 
-#include "peridot/lib/util/ptr.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/util/ptr.h"
 
 namespace storage {
 namespace {
@@ -102,8 +102,8 @@ std::ostream& operator<<(std::ostream& os, const EntryChange& e) {
 }
 
 bool operator==(const ThreeWayChange& lhs, const ThreeWayChange& rhs) {
-  return util::EqualPtr(lhs.base, rhs.base) && util::EqualPtr(lhs.left, rhs.left) &&
-         util::EqualPtr(lhs.right, rhs.right);
+  return ledger::EqualPtr(lhs.base, rhs.base) && ledger::EqualPtr(lhs.left, rhs.left) &&
+         ledger::EqualPtr(lhs.right, rhs.right);
 }
 
 bool operator!=(const ThreeWayChange& lhs, const ThreeWayChange& rhs) { return !(lhs == rhs); }

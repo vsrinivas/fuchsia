@@ -11,12 +11,12 @@
 #include <string>
 #include <vector>
 
-#include "peridot/lib/util/ptr.h"
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/diff_utils.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/public/status.h"
+#include "src/ledger/lib/util/ptr.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fsl/socket/strings.h"
@@ -238,14 +238,14 @@ void ConflictResolverClient::MergeNonConflictingEntries(fit::function<void(Statu
           // right side: no change means no diff, 3 different versions means
           // conflict (so we skip), and left-only changes are already taken into
           // account.
-          if (util::EqualPtr(change.base, change.left)) {
+          if (EqualPtr(change.base, change.left)) {
             if (change.right) {
               journal_->Put(change.right->key, change.right->object_identifier,
                             change.right->priority);
             } else {
               journal_->Delete(change.base->key);
             }
-          } else if (util::EqualPtr(change.base, change.right) && has_merged_values_) {
+          } else if (EqualPtr(change.base, change.right) && has_merged_values_) {
             if (change.left) {
               journal_->Put(change.left->key, change.left->object_identifier,
                             change.left->priority);

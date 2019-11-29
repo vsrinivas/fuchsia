@@ -153,6 +153,7 @@ source_set("lib") {
     "//src/ledger/bin/synchronization:lock",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/socket",
+    "//src/ledger/lib/util:ptr",
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",

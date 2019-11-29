@@ -31,7 +31,6 @@ source_set("public") {
   ]
 
   public_deps = [
-    "//peridot/lib/util:ptr",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/clocks/public",
     "//src/ledger/bin/encryption/primitives",
@@ -39,6 +38,7 @@ source_set("public") {
     "//src/ledger/bin/public",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/coroutine",
+    "//src/ledger/lib/util:ptr",
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",

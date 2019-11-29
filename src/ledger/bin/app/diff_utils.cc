@@ -11,10 +11,10 @@
 #include <memory>
 #include <vector>
 
-#include "peridot/lib/util/ptr.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/storage/public/object.h"
+#include "src/ledger/lib/util/ptr.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -79,8 +79,8 @@ void GetOptionalValueFromReference(
 // Returns true if the change is automatically mergeable, ie. is not
 // conflicting.
 bool IsMergeable(const storage::ThreeWayChange& change) {
-  return util::EqualPtr(change.base, change.left) || util::EqualPtr(change.base, change.right) ||
-         util::EqualPtr(change.left, change.right);
+  return EqualPtr(change.base, change.left) || EqualPtr(change.base, change.right) ||
+         EqualPtr(change.left, change.right);
 }
 }  // namespace
 

@@ -49,12 +49,6 @@ source_set("pseudo_dir_server") {
   ]
 }
 
-source_set("ptr") {
-  sources = [
-    "ptr.h",
-  ]
-}
-
 source_set("unittests") {
   testonly = true
 

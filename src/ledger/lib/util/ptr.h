@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_UTIL_PTR_H_
-#define PERIDOT_LIB_UTIL_PTR_H_
+#ifndef SRC_LEDGER_LIB_UTIL_PTR_H_
+#define SRC_LEDGER_LIB_UTIL_PTR_H_
 
 #include <memory>
 
-namespace util {
+namespace ledger {
 
 // Returns true if the provided std::unique_ptrs are both empty, or point to
 // equal objects. Returns false otherwise.
@@ -22,6 +22,6 @@ bool EqualPtr(const std::unique_ptr<T>& lhs, const std::unique_ptr<T>& rhs) {
   return *lhs == *rhs;
 }
 
-}  // namespace util
+}  // namespace ledger
 
-#endif  // PERIDOT_LIB_UTIL_PTR_H_
+#endif  // SRC_LEDGER_LIB_UTIL_PTR_H_
