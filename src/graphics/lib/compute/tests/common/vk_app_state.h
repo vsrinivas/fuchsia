@@ -160,6 +160,8 @@ typedef struct vk_app_state_config_t
   bool enable_debug_report;  // True to enable debug report callbacks if available.
   // TODO(digit): Change this to |enable_debug| and support debug_utils if available.
 
+  bool enable_tracing;                // True to enable tracing support.
+
   bool enable_amd_statistics;         // True to enable VK_AMD_shader_info if available.
   bool enable_subgroup_size_control;  // True to enable VK_EXT_subgroup_size_control if available.
 

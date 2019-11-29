@@ -868,7 +868,7 @@ typedef struct
 } FuchsiaState;
 
 static void
-fuchsia_state_init(FuchsiaState * state)
+fuchsia_state_init(FuchsiaState * state, bool need_tracing)
 {
   zx_status_t status =
     async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &state->async_loop);
@@ -877,15 +877,22 @@ fuchsia_state_init(FuchsiaState * state)
   status = async_loop_start_thread(state->async_loop, "loop", NULL);
   ASSERT_MSG(status == ZX_OK, "async_loop_start_thread failed.\n");
 
-  async_dispatcher_t * dispatcher = async_loop_get_dispatcher(state->async_loop);
-  state->trace_provider           = trace_provider_create_with_fdio(dispatcher);
-  ASSERT_MSG(status == ZX_OK, "trace_provider_create failed.\n");
+  // NOTE: Creating the trace provider can fail randomly on the CQ, so only
+  // try to do it when needed (see https://crbug.com/fuchsia/41918).
+  if (need_tracing)
+    {
+      async_dispatcher_t * dispatcher = async_loop_get_dispatcher(state->async_loop);
+      state->trace_provider           = trace_provider_create_with_fdio(dispatcher);
+      ASSERT_MSG(state->trace_provider != NULL, "trace_provider_create failed.\n");
+    }
 }
 
 static void
 fuchsia_state_destroy(FuchsiaState * state)
 {
-  trace_provider_destroy(state->trace_provider);
+  if (state->trace_provider)
+    trace_provider_destroy(state->trace_provider);
+
   async_loop_shutdown(state->async_loop);
 }
 #endif  // VK_USE_PLATFORM_FUCHSIA
@@ -1037,7 +1044,7 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   app_state->internal         = internal;
 
 #if VK_USE_PLATFORM_FUCHSIA
-  fuchsia_state_init(&internal->fuchsia);
+  fuchsia_state_init(&internal->fuchsia, config->enable_tracing);
 #endif
 
   if (app_state->has_debug_report)
