@@ -71,17 +71,3 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
   ]
 }
-
-source_set("idle_waiter") {
-  sources = [
-    "idle_waiter.cc",
-    "idle_waiter.h",
-  ]
-
-  public_deps = [
-    "//src/lib/fxl",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-  ]
-}
