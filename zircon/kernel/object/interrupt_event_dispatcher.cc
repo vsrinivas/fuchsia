@@ -130,10 +130,10 @@ zx_status_t InterruptEventDispatcher::BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_
     MaskInterrupt();
     UnregisterInterruptHandler();
     zx_status_t status = register_int_handler(vector_, VcpuIrqHandler, this);
+    UnmaskInterrupt();
     if (status != ZX_OK) {
       return status;
     }
-    UnmaskInterrupt();
   }
   vcpus_.push_front(ktl::move(node));
   return ZX_OK;
