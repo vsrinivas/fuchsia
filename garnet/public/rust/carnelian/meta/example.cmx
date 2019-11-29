@@ -5,7 +5,8 @@
     "sandbox": {
         "dev": [
             "class/display-controller",
-            "class/input"
+            "class/input",
+            "class/input-report"
         ],
         "features": [
             "vulkan"

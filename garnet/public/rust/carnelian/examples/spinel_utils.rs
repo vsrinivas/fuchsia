@@ -75,10 +75,12 @@ pub trait RasterBuilder {
 }
 
 pub trait Styling {
+    fn seal(&mut self);
+    fn unseal(&mut self);
+    fn reset(&mut self);
     fn alloc_group(&mut self, range_lo: u32, range_hi: u32, background_color: &[f32; 4])
         -> GroupId;
     fn group_layer(&mut self, group_id: &GroupId, layer_id: u32, color: &[f32; 4]);
-    fn seal(&mut self);
 }
 
 pub trait Composition {
@@ -298,6 +300,27 @@ impl SpinelStyling {
 }
 
 impl Styling for SpinelStyling {
+    fn seal(&mut self) {
+        unsafe {
+            let status = spn_styling_seal(self.styling);
+            assert_eq!(status, SpnSuccess);
+        }
+    }
+
+    fn unseal(&mut self) {
+        unsafe {
+            let status = spn_styling_unseal(self.styling);
+            assert_eq!(status, SpnSuccess);
+        }
+    }
+
+    fn reset(&mut self) {
+        unsafe {
+            let status = spn_styling_reset(self.styling);
+            assert_eq!(status, SpnSuccess);
+        }
+    }
+
     fn alloc_group(
         &mut self,
         range_lo: u32,
@@ -359,13 +382,6 @@ impl Styling for SpinelStyling {
             spn_styling_layer_fill_rgba_encoder(&mut cmds[2], color.as_ptr());
         }
         cmds[5] = SpnCommand::SpnStylingOpcodeBlendOver;
-    }
-
-    fn seal(&mut self) {
-        unsafe {
-            let status = spn_styling_seal(self.styling);
-            assert_eq!(status, SpnSuccess);
-        }
     }
 }
 
@@ -1307,6 +1323,14 @@ impl MoldStyling {
 }
 
 impl Styling for MoldStyling {
+    fn seal(&mut self) {}
+
+    fn unseal(&mut self) {}
+
+    fn reset(&mut self) {
+        self.styling.reset();
+    }
+
     fn alloc_group(
         &mut self,
         range_lo: u32,
@@ -1368,8 +1392,6 @@ impl Styling for MoldStyling {
             cmds.write(spinel_mold::SPN_STYLING_OPCODE_BLEND_OVER);
         }
     }
-
-    fn seal(&mut self) {}
 }
 
 struct MoldComposition {
