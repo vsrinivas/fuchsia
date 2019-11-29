@@ -64,7 +64,7 @@ type Segment struct {
 	Vaddr      uint64 `json:"vaddr"`
 	Size       uint64 `json:"size"`
 	Flags      string `json:"flags"`
-	ModRelAddr uint64 `json:"modRelAddr"`
+	ModRelAddr uint64 `json:"mod_rel_addr"`
 }
 
 type addressInfo struct {
