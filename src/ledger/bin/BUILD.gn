@@ -73,7 +73,6 @@ fuzzers_package("ledger_fuzzers") {
     "//src/ledger/bin/storage/impl:leveldb_fuzzer",
     "//src/ledger/bin/storage/impl:clock_serialization_fuzzer",
     "//src/ledger/bin/storage/impl:clock_serialization_device_id_fuzzer",
-    "//src/ledger/lib/commit_pack:commit_pack_fuzzer",
     "//src/ledger/lib/encoding:encoding_buffer_fuzzer",
   ]
   generated_test_package = "ledger_fuzzer_tests"

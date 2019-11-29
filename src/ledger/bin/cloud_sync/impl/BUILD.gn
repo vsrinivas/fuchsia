@@ -40,7 +40,6 @@ source_set("impl") {
     "//src/ledger/bin/environment",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/storage/public",
-    "//src/ledger/lib/commit_pack",
     "//src/ledger/lib/coroutine",
     "//src/lib/backoff",
   ]

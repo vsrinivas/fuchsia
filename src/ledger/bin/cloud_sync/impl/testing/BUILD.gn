@@ -28,7 +28,6 @@ source_set("testing") {
     "//src/ledger/bin/storage/fake:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",
-    "//src/ledger/lib/commit_pack",
   ]
 
   deps = [

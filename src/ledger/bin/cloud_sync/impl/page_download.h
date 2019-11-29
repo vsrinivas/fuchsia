@@ -14,7 +14,6 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
-#include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/managed_container.h"
 #include "src/lib/callback/scoped_task_runner.h"
