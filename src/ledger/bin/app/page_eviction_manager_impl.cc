@@ -100,7 +100,13 @@ void PageEvictionManagerImpl::TryEvictPage(fxl::StringView ledger_name, storage:
                                            PageEvictionCondition condition,
                                            fit::function<void(Status, PageWasEvicted)> callback) {
   coroutine_manager_.StartCoroutine(
-      std::move(callback),
+      [callback = std::move(callback)](Status status, PageWasEvicted was_evicted) {
+        // TODO(fxb/42226): replace this stop-gap interception of INTERRUPTED status by a more
+        // generic solution.
+        if (status != Status::INTERRUPTED) {
+          callback(status, was_evicted);
+        }
+      },
       [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
        condition](coroutine::CoroutineHandler* handler) mutable {
         ExpiringToken token = token_manager_.CreateToken();

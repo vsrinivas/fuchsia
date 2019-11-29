@@ -204,12 +204,16 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   std::shared_ptr<fbl::unique_fd> root_fd_;
   zx::channel fd_chan_;
   std::unique_ptr<async::Wait> fd_wait_;
+  // This callback is invoked indirectly when ledger_repository_ is destructed, because the
+  // on_discardable callback of ledger_repository_ is set (in |SetRepository|) to invoke
+  // |LedgerRepositoryContainer::OnDiscardable|. Therefore, on_discardable_ must outlive
+  // ledger_repository_.
+  fit::closure on_discardable_;
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
   Status status_ = Status::OK;
   std::vector<std::pair<fidl::InterfaceRequest<ledger_internal::LedgerRepository>,
                         fit::function<void(Status)>>>
       requests_;
-  fit::closure on_discardable_;
   std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>> detached_handles_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
