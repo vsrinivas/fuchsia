@@ -12,6 +12,7 @@ source_set("spinel_headers") {
   public = [
     "include/spinel/spinel.h",
     "include/spinel/spinel_assert.h",
+    "include/spinel/spinel_opcodes.h",
     "include/spinel/spinel_result.h",
     "include/spinel/spinel_types.h",
     "include/spinel/spinel_vk.h",
@@ -20,6 +21,7 @@ source_set("spinel_headers") {
   sources = [
     "include/spinel/spinel.h",
     "include/spinel/spinel_assert.h",
+    "include/spinel/spinel_opcodes.h",
     "include/spinel/spinel_result.h",
     "include/spinel/spinel_types.h",
     "include/spinel/spinel_vk.h",

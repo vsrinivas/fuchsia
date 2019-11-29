@@ -17,6 +17,7 @@
 #include "ext/transform_stack/transform_stack.h"
 #include "hotsort/platforms/vk/hotsort_vk.h"
 #include "spinel/spinel_assert.h"
+#include "spinel/spinel_opcodes.h"
 #include "spinel/spinel_vk.h"
 
 //
@@ -81,55 +82,6 @@
 #define SPN_DEMO_LION_CUB_CHECKSUM_INTEL  0x1894B54C
 #define SPN_DEMO_LION_CUB_CHECKSUM_NVIDIA 0x16DA05CE
 // clang-format on
-
-//
-// FIXME(allanmac): Styling opcodes will be buried later
-//
-
-//
-// clang-format off
-//
-
-#define SPN_STYLING_OPCODE_NOOP                        0
-
-#define SPN_STYLING_OPCODE_COVER_NONZERO               1
-#define SPN_STYLING_OPCODE_COVER_EVENODD               2
-#define SPN_STYLING_OPCODE_COVER_ACCUMULATE            3
-#define SPN_STYLING_OPCODE_COVER_MASK                  4
-
-#define SPN_STYLING_OPCODE_COVER_WIP_ZERO              5
-#define SPN_STYLING_OPCODE_COVER_ACC_ZERO              6
-#define SPN_STYLING_OPCODE_COVER_MASK_ZERO             7
-#define SPN_STYLING_OPCODE_COVER_MASK_ONE              8
-#define SPN_STYLING_OPCODE_COVER_MASK_INVERT           9
-
-#define SPN_STYLING_OPCODE_COLOR_FILL_SOLID            10
-#define SPN_STYLING_OPCODE_COLOR_FILL_GRADIENT_LINEAR  11
-
-#define SPN_STYLING_OPCODE_COLOR_WIP_ZERO              12
-#define SPN_STYLING_OPCODE_COLOR_ACC_ZERO              13
-
-#define SPN_STYLING_OPCODE_BLEND_OVER                  14
-#define SPN_STYLING_OPCODE_BLEND_PLUS                  15
-#define SPN_STYLING_OPCODE_BLEND_MULTIPLY              16
-#define SPN_STYLING_OPCODE_BLEND_KNOCKOUT              17
-
-#define SPN_STYLING_OPCODE_COVER_WIP_MOVE_TO_MASK      18
-#define SPN_STYLING_OPCODE_COVER_ACC_MOVE_TO_MASK      19
-
-#define SPN_STYLING_OPCODE_COLOR_ACC_OVER_BACKGROUND   20
-#define SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE  21
-#define SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY      22
-
-#define SPN_STYLING_OPCODE_COLOR_ILL_ZERO              23
-#define SPN_STYLING_OPCODE_COLOR_ILL_COPY_ACC          24
-#define SPN_STYLING_OPCODE_COLOR_ACC_MULTIPLY_ILL      25
-
-#define SPN_STYLING_OPCODE_COUNT                       26
-
-//
-// clang-format on
-//
 
 #ifndef M_PI_F
 #define M_PI_F 3.14159265358979323846f
@@ -492,9 +444,9 @@ main(int argc, char const * argv[])
   if (!hotsort_vk_target_get_requirements(hs_target, &hs_tr))
     return EXIT_FAILURE;
 
-  //
-  // create VkDevice
-  //
+    //
+    // create VkDevice
+    //
 #if 0
   //
   // This feature is missing from our prebuilt Vulkan SDK. Enable as

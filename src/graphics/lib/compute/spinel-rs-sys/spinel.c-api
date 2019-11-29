@@ -1,6 +1,7 @@
 {
     "spinel/spinel.h": "de618078e57613a7e09481e8e61796eaaa273b94", 
     "spinel/spinel_assert.h": "f561cfcf729cb4aaad4f2fbbb36eb90ed89d21e1", 
+    "spinel/spinel_opcodes.h": "1b6b8612a10d39d4f9b8d2cd5d09b5df8324d629", 
     "spinel/spinel_result.h": "dfee08e10a53cb54ce3af2380dbd97f4224efb3d", 
     "spinel/spinel_types.h": "6836ecf840f85a615d76fab416f2b8b8a7792760", 
     "spinel/spinel_vk.h": "931dae69a577e64197f8259357f480e9aef9626f", 
