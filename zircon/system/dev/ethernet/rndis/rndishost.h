@@ -8,6 +8,13 @@
 #include <stdint.h>
 #include <zircon/compiler.h>
 
+#include <ddk/protocol/usb.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/ethernet.h>
+#include <fbl/mutex.h>
+#include <usb/usb-request.h>
+#include <usb/usb.h>
+
 // clang-format off
 
 // USB subclass and protocol for binding
@@ -59,96 +66,159 @@
 #define RNDIS_QUERY_BUFFER_OFFSET 20
 #define RNDIS_CONTROL_TIMEOUT ZX_SEC(5)
 
+// clang-format on
+
 typedef struct {
-    uint32_t msg_type;
-    uint32_t msg_length;
-    uint32_t request_id;
+  uint32_t msg_type;
+  uint32_t msg_length;
+  uint32_t request_id;
 } __PACKED rndis_header;
 
 typedef struct {
-    uint32_t msg_type;
-    uint32_t msg_length;
-    uint32_t request_id;
-    uint32_t status;
+  uint32_t msg_type;
+  uint32_t msg_length;
+  uint32_t request_id;
+  uint32_t status;
 } __PACKED rndis_header_complete;
 
 typedef struct {
-    uint32_t msg_type;
-    uint32_t msg_length;
-    uint32_t request_id;
-    uint32_t major_version;
-    uint32_t minor_version;
-    uint32_t max_xfer_size;
+  uint32_t msg_type;
+  uint32_t msg_length;
+  uint32_t request_id;
+  uint32_t major_version;
+  uint32_t minor_version;
+  uint32_t max_xfer_size;
 } __PACKED rndis_init;
 
 typedef struct {
-    uint32_t msg_type;
-    uint32_t msg_length;
-    uint32_t request_id;
-    uint32_t status;
-    uint32_t major_version;
-    uint32_t minor_version;
-    uint32_t device_flags;
-    uint32_t medium;
-    uint32_t max_packers_per_xfer;
-    uint32_t max_xfer_size;
-    uint32_t packet_alignment;
-    uint32_t reserved0;
-    uint32_t reserved1;
+  uint32_t msg_type;
+  uint32_t msg_length;
+  uint32_t request_id;
+  uint32_t status;
+  uint32_t major_version;
+  uint32_t minor_version;
+  uint32_t device_flags;
+  uint32_t medium;
+  uint32_t max_packers_per_xfer;
+  uint32_t max_xfer_size;
+  uint32_t packet_alignment;
+  uint32_t reserved0;
+  uint32_t reserved1;
 } __PACKED rndis_init_complete;
 
 typedef struct {
-    uint32_t msg_type;
-    uint32_t msg_length;
-    uint32_t request_id;
-    uint32_t oid;
-    uint32_t info_buffer_length;
-    uint32_t info_buffer_offset;
-    uint32_t reserved;
+  uint32_t msg_type;
+  uint32_t msg_length;
+  uint32_t request_id;
+  uint32_t oid;
+  uint32_t info_buffer_length;
+  uint32_t info_buffer_offset;
+  uint32_t reserved;
 } __PACKED rndis_query;
 
 typedef struct {
-    uint32_t msg_type;
-    uint32_t msg_length;
-    uint32_t request_id;
-    uint32_t status;
-    uint32_t info_buffer_length;
-    uint32_t info_buffer_offset;
+  uint32_t msg_type;
+  uint32_t msg_length;
+  uint32_t request_id;
+  uint32_t status;
+  uint32_t info_buffer_length;
+  uint32_t info_buffer_offset;
 } __PACKED rndis_query_complete;
 
 typedef struct {
-    uint32_t msg_type;
-    uint32_t msg_length;
-    uint32_t request_id;
-    uint32_t oid;
-    uint32_t info_buffer_length;
-    uint32_t info_buffer_offset;
-    uint32_t reserved;
+  uint32_t msg_type;
+  uint32_t msg_length;
+  uint32_t request_id;
+  uint32_t oid;
+  uint32_t info_buffer_length;
+  uint32_t info_buffer_offset;
+  uint32_t reserved;
 } __PACKED rndis_set;
 
 typedef struct {
-    uint32_t msg_type;
-    uint32_t msg_length;
-    uint32_t request_id;
-    uint32_t status;
-    // TODO: Figure out why these fields aren't send in the reply. Maybe the
-    // Pixel I'm testing with implements the spec badly?
-    //uint32_t info_buffer_length;
-    //uint32_t info_buffer_offset;
+  uint32_t msg_type;
+  uint32_t msg_length;
+  uint32_t request_id;
+  uint32_t status;
+  // TODO: Figure out why these fields aren't send in the reply. Maybe the
+  // Pixel I'm testing with implements the spec badly?
+  // uint32_t info_buffer_length;
+  // uint32_t info_buffer_offset;
 } __PACKED rndis_set_complete;
 
 typedef struct {
-    uint32_t msg_type;
-    uint32_t msg_length;
-    uint32_t data_offset;
-    uint32_t data_length;
-    uint32_t oob_data_offset;
-    uint32_t oob_data_length;
-    uint32_t num_oob_elements;
-    uint32_t per_packet_info_offset;
-    uint32_t per_packet_info_length;
-    uint32_t reserved0;
-    uint32_t reserved1;
+  uint32_t msg_type;
+  uint32_t msg_length;
+  uint32_t data_offset;
+  uint32_t data_length;
+  uint32_t oob_data_offset;
+  uint32_t oob_data_length;
+  uint32_t num_oob_elements;
+  uint32_t per_packet_info_offset;
+  uint32_t per_packet_info_length;
+  uint32_t reserved0;
+  uint32_t reserved1;
 } __PACKED rndis_packet_header;
+
+class RndisHost;
+
+using RndisHostType = ddk::Device<RndisHost, ddk::UnbindableNew>;
+
+class RndisHost : public RndisHostType,
+                  public ddk::EthernetImplProtocol<RndisHost, ddk::base_protocol> {
+ public:
+  explicit RndisHost(zx_device_t* parent, uint8_t control_intf, uint8_t bulk_in_addr,
+                     uint8_t bulk_out_addr, usb_protocol_t usb);
+
+  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkRelease();
+
+  zx_status_t InitBuffers();
+  zx_status_t AddDevice();
+
+  zx_status_t EthernetImplQuery(uint32_t options, ethernet_info_t* info);
+  void EthernetImplStop();
+  zx_status_t EthernetImplStart(const ethernet_ifc_protocol_t* ifc_);
+  void EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                           ethernet_impl_queue_tx_callback completion_cb, void* cookie);
+  zx_status_t EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+                                   size_t data_size);
+  void EthernetImplGetBti(zx::bti* out_bti);
+
+ private:
+  zx_status_t StartThread();
+
+  void WriteComplete(usb_request_t* request);
+  void ReadComplete(usb_request_t* request);
+
+  void Recv(usb_request_t* request);
+
+  zx_status_t Command(void* buf);
+
+  usb_protocol_t usb_;
+
+  uint8_t mac_addr_[ETH_MAC_SIZE];
+  uint8_t control_intf_;
+  uint32_t next_request_id_;
+  uint32_t mtu_;
+
+  uint8_t bulk_in_addr_;
+  uint8_t bulk_out_addr_;
+
+  list_node_t free_read_reqs_;
+  list_node_t free_write_reqs_;
+
+  uint64_t rx_endpoint_delay_;  // wait time between 2 recv requests
+  uint64_t tx_endpoint_delay_;  // wait time between 2 transmit requests
+
+  // Interface to the ethernet layer.
+  ethernet_ifc_protocol_t ifc_;
+
+  thrd_t thread_;
+  bool thread_started_ = false;
+  size_t parent_req_size_;
+
+  fbl::Mutex mutex_;
+};
 
 #endif  // ZIRCON_SYSTEM_DEV_ETHERNET_RNDIS_RNDISHOST_H_

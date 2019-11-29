@@ -4,7 +4,7 @@
 
 zx_driver("rndis") {
   sources = [
-    "rndishost.c",
+    "rndishost.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
@@ -13,6 +13,7 @@ zx_driver("rndis") {
     "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/usb",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
     "$zx/system/ulib/zircon",
   ]
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
