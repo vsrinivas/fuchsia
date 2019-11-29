@@ -5,6 +5,7 @@
 use crate::{
     channel::ChannelConfigs,
     inspect::{AppsNode, StateNode},
+    observer::FuchsiaObserver,
 };
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_update::{
@@ -130,22 +131,15 @@ where
         let fs_fut = fs.for_each_concurrent(MAX_CONCURRENT, |stream| {
             Self::handle_client(server.clone(), stream).unwrap_or_else(|e| error!("{:?}", e))
         });
-        Self::setup_state_callback(server.clone());
+        Self::setup_observer(server.clone());
         fs_fut.await;
     }
 
-    /// Setup the state callback from state machine.
-    fn setup_state_callback(server: Rc<RefCell<Self>>) {
+    /// Setup the observer from state machine.
+    fn setup_observer(server: Rc<RefCell<Self>>) {
         let state_machine_ref = server.borrow().state_machine_ref.clone();
         let mut state_machine = state_machine_ref.borrow_mut();
-        state_machine.set_state_callback(move |state| {
-            let server = server.clone();
-            async move {
-                let mut server = server.borrow_mut();
-                server.on_state_change(state).await;
-            }
-                .boxed_local()
-        });
+        state_machine.set_observer(FuchsiaObserver::<PE, HR, IN, TM, MR, ST>::new(server));
     }
 
     /// Handle an incoming FIDL connection from a client.
@@ -310,7 +304,7 @@ where
     }
 
     /// The state change callback from StateMachine.
-    async fn on_state_change(&mut self, state: state_machine::State) {
+    pub async fn on_state_change(&mut self, state: state_machine::State) {
         self.state.state = Some(match state {
             state_machine::State::Idle => ManagerState::Idle,
             state_machine::State::CheckingForUpdates => ManagerState::CheckingForUpdates,
@@ -504,7 +498,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_check_now_with_monitor() {
         let fidl = Rc::new(RefCell::new(FidlServerBuilder::new().build().await));
-        FidlServer::setup_state_callback(fidl.clone());
+        FidlServer::setup_observer(fidl.clone());
         let proxy = spawn_fidl_server::<ManagerMarker>(fidl.clone(), IncomingServices::Manager);
         let (client_proxy, server_end) = create_proxy::<MonitorMarker>().unwrap();
         let options = Options { initiator: Some(Initiator::User) };

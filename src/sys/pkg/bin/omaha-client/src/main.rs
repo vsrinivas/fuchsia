@@ -19,6 +19,7 @@ mod inspect;
 mod install_plan;
 mod installer;
 mod metrics;
+mod observer;
 mod policy;
 mod storage;
 mod temp_installer;

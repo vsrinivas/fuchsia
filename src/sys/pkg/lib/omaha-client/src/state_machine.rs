@@ -24,8 +24,6 @@ use futures::{compat::Stream01CompatExt, lock::Mutex, prelude::*};
 use http::response::Parts;
 use log::{error, info, warn};
 use std::cell::RefCell;
-use std::fmt;
-use std::pin::Pin;
 use std::rc::Rc;
 use std::str::Utf8Error;
 use std::time::{Duration, Instant, SystemTime};
@@ -38,6 +36,9 @@ mod timer;
 pub use timer::MockTimer;
 pub use timer::StubTimer;
 pub use timer::Timer;
+
+mod observer;
+pub use observer::Observer;
 
 const LAST_CHECK_TIME: &str = "last_check_time";
 const INSTALL_PLAN_ID: &str = "install_plan_id";
@@ -77,8 +78,8 @@ where
     /// The current State of the StateMachine.
     state: State,
 
-    /// Called whenever the state is changed.
-    state_callback: Option<Box<dyn StateCallback>>,
+    /// Observe changes in the state machine.
+    observer: Option<Box<dyn Observer>>,
 
     /// The list of apps used for update check.
     app_set: AppSet,
@@ -93,22 +94,6 @@ pub enum State {
     WaitingForReboot,
     FinalizingUpdate,
     EncounteredError,
-}
-
-// We need to define our own trait because we need Debug trait but FnMut doesn't implement it.
-pub trait StateCallback:
-    (FnMut(State) -> Pin<Box<dyn Future<Output = ()> + 'static>>) + 'static
-{
-}
-impl<T: (FnMut(State) -> Pin<Box<dyn Future<Output = ()> + 'static>>) + 'static> StateCallback
-    for T
-{
-}
-
-impl fmt::Debug for dyn StateCallback {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "StateCallback")
-    }
 }
 
 /// This is the set of errors that can occur when making a request to Omaha.  This is an internal
@@ -223,7 +208,7 @@ where
             storage_ref,
             context,
             state: State::Idle,
-            state_callback: None,
+            observer: None,
             app_set,
         }
     }
@@ -751,17 +736,17 @@ where
         }
     }
 
-    /// Update the state internally and send it to the callback.
+    /// Update the state internally and send it to the observer.
     async fn set_state(&mut self, state: State) {
         self.state = state.clone();
-        if let Some(callback) = &mut self.state_callback {
-            callback(state).await;
+        if let Some(observer) = &mut self.observer {
+            observer.on_state_change(state).await;
         }
     }
 
-    /// Set the callback function that will be called every time state changes.
-    pub fn set_state_callback(&mut self, callback: impl StateCallback) {
-        self.state_callback = Some(Box::new(callback));
+    /// Set the observer that will be called every changes.
+    pub fn set_observer(&mut self, observer: impl Observer + 'static) {
+        self.observer = Some(Box::new(observer));
     }
 
     fn report_metrics(&mut self, metrics: Metrics) {
@@ -851,6 +836,7 @@ mod tests {
         protocol::Cohort,
     };
     use futures::executor::{block_on, LocalPool};
+    use futures::future::LocalBoxFuture;
     use futures::task::LocalSpawnExt;
     use log::info;
     use matches::assert_matches;
@@ -1369,24 +1355,34 @@ mod tests {
         });
     }
 
+    #[derive(Clone, Debug, Default)]
+    struct TestObserver {
+        actual_states: Option<Rc<RefCell<Vec<State>>>>,
+    }
+
+    impl Observer for TestObserver {
+        fn on_state_change(&mut self, state: State) -> LocalBoxFuture<'_, ()> {
+            // For `test_report_successful_update_duration()`.
+            if state == State::FinalizingUpdate {
+                clock::mock::set(time::i64_to_time(222222222))
+            }
+
+            if let Some(actual_states) = &self.actual_states {
+                let mut actual_states = actual_states.borrow_mut();
+                actual_states.push(state);
+            }
+            future::ready(()).boxed_local()
+        }
+    }
+
     #[test]
-    fn test_state_callback() {
+    fn test_observe_state() {
         block_on(async {
             let config = config_generator();
             let mut state_machine = StateMachine::new_stub(&config, make_test_app_set()).await;
             let actual_states = Vec::new();
             let actual_states = Rc::new(RefCell::new(actual_states));
-            {
-                let actual_states = actual_states.clone();
-                state_machine.set_state_callback(move |state| {
-                    let actual_states = actual_states.clone();
-                    async move {
-                        let mut actual_states = actual_states.borrow_mut();
-                        actual_states.push(state);
-                    }
-                    .boxed_local()
-                });
-            }
+            state_machine.set_observer(TestObserver { actual_states: Some(actual_states.clone()) });
             state_machine.start_update_check(CheckOptions::default()).await;
             drop(state_machine);
             let actual_states = actual_states.borrow();
@@ -1728,14 +1724,7 @@ mod tests {
                 storage.set_int(UPDATE_FIRST_SEEN_TIME, 23456789).await.unwrap();
                 storage.commit().await.unwrap();
             }
-            state_machine.set_state_callback(|state| {
-                async move {
-                    if state == State::FinalizingUpdate {
-                        clock::mock::set(time::i64_to_time(222222222))
-                    }
-                }
-                .boxed_local()
-            });
+            state_machine.set_observer(TestObserver::default());
             state_machine.start_update_check(CheckOptions::default()).await;
 
             assert!(state_machine
