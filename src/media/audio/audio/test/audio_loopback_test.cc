@@ -351,7 +351,8 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
     audio_renderer_[renderer_num]->SendPacketNoReply(packet[renderer_num]);
   }
 
-  sleep_duration += ZX_MSEC(5);  // Give a little wiggle room.
+  // TODO(fxb/42050): Revert to 5ms.
+  sleep_duration += ZX_MSEC(15);  // Give a little wiggle room.
 
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
