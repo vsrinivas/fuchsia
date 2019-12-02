@@ -63,7 +63,6 @@ group("default") {
     "//garnet/packages:all",
     "//garnet/packages/config:amber",
     "//garnet/packages/config:factory_reset",
-    "//garnet/packages/config:mediasession",
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/config:thermd",

@@ -25,6 +25,9 @@ group("core") {
     "//peridot/packages:all",
     "//src:host_tests",
     "//src:tests",
+    "//src/media/audio/bundles:virtual_audio_driver",
+    "//src/media/bundles:services",
+    "//src/media/bundles:tools",
     "//tools:tests",
   ]
 }

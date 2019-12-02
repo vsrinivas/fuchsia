@@ -8,15 +8,20 @@
 group("interactive_minimal") {
   testonly = true
   public_deps = [
-    "//garnet/packages/config:mediasession",
     "//garnet/packages/config:shortcut",
     "//garnet/packages/prod:display_manager",
-    "//garnet/packages/prod:media_codec_factory",
-    "//garnet/packages/prod:mediaplayer",
-    "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/products:graphical",
     "//src/fonts",
+
+    # TODO(dalesat): Part of soft transition...remove.
+    "//src/media/playback/bundles:services",
+
+    # TODO(dalesat): Part of soft transition...remove.
+    "//src/media/sessions/bundles:services",
+
+    # TODO(dalesat): Part of soft transition...remove.
+    "//src/media/codec/bundles:codec_factory",
     "//src/ui/a11y",
   ]
 }

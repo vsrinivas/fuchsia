@@ -13,6 +13,7 @@ group("tools") {
     "//src/developer/exception_broker/limbo_client",
     "//src/developer/feedback/bugreport",
     "//src/developer/kcounter_inspect",
+    "//src/media/bundles:tools",
     "//src/sys/component_manager_for_test",
     "//src/sys/run_test_suite",
     "//tools",
@@ -46,6 +47,9 @@ group("kitchen_sink") {
     "//garnet/packages:kitchen_sink",
     "//peridot/packages:all",
     "//src/connectivity/telephony",
+    "//src/media/audio/bundles:virtual_audio_driver",
+    "//src/media/bundles:services",
+    "//src/media/bundles:tools",
     "//topaz",
   ]
 }

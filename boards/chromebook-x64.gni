@@ -13,4 +13,5 @@ use_vboot = true
 board_package_labels = [
   # Include all drivers for now.
   "//garnet/packages/prod:drivers",
+  "//src/media/audio/bundles:virtual_audio_driver",
 ]

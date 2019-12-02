@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("services") {
+  testonly = true
+  deps = [
+    "//src/media/sessions:mediasession",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "//src/media/sessions:tests",
+  ]
+}
+
+group("tools") {
+  testonly = true
+  deps = [
+    "//src/media/sessions/mediasession_cli_tool",
+  ]
+}
+
+group("examples") {
+  testonly = true
+  deps = [
+    "//src/media/sessions/examples",
+  ]
+}
+
+group("config") {
+  testonly = true
+  deps = [
+    "//src/media/sessions:mediasession_config",
+  ]
+}
