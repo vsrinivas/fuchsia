@@ -1,7 +1,7 @@
 {
   "test_suite_name": "fuchsia.ledger.get_entry",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/get_entry.cmx",
-  "args": ["--entry-count=100", "--key-size=100", "--value-size=1000"],
+  "args": ["--entry_count=100", "--key_size=100", "--value_size=1000"],
   "categories": ["benchmark", "ledger"],
   "duration": 60,
   "measure": [

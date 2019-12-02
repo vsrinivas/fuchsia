@@ -12,7 +12,6 @@
 #include "src/ledger/lib/socket/socket_writer.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fxl/command_line.h"
 
 namespace ledger {
 

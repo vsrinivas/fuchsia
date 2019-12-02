@@ -1,7 +1,7 @@
 {
   "test_suite_name": "fuchsia.ledger.stories_simulation",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/stories_simulation.cmx",
-  "args": [ "--story-count=100", "--active-story-count=1" ],
+  "args": [ "--story_count=100", "--active_story_count=1" ],
   "environment": {
     "name": "trace_record_environment"
   },

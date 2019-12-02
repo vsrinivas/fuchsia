@@ -1,7 +1,7 @@
 {
   "test_suite_name": "fuchsia.ledger.get_page",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/get_page.cmx",
-  "args": ["--requests-count=200", "--wait-for-cached-page"],
+  "args": ["--requests_count=200", "--wait_for_cached_page"],
   "categories": ["benchmark", "ledger"],
   "duration": 120,
   "measure": [

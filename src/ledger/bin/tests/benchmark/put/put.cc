@@ -27,26 +27,27 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/flags/flag.h"
+#include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+
+ABSL_FLAG(ssize_t, entry_count, -1, "number of entries to delete");
+ABSL_FLAG(ssize_t, transaction_size, -1, "number of element in the transaction");
+ABSL_FLAG(ssize_t, key_size, -1, "size of the keys of entries");
+ABSL_FLAG(ssize_t, value_size, -1, "size of the values of entries");
+ABSL_FLAG(bool, refs, false,
+          "the reference strategy: true if every value is inserted as a reference, false if every "
+          "value is inserted as a FIDL array");
+ABSL_FLAG(bool, update, false,
+          "whether operations will update existing entries (put with existing keys and new values");
+ABSL_FLAG(int, seed, 0, "(optional) the seed for key and value generation");
 
 namespace ledger {
 namespace {
-
-constexpr fxl::StringView kBinaryPath = "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx";
-constexpr fxl::StringView kEntryCountFlag = "entry-count";
-constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
-constexpr fxl::StringView kKeySizeFlag = "key-size";
-constexpr fxl::StringView kValueSizeFlag = "value-size";
-constexpr fxl::StringView kRefsFlag = "refs";
-constexpr fxl::StringView kUpdateFlag = "update";
-constexpr fxl::StringView kSeedFlag = "seed";
-
-constexpr fxl::StringView kRefsOnFlag = "on";
-constexpr fxl::StringView kRefsOffFlag = "off";
 
 // Benchmark that measures performance of the Put() operation.
 //
@@ -150,15 +151,14 @@ PutBenchmark::PutBenchmark(async::Loop* loop,
 }
 
 void PutBenchmark::Run() {
-  FXL_LOG(INFO) << "--" << kEntryCountFlag << "=" << entry_count_             //
-                << " --" << kTransactionSizeFlag << "=" << transaction_size_  //
-                << " --" << kKeySizeFlag << "=" << key_size_                  //
-                << " --" << kValueSizeFlag << "=" << value_size_              //
-                << " --" << kRefsFlag << "="
-                << (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE
-                        ? kRefsOffFlag
-                        : kRefsOnFlag)
-                << (update_ ? fxl::Concatenate({" --", kUpdateFlag}) : "");
+  FXL_LOG(INFO) << "--" << FLAGS_entry_count.Name() << "=" << entry_count_             //
+                << " --" << FLAGS_transaction_size.Name() << "=" << transaction_size_  //
+                << " --" << FLAGS_key_size.Name() << "=" << key_size_                  //
+                << " --" << FLAGS_value_size.Name() << "=" << value_size_              //
+                << " --" << FLAGS_refs.Name() << "="
+                << (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE ? "false"
+                                                                                        : "true")
+                << (update_ ? absl::StrCat(" --", FLAGS_update.Name()) : "");
   Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
                             "", "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_,
                             kDefaultGarbageCollectionPolicy);
@@ -333,76 +333,30 @@ fit::closure PutBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-void PrintUsage() {
-  std::cout << "Usage: trace record "
-            << kBinaryPath
-            // Comment to make clang format not break formatting.
-            << " --" << kEntryCountFlag << "=<int>"
-            << " --" << kTransactionSizeFlag << "=<int>"
-            << " --" << kKeySizeFlag << "=<int>"
-            << " --" << kValueSizeFlag << "=<int>"
-            << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag << ")"
-            << " [--" << kSeedFlag << "=<int>]"
-            << " [--" << kUpdateFlag << "]" << std::endl;
-}
+int Main(int argc, char** argv) {
+  absl::ParseCommandLine(argc, argv);
 
-bool GetPositiveIntValue(const fxl::CommandLine& command_line, fxl::StringView flag, int* value) {
-  std::string value_str;
-  int found_value;
-  if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||
-      !absl::SimpleAtoi(value_str, &found_value) || found_value <= 0) {
-    return false;
-  }
-  *value = found_value;
-  return true;
-}
-
-int Main(int argc, const char** argv) {
-  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
-  int entry_count;
-  std::string transaction_size_str;
-  int transaction_size;
-  int key_size;
-  int value_size;
-  bool update = command_line.HasOption(kUpdateFlag.ToString());
-  if (!GetPositiveIntValue(command_line, kEntryCountFlag, &entry_count) ||
-      !command_line.GetOptionValue(kTransactionSizeFlag.ToString(), &transaction_size_str) ||
-      !absl::SimpleAtoi(transaction_size_str, &transaction_size) || transaction_size < 0 ||
-      !GetPositiveIntValue(command_line, kKeySizeFlag, &key_size) ||
-      !GetPositiveIntValue(command_line, kValueSizeFlag, &value_size)) {
-    PrintUsage();
-    return -1;
-  }
+  ssize_t entry_count = absl::GetFlag(FLAGS_entry_count);
+  ssize_t transaction_size = absl::GetFlag(FLAGS_transaction_size);
+  ssize_t key_size = absl::GetFlag(FLAGS_key_size);
+  ssize_t value_size = absl::GetFlag(FLAGS_value_size);
+  bool update = absl::GetFlag(FLAGS_update);
+  bool refs_flag = absl::GetFlag(FLAGS_refs);
+  int seed = absl::GetFlag(FLAGS_seed);
 
-  std::string ref_strategy_str;
-  if (!command_line.GetOptionValue(kRefsFlag.ToString(), &ref_strategy_str)) {
-    PrintUsage();
-    return -1;
-  }
   PageDataGenerator::ReferenceStrategy ref_strategy;
-  if (ref_strategy_str == kRefsOnFlag) {
+  if (refs_flag) {
     ref_strategy = PageDataGenerator::ReferenceStrategy::REFERENCE;
-  } else if (ref_strategy_str == kRefsOffFlag) {
-    ref_strategy = PageDataGenerator::ReferenceStrategy::INLINE;
   } else {
-    std::cerr << "Unknown option " << ref_strategy_str << " for " << kRefsFlag.ToString()
-              << std::endl;
-    PrintUsage();
-    return -1;
+    ref_strategy = PageDataGenerator::ReferenceStrategy::INLINE;
   }
 
-  int seed;
-  std::string seed_str;
-  if (command_line.GetOptionValue(kSeedFlag.ToString(), &seed_str)) {
-    if (!absl::SimpleAtoi(seed_str, &seed)) {
-      PrintUsage();
-      return -1;
-    }
-  } else {
-    seed = 0;
+  if (entry_count <= 0 || transaction_size < 0 || key_size <= 0 || value_size <= 0) {
+    std::cerr << "Incorrect parameter values" << std::endl;
+    return 1;
   }
 
   PutBenchmark app(&loop, std::move(component_context), entry_count, transaction_size, key_size,
@@ -414,4 +368,4 @@ int Main(int argc, const char** argv) {
 }  // namespace
 }  // namespace ledger
 
-int main(int argc, const char** argv) { return ledger::Main(argc, argv); }
+int main(int argc, char** argv) { return ledger::Main(argc, argv); }

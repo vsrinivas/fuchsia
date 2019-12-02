@@ -26,33 +26,22 @@
 #include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/flags/flag.h"
+#include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
+
+ABSL_FLAG(ssize_t, page_count, -1, "number of pages to create");
+ABSL_FLAG(ssize_t, unique_key_count, -1, "number of keys to create");
+ABSL_FLAG(ssize_t, commit_count, -1, "number of commits to create");
+ABSL_FLAG(ssize_t, key_size, -1, "size of the keys of entries");
+ABSL_FLAG(ssize_t, value_size, -1, "size of the values of entries");
 
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kBinaryPath =
-    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/disk_space.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/disk_space";
-constexpr fxl::StringView kPageCountFlag = "page-count";
-constexpr fxl::StringView kUniqueKeyCountFlag = "unique-key-count";
-constexpr fxl::StringView kCommitCountFlag = "commit-count";
-constexpr fxl::StringView kKeySizeFlag = "key-size";
-constexpr fxl::StringView kValueSizeFlag = "value-size";
-
-void PrintUsage() {
-  std::cout << "Usage: trace record "
-            << kBinaryPath
-            // Comment to make clang format not break formatting.
-            << " --" << kPageCountFlag << "=<int>"
-            << " --" << kUniqueKeyCountFlag << "=<int>"
-            << " --" << kCommitCountFlag << "=<int>"
-            << " --" << kKeySizeFlag << "=<int>"
-            << " --" << kValueSizeFlag << "=<int>" << std::endl;
-}
 
 // Disk space "general usage" benchmark.
 // This benchmark is used to capture Ledger disk usage over the set of common
@@ -199,33 +188,21 @@ fit::closure DiskSpaceBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-int Main(int argc, const char** argv) {
-  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+int Main(int argc, char** argv) {
+  absl::ParseCommandLine(argc, argv);
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
-  std::string page_count_str;
-  size_t page_count;
-  std::string unique_key_count_str;
-  size_t unique_key_count;
-  std::string commit_count_str;
-  size_t commit_count;
-  std::string key_size_str;
-  size_t key_size;
-  std::string value_size_str;
-  size_t value_size;
-  if (!command_line.GetOptionValue(kPageCountFlag.ToString(), &page_count_str) ||
-      !absl::SimpleAtoi(page_count_str, &page_count) ||
-      !command_line.GetOptionValue(kUniqueKeyCountFlag.ToString(), &unique_key_count_str) ||
-      !absl::SimpleAtoi(unique_key_count_str, &unique_key_count) ||
-      !command_line.GetOptionValue(kCommitCountFlag.ToString(), &commit_count_str) ||
-      !absl::SimpleAtoi(commit_count_str, &commit_count) ||
-      !command_line.GetOptionValue(kKeySizeFlag.ToString(), &key_size_str) ||
-      !absl::SimpleAtoi(key_size_str, &key_size) || key_size == 0 ||
-      !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
-      !absl::SimpleAtoi(value_size_str, &value_size) || value_size == 0) {
-    PrintUsage();
-    return -1;
+  ssize_t page_count = absl::GetFlag(FLAGS_page_count);
+  ssize_t unique_key_count = absl::GetFlag(FLAGS_unique_key_count);
+  ssize_t commit_count = absl::GetFlag(FLAGS_commit_count);
+  ssize_t key_size = absl::GetFlag(FLAGS_key_size);
+  ssize_t value_size = absl::GetFlag(FLAGS_value_size);
+  if (page_count < 0 || unique_key_count < 0 || commit_count < 0 || key_size <= 0 ||
+      value_size <= 0) {
+    std::cerr << "Incorrect parameter values" << std::endl;
+    return 1;
   }
 
   DiskSpaceBenchmark app(&loop, std::move(component_context), page_count, unique_key_count,
@@ -237,4 +214,4 @@ int Main(int argc, const char** argv) {
 }  // namespace
 }  // namespace ledger
 
-int main(int argc, const char** argv) { return ledger::Main(argc, argv); }
+int main(int argc, char** argv) { return ledger::Main(argc, argv); }

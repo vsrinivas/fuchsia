@@ -29,21 +29,21 @@
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/flags/flag.h"
+#include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
+ABSL_FLAG(ssize_t, story_count, -1, "the number of stories to be created");
+ABSL_FLAG(ssize_t, active_story_count, -1, "The number of active stories");
+ABSL_FLAG(bool, wait_for_cached_page, false,
+          "if this flag is specified, the benchmark will waitfor a sufficient amount of time "
+          "before each page request, to allow Ledger to precache an empty new page");
+
 namespace ledger {
 namespace {
-
-constexpr fxl::StringView kBinaryPath =
-    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/stories-simulation.cmx";
-
-constexpr fxl::StringView kStoryCountFlag = "story-count";
-constexpr fxl::StringView kActiveStoryCountFlag = "active-story-count";
-constexpr fxl::StringView kWaitForCachedPageFlag = "wait-for-cached-page";
 
 constexpr fxl::StringView kMessageQueuePageId = "MessageQueuePage";
 constexpr fxl::StringView kAgentRunnerPageId = "AgentRunnerPage_";
@@ -434,42 +434,20 @@ fit::closure StoriesBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-void PrintUsage() {
-  std::cout << "Usage: trace record "
-            << kBinaryPath
-            // Comment to make clang format not break formatting.
-            << " --" << kStoryCountFlag << "=<int>"
-            << " --" << kActiveStoryCountFlag << "=<int>"
-            << " [--" << kWaitForCachedPageFlag << "]" << std::endl;
-}
+int Main(int argc, char** argv) {
+  absl::ParseCommandLine(argc, argv);
 
-bool GetPositiveIntValue(const fxl::CommandLine& command_line, fxl::StringView flag, int* value) {
-  std::string value_str;
-  int found_value;
-  if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||
-      !absl::SimpleAtoi(value_str, &found_value) || found_value <= 0) {
-    return false;
-  }
-  *value = found_value;
-  return true;
-}
-
-int Main(int argc, const char** argv) {
-  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
-  int story_count;
-  if (!GetPositiveIntValue(command_line, kStoryCountFlag, &story_count)) {
-    PrintUsage();
-    return -1;
+  ssize_t story_count = absl::GetFlag(FLAGS_story_count);
+  ssize_t active_story_count = absl::GetFlag(FLAGS_active_story_count);
+  bool wait_for_cached_page = absl::GetFlag(FLAGS_wait_for_cached_page);
+
+  if (story_count <= 0 || active_story_count < 0) {
+    std::cerr << "Incorrect parameter values" << std::endl;
+    return 1;
   }
-  int active_story_count;
-  if (!GetPositiveIntValue(command_line, kActiveStoryCountFlag, &active_story_count)) {
-    PrintUsage();
-    return -1;
-  }
-  bool wait_for_cached_page = command_line.HasOption(kWaitForCachedPageFlag);
 
   StoriesBenchmark app(&loop, std::move(component_context), story_count, active_story_count,
                        wait_for_cached_page);
@@ -480,4 +458,4 @@ int Main(int argc, const char** argv) {
 }  // namespace
 }  // namespace ledger
 
-int main(int argc, const char** argv) { return ledger::Main(argc, argv); }
+int main(int argc, char** argv) { return ledger::Main(argc, argv); }

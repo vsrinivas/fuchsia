@@ -35,12 +35,16 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 #include "src/lib/inspect_deprecated/inspect.h"
+#include "third_party/abseil-cpp/absl/flags/flag.h"
+#include "third_party/abseil-cpp/absl/flags/parse.h"
+
+ABSL_FLAG(bool, disable_reporting, false, "disable sending statistics to Cobalt");
+ABSL_FLAG(bool, disable_p2p_sync, false, "disable peer-to-peer syncing");
+ABSL_FLAG(int, verbose, 0, "level of verbosity");
+ABSL_FLAG(int, v, 0, "alias for verbose");
 
 namespace ledger {
 namespace {
-
-constexpr fxl::StringView kNoStatisticsReportingFlag = "disable_reporting";
-constexpr fxl::StringView kNoPeerToPeerSync = "disable_p2p_sync";
 
 struct AppParams {
   bool disable_statistics = false;
@@ -154,14 +158,17 @@ class App : public ledger_internal::LedgerController {
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
-int Main(int argc, const char** argv) {
+int Main(int argc, char** argv) {
+  // TODO(qsr): Remove when moving logging outside of fxl.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
 
+  absl::ParseCommandLine(argc, argv);
+
   AppParams app_params;
-  app_params.disable_statistics = command_line.HasOption(kNoStatisticsReportingFlag);
-  app_params.disable_p2p_sync = command_line.HasOption(kNoPeerToPeerSync);
-  app_params.gc_policy = GarbageCollectionPolicyFromFlags(command_line);
+  app_params.disable_statistics = absl::GetFlag(FLAGS_disable_reporting);
+  app_params.disable_p2p_sync = absl::GetFlag(FLAGS_disable_p2p_sync);
+  app_params.gc_policy = absl::GetFlag(FLAGS_gc_policy);
 
   App app(app_params);
   if (!app.Start()) {
@@ -174,4 +181,4 @@ int Main(int argc, const char** argv) {
 }  // namespace
 }  // namespace ledger
 
-int main(int argc, const char** argv) { return ledger::Main(argc, argv); }
+int main(int argc, char** argv) { return ledger::Main(argc, argv); }

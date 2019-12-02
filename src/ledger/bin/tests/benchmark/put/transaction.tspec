@@ -2,8 +2,8 @@
   "test_suite_name": "fuchsia.ledger.put_entry",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx",
   "args": [
-    "--entry-count=100", "--transaction-size=10", "--key-size=100",
-    "--value-size=1000", "--refs=off"
+    "--entry_count=100", "--transaction_size=10", "--key_size=100",
+    "--value_size=1000", "--refs=false"
   ],
   "environment": {
     "name": "trace_record_environment"

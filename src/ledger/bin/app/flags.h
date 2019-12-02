@@ -10,7 +10,9 @@
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/command_line.h"
+#include "third_party/abseil-cpp/absl/flags/flag.h"
+
+ABSL_DECLARE_FLAG(storage::GarbageCollectionPolicy, gc_policy);
 
 namespace ledger {
 
@@ -22,10 +24,6 @@ inline constexpr storage::GarbageCollectionPolicy kDefaultGarbageCollectionPolic
 // use the default garbage collection policy instead to provide realistic performance numbers.
 inline constexpr storage::GarbageCollectionPolicy kTestingGarbageCollectionPolicy =
     storage::GarbageCollectionPolicy::EAGER_LIVE_REFERENCES;
-
-// Parses |command_line| to extract the garbage-collection policy.
-storage::GarbageCollectionPolicy GarbageCollectionPolicyFromFlags(
-    const fxl::CommandLine& command_line);
 
 // Appends command-line flags representing |policy| to |launch_info| arguments.
 void AppendGarbageCollectionPolicyFlags(storage::GarbageCollectionPolicy policy,

@@ -1,7 +1,7 @@
 {
   "test_suite_name": "fuchsia.ledger.update_entry",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/update_entry.cmx",
-  "args": ["--entry-count=100", "--transaction-size=0", "--value-size=20000"],
+  "args": ["--entry_count=100", "--transaction_size=0", "--value_size=20000"],
   "categories": ["benchmark", "ledger"],
   "duration": 180,
   "measure": [

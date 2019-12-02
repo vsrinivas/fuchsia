@@ -26,21 +26,26 @@
 #include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/flags/flag.h"
+#include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
+
+ABSL_FLAG(ssize_t, requests_count, -1, "number of request to GetPage");
+ABSL_FLAG(bool, reuse, false,
+          "if this flag is specified, the same id will be used. Otherwise, a new page with a "
+          "random id is requested every time");
+ABSL_FLAG(bool, wait_for_cached_page, false,
+          "if this flag is specified, the benchmark will wait for a sufficient amount of time "
+          "before each page request, to allow Ledger to precache an empty new page");
+ABSL_FLAG(bool, clear_pages, false,
+          "if this flag is specified, the benchmark will clear the page each time");
 
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kBinaryPath =
-    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/get_page.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/get_page";
-constexpr fxl::StringView kPageCountFlag = "requests-count";
-constexpr fxl::StringView kReuseFlag = "reuse";
-constexpr fxl::StringView kWaitForCachedPageFlag = "wait-for-cached-page";
-constexpr fxl::StringView kClearPagesFlag = "clear-pages";
 
 // The delay to be used when waiting for a ledger background I/O operation to
 // finish. This is used when it is not possible to wait for a specific event,
@@ -49,16 +54,6 @@ constexpr fxl::StringView kClearPagesFlag = "clear-pages";
 constexpr zx::duration kDelay = zx::msec(500);
 constexpr size_t kKeySize = 10;
 constexpr size_t kValueSize = 10;
-
-void PrintUsage() {
-  std::cout << "Usage: trace record "
-            << kBinaryPath
-            // Comment to make clang format not break formatting.
-            << " --" << kPageCountFlag << "=<int>"
-            << " [--" << kReuseFlag << "]"
-            << " [--" << kWaitForCachedPageFlag << "]"
-            << " [--" << kClearPagesFlag << "]" << std::endl;
-}
 
 // Benchmark that measures the time taken to get a page.
 //
@@ -190,21 +185,20 @@ fit::closure GetPageBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-int Main(int argc, const char** argv) {
-  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+int Main(int argc, char** argv) {
+  absl::ParseCommandLine(argc, argv);
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
-  std::string requests_count_str;
-  size_t requests_count;
-  if (!command_line.GetOptionValue(kPageCountFlag.ToString(), &requests_count_str) ||
-      !absl::SimpleAtoi(requests_count_str, &requests_count) || requests_count == 0) {
-    PrintUsage();
-    return EXIT_FAILURE;
+  ssize_t requests_count = absl::GetFlag(FLAGS_requests_count);
+  bool reuse = absl::GetFlag(FLAGS_reuse);
+  bool wait_for_cached_page = absl::GetFlag(FLAGS_wait_for_cached_page);
+  bool clear_pages = absl::GetFlag(FLAGS_clear_pages);
+  if (requests_count <= 0) {
+    std::cerr << "Incorrect parameter values" << std::endl;
+    return 1;
   }
-  bool reuse = command_line.HasOption(kReuseFlag);
-  bool wait_for_cached_page = command_line.HasOption(kWaitForCachedPageFlag);
-  bool clear_pages = command_line.HasOption(kClearPagesFlag);
 
   GetPageBenchmark app(&loop, std::move(component_context), requests_count, reuse,
                        wait_for_cached_page, clear_pages);
@@ -215,4 +209,4 @@ int Main(int argc, const char** argv) {
 }  // namespace
 }  // namespace ledger
 
-int main(int argc, const char** argv) { return ledger::Main(argc, argv); }
+int main(int argc, char** argv) { return ledger::Main(argc, argv); }

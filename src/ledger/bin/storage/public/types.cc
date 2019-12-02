@@ -6,9 +6,16 @@
 
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/util/ptr.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace {
+
+constexpr absl::string_view kNeverPolicy = "never";
+constexpr absl::string_view kEagerPolicy = "eager";
+constexpr absl::string_view kRootNodesPolicy = "root_nodes";
+
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& ptr) {
   if (ptr) {
@@ -137,6 +144,36 @@ std::ostream& operator<<(std::ostream& os, const DeviceEntry& e) {
     os << "<empty>";
   }
   return os << "}";
+}
+
+bool AbslParseFlag(absl::string_view text, GarbageCollectionPolicy* policy, std::string* error) {
+  if (text == kNeverPolicy) {
+    *policy = GarbageCollectionPolicy::NEVER;
+    return true;
+  }
+  if (text == kEagerPolicy) {
+    *policy = GarbageCollectionPolicy::EAGER_LIVE_REFERENCES;
+    return true;
+  }
+  if (text == kRootNodesPolicy) {
+    *policy = GarbageCollectionPolicy::EAGER_ROOT_NODES;
+    return true;
+  }
+  *error = "unknown value for enumeration";
+  return false;
+}
+
+std::string AbslUnparseFlag(GarbageCollectionPolicy policy) {
+  switch (policy) {
+    case GarbageCollectionPolicy::NEVER:
+      return std::string(kNeverPolicy);
+    case GarbageCollectionPolicy::EAGER_LIVE_REFERENCES:
+      return std::string(kEagerPolicy);
+    case GarbageCollectionPolicy::EAGER_ROOT_NODES:
+      return std::string(kRootNodesPolicy);
+    default:
+      return absl::StrCat(policy);
+  }
 }
 
 }  // namespace storage

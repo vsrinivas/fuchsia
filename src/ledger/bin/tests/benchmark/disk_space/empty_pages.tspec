@@ -1,8 +1,8 @@
 {
   "test_suite_name": "fuchsia.ledger.disk_space",
   "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/disk_space.cmx",
-  "args": ["--page-count=10", "--unique-key-count=0", "--key-size=10",
-           "--value-size=10", "--commit-count=0"],
+  "args": ["--page_count=10", "--unique_key_count=0", "--key_size=10",
+           "--value_size=10", "--commit_count=0"],
   "categories": ["benchmark", "ledger"],
   "duration": 60,
   "measure": [

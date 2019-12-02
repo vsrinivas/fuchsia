@@ -26,30 +26,22 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/flags/flag.h"
+#include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
+
+ABSL_FLAG(ssize_t, entry_count, -1, "number of entries to delete");
+ABSL_FLAG(ssize_t, key_size, -1, "size of the keys of entries");
+ABSL_FLAG(ssize_t, value_size, -1, "size of the values of entries");
+ABSL_FLAG(bool, use_inline, false,
+          "whether Get or GetInline method will be used "
+          "(the latter retrieves the entry directly as String)");
 
 namespace ledger {
 namespace {
-
-constexpr fxl::StringView kBinaryPath =
-    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/get_entry.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/get_entry";
-constexpr fxl::StringView kEntryCountFlag = "entry-count";
-constexpr fxl::StringView kKeySizeFlag = "key-size";
-constexpr fxl::StringView kValueSizeFlag = "value-size";
-constexpr fxl::StringView kInlineFlag = "inline";
-
-void PrintUsage() {
-  std::cout << "Usage: trace record "
-            << kBinaryPath
-            // Comment to make clang format not break formatting.
-            << " --" << kEntryCountFlag << "=<int>"
-            << " --" << kKeySizeFlag << "=<int>"
-            << " --" << kValueSizeFlag << "=<int>"
-            << " [--" << kInlineFlag << "]" << std::endl;
-}
+}  // namespace
 
 // Benchmark that measures the time taken to read an entry from a page.
 //
@@ -62,7 +54,7 @@ void PrintUsage() {
 class GetEntryBenchmark {
  public:
   GetEntryBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-                    size_t entry_count, size_t key_size, size_t value_size, bool get_inline);
+                    size_t entry_count, size_t key_size, size_t value_size, bool use_inline);
 
   void Run();
 
@@ -84,7 +76,7 @@ class GetEntryBenchmark {
   const size_t entry_count_;
   const size_t key_size_;
   const size_t value_size_;
-  const bool get_inline_;
+  const bool use_inline_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
   LedgerPtr ledger_;
   PagePtr page_;
@@ -97,7 +89,7 @@ class GetEntryBenchmark {
 GetEntryBenchmark::GetEntryBenchmark(async::Loop* loop,
                                      std::unique_ptr<sys::ComponentContext> component_context,
                                      size_t entry_count, size_t key_size, size_t value_size,
-                                     bool get_inline)
+                                     bool use_inline)
     : loop_(loop),
       random_(0),
       tmp_dir_(kStoragePath),
@@ -107,7 +99,7 @@ GetEntryBenchmark::GetEntryBenchmark(async::Loop* loop,
       entry_count_(entry_count),
       key_size_(key_size),
       value_size_(value_size),
-      get_inline_(get_inline) {
+      use_inline_(use_inline) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(entry_count_ > 0);
   FXL_DCHECK(key_size_ > 0);
@@ -167,7 +159,7 @@ void GetEntryBenchmark::GetKeys(std::unique_ptr<Token> token) {
       GetKeys(std::move(next_token));
       return;
     }
-    if (get_inline_) {
+    if (use_inline_) {
       GetNextEntryInline(0);
     } else {
       GetNextEntry(0);
@@ -217,35 +209,27 @@ fit::closure GetEntryBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-int Main(int argc, const char** argv) {
-  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+int Main(int argc, char** argv) {
+  absl::ParseCommandLine(argc, argv);
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
-  std::string entry_count_str;
-  size_t entry_count;
-  std::string key_size_str;
-  size_t key_size;
-  std::string value_size_str;
-  size_t value_size;
-  bool get_inline = command_line.HasOption(kInlineFlag.ToString());
-  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(), &entry_count_str) ||
-      !absl::SimpleAtoi(entry_count_str, &entry_count) || entry_count == 0 ||
-      !command_line.GetOptionValue(kKeySizeFlag.ToString(), &key_size_str) ||
-      !absl::SimpleAtoi(key_size_str, &key_size) || key_size == 0 ||
-      !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
-      !absl::SimpleAtoi(value_size_str, &value_size) || value_size == 0) {
-    PrintUsage();
-    return -1;
+  ssize_t entry_count = absl::GetFlag(FLAGS_entry_count);
+  ssize_t key_size = absl::GetFlag(FLAGS_key_size);
+  ssize_t value_size = absl::GetFlag(FLAGS_value_size);
+  bool use_inline = absl::GetFlag(FLAGS_use_inline);
+  if (entry_count <= 0 || key_size <= 0 || value_size <= 0) {
+    std::cerr << "Incorrect parameter values" << std::endl;
+    return 1;
   }
 
   GetEntryBenchmark app(&loop, std::move(component_context), entry_count, key_size, value_size,
-                        get_inline);
+                        use_inline);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }
 
-}  // namespace
 }  // namespace ledger
 
-int main(int argc, const char** argv) { return ledger::Main(argc, argv); }
+int main(int argc, char** argv) { return ledger::Main(argc, argv); }

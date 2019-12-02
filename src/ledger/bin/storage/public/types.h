@@ -16,6 +16,7 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/flags/flag.h"
 
 namespace storage {
 
@@ -247,6 +248,17 @@ enum class GarbageCollectionPolicy {
   // will not try to delete any locally created objects that were never referenced by any commit.
   EAGER_ROOT_NODES,
 };
+
+// Functions allowing use of GarbageCollectionPolicy in ABSL flags.
+
+// Parses a GarbageCollectionPolicy from the command line flag value |text|.
+// Returns |true| and sets |*policy| on success; returns |false| and sets
+// |*error| on failure.
+bool AbslParseFlag(absl::string_view text, GarbageCollectionPolicy* policy, std::string* error);
+
+// AbslUnparseFlag converts from an GarbageCollectionPolicy to a string.
+// Returns a textual flag value corresponding to the GarbageCollectionPolicy |policy|.
+std::string AbslUnparseFlag(GarbageCollectionPolicy policy);
 
 enum class DiffCompatibilityPolicy {
   // Tree nodes are uploaded to the cloud and storage falls back to getting objects from the cloud

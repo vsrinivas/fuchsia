@@ -42,6 +42,7 @@ source_set("public") {
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//third_party/flatbuffers",
     "//zircon/public/lib/zx",
   ]
@@ -56,6 +57,7 @@ source_set("unittests") {
     "data_source_unittest.cc",
     "object_unittest.cc",
     "read_data_source_unittest.cc",
+    "types_unittest.cc",
   ]
 
   deps = [

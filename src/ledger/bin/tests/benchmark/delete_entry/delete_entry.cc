@@ -29,30 +29,20 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/flags/flag.h"
+#include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
+
+ABSL_FLAG(ssize_t, entry_count, -1, "number of entries to delete");
+ABSL_FLAG(ssize_t, transaction_size, -1, "number of element in the transaction");
+ABSL_FLAG(ssize_t, key_size, -1, "size of the keys of entries");
+ABSL_FLAG(ssize_t, value_size, -1, "size of the values of entries");
 
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kBinaryPath =
-    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/delete_entry.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/delete_entry";
-constexpr fxl::StringView kEntryCountFlag = "entry-count";
-constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
-constexpr fxl::StringView kKeySizeFlag = "key-size";
-constexpr fxl::StringView kValueSizeFlag = "value-size";
-
-void PrintUsage() {
-  std::cout << "Usage: trace record "
-            << kBinaryPath
-            // Comment to make clang format not break formatting.
-            << " --" << kEntryCountFlag << "=<int>"
-            << " --" << kTransactionSizeFlag << "=<int>"
-            << " --" << kKeySizeFlag << "=<int>"
-            << " --" << kValueSizeFlag << "=<int>" << std::endl;
-}
 
 // Benchmark that measures the time taken to delete an entry from a page.
 //
@@ -211,29 +201,19 @@ fit::closure DeleteEntryBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
 
-int Main(int argc, const char** argv) {
-  fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+int Main(int argc, char** argv) {
+  absl::ParseCommandLine(argc, argv);
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
-  std::string entry_count_str;
-  size_t entry_count;
-  std::string transaction_size_str;
-  size_t transaction_size;
-  std::string key_size_str;
-  size_t key_size;
-  std::string value_size_str;
-  size_t value_size;
-  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(), &entry_count_str) ||
-      !absl::SimpleAtoi(entry_count_str, &entry_count) || entry_count == 0 ||
-      !command_line.GetOptionValue(kTransactionSizeFlag.ToString(), &transaction_size_str) ||
-      !absl::SimpleAtoi(transaction_size_str, &transaction_size) ||
-      !command_line.GetOptionValue(kKeySizeFlag.ToString(), &key_size_str) ||
-      !absl::SimpleAtoi(key_size_str, &key_size) || key_size == 0 ||
-      !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
-      !absl::SimpleAtoi(value_size_str, &value_size) || value_size == 0) {
-    PrintUsage();
-    return -1;
+  ssize_t entry_count = absl::GetFlag(FLAGS_entry_count);
+  ssize_t transaction_size = absl::GetFlag(FLAGS_transaction_size);
+  ssize_t key_size = absl::GetFlag(FLAGS_key_size);
+  ssize_t value_size = absl::GetFlag(FLAGS_value_size);
+  if (entry_count <= 0 || transaction_size < 0 || key_size <= 0 || value_size <= 0) {
+    std::cerr << "Incorrect parameter values" << std::endl;
+    return 1;
   }
 
   DeleteEntryBenchmark app(&loop, std::move(component_context), entry_count, transaction_size,
@@ -245,4 +225,4 @@ int Main(int argc, const char** argv) {
 }  // namespace
 }  // namespace ledger
 
-int main(int argc, const char** argv) { return ledger::Main(argc, argv); }
+int main(int argc, char** argv) { return ledger::Main(argc, argv); }
