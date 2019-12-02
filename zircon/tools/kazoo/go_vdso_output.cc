@@ -136,7 +136,7 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
   size_t off = 0;
   for (size_t i = 0; i < syscall->num_kernel_args(); ++i) {
     const StructMember& arg = syscall->kernel_arguments()[i];
-    const std::string& name = arg.name();
+    std::string name = RemapReservedGoName(arg.name());
     std::string suffix = suffix8;
     size_t sz = GoTypeSize(arg.type());
     if (sz == 4) {

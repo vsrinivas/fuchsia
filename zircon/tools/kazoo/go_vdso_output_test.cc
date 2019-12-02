@@ -69,7 +69,7 @@ func vdsoCall_zx_selection_ktrace_read(handle uint32, data unsafe.Pointer, offse
 
 //go:noescape
 //go:nosplit
-func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, func uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
+func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
 
 //go:noescape
 //go:nosplit
@@ -180,7 +180,7 @@ TEXT runtime·vdsoCall_zx_selection_ktrace_read(SB),NOSPLIT,$8-44
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, func uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
+// func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
 TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$40-29
 	GO_ARGS
 	NO_LOCAL_POINTERS
@@ -195,7 +195,7 @@ TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$40-29
 	MOVL handle+0(FP), DI
 	MOVQ bus+4(FP), SI
 	MOVQ dev+5(FP), DX
-	MOVQ func+6(FP), CX
+	MOVQ funk+6(FP), CX
 	MOVQ offset+7(FP), R8
 	MOVQ val+8(FP), R9
 	MOVQ width+16(FP), R12
@@ -337,7 +337,7 @@ TEXT runtime·vdsoCall_zx_selection_ktrace_read(SB),NOSPLIT,$0-44
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
-// func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, func uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
+// func vdsoCall_zx_selection_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write bool) int32
 TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$0-68
 	GO_ARGS
 	NO_LOCAL_POINTERS
@@ -348,7 +348,7 @@ TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$0-68
 	MOVW handle+0(FP), R0
 	MOVD bus+8(FP), R1
 	MOVD dev+16(FP), R2
-	MOVD func+24(FP), R3
+	MOVD funk+24(FP), R3
 	MOVD offset+32(FP), R4
 	MOVD val+40(FP), R5
 	MOVD width+48(FP), R6

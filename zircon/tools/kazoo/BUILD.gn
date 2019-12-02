@@ -125,6 +125,7 @@ if (defined(zx)) {
 
     sources = [
       "test_aliases.test.fidl",
+      "test_go_reserved_words.test.fidl",
       "test_kernel_cases.test.fidl",
       "test_kernelwrappers.test.fidl",
       "test_no_methods.test.fidl",

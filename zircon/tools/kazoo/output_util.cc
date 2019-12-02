@@ -250,6 +250,9 @@ std::string GetGoName(const Type& type) {
   if (name == "zx_clock_t") return "uint32";
   if (name == "zx_handle_disposition_t") return "HandleDisposition";
   if (name == "zx_handle_info_t") return "int";
+  if (name == "zx_pci_bar_t") return "uintptr";
+  if (name == "zx_pci_init_arg_t") return "uintptr";
+  if (name == "zx_pcie_device_info_t") return "uintptr";
   if (name == "zx_port_packet_t") return "int";
   if (name == "zx_profile_info_t") return "int";
   if (name == "zx_rights_t") return "Rights";
@@ -286,6 +289,9 @@ std::string GetNativeGoName(const Type& type) {
   if (name == "zx_clock_t") return "uint32";
   if (name == "zx_handle_disposition_t") return "uintptr";
   if (name == "zx_handle_info_t") return "int";
+  if (name == "zx_pci_bar_t") return "uintptr";
+  if (name == "zx_pci_init_arg_t") return "uintptr";
+  if (name == "zx_pcie_device_info_t") return "uintptr";
   if (name == "zx_port_packet_t") return "int";
   if (name == "zx_profile_info_t") return "int";
   if (name == "zx_rights_t") return "uint32";
@@ -297,10 +303,13 @@ std::string GetNativeGoName(const Type& type) {
 }
 
 std::string RemapReservedGoName(const std::string& name) {
-  // Probably more of these and/or a better way to do this, but this is the only one that happens in
-  // practice today.
+  // Probably more of these and/or a better way to do this, but this handles current syscalls.
   if (name == "type")
     return "typ";
+  if (name == "func")
+    return "funk";
+  if (name == "g")
+    return "g_";
   return name;
 }
 

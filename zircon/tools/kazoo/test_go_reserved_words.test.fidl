@@ -1,0 +1,28 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zz;
+
+using zx;
+
+struct PciBar {
+    uint32 unused;
+};
+
+struct PciInitArg {
+    uint32 unused;
+};
+
+struct PcieDeviceInfo {
+    uint32 unused;
+};
+
+[Transport="Syscall"]
+protocol ReservedWords {
+    // These argument names can't used as identifiers in Go, make sure they're
+    // remapped to something else.
+    MyFunc(uint32 type, uint32 func, uint32 g) -> (zx.status status);
+
+    PciTypes(PciBar bar, PciInitArg initarg, PcieDeviceInfo device_info) -> (zx.status status);
+};
