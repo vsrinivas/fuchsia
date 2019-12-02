@@ -23,24 +23,6 @@ namespace {
 using fs::FilesystemTest;
 using fs::RamDisk;
 
-// This is work in progress!. See ZX-4203 for context.
-
-/*
-
-// Helper functions for testing:
-
-static bool MakeBlobUnverified(fs_test_utils::BlobInfo* info, fbl::unique_fd* out_fd) {
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd, "Failed to create blob");
-    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-    ASSERT_EQ(fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
-              "Failed to write Data");
-    out_fd->reset(fd.release());
-    return true;
-}
-
-*/
-
 void RunHugeBlobRandomTest(FilesystemTest* test) {
   std::unique_ptr<fs_test_utils::BlobInfo> info;
 
@@ -383,25 +365,25 @@ TEST_F(BlobfsTest, Fragmentation) { RunFragmentationTest(this); }
 
 TEST_F(BlobfsTestWithFvm, Fragmentation) { RunFragmentationTest(this); }
 
-/*
+void MakeBlobUnverified(fs_test_utils::BlobInfo* info, fbl::unique_fd* out_fd) {
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  ASSERT_TRUE(fd, "Failed to create blob");
+  ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+  ASSERT_EQ(fs_test_utils::StreamAll(write, fd.get(), info->data.get(), info->size_data), 0,
+            "Failed to write Data");
+  out_fd->reset(fd.release());
+}
 
-typedef struct reopen_data {
-    char path[PATH_MAX];
-    std::atomic_bool complete;
-} reopen_data_t;
-
-int reopen_thread(void* arg) {
-    reopen_data_t* dat = static_cast<reopen_data_t*>(arg);
-    unsigned attempts = 0;
-    while (!atomic_load(&dat->complete)) {
-        fbl::unique_fd fd(open(dat->path, O_RDONLY));
-        ASSERT_TRUE(fd);
-        ASSERT_EQ(close(fd.release()), 0);
-        attempts++;
+void ReopenThread(const std::string& path, std::atomic_bool* done) {
+  int attempts = 0;
+  while (!atomic_load(done)) {
+    fbl::unique_fd fd(open(path.c_str(), O_RDONLY));
+    if (!fd) {
+      break;
     }
-
-    printf("Reopened %u times\n", attempts);
-    return 0;
+    attempts++;
+  }
+  printf("Reopened %d times\n", attempts);
 }
 
 // The purpose of this test is to repro the case where a blob is being retrieved from the blob hash
@@ -409,58 +391,54 @@ int reopen_thread(void* arg) {
 // occur when the client is opening a new fd to the blob at the same time it is being destructed
 // after all writes to disk have completed.
 // This test works best if a sleep is added at the beginning of fbl_recycle in VnodeBlob.
-static bool CreateWriteReopen(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    size_t num_ops = 10;
+//
+// TODO(rvargas): The description seems to hint that this test should be removed because it's
+// not really doing anything (requires adding sleeps in the code); it's trying to protect against
+// a regression for a race from too far away.
+void RunCreateWriteReopenTest() {
+  size_t num_ops = 10;
 
-    std::unique_ptr<fs_test_utils::BlobInfo> anchor_info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 10, &anchor_info));
+  std::unique_ptr<fs_test_utils::BlobInfo> anchor_info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 10, &anchor_info));
 
-    std::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 10 * (1 << 20), &info));
-    reopen_data_t dat;
-    strcpy(dat.path, info->path);
+  std::unique_ptr<fs_test_utils::BlobInfo> info;
+  ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 10 * (1 << 20), &info));
+  std::string path(info->path);
 
-    for (size_t i = 0; i < num_ops; i++) {
-        printf("Running op %lu... ", i);
-        fbl::unique_fd fd;
-        fbl::unique_fd anchor_fd;
-        atomic_store(&dat.complete, false);
+  for (size_t i = 0; i < num_ops; i++) {
+    printf("Running op %lu... ", i);
+    fbl::unique_fd fd;
+    fbl::unique_fd anchor_fd;
 
-        // Write both blobs to disk (without verification, so we can start reopening the blob asap)
-        ASSERT_TRUE(MakeBlobUnverified(info.get(), &fd));
-        ASSERT_TRUE(MakeBlobUnverified(anchor_info.get(), &anchor_fd));
-        ASSERT_EQ(close(fd.release()), 0);
+    // Write both blobs to disk (without verification, so we can start reopening the blob asap).
+    ASSERT_NO_FAILURES(MakeBlobUnverified(info.get(), &fd));
+    ASSERT_NO_FAILURES(MakeBlobUnverified(anchor_info.get(), &anchor_fd));
+    fd.reset();
 
-        int result;
-        int success;
-        thrd_t thread;
-        ASSERT_EQ(thrd_create(&thread, reopen_thread, &dat), thrd_success);
+    // Launch a background thread to wait for the file to become readable.
+    std::atomic_bool done;
+    std::thread thread(ReopenThread, path, &done);
 
-        {
-            // In case the test fails, always join the thread before returning from the test.
-            auto join_thread = fbl::MakeAutoCall([&]() {
-                atomic_store(&dat.complete, true);
-                success = thrd_join(thread, &result);
-            });
+    {
+      // Always join the thread before returning from the test.
+      auto join_thread = fbl::MakeAutoCall([&]() {
+        done = true;
+        thread.join();
+      });
 
-            // Sleep while the thread continually opens and closes the blob
-            usleep(1000000);
-            ASSERT_EQ(syncfs(anchor_fd.get()), 0);
-        }
-
-        ASSERT_EQ(success, thrd_success);
-        ASSERT_EQ(result, 0);
-
-        ASSERT_EQ(close(anchor_fd.release()), 0);
-        ASSERT_EQ(unlink(info->path), 0);
-        ASSERT_EQ(unlink(anchor_info->path), 0);
+      // Sleep while the thread continually opens and closes the blob.
+      sleep(1);
+      ASSERT_EQ(syncfs(anchor_fd.get()), 0);
     }
 
-    END_HELPER;
+    ASSERT_EQ(0, unlink(info->path));
+    ASSERT_EQ(0, unlink(anchor_info->path));
+  }
 }
 
-*/
+TEST_F(BlobfsTest, CreateWriteReopen) { RunCreateWriteReopenTest(); }
+
+TEST_F(BlobfsTestWithFvm, CreateWriteReopen) { RunCreateWriteReopenTest(); }
 
 void RunCreateFailureTest(const RamDisk* disk, FilesystemTest* test) {
   std::unique_ptr<fs_test_utils::BlobInfo> info;
@@ -627,7 +605,6 @@ TEST_F(LargeBlobTest, UseSecondBitmap) {
 BEGIN_TEST_CASE(blobfs_tests)
 RUN_TESTS(LARGE, CreateUmountRemountLarge)
 RUN_TESTS(LARGE, CreateUmountRemountLargeMultithreaded)
-RUN_TESTS(LARGE, CreateWriteReopen)
 END_TEST_CASE(blobfs_tests)
 
 */
