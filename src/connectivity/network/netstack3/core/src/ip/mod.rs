@@ -10,9 +10,9 @@ pub(crate) mod path_mtu;
 mod forwarding;
 mod gmp;
 pub mod icmp;
-mod igmp;
+pub(crate) mod igmp;
 mod ipv6;
-mod mld;
+pub(crate) mod mld;
 pub(crate) mod reassembly;
 pub(crate) mod socket;
 mod types;
@@ -32,7 +32,6 @@ use packet::{Buf, BufferMut, Either, EmptyBuf, ParseMetadata, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::context::{CounterContext, FrameContext, StateContext, TimerContext};
-use crate::data_structures::IdMap;
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
@@ -41,9 +40,9 @@ use crate::ip::icmp::{
     IcmpContext, IcmpEventDispatcher, Icmpv4Context, Icmpv4ErrorCode, Icmpv4State,
     Icmpv4StateBuilder, Icmpv6Context, Icmpv6ErrorCode, Icmpv6State, Icmpv6StateBuilder,
 };
-use crate::ip::igmp::{IgmpContext, IgmpInterface, IgmpPacketMetadata, IgmpTimerId};
+use crate::ip::igmp::{IgmpContext, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
-use crate::ip::mld::{MldContext, MldFrameMetadata, MldInterface, MldReportDelay};
+use crate::ip::mld::{MldContext, MldFrameMetadata, MldReportDelay};
 use crate::ip::path_mtu::{handle_pmtu_timer, IpLayerPathMtuCache, PmtuTimerId};
 use crate::ip::reassembly::{
     handle_reassembly_timer, process_fragment, reassemble_packet, FragmentCacheKey,
@@ -252,7 +251,6 @@ impl Ipv4StateBuilder {
                 path_mtu: IpLayerPathMtuCache::new(),
             },
             icmp: self.icmp.build(),
-            igmp: IdMap::default(),
         }
     }
 }
@@ -297,7 +295,6 @@ impl Ipv6StateBuilder {
                 path_mtu: IpLayerPathMtuCache::new(),
             },
             icmp: self.icmp.build(),
-            mld: IdMap::default(),
         }
     }
 }
@@ -305,42 +302,11 @@ impl Ipv6StateBuilder {
 pub(crate) struct Ipv4State<Instant: crate::Instant, D> {
     inner: IpStateInner<Ipv4, Instant>,
     icmp: Icmpv4State<Instant, IpSock<Ipv4, D>>,
-    igmp: IdMap<IgmpInterface<Instant>>,
-}
-
-impl<Instant: crate::Instant, D> Ipv4State<Instant, D> {
-    /// Get the IGMP state associated with the device immutably.
-    pub(crate) fn get_igmp_state(&self, device_id: usize) -> &IgmpInterface<Instant> {
-        self.igmp.get(device_id).unwrap()
-    }
-
-    /// Get the IGMP state associated with the device mutably.
-    pub(crate) fn get_igmp_state_mut(&mut self, device_id: usize) -> &mut IgmpInterface<Instant> {
-        self.igmp.entry(device_id).or_insert(IgmpInterface::default())
-    }
 }
 
 pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
     inner: IpStateInner<Ipv6, Instant>,
     icmp: Icmpv6State<Instant, IpSock<Ipv6, D>>,
-    mld: IdMap<MldInterface<Instant>>,
-}
-
-impl<Instant: crate::Instant, D> Ipv6State<Instant, D> {
-    /// Get the MLD state associated with the device immutably.
-    fn get_mld_state(&self, device_id: usize) -> &MldInterface<Instant> {
-        self.mld.get(device_id).unwrap()
-    }
-
-    /// Get the MLD state associated with the device mutably.
-    fn get_mld_state_mut(&mut self, device_id: usize) -> &mut MldInterface<Instant> {
-        self.mld.entry(device_id).or_insert(MldInterface::default())
-
-        // if self.mld.get(device_id).is_none() {
-        //     self.mld.insert(device_id, MldInterface::default());
-        // }
-        // self.mld.get_mut(device_id).unwrap()
-    }
 }
 
 struct IpStateInner<I: Ip, Instant: crate::Instant> {
@@ -368,26 +334,6 @@ fn get_state_inner_mut<I: Ip, D: EventDispatcher>(
     return &mut state.ipv4.inner;
     #[ipv6]
     return &mut state.ipv6.inner;
-}
-
-impl<D: EventDispatcher> StateContext<IgmpInterface<D::Instant>, DeviceId> for Context<D> {
-    fn get_state_with(&self, device: DeviceId) -> &IgmpInterface<D::Instant> {
-        self.state().ipv4.get_igmp_state(device.id())
-    }
-
-    fn get_state_mut_with(&mut self, device: DeviceId) -> &mut IgmpInterface<D::Instant> {
-        self.state_mut().ipv4.get_igmp_state_mut(device.id())
-    }
-}
-
-impl<D: EventDispatcher> StateContext<MldInterface<D::Instant>, DeviceId> for Context<D> {
-    fn get_state_with(&self, device: DeviceId) -> &MldInterface<D::Instant> {
-        self.state().ipv6.get_mld_state(device.id())
-    }
-
-    fn get_state_mut_with(&mut self, device: DeviceId) -> &mut MldInterface<D::Instant> {
-        self.state_mut().ipv6.get_mld_state_mut(device.id())
-    }
 }
 
 impl<I: Ip, D: EventDispatcher> StateContext<IpLayerFragmentCache<I>> for Context<D> {

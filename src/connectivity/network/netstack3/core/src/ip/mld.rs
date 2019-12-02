@@ -608,13 +608,11 @@ mod tests {
         receive_mld_query(&mut ctx, dev_id, Duration::from_secs(10));
 
         // We have received a query, hence we are falling back to Delay Member state.
-        let group_state = ctx
-            .state
-            .ipv6
-            .get_mld_state_mut(dev_id.id())
-            .groups
-            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-            .unwrap();
+        let group_state =
+            <Context<_> as StateContext<MldInterface<_>, _>>::get_state_with(&ctx, dev_id)
+                .groups
+                .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
+                .unwrap();
         match group_state.get_inner() {
             MemberState::Delaying(_) => {}
             _ => panic!("Wrong State!"),
@@ -641,13 +639,11 @@ mod tests {
 
         // Since it is an immediate query, we will send a report immediately and turn
         // into Idle state again
-        let group_state = ctx
-            .state
-            .ipv6
-            .get_mld_state_mut(dev_id.id())
-            .groups
-            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-            .unwrap();
+        let group_state =
+            <Context<_> as StateContext<MldInterface<_>, _>>::get_state_with(&ctx, dev_id)
+                .groups
+                .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
+                .unwrap();
         match group_state.get_inner() {
             MemberState::Idle(_) => {}
             _ => panic!("Wrong State!"),

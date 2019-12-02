@@ -622,13 +622,11 @@ mod tests {
         receive_igmp_query(&mut ctx, dev_id, Duration::from_secs(10));
 
         // We have received a query, hence we are falling back to Delay Member state.
-        let group_state = ctx
-            .state
-            .ipv4
-            .get_igmp_state_mut(dev_id.id())
-            .groups
-            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-            .unwrap();
+        let group_state =
+            <Context<_> as StateContext<IgmpInterface<_>, _>>::get_state_with(&ctx, dev_id)
+                .groups
+                .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
+                .unwrap();
         match group_state.get_inner() {
             MemberState::Delaying(_) => {}
             _ => panic!("Wrong State!"),
@@ -656,13 +654,11 @@ mod tests {
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         // Since we have heard from the v1 router, we should have set our flag
-        let group_state = ctx
-            .state
-            .ipv4
-            .get_igmp_state_mut(dev_id.id())
-            .groups
-            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-            .unwrap();
+        let group_state =
+            <Context<_> as StateContext<IgmpInterface<_>, _>>::get_state_with(&ctx, dev_id)
+                .groups
+                .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
+                .unwrap();
         match group_state.get_inner() {
             MemberState::Delaying(state) => {
                 assert!(state.get_protocol_specific().v1_router_present)
@@ -686,13 +682,11 @@ mod tests {
 
         assert!(testutil::trigger_next_timer(&mut ctx));
         // After the second timer, we should reset our flag for v1 routers.
-        let group_state = ctx
-            .state
-            .ipv4
-            .get_igmp_state_mut(dev_id.id())
-            .groups
-            .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
-            .unwrap();
+        let group_state =
+            <Context<_> as StateContext<IgmpInterface<_>, _>>::get_state_with(&ctx, dev_id)
+                .groups
+                .get(&MulticastAddr::new(GROUP_ADDR).unwrap())
+                .unwrap();
         match group_state.get_inner() {
             MemberState::Idle(state) => assert!(!state.get_protocol_specific().v1_router_present),
             _ => panic!("Wrong State!"),

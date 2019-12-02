@@ -30,6 +30,8 @@ use crate::device::ethernet::{
 };
 use crate::device::link::LinkDevice;
 use crate::device::ndp::NdpPacketHandler;
+use crate::ip::igmp::IgmpInterface;
+use crate::ip::mld::MldInterface;
 use crate::ip::socket::IpSockUpdate;
 use crate::wire::icmp::ndp::NdpPacket;
 use crate::{BufferDispatcher, Context, EventDispatcher, Instant, StackState};
@@ -141,6 +143,50 @@ impl<D: EventDispatcher> StateContext<EthernetDeviceState<D::Instant>, EthernetD
 
     fn get_state_mut_with(&mut self, id: EthernetDeviceId) -> &mut EthernetDeviceState<D::Instant> {
         self.state_mut().device.ethernet.get_mut(id.0).unwrap().device_mut()
+    }
+}
+
+impl<D: EventDispatcher> StateContext<IgmpInterface<D::Instant>, DeviceId> for Context<D> {
+    fn get_state_with(&self, device: DeviceId) -> &IgmpInterface<D::Instant> {
+        match device.protocol {
+            DeviceProtocol::Ethernet => <Context<D> as StateContext<
+                EthernetDeviceState<D::Instant>,
+                EthernetDeviceId,
+            >>::get_state_with(self, device.id().into())
+            .get_igmp_state(),
+        }
+    }
+
+    fn get_state_mut_with(&mut self, device: DeviceId) -> &mut IgmpInterface<D::Instant> {
+        match device.protocol {
+            DeviceProtocol::Ethernet => <Context<D> as StateContext<
+                EthernetDeviceState<D::Instant>,
+                EthernetDeviceId,
+            >>::get_state_mut_with(self, device.id().into())
+            .get_igmp_state_mut(),
+        }
+    }
+}
+
+impl<D: EventDispatcher> StateContext<MldInterface<D::Instant>, DeviceId> for Context<D> {
+    fn get_state_with(&self, device: DeviceId) -> &MldInterface<D::Instant> {
+        match device.protocol {
+            DeviceProtocol::Ethernet => <Context<D> as StateContext<
+                EthernetDeviceState<D::Instant>,
+                EthernetDeviceId,
+            >>::get_state_with(self, device.id().into())
+            .get_mld_state(),
+        }
+    }
+
+    fn get_state_mut_with(&mut self, device: DeviceId) -> &mut MldInterface<D::Instant> {
+        match device.protocol {
+            DeviceProtocol::Ethernet => <Context<D> as StateContext<
+                EthernetDeviceState<D::Instant>,
+                EthernetDeviceId,
+            >>::get_state_mut_with(self, device.id().into())
+            .get_mld_state_mut(),
+        }
     }
 }
 

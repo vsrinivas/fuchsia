@@ -32,6 +32,8 @@ use crate::device::{
     AddressConfigurationType, AddressEntry, AddressError, AddressState, BufferIpDeviceContext,
     DeviceIdContext, FrameDestination, IpDeviceContext, RecvIpFrameMeta, Tentative,
 };
+use crate::ip::igmp::IgmpInterface;
+use crate::ip::mld::MldInterface;
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::Instant;
@@ -229,6 +231,8 @@ impl EthernetDeviceStateBuilder {
             link_multicast_groups: HashMap::new(),
             ipv4_arp: ArpState::default(),
             ndp: NdpState::new(self.ndp_configs),
+            mld: MldInterface::default(),
+            igmp: IgmpInterface::default(),
             route_ipv4: self.route_ipv4,
             route_ipv6: self.route_ipv6,
             pending_frames: HashMap::new(),
@@ -284,6 +288,12 @@ pub(super) struct EthernetDeviceState<I: Instant> {
 
     /// (IPv6) NDP state.
     ndp: ndp::NdpState<EthernetLinkDevice, I>,
+
+    /// MLD State.
+    mld: MldInterface<I>,
+
+    /// IGMP State.
+    igmp: IgmpInterface<I>,
 
     /// A flag indicating whether routing of IPv4 packets not destined for this device is
     /// enabled.
@@ -366,6 +376,26 @@ impl<I: Instant> EthernetDeviceState<I> {
     /// device.
     fn should_deliver(&self, dst_mac: &Mac) -> bool {
         self.promiscuous_mode || self.should_accept(dst_mac)
+    }
+
+    /// Get the IGMP state associated with the device immutably.
+    pub(crate) fn get_igmp_state(&self) -> &IgmpInterface<I> {
+        &self.igmp
+    }
+
+    /// Get the IGMP state associated with the device mutably.
+    pub(crate) fn get_igmp_state_mut(&mut self) -> &mut IgmpInterface<I> {
+        &mut self.igmp
+    }
+
+    /// Get the MLD state associated with the device immutably.
+    pub(crate) fn get_mld_state(&self) -> &MldInterface<I> {
+        &self.mld
+    }
+
+    /// Get the MLD state associated with the device mutably.
+    pub(crate) fn get_mld_state_mut(&mut self) -> &mut MldInterface<I> {
+        &mut self.mld
     }
 }
 
