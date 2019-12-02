@@ -27,7 +27,14 @@ function main {
   check-for-amber-server || return -1
 
   for pkg in $(cat "${FUCHSIA_BUILD_DIR}/cache_packages.list"); do
-    fx-command-run shell pkgctl resolve "fuchsia-pkg://fuchsia.com/${pkg}"
+    buf=$(fx-command-run shell pkgctl resolve "fuchsia-pkg://fuchsia.com/${pkg}" 2>&1)
+    status=$?
+    if [[ "${status}" -ne 0 ]]; then
+      echo >&2 "$buf"
+      exit "${status}"
+    else
+      echo >&2 "Updated ${pkg}"
+    fi
   done
   fx-command-run ota
 }
