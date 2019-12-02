@@ -56,8 +56,7 @@ async fn bind_root() {
     let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
     let m: AbsoluteMoniker = AbsoluteMoniker::root();
     let res = model.bind(&m).await;
-    let expected_res: Result<(), ModelError> = Ok(());
-    assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+    assert!(res.is_ok());
     let actual_urls = mock_runner.urls_run();
     let expected_urls = vec!["test:///root_resolved".to_string()];
     assert_eq!(actual_urls, expected_urls);
@@ -73,7 +72,7 @@ async fn bind_root_non_existent() {
     let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
     let m: AbsoluteMoniker = vec!["no-such-instance:0"].into();
     let res = model.bind(&m).await;
-    let expected_res: Result<(), ModelError> =
+    let expected_res: Result<Arc<Realm>, ModelError> =
         Err(ModelError::instance_not_found(vec!["no-such-instance:0"].into()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     let actual_urls = mock_runner.urls_run();
@@ -332,8 +331,7 @@ async fn bind_eager_children() {
     {
         let m = AbsoluteMoniker::new(vec!["a:0".into()]);
         let res = model.bind(&m).await;
-        let expected_res: Result<(), ModelError> = Ok(());
-        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+        assert!(res.is_ok());
         let actual_urls = mock_runner.urls_run();
         // Execution order of `b` and `c` is non-deterministic.
         let expected_urls1 = vec![

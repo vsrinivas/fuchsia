@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        model::{AbsoluteMoniker, ModelError, OutgoingBinder, Realm},
+        model::{AbsoluteMoniker, Binder, ModelError, Realm},
         work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_PATH},
     },
     failure::Fail,
@@ -23,7 +23,6 @@ use {
 pub enum Error {
     #[fail(display = "fuchsia.sys2 fidl protocol error: {:?}", 0)]
     API(fsys::Error),
-
     /// Used in tests to indicate dispatchers that cannot connect to real component instances.
     #[cfg(test)]
     #[fail(display = "component is not running")]
@@ -59,18 +58,18 @@ impl PartialEq for dyn Dispatcher {
 impl Eq for dyn Dispatcher {}
 
 // TODO(markdittmer): `Realm` can be replaced by an `AbsoluteMoniker` when `Model` (and
-// `OutgoingBinder`) interface methods accept `AbsoluteMoniker` instead of `Realm`.
+// `Binder`) interface methods accept `AbsoluteMoniker` instead of `Realm`.
 pub(super) struct RealDispatcher {
     /// `Realm` where component instance receiving dispatch resides.
     realm: Arc<Realm>,
     /// Implementation for binding to component and connecting to a service in its outgoing
     /// directory, in this case, the component instance's `fuchsia.sys2.Worker` server.
-    outgoing_binder: Weak<dyn OutgoingBinder>,
+    binder: Weak<dyn Binder>,
 }
 
 impl RealDispatcher {
-    pub(super) fn new(realm: Arc<Realm>, outgoing_binder: Weak<dyn OutgoingBinder>) -> Arc<Self> {
-        Arc::new(Self { realm, outgoing_binder })
+    pub(super) fn new(realm: Arc<Realm>, binder: Weak<dyn Binder>) -> Arc<Self> {
+        Arc::new(Self { realm, binder })
     }
 }
 
@@ -80,27 +79,24 @@ impl Dispatcher for RealDispatcher {
     }
 
     fn dispatch(&self, work_item: WorkItem) -> BoxFuture<Result<(), Error>> {
-        Box::pin(async move { dispatch(&self.realm, &self.outgoing_binder, work_item).await })
+        Box::pin(async move { dispatch(&self.realm, &self.binder, work_item).await })
     }
 }
 
 async fn dispatch(
     realm: &Arc<Realm>,
-    outgoing_binder: &Weak<dyn OutgoingBinder>,
+    binder: &Weak<dyn Binder>,
     work_item: WorkItem,
 ) -> Result<(), Error> {
     let (client_end, server_end) = zx::Channel::create().map_err(|err| Error::Internal(err))?;
 
-    outgoing_binder
+    binder
         .upgrade()
         .ok_or_else(|| Error::ModelNotFound)?
-        .bind_open_outgoing(
-            realm.clone(),
-            OPEN_RIGHT_READABLE,
-            MODE_TYPE_SERVICE,
-            &*WORKER_CAPABILITY_PATH,
-            server_end,
-        )
+        .bind(&realm.abs_moniker)
+        .await
+        .map_err(|err| Error::Model(err))?
+        .open_outgoing(OPEN_RIGHT_READABLE, MODE_TYPE_SERVICE, &*WORKER_CAPABILITY_PATH, server_end)
         .await
         .map_err(|err| Error::Model(err))?;
 

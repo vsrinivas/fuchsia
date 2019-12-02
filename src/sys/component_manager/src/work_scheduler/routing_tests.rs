@@ -2,7 +2,7 @@ use {
     crate::{
         model::testing::mocks::ManagedNamespace,
         model::testing::{routing_test_helpers::*, test_helpers::*},
-        model::{testing::mocks::FakeOutgoingBinder, AbsoluteMoniker, OutgoingBinder},
+        model::{testing::mocks::FakeBinder, AbsoluteMoniker, Binder},
         work_scheduler::{
             WorkScheduler, WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
             WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
@@ -20,15 +20,15 @@ use {
 
 struct BindingWorkScheduler {
     work_scheduler: Arc<WorkScheduler>,
-    // Retain `Arc` to keep `OutgoingBinder` alive throughout test.
-    _outgoing_binder: Arc<dyn OutgoingBinder>,
+    // Retain `Arc` to keep `Binder` alive throughout test.
+    _binder: Arc<dyn Binder>,
 }
 
 impl BindingWorkScheduler {
     async fn new() -> Self {
-        let _outgoing_binder = FakeOutgoingBinder::new();
-        let work_scheduler = WorkScheduler::new(Arc::downgrade(&_outgoing_binder)).await;
-        Self { work_scheduler, _outgoing_binder }
+        let _binder = FakeBinder::new();
+        let work_scheduler = WorkScheduler::new(Arc::downgrade(&_binder)).await;
+        Self { work_scheduler, _binder }
     }
 }
 

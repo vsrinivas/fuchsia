@@ -7,7 +7,7 @@ use {
         builtin_environment::BuiltinEnvironment,
         model::{
             self, hooks::*, testing::breakpoints::*, testing::test_helpers, AbsoluteMoniker,
-            ComponentManagerConfig, Model,
+            Binder, ComponentManagerConfig, Model,
         },
         startup,
     },
@@ -89,8 +89,7 @@ impl TestRunner {
         // Bind the model, starting the root component
         let root_moniker = model::AbsoluteMoniker::root();
         let res = model.bind(&root_moniker).await;
-        let expected_res: Result<(), model::ModelError> = Ok(());
-        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+        assert!(res.is_ok());
 
         Ok(Self {
             model,

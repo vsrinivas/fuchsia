@@ -136,7 +136,11 @@ async fn open_capability_at_source<'a>(
                 if path.to_string().contains("pkgfs") {
                     flags = fio::OPEN_RIGHT_READABLE;
                 }
-                model.bind_open_outgoing(realm, flags, open_mode, path, server_chan).await?;
+                model
+                    .bind(&realm.abs_moniker)
+                    .await?
+                    .open_outgoing(flags, open_mode, path, server_chan)
+                    .await?;
             } else {
                 return Err(ModelError::capability_discovery_error(format_err!(
                     "invalid capability type to come from a component"

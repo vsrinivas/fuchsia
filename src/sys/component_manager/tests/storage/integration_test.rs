@@ -9,7 +9,7 @@ use {
             hooks::*,
             moniker::AbsoluteMoniker,
             testing::{breakpoints::*, test_helpers, test_hook::TestHook},
-            ComponentManagerConfig, Model,
+            Binder, ComponentManagerConfig, Model,
         },
         startup,
     },
@@ -64,7 +64,10 @@ async fn storage() -> Result<(), Error> {
         model.look_up_realm(&m).await.context("could not look up storage_user realm")?;
     let (exposed_proxy, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>()?;
     model
-        .bind_open_exposed(storage_user_realm, server_end.into_channel())
+        .bind(&storage_user_realm.abs_moniker)
+        .await
+        .context("could not bind")?
+        .open_exposed(server_end.into_channel())
         .await
         .context("could not open exposed directory of storage user realm")?;
 
@@ -203,7 +206,10 @@ async fn use_storage(
     let m = AbsoluteMoniker::from(vec!["memfs:0"]);
     let memfs_realm = model.look_up_realm(&m).await.context("could not look up memfs realm")?;
     model
-        .bind_open_exposed(memfs_realm, server_end.into_channel())
+        .bind(&memfs_realm.abs_moniker)
+        .await
+        .context("could not bind")?
+        .open_exposed(server_end.into_channel())
         .await
         .context("could not open exposed directory of root realm")?;
     let memfs_proxy = io_util::open_directory(

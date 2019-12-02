@@ -619,7 +619,7 @@ mod tests {
                     },
                     test_hook::HubInjectionTestHook,
                 },
-                ComponentManagerConfig,
+                Binder, ComponentManagerConfig,
             },
             startup,
         },
@@ -754,8 +754,7 @@ mod tests {
 
         let root_moniker = model::AbsoluteMoniker::root();
         let res = model.bind(&root_moniker).await;
-        let expected_res: Result<(), model::ModelError> = Ok(());
-        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+        assert!(res.is_ok());
 
         (model, builtin_environment, hub_proxy)
     }

@@ -18,7 +18,7 @@
 
 use {
     crate::{
-        model::{OutgoingBinder, Realm},
+        model::{Binder, Realm},
         work_scheduler::{delegate::WorkSchedulerDelegate, dispatcher::RealDispatcher},
     },
     cm_rust::CapabilityPath,
@@ -47,13 +47,13 @@ pub struct WorkScheduler {
     /// Delegate that implements business logic and holds state behind `Mutex`.
     delegate: Mutex<WorkSchedulerDelegate>,
     /// A reference to the `Model` used to bind to component instances during dispatch.
-    outgoing_binder: Weak<dyn OutgoingBinder>,
+    binder: Weak<dyn Binder>,
 }
 
 impl WorkScheduler {
     // `Workscheduler` is always instantiated in an `Arc` that will determine its lifetime.
-    pub async fn new(outgoing_binder: Weak<dyn OutgoingBinder>) -> Arc<Self> {
-        let work_scheduler = Self::new_raw(outgoing_binder);
+    pub async fn new(binder: Weak<dyn Binder>) -> Arc<Self> {
+        let work_scheduler = Self::new_raw(binder);
         {
             let mut delegate = work_scheduler.delegate.lock().await;
             delegate.init(Arc::downgrade(&work_scheduler));
@@ -61,8 +61,8 @@ impl WorkScheduler {
         work_scheduler
     }
 
-    fn new_raw(outgoing_binder: Weak<dyn OutgoingBinder>) -> Arc<Self> {
-        Arc::new(Self { delegate: WorkSchedulerDelegate::new(), outgoing_binder })
+    fn new_raw(binder: Weak<dyn Binder>) -> Arc<Self> {
+        Arc::new(Self { delegate: WorkSchedulerDelegate::new(), binder })
     }
 
     /// `schedule_work()` interface method is forwarded to delegate. `Arc<dyn Dispatcher>` is
@@ -75,7 +75,7 @@ impl WorkScheduler {
     ) -> Result<(), fsys::Error> {
         let mut delegate = self.delegate.lock().await;
         delegate.schedule_work(
-            RealDispatcher::new(realm, self.outgoing_binder.clone()),
+            RealDispatcher::new(realm, self.binder.clone()),
             work_id,
             work_request,
         )
@@ -89,7 +89,7 @@ impl WorkScheduler {
         work_id: &'a str,
     ) -> Result<(), fsys::Error> {
         let mut delegate = self.delegate.lock().await;
-        delegate.cancel_work(RealDispatcher::new(realm, self.outgoing_binder.clone()), work_id)
+        delegate.cancel_work(RealDispatcher::new(realm, self.binder.clone()), work_id)
     }
 
     /// `get_batch_period()` interface method is forwarded to delegate.
@@ -157,7 +157,7 @@ mod time_tests {
     use {
         super::WorkScheduler,
         crate::{
-            model::{testing::mocks::FakeOutgoingBinder, AbsoluteMoniker, OutgoingBinder},
+            model::{testing::mocks::FakeBinder, AbsoluteMoniker, Binder},
             work_scheduler::work_item::WorkItem,
         },
         fidl_fuchsia_sys2 as fsys,
@@ -206,21 +206,21 @@ mod time_tests {
     struct TimeTest {
         executor: Executor,
         work_scheduler: Arc<WorkScheduler>,
-        // Retain `Arc` to keep `OutgoingBinder` alive throughout test.
-        _outgoing_binder: Arc<dyn OutgoingBinder>,
+        // Retain `Arc` to keep `Binder` alive throughout test.
+        _binder: Arc<dyn Binder>,
     }
 
     impl TimeTest {
         fn new() -> Self {
             let executor = Executor::new_with_fake_time().unwrap();
             executor.set_fake_time(Time::from_nanos(0));
-            let _outgoing_binder = FakeOutgoingBinder::new();
-            let work_scheduler = WorkScheduler::new_raw(Arc::downgrade(&_outgoing_binder));
+            let _binder = FakeBinder::new();
+            let work_scheduler = WorkScheduler::new_raw(Arc::downgrade(&_binder));
             block_on(async {
                 let mut delegate = work_scheduler.delegate.lock().await;
                 delegate.init(Arc::downgrade(&work_scheduler));
             });
-            TimeTest { executor, work_scheduler, _outgoing_binder }
+            TimeTest { executor, work_scheduler, _binder }
         }
 
         fn work_scheduler(&self) -> Arc<WorkScheduler> {
@@ -581,8 +581,7 @@ mod connect_tests {
         crate::{
             capability::ComponentManagerCapability,
             model::{
-                testing::mocks::FakeOutgoingBinder, Event, EventPayload, Hooks, Realm,
-                ResolverRegistry,
+                testing::mocks::FakeBinder, Event, EventPayload, Hooks, Realm, ResolverRegistry,
             },
         },
         failure::Error,
@@ -595,10 +594,10 @@ mod connect_tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn connect_to_work_scheduler_control_service() -> Result<(), Error> {
-        // Retain `Arc` to keep `OutgoingBinder` alive throughout test.
-        let outgoing_binder = FakeOutgoingBinder::new();
+        // Retain `Arc` to keep `Binder` alive throughout test.
+        let binder = FakeBinder::new();
 
-        let work_scheduler = WorkScheduler::new(Arc::downgrade(&outgoing_binder)).await;
+        let work_scheduler = WorkScheduler::new(Arc::downgrade(&binder)).await;
         let hooks = Hooks::new(None);
         hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
 

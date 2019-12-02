@@ -10,7 +10,7 @@ use {
             hooks::*,
             testing::breakpoints::*,
             testing::test_hook::{Lifecycle, TestHook},
-            ComponentManagerConfig,
+            Binder, ComponentManagerConfig,
         },
         startup,
     },

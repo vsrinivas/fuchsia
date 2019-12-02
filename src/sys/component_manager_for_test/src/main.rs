@@ -5,7 +5,7 @@
 use {
     component_manager_lib::{
         builtin_environment::BuiltinEnvironment,
-        model::{testing::test_helpers, AbsoluteMoniker, ComponentManagerConfig},
+        model::{testing::test_helpers, AbsoluteMoniker, Binder, ComponentManagerConfig},
         startup,
     },
     failure::{self, Error},
@@ -42,7 +42,7 @@ async fn main() -> Result<(), Error> {
 
     let root_moniker = AbsoluteMoniker::root();
     match model.bind(&root_moniker).await {
-        Ok(()) => {
+        Ok(_) => {
             // TODO: Exit the component manager when the root component's binding is lost
             // (when it terminates).
         }

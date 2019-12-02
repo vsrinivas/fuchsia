@@ -8,8 +8,9 @@ use {
         self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeTarget, UseDecl,
         UseStorageDecl,
     },
-    fidl::endpoints::{create_endpoints, Proxy},
-    fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY},
+    failure::format_err,
+    fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
+    fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::{BoxFuture, FutureExt},
     futures::lock::{Mutex, MutexLockFuture},
@@ -399,6 +400,76 @@ impl Realm {
             }
             _ => false,
         })
+    }
+
+    pub async fn open_outgoing(
+        &self,
+        flags: u32,
+        open_mode: u32,
+        path: &CapabilityPath,
+        server_chan: zx::Channel,
+    ) -> Result<(), ModelError> {
+        let server_end = ServerEnd::new(server_chan);
+        let execution = self.lock_execution().await;
+        if execution.runtime.is_none() {
+            return Err(ModelError::capability_discovery_error(format_err!(
+                "component hosting capability isn't running: {}",
+                self.abs_moniker
+            )));
+        }
+        let out_dir = &execution
+            .runtime
+            .as_ref()
+            .expect("bind_instance_open_outgoing: no runtime")
+            .outgoing_dir
+            .as_ref()
+            .ok_or(ModelError::capability_discovery_error(format_err!(
+                "component hosting capability is non-executable: {}",
+                self.abs_moniker
+            )))?;
+        let path = path.to_string();
+        let path = io_util::canonicalize_path(&path);
+        out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
+            ModelError::capability_discovery_error(format_err!(
+                "failed to open outgoing dir for {}: {}",
+                self.abs_moniker,
+                e
+            ))
+        })?;
+        Ok(())
+    }
+
+    pub async fn open_exposed(&self, server_chan: zx::Channel) -> Result<(), ModelError> {
+        let server_end = ServerEnd::new(server_chan);
+        let execution = self.lock_execution().await;
+        if execution.runtime.is_none() {
+            return Err(ModelError::capability_discovery_error(format_err!(
+                "component hosting capability isn't running: {}",
+                self.abs_moniker
+            )));
+        }
+        let exposed_dir = &execution
+            .runtime
+            .as_ref()
+            .expect("bind_instance_open_exposed: no runtime")
+            .exposed_dir;
+
+        // TODO(fxb/36541): Until directory capabilities specify rights, we always open
+        // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
+        // the same directory rights as the parent directory connection.
+        let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
+        exposed_dir
+            .root_dir
+            .open(flags, fio::MODE_TYPE_DIRECTORY, vec![], server_end)
+            .await
+            .map_err(|e| {
+                ModelError::capability_discovery_error(format_err!(
+                    "failed to open exposed dir for {}: {}",
+                    self.abs_moniker,
+                    e
+                ))
+            })?;
+        Ok(())
     }
 }
 

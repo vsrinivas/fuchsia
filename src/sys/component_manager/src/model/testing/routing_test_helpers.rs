@@ -550,8 +550,10 @@ impl RoutingTest {
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
         let realm = self.model.look_up_realm(component).await.expect("lookup root realm failed");
         self.model
-            .bind_open_outgoing(
-                realm,
+            .bind(&realm.abs_moniker)
+            .await
+            .expect("failed to bind to realm")
+            .open_outgoing(
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
                 fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
                 &CapabilityPath::try_from("/.").unwrap(), // Root directory.

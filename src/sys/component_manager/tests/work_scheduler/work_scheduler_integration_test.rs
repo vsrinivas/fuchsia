@@ -6,8 +6,8 @@ use {
     component_manager_lib::{
         builtin_environment::BuiltinEnvironment,
         model::{
-            self, AbsoluteMoniker, ComponentManagerConfig, EventType, Hook, HooksRegistration,
-            Model,
+            self, AbsoluteMoniker, Binder, ComponentManagerConfig, EventType, Hook,
+            HooksRegistration, Model,
         },
         startup,
     },
@@ -60,8 +60,7 @@ impl TestRunner {
 
     async fn bind(&self) -> Result<(), Error> {
         let res = self.model.bind(&model::AbsoluteMoniker::root()).await;
-        let expected_res: Result<(), model::ModelError> = Ok(());
-        assert_eq!(format!("{:?}", expected_res), format!("{:?}", res));
+        assert!(res.is_ok());
         Ok(())
     }
 }

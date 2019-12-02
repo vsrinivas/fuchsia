@@ -4,7 +4,7 @@
 
 use {
     crate::model::*,
-    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
+    cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::RoutingFn,
     failure::format_err,
     fidl::endpoints::ServerEnd,
@@ -15,7 +15,6 @@ use {
         directory::{self, entry::DirectoryEntry},
         file::simple::read_only,
     },
-    fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex, prelude::*},
     std::{
         boxed::Box,
@@ -267,24 +266,25 @@ impl Runner for MockRunner {
     }
 }
 
-/// A fake `OutgoingBinder` implementation that always returns `Ok(())` in a `BoxFuture`.
-pub struct FakeOutgoingBinder;
+/// A fake `Binder` implementation that always returns `Ok(())` in a `BoxFuture`.
+pub struct FakeBinder;
 
-impl FakeOutgoingBinder {
-    pub fn new() -> Arc<dyn OutgoingBinder> {
+impl FakeBinder {
+    pub fn new() -> Arc<dyn Binder> {
         Arc::new(Self {})
     }
 }
 
-impl OutgoingBinder for FakeOutgoingBinder {
-    fn bind_open_outgoing<'a>(
+impl Binder for FakeBinder {
+    fn bind<'a>(
         &'a self,
-        _realm: Arc<Realm>,
-        _flags: u32,
-        _open_mode: u32,
-        _path: &'a CapabilityPath,
-        _server_chan: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move { Ok(()) })
+        _abs_moniker: &'a AbsoluteMoniker,
+    ) -> BoxFuture<Result<Arc<Realm>, ModelError>> {
+        async {
+            let resolver = ResolverRegistry::new();
+            let root_component_url = "test:///root".to_string();
+            Ok(Arc::new(Realm::new_root_realm(resolver, root_component_url)))
+        }
+        .boxed()
     }
 }

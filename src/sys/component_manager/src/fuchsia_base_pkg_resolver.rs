@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        find_exposed_root_directory_capability, Model, Resolver, ResolverError, ResolverFut,
+        find_exposed_root_directory_capability, Binder, Model, Resolver, ResolverError, ResolverFut,
     },
     cm_fidl_translator,
     failure::format_err,
@@ -60,8 +60,15 @@ impl FuchsiaPkgResolver {
                 ResolverError::component_not_available(component_package_url.to_string(), e)
             })?;
             model
-                .bind_open_outgoing(
-                    realm,
+                .bind(&realm.abs_moniker)
+                .await
+                .map_err(|e| {
+                    ResolverError::component_not_available(
+                        component_package_url.to_string(),
+                        format_err!("failed to bind to pkgfs provider: {}", e),
+                    )
+                })?
+                .open_outgoing(
                     OPEN_RIGHT_READABLE,
                     MODE_TYPE_DIRECTORY,
                     &capability_path,
@@ -71,7 +78,7 @@ impl FuchsiaPkgResolver {
                 .map_err(|e| {
                     ResolverError::component_not_available(
                         component_package_url.to_string(),
-                        format_err!("failed to bind to pkgfs provider: {}", e),
+                        format_err!("failed to open outgoing directory of pkgfs provider: {}", e),
                     )
                 })?;
             *o_pkgfs_handle = Some(pkgfs_client)

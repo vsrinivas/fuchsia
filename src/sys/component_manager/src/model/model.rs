@@ -10,14 +10,14 @@ use {
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
     },
-    cm_rust::{data, CapabilityPath},
-    failure::format_err,
+    cm_rust::data,
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
-    fidl_fuchsia_io::{self as fio, DirectoryProxy},
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         future::{join_all, BoxFuture},
         lock::Mutex,
+        FutureExt,
     },
     std::sync::Arc,
 };
@@ -88,99 +88,6 @@ impl Model {
             .await;
     }
 
-    /// Given a realm and path, lazily bind to the instance in the realm, open its outgoing
-    /// directory at that path, then bind its eager children.
-    pub async fn bind_open_outgoing(
-        &self,
-        realm: Arc<Realm>,
-        flags: u32,
-        open_mode: u32,
-        path: &CapabilityPath,
-        server_chan: zx::Channel,
-    ) -> Result<(), ModelError> {
-        self.bind(&realm.abs_moniker).await?;
-        self.open_outgoing(realm, flags, open_mode, path, server_chan).await?;
-        Ok(())
-    }
-
-    async fn open_outgoing(
-        &self,
-        realm: Arc<Realm>,
-        flags: u32,
-        open_mode: u32,
-        path: &CapabilityPath,
-        server_chan: zx::Channel,
-    ) -> Result<(), ModelError> {
-        let server_end = ServerEnd::new(server_chan);
-        let execution = realm.lock_execution().await;
-        if execution.runtime.is_none() {
-            return Err(ModelError::capability_discovery_error(format_err!(
-                "component hosting capability isn't running: {}",
-                realm.abs_moniker
-            )));
-        }
-        let out_dir = &execution
-            .runtime
-            .as_ref()
-            .expect("bind_instance_open_outgoing: no runtime")
-            .outgoing_dir
-            .as_ref()
-            .ok_or(ModelError::capability_discovery_error(format_err!(
-                "component hosting capability is non-executable: {}",
-                realm.abs_moniker
-            )))?;
-        let path = path.to_string();
-        let path = io_util::canonicalize_path(&path);
-        out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
-            ModelError::capability_discovery_error(format_err!(
-                "failed to open outgoing dir for {}: {}",
-                realm.abs_moniker,
-                e
-            ))
-        })?;
-        Ok(())
-    }
-
-    /// Given a realm and path, lazily bind to the instance in the realm, open its exposed
-    /// directory, then bind its eager children.
-    pub async fn bind_open_exposed(
-        &self,
-        realm: Arc<Realm>,
-        server_chan: zx::Channel,
-    ) -> Result<(), ModelError> {
-        self.bind(&realm.abs_moniker).await?;
-        let server_end = ServerEnd::new(server_chan);
-        let execution = realm.lock_execution().await;
-        if execution.runtime.is_none() {
-            return Err(ModelError::capability_discovery_error(format_err!(
-                "component hosting capability isn't running: {}",
-                realm.abs_moniker
-            )));
-        }
-        let exposed_dir = &execution
-            .runtime
-            .as_ref()
-            .expect("bind_instance_open_exposed: no runtime")
-            .exposed_dir;
-
-        // TODO(fxb/36541): Until directory capabilities specify rights, we always open
-        // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
-        // the same directory rights as the parent directory connection.
-        let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
-        exposed_dir
-            .root_dir
-            .open(flags, fio::MODE_TYPE_DIRECTORY, vec![], server_end)
-            .await
-            .map_err(|e| {
-                ModelError::capability_discovery_error(format_err!(
-                    "failed to open exposed dir for {}: {}",
-                    realm.abs_moniker,
-                    e
-                ))
-            })?;
-        Ok(())
-    }
-
     /// Looks up a realm by absolute moniker. The component instance in the realm will be resolved
     /// if that has not already happened.
     pub async fn look_up_realm(
@@ -202,38 +109,6 @@ impl Model {
         }
         Realm::resolve_decl(&cur_realm).await?;
         Ok(cur_realm)
-    }
-
-    /// Binds to the component instance with the specified moniker. This has the following effects:
-    /// - Binds to the parent instance.
-    /// - Starts the component instance, if it is not already running and not shut down.
-    /// - Binds to any descendant component instances that need to be eagerly started.
-    // TODO: This function starts the parent component, but doesn't track the bindings anywhere.
-    // This means that when the child stops and the parent has no other reason to run, we won't
-    // stop the parent. To solve this, we need to track the bindings.
-    pub async fn bind<'a>(&'a self, abs_moniker: &'a AbsoluteMoniker) -> Result<(), ModelError> {
-        async fn bind_one(model: &Model, m: AbsoluteMoniker) -> Result<(), ModelError> {
-            let realm = model.look_up_realm(&m).await?;
-            let eager_children = model.bind_single_instance(realm).await?;
-            // If the bind to this realm's instance succeeded but the child is shut down, allow
-            // the call to succeed. If the child is shut down, that shouldn't cause the client to
-            // believe the bind to `abs_moniker` failed.
-            //
-            // TODO: Have a more general strategy for dealing with errors from eager binding. Should
-            // we ever pass along the error?
-            model.bind_eager_children_recursive(eager_children).await.or_else(|e| match e {
-                ModelError::InstanceShutDown { .. } => Ok(()),
-                _ => Err(e),
-            })?;
-            Ok(())
-        }
-        let mut cur_moniker = AbsoluteMoniker::root();
-        bind_one(self, cur_moniker.clone()).await?;
-        for m in abs_moniker.path().iter() {
-            cur_moniker = cur_moniker.child(m.clone());
-            bind_one(self, cur_moniker.clone()).await?;
-        }
-        Ok(())
     }
 
     /// Binds to the component instance in the given realm, starting it if it's not already
@@ -375,31 +250,52 @@ impl Model {
     }
 }
 
-/// A trait to enable support for different `bind_open_outgoing()` implementations. This is used,
-/// for example, for testing code that depends on `bind_open_outgoing()`, but no other `Model`
+/// A trait to enable support for different `bind()` implementations. This is used,
+/// for example, for testing code that depends on `bind()`, but no other `Model`
 /// functionality.
-pub trait OutgoingBinder: Send + Sync {
-    fn bind_open_outgoing<'a>(
+pub trait Binder: Send + Sync {
+    fn bind<'a>(
         &'a self,
-        realm: Arc<Realm>,
-        flags: u32,
-        open_mode: u32,
-        path: &'a CapabilityPath,
-        server_chan: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>>;
+        abs_moniker: &'a AbsoluteMoniker,
+    ) -> BoxFuture<Result<Arc<Realm>, ModelError>>;
 }
 
-impl OutgoingBinder for Model {
-    fn bind_open_outgoing<'a>(
+impl Binder for Model {
+    /// Binds to the component instance with the specified moniker. This has the following effects:
+    /// - Binds to the parent instance.
+    /// - Starts the component instance, if it is not already running and not shut down.
+    /// - Binds to any descendant component instances that need to be eagerly started.
+    // TODO: This function starts the parent component, but doesn't track the bindings anywhere.
+    // This means that when the child stops and the parent has no other reason to run, we won't
+    // stop the parent. To solve this, we need to track the bindings.
+    fn bind<'a>(
         &'a self,
-        realm: Arc<Realm>,
-        flags: u32,
-        open_mode: u32,
-        path: &'a CapabilityPath,
-        server_chan: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            self.bind_open_outgoing(realm, flags, open_mode, path, server_chan).await
-        })
+        abs_moniker: &'a AbsoluteMoniker,
+    ) -> BoxFuture<Result<Arc<Realm>, ModelError>> {
+        async move {
+            async fn bind_one(model: &Model, m: AbsoluteMoniker) -> Result<Arc<Realm>, ModelError> {
+                let realm = model.look_up_realm(&m).await?;
+                let eager_children = model.bind_single_instance(realm.clone()).await?;
+                // If the bind to this realm's instance succeeded but the child is shut down, allow
+                // the call to succeed. If the child is shut down, that shouldn't cause the client to
+                // believe the bind to `abs_moniker` failed.
+                //
+                // TODO: Have a more general strategy for dealing with errors from eager binding. Should
+                // we ever pass along the error?
+                model.bind_eager_children_recursive(eager_children).await.or_else(|e| match e {
+                    ModelError::InstanceShutDown { .. } => Ok(()),
+                    _ => Err(e),
+                })?;
+                Ok(realm)
+            }
+            let mut cur_moniker = AbsoluteMoniker::root();
+            let mut realm = bind_one(self, cur_moniker.clone()).await?;
+            for m in abs_moniker.path().iter() {
+                cur_moniker = cur_moniker.child(m.clone());
+                realm = bind_one(self, cur_moniker.clone()).await?;
+            }
+            Ok(realm)
+        }
+        .boxed()
     }
 }

@@ -4,7 +4,6 @@
 
 // TODO Follow 2018 idioms
 #![allow(elided_lifetimes_in_paths)]
-
 // This is needed for the pseudo_directory nesting in crate::model::tests
 #![recursion_limit = "256"]
 

@@ -183,8 +183,10 @@ impl RealmCapabilityHostInner {
             realm_state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
         };
         if let Some(child_realm) = child_realm {
-            model.bind_open_exposed(child_realm, exposed_dir.into_channel()).await.map_err(
-                |e| match e {
+            model
+                .bind(&child_realm.abs_moniker)
+                .await
+                .map_err(|e| match e {
                     ModelError::ResolverError { err } => {
                         debug!("failed to resolve child: {:?}", err);
                         fsys::Error::InstanceCannotResolve
@@ -194,11 +196,16 @@ impl RealmCapabilityHostInner {
                         fsys::Error::InstanceCannotStart
                     }
                     e => {
-                        error!("bind_open_exposed() failed: {}", e);
+                        error!("bind() failed: {}", e);
                         fsys::Error::Internal
                     }
-                },
-            )?;
+                })?
+                .open_exposed(exposed_dir.into_channel())
+                .await
+                .map_err(|e| {
+                    error!("open_exposed() failed: {}", e);
+                    fsys::Error::Internal
+                })?;
         } else {
             return Err(fsys::Error::InstanceNotFound);
         }

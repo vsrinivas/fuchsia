@@ -93,13 +93,17 @@ pub async fn open_isolated_storage(
     let (dir_proxy, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
     model
-        .bind_open_outgoing(
-            dir_source_realm.clone(),
-            FLAGS,
-            open_mode,
-            dir_source_path,
-            local_server_end.into_channel(),
-        )
+        .bind(&dir_source_realm.abs_moniker)
+        .await
+        .map_err(|e| {
+            StorageError::open(
+                dir_source_realm.abs_moniker.clone(),
+                dir_source_path.clone(),
+                relative_moniker.clone(),
+                e,
+            )
+        })?
+        .open_outgoing(FLAGS, open_mode, dir_source_path, local_server_end.into_channel())
         .await
         .map_err(|e| {
             StorageError::open(
@@ -135,13 +139,17 @@ pub async fn delete_isolated_storage(
     let (root_dir, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
     model
-        .bind_open_outgoing(
-            dir_source_realm.clone(),
-            FLAGS,
-            MODE_TYPE_DIRECTORY,
-            dir_source_path,
-            local_server_end.into_channel(),
-        )
+        .bind(&dir_source_realm.abs_moniker)
+        .await
+        .map_err(|e| {
+            StorageError::open(
+                dir_source_realm.abs_moniker.clone(),
+                dir_source_path.clone(),
+                relative_moniker.clone(),
+                e,
+            )
+        })?
+        .open_outgoing(FLAGS, MODE_TYPE_DIRECTORY, dir_source_path, local_server_end.into_channel())
         .await
         .map_err(|e| {
             StorageError::open(

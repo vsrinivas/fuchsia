@@ -6,8 +6,8 @@ use {
     crate::{
         framework::RealmCapabilityHost,
         model::{
-            testing::breakpoints::BreakpointSystem, ComponentManagerConfig, EventType, Hub, Model,
-            ModelError, OutgoingBinder,
+            testing::breakpoints::BreakpointSystem, Binder, ComponentManagerConfig, EventType, Hub,
+            Model, ModelError,
         },
         process_launcher::ProcessLauncher,
         runner::BuiltinRunner,
@@ -71,8 +71,7 @@ impl BuiltinEnvironment {
         };
 
         // Set up work scheduler.
-        let work_scheduler =
-            WorkScheduler::new(Arc::downgrade(model) as Weak<dyn OutgoingBinder>).await;
+        let work_scheduler = WorkScheduler::new(Arc::downgrade(model) as Weak<dyn Binder>).await;
         model.root_realm.hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
 
         // Set up system controller.
