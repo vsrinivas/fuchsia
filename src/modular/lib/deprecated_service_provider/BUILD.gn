@@ -12,8 +12,6 @@ source_set("deprecated_service_provider") {
     "//sdk/fidl/fuchsia.sys",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
-
   # This library is deprecated.
   #
   # Use a directory(sys::ServiceDirectory) instead.

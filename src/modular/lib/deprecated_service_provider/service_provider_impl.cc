@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/component/cpp/service_provider_impl.h"
+#include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 
 #include <utility>
 

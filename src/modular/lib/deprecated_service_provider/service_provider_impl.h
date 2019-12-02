@@ -9,14 +9,13 @@
 #define SRC_LIB_COMPONENT_CPP_SERVICE_PROVIDER_IMPL_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
 #include <string>
 #include <unordered_map>
 #include <utility>
-
-#include "lib/fidl/cpp/binding_set.h"
 
 namespace component {
 

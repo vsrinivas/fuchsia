@@ -21,7 +21,6 @@
 #include <lib/sys/inspect/cpp/component.h>
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
-#include "src/lib/component/cpp/service_provider_impl.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/module_resolver/local_module_resolver.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_service_index.h"
@@ -30,6 +29,7 @@
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 #include "src/modular/bin/sessionmgr/user_intelligence_provider_impl.h"
 #include "src/modular/lib/common/async_holder.h"
+#include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/fidl/view_host.h"

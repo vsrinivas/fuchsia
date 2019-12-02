@@ -14,10 +14,10 @@
 
 #include <string>
 
-#include "src/lib/component/cpp/service_provider_impl.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
 
 namespace modular {

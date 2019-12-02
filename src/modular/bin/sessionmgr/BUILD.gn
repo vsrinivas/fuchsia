@@ -56,8 +56,8 @@ source_set("sessionmgr_lib") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
-    "//src/lib/component/cpp:deprecated_service_provider",
     "//src/modular/bin/sessionmgr/agent_runner",
+    "//src/modular/lib/deprecated_service_provider",
   ]
 
   deps = [
