@@ -201,7 +201,9 @@ class TestSwapchain {
         .queueFamilyIndex = 0,
         .queueCount = 1,
         .pQueuePriorities = queue_priorities,
-        .flags = 0};
+        .flags = protected_memory_
+                     ? static_cast<VkDeviceQueueCreateFlags>(VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT)
+                     : 0};
 
     VkDeviceCreateInfo device_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -232,6 +234,7 @@ class TestSwapchain {
     LoadProc(&get_swapchain_images_khr_, "vkGetSwapchainImagesKHR");
     LoadProc(&acquire_next_image_khr_, "vkAcquireNextImageKHR");
     LoadProc(&queue_present_khr_, "vkQueuePresentKHR");
+    LoadProc(&get_device_queue2_, "vkGetDeviceQueue2");
 
     init_ = true;
   }
@@ -322,6 +325,7 @@ class TestSwapchain {
   PFN_vkGetSwapchainImagesKHR get_swapchain_images_khr_;
   PFN_vkAcquireNextImageKHR acquire_next_image_khr_;
   PFN_vkQueuePresentKHR queue_present_khr_;
+  PFN_vkGetDeviceQueue2 get_device_queue2_;
   std::unique_ptr<FakeImagePipe> imagepipe_;
 
   const bool protected_memory_ = false;
@@ -432,7 +436,16 @@ TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
                                        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &swapchain));
 
   VkQueue queue;
-  vkGetDeviceQueue(test.vk_device_, 0, 0, &queue);
+  if (protected_memory) {
+    VkDeviceQueueInfo2 queue_info2 = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2,
+                                      .pNext = nullptr,
+                                      .flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT,
+                                      .queueFamilyIndex = 0,
+                                      .queueIndex = 0};
+    test.get_device_queue2_(test.vk_device_, &queue_info2, &queue);
+  } else {
+    vkGetDeviceQueue(test.vk_device_, 0, 0, &queue);
+  }
 
   uint32_t image_index;
   // Acquire all initial images.
