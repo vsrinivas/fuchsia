@@ -1861,9 +1861,11 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
     ASSERT_EQ(ranges[0].count, query_request.vslice_start[1] - query_request.vslice_start[0]);
   }
 
-  // Try to mount the VPart.
+  // Try to mount the VPart. Since this mount call is supposed to fail, we wait for the spawned
+  // fs process to finish and associated fidl channels to close before continuing to try and prevent
+  // race conditions with the later mount call.
   ASSERT_NE(
-      mount(vp_fd.release(), kMountPath, disk_format, &default_mount_options, launch_stdio_async),
+      mount(vp_fd.release(), kMountPath, disk_format, &default_mount_options, launch_stdio_sync),
       ZX_OK);
 
   {
