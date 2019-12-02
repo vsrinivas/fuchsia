@@ -42,6 +42,10 @@ class BranchTracker::PageWatcherContainer {
     });
   }
 
+  PageWatcherContainer(const PageWatcherContainer&) = delete;
+
+  PageWatcherContainer& operator=(const PageWatcherContainer&) = delete;
+
   ~PageWatcherContainer() {
     if (on_drained_) {
       on_drained_();
@@ -241,8 +245,6 @@ class BranchTracker::PageWatcherContainer {
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<PageWatcherContainer> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageWatcherContainer);
 };
 
 BranchTracker::BranchTracker(Environment* environment, ActivePageManager* manager,

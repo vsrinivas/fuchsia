@@ -27,6 +27,8 @@ class CommitsChildrenManager final : public inspect_deprecated::ChildrenManager 
   explicit CommitsChildrenManager(async_dispatcher_t* dispatcher,
                                   inspect_deprecated::Node* commits_node,
                                   InspectablePage* inspectable_page);
+  CommitsChildrenManager(const CommitsChildrenManager&) = delete;
+  CommitsChildrenManager& operator=(const CommitsChildrenManager&) = delete;
   ~CommitsChildrenManager() override;
 
   void SetOnDiscardable(fit::closure on_discardable);
@@ -45,8 +47,6 @@ class CommitsChildrenManager final : public inspect_deprecated::ChildrenManager 
   fit::closure on_discardable_;
   callback::AutoCleanableMap<storage::CommitId, InspectedContainer<InspectedCommit>>
       inspected_commit_containers_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(CommitsChildrenManager);
 };
 
 }  // namespace ledger

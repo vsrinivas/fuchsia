@@ -32,7 +32,6 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
@@ -87,6 +86,8 @@ class App : public ledger_internal::LedgerController {
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);
   }
+  App(const App&) = delete;
+  App& operator=(const App&) = delete;
   ~App() override = default;
 
   bool Start() {
@@ -154,8 +155,6 @@ class App : public ledger_internal::LedgerController {
       SyncableBinding<fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate>>
       factory_bindings_;
   fidl::BindingSet<LedgerController> controller_bindings_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 int Main(int argc, char** argv) {

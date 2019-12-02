@@ -30,6 +30,8 @@ class BranchTracker : public storage::CommitWatcher {
  public:
   BranchTracker(Environment* environment, ActivePageManager* manager,
                 storage::PageStorage* storage);
+  BranchTracker(const BranchTracker&) = delete;
+  BranchTracker& operator=(const BranchTracker&) = delete;
   ~BranchTracker() override;
 
   Status Init();
@@ -81,8 +83,6 @@ class BranchTracker : public storage::CommitWatcher {
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<BranchTracker> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(BranchTracker);
 };
 
 }  // namespace ledger

@@ -35,15 +35,14 @@ class ActivePageManagerContainerTest : public TestWithEnvironment {
         &environment_, std::move(page_storage), nullptr, std::move(merge_resolver),
         ActivePageManager::PageStorageState::AVAILABLE);
   }
+  ActivePageManagerContainerTest(const ActivePageManagerContainerTest&) = delete;
+  ActivePageManagerContainerTest& operator=(const ActivePageManagerContainerTest&) = delete;
   ~ActivePageManagerContainerTest() override = default;
 
  protected:
   storage::PageId page_id_;
   std::unique_ptr<ActivePageManager> active_page_manager_;
   FakeDiskCleanupManager fake_disk_cleanup_manager_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(ActivePageManagerContainerTest);
 };
 
 TEST_F(ActivePageManagerContainerTest, OneEarlyBindingNoPageManager) {

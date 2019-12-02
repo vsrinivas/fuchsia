@@ -28,6 +28,8 @@ class ActivePageManagerContainer {
   ActivePageManagerContainer(Environment* environment, std::string ledger_name,
                              storage::PageId page_id,
                              std::vector<PageUsageListener*> page_usage_listeners);
+  ActivePageManagerContainer(const ActivePageManagerContainer&) = delete;
+  ActivePageManagerContainer& operator=(const ActivePageManagerContainer&) = delete;
   ~ActivePageManagerContainer();
 
   void SetOnDiscardable(fit::closure on_discardable);
@@ -97,8 +99,6 @@ class ActivePageManagerContainer {
 
   // Must be the last member.
   fxl::WeakPtrFactory<ActivePageManagerContainer> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ActivePageManagerContainer);
 };
 
 }  // namespace ledger

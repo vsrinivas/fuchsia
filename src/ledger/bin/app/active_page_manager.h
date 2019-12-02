@@ -51,6 +51,8 @@ class ActivePageManager {
                     std::unique_ptr<MergeResolver> merge_resolver,
                     ActivePageManager::PageStorageState state,
                     zx::duration sync_timeout = zx::sec(5));
+  ActivePageManager(const ActivePageManager&) = delete;
+  ActivePageManager& operator=(const ActivePageManager&) = delete;
   ~ActivePageManager();
 
   // Creates a new PageDelegate managed by this ActivePageManager, and binds it
@@ -133,8 +135,6 @@ class ActivePageManager {
 
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ActivePageManager);
 };
 
 }  // namespace ledger

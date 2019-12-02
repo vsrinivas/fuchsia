@@ -37,7 +37,6 @@
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/vector.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {
@@ -332,6 +331,8 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
 class ActivePageManagerTest : public TestWithEnvironment {
  public:
   ActivePageManagerTest() = default;
+  ActivePageManagerTest(const ActivePageManagerTest&) = delete;
+  ActivePageManagerTest& operator=(const ActivePageManagerTest&) = delete;
   ~ActivePageManagerTest() override = default;
 
  protected:
@@ -348,9 +349,6 @@ class ActivePageManagerTest : public TestWithEnvironment {
   }
 
   storage::PageId page_id_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(ActivePageManagerTest);
 };
 
 TEST_F(ActivePageManagerTest, OnDiscardableCallback) {

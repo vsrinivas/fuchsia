@@ -19,6 +19,8 @@ namespace ledger {
 class DiskCleanupManager {
  public:
   DiskCleanupManager() = default;
+  DiskCleanupManager(const DiskCleanupManager&) = delete;
+  DiskCleanupManager& operator=(const DiskCleanupManager&) = delete;
   virtual ~DiskCleanupManager() = default;
 
   // Sets the callback to be called every time the DiskCleanupManager is empty.
@@ -30,9 +32,6 @@ class DiskCleanupManager {
 
   // Tries to free up disk space.
   virtual void TryCleanUp(fit::function<void(Status)> callback) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(DiskCleanupManager);
 };
 
 }  // namespace ledger
