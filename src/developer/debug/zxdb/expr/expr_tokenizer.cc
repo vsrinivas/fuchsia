@@ -93,8 +93,8 @@ std::string ExprTokenizer::GetErrorContext(const std::string& input, size_t byte
   FXL_DCHECK(byte_offset <= input.size());
 
   // Future enhancements:
-  // - If we allow multiline expressions in the, the returned context should not cross newlines or
-  //   it will be messed up.
+  // - If we allow multiline expressions in the input, the returned context should not cross
+  //   newlines or it will be messed up.
   // - Input longer than 80 chars should be clipped to guarantee it doesn't wrap.
 
   std::string output;
