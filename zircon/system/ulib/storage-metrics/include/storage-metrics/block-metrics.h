@@ -6,6 +6,7 @@
 #define STORAGE_METRICS_BLOCK_METRICS_H_
 
 #include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 
 #include <atomic>
@@ -83,6 +84,9 @@ class BlockDeviceMetrics : public storage_metrics::Metrics {
     }
     barrier_after_.UpdateCallStat(success, delta_time, bytes_transferred);
   }
+
+  void UpdateStats(bool success, const zx::ticks start_tick, const uint32_t command,
+                   const uint64_t bytes_transfered);
 
   // Total number of successful, failed, sum of successful and failed calls is returned if
   // |success| is true, false or nullopt, respectively.

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 
+#include <ddktl/protocol/block.h>
 #include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
 #include <storage-metrics/storage-metrics.h>
@@ -497,5 +498,100 @@ TEST(BlockDeviceMetricsTest, EnabledMetricsCollectOnUpdate) {
   metrics.CopyToFidl(&fidl_block_metrics);
   CompareFidlBlockDeviceStatAll(fidl_block_metrics, fidl_call_stat);
 }
+
+TEST(BlockDeviceMetricsTest, UpdateWriteStats) {
+  storage_metrics::BlockDeviceMetrics metrics;
+  fuchsia_hardware_block_BlockStats fidl_block_metrics;
+
+  metrics.UpdateStats(true, zx::ticks(0), BLOCK_OP_WRITE, 100);
+  metrics.UpdateStats(false, zx::ticks(0), BLOCK_OP_WRITE, 10);
+  metrics.CopyToFidl(&fidl_block_metrics);
+
+  ASSERT_EQ(1, fidl_block_metrics.write.success.total_calls);
+  ASSERT_EQ(100, fidl_block_metrics.write.success.bytes_transferred);
+  ASSERT_LT(0, fidl_block_metrics.write.success.total_time_spent);
+  ASSERT_EQ(1, fidl_block_metrics.write.failure.total_calls);
+  ASSERT_EQ(10, fidl_block_metrics.write.failure.bytes_transferred);
+  ASSERT_LT(0, fidl_block_metrics.write.failure.total_time_spent);
+}
+
+TEST(BlockDeviceMetricsTest, UpdateReadStats) {
+  storage_metrics::BlockDeviceMetrics metrics;
+  fuchsia_hardware_block_BlockStats fidl_block_metrics;
+
+  metrics.UpdateStats(true, zx::ticks(0), BLOCK_OP_READ, 100);
+  metrics.UpdateStats(false, zx::ticks(0), BLOCK_OP_READ, 10);
+  metrics.CopyToFidl(&fidl_block_metrics);
+
+  ASSERT_EQ(1, fidl_block_metrics.read.success.total_calls);
+  ASSERT_EQ(100, fidl_block_metrics.read.success.bytes_transferred);
+  ASSERT_LT(0, fidl_block_metrics.read.success.total_time_spent);
+  ASSERT_EQ(1, fidl_block_metrics.read.failure.total_calls);
+  ASSERT_EQ(10, fidl_block_metrics.read.failure.bytes_transferred);
+  ASSERT_LT(0, fidl_block_metrics.read.failure.total_time_spent);
+}
+
+TEST(BlockDeviceMetricsTest, UpdateFlushStats) {
+  storage_metrics::BlockDeviceMetrics metrics;
+  fuchsia_hardware_block_BlockStats fidl_block_metrics;
+
+  metrics.UpdateStats(true, zx::ticks(0), BLOCK_OP_FLUSH, 100);
+  metrics.UpdateStats(false, zx::ticks(0), BLOCK_OP_FLUSH, 10);
+  metrics.CopyToFidl(&fidl_block_metrics);
+
+  ASSERT_EQ(1, fidl_block_metrics.flush.success.total_calls);
+  ASSERT_EQ(100, fidl_block_metrics.flush.success.bytes_transferred);
+  ASSERT_LT(0, fidl_block_metrics.flush.success.total_time_spent);
+  ASSERT_EQ(1, fidl_block_metrics.flush.failure.total_calls);
+  ASSERT_EQ(10, fidl_block_metrics.flush.failure.bytes_transferred);
+  ASSERT_LT(0, fidl_block_metrics.flush.failure.total_time_spent);
+}
+
+TEST(BlockDeviceMetricsTest, UpdateTrimStats) {
+  storage_metrics::BlockDeviceMetrics metrics;
+  fuchsia_hardware_block_BlockStats fidl_block_metrics;
+
+  metrics.UpdateStats(true, zx::ticks(0), BLOCK_OP_TRIM, 100);
+  metrics.UpdateStats(false, zx::ticks(0), BLOCK_OP_TRIM, 10);
+  metrics.CopyToFidl(&fidl_block_metrics);
+
+  ASSERT_EQ(1, fidl_block_metrics.trim.success.total_calls);
+  ASSERT_EQ(100, fidl_block_metrics.trim.success.bytes_transferred);
+  ASSERT_LT(0, fidl_block_metrics.trim.success.total_time_spent);
+  ASSERT_EQ(1, fidl_block_metrics.trim.failure.total_calls);
+  ASSERT_EQ(10, fidl_block_metrics.trim.failure.bytes_transferred);
+  ASSERT_LT(0, fidl_block_metrics.trim.failure.total_time_spent);
+}
+
+TEST(BlockDeviceMetricsTest, UpdateBarrierStats) {
+  storage_metrics::BlockDeviceMetrics metrics;
+  fuchsia_hardware_block_BlockStats fidl_block_metrics;
+
+  metrics.UpdateStats(true, zx::ticks(0), BLOCK_OP_READ | BLOCK_FL_BARRIER_BEFORE, 100);
+  metrics.UpdateStats(false, zx::ticks(0), BLOCK_OP_WRITE | BLOCK_FL_BARRIER_AFTER, 10);
+  metrics.UpdateStats(true, zx::ticks(0),
+                      BLOCK_OP_TRIM | BLOCK_FL_BARRIER_AFTER | BLOCK_FL_BARRIER_BEFORE, 20);
+  metrics.CopyToFidl(&fidl_block_metrics);
+
+  ASSERT_EQ(1, fidl_block_metrics.read.success.total_calls);
+  ASSERT_EQ(1, fidl_block_metrics.write.failure.total_calls);
+  ASSERT_EQ(1, fidl_block_metrics.trim.success.total_calls);
+  ASSERT_EQ(2, fidl_block_metrics.barrier_before.success.total_calls);
+  ASSERT_EQ(1, fidl_block_metrics.barrier_after.failure.total_calls);
+  ASSERT_EQ(1, fidl_block_metrics.barrier_after.success.total_calls);
+
+  ASSERT_EQ(100, fidl_block_metrics.read.success.bytes_transferred);
+  ASSERT_EQ(10, fidl_block_metrics.write.failure.bytes_transferred);
+  ASSERT_EQ(20, fidl_block_metrics.trim.success.bytes_transferred);
+  ASSERT_EQ(120, fidl_block_metrics.barrier_before.success.bytes_transferred);
+  ASSERT_EQ(10, fidl_block_metrics.barrier_after.failure.bytes_transferred);
+  ASSERT_EQ(20, fidl_block_metrics.barrier_after.success.bytes_transferred);
+
+  ASSERT_LT(0, fidl_block_metrics.barrier_before.success.total_time_spent);
+  ASSERT_EQ(0, fidl_block_metrics.barrier_before.failure.total_time_spent);
+  ASSERT_LT(0, fidl_block_metrics.barrier_after.success.total_time_spent);
+  ASSERT_LT(0, fidl_block_metrics.barrier_after.failure.total_time_spent);
+}
+
 }  // namespace
 }  // namespace storage_metrics

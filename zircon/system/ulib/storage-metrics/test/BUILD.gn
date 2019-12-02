@@ -14,6 +14,7 @@ zx_test("storage-metrics") {
     "storage-metrics-test.cc",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-minfs:c",
     "$zx/system/fidl/fuchsia-storage-metrics:c",

@@ -4,26 +4,28 @@
 
 #include <algorithm>
 
+#include <ddktl/protocol/block.h>
 #include <storage-metrics/block-metrics.h>
 #include <storage-metrics/fs-metrics.h>
 #include <storage-metrics/storage-metrics.h>
 
 namespace storage_metrics {
 
+namespace {
+constexpr uint32_t block_operation(uint32_t command) { return command & BLOCK_OP_MASK; }
+}  // namespace
+
 bool RawCallStatEqual(const CallStatRawFidl& lhs, const CallStatRawFidl& rhs) {
   return (lhs.total_calls == rhs.total_calls) && (lhs.bytes_transferred == rhs.bytes_transferred);
 }
 
 bool CallStatEqual(const CallStatFidl& lhs, const CallStatFidl& rhs) {
-  return RawCallStatEqual(lhs.success, rhs.success) &&
-         RawCallStatEqual(lhs.failure, rhs.failure);
+  return RawCallStatEqual(lhs.success, rhs.success) && RawCallStatEqual(lhs.failure, rhs.failure);
 }
 
 bool BlockStatEqual(const BlockStatFidl& lhs, const BlockStatFidl& rhs) {
-  return CallStatEqual(lhs.read, rhs.read) &&
-         CallStatEqual(lhs.write, rhs.write) &&
-         CallStatEqual(lhs.trim, rhs.trim) &&
-         CallStatEqual(lhs.flush, rhs.flush) &&
+  return CallStatEqual(lhs.read, rhs.read) && CallStatEqual(lhs.write, rhs.write) &&
+         CallStatEqual(lhs.trim, rhs.trim) && CallStatEqual(lhs.flush, rhs.flush) &&
          CallStatEqual(lhs.barrier_before, rhs.barrier_before) &&
          CallStatEqual(lhs.barrier_after, rhs.barrier_after);
 }
@@ -254,6 +256,29 @@ void BlockDeviceMetrics::Dump(FILE* stream, std::optional<bool> success) const {
   flush_.Dump(stream, "flush", success);
   barrier_before_.Dump(stream, "barrier_before", success);
   barrier_after_.Dump(stream, "barrier_after", success);
+}
+
+void BlockDeviceMetrics::UpdateStats(bool success, const zx::ticks start_tick,
+                                     const uint32_t command, const uint64_t bytes_transfered) {
+  zx::ticks duration = zx::ticks::now() - start_tick;
+
+  if (block_operation(command) == BLOCK_OP_WRITE) {
+    UpdateWriteStat(success, duration.get(), bytes_transfered);
+  } else if (block_operation(command) == BLOCK_OP_READ) {
+    UpdateReadStat(success, duration.get(), bytes_transfered);
+  } else if (block_operation(command) == BLOCK_OP_FLUSH) {
+    UpdateFlushStat(success, duration.get(), bytes_transfered);
+  } else if (block_operation(command) == BLOCK_OP_TRIM) {
+    UpdateTrimStat(success, duration.get(), bytes_transfered);
+  }
+
+  if ((command & BLOCK_FL_BARRIER_BEFORE) == BLOCK_FL_BARRIER_BEFORE) {
+    UpdateBarrierBeforeStat(success, duration.get(), bytes_transfered);
+  }
+
+  if ((command & BLOCK_FL_BARRIER_AFTER) == BLOCK_FL_BARRIER_AFTER) {
+    UpdateBarrierAfterStat(success, duration.get(), bytes_transfered);
+  }
 }
 
 }  // namespace storage_metrics

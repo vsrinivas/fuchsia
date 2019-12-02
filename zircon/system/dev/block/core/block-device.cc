@@ -47,9 +47,9 @@ namespace {
 uint32_t block_operation(const block_op_t* op) { return op->command & BLOCK_OP_MASK; }
 
 using storage_metrics::BlockDeviceMetrics;
-using BlockDeviceType = ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::Messageable,
-                                    ddk::UnbindableNew, ddk::Readable, ddk::Writable,
-                                    ddk::GetSizable>;
+using BlockDeviceType =
+    ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::Messageable, ddk::UnbindableNew,
+                ddk::Readable, ddk::Writable, ddk::GetSizable>;
 
 struct StatsCookie {
   zx::ticks start_tick;
@@ -246,28 +246,9 @@ zx_status_t BlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 void BlockDevice::UpdateStats(bool success, zx::ticks start_tick, block_op_t* op) {
-  uint64_t command = op->command & BLOCK_OP_MASK;
-  zx::ticks duration = zx::ticks::now() - start_tick;
-  fbl::AutoLock lock(&stat_lock_);
-
   uint64_t bytes_transfered = op->rw.length * info_.block_size;
-  if (block_operation(op) == BLOCK_OP_WRITE) {
-    stats_.UpdateWriteStat(success, duration.get(), bytes_transfered);
-  } else if (block_operation(op) == BLOCK_OP_READ) {
-    stats_.UpdateReadStat(success, duration.get(), bytes_transfered);
-  } else if (block_operation(op) == BLOCK_OP_FLUSH) {
-    stats_.UpdateFlushStat(success, duration.get(), bytes_transfered);
-  } else if (block_operation(op) == BLOCK_OP_TRIM) {
-    stats_.UpdateTrimStat(success, duration.get(), bytes_transfered);
-  }
-
-  if ((command & BLOCK_FL_BARRIER_BEFORE) == BLOCK_FL_BARRIER_BEFORE) {
-    stats_.UpdateBarrierBeforeStat(success, duration.get(), bytes_transfered);
-  }
-
-  if ((command & BLOCK_FL_BARRIER_AFTER) == BLOCK_FL_BARRIER_AFTER) {
-    stats_.UpdateBarrierAfterStat(success, duration.get(), bytes_transfered);
-  }
+  fbl::AutoLock lock(&stat_lock_);
+  stats_.UpdateStats(success, start_tick, op->command, bytes_transfered);
 }
 
 // Adapter from read/write to block_op_t

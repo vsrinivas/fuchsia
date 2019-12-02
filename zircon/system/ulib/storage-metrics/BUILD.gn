@@ -12,6 +12,7 @@ zx_library("storage-metrics") {
     "$zx/system/ulib/fbl:headers",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-minfs:c",
     "$zx/system/fidl/fuchsia-storage-metrics:c",
