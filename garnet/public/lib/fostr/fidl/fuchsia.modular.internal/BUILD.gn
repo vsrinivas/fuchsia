@@ -4,11 +4,11 @@
 
 import("//garnet/public/build/fostr/fostr_fidl.gni")
 
-fostr_fidl("fuchsia.modular.storymodel") {
-  fidl_target = "//sdk/fidl/fuchsia.modular.storymodel"
+fostr_fidl("fuchsia.modular.internal") {
+  fidl_target = "//sdk/fidl/fuchsia.modular.internal"
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.sys2",
-    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+    "//garnet/public/lib/fostr/fidl/fuchsia.auth",
+    "//garnet/public/lib/fostr/fidl/fuchsia.modular",
   ]
 }

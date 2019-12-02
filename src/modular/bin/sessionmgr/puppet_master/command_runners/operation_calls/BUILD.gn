@@ -44,7 +44,7 @@ source_set("find_modules_call") {
 
   deps = [
     ":get_types_from_entity_call",
-    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+    "//garnet/public/lib/fostr/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fsl",
     "//src/lib/fxl",

@@ -38,7 +38,7 @@ source_set("story_runner") {
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/util",
-    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+    "//garnet/public/lib/fostr/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",

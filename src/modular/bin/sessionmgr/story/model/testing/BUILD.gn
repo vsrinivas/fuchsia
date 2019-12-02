@@ -19,8 +19,8 @@ source_set("mutation_matchers") {
   ]
 
   public_deps = [
-    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
-    "//peridot/public/lib/fostr/fidl/fuchsia.modular.storymodel",
+    "//garnet/public/lib/fostr/fidl/fuchsia.modular",
+    "//garnet/public/lib/fostr/fidl/fuchsia.modular.storymodel",
     "//sdk/fidl/fuchsia.modular.storymodel",
     "//third_party/googletest:gmock",
   ]
