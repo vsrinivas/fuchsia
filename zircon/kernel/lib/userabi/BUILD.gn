@@ -267,6 +267,8 @@ if (is_kernel) {
     ]
   }
 
+  decompress_zbi = zbi_compression_algorithm != "none"
+
   # Loading and launching userboot, which loads and launches "real" userland.
   source_set("userboot") {
     visibility = [ ":*" ]
@@ -275,8 +277,6 @@ if (is_kernel) {
     ]
     include_dirs = [ target_gen_dir ]
     deps = [
-      ":decompress_zbi-code.h",
-      ":decompress_zbi.image",
       ":headers",
       ":rodso",
       ":userboot-code.h",
@@ -287,6 +287,13 @@ if (is_kernel) {
       "$zx/system/ulib/elf-psabi",
       "$zx/system/ulib/zircon-internal",
     ]
+    if (decompress_zbi) {
+      defines = [ "DECOMPRESS_ZBI" ]
+      deps += [
+        ":decompress_zbi-code.h",
+        ":decompress_zbi.image",
+      ]
+    }
   }
 
   rodso("userboot") {
@@ -297,14 +304,16 @@ if (is_kernel) {
     ]
   }
 
-  rodso("decompress_zbi") {
-    visibility = [ ":*" ]
-    name = "DECOMPRESS_ZBI"
-    deps = [
-      "$zx/system/ulib/hermetic-decompressor:decompress-$zbi_compression_algorithm",
-    ]
+  if (zbi_compression_algorithm != "none") {
+    rodso("decompress_zbi") {
+      visibility = [ ":*" ]
+      name = "DECOMPRESS_ZBI"
+      deps = [
+        "$zx/system/ulib/hermetic-decompressor:decompress-$zbi_compression_algorithm",
+      ]
 
-    # It's hermetic, but it's allowed to have data and bss.
-    writable = true
+      # It's hermetic, but it's allowed to have data and bss.
+      writable = true
+    }
   }
 }

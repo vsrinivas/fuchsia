@@ -52,13 +52,19 @@ constexpr const char kZbiVmoName[] = "zbi";
 
 constexpr size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
 
-#include "decompress_zbi-code.h"
 #include "userboot-code.h"
 
 // This is defined in assembly via RODSO_IMAGE (see rodso-asm.h);
 // userboot-code.h gives details about the image's size and layout.
 extern "C" const char userboot_image[];
+
+#if DECOMPRESS_ZBI
+#include "decompress_zbi-code.h"
 extern "C" const char decompress_zbi_image[];
+#else
+constexpr const char* decompress_zbi_image = nullptr;
+constexpr size_t DECOMPRESS_ZBI_DATA_END = 0;
+#endif
 
 KCOUNTER(init_time, "init.userboot.time.msec")
 

@@ -387,14 +387,14 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
       auto vmo2 = static_cast<VmObjectPaged*>(vmo.get());
       vmo2->AddPage(page, count * PAGE_SIZE);
     }
-  }
 
-  if (exclusive && !is_physmap_addr(data)) {
-    // unmap it from the kernel
-    // NOTE: this means the image can no longer be referenced from original pointer
-    status = VmAspace::kernel_aspace()->arch_aspace().Unmap(reinterpret_cast<vaddr_t>(data),
-                                                            size / PAGE_SIZE, nullptr);
-    ASSERT(status == ZX_OK);
+    if (exclusive && !is_physmap_addr(data)) {
+      // unmap it from the kernel
+      // NOTE: this means the image can no longer be referenced from original pointer
+      status = VmAspace::kernel_aspace()->arch_aspace().Unmap(reinterpret_cast<vaddr_t>(data),
+                                                              size / PAGE_SIZE, nullptr);
+      ASSERT(status == ZX_OK);
+    }
   }
 
   *obj = ktl::move(vmo);

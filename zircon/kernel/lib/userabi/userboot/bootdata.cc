@@ -5,6 +5,8 @@
 #include "bootdata.h"
 
 #include <lib/hermetic-decompressor/hermetic-decompressor.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <string.h>
 #include <zircon/boot/image.h>
 #include <zircon/syscalls.h>
@@ -12,7 +14,9 @@
 #include "util.h"
 
 namespace {
-  constexpr const char kZbiDecompressedName[] = "zbi-decompressed";
+constexpr const char kBootfsVmoName[] = "uncompressed-bootfs";
+
+#ifdef ZBI_COMPRESSION_MAGIC
 
 class EngineService {
  public:
@@ -45,6 +49,8 @@ class EngineService {
 
 using Decompressor = HermeticDecompressorWithEngineService<EngineService>;
 
+#endif  // ZBI_COMPRESSION_MAGIC
+
 }  // namespace
 
 zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handle_t job,
@@ -70,19 +76,41 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
         break;
 
       case ZBI_TYPE_STORAGE_BOOTFS: {
-
         zx::vmo bootfs_vmo;
         if (bootdata.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
+#ifdef ZBI_COMPRESSION_MAGIC
           status = zx::vmo::create(bootdata.extra, 0, &bootfs_vmo);
-          bootfs_vmo.set_property(ZX_PROP_NAME, kZbiDecompressedName, sizeof(kZbiDecompressedName)-1);
           check(log, status, "cannot create BOOTFS VMO (%u bytes)", bootdata.extra);
           status = Decompressor(job, engine_vmo, vdso_vmo)(*zx::unowned_vmo{bootdata_vmo},
                                                            off + sizeof(bootdata), bootdata.length,
                                                            bootfs_vmo, 0, bootdata.extra);
           check(log, status, "failed to decompress BOOTFS");
+#else
+          fail(log, "userboot built without BOOTFS decompressor!");
+#endif
         } else {
-          fail(log, "uncompressed BOOTFS not supported");
+          off += sizeof(bootdata);
+          if (off % ZX_PAGE_SIZE == 0) {
+            status = zx_vmo_create_child(bootdata_vmo, ZX_VMO_CHILD_COPY_ON_WRITE, off,
+                                         bootdata.length, bootfs_vmo.reset_and_get_address());
+            check(log, status, "zx_vmo_create_child failed for BOOTFS");
+          } else {
+            // The data is not aligned, so it must be copied into a new VMO.
+            status = zx::vmo::create(bootdata.length, 0, &bootfs_vmo);
+            check(log, status, "cannot create BOOTFS VMO (%u bytes)", bootdata.length);
+            zx::unowned_vmar vmar{vmar_self};
+            uintptr_t bootfs_payload;
+            status = vmar->map(0, bootfs_vmo, 0, bootdata.length,
+                               ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &bootfs_payload);
+            check(log, status, "cannot map BOOTFS VMO (%u bytes)", bootdata.length);
+            status = zx_vmo_read(bootdata_vmo, reinterpret_cast<void*>(bootfs_payload), off,
+                                 bootdata.length);
+            check(log, status, "cannot read BOOTFS into VMO (%u bytes)", bootdata.length);
+            status = vmar->unmap(bootfs_payload, bootdata.length);
+            check(log, status, "cannot unmap BOOTFS VMO (%u bytes)", bootdata.length);
+          }
         }
+        bootfs_vmo.set_property(ZX_PROP_NAME, kBootfsVmoName, sizeof(kBootfsVmoName) - 1);
 
         // Signal that we've already processed this one.
         bootdata.type = ZBI_TYPE_DISCARD;
@@ -91,7 +119,13 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self, zx_handl
                            sizeof(bootdata.type)),
               "zx_vmo_write failed on bootdata VMO\n");
 
-        printl(log, "decompressed bootfs to VMO!\n");
+        printl(log,
+#ifdef ZBI_COMPRESSION_MAGIC
+               "decompressed"
+#else
+               "copied uncompressed"
+#endif
+               " BOOTFS to VMO!\n");
         return bootfs_vmo.release();
       }
     }

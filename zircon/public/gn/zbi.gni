@@ -22,6 +22,7 @@ declare_args() {
 # The compression algorithm part of the $zbi_compression setting.
 zbi_compression_algorithm = get_path_info(zbi_compression, "name")
 if (get_path_info(zbi_compression, "extension") == "" &&
+    zbi_compression_algorithm != "none" &&
     zbi_compression_algorithm != "lz4f" &&
     zbi_compression_algorithm != "zstd") {
   # This must match what $zx/tools/zbi/zbi.cc uses by default.

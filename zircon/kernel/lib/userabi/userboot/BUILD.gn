@@ -104,6 +104,9 @@ if (current_toolchain == default_toolchain) {
       defines += [ "ZBI_COMPRESSION_MAGIC=kLz4fMagic" ]
     } else if (zbi_compression_algorithm == "zstd") {
       defines += [ "ZBI_COMPRESSION_MAGIC=kZstdMagic" ]
+    } else {
+      assert(zbi_compression_algorithm == "none",
+             "bad zbi_compression_algorithm=\"$zbi_compression_algorithm\"")
     }
 
     metadata = {
