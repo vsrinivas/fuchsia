@@ -53,6 +53,12 @@ enum class Arch {
   kX86,
 };
 
+bool IsSpecialGoRuntimeFunction(const Syscall& syscall) {
+  // These functions can't call runtime·entersyscall and exitsyscall, otherwise
+  // the system will hang.
+  return syscall.name() == "nanosleep" || syscall.name() == "futex_wait";
+}
+
 void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
   static const char* kX86RegArgs[] = {"DI", "SI", "DX", "CX", "R8", "R9", "R12", "R13"};
   static const char* kArm64RegArgs[] = {"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7"};
@@ -129,7 +135,7 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
       break;
   }
 
-  if (syscall->HasAttribute("blocking")) {
+  if (syscall->HasAttribute("blocking") && !IsSpecialGoRuntimeFunction(*syscall)) {
     writer->Puts("\tCALL runtime·entersyscall(SB)\n");
   }
 
@@ -185,7 +191,7 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
     writer->Printf("\tMOV%s %s, ret+%zu(FP)\n", suffix.c_str(), ret_reg.c_str(), arg_size);
   }
 
-  if (syscall->HasAttribute("blocking")) {
+  if (syscall->HasAttribute("blocking") && !IsSpecialGoRuntimeFunction(*syscall)) {
     writer->Printf("\t%s runtime·exitsyscall(SB)\n", call_ins.c_str());
   }
 

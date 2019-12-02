@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zz;
+
+using zx;
+
+[Transport="Syscall", NoProtocolPrefix]
+protocol SpecialNonBlocking {
+    // The go runtime needs these not to be marked nonblocking, even when tagged
+    // blocking.
+
+    [blocking]
+    FutexWait(uint32 a) -> (zx.status status);
+
+    [blocking]
+    Nanosleep(uint32 a) -> (zx.status status);
+};
