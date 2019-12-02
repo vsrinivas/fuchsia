@@ -9,7 +9,6 @@
 #include <set>
 
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/developer/debug/zxdb/client/backtrace_cache.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/process_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
@@ -202,17 +201,6 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool r
   Thread* thread_ptr = thread.get();
   threads_[record.thread_koid] = std::move(thread);
 
-  // Only backtrace create the cache if the process is currently tracking them.
-  // Otherwise creation will be delayed until the process starts tracking.
-  if (should_cache_backtraces_) {
-    DEBUG_LOG(Process) << "Process " << koid_ << ": Caching backtraces for thread "
-                       << thread_ptr->GetKoid();
-    auto backtrace_cache = std::make_unique<BacktraceCache>();
-    backtrace_cache->set_should_cache(true);
-    thread_ptr->AddObserver(backtrace_cache.get());
-    backtrace_caches_[record.thread_koid] = std::move(backtrace_cache);
-  }
-
   for (auto& observer : observers())
     observer.DidCreateThread(this, thread_ptr);
 
@@ -317,26 +305,6 @@ void ProcessImpl::WillUnloadModuleSymbols(LoadedModuleSymbols* module) {
 void ProcessImpl::OnSymbolLoadFailure(const Err& err) {
   for (auto& observer : observers())
     observer.OnSymbolLoadFailure(this, err);
-}
-
-BacktraceCache* ProcessImpl::GetBacktraceCacheFromKoid(uint64_t thread_koid) {
-  auto it = backtrace_caches_.find(thread_koid);
-  if (it == backtrace_caches_.end())
-    return nullptr;
-  return it->second.get();
-}
-
-void ProcessImpl::ShouldStoreBacktraces(bool ss) {
-  DEBUG_LOG(Process) << "Process " << koid_ << ": Storing backtraces: " << ss;
-
-  should_cache_backtraces_ = ss;
-  for (auto& [thread_koid, thread] : threads_) {
-    // std::map[] creates if key is not found.
-    auto& cache = backtrace_caches_[thread_koid];
-    if (!cache)
-      cache = std::make_unique<BacktraceCache>();
-    cache->set_should_cache(ss);
-  }
 }
 
 }  // namespace zxdb

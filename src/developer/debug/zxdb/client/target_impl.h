@@ -17,7 +17,7 @@ namespace zxdb {
 class ProcessImpl;
 class SystemImpl;
 
-class TargetImpl : public Target, public SettingStoreObserver {
+class TargetImpl : public Target {
  public:
   // The system owns this object and will outlive it.
   explicit TargetImpl(SystemImpl* system);
@@ -61,9 +61,6 @@ class TargetImpl : public Target, public SettingStoreObserver {
   void Attach(uint64_t koid, Callback callback) override;
   void Detach(Callback callback) override;
   void OnProcessExiting(int return_code) override;
-
-  // SettingStoreObserver implementation.
-  void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
 
  private:
   static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Callback callback,

@@ -17,10 +17,6 @@ static const char kShowStdoutDescription[] =
   If not set for a particular process, it will default to the system-wide
   setting.)";
 
-const char* ClientSettings::Target::kStoreBacktraces = "x-store-backtraces";
-static const char kStoreBacktracesDescription[] =
-    R"(  [EXPERIMENTAL] Store exceptional backtraces. Do not use.)";
-
 const char* ClientSettings::Target::kBuildDirs = "build-dirs";
 const char* ClientSettings::Target::kBuildDirsDescription =
     R"(  List of paths to build direcories. These are the directories to which paths in
@@ -69,7 +65,6 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
 
-  schema->AddBool(ClientSettings::Target::kStoreBacktraces, kStoreBacktracesDescription, false);
   schema->AddList(ClientSettings::Target::kBuildDirs, ClientSettings::Target::kBuildDirsDescription,
                   {});
 

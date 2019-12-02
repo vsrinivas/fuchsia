@@ -91,10 +91,6 @@ class Process : public ClientObject {
   // Returns the thread in this process associated with the given koid.
   virtual Thread* GetThreadFromKoid(uint64_t koid) = 0;
 
-  // Returns a pointer to the backtrace cache associated with this koid. Returns null if there is no
-  // cache present (mostly in tests).
-  virtual BacktraceCache* GetBacktraceCacheFromKoid(uint64_t koid);
-
   // Asynchronously refreshes the thread list from the debugged process. This will ensure the thread
   // names are up-to-date, and is also used after attaching when there are no thread notifications
   // for existing threads.

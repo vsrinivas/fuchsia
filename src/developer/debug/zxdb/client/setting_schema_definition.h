@@ -40,7 +40,6 @@ struct ClientSettings {
   struct Job {};
 
   struct Target {
-    static const char* kStoreBacktraces;
     static const char* kBuildDirs;
     static const char* kBuildDirsDescription;  // Help for kBuildDirs.
 

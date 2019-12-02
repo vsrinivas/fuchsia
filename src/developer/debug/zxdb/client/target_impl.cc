@@ -27,8 +27,6 @@ TargetImpl::TargetImpl(SystemImpl* system)
       impl_weak_factory_(this) {
   settings_.set_fallback(&system_->settings());
   settings_.set_name("target");
-
-  settings_.AddObserver(ClientSettings::Target::kStoreBacktraces, this);
 }
 
 TargetImpl::~TargetImpl() {
@@ -226,17 +224,6 @@ void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Cal
   }
 }
 
-void TargetImpl::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {
-  if (setting_name == ClientSettings::Target::kStoreBacktraces) {
-    bool should_store = store.GetBool(setting_name);
-    if (!process_)
-      return;
-    process_->ShouldStoreBacktraces(should_store);
-  } else {
-    FXL_LOG(WARNING) << "Target setting unhandled: " << setting_name;
-  }
-}
-
 void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
                                        debug_ipc::zx_status_t status,
                                        const std::string& process_name) {
@@ -341,10 +328,7 @@ void TargetImpl::OnKillOrDetachReply(TargetObserver::DestroyReason reason, const
 
 std::unique_ptr<ProcessImpl> TargetImpl::CreateProcessImpl(uint64_t koid, const std::string& name,
                                                            Process::StartType start_type) {
-  auto process = std::make_unique<ProcessImpl>(this, koid, name, Process::StartType::kAttach);
-  if (settings_.GetBool(ClientSettings::Target::kStoreBacktraces))
-    process->ShouldStoreBacktraces(true);
-  return process;
+  return std::make_unique<ProcessImpl>(this, koid, name, Process::StartType::kAttach);
 }
 
 }  // namespace zxdb

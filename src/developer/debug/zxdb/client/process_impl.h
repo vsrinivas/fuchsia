@@ -67,12 +67,6 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   // ProcessSymbols::Notifications implementation (public portion):
   void OnSymbolLoadFailure(const Err& err) override;
 
-  BacktraceCache* GetBacktraceCacheFromKoid(uint64_t thread_koid) override;
-
-  // Whether this process should store backtraces for all important exceptions. See
-  // backtrace_cache.h for more details.
-  void ShouldStoreBacktraces(bool);
-
  private:
   // Syncs the threads_ list to the new list of threads passed in .
   void UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_threads);
@@ -87,9 +81,6 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
 
   // Threads indexed by their thread koid.
   std::map<uint64_t, std::unique_ptr<ThreadImpl>> threads_;
-  // Stores backtraces from previous thread exceptions. Indexd by thread_koid.
-  std::map<uint64_t, std::unique_ptr<BacktraceCache>> backtrace_caches_;
-  bool should_cache_backtraces_ = false;
 
   ProcessSymbols symbols_;
 

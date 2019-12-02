@@ -9,7 +9,6 @@
 
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/developer/debug/zxdb/client/backtrace_cache.h"
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
@@ -867,74 +866,6 @@ Err DoStderr(ConsoleContext* context, const Command& cmd) {
   return DoStdio(Verb::kStderr, cmd, context);
 }
 
-// PastBacktrace -----------------------------------------------------------------------------------
-
-const char kPastBacktraceShortHelp[] = "past-backtrace: [EXPERIMENTAL] Show a cached backtrace.";
-const char kPastBacktraceHelp[] =
-    R"(past-backtrace: Show a cached backtrace.
-
-  *** EXPERIMENTAL (DO NOT USE) ****
-
-  Shows a backtrace that zxdb cached during the process execution.
-)";
-
-// TODO(donosoc): This is a quick formatter to test the backtrace printing feature. Must be replaced
-//                with the same backtracing format as the rest of the console.
-OutputBuffer TemporaryOutputBacktrace(const Backtrace& backtrace) {
-  std::vector<std::vector<OutputBuffer>> rows;
-  rows.reserve(backtrace.frames.size());
-
-  for (uint32_t i = 0; i < backtrace.frames.size(); i++) {
-    auto& frame = backtrace.frames[i];
-    auto& row = rows.emplace_back();
-
-    row.reserve(3);
-    row.push_back(fxl::StringPrintf("%u", i));
-
-    row.push_back(frame.function_name);
-
-    auto& fl = frame.file_line;
-    row.push_back(fxl::StringPrintf("%s:%d", fl.file().c_str(), fl.line()));
-  }
-
-  OutputBuffer out;
-  FormatTable({ColSpec(Align::kLeft, 0, "No", 0), ColSpec(Align::kRight, 0, "Function", 0),
-               ColSpec(Align::kRight, 0, "File:Number", 0)},
-              rows, &out);
-
-  return out;
-}
-
-Err DoPastBacktrace(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({Noun::kThread, Noun::kProcess});
-  if (err.has_error())
-    return err;
-
-  if (!cmd.args().empty())
-    return Err("No arguments for now.");
-
-  auto* process = cmd.target()->GetProcess();
-  if (!process)
-    return Err("No running process. This is a no for now.");
-
-  auto* thread = cmd.thread();
-  if (!thread)
-    return Err("No valid thread. This is a no for now.");
-
-  auto* backtrace_cache = process->GetBacktraceCacheFromKoid(thread->GetKoid());
-  if (!backtrace_cache)
-    return Err("No backtrace cache for thread (koid: %" PRIu64 ")", thread->GetKoid());
-
-  auto& backtraces = backtrace_cache->backtraces();
-  if (backtraces.empty())
-    return Err("No backtrace found within the cache.");
-
-  // TODO(donosoc): Use the format_frames call.
-  OutputBuffer out = TemporaryOutputBacktrace(backtraces.back());
-  Console::get()->Output(std::move(out));
-  return Err();
-}
-
 }  // namespace
 
 void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
@@ -960,9 +891,6 @@ void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
       VerbRecord(&DoStdout, {"stdout"}, kStdoutShortHelp, kStdioHelp, CommandGroup::kProcess);
   (*verbs)[Verb::kStderr] =
       VerbRecord(&DoStderr, {"stderr"}, kStderrShortHelp, kStdioHelp, CommandGroup::kProcess);
-  (*verbs)[Verb::kPastBacktrace] =
-      VerbRecord(&DoPastBacktrace, {"past-backtrace"}, kPastBacktraceShortHelp, kPastBacktraceHelp,
-                 CommandGroup::kProcess);
 }
 
 }  // namespace zxdb
