@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::registry::service_context::GenerateService;
+use crate::service_context::GenerateService;
 use crate::tests::fakes::base::Service;
 use failure::{format_err, Error};
 use fuchsia_zircon as zx;

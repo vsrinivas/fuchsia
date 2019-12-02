@@ -16,7 +16,7 @@ use rust_icu_uenum as uenum;
 
 use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::registry::service_context::ServiceContext;
+use crate::service_context::ServiceContext;
 use crate::switchboard::base::{
     IntlInfo, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
 };

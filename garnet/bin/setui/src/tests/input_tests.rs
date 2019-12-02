@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::fidl_clone::FIDLClone, crate::input::monitor_mic_mute,
-    crate::registry::service_context::ServiceContext,
+    crate::service_context::ServiceContext,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     fidl_fuchsia_ui_input::MediaButtonsEvent, futures::stream::StreamExt, parking_lot::RwLock,

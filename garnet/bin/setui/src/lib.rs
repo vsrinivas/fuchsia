@@ -23,7 +23,7 @@ use {
     crate::registry::base::Registry,
     crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::registry_impl::RegistryImpl,
-    crate::registry::service_context::ServiceContext,
+    crate::service_context::ServiceContext,
     crate::setup::setup_controller::SetupController,
     crate::setup::setup_fidl_handler::SetupFidlHandler,
     crate::switchboard::base::{SettingAction, SettingType},
@@ -56,6 +56,7 @@ mod system;
 
 pub mod config;
 pub mod registry;
+pub mod service_context;
 pub mod switchboard;
 
 /// Brings up the settings service fidl environment.

@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
   crate::create_fidl_service, crate::registry::device_storage::testing::*,
-  crate::registry::service_context::ServiceContext, crate::switchboard::base::SettingType,
+  crate::service_context::ServiceContext, crate::switchboard::base::SettingType,
   fidl_fuchsia_setui::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
   futures::prelude::*, parking_lot::RwLock, std::sync::Arc,
 };

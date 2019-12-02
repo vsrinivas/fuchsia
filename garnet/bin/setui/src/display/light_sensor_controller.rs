@@ -4,7 +4,7 @@
 use {
     crate::display::light_sensor::{open_sensor, read_sensor},
     crate::registry::base::{Command, Notifier, State},
-    crate::registry::service_context::ServiceContext,
+    crate::service_context::ServiceContext,
     crate::switchboard::base::{LightData, SettingRequest, SettingResponse, SettingType},
     fidl_fuchsia_hardware_input::{DeviceMarker as SensorMarker, DeviceProxy as SensorProxy},
     fuchsia_async::{self as fasync, DurationExt},

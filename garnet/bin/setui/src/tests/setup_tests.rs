@@ -7,7 +7,7 @@ use {
     crate::create_fidl_service,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorageFactory,
-    crate::registry::service_context::ServiceContext,
+    crate::service_context::ServiceContext,
     crate::switchboard::base::SettingType,
     crate::switchboard::base::{ConfigurationInterfaceFlags, SetupInfo},
     crate::tests::fakes::device_admin_service::{Action, DeviceAdminService},

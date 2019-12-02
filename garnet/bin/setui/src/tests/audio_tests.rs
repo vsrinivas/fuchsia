@@ -11,7 +11,7 @@ use {
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::{DeviceStorage, DeviceStorageFactory},
     crate::registry::registry_impl::RegistryImpl,
-    crate::registry::service_context::ServiceContext,
+    crate::service_context::ServiceContext,
     crate::switchboard::base::{
         AudioInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingAction, SettingType,
     },

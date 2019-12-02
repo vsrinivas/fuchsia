@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::registry::service_context::ServiceContext,
+    crate::service_context::ServiceContext,
     failure::Error,
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_ui_input::MediaButtonsEvent,

@@ -12,7 +12,7 @@ use {
     parking_lot::RwLock,
     settings::create_fidl_service,
     settings::registry::device_storage::StashDeviceStorageFactory,
-    settings::registry::service_context::ServiceContext,
+    settings::service_context::ServiceContext,
     settings::switchboard::base::get_all_setting_types,
     std::sync::Arc,
 };

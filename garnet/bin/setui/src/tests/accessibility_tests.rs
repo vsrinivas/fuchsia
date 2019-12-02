@@ -8,7 +8,7 @@ use {
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorageFactory,
-    crate::registry::service_context::ServiceContext,
+    crate::service_context::ServiceContext,
     crate::switchboard::accessibility_types::{AccessibilityInfo, ColorBlindnessType},
     crate::switchboard::base::SettingType,
     fidl_fuchsia_settings::*,
@@ -145,7 +145,7 @@ async fn test_accessibility_set_captions() {
         for_tts: None,
         font_style: None,
         window_color: EXPECTED_CAPTIONS_SETTINGS.window_color,
-        background_color: None
+        background_color: None,
     });
     accessibility_proxy
         .set(first_set.clone())
@@ -160,7 +160,7 @@ async fn test_accessibility_set_captions() {
         for_tts: None,
         font_style: EXPECTED_CAPTIONS_SETTINGS.font_style,
         window_color: None,
-        background_color: None
+        background_color: None,
     });
     accessibility_proxy
         .set(second_set.clone())

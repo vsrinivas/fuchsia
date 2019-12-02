@@ -6,7 +6,7 @@ use {
     crate::input::monitor_mic_mute,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::DeviceStorage,
-    crate::registry::service_context::ServiceContext,
+    crate::service_context::ServiceContext,
     crate::switchboard::base::*,
     failure::Error,
     fidl_fuchsia_ui_input::MediaButtonsEvent,

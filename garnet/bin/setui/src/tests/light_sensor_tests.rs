@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::create_fidl_service, crate::display::LIGHT_SENSOR_SERVICE_NAME,
-    crate::registry::device_storage::testing::*, crate::registry::service_context::ServiceContext,
+    crate::registry::device_storage::testing::*, crate::service_context::ServiceContext,
     crate::switchboard::base::SettingType, failure::format_err, fidl::endpoints::ServerEnd,
     fidl_fuchsia_settings::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx, futures::prelude::*, parking_lot::RwLock, std::sync::Arc,

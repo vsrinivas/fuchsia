@@ -5,10 +5,10 @@
 #[cfg(test)]
 use {
     crate::create_fidl_service, crate::registry::device_storage::testing::*,
-    crate::registry::device_storage::DeviceStorageFactory,
-    crate::registry::service_context::ServiceContext, crate::switchboard::base::PrivacyInfo,
-    crate::switchboard::base::SettingType, fidl_fuchsia_settings::*, fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs, futures::prelude::*, parking_lot::RwLock, std::sync::Arc,
+    crate::registry::device_storage::DeviceStorageFactory, crate::service_context::ServiceContext,
+    crate::switchboard::base::PrivacyInfo, crate::switchboard::base::SettingType,
+    fidl_fuchsia_settings::*, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
+    futures::prelude::*, parking_lot::RwLock, std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_privacy_test_environment";

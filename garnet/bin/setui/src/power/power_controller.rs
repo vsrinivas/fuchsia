@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-  crate::registry::base::Command, crate::registry::service_context::ServiceContext,
+  crate::registry::base::Command, crate::service_context::ServiceContext,
   crate::switchboard::base::*, fuchsia_async as fasync, futures::StreamExt, parking_lot::RwLock,
   std::sync::Arc,
 };

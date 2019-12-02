@@ -4,7 +4,7 @@
 use {
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
-    crate::registry::service_context::ServiceContext,
+    crate::service_context::ServiceContext,
     crate::switchboard::base::{DisplayInfo, SettingRequest, SettingResponse, SettingType},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
