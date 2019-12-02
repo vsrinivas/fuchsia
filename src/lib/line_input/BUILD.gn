@@ -8,6 +8,8 @@ static_library("line_input") {
   sources = [
     "line_input.cc",
     "line_input.h",
+    "modal_line_input.cc",
+    "modal_line_input.h",
     "options_line_input.cc",
     "options_line_input.h",
   ]
@@ -31,6 +33,8 @@ if (current_toolchain == host_toolchain) {
   test("line_input_tests") {
     sources = [
       "line_input_unittest.cc",
+      "modal_line_input_unittest.cc",
+      "test_line_input.h",
     ]
 
     deps = [
@@ -55,6 +59,8 @@ if (current_toolchain == host_toolchain) {
     testonly = true
     sources = [
       "line_input_unittest.cc",
+      "modal_line_input_unittest.cc",
+      "test_line_input.h",
     ]
 
     deps = [

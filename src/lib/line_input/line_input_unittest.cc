@@ -7,6 +7,7 @@
 #include <optional>
 
 #include "gtest/gtest.h"
+#include "src/lib/line_input/test_line_input.h"
 
 namespace line_input {
 
@@ -27,62 +28,6 @@ std::vector<std::string> AutocompleteCallback(const std::string& line) {
 }
 
 }  // namespace
-
-class TestLineInput : public LineInputEditor {
- public:
-  TestLineInput(const std::string& prompt)
-      : LineInputEditor(
-            [this](const std::string& s) {
-              if (accept_goes_to_history_)
-                AddToHistory(s);
-              accept_ = s;
-            },
-            prompt) {}
-
-  // The "accept" value is the result of the most recent callback issuance.
-  const std::optional<std::string>& accept() const { return accept_; }
-  void ClearAccept() { accept_ = std::nullopt; }
-
-  void ClearOutput() { output_.clear(); }
-
-  // See variable below.
-  void set_accept_goes_to_history(bool a) { accept_goes_to_history_ = a; }
-
-  std::string GetAndClearOutput() {
-    std::string ret = output_;
-    ClearOutput();
-    return ret;
-  }
-
-  // This input takes a string instead of one character at a time, returning true if the
-  // callback was issued for the *last* character.
-  bool OnInputStr(const std::string& input) {
-    for (char c : input) {
-      ClearAccept();
-      OnInput(c);
-    }
-    return !!accept();
-  }
-
-  void SetLine(const std::string& input) {
-    cur_line() = input;
-    set_pos(input.size());
-  }
-
-  void SetPos(size_t pos) { set_pos(pos); }
-
- protected:
-  void Write(const std::string& data) { output_.append(data); }
-
- private:
-  std::string output_;
-
-  // When set, the accept callback will automatically add the new line to history.
-  bool accept_goes_to_history_ = false;
-
-  // The parameter from the most recent "accept" call, or none if not called.
-  std::optional<std::string> accept_;
-};
 
 TEST(LineInput, CursorCommands) {
   std::string prompt("Prompt ");
