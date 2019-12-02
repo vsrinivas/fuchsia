@@ -97,7 +97,6 @@ source_set("src") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/timekeeper",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/sys/cpp",
@@ -105,6 +104,8 @@ source_set("src") {
     "//src/developer/feedback/utils:inspect_node_manager",
     "//src/developer/feedback/utils:time",
     "//src/lib/fxl",
+    "//src/lib/timekeeper",
+    "//src/lib/timekeeper:system",
     "//third_party/crashpad/client",
     "//third_party/crashpad/util",
     "//zircon/public/lib/async-cpp",

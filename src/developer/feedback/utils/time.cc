@@ -4,6 +4,8 @@
 
 #include "src/developer/feedback/utils/time.h"
 
+#include <lib/zx/time.h>
+
 #include <ctime>
 
 #include "src/lib/fxl/strings/string_printf.h"
@@ -33,7 +35,7 @@ std::optional<std::string> FormatDuration(zx::duration duration) {
   return fxl::StringPrintf("%ldd%ldh%ldm%lds", d, h, m, s);
 }
 
-std::optional<std::string> CurrentUTCTime(timekeeper::Clock* clock) {
+std::optional<zx::time_utc> CurrentUTCTimeRaw(timekeeper::Clock* clock) {
   if (!clock) {
     return std::nullopt;
   }
@@ -42,8 +44,21 @@ std::optional<std::string> CurrentUTCTime(timekeeper::Clock* clock) {
   if (const zx_status_t status = clock->Now(&now_utc); status != ZX_OK) {
     return std::nullopt;
   }
+
+  return now_utc;
+}
+
+std::optional<std::string> CurrentUTCTime(timekeeper::Clock* clock) {
+  if (!clock) {
+    return std::nullopt;
+  }
+
+  auto now_utc = CurrentUTCTimeRaw(clock);
+  if (!now_utc.has_value()) {
+    return std::nullopt;
+  }
   // std::gmtime expects epoch in seconds.
-  const int64_t now_utc_seconds = now_utc.get() / zx::sec(1).get();
+  const int64_t now_utc_seconds = now_utc.value().get() / zx::sec(1).get();
   char buffer[32];
   strftime(buffer, sizeof(buffer), "%Y-%m-%d %X %Z", std::gmtime(&now_utc_seconds));
   return std::string(buffer);

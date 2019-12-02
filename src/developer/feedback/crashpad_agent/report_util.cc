@@ -9,9 +9,11 @@
 
 #include <string>
 
+#include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace feedback {
 
@@ -56,6 +58,9 @@ const char kDartExceptionMessageKey[] = "error_message";
 const char kDartExceptionRuntimeTypeKey[] = "error_runtime_type";
 const char kDartExceptionStackTraceKey[] = "DartError";
 
+// The crash server expects a specific key for client-provided report time.
+constexpr char kReportTimeMillis[] = "reportTimeMillis";
+
 void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                       std::map<std::string, std::string>* annotations,
                                       std::map<std::string, fuchsia::mem::Buffer>* attachments,
@@ -75,6 +80,14 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
 
   if (report.has_event_id()) {
     (*annotations)[kEventIdKey] = report.event_id();
+  }
+
+  timekeeper::SystemClock clock;
+  auto current_time = CurrentUTCTimeRaw(&clock);
+
+  if (current_time.has_value()) {
+    (*annotations)[kReportTimeMillis] =
+        std::to_string(current_time.value().get() / zx::msec(1).get());
   }
 
   // Generic-specific annotations.

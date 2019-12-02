@@ -209,6 +209,7 @@ class CrashpadAgentTest : public UnitTestFixture {
         {"ptype", testing::StartsWith("crashing_program")},
         {"osName", "Fuchsia"},
         {"osVersion", "0.0.0"},
+        {"reportTimeMillis", Not(IsEmpty())},
         {"should_process", "false"},
     };
     if (feedback_data_provider_) {

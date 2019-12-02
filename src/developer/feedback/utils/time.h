@@ -17,7 +17,10 @@ namespace feedback {
 // Formats the provided duration as WdXhYmZs e.g., 1d14h7m32s
 std::optional<std::string> FormatDuration(zx::duration duration);
 
-// Returns a non-localized human-readable timestamp of the current time according to |clock_|.
+// Returns the non-localized current time according to |clock|.
+std::optional<zx::time_utc> CurrentUTCTimeRaw(timekeeper::Clock* clock);
+
+// Returns a non-localized human-readable timestamp of the current time according to |clock|.
 std::optional<std::string> CurrentUTCTime(timekeeper::Clock* clock);
 
 }  // namespace feedback

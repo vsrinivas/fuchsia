@@ -131,6 +131,21 @@ TEST(TimeTest, FormatDuration_NegativeRandomNSec) {
   EXPECT_EQ(FormatDuration(kNegRndmNSecs), std::nullopt);
 }
 
+TEST(TimeTest, CurrentUTCTimeRaw_NullClock) { EXPECT_EQ(CurrentUTCTimeRaw(nullptr), std::nullopt); }
+
+TEST(TimeTest, CurrentUTCTimeRaw_ValidClock) {
+  auto clock = std::make_unique<timekeeper::TestClock>();
+
+  clock->Set(kTime1);
+  EXPECT_EQ(CurrentUTCTimeRaw(clock.get()), kTime1);
+
+  clock->Set(kTime2);
+  EXPECT_EQ(CurrentUTCTimeRaw(clock.get()), kTime2);
+
+  clock->Set(kTime3);
+  EXPECT_EQ(CurrentUTCTimeRaw(clock.get()), kTime3);
+}
+
 TEST(TimeTest, CurrentUTCTime_NullClock) { EXPECT_EQ(CurrentUTCTime(nullptr), std::nullopt); }
 
 TEST(TimeTest, CurrentUTCTime_ValidClock) {
