@@ -15,7 +15,7 @@ namespace {
 struct CommandLineOptions {
   std::optional<std::string> arm64_asm;
   std::optional<std::string> category;
-  std::optional<std::string> go_syscall_arm_asm;
+  std::optional<std::string> go_syscall_arm64_asm;
   std::optional<std::string> go_syscall_stubs;
   std::optional<std::string> go_syscall_x86_asm;
   std::optional<std::string> go_vdso_arm64_calls;
@@ -109,8 +109,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   cmdline::ArgsParser<CommandLineOptions> parser;
   parser.AddSwitch("arm64-asm", 0, kArm64AsmHelp, &CommandLineOptions::arm64_asm);
   parser.AddSwitch("category", 0, kCategoryHelp, &CommandLineOptions::category);
-  parser.AddSwitch("go-syscall-arm-asm", 0, kGoSyscallArm64AsmHelp,
-                   &CommandLineOptions::go_syscall_arm_asm);
+  parser.AddSwitch("go-syscall-arm64-asm", 0, kGoSyscallArm64AsmHelp,
+                   &CommandLineOptions::go_syscall_arm64_asm);
   parser.AddSwitch("go-syscall-stubs", 0, kGoSyscallStubsHelp,
                    &CommandLineOptions::go_syscall_stubs);
   parser.AddSwitch("go-syscall-x86-asm", 0, kGoSyscallX86AsmHelp,
@@ -176,7 +176,7 @@ int main(int argc, const char* argv[]) {
   } backends[] = {
       {&options.arm64_asm, AsmOutput},
       {&options.category, CategoryOutput},
-      {&options.go_syscall_arm_asm, GoSyscallsAsm},
+      {&options.go_syscall_arm64_asm, GoSyscallsAsm},
       {&options.go_syscall_stubs, GoSyscallsStubs},
       {&options.go_syscall_x86_asm, GoSyscallsAsm},
       {&options.go_vdso_arm64_calls, GoVdsoArm64Calls},

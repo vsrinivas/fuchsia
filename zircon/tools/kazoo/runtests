@@ -24,6 +24,7 @@ mkdir -p /tmp/kazoo-output
 out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
   --arm64-asm=/tmp/kazoo-output/arm64-asm.S \
   --category=/tmp/kazoo-output/syscall-category.inc \
+  --go-syscall-arm64-asm=/tmp/kazoo-output/syscalls_fuchsia_arm64.go \
   --go-syscall-stubs=/tmp/kazoo-output/syscalls_fuchsia.go \
   --go-syscall-x86-asm=/tmp/kazoo-output/syscalls_fuchsia_amd64.go \
   --go-vdso-arm64-calls=/tmp/kazoo-output/vdso_fuchsia_arm64.s \
