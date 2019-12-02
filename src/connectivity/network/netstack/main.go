@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -34,6 +35,7 @@ import (
 	"fidl/fuchsia/posix/socket"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/google/netstack/tcpip/link/sniffer"
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
@@ -59,6 +61,12 @@ func Main() {
 	flags.Var(&logLevel, "verbosity", "Set the logging verbosity")
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		panic(err)
+	}
+
+	if *sniff {
+		atomic.StoreUint32(&sniffer.LogPackets, 1)
+	} else {
+		atomic.StoreUint32(&sniffer.LogPackets, 0)
 	}
 
 	ctx := appcontext.CreateFromStartupInfo()
@@ -111,7 +119,6 @@ func Main() {
 		arena:        arena,
 		dnsClient:    dns.NewClient(stk),
 		nameProvider: np,
-		sniff:        *sniff,
 	}
 	ns.mu.ifStates = make(map[tcpip.NICID]*ifState)
 	ns.mu.stack = stk

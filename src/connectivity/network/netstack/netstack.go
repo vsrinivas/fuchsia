@@ -134,7 +134,6 @@ type Netstack struct {
 		ifStates           map[tcpip.NICID]*ifState
 	}
 	nodename string
-	sniff    bool
 
 	stats stats
 
@@ -715,11 +714,9 @@ func (ns *Netstack) addEndpoint(
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.
-	if ns.sniff {
-		// A wrapper LinkEndpoint should encapsulate the underlying
-		// one, and manifest itself to 3rd party netstack.
-		ep = sniffer.New(ep)
-	}
+	// A wrapper LinkEndpoint should encapsulate the underlying
+	// one, and manifest itself to 3rd party netstack.
+	ep = sniffer.New(ep)
 
 	if doFilter {
 		ifs.filterEndpoint = filter.NewEndpoint(ns.filter, ep)
@@ -737,7 +734,7 @@ func (ns *Netstack) addEndpoint(
 	ns.mu.ifStates[ifs.nicid] = ifs
 	ns.mu.countNIC++
 
-	syslog.Infof("NIC %s added [sniff = %t]", name, ns.sniff)
+	syslog.Infof("NIC %s added", name)
 
 	if err := createFn(ifs.nicid, name, ep); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %s", name, err)
