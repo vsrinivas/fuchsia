@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
@@ -33,21 +35,20 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
   void Get(std::string name, GetCallback callback) {
     // TODO(MA-470): Load this from a package's data directory, not /system/lib
     std::string load_path = "/system/lib/" + name;
-    int fd = open(load_path.c_str(), O_RDONLY);
-    if (fd < 0) {
-      FXL_LOG(ERROR) << "Could not open path " << load_path;
+    int fd;
+    zx_status_t status = fdio_open_fd(load_path.c_str(),
+                                      fuchsia::io::OPEN_RIGHT_READABLE |
+                                      fuchsia::io::OPEN_RIGHT_EXECUTABLE, &fd);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Could not open path " << load_path << ":" << status;
       callback({});
       return;
     }
     zx::vmo vmo;
-    zx_status_t status = fdio_get_vmo_clone(fd, vmo.reset_and_get_address());
+    status = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
     close(fd);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not clone vmo: " << status;
-    }
-    status = vmo.replace_as_executable(zx::handle(), &vmo);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not make vmo executable: " << status;
+      FXL_LOG(ERROR) << "Could not clone vmo exec: " << status;
     }
     callback(std::move(vmo));
   }

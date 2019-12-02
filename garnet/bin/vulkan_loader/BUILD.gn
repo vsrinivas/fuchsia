@@ -19,6 +19,7 @@ executable("bin") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
+    "//zircon/system/fidl/fuchsia-io",
   ]
 }
 
