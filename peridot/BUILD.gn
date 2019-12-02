@@ -10,7 +10,6 @@ group("peridot") {
   testonly = true
   deps = [
     ":peridot_tests",
-    "cloud",
     "lib",
     "tests",
   ]

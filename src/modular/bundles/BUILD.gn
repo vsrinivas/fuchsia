@@ -23,11 +23,11 @@ group("tools") {
 group("framework") {
   testonly = true
   public_deps = [
-    "//peridot/cloud/go/src/remote_module_resolver:host",
     "//src/ledger/bin",
     "//src/modular/bin/basemgr:auto_login_base_shell",
     "//src/modular/bin/basemgr",
     "//src/modular/bin/sessionmgr",
+    "//src/modular/cloud/go/src/remote_module_resolver:host",
   ]
 }
 
@@ -53,7 +53,6 @@ group("integration_testing") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:test_runner",
-    "//peridot/cloud/go/src/remote_module_resolver:host",
     "//src/modular/bin/basemgr:auto_login_base_shell",
     "//src/modular/bin/basemgr:dev_base_shell",
     "//src/modular/bin/basemgr",
@@ -61,6 +60,7 @@ group("integration_testing") {
     "//src/modular/bin/sessionmgr:dev_session_shell",
     "//src/modular/bin/sessionmgr",
     "//src/modular/bin/sessionmgr/story_runner:dev_story_shell",
+    "//src/modular/cloud/go/src/remote_module_resolver:host",
     "//src/stories/bin/discovermgr",
   ]
 }
