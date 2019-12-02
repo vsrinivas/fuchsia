@@ -2,12 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("hci") {
-  testonly = true
+group("bluetooth") {
   deps = [
-    "atheros",
-    "emulator",
-    "intel",
-    "passthrough",
+    "bt-hci-broadcom",
+    "bt-hci-mediatek",
+    "bt-transport-uart",
+    "bt-transport-usb",
   ]
 }

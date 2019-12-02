@@ -31,8 +31,5 @@ group("core") {
 # Includes hci and transport drivers for broadcom controllers which communicate over a uart
 # transport.
 group("broadcom_uart") {
-  public_deps = [
-    "hci/transport/uart",
-    "hci/vendor/broadcom",
-  ]
+  public_deps = []
 }
