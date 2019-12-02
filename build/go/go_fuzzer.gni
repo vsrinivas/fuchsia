@@ -54,12 +54,8 @@ template("go_fuzzer") {
 
   go_build("${fuzzer_name}_wrapper") {
     gopackages = [ "${fuzzer_name}_wrapper" ]
-    fuzzer = true
+    carchive = true
     forward_variables_from(invoker, [ "tags" ])
-    if (!defined(tags)) {
-      tags = []
-    }
-    tags += [ "libfuzzer" ]
     deps = [
       ":${fuzzer_name}_wrapper_library",
     ]
