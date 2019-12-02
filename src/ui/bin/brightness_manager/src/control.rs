@@ -27,6 +27,7 @@ const QUICK_SCAN_TIMEOUT_MS: i64 = 100;
 // What constitutes a large change in brightness?
 // This seems small but it is significant and works nicely.
 const LARGE_CHANGE_THRESHOLD_NITS: i32 = 0.016 as i32;
+const AUTO_MINIMUM_BRIGHTNESS: f32 = 0.004;
 
 //This is the default table, and a default curve will be generated base on this table.
 //This will be replaced once SetBrightnessTable is called.
@@ -75,8 +76,7 @@ pub struct Control {
     sensor: Arc<Mutex<dyn SensorControl>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
     set_brightness_abort_handle: Option<AbortHandle>,
-    auto_brightness_on: bool,
-    auto_brightness_abort_handle: AbortHandle,
+    auto_brightness_abort_handle: Option<AbortHandle>,
     spline: Spline<f32, f32>,
     current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
     auto_sender_channel: Arc<Mutex<SenderChannel<bool>>>,
@@ -93,17 +93,17 @@ impl Control {
 
         let set_brightness_abort_handle = None::<AbortHandle>;
 
-        let auto_brightness_on = true;
-
         let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
         let brightness_table = BrightnessTable { points: points.to_vec() };
         let spline_arg = generate_spline(brightness_table);
 
         // Startup auto-brightness loop
+        let initial_auto_brightness_abort_handle = None::<AbortHandle>;
         let auto_brightness_abort_handle = start_auto_brightness_task(
             sensor.clone(),
             backlight.clone(),
             spline_arg.clone(),
+            initial_auto_brightness_abort_handle.as_ref(),
             current_sender_channel.clone(),
         );
 
@@ -111,7 +111,6 @@ impl Control {
             backlight,
             sensor,
             set_brightness_abort_handle,
-            auto_brightness_on,
             auto_brightness_abort_handle,
             spline: spline_arg,
             current_sender_channel,
@@ -170,22 +169,24 @@ impl Control {
     pub fn get_backlight_and_auto_brightness_on(
         &mut self,
     ) -> (Arc<Mutex<dyn BacklightControl>>, bool) {
-        (self.backlight.clone(), self.auto_brightness_on)
+        (self.backlight.clone(), self.auto_brightness_abort_handle.is_some())
     }
 
     // FIDL message handlers
     async fn set_auto_brightness(&mut self) {
-        if !self.auto_brightness_on {
+        if self.auto_brightness_abort_handle.is_none() {
             fx_log_info!("Auto-brightness turned on");
-            self.auto_brightness_abort_handle.abort();
             self.auto_brightness_abort_handle = start_auto_brightness_task(
                 self.sensor.clone(),
                 self.backlight.clone(),
                 self.spline.clone(),
+                self.auto_brightness_abort_handle.as_ref(),
                 self.current_sender_channel.clone(),
             );
-            self.auto_brightness_on = true;
-            self.auto_sender_channel.lock().await.send_value(self.auto_brightness_on);
+            self.auto_sender_channel
+                .lock()
+                .await
+                .send_value(self.auto_brightness_abort_handle.is_some());
         }
     }
 
@@ -202,15 +203,17 @@ impl Control {
 
     async fn set_manual_brightness(&mut self, value: f32) {
         // Stop the background brightness tasks, if any
-        if let Some(handle) = self.set_brightness_abort_handle.as_ref() {
+        if let Some(handle) = self.set_brightness_abort_handle.take() {
             handle.abort();
         }
-        if self.auto_brightness_on {
-            fx_log_info!("Auto-brightness off, brightness set to {}", value);
 
-            self.auto_brightness_abort_handle.abort();
-            self.auto_brightness_on = false;
-            self.auto_sender_channel.lock().await.send_value(self.auto_brightness_on);
+        if let Some(handle) = self.auto_brightness_abort_handle.take() {
+            fx_log_info!("Auto-brightness off, brightness set to {}", value);
+            handle.abort();
+            self.auto_sender_channel
+                .lock()
+                .await
+                .send_value(self.auto_brightness_abort_handle.is_some());
         }
 
         // TODO(b/138455663): remove this when the driver changes.
@@ -235,12 +238,12 @@ impl Control {
         fx_log_info!("Setting brightness table.");
         self.spline = generate_spline(table);
 
-        if self.auto_brightness_on {
-            self.auto_brightness_abort_handle.abort();
+        if self.auto_brightness_abort_handle.is_some() {
             self.auto_brightness_abort_handle = start_auto_brightness_task(
                 self.sensor.clone(),
                 self.backlight.clone(),
                 self.spline.clone(),
+                self.auto_brightness_abort_handle.as_ref(),
                 self.current_sender_channel.clone(),
             );
         }
@@ -308,8 +311,12 @@ fn start_auto_brightness_task(
     sensor: Arc<Mutex<dyn SensorControl>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
     spline: Spline<f32, f32>,
+    auto_brightness_abort_handle: Option<&AbortHandle>,
     sender_channel: Arc<Mutex<SenderChannel<f32>>>,
-) -> AbortHandle {
+) -> Option<AbortHandle> {
+    if let Some(handle) = auto_brightness_abort_handle {
+        handle.abort();
+    }
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     fasync::spawn(
         Abortable::new(
@@ -323,12 +330,13 @@ fn start_auto_brightness_task(
                 let mut last_value: i32 = -1;
                 loop {
                     let sensor = sensor.clone();
-                    let value =
+                    let mut value =
                         read_sensor_and_get_brightness(sensor, &spline, max_brightness).await;
                     let backlight_clone = backlight.clone();
                     if let Some(handle) = set_brightness_abort_handle {
                         handle.abort();
                     }
+                    value = num_traits::clamp(value, AUTO_MINIMUM_BRIGHTNESS, 1.0);
                     set_brightness_abort_handle =
                         Some(set_brightness(value, backlight_clone).await);
                     sender_channel.lock().await.send_value(value);
@@ -345,7 +353,7 @@ fn start_auto_brightness_task(
         )
         .unwrap_or_else(|_| ()),
     );
-    abort_handle
+    Some(abort_handle)
 }
 
 async fn read_sensor_and_get_brightness(
@@ -500,7 +508,7 @@ mod tests {
     fn generate_control_struct() -> Control {
         let (sensor, _backlight) = set_mocks(400, 0.5);
         let set_brightness_abort_handle = None::<AbortHandle>;
-        let (auto_brightness_abort_handle, _abort_registration) = AbortHandle::new_pair();
+        let auto_brightness_abort_handle = None::<AbortHandle>;
         let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
         let brightness_table_old = BrightnessTable { points: points.to_vec() };
         let spline_arg = generate_spline(brightness_table_old.clone());
@@ -514,7 +522,6 @@ mod tests {
             sensor,
             backlight: _backlight,
             set_brightness_abort_handle,
-            auto_brightness_on: true,
             auto_brightness_abort_handle,
             spline: spline_arg,
             current_sender_channel,
