@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("format_conversion") {
+  sources = [
+    "buffer_collection_helper.h",
+    "format_conversion.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/image-format",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+  ]
+}

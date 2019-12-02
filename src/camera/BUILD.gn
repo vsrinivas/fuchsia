@@ -14,6 +14,7 @@ group("camera") {
     "camera_manager2",
     "drivers",
     "image_writer",
+    "lib/format_conversion",
     "stream_utils",
   ]
 }

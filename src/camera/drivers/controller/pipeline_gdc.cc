@@ -60,18 +60,8 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
 
   auto output_buffers_hlcpp = std::move(result.value());
 
-  // Convert the buffers to C type
-  auto output_buffers_c = ConvertHlcppBufferCollection2toCType(&output_buffers_hlcpp);
-  if (output_buffers_c.is_error()) {
-    FX_LOGS(ERROR) << "Failed to convert output buffers to c type";
-    return fit::error(output_buffers_c.error());
-  }
-
-  auto input_buffers_c = ConvertHlcppBufferCollection2toCType(&input_buffers_hlcpp);
-  if (input_buffers_c.is_error()) {
-    FX_LOGS(ERROR) << "Failed to convert output buffers to c type";
-    return fit::error(input_buffers_c.error());
-  }
+  BufferCollectionHelper output_buffer_collection_helper(output_buffers_hlcpp);
+  BufferCollectionHelper input_buffer_collection_helper(input_buffers_hlcpp);
 
   // Convert the formats to C type
   std::vector<fuchsia_sysmem_ImageFormat_2> output_image_formats_c;
@@ -97,19 +87,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
     config_vmos_info.push_back(gdc_config.value());
   }
 
-  auto cleanup = fbl::MakeAutoCall([&output_buffers_c, &input_buffers_c,
-                                    config_vmos_info]() {  // Free up the |output_buffers_c| and
-                                                           // |input_buffers_c| and config VMOs
-    for (uint32_t i = 0; i < output_buffers_c.value().buffer_count; i++) {
-      ZX_ASSERT_MSG(ZX_OK == zx_handle_close(output_buffers_c.value().buffers[i].vmo),
-                    "Failed to free up Output VMOs");
-    }
-
-    for (uint32_t i = 0; i < input_buffers_c.value().buffer_count; i++) {
-      ZX_ASSERT_MSG(ZX_OK == zx_handle_close(input_buffers_c.value().buffers[i].vmo),
-                    "Failed to free up Input VMOs");
-    }
-
+  auto cleanup = fbl::MakeAutoCall([config_vmos_info]() {
     for (auto info : config_vmos_info) {
       ZX_ASSERT_MSG(ZX_OK == zx_handle_close(info.config_vmo), "Failed to free up Config VMOs");
     }
@@ -127,11 +105,12 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
 
   // Initialize the GDC to get a unique task index
   uint32_t gdc_task_index;
-  auto status = gdc_.InitTask(
-      &input_buffers_c.value(), &output_buffers_c.value(), &input_image_formats_c,
-      output_image_formats_c.data(), output_image_formats_c.size(), info->image_format_index,
-      config_vmos_info.data(), config_vmos_info.size(), gdc_node->hw_accelerator_frame_callback(),
-      gdc_node->hw_accelerator_res_callback(), &gdc_task_index);
+  auto status = gdc_.InitTask(input_buffer_collection_helper.GetC(),
+                              output_buffer_collection_helper.GetC(), &input_image_formats_c,
+                              output_image_formats_c.data(), output_image_formats_c.size(),
+                              info->image_format_index, config_vmos_info.data(),
+                              config_vmos_info.size(), gdc_node->hw_accelerator_frame_callback(),
+                              gdc_node->hw_accelerator_res_callback(), &gdc_task_index);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to initialize GDC";
     return fit::error(status);
@@ -146,7 +125,6 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
   auto return_value = fit::ok(child_info.child_node.get());
 
   parent_node->AddChildNodeInfo(std::move(child_info));
-  cleanup.cancel();
   return return_value;
 }
 

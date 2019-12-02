@@ -35,14 +35,12 @@ class ProcessNode {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ProcessNode);
   ProcessNode(NodeType type, std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-              fuchsia_sysmem_BufferCollectionInfo old_output_buffer_collection,
               fuchsia::camera2::CameraStreamType current_stream_type,
               std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
       : type_(type),
         parent_node_(nullptr),
         output_buffer_collection_(std::move(output_buffer_collection)),
         output_image_formats_(output_image_formats),
-        old_output_buffer_collection_(old_output_buffer_collection),
         isp_callback_{OnFrameAvailable, this},
         enabled_(false),
         supported_streams_(supported_streams) {
@@ -84,16 +82,6 @@ class ProcessNode {
     // We need to ensure that the child nodes
     // are destructed before parent node.
     child_nodes_info_.clear();
-
-    // TODO(braval) : Remove this once we use buffercollectioninfo_2 where the buffer
-    // collections will be part of camera processing nodes, and they will get destructed and
-    // handles will be released. The ISP does not actually take ownership of the buffers upon
-    // creating the stream (they are duplicated internally), so they must be manually released
-    // here.
-    if (type_ == NodeType::kInputStream) {
-      ZX_ASSERT(ZX_OK == zx_handle_close_many(old_output_buffer_collection_.vmos,
-                                              old_output_buffer_collection_.buffer_count));
-    }
   }
 
   // Called when input is ready for this processing node.
@@ -182,8 +170,6 @@ class ProcessNode {
   // Ouput Image formats
   // These are needed when we initialize HW accelerators.
   std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats_;
-  // Temporary entry
-  fuchsia_sysmem_BufferCollectionInfo old_output_buffer_collection_;
   // Valid for output node
   std::unique_ptr<StreamImpl> client_stream_;
   // Valid for input node

@@ -50,7 +50,6 @@ source_set("controller-source") {
   sources = [
     "controller-device.cc",
     "controller-protocol.cc",
-    "format-conversion.cc",
     "memory_allocation.cc",
     "pipeline_gdc.cc",
     "pipeline_manager.cc",
@@ -63,6 +62,7 @@ source_set("controller-source") {
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//src/camera/drivers/controller/configs/sherlock/:controller-configs",
+    "//src/camera/lib/format_conversion:format_conversion",
     "//src/devices:driver",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",

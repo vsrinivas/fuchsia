@@ -17,6 +17,7 @@ source_set("controller-configs") {
     "//src/camera/stream_utils:stream_configs",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/image-format",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",

@@ -2,49 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "pipeline_manager.h"
-#include "src/lib/syslog/cpp/logger.h"
+#include "format_conversion.h"
 
 namespace camera {
 
-// Temporary code to convert into old deprecated sysmem structure
-// |fuchsia_sysmem_BufferCollectionInfo|
-// This will be going away once we move ISP code to using new
-// |fuchsia_sysmem_BufferCollectionInfo_2|
-zx_status_t PipelineManager::ConvertToBufferCollectionInfo(
-    fuchsia::sysmem::BufferCollectionInfo_2* buffer_collection,
-    fuchsia_sysmem_BufferCollectionInfo* old_buffer_collection) {
-  old_buffer_collection->buffer_count = buffer_collection->buffer_count;
-  old_buffer_collection->format.image.width =
-      buffer_collection->settings.image_format_constraints.max_coded_width;
-  old_buffer_collection->format.image.height =
-      buffer_collection->settings.image_format_constraints.max_coded_height;
-  old_buffer_collection->format.image.layers =
-      buffer_collection->settings.image_format_constraints.layers;
-  old_buffer_collection->format.image.pixel_format =
-      *reinterpret_cast<const fuchsia_sysmem_PixelFormat*>(
-          &buffer_collection->settings.image_format_constraints.pixel_format);
-  old_buffer_collection->format.image.color_space =
-      *reinterpret_cast<const fuchsia_sysmem_ColorSpace*>(
-          &buffer_collection->settings.image_format_constraints.color_space);
-  old_buffer_collection->format.image.planes[0].bytes_per_row =
-      buffer_collection->settings.image_format_constraints.max_bytes_per_row;
-  for (uint32_t i = 0; i < buffer_collection->buffer_count; ++i) {
-    // We duplicate the handles since we need to new version
-    // as well to send it to GDC
-    zx::vmo vmo;
-    auto status = buffer_collection->buffers[i].vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to dup VMO";
-      return status;
-    }
-    old_buffer_collection->vmos[i] = vmo.release();
-  }
-  old_buffer_collection->vmo_size = buffer_collection->settings.buffer_settings.size_bytes;
-  return ZX_OK;
-}
-
-fuchsia_sysmem_ImageFormat_2 PipelineManager::ConvertHlcppImageFormat2toCType(
+fuchsia_sysmem_ImageFormat_2 ConvertHlcppImageFormat2toCType(
     fuchsia::sysmem::ImageFormat_2* hlcpp_image_format2) {
   return {
       .pixel_format =
@@ -68,14 +30,37 @@ fuchsia_sysmem_ImageFormat_2 PipelineManager::ConvertHlcppImageFormat2toCType(
   };
 }
 
-fit::result<fuchsia_sysmem_BufferCollectionInfo_2, zx_status_t>
-PipelineManager::ConvertHlcppBufferCollection2toCType(
-    fuchsia::sysmem::BufferCollectionInfo_2* hlcpp_buffer_collection) {
-  fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection;
-  buffer_collection.buffer_count = hlcpp_buffer_collection->buffer_count;
+void ConvertToOldCTypeBufferCollectionInfo(
+    const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection,
+    fuchsia_sysmem_BufferCollectionInfo* old_buffer_collection) {
+  old_buffer_collection->buffer_count = buffer_collection.buffer_count;
+  old_buffer_collection->format.image.width =
+      buffer_collection.settings.image_format_constraints.max_coded_width;
+  old_buffer_collection->format.image.height =
+      buffer_collection.settings.image_format_constraints.max_coded_height;
+  old_buffer_collection->format.image.layers =
+      buffer_collection.settings.image_format_constraints.layers;
+  old_buffer_collection->format.image.pixel_format =
+      *reinterpret_cast<const fuchsia_sysmem_PixelFormat*>(
+          &buffer_collection.settings.image_format_constraints.pixel_format);
+  old_buffer_collection->format.image.color_space =
+      *reinterpret_cast<const fuchsia_sysmem_ColorSpace*>(
+          &buffer_collection.settings.image_format_constraints.color_space);
+  old_buffer_collection->format.image.planes[0].bytes_per_row =
+      buffer_collection.settings.image_format_constraints.max_bytes_per_row;
+  for (uint32_t i = 0; i < buffer_collection.buffer_count; ++i) {
+    old_buffer_collection->vmos[i] = buffer_collection.buffers[i].vmo.get();
+  }
+  old_buffer_collection->vmo_size = buffer_collection.settings.buffer_settings.size_bytes;
+}
 
-  auto& buffer_settings = buffer_collection.settings.buffer_settings;
-  auto& hlcpp_buffer_settings = hlcpp_buffer_collection->settings.buffer_settings;
+void ConvertToCTypeBufferCollectionInfo2(
+    const fuchsia::sysmem::BufferCollectionInfo_2& hlcpp_buffer_collection,
+    fuchsia_sysmem_BufferCollectionInfo_2* buffer_collection) {
+  buffer_collection->buffer_count = hlcpp_buffer_collection.buffer_count;
+
+  auto& buffer_settings = buffer_collection->settings.buffer_settings;
+  auto& hlcpp_buffer_settings = hlcpp_buffer_collection.settings.buffer_settings;
   buffer_settings.size_bytes = hlcpp_buffer_settings.size_bytes;
   buffer_settings.is_physically_contiguous = hlcpp_buffer_settings.is_physically_contiguous;
   buffer_settings.is_secure = hlcpp_buffer_settings.is_secure;
@@ -83,11 +68,11 @@ PipelineManager::ConvertHlcppBufferCollection2toCType(
       &hlcpp_buffer_settings.coherency_domain);
   buffer_settings.heap =
       *reinterpret_cast<const fuchsia_sysmem_HeapType*>(&hlcpp_buffer_settings.heap);
-  buffer_collection.settings.has_image_format_constraints =
-      hlcpp_buffer_collection->settings.has_image_format_constraints;
+  buffer_collection->settings.has_image_format_constraints =
+      hlcpp_buffer_collection.settings.has_image_format_constraints;
 
-  auto& image_format_constraints = buffer_collection.settings.image_format_constraints;
-  auto& hlcpp_image_format_constraints = hlcpp_buffer_collection->settings.image_format_constraints;
+  auto& image_format_constraints = buffer_collection->settings.image_format_constraints;
+  auto& hlcpp_image_format_constraints = hlcpp_buffer_collection.settings.image_format_constraints;
   image_format_constraints.pixel_format.type =
       *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(
           &hlcpp_image_format_constraints.pixel_format.type);
@@ -136,17 +121,9 @@ PipelineManager::ConvertHlcppBufferCollection2toCType(
   image_format_constraints.required_max_bytes_per_row =
       hlcpp_image_format_constraints.required_max_bytes_per_row;
 
-  for (uint32_t i = 0; i < hlcpp_buffer_collection->buffer_count; ++i) {
-    zx::vmo vmo;
-    auto status = hlcpp_buffer_collection->buffers[i].vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to dup VMO";
-      return fit::error(status);
-    }
-    buffer_collection.buffers[i].vmo = vmo.release();
+  for (uint32_t i = 0; i < hlcpp_buffer_collection.buffer_count; ++i) {
+    buffer_collection->buffers[i].vmo = hlcpp_buffer_collection.buffers[i].vmo.get();
   }
-
-  return fit::ok(buffer_collection);
 }
 
 }  // namespace camera

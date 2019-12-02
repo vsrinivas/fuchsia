@@ -15,6 +15,8 @@
 #include "src/camera/drivers/controller/configs/sherlock/video-conferencing-config.h"
 #include "src/camera/drivers/controller/memory_allocation.h"
 #include "src/camera/drivers/controller/pipeline_manager.h"
+#include "src/camera/lib/format_conversion/buffer_collection_helper.h"
+#include "src/camera/lib/format_conversion/format_conversion.h"
 
 // NOTE: In this test, we are actually just unit testing
 // the sysmem allocation using different constraints.
@@ -165,10 +167,10 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints, &hlcpp_buffer));
   EXPECT_EQ(hlcpp_buffer.buffer_count, kOutputStreamMlDSMinBufferForCamping);
 
-  auto result = pipeline_manager_->ConvertHlcppBufferCollection2toCType(&hlcpp_buffer);
-  EXPECT_FALSE(result.is_error());
+  BufferCollectionHelper buffer_collection_helper(hlcpp_buffer);
 
-  fuchsia_sysmem_BufferCollectionInfo_2 c_buffer = result.value();
+  fuchsia_sysmem_BufferCollectionInfo_2 c_buffer = *buffer_collection_helper.GetC();
+
   EXPECT_EQ(c_buffer.buffer_count, hlcpp_buffer.buffer_count);
   auto& c_buffer_settings = c_buffer.settings.buffer_settings;
   auto& hlcpp_buffer_settings = hlcpp_buffer.settings.buffer_settings;
@@ -249,7 +251,7 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertImageFormat2TypeTest) {
   fuchsia::sysmem::ImageFormat_2 hlcpp_image_format = vector_image_formats[0];
 
   fuchsia_sysmem_ImageFormat_2 c_image_format =
-      pipeline_manager_->ConvertHlcppImageFormat2toCType(&hlcpp_image_format);
+      ConvertHlcppImageFormat2toCType(&hlcpp_image_format);
 
   EXPECT_EQ(c_image_format.pixel_format.type,
             *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(

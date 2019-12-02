@@ -86,12 +86,11 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
 
   // Temporary conversion since ISP protocol
   // accepts only old bufferCollectionInfo
-  fuchsia_sysmem_BufferCollectionInfo old_buffer_collection;
-  ConvertToBufferCollectionInfo(&buffers, &old_buffer_collection);
+  BufferCollectionHelper buffer_collection_helper(buffers);
 
   // Create Input Node
   auto processing_node = std::make_unique<camera::ProcessNode>(
-      info->node.type, info->node.image_formats, std::move(buffers), old_buffer_collection,
+      info->node.type, info->node.image_formats, std::move(buffers),
       info->stream_config->properties.stream_type(), info->node.supported_streams);
   if (!processing_node) {
     FX_LOGS(ERROR) << "Failed to create Input node";
@@ -107,8 +106,9 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
 
   // TODO(braval): create FR or DS depending on what stream is requested
   auto status = isp_.CreateOutputStream(
-      &old_buffer_collection, reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate),
-      isp_stream_type, processing_node->isp_callback(), isp_stream_protocol->protocol());
+      buffer_collection_helper.GetOldC(),
+      reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate), isp_stream_type,
+      processing_node->isp_callback(), isp_stream_protocol->protocol());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to create output stream on ISP";
     return fit::error(ZX_ERR_INTERNAL);
@@ -187,7 +187,9 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGraph(
       }
       break;
     }
-    default: { return fit::error(ZX_ERR_NOT_SUPPORTED); }
+    default: {
+      return fit::error(ZX_ERR_NOT_SUPPORTED);
+    }
   }
   return result;
 }
@@ -307,7 +309,9 @@ void PipelineManager::OnClientStreamDisconnect(PipelineInfo* info) {
       downscaled_resolution_stream_ = nullptr;
       break;
     }
-    default: { ZX_ASSERT_MSG(false, "Invalid input stream type\n"); }
+    default: {
+      ZX_ASSERT_MSG(false, "Invalid input stream type\n");
+    }
   }
 }
 
