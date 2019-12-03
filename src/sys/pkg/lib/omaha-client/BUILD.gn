@@ -20,7 +20,6 @@ rustc_library("omaha-client") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
@@ -28,6 +27,8 @@ rustc_library("omaha-client") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_repr",
   ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 group("tests") {

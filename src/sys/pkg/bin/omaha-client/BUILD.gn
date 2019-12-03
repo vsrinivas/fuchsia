@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
@@ -23,7 +22,6 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-hyper",
     "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
@@ -38,14 +36,13 @@ rustc_binary("bin") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:timebomb",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]
+
+  test_deps = [ "//third_party/rust_crates:pretty_assertions" ]
 
   non_rust_deps = [ "//zircon/public/lib/sysconfig-sync-client-c" ]
 }
@@ -83,7 +80,7 @@ group("tests") {
 test_package("omaha-client-service-bin-tests") {
   deps = [
     ":bin_test",
-]
+  ]
 
   tests = [
     {
