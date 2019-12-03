@@ -87,16 +87,6 @@ zx_status_t Blob::Verify() const {
 zx_status_t Blob::InitVmos() {
   TRACE_DURATION("blobfs", "Blobfs::InitVmos");
 
-  // fxb/36257 Temporary check that there is no parallel initialization happening.
-  {
-    uint32_t prev_count = init_count_.fetch_add(1);
-    ZX_DEBUG_ASSERT(prev_count == 0);
-  }
-  auto dec_count = fbl::MakeAutoCall([this]() {
-    uint32_t prev_count = init_count_.fetch_sub(1);
-    ZX_DEBUG_ASSERT(prev_count == 1);
-  });
-
   if (mapping_.vmo()) {
     return ZX_OK;
   }
@@ -146,44 +136,38 @@ zx_status_t Blob::InitVmos() {
     FS_TRACE_ERROR("Failed to initialize vmo; error: %s\n", zx_status_get_string(status));
     return status;
   }
-  vmoid_t vmoid;
-  status = blobfs_->AttachVmo(mapping_.vmo(), &vmoid);
-  if (status != ZX_OK) {
+  if ((status = blobfs_->AttachVmo(mapping_.vmo(), &vmoid_)) != ZX_OK) {
     FS_TRACE_ERROR("Failed to attach VMO to block device; error: %s\n",
                    zx_status_get_string(status));
     return status;
   }
-  {
-    auto detach_vmo = fbl::MakeAutoCall([this, &vmoid]() { blobfs_->DetachVmo(vmoid); });
 
-    if (use_pager) {
-      // TODO(rashaeqbal): Remove this once Merkle tree verification no longer requires the entire
-      // blob to be present (fxb/35678).
-      // For now page in the entire blob. This is different from the InitUncompressed() path below,
-      // which reads the data directly into the blob's VMO. This path exercises the blobfs pager.
-      char bytes[kBlobfsBlockSize];
-      for (uint64_t blk = 0; blk < num_blocks; blk++) {
-        status = mapping_.vmo().read(static_cast<void*>(bytes), blk * kBlobfsBlockSize,
-                                     kBlobfsBlockSize);
-        if (status != ZX_OK) {
-          FS_TRACE_ERROR("Failed to read in data at block %zu; error %s\n", blk,
-                         zx_status_get_string(status));
-          return status;
-        }
+  if (use_pager) {
+    // TODO(rashaeqbal): Remove this once Merkle tree verification no longer requires the entire
+    // blob to be present (fxb/35678).
+    // For now page in the entire blob. This is different from the InitUncompressed() path below,
+    // which reads the data directly into the blob's VMO. This path exercises the blobfs pager.
+    char bytes[kBlobfsBlockSize];
+    for (uint64_t blk = 0; blk < num_blocks; blk++) {
+      status = mapping_.vmo().read(static_cast<void*>(bytes), blk * kBlobfsBlockSize,
+                                   kBlobfsBlockSize);
+      if (status != ZX_OK) {
+        FS_TRACE_ERROR("Failed to read in data at block %zu; error %s\n", blk,
+                       zx_status_get_string(status));
+        return status;
       }
-    } else if ((inode_.header.flags & kBlobFlagLZ4Compressed) != 0) {
-      status = InitCompressed(CompressionAlgorithm::LZ4, vmoid);
-    } else if ((inode_.header.flags & kBlobFlagZSTDCompressed) != 0) {
-      status = InitCompressed(CompressionAlgorithm::ZSTD, vmoid);
-    } else {
-      status = InitUncompressed(vmoid);
     }
-
-    if (status != ZX_OK) {
-      return status;
-    }
+  } else if ((inode_.header.flags & kBlobFlagLZ4Compressed) != 0) {
+    status = InitCompressed(CompressionAlgorithm::LZ4);
+  } else if ((inode_.header.flags & kBlobFlagZSTDCompressed) != 0) {
+    status = InitCompressed(CompressionAlgorithm::ZSTD);
+  } else {
+    status = InitUncompressed();
   }
 
+  if (status != ZX_OK) {
+    return status;
+  }
   // TODO(rashaeqbal): Remove this once fxb/35678 is in. Instead verify pages as they are populated
   // by the pager.
   status = Verify();
@@ -195,7 +179,7 @@ zx_status_t Blob::InitVmos() {
   return ZX_OK;
 }
 
-zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm, vmoid_t vmoid) {
+zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
   TRACE_DURATION("blobfs", "Blobfs::InitCompressed", "size", inode_.blob_size, "blocks",
                  inode_.block_count);
   fs::Ticker ticker(blobfs_->Metrics().Collecting());
@@ -234,7 +218,7 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm, vmoid_t vmoid) 
   // Read the uncompressed merkle tree into the start of the blob's VMO.
   status = StreamBlocks(&block_iter, merkle_blocks,
                         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(vmoid, vmo_offset, dev_offset + kDataStart, length);
+                          txn.Enqueue(vmoid_, vmo_offset, dev_offset + kDataStart, length);
                           return ZX_OK;
                         });
   if (status != ZX_OK) {
@@ -293,7 +277,7 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm, vmoid_t vmoid) 
   return ZX_OK;
 }
 
-zx_status_t Blob::InitUncompressed(vmoid_t vmoid) {
+zx_status_t Blob::InitUncompressed() {
   TRACE_DURATION("blobfs", "Blobfs::InitUncompressed", "size", inode_.blob_size, "blocks",
                  inode_.block_count);
   fs::Ticker ticker(blobfs_->Metrics().Collecting());
@@ -310,7 +294,7 @@ zx_status_t Blob::InitUncompressed(vmoid_t vmoid) {
   const uint64_t data_start = DataStartBlock(blobfs_->Info());
   zx_status_t status = StreamBlocks(
       &block_iter, length, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-        txn.Enqueue(vmoid, vmo_offset, dev_offset + data_start, length);
+        txn.Enqueue(vmoid_, vmo_offset, dev_offset + data_start, length);
         return ZX_OK;
       });
 
@@ -357,16 +341,6 @@ void Blob::BlobCloseHandles() {
 zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "size_data", size_data);
   fs::Ticker ticker(blobfs_->Metrics().Collecting());
-
-  // fxb/36257 Temporary check that there is no parallel initialization happening.
-  {
-    uint32_t prev_count = init_count_.fetch_add(1);
-    ZX_DEBUG_ASSERT(prev_count == 0);
-  }
-  auto dec_count = fbl::MakeAutoCall([this]() {
-    uint32_t prev_count = init_count_.fetch_sub(1);
-    ZX_DEBUG_ASSERT(prev_count == 1);
-  });
 
   if (GetState() != kBlobStateEmpty) {
     return ZX_ERR_BAD_STATE;
@@ -434,6 +408,9 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   FormatVmoName(kBlobVmoNamePrefix, &vmo_name, Ino());
   if ((status = mapping.CreateAndMap(inode_.block_count * kBlobfsBlockSize, vmo_name.c_str())) !=
       ZX_OK) {
+    return status;
+  }
+  if ((status = blobfs_->AttachVmo(mapping.vmo(), &vmoid_)) != ZX_OK) {
     return status;
   }
 
@@ -591,18 +568,6 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     if ((status = mtc.SetDataLength(inode_.blob_size)) != ZX_OK) {
       return status;
     }
-
-    // BUG: fxb/36257 Clone the VMO so we can give a different vmo handle to the write path. This
-    // ensures the VMO handle for mapping_ is not escaping anywhere. Once fxb/36257 is resolved
-    // this can be removed and mapping_ can be used directly instead of clone_vmo
-    zx::vmo clone_vmo;
-    uint64_t clone_size = 0;
-    status = mapping_.vmo().get_size(&clone_size);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-    ZX_DEBUG_ASSERT(init_count_ == 0);
-    status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, clone_size, &clone_vmo);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-
     size_t merkle_size = mtc.GetTreeLength();
     if (merkle_size > 0) {
       // Tracking generation time.
@@ -623,19 +588,10 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
 
-      // BUG: fxb/36257 If we updated the merkle data then re-create our clone to capture the new
-      // data.
-      status = mapping_.vmo().get_size(&clone_size);
-      ZX_DEBUG_ASSERT(status == ZX_OK);
-      clone_vmo.reset();
-      ZX_DEBUG_ASSERT(init_count_ == 0);
-      status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, clone_size, &clone_vmo);
-      ZX_DEBUG_ASSERT(status == ZX_OK);
-
       status = StreamBlocks(&block_iter, merkle_blocks,
                             [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
                               storage::UnbufferedOperation op = {
-                                  .vmo = zx::unowned_vmo(clone_vmo.get()),
+                                  .vmo = zx::unowned_vmo(mapping_.vmo().get()),
                                   {
                                       .type = storage::OperationType::kWrite,
                                       .vmo_offset = vmo_offset,
@@ -693,7 +649,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       uint32_t blocks = static_cast<uint32_t>(blocks64);
       status = StreamBlocks(
           &block_iter, blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-            storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(clone_vmo.get()),
+            storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(mapping_.vmo().get()),
                                                {
                                                    .type = storage::OperationType::kWrite,
                                                    .vmo_offset = vmo_offset,
@@ -717,12 +673,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     // Wrap all pending writes with a strong reference to this Blob, so that it stays
     // alive while there are writes in progress acting on it.
     auto task = fs::wrap_reference(write_all_data.and_then(WriteMetadata()), fbl::RefPtr(this));
-
-    // fxb/36257 Hold the handle until the write completes.
-    auto task2 = task.then([obj = std::move(clone_vmo)](
-                               decltype(task)::result_type& result) mutable { return result; });
-
-    blobfs_->journal()->schedule_task(std::move(task2));
+    blobfs_->journal()->schedule_task(std::move(task));
     blobfs_->Metrics().UpdateClientWrite(to_write, merkle_size, ticker.End(), generation_time);
     set_error.cancel();
     return ZX_OK;
@@ -774,31 +725,22 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out
 
   const size_t merkle_bytes = MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
   zx::vmo clone;
-  // fxb/36257 When we create the child we expect to not be racing with any initialization.
-  {
-    uint32_t prev_count = init_count_.fetch_add(1);
-    ZX_DEBUG_ASSERT(prev_count == 0);
-    auto dec_count = fbl::MakeAutoCall([this]() {
-      uint32_t prev_count = init_count_.fetch_sub(1);
-      ZX_DEBUG_ASSERT(prev_count == 1);
-    });
 
-    zx_info_vmo_t info;
-    status = mapping_.vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
-    if (status != ZX_OK) {
-      return status;
-    }
-    if (info.flags & ZX_INFO_VMO_PAGER_BACKED) {
-      status = mapping_.vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, merkle_bytes,
-                                           inode_.blob_size, &clone);
-    } else {
-      status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes,
-                                           inode_.blob_size, &clone);
-    }
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to create child VMO: %s\n", zx_status_get_string(status));
-      return status;
-    }
+  zx_info_vmo_t info;
+  status = mapping_.vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (info.flags & ZX_INFO_VMO_PAGER_BACKED) {
+    status = mapping_.vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, merkle_bytes,
+                                         inode_.blob_size, &clone);
+  } else {
+    status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes,
+                                         inode_.blob_size, &clone);
+  }
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to create child VMO: %s\n", zx_status_get_string(status));
+    return status;
   }
 
   // Only add exec right to VMO if explictly requested.  (Saves a syscall if
@@ -910,6 +852,9 @@ void Blob::ActivateLowMemory() {
   // We shouldn't be putting the blob into a low-memory state while it is still mapped.
   ZX_ASSERT(clone_watcher_.object() == ZX_HANDLE_INVALID);
   page_watcher_.reset();
+  if (mapping_.vmo()) {
+    blobfs_->DetachVmo(vmoid_);
+  }
   mapping_.Reset();
 }
 

@@ -219,11 +219,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Initializes a compressed blob by reading it from disk and decompressing it.
   // Does not verify the blob.
-  zx_status_t InitCompressed(CompressionAlgorithm algorithm, vmoid_t vmoid);
+  zx_status_t InitCompressed(CompressionAlgorithm algorithm);
 
   // Initializes a decompressed blob by reading it from disk.
   // Does not verify the blob.
-  zx_status_t InitUncompressed(vmoid_t vmoid);
+  zx_status_t InitUncompressed();
 
   // Verifies the integrity of the in-memory Blob - operates on the entire blob at once.
   // InitVmos() must have already been called for this blob.
@@ -245,6 +245,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // 1) The Merkle Tree
   // 2) The Blob itself, aligned to the nearest kBlobfsBlockSize
   fzl::OwnedVmoMapper mapping_;
+  vmoid_t vmoid_ = {};
 
   // Watches any clones of "vmo_" provided to clients.
   // Observes the ZX_VMO_ZERO_CHILDREN signal.
@@ -260,11 +261,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   uint32_t fd_count_ = {};
   uint32_t map_index_ = {};
-
-  // BUG: fxb/36257 Temporary counter to check for unexpected parallelism between initialization
-  // and other paths. This counter should only ever be 0 or 1, and when 1 it effectively means that
-  // the mapping_ VMO could be pinned.
-  std::atomic<uint32_t> init_count_ = 0;
 
   // TODO(smklein): We are only using a few of these fields, such as:
   // - blob_size

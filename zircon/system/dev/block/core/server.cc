@@ -175,32 +175,6 @@ zx_status_t Server::FindVmoIDLocked(vmoid_t* out) {
   return ZX_ERR_NO_RESOURCES;
 }
 
-void Server::ValidateUniqueKoid(const zx::vmo& vmo) {
-  zx_info_handle_basic_t info;
-  size_t count = 0;
-  size_t avail = 0;
-  // Get the koid of the incoming vmo
-  zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), &count, &avail);
-  ZX_DEBUG_ASSERT(status == ZX_OK);
-  ZX_DEBUG_ASSERT(count == 1);
-  zx_koid_t vmo_koid = info.koid;
-
-  // Check against the koid of every existing vmo.
-  for (auto it = tree_.begin(); it != tree_.end(); it++) {
-    ZX_DEBUG_ASSERT(it.IsValid());
-    zx_handle_t vmo_handle = it->vmo();
-    status =
-        zx_object_get_info(vmo_handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), &count, &avail);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-    if (info.koid == vmo_koid) {
-      fprintf(stderr,
-              "Block server has identified double-vmo registration; please upload your logs to "
-              "fxb/36257\n");
-      ZX_DEBUG_ASSERT(false);
-    }
-  }
-}
-
 zx_status_t Server::AttachVmo(zx::vmo vmo, vmoid_t* out) {
   zx_status_t status;
   vmoid_t id;
@@ -208,9 +182,6 @@ zx_status_t Server::AttachVmo(zx::vmo vmo, vmoid_t* out) {
   if ((status = FindVmoIDLocked(&id)) != ZX_OK) {
     return status;
   }
-  // BUG: Until fxb/36257 is resolved, prevent the same VMO from being attached multiple times, even
-  // by different handles.
-  ValidateUniqueKoid(vmo);
 
   fbl::AllocChecker ac;
   fbl::RefPtr<IoBuffer> ibuf = fbl::AdoptRef(new (&ac) IoBuffer(std::move(vmo), id));
