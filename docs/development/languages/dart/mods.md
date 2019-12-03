@@ -192,7 +192,7 @@ Also, for flutter projects, the following line should be manually added to the
 `.packages` file manually (fill in the fuchsia root dir of yours):
 
 ```
-sky_engine:file:///<abs_fuchsia_root>/third_party/dart-pkg/git/flutter/bin/cache/pkg/sky_engine/lib/
+sky_engine:file:///<abs_fuchsia_root>/prebuilt/third_party/sky_engine/lib/
 ```
 
 You might have to relaunch Atom to get everything working correctly. With this

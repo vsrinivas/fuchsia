@@ -22,7 +22,7 @@ ROOT_PUBSPECS = [
     'third_party/dart-pkg/git/flutter/packages/flutter',
     'third_party/dart-pkg/git/flutter/packages/flutter_test',
     'third_party/dart-pkg/git/flutter/packages/flutter_tools',
-    'third_party/flutter/sky/packages/sky_engine',
+    'prebuilt/third_party/sky_engine',
 ]
 
 # These are the locations of yaml files listing the Dart dependencies of a git
