@@ -26,7 +26,6 @@ group("deprecated_misc_storage_allowlist") {
   visibility = [
     "//garnet/go/src/amber:amber",
     "//garnet/bin/system-update-checker",
-    "//garnet/bin/omaha_client",
   ]
 }
 
