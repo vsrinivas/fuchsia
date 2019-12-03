@@ -18,6 +18,7 @@
 
 #include <ffl/expression.h>
 #include <ffl/fixed_format.h>
+#include <ffl/saturating_arithmetic.h>
 #include <ffl/utility.h>
 
 namespace ffl {
@@ -73,7 +74,7 @@ class Fixed {
   // to the precision and resolution of this type, if necessary.
   template <Operation Op, typename... Args>
   constexpr Fixed(Expression<Op, Args...> expression)
-      : value_{Format::Saturate(Format::Convert(expression.Evaluate(Format{})))} {}
+      : Fixed{Format::Convert(expression.Evaluate(Format{}))} {}
 
   // Explicit conversion from another fixed point type. The value is converted
   // to the precision and resolution of this type, if necessary.
@@ -81,7 +82,7 @@ class Fixed {
             typename = std::enable_if_t<!std::is_same_v<Integer, OtherInteger> ||
                                         FractionalBits != OtherFractionalBits>>
   explicit constexpr Fixed(const Fixed<OtherInteger, OtherFractionalBits>& other)
-      : Fixed{ToExpression<Fixed<OtherInteger, OtherFractionalBits>>{other}} {}
+      : Fixed{Format::Convert(other.value())} {}
 
   // Assignment from an intermediate expression. The value is rounded and
   // saturated to fit within the precision and resolution of this type, if
@@ -106,32 +107,49 @@ class Fixed {
   // Returns the closest integer value greater-than or equal-to this fixed-
   // point value.
   constexpr Integer Ceiling() const {
-    using Intermediate = typename Format::Intermediate;
-    const Intermediate value = value_;
-    const Intermediate power = Format::Power;
-    const Intermediate saturated_value = Format::Saturate(value + Format::FractionalMask);
+    const Integer value = value_ / Format::AdjustmentFactor;
+    const Integer power = Format::AdjustedPower;
+    const auto saturated_value = SaturateAddAs<Integer>(value, Format::AdjustedFractionalMask);
     return static_cast<Integer>(saturated_value / power);
   }
 
   // Returns the closest integer value less-than or equal-to this fixed-point
   // value.
   constexpr Integer Floor() const {
-    using Intermediate = typename Format::Intermediate;
-    const Intermediate power = Format::Power;
-    const Intermediate value = value_ & Format::IntegralMask;
-    return static_cast<Integer>(value / power);
+    const Integer value = value_ / Format::AdjustmentFactor;
+    const Integer power = Format::AdjustedPower;
+    const Integer masked_value = value & Format::AdjustedIntegralMask;
+    return static_cast<Integer>(masked_value / power);
   }
 
   // Returns the rounded value of this fixed-point value as an integer.
   constexpr Integer Round() const {
-    using Intermediate = typename Format::Intermediate;
-    const Intermediate power = Format::Power;
-    const Intermediate rounded_value = Format::Round(value_);
-    return Format::Saturate(static_cast<Intermediate>(rounded_value / power));
+    const Integer value = value_ / Format::AdjustmentFactor;
+    const Integer power = Format::AdjustedPower;
+    const Integer rounded_value = Format::Round(value, ToPlace<Format::AdjustedFractionalBits>);
+    return Format::Saturate(static_cast<Integer>(rounded_value / power));
   }
 
   // Returns the fractional component of this fixed-point value.
   constexpr Fixed Fraction() const { return *this - Fixed{Floor()}; }
+
+  // Returns the absolute value of this fixed-point value.
+  constexpr Fixed Absolute() {
+    // Compute a mask and bit to conditionally convert |value_| to positive.
+    // When |value_| is negative, then |mask| = -1 and |one| = 1, otherwise both
+    // are zero.
+    const Integer mask = static_cast<Integer>(-(value_ < 0));
+    const Integer one = mask & 1;
+
+    // Find the absolute value by computing the clamped two's complement. This
+    // is a no-op when |value_| is positive because |mask| and |one| are zero.
+    // Note that this will always return a positive value by clamping to Max.
+    Integer absolute = 0;
+    if (__builtin_add_overflow(value_ ^ mask, one, &absolute)) {
+      absolute = Format::Max;
+    }
+    return FromRaw(absolute);
+  }
 
   // Relational operators for same-typed values.
   constexpr bool operator<(Fixed other) const { return value_ < other.value_; }
@@ -200,24 +218,16 @@ inline constexpr auto FromRaw(Integer value) {
   return ValueExpression<Integer, FractionalBits>{value};
 }
 
-// Relational operators. Note that relational operators convert to the format
-// with the least precision before comparison. This means that comparing with
-// an integer directly is different than comparing with an integer converted to
-// the same fixed-point type, due to rounding in the former.
+// Relational operators.
 //
-// For example,
+// Fixed-to-fixed comparisons convert to an intermediate type with suitable
+// precision and the least resolution of the two operands, using convergent
+// rounding to reduce resolution and avoid bias.
 //
-//  constexpr Fixed<int32_t, 1> value{FromRatio(1, 2)};
-//  constexpr bool compare_a = value > 0;
-//  constexpr bool compare_b = value > Fixed<int32_t, 1>{0};
-//
-//  static_assert(compare_a != compare_b, "");
-//
-// In the former case, compare_a expresses whether the value rounds to greater
-// than zero. Whereas, in the latter case, compare_b expresses whether the value
-// is greater than zero, even fractionally. Because this library uses convergent
-// rounding these comparisons do not always yield the same result.
-//
+// Fixed-to-integer comparisons convert to an intermediate type with suitable
+// precision and the resolution of the fixed-point type. This is less
+// less surprising when comparing a fixed-point type to zero and other integer
+// constants.
 template <typename Left, typename Right,
           typename Enabled = EnableIfComparisonExpression<Left, Right>>
 inline constexpr bool operator<(Left left, Right right) {

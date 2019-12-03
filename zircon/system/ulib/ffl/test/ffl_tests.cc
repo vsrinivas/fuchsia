@@ -7,12 +7,14 @@
 #include <limits>
 #include <type_traits>
 
+#include <ffl/expression.h>
 #include <ffl/fixed.h>
 #include <ffl/saturating_arithmetic.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
+using ffl::ComparisonTraits;
 using ffl::Fixed;
 using ffl::FormatIsValid;
 using ffl::FromRatio;
@@ -576,14 +578,14 @@ constexpr bool TestSaturatingFixedPointArithmetic() {
 
         static_assert_if(T::Max() * U{+2} == Offset<R>(R::Max(), -1),
                          U::Format::IntegralBits > 2 && !Truncating);
-        static_assert_if(T::Max() * U{+2} == Offset<R>(R::Max(), -3), U::Format::IntegralBits == 2);
+        static_assert_if(T::Max() * U{+2} == Offset<R>(R::Max(), -3), U::Format::IntegralBits == 1);
         static_assert_if(T::Min() * U{+2} == R::Min(), U::Format::IntegralBits > 1);
         static_assert_if(T::Max() * U{-2} == R::Min(), U::Format::IntegralBits > 1);
         static_assert_if(T::Min() * U{-2} == R::Max(), U::Format::IntegralBits > 1 && !Truncating);
 
         static_assert_if(T{+2} * U::Max() == Offset<R>(R::Max(), -1),
                          T::Format::IntegralBits > 2 && !Truncating);
-        static_assert_if(T{+2} * U::Max() == Offset<R>(R::Max(), -3), T::Format::IntegralBits == 2);
+        static_assert_if(T{+2} * U::Max() == Offset<R>(R::Max(), -3), T::Format::IntegralBits == 1);
         static_assert_if(T{+2} * U::Min() == R::Min(), T::Format::IntegralBits > 1);
         static_assert_if(T{-2} * U::Max() == R::Min(), T::Format::IntegralBits > 1);
         static_assert_if(T{-2} * U::Min() == R::Max(), T::Format::IntegralBits > 1 && !Truncating);
@@ -595,7 +597,7 @@ constexpr bool TestSaturatingFixedPointArithmetic() {
         static_assert_if(T::Max() * U::Max() == R::Max(),
                          !ImpreciseOne && U::Format::IntegralBits > 2 && !Truncating);
         static_assert_if(T::Max() * U::Max() == Offset<R>(R::Max(), -3),
-                         !ImpreciseOne && U::Format::IntegralBits == 2);
+                         !ImpreciseOne && U::Format::IntegralBits == 1);
       }
     }
 
@@ -728,25 +730,39 @@ static_assert(TestSaturatingFixedPointArithmeticVaryRightHand<uint16_t>());
 static_assert(TestSaturatingFixedPointArithmeticVaryRightHand<uint32_t>());
 static_assert(TestSaturatingFixedPointArithmeticVaryRightHand<uint64_t>());
 
+// Fixed-to-fixed comparisons promote to the least resolution and greatest
+// precision.
 static_assert(Fixed<int, 0>{1} > Fixed<int, 1>::FromRaw(0));
 static_assert(Fixed<int, 0>{1} > Fixed<int, 1>::FromRaw(1));
 static_assert(Fixed<int, 0>{1} > Fixed<int, 2>::FromRaw(1));
 static_assert(Fixed<int, 0>{1} > Fixed<int, 2>::FromRaw(2));
+static_assert(Fixed<int, 0>{1} == Fixed<int, 2>::FromRaw(3));  // Round half to even.
+static_assert(Fixed<int, 0>{1} == Fixed<int, 2>::FromRaw(4));  // Round half to even.
+static_assert(Fixed<int, 0>{1} == Fixed<int, 2>::FromRaw(5));  // Round half to even.
+
+static_assert(Fixed<int, 0>{1} >= Fixed<int, 1>::FromRaw(0));
+static_assert(Fixed<int, 0>{1} >= Fixed<int, 1>::FromRaw(1));
+static_assert(Fixed<int, 0>{1} >= Fixed<int, 2>::FromRaw(1));
+static_assert(Fixed<int, 0>{1} >= Fixed<int, 2>::FromRaw(2));
+static_assert(Fixed<int, 0>{1} >= Fixed<int, 2>::FromRaw(3));  // Round half to even.
+static_assert(Fixed<int, 0>{1} >= Fixed<int, 2>::FromRaw(4));  // Round half to even.
+static_assert(Fixed<int, 0>{1} >= Fixed<int, 2>::FromRaw(5));  // Round half to even.
 
 static_assert(Fixed<int, 1>::FromRaw(0) < Fixed<int, 0>{1});
 static_assert(Fixed<int, 1>::FromRaw(1) < Fixed<int, 0>{1});
 static_assert(Fixed<int, 2>::FromRaw(1) < Fixed<int, 0>{1});
 static_assert(Fixed<int, 2>::FromRaw(2) < Fixed<int, 0>{1});
+static_assert(Fixed<int, 2>::FromRaw(3) == Fixed<int, 0>{1});  // Round half to even.
+static_assert(Fixed<int, 2>::FromRaw(4) == Fixed<int, 0>{1});  // Round half to even.
+static_assert(Fixed<int, 2>::FromRaw(5) == Fixed<int, 0>{1});  // Round half to even.
 
-// Round half-to-even.
-static_assert(Fixed<int, 0>{1} == Fixed<int, 2>::FromRaw(3));
-static_assert(Fixed<int, 2>::FromRaw(3) == Fixed<int, 0>{1});
-
-static_assert(Fixed<int, 0>{1} == Fixed<int, 2>::FromRaw(4));
-static_assert(Fixed<int, 0>{1} == Fixed<int, 2>::FromRaw(5));
-
-static_assert(Fixed<int, 2>::FromRaw(4) == Fixed<int, 0>{1});
-static_assert(Fixed<int, 2>::FromRaw(5) == Fixed<int, 0>{1});
+static_assert(Fixed<int, 1>::FromRaw(0) <= Fixed<int, 0>{1});
+static_assert(Fixed<int, 1>::FromRaw(1) <= Fixed<int, 0>{1});
+static_assert(Fixed<int, 2>::FromRaw(1) <= Fixed<int, 0>{1});
+static_assert(Fixed<int, 2>::FromRaw(2) <= Fixed<int, 0>{1});
+static_assert(Fixed<int, 2>::FromRaw(3) <= Fixed<int, 0>{1});  // Round half to even.
+static_assert(Fixed<int, 2>::FromRaw(4) <= Fixed<int, 0>{1});  // Round half to even.
+static_assert(Fixed<int, 2>::FromRaw(5) <= Fixed<int, 0>{1});  // Round half to even.
 
 #if 0 || TEST_DOES_NOT_COMPILE
 static_assert(Fixed<int, 2>{1} == Fixed<unsigned, 2>{1});
@@ -757,6 +773,181 @@ static_assert(Fixed<unsigned, 2>{1} == Fixed<int, 2>{1});
 static_assert(Fixed<int, 2>{Fixed<unsigned, 2>{1}} == Fixed<int, 2>{1});
 static_assert(Fixed<int, 2>{1} == Fixed<int, 2>{Fixed<unsigned, 2>{1}});
 
+// Fixed-to-integer comparisons promote to the fixed-point resolution and the
+// greatest precision.
+static_assert(0 == Fixed<int, 1>::FromRaw(0));
+static_assert(0 < Fixed<int, 1>::FromRaw(1));
+static_assert(0 <= Fixed<int, 1>::FromRaw(1));
+static_assert(0 <= Fixed<int, 1>::FromRaw(2));
+
+static_assert(Fixed<int, 1>::FromRaw(0) == 0);
+static_assert(Fixed<int, 1>::FromRaw(1) > 0);
+static_assert(Fixed<int, 1>::FromRaw(1) >= 0);
+static_assert(Fixed<int, 1>::FromRaw(2) >= 0);
+
+static_assert(0 == Fixed<int, 2>::FromRaw(0));
+static_assert(0 < Fixed<int, 2>::FromRaw(1));
+static_assert(0 <= Fixed<int, 2>::FromRaw(1));
+static_assert(0 < Fixed<int, 2>::FromRaw(2));
+static_assert(0 <= Fixed<int, 2>::FromRaw(2));
+
+static_assert(Fixed<int, 2>::FromRaw(0) == 0);
+static_assert(Fixed<int, 2>::FromRaw(1) > 0);
+static_assert(Fixed<int, 2>::FromRaw(1) >= 0);
+static_assert(Fixed<int, 2>::FromRaw(2) > 0);
+static_assert(Fixed<int, 2>::FromRaw(2) >= 0);
+
+// Tests the fixed-to-fixed point conversion logic.
+template <typename LeftInteger, size_t LeftFractionalBits, typename RightInteger,
+          size_t RightFractionalBits>
+static constexpr bool FixedComparisonPromotionTest() {
+  if constexpr (FormatIsValid<LeftInteger, LeftFractionalBits> &&
+                FormatIsValid<RightInteger, RightFractionalBits>) {
+    using T = Fixed<LeftInteger, LeftFractionalBits>;
+    using U = Fixed<RightInteger, RightFractionalBits>;
+    using Comparison = ComparisonTraits<T, U>;
+
+    static_assert((std::is_signed_v<LeftInteger> == std::is_signed_v<RightInteger>) ==
+                  Comparison::value);
+
+    // Fixed-to-fixed comparisons are only permitted on like signs.
+    if constexpr (Comparison::value) {
+      constexpr bool ImpreciseOne = T::Format::ApproximateUnit || U::Format::ApproximateUnit;
+
+      constexpr size_t kGreatestRange = std::max(T::Format::IntegralBits, U::Format::IntegralBits);
+      constexpr size_t kLeastResolution = std::min(LeftFractionalBits, RightFractionalBits);
+
+      using Left = decltype(Comparison::Left(std::declval<T>()));
+      using Right = decltype(Comparison::Right(std::declval<U>()));
+
+      static_assert(std::is_same_v<Left, Right>);
+      static_assert(Left::Format::FractionalBits == kLeastResolution);
+      static_assert(Left::Format::IntegralBits >= kGreatestRange || Left::Format::Bits == 64);
+
+      static_assert(T::Max() >= U::Min());
+      static_assert(T::Min() <= U::Max());
+      static_assert(T::Max() > U::Min());
+      static_assert(T::Min() < U::Max());
+      static_assert(T::Max() != U::Min());
+      static_assert(T::Min() != U::Max());
+
+      static_assert(T{0} == U{0});
+      static_assert(T{0} >= U{0});
+      static_assert(T{0} <= U{0});
+
+      static_assert(T{1} != U{0});
+      static_assert(T{1} >= U{0});
+      static_assert(T{1} > U{0});
+
+      static_assert(T{0} != U{1});
+      static_assert(T{0} <= U{1});
+      static_assert(T{0} < U{1});
+
+      static_assert_if(T{1} == U{1}, !ImpreciseOne);
+      static_assert_if(T{1} >= U{1}, !ImpreciseOne);
+      static_assert_if(T{1} <= U{1}, !ImpreciseOne);
+
+      if constexpr (T::Format::IsSigned && U::Format::IsSigned) {
+        static_assert(T{-1} != U{0});
+        static_assert(T{-1} < U{0});
+        static_assert(T{-1} <= U{0});
+
+        static_assert(T{0} != U{-1});
+        static_assert(T{0} > U{-1});
+        static_assert(T{0} >= U{-1});
+
+        static_assert(T{-1} == U{-1});
+        static_assert(T{-1} >= U{-1});
+        static_assert(T{-1} <= U{-1});
+      }
+    }
+  }
+
+  return true;
+}
+
+template <typename LeftInteger, size_t LeftFractionalBits, typename RightInteger>
+static constexpr bool FixedComparisonPromotionTestVaryRightFractionalBits() {
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 0>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 1>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 2>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 3>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 4>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 5>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 6>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 7>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 8>());
+
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 13>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 14>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 15>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 16>());
+
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 29>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 30>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 31>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 32>());
+
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 61>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 62>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 63>());
+  static_assert(FixedComparisonPromotionTest<LeftInteger, LeftFractionalBits, RightInteger, 64>());
+
+  return true;
+}
+
+template <typename LeftInteger, size_t Bits>
+static constexpr bool FixedComparisonPromotionTestVaryRightInteger() {
+  static_assert(FixedComparisonPromotionTestVaryRightFractionalBits<LeftInteger, Bits, int8_t>());
+  static_assert(FixedComparisonPromotionTestVaryRightFractionalBits<LeftInteger, Bits, int16_t>());
+  static_assert(FixedComparisonPromotionTestVaryRightFractionalBits<LeftInteger, Bits, int32_t>());
+  static_assert(FixedComparisonPromotionTestVaryRightFractionalBits<LeftInteger, Bits, int64_t>());
+  static_assert(FixedComparisonPromotionTestVaryRightFractionalBits<LeftInteger, Bits, uint8_t>());
+  static_assert(FixedComparisonPromotionTestVaryRightFractionalBits<LeftInteger, Bits, uint16_t>());
+  static_assert(FixedComparisonPromotionTestVaryRightFractionalBits<LeftInteger, Bits, uint32_t>());
+  static_assert(FixedComparisonPromotionTestVaryRightFractionalBits<LeftInteger, Bits, uint64_t>());
+
+  return true;
+}
+
+template <typename LeftInteger>
+static constexpr bool FixedComparisonPromotionTestVaryLeftFractionalBits() {
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 0>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 1>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 2>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 4>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 5>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 6>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 7>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 8>());
+
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 13>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 14>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 15>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 16>());
+
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 29>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 30>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 31>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 32>());
+
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 61>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 62>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 63>());
+  static_assert(FixedComparisonPromotionTestVaryRightInteger<LeftInteger, 64>());
+
+  return true;
+}
+
+static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<int8_t>());
+static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<int16_t>());
+static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<int32_t>());
+static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<int64_t>());
+static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<uint8_t>());
+static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<uint16_t>());
+static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<uint32_t>());
+static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<uint64_t>());
+
 static_assert(1 == Fixed<int, 0>{1}.Ceiling());
 static_assert(1 == Fixed<int, 1>{FromRatio(1, 2)}.Ceiling());
 static_assert(1 == Fixed<int, 2>{FromRatio(1, 2)}.Ceiling());
@@ -766,6 +957,24 @@ static_assert(0 == Fixed<int, 2>{FromRatio(-1, 2)}.Ceiling());
 static_assert(0 == Fixed<int, 2>{FromRatio(-1, 4)}.Ceiling());
 static_assert(-1 == Fixed<int, 0>{-1}.Ceiling());
 
+static_assert(1 == Fixed<int8_t, 7>::Max().Ceiling());
+static_assert(1 == Fixed<int16_t, 15>::Max().Ceiling());
+static_assert(1 == Fixed<int32_t, 31>::Max().Ceiling());
+static_assert(1 == Fixed<int64_t, 63>::Max().Ceiling());
+static_assert(1 == Fixed<uint8_t, 8>::Max().Ceiling());
+static_assert(1 == Fixed<uint16_t, 16>::Max().Ceiling());
+static_assert(1 == Fixed<uint32_t, 32>::Max().Ceiling());
+static_assert(1 == Fixed<uint64_t, 64>::Max().Ceiling());
+
+static_assert(0 == Fixed<int8_t, 7>::Min().Ceiling());
+static_assert(0 == Fixed<int16_t, 15>::Min().Ceiling());
+static_assert(0 == Fixed<int32_t, 31>::Min().Ceiling());
+static_assert(0 == Fixed<int64_t, 63>::Min().Ceiling());
+static_assert(0 == Fixed<uint8_t, 8>::Min().Ceiling());
+static_assert(0 == Fixed<uint16_t, 16>::Min().Ceiling());
+static_assert(0 == Fixed<uint32_t, 32>::Min().Ceiling());
+static_assert(0 == Fixed<uint64_t, 64>::Min().Ceiling());
+
 static_assert(1 == Fixed<int, 0>{1}.Floor());
 static_assert(0 == Fixed<int, 1>{FromRatio(1, 2)}.Floor());
 static_assert(0 == Fixed<int, 2>{FromRatio(1, 2)}.Floor());
@@ -774,6 +983,76 @@ static_assert(-1 == Fixed<int, 1>{FromRatio(-1, 2)}.Floor());
 static_assert(-1 == Fixed<int, 2>{FromRatio(-1, 2)}.Floor());
 static_assert(-1 == Fixed<int, 2>{FromRatio(-1, 4)}.Floor());
 static_assert(-1 == Fixed<int, 0>{-1}.Floor());
+
+static_assert(0 == Fixed<int8_t, 7>::Max().Floor());
+static_assert(0 == Fixed<int16_t, 15>::Max().Floor());
+static_assert(0 == Fixed<int32_t, 31>::Max().Floor());
+static_assert(0 == Fixed<int64_t, 63>::Max().Floor());
+static_assert(0 == Fixed<uint8_t, 8>::Max().Floor());
+static_assert(0 == Fixed<uint16_t, 16>::Max().Floor());
+static_assert(0 == Fixed<uint32_t, 32>::Max().Floor());
+static_assert(0 == Fixed<uint64_t, 64>::Max().Floor());
+
+static_assert(-1 == Fixed<int8_t, 7>::Min().Floor());
+static_assert(-1 == Fixed<int16_t, 15>::Min().Floor());
+static_assert(-1 == Fixed<int32_t, 31>::Min().Floor());
+static_assert(-1 == Fixed<int64_t, 63>::Min().Floor());
+static_assert(0 == Fixed<uint8_t, 8>::Min().Floor());
+static_assert(0 == Fixed<uint16_t, 16>::Min().Floor());
+static_assert(0 == Fixed<uint32_t, 32>::Min().Floor());
+static_assert(0 == Fixed<uint64_t, 64>::Min().Floor());
+
+static_assert(1 == Fixed<int, 0>{1}.Round());
+static_assert(0 == Fixed<int, 1>{FromRatio(1, 2)}.Round());
+static_assert(0 == Fixed<int, 2>{FromRatio(1, 2)}.Round());
+static_assert(0 == Fixed<int, 2>{FromRatio(1, 4)}.Round());
+static_assert(0 == Fixed<int, 1>{FromRatio(-1, 2)}.Round());
+static_assert(0 == Fixed<int, 2>{FromRatio(-1, 2)}.Round());
+static_assert(0 == Fixed<int, 2>{FromRatio(-1, 4)}.Round());
+static_assert(-1 == Fixed<int, 0>{-1}.Round());
+
+static_assert(1 == Fixed<int8_t, 7>::Max().Round());
+static_assert(1 == Fixed<int16_t, 15>::Max().Round());
+static_assert(1 == Fixed<int32_t, 31>::Max().Round());
+static_assert(1 == Fixed<int64_t, 63>::Max().Round());
+static_assert(1 == Fixed<uint8_t, 8>::Max().Round());
+static_assert(1 == Fixed<uint16_t, 16>::Max().Round());
+static_assert(1 == Fixed<uint32_t, 32>::Max().Round());
+static_assert(1 == Fixed<uint64_t, 64>::Max().Round());
+
+static_assert(-1 == Fixed<int8_t, 7>::Min().Round());
+static_assert(-1 == Fixed<int16_t, 15>::Min().Round());
+static_assert(-1 == Fixed<int32_t, 31>::Min().Round());
+static_assert(-1 == Fixed<int64_t, 63>::Min().Round());
+static_assert(0 == Fixed<uint8_t, 8>::Min().Round());
+static_assert(0 == Fixed<uint16_t, 16>::Min().Round());
+static_assert(0 == Fixed<uint32_t, 32>::Min().Round());
+static_assert(0 == Fixed<uint64_t, 64>::Min().Round());
+
+static_assert(Fixed<int, 2>{FromRatio(1, 1)} == Fixed<int, 2>{FromRatio(1, 1)}.Absolute());
+static_assert(Fixed<int, 2>{FromRatio(1, 2)} == Fixed<int, 2>{FromRatio(1, 2)}.Absolute());
+static_assert(Fixed<int, 2>{FromRatio(1, 4)} == Fixed<int, 2>{FromRatio(1, 4)}.Absolute());
+static_assert(Fixed<int, 2>{FromRatio(1, 1)} == Fixed<int, 2>{FromRatio(-1, 1)}.Absolute());
+static_assert(Fixed<int, 2>{FromRatio(1, 2)} == Fixed<int, 2>{FromRatio(-1, 2)}.Absolute());
+static_assert(Fixed<int, 2>{FromRatio(1, 4)} == Fixed<int, 2>{FromRatio(-1, 4)}.Absolute());
+
+static_assert(Fixed<int8_t, 7>::Max() == Fixed<int8_t, 7>::Max().Absolute());
+static_assert(Fixed<int16_t, 15>::Max() == Fixed<int16_t, 15>::Max().Absolute());
+static_assert(Fixed<int32_t, 31>::Max() == Fixed<int32_t, 31>::Max().Absolute());
+static_assert(Fixed<int64_t, 63>::Max() == Fixed<int64_t, 63>::Max().Absolute());
+static_assert(Fixed<uint8_t, 8>::Max() == Fixed<uint8_t, 8>::Max().Absolute());
+static_assert(Fixed<uint16_t, 16>::Max() == Fixed<uint16_t, 16>::Max().Absolute());
+static_assert(Fixed<uint32_t, 32>::Max() == Fixed<uint32_t, 32>::Max().Absolute());
+static_assert(Fixed<uint64_t, 64>::Max() == Fixed<uint64_t, 64>::Max().Absolute());
+
+static_assert(Fixed<int8_t, 7>::Max() == Fixed<int8_t, 7>::Min().Absolute());
+static_assert(Fixed<int16_t, 15>::Max() == Fixed<int16_t, 15>::Min().Absolute());
+static_assert(Fixed<int32_t, 31>::Max() == Fixed<int32_t, 31>::Min().Absolute());
+static_assert(Fixed<int64_t, 63>::Max() == Fixed<int64_t, 63>::Min().Absolute());
+static_assert(Fixed<uint8_t, 8>::Min() == Fixed<uint8_t, 8>::Min().Absolute());
+static_assert(Fixed<uint16_t, 16>::Min() == Fixed<uint16_t, 16>::Min().Absolute());
+static_assert(Fixed<uint32_t, 32>::Min() == Fixed<uint32_t, 32>::Min().Absolute());
+static_assert(Fixed<uint64_t, 64>::Min() == Fixed<uint64_t, 64>::Min().Absolute());
 
 }  // anonymous namespace
 

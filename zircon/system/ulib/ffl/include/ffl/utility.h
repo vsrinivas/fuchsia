@@ -30,42 +30,95 @@ struct Resolution {};
 template <size_t Place>
 constexpr auto ToPlace = Bit<Place>{};
 
-// Type trait to determine the size of the intermediate result of integer arithmetic.
+// Traits type the determines the precision of the given integer type.
 template <typename T>
-struct IntermediateType;
+struct IntegerPrecisionType {
+  static_assert(sizeof(T) != sizeof(T), "T must be a standard integer type!");
+};
 
+// The precision of signed values does not include the signed bit.
 template <>
-struct IntermediateType<uint8_t> {
-  using Type = uint16_t;
+struct IntegerPrecisionType<int8_t> {
+  static constexpr size_t value = 7;
 };
 template <>
-struct IntermediateType<uint16_t> {
-  using Type = uint32_t;
+struct IntegerPrecisionType<int16_t> {
+  static constexpr size_t value = 15;
 };
 template <>
-struct IntermediateType<uint32_t> {
-  using Type = uint64_t;
+struct IntegerPrecisionType<int32_t> {
+  static constexpr size_t value = 31;
 };
 template <>
-struct IntermediateType<uint64_t> {
-  using Type = uint64_t;
+struct IntegerPrecisionType<int64_t> {
+  static constexpr size_t value = 63;
+};
+
+// The precision of unsigned values covers the full range.
+template <>
+struct IntegerPrecisionType<uint8_t> {
+  static constexpr size_t value = 8;
 };
 template <>
-struct IntermediateType<int8_t> {
+struct IntegerPrecisionType<uint16_t> {
+  static constexpr size_t value = 16;
+};
+template <>
+struct IntegerPrecisionType<uint32_t> {
+  static constexpr size_t value = 32;
+};
+template <>
+struct IntegerPrecisionType<uint64_t> {
+  static constexpr size_t value = 64;
+};
+
+template <typename T>
+static constexpr size_t IntegerPrecision = IntegerPrecisionType<T>::value;
+
+// Trait type to determine the best-fitting integer for a given sign and
+// precision in bits.
+template <bool Signed, size_t Precision, typename = void>
+struct BestFittingType;
+
+// Signed values require space for the signed bit, precision covers the positive
+// range.
+template <size_t Precision>
+struct BestFittingType<true, Precision, std::enable_if_t<(Precision < 8)>> {
+  using Type = int8_t;
+};
+template <size_t Precision>
+struct BestFittingType<true, Precision, std::enable_if_t<(Precision >= 8 && Precision < 16)>> {
   using Type = int16_t;
 };
-template <>
-struct IntermediateType<int16_t> {
+template <size_t Precision>
+struct BestFittingType<true, Precision, std::enable_if_t<(Precision >= 16 && Precision < 32)>> {
   using Type = int32_t;
 };
-template <>
-struct IntermediateType<int32_t> {
+template <size_t Precision>
+struct BestFittingType<true, Precision, std::enable_if_t<(Precision >= 32)>> {
   using Type = int64_t;
 };
-template <>
-struct IntermediateType<int64_t> {
-  using Type = int64_t;
+
+// Unsigned values do not have a signed bit, precision covers the entire range.
+template <size_t Precision>
+struct BestFittingType<false, Precision, std::enable_if_t<(Precision <= 8)>> {
+  using Type = uint8_t;
 };
+template <size_t Precision>
+struct BestFittingType<false, Precision, std::enable_if_t<(Precision > 8 && Precision <= 16)>> {
+  using Type = uint16_t;
+};
+template <size_t Precision>
+struct BestFittingType<false, Precision, std::enable_if_t<(Precision > 16 && Precision <= 32)>> {
+  using Type = uint32_t;
+};
+template <size_t Precision>
+struct BestFittingType<false, Precision, std::enable_if_t<(Precision > 32)>> {
+  using Type = uint64_t;
+};
+
+template <bool Signed, size_t Precision>
+using BestFitting = typename BestFittingType<Signed, Precision>::Type;
 
 // Changes the signedness of Integer to match the signedness of Reference,
 // preserving the original size of Integer.
@@ -77,49 +130,62 @@ using MatchSignedOrUnsigned =
 // Clamps the given Integer value to the range of Result. Optimized for all
 // combinations of sizes and signedness.
 template <typename Result, typename Integer,
-          typename = std::enable_if_t<std::is_integral_v<Result> && std::is_integral_v<Integer>>>
+          std::enable_if_t<std::is_integral_v<Result> && std::is_integral_v<Integer> &&
+                               std::is_unsigned_v<Result> && std::is_signed_v<Integer>,
+                           int> = 0>
 constexpr Result ClampCast(Integer value) {
-  constexpr auto kMin = std::numeric_limits<Result>::min();
-  constexpr auto kMax = std::numeric_limits<Result>::max();
-
-  if constexpr (std::is_unsigned_v<Result> && std::is_signed_v<Integer>) {
-    if (value <= 0) {
-      return 0;
-    }
-    if constexpr (sizeof(Result) < sizeof(Integer)) {
-      if (value > static_cast<Integer>(kMax)) {
-        return kMax;
-      }
-    }
-    return static_cast<Result>(value);
-  } else if (std::is_unsigned_v<Result> && std::is_unsigned_v<Integer>) {
-    if constexpr (sizeof(Result) < sizeof(Integer)) {
-      if (value > kMax) {
-        return kMax;
-      }
-    }
-    return static_cast<Result>(value);
-  } else if (std::is_signed_v<Result> && std::is_unsigned_v<Integer>) {
-    if constexpr (sizeof(Result) <= sizeof(Integer)) {
-      if (value > static_cast<Integer>(kMax)) {
-        return kMax;
-      }
-    }
-    return static_cast<Result>(value);
-  } else if (std::is_signed_v<Result> && std::is_signed_v<Integer>) {
-    if constexpr (sizeof(Result) < sizeof(Integer)) {
-      if (value < kMin) {
-        return kMin;
-      } else if (value > kMax) {
-        return kMax;
-      }
-    }
-    return static_cast<Result>(value);
+  if (value <= 0) {
+    return 0;
   }
-
-  // Silence warnings when compiling with GCC.
-  static_cast<void>(kMin);
-  static_cast<void>(kMax);
+  if constexpr (sizeof(Result) < sizeof(Integer)) {
+    constexpr auto kMax = std::numeric_limits<Result>::max();
+    if (value > static_cast<Integer>(kMax)) {
+      return kMax;
+    }
+  }
+  return static_cast<Result>(value);
+}
+template <typename Result, typename Integer,
+          std::enable_if_t<std::is_integral_v<Result> && std::is_integral_v<Integer> &&
+                               std::is_unsigned_v<Result> && std::is_unsigned_v<Integer>,
+                           int> = 1>
+constexpr Result ClampCast(Integer value) {
+  if constexpr (sizeof(Result) < sizeof(Integer)) {
+    constexpr auto kMax = std::numeric_limits<Result>::max();
+    if (value > kMax) {
+      return kMax;
+    }
+  }
+  return static_cast<Result>(value);
+}
+template <typename Result, typename Integer,
+          std::enable_if_t<std::is_integral_v<Result> && std::is_integral_v<Integer> &&
+                               std::is_signed_v<Result> && std::is_unsigned_v<Integer>,
+                           int> = 2>
+constexpr Result ClampCast(Integer value) {
+  if constexpr (sizeof(Result) <= sizeof(Integer)) {
+    constexpr auto kMax = std::numeric_limits<Result>::max();
+    if (value > static_cast<Integer>(kMax)) {
+      return kMax;
+    }
+  }
+  return static_cast<Result>(value);
+}
+template <typename Result, typename Integer,
+          std::enable_if_t<std::is_integral_v<Result> && std::is_integral_v<Integer> &&
+                               std::is_signed_v<Result> && std::is_signed_v<Integer>,
+                           int> = 3>
+constexpr Result ClampCast(Integer value) {
+  if constexpr (sizeof(Result) < sizeof(Integer)) {
+    constexpr auto kMin = std::numeric_limits<Result>::min();
+    constexpr auto kMax = std::numeric_limits<Result>::max();
+    if (value < kMin) {
+      return kMin;
+    } else if (value > kMax) {
+      return kMax;
+    }
+  }
+  return static_cast<Result>(value);
 }
 
 }  // namespace ffl

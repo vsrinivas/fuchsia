@@ -41,8 +41,8 @@ Fixed<int32_t, 31> UnitaryRatio(Fixed<int32_t, 0> a, Fixed<int32_t, 0> b) {
         return a / b;
 }
 
-Fixed<uint8_t, 0> Blend(Fixed<uint8_t, 0> color0, Fixed<uint8_t, 0> color1, Fixed<uint8_t, 7> alpha) {
-    return alpha * color0 + (Fixed<uint8_t, 7>{1} - alpha) * color1;
+Fixed<uint8_t, 0> Blend(Fixed<uint8_t, 0> color0, Fixed<uint8_t, 0> color1, Fixed<uint8_t, 8> alpha) {
+    return alpha * color0 + (Fixed<uint8_t, 8>{1} - alpha) * color1;
 }
 ```
 
@@ -98,64 +98,18 @@ using ffl::Fixed;
 ### Mixed Precision
 
 FFL uses the following rules when performing mixed precision arithmetic:
-* Addition and subtraction convert to the least precision between the two
-  operands before computing an intermediate result.
-* Multiplication produces an intermediate result with precision resolution
+* Addition and subtraction convert to the greatest precision and least
+  resolution of the two operands before computing an intermediate result.
+* Multiplication produces an intermediate result with precision and resolution
   sufficient to hold the sum of both the fractional and integral bit depths of the
   operands.
 * Division produces an intermediate result with the resolution of the target
   format.
 
-Comparisons convert to the least precision between the two operands before
-performing the comparison. Care must be taken when comparing a fixed-point value
-with an plain integer: plain integers are promoted to a fixed-point value with a
-zero bit fractional component. This means that comparisons with plain integers
-round the fixed-point value to a whole integer value before comparison.
-Sometimes this is the desired outcome however, it can lead to unexpected results
-if you are unaware of this behavior.
-
-Consider the following example that presents two functions to determine whether
-given fixed-point value is zero:
-
-```C++
-#include <ffl/fixed.h>
-
-using ffl::Fixed;
-using ffl::FromRatio;
-
-template <typename Integer, size_t FractionalBits>
-constexpr bool IsZero1(Fixed<Intefer, FractionalBits> value) {
-    return value == 0;
-}
-
-template <typename Integer, size_t FractionalBits>
-constexpr bool IsZero2(Fixed<Intefer, FractionalBits> value) {
-    return value == Fixed<Integer, FractionalBits>{0};
-}
-
-constexpr Fixed<int, 1> kOneHalf = FromRatio(1, 2);
-
-// Round-half-to-even rounds one-half down to zero.
-static_assert(IsZero1(kOneHalf) == true);
-
-// Fixed-to-fixed comparison of one-half is not equal to zero.
-static_assert(IsZero2(kOneHalf) == false);
-```
-
-In this example `IsZero1` compares the fractional value `kOneHalf` with plain
-integer zero. This results in `kOneHalf` being rounded to a value with zero
-fractional bits, due to the promotion of the literal `0` to a fixed-point value.
-The convergent rounding policy rounds `kOneHalf` towards zero because it is the
-nearest even integer.
-
-In contrast, `IsZero2` explicitly converts the literal `0` to a fixed-point
-value with the same precision as the argument. Because both arguments of the
-comparison have the same precision, the values are directly compared without
-rounding.
-
-Both types of comparison are valid. Which one to use depends on the what the
-situation requires. Keep in mind that comparisons always convert to the least
-precision when comparing with plain integers and the right choice will be clear.
+Comparisons convert to the least resolution of the two operands before
+performing the comparison. However, when comparing a fixed-point value with a
+plain integer, the values are converted to an intermediate type with sufficient
+precision and the resolution of the fixed-point argument.
 
 ### Intermediate Values and Saturation
 
