@@ -33,10 +33,10 @@
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fsl/vmo/strings.h"
 
 namespace ledger {
 namespace {

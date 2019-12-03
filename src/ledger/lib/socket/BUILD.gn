@@ -6,16 +6,22 @@ visibility = [ "//src/ledger/*" ]
 
 source_set("socket") {
   sources = [
+    "blocking_drain.cc",
+    "blocking_drain.h",
+    "socket_drainer.cc",
+    "socket_drainer.h",
     "socket_drainer_client.cc",
     "socket_drainer_client.h",
     "socket_pair.h",
     "socket_writer.cc",
     "socket_writer.h",
+    "strings.cc",
+    "strings.h",
   ]
 
   public_deps = [
+    "//src/ledger/lib/vmo",
     "//src/lib/callback",
-    "//src/lib/fsl",
     "//zircon/public/lib/zx",
   ]
 }
@@ -24,8 +30,11 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "blocking_drain_unittest.cc",
     "socket_drainer_client_unittest.cc",
+    "socket_drainer_unittest.cc",
     "socket_writer_unittest.cc",
+    "strings_unittest.cc",
   ]
 
   deps = [

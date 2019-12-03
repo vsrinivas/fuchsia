@@ -23,7 +23,7 @@ source_set("overnet") {
 
   deps = [
     "//src/ledger/lib/convert",
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
@@ -45,8 +45,8 @@ source_set("unittests") {
     "//src/ledger/bin/fidl_helpers:message_relay",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/vmo",
     "//src/lib/callback",
-    "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]

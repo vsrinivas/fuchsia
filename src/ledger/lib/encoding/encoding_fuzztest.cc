@@ -5,7 +5,7 @@
 #include <fuchsia/ledger/testing/cpp/fidl.h>
 
 #include "src/ledger/lib/encoding/encoding.h"
-#include "src/lib/fsl/vmo/vector.h"
+#include "src/ledger/lib/vmo/vector.h"
 
 namespace cloud_provider {
 namespace {
@@ -13,7 +13,7 @@ namespace {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   std::vector<uint8_t> serialized_commits(data, data + size);
   fuchsia::mem::Buffer buffer;
-  if (!fsl::VmoFromVector(serialized_commits, &buffer)) {
+  if (!ledger::VmoFromVector(serialized_commits, &buffer)) {
     return 1;
   }
   fuchsia::ledger::testing::TestStruct commits;

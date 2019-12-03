@@ -21,8 +21,8 @@ source_set("sync") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/vmo",
     "//src/lib/callback",
-    "//src/lib/fsl",
     "//src/lib/fxl",
   ]
 

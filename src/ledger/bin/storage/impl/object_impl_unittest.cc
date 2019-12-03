@@ -20,7 +20,7 @@
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 #include "util/env_fuchsia.h"
@@ -53,14 +53,14 @@ ObjectIdentifier CreateObjectIdentifier(ObjectIdentifierFactory* factory, Object
                                          << ", but got: " << convert::ToHex(found_data);
   }
 
-  fsl::SizedVmo vmo;
+  ledger::SizedVmo vmo;
   status = object.GetVmo(&vmo);
   if (status != Status::OK) {
     return ::testing::AssertionFailure() << "Unable to call GetVmo on object, status: " << status;
   }
 
   std::string found_data_in_vmo;
-  if (!fsl::StringFromVmo(vmo, &found_data_in_vmo)) {
+  if (!ledger::StringFromVmo(vmo, &found_data_in_vmo)) {
     return ::testing::AssertionFailure() << "Unable to read from VMO.";
   }
 
@@ -211,8 +211,8 @@ TEST_F(ObjectImplTest, VmoObject) {
   ObjectIdentifier identifier = CreateObjectIdentifier(
       &factory, ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
-  fsl::SizedVmo vmo;
-  ASSERT_TRUE(fsl::VmoFromString(data, &vmo));
+  ledger::SizedVmo vmo;
+  ASSERT_TRUE(ledger::VmoFromString(data, &vmo));
 
   VmoObject object(identifier, std::move(vmo));
   EXPECT_TRUE(CheckObjectValue(object, identifier, data));

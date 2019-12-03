@@ -6,14 +6,14 @@
 
 #include <memory>
 
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 
 namespace storage {
-Status Object::GetVmo(fsl::SizedVmo* vmo) const {
+Status Object::GetVmo(ledger::SizedVmo* vmo) const {
   fxl::StringView data;
   RETURN_ON_ERROR(GetData(&data));
 
-  if (!fsl::VmoFromString(data, vmo)) {
+  if (!ledger::VmoFromString(data, vmo)) {
     FXL_LOG(WARNING) << "Unable to produce VMO for object " << GetIdentifier();
     return Status::INTERNAL_ERROR;
   }

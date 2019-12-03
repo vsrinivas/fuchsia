@@ -18,8 +18,8 @@
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/lib/socket/strings.h"
 #include "src/lib/callback/capture.h"
-#include "src/lib/fsl/socket/strings.h"
 
 namespace cloud_sync {
 // Fake implementation of storage::PageStorage. Injects the data that PageSync

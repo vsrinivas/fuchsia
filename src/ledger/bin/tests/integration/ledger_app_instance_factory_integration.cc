@@ -33,11 +33,11 @@
 #include "src/ledger/cloud_provider_memory_diff/cpp/cloud_controller_factory.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
+#include "src/ledger/lib/socket/strings.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {

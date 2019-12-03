@@ -11,7 +11,7 @@
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/ledger/lib/vmo/sized_vmo.h"
 
 namespace ledger {
 

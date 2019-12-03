@@ -23,7 +23,7 @@ source_set("cobalt") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
     "//src/lib/fxl",
   ]
 

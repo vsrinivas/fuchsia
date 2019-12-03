@@ -17,9 +17,9 @@
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/vmo/sized_vmo.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {

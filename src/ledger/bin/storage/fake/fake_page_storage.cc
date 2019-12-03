@@ -20,8 +20,8 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
-#include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/socket/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
@@ -31,7 +31,7 @@ namespace fake {
 namespace {
 
 Status ToBuffer(convert::ExtendedStringView value, int64_t offset, int64_t max_size,
-                fsl::SizedVmo* buffer) {
+                ledger::SizedVmo* buffer) {
   size_t start = value.size();
   // Valid indices are between -N and N-1.
   if (offset >= -static_cast<int64_t>(value.size()) &&
@@ -39,7 +39,7 @@ Status ToBuffer(convert::ExtendedStringView value, int64_t offset, int64_t max_s
     start = offset < 0 ? value.size() + offset : offset;
   }
   size_t length = max_size < 0 ? value.size() : max_size;
-  bool result = fsl::VmoFromString(value.substr(start, length), buffer);
+  bool result = ledger::VmoFromString(value.substr(start, length), buffer);
   return result ? Status::OK : Status::INTERNAL_ERROR;
 }
 
@@ -238,7 +238,7 @@ void FakePageStorage::GetObject(
 
 void FakePageStorage::GetObjectPart(ObjectIdentifier object_identifier, int64_t offset,
                                     int64_t max_size, Location location,
-                                    fit::function<void(Status, fsl::SizedVmo)> callback) {
+                                    fit::function<void(Status, ledger::SizedVmo)> callback) {
   GetPiece(object_identifier, [offset, max_size, callback = std::move(callback)](
                                   Status status, std::unique_ptr<const Piece> piece) {
     if (status != Status::OK) {
@@ -246,7 +246,7 @@ void FakePageStorage::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
       return;
     }
     fxl::StringView data = piece->GetData();
-    fsl::SizedVmo buffer;
+    ledger::SizedVmo buffer;
     Status buffer_status = ToBuffer(data, offset, max_size, &buffer);
     if (buffer_status != Status::OK) {
       callback(buffer_status, nullptr);

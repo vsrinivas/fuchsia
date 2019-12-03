@@ -12,9 +12,9 @@
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/vmo/strings.h"
+#include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/callback/capture.h"
-#include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fsl/vmo/vector.h"
 
 namespace ledger {
 namespace {
@@ -162,8 +162,8 @@ TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
 
   std::vector<uint8_t> key = convert::ToArray("Hello");
   std::vector<uint8_t> big_value = generator.MakeValue(2 * 65536 + 1);
-  fsl::SizedVmo vmo;
-  ASSERT_TRUE(fsl::VmoFromVector(big_value, &vmo));
+  ledger::SizedVmo vmo;
+  ASSERT_TRUE(ledger::VmoFromVector(big_value, &vmo));
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result create_result;
   loop_waiter = NewWaiter();
   page1->CreateReferenceFromBuffer(std::move(vmo).ToTransport(),
@@ -224,8 +224,8 @@ TEST_P(SyncIntegrationCloudTest, PageChangeLazyEntry) {
 
   std::vector<uint8_t> key = convert::ToArray("Hello");
   std::vector<uint8_t> big_value(2 * 65536 + 1);
-  fsl::SizedVmo vmo;
-  ASSERT_TRUE(fsl::VmoFromVector(big_value, &vmo));
+  ledger::SizedVmo vmo;
+  ASSERT_TRUE(ledger::VmoFromVector(big_value, &vmo));
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
   loop_waiter = NewWaiter();
   page1->CreateReferenceFromBuffer(std::move(vmo).ToTransport(),

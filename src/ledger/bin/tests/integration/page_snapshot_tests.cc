@@ -18,10 +18,10 @@
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/vmo/sized_vmo.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
@@ -82,7 +82,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
     }
     EXPECT_TRUE(result.is_response());
     std::string result_as_string;
-    EXPECT_TRUE(fsl::StringFromVmo(result.response().buffer, &result_as_string));
+    EXPECT_TRUE(ledger::StringFromVmo(result.response().buffer, &result_as_string));
     return result_as_string;
   }
 };
@@ -514,8 +514,8 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
 TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   auto instance = NewLedgerAppInstance();
   const std::string big_data(1'000'000, 'a');
-  fsl::SizedVmo vmo;
-  ASSERT_TRUE(fsl::VmoFromString(big_data, &vmo));
+  ledger::SizedVmo vmo;
+  ASSERT_TRUE(ledger::VmoFromString(big_data, &vmo));
 
   PagePtr page = instance->GetTestPage();
 

@@ -141,7 +141,7 @@ void PageStorageEmptyImpl::AddObjectFromLocal(
 
 void PageStorageEmptyImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t offset,
                                          int64_t max_size, Location location,
-                                         fit::function<void(Status, fsl::SizedVmo)> callback) {
+                                         fit::function<void(Status, ledger::SizedVmo)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }

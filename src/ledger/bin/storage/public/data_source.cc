@@ -8,7 +8,7 @@
 #include <lib/zx/vmar.h>
 
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fsl/socket/socket_drainer.h"
+#include "src/ledger/lib/socket/socket_drainer.h"
 
 namespace storage {
 
@@ -50,7 +50,7 @@ class StringLikeDataSource : public DataSource {
 
 class VmoDataChunk : public DataSource::DataChunk {
  public:
-  explicit VmoDataChunk(fsl::SizedVmo vmo) : vmo_(std::move(vmo)) {}
+  explicit VmoDataChunk(ledger::SizedVmo vmo) : vmo_(std::move(vmo)) {}
 
   ~VmoDataChunk() override {
     if (vmar_) {
@@ -76,14 +76,14 @@ class VmoDataChunk : public DataSource::DataChunk {
     return fxl::StringView(reinterpret_cast<char*>(mapped_address_), vmo_.size());
   }
 
-  fsl::SizedVmo vmo_;
+  ledger::SizedVmo vmo_;
   zx::vmar vmar_;
   uintptr_t mapped_address_;
 };
 
 class VmoDataSource : public DataSource {
  public:
-  explicit VmoDataSource(fsl::SizedVmo vmo) : vmo_(std::move(vmo)) { FXL_DCHECK(vmo_); }
+  explicit VmoDataSource(ledger::SizedVmo vmo) : vmo_(std::move(vmo)) { FXL_DCHECK(vmo_); }
 
  private:
   uint64_t GetSize() override { return vmo_.size(); }
@@ -105,13 +105,13 @@ class VmoDataSource : public DataSource {
     callback(std::move(data), Status::DONE);
   }
 
-  fsl::SizedVmo vmo_;
+  ledger::SizedVmo vmo_;
 #ifndef NDEBUG
   bool called_ = false;
 #endif
 };
 
-class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
+class SocketDataSource : public DataSource, public ledger::SocketDrainer::Client {
  public:
   SocketDataSource(zx::socket socket, uint64_t expected_size)
       : socket_(std::move(socket)), expected_size_(expected_size), remaining_bytes_(expected_size) {
@@ -124,7 +124,7 @@ class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
   void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) override {
     FXL_DCHECK(socket_);
     callback_ = std::move(callback);
-    socket_drainer_ = std::make_unique<fsl::SocketDrainer>(this);
+    socket_drainer_ = std::make_unique<ledger::SocketDrainer>(this);
     socket_drainer_->Start(std::move(socket_));
     socket_.reset();
   }
@@ -159,7 +159,7 @@ class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
   zx::socket socket_;
   uint64_t expected_size_;
   uint64_t remaining_bytes_;
-  std::unique_ptr<fsl::SocketDrainer> socket_drainer_;
+  std::unique_ptr<ledger::SocketDrainer> socket_drainer_;
   fit::function<void(std::unique_ptr<DataChunk>, Status)> callback_;
 };
 
@@ -193,7 +193,7 @@ std::unique_ptr<DataSource> DataSource::Create(std::vector<uint8_t> value) {
   return std::make_unique<StringLikeDataSource<std::vector<uint8_t>>>(std::move(value));
 }
 
-std::unique_ptr<DataSource> DataSource::Create(fsl::SizedVmo vmo) {
+std::unique_ptr<DataSource> DataSource::Create(ledger::SizedVmo vmo) {
   return std::make_unique<VmoDataSource>(std::move(vmo));
 }
 

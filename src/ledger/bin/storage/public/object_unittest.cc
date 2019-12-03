@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 
 namespace storage {
 namespace {
@@ -37,10 +37,10 @@ TEST(ObjectTest, GetVmo) {
   std::string content = "content";
   StringObject object(content);
 
-  fsl::SizedVmo vmo;
+  ledger::SizedVmo vmo;
   ASSERT_EQ(object.GetVmo(&vmo), Status::OK);
   std::string vmo_content;
-  ASSERT_TRUE(fsl::StringFromVmo(vmo, &vmo_content));
+  ASSERT_TRUE(ledger::StringFromVmo(vmo, &vmo_content));
   EXPECT_EQ(vmo_content, content);
 }
 

@@ -10,8 +10,8 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
 #include "src/ledger/lib/socket/socket_pair.h"
-#include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/socket/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 
 namespace storage {
 namespace {
@@ -67,8 +67,8 @@ TEST_F(DataSourceTest, Array) {
 TEST_F(DataSourceTest, Vmo) {
   std::string value = "Hello World";
 
-  fsl::SizedVmo vmo;
-  EXPECT_TRUE(fsl::VmoFromString(value, &vmo));
+  ledger::SizedVmo vmo;
+  EXPECT_TRUE(ledger::VmoFromString(value, &vmo));
 
   EXPECT_TRUE(TestDataSource(value, DataSource::Create(std::move(vmo))));
 }
@@ -80,8 +80,8 @@ TEST_F(DataSourceTest, VmoIsDestroyed) {
   // Create 10 VMOs and let them get destructed.
   for (int i = 0; i < 10; ++i) {
     std::string big_value(1'000'000, 'a');
-    fsl::SizedVmo vmo;
-    EXPECT_TRUE(fsl::VmoFromString(big_value, &vmo));
+    ledger::SizedVmo vmo;
+    EXPECT_TRUE(ledger::VmoFromString(big_value, &vmo));
     EXPECT_TRUE(TestDataSource(big_value, DataSource::Create(std::move(vmo))));
   }
 
@@ -104,16 +104,16 @@ TEST_F(DataSourceTest, Socket) {
   std::string value = "Hello World";
 
   EXPECT_TRUE(
-      TestDataSource(value, DataSource::Create(fsl::WriteStringToSocket(value), value.size())));
+      TestDataSource(value, DataSource::Create(ledger::WriteStringToSocket(value), value.size())));
 }
 
 TEST_F(DataSourceTest, SocketWrongSize) {
   std::string value = "Hello World";
 
-  EXPECT_FALSE(
-      TestDataSource(value, DataSource::Create(fsl::WriteStringToSocket(value), value.size() - 1)));
-  EXPECT_FALSE(
-      TestDataSource(value, DataSource::Create(fsl::WriteStringToSocket(value), value.size() + 1)));
+  EXPECT_FALSE(TestDataSource(
+      value, DataSource::Create(ledger::WriteStringToSocket(value), value.size() - 1)));
+  EXPECT_FALSE(TestDataSource(
+      value, DataSource::Create(ledger::WriteStringToSocket(value), value.size() + 1)));
 }
 
 TEST_F(DataSourceTest, SocketMultipleChunk) {

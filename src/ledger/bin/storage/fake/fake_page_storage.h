@@ -59,7 +59,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
                           fit::function<void(Status, ObjectIdentifier)> callback) override;
   void GetObjectPart(ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
                      Location location,
-                     fit::function<void(Status, fsl::SizedVmo)> callback) override;
+                     fit::function<void(Status, ledger::SizedVmo)> callback) override;
   void GetObject(ObjectIdentifier object_identifier, Location location,
                  fit::function<void(Status, std::unique_ptr<const Object>)> callback) override;
   void GetPiece(ObjectIdentifier object_identifier,

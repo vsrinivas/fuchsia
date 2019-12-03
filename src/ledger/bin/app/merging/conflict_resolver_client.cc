@@ -16,10 +16,10 @@
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/public/status.h"
+#include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/util/ptr.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

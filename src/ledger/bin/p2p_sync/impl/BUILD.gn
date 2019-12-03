@@ -69,7 +69,7 @@ source_set("unittests") {
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/bin/testing/overnet",
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
     "//src/lib/fxl",
 
     # gtest matchers are in gmock.

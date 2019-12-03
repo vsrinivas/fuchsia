@@ -10,7 +10,7 @@
 #include <string>
 
 #include "src/ledger/bin/storage/public/constants.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace encryption {

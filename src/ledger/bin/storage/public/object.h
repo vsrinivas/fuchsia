@@ -6,7 +6,7 @@
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_OBJECT_H_
 
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
@@ -29,7 +29,7 @@ class Object {
   virtual Status GetData(fxl::StringView* data) const = 0;
 
   // Returns a vmo containing the data.
-  virtual Status GetVmo(fsl::SizedVmo* vmo) const;
+  virtual Status GetVmo(ledger::SizedVmo* vmo) const;
 
   // Adds tree-level references from this object to other objects into
   // |references|. Does not clear |references|. Does not add piece-level

@@ -66,7 +66,7 @@ source_set("lib") {
     "//src/ledger/bin/public",
     "//src/ledger/bin/storage/public:public",
     "//src/ledger/lib/convert",
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
     "//src/lib/inspect_deprecated/testing:testing",
@@ -88,8 +88,8 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//src/ledger/bin/fidl",
     "//src/ledger/lib/coroutine",
+    "//src/ledger/lib/vmo",
     "//src/lib/callback",
-    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated:reader",
     "//third_party/boringssl",
@@ -119,8 +119,8 @@ source_set("ledger_instance_factory") {
 
   deps = [
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/vmo",
     "//src/lib/callback",
-    "//src/lib/fsl",
     "//third_party/googletest:gtest",
   ]
 
@@ -147,7 +147,7 @@ source_set("get_ledger") {
     "//src/ledger/bin/filesystem",
     "//src/ledger/bin/public",
     "//src/ledger/lib/convert",
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]

@@ -374,8 +374,8 @@ void PageDownload::GetObject(
                                                  std::move(callback));
                             return;
                           }
-                          fsl::SizedVmo sized_vmo;
-                          if (!fsl::SizedVmo::FromTransport(std::move(*data), &sized_vmo)) {
+                          ledger::SizedVmo sized_vmo;
+                          if (!ledger::SizedVmo::FromTransport(std::move(*data), &sized_vmo)) {
                             HandleGetObjectError(std::move(object_identifier), true,
                                                  "converting to SizedVmo", std::move(callback));
                             return;

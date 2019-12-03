@@ -24,10 +24,10 @@
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/socket/strings.h"
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fsl/socket/strings.h"
 
 namespace cloud_sync {
 namespace {

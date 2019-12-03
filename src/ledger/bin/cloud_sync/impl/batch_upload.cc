@@ -19,10 +19,10 @@
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/encoding/encoding.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -200,8 +200,8 @@ void BatchUpload::SynchronousUploadObject(coroutine::CoroutineHandler* handler,
     return;
   }
 
-  fsl::SizedVmo data;
-  if (!fsl::VmoFromString(encrypted_data, &data)) {
+  ledger::SizedVmo data;
+  if (!ledger::VmoFromString(encrypted_data, &data)) {
     SetUploadStatus(UploadStatus::PERMANENT_ERROR);
     return;
   }

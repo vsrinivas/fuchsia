@@ -18,10 +18,10 @@
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/strings/concatenate.h"
 

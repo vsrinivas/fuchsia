@@ -17,7 +17,7 @@ source_set("testing") {
   ]
 
   deps = [
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
     "//src/lib/fxl",
   ]
 

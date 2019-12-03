@@ -15,8 +15,8 @@
 #include "src/ledger/bin/cloud_sync/impl/testing/test_commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/lib/socket/strings.h"
 #include "src/lib/callback/capture.h"
-#include "src/lib/fsl/socket/strings.h"
 
 namespace cloud_sync {
 

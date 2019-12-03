@@ -10,8 +10,8 @@
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
+#include "src/ledger/lib/socket/strings.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/fsl/socket/strings.h"
 
 namespace ledger {
 

@@ -27,7 +27,7 @@ executable("e2e_local") {
     "//src/ledger/bin/testing:get_ledger",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/cloud_provider_in_memory/lib",
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",

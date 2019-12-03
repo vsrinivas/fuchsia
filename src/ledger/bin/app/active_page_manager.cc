@@ -18,8 +18,8 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
+#include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -281,27 +281,27 @@ void ActivePageManager::GetValue(const storage::Commit& commit, std::string key,
           return;
         }
 
-        page_storage_->GetObjectPart(std::move(entry.object_identifier), 0, 1024,
-                                     storage::PageStorage::Location::Local(),
-                                     [this, callback = std::move(callback)](
-                                         storage::Status status, const fsl::SizedVmo& sized_vmo) {
-                                       ongoing_page_storage_uses_--;
-                                       if (status != storage::Status::OK) {
-                                         callback(status, std::vector<uint8_t>{});
-                                         CheckDiscardable();
-                                         return;
-                                       }
-                                       std::vector<uint8_t> value{};
-                                       if (!fsl::VectorFromVmo(sized_vmo, &value)) {
-                                         FXL_LOG(ERROR) << "VMO of size " << sized_vmo.size()
-                                                        << " not converted to vector<uint8_t>.";
-                                         callback(Status::INTERNAL_ERROR, std::vector<uint8_t>{});
-                                         CheckDiscardable();
-                                         return;
-                                       }
-                                       callback(Status::OK, std::move(value));
-                                       CheckDiscardable();
-                                     });
+        page_storage_->GetObjectPart(
+            std::move(entry.object_identifier), 0, 1024, storage::PageStorage::Location::Local(),
+            [this, callback = std::move(callback)](storage::Status status,
+                                                   const ledger::SizedVmo& sized_vmo) {
+              ongoing_page_storage_uses_--;
+              if (status != storage::Status::OK) {
+                callback(status, std::vector<uint8_t>{});
+                CheckDiscardable();
+                return;
+              }
+              std::vector<uint8_t> value{};
+              if (!ledger::VectorFromVmo(sized_vmo, &value)) {
+                FXL_LOG(ERROR) << "VMO of size " << sized_vmo.size()
+                               << " not converted to vector<uint8_t>.";
+                callback(Status::INTERNAL_ERROR, std::vector<uint8_t>{});
+                CheckDiscardable();
+                return;
+              }
+              callback(Status::OK, std::move(value));
+              CheckDiscardable();
+            });
       });
 }
 

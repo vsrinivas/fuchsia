@@ -7,7 +7,7 @@
 #include <lib/fidl/cpp/optional.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 
 using testing::HasSubstr;
 using testing::Not;
@@ -25,8 +25,8 @@ TEST(LedgerMatcher, ExtendedStringViewMatcher) {
 }
 
 TEST(LedgerMatcher, BufferMatcher) {
-  fsl::SizedVmo size_vmo;
-  ASSERT_TRUE(fsl::VmoFromString("hello", &size_vmo));
+  ledger::SizedVmo size_vmo;
+  ASSERT_TRUE(ledger::VmoFromString("hello", &size_vmo));
   fuchsia::mem::Buffer buffer = std::move(size_vmo).ToTransport();
 
   EXPECT_THAT(buffer, MatchesBuffer("hello"));
@@ -35,8 +35,8 @@ TEST(LedgerMatcher, BufferMatcher) {
 }
 
 TEST(LedgerMatcher, EntryMatcher) {
-  fsl::SizedVmo size_vmo;
-  ASSERT_TRUE(fsl::VmoFromString("hello", &size_vmo));
+  ledger::SizedVmo size_vmo;
+  ASSERT_TRUE(ledger::VmoFromString("hello", &size_vmo));
   fuchsia::mem::Buffer buffer = std::move(size_vmo).ToTransport();
 
   Entry entry{convert::ToArray("key"), fidl::MakeOptional(std::move(buffer))};
@@ -46,13 +46,13 @@ TEST(LedgerMatcher, EntryMatcher) {
 }
 
 TEST(LedgerMatcher, EntriesMatcher) {
-  fsl::SizedVmo size_vmo;
-  ASSERT_TRUE(fsl::VmoFromString("hello", &size_vmo));
+  ledger::SizedVmo size_vmo;
+  ASSERT_TRUE(ledger::VmoFromString("hello", &size_vmo));
   fuchsia::mem::Buffer buffer = std::move(size_vmo).ToTransport();
 
   Entry entry1{convert::ToArray("key1"), fidl::MakeOptional(std::move(buffer))};
 
-  ASSERT_TRUE(fsl::VmoFromString("hello2", &size_vmo));
+  ASSERT_TRUE(ledger::VmoFromString("hello2", &size_vmo));
   buffer = std::move(size_vmo).ToTransport();
 
   Entry entry2{convert::ToArray("key2"), fidl::MakeOptional(std::move(buffer))};

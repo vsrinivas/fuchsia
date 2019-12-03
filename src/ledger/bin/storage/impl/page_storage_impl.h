@@ -24,9 +24,9 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/lib/callback/managed_container.h"
 #include "src/lib/callback/operation_serializer.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/observer_list.h"
@@ -103,7 +103,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
                           fit::function<void(Status, ObjectIdentifier)> callback) override;
   void GetObjectPart(ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
                      Location location,
-                     fit::function<void(Status, fsl::SizedVmo)> callback) override;
+                     fit::function<void(Status, ledger::SizedVmo)> callback) override;
   void GetObject(ObjectIdentifier object_identifier, Location location,
                  fit::function<void(Status, std::unique_ptr<const Object>)> callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
@@ -203,7 +203,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   // size of the currently read piece.
   // |location| is either LOCAL and NETWORK and defines the behavior in the case where the object is
   // not found locally.
-  void FillBufferWithObjectContent(const Piece& piece, fsl::SizedVmo vmo, int64_t global_offset,
+  void FillBufferWithObjectContent(const Piece& piece, ledger::SizedVmo vmo, int64_t global_offset,
                                    int64_t global_size, int64_t current_position,
                                    int64_t object_size, Location location,
                                    fit::function<void(Status)> callback);
@@ -215,7 +215,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   // children of |piece|.
   void GetIndexObject(const Piece& piece, int64_t offset, int64_t max_size, Location location,
                       std::vector<ObjectIdentifier>* child_identifiers,
-                      fit::function<void(Status, fsl::SizedVmo)> callback);
+                      fit::function<void(Status, ledger::SizedVmo)> callback);
 
   // Notifies the registered watchers of |new_commits|.
   void NotifyWatchersOfNewCommits(const std::vector<std::unique_ptr<const Commit>>& new_commits,

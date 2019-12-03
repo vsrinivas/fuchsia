@@ -222,7 +222,7 @@ class PageStorage : public PageSyncClient {
   // This method must not be called on TREE_NODE objects.
   virtual void GetObjectPart(ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
                              Location location,
-                             fit::function<void(Status, fsl::SizedVmo)> callback) = 0;
+                             fit::function<void(Status, ledger::SizedVmo)> callback) = 0;
 
   // Finds the piece associated with the given |object_identifier|. The result
   // or an error will be returned through the given |callback|. Only local

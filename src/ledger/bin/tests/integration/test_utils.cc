@@ -15,9 +15,9 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/time/time_delta.h"
 
 namespace ledger {
@@ -35,7 +35,7 @@ std::vector<uint8_t> RandomArray(rng::Random* random, size_t size,
 
 std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   std::string value;
-  bool status = fsl::StringFromVmo(*vmo, &value);
+  bool status = ledger::StringFromVmo(*vmo, &value);
   FXL_DCHECK(status);
   return value;
 }

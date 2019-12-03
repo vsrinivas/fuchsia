@@ -7,8 +7,8 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/cobalt/ledger_metrics_registry.cb.h"
+#include "src/ledger/lib/vmo/file.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
-#include "src/lib/fsl/vmo/file.h"
 
 namespace ledger {
 namespace {

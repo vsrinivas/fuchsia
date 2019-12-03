@@ -32,11 +32,11 @@
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/vmo/strings.h"
+#include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fsl/vmo/vector.h"
 
 namespace ledger {
 namespace {
@@ -184,7 +184,7 @@ class EntriesPageStorage final : public storage::PageStorageEmptyImpl {
   void RemoveCommitWatcher(storage::CommitWatcher* watcher) override {}
   void GetObjectPart(storage::ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
                      storage::PageStorage::Location location,
-                     fit::function<void(storage::Status, fsl::SizedVmo)> callback) override {
+                     fit::function<void(storage::Status, ledger::SizedVmo)> callback) override {
     if (offset != 0) {
       FXL_NOTIMPLEMENTED();  // Feel free to implement!
     }
@@ -214,8 +214,8 @@ class EntriesPageStorage final : public storage::PageStorageEmptyImpl {
         callback(storage::Status::INTERNAL_NOT_FOUND, {});
         return;
       }
-      fsl::SizedVmo sized_vmo;
-      ASSERT_TRUE(fsl::VmoFromVector(value_it->second.first, &sized_vmo));
+      ledger::SizedVmo sized_vmo;
+      ASSERT_TRUE(ledger::VmoFromVector(value_it->second.first, &sized_vmo));
       callback(storage::Status::OK, std::move(sized_vmo));
     };
     switch (get_object_part_synchrony_) {

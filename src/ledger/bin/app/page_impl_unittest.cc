@@ -29,11 +29,11 @@
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/socket/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 using testing::Contains;
@@ -49,7 +49,7 @@ namespace {
 
 std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   std::string value;
-  bool status = fsl::StringFromVmo(*vmo, &value);
+  bool status = ledger::StringFromVmo(*vmo, &value);
   FXL_DCHECK(status);
   return value;
 }
@@ -199,8 +199,8 @@ TEST_F(PageImplTest, PutNoTransaction) {
 
 TEST_F(PageImplTest, PutReferenceNoTransaction) {
   std::string object_data("some_data");
-  fsl::SizedVmo vmo;
-  ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
+  ledger::SizedVmo vmo;
+  ASSERT_TRUE(ledger::VmoFromString(object_data, &vmo));
 
   bool called;
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
@@ -278,8 +278,8 @@ TEST_F(PageImplTest, PutKeyTooLarge) {
 
 TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   std::string object_data("some_data");
-  fsl::SizedVmo vmo;
-  ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
+  ledger::SizedVmo vmo;
+  ASSERT_TRUE(ledger::VmoFromString(object_data, &vmo));
 
   bool called;
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
@@ -352,8 +352,8 @@ TEST_F(PageImplTest, TransactionCommit) {
   std::string key2("some_key2");
   std::string value2("another value");
 
-  fsl::SizedVmo vmo;
-  ASSERT_TRUE(fsl::VmoFromString(value2, &vmo));
+  ledger::SizedVmo vmo;
+  ASSERT_TRUE(ledger::VmoFromString(value2, &vmo));
 
   bool called;
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
@@ -612,7 +612,7 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
   bool called;
   fuchsia::ledger::Page_CreateReferenceFromSocket_Result result;
   page_ptr_->CreateReferenceFromSocket(
-      value.size(), fsl::WriteStringToSocket(value),
+      value.size(), ledger::WriteStringToSocket(value),
       callback::Capture(callback::SetWhenCalled(&called), &result));
   DrainLoop();
   EXPECT_TRUE(called);
@@ -625,8 +625,8 @@ TEST_F(PageImplTest, CreateReferenceFromBuffer) {
   ASSERT_EQ(fake_storage_->GetObjects().size(), 0u);
 
   std::string value("a small value");
-  fsl::SizedVmo vmo;
-  ASSERT_TRUE(fsl::VmoFromString(value, &vmo));
+  ledger::SizedVmo vmo;
+  ASSERT_TRUE(ledger::VmoFromString(value, &vmo));
 
   bool called;
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
@@ -1153,8 +1153,8 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
 
 TEST_F(PageImplTest, SnapshotGetLarge) {
   std::string value_string(fidl_serialization::kMaxInlineDataSize + 1, 'a');
-  fsl::SizedVmo vmo;
-  ASSERT_TRUE(fsl::VmoFromString(value_string, &vmo));
+  ledger::SizedVmo vmo;
+  ASSERT_TRUE(ledger::VmoFromString(value_string, &vmo));
 
   bool called;
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;

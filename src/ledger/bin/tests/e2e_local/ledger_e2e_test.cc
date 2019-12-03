@@ -25,12 +25,12 @@
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fsl/vmo/strings.h"
 
 namespace test {
 namespace e2e_local {

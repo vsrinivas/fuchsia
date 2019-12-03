@@ -20,7 +20,8 @@ executable("cloud_provider") {
     "//peridot/lib/rng:testing",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/lib/convert",
-    "//src/lib/fsl",
+    "//src/ledger/lib/socket",
+    "//src/ledger/lib/vmo",
     "//src/lib/uuid",
   ]
 

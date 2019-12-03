@@ -12,8 +12,8 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/vmo/sized_vmo.h"
+#include "src/ledger/lib/vmo/strings.h"
 
 namespace ledger {
 

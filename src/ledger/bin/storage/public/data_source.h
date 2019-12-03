@@ -13,7 +13,7 @@
 #include <functional>
 #include <memory>
 
-#include "src/lib/fsl/vmo/sized_vmo.h"
+#include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
@@ -48,7 +48,7 @@ class DataSource {
   // Factory methods.
   static std::unique_ptr<DataSource> Create(std::string value);
   static std::unique_ptr<DataSource> Create(std::vector<uint8_t> value);
-  static std::unique_ptr<DataSource> Create(fsl::SizedVmo vmo);
+  static std::unique_ptr<DataSource> Create(ledger::SizedVmo vmo);
   static std::unique_ptr<DataSource> Create(zx::socket socket, uint64_t size);
 
   DataSource() = default;

@@ -185,7 +185,7 @@ source_set("test_utils") {
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/testing:lib",
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
     "//src/lib/fxl",
   ]
 
@@ -235,7 +235,7 @@ source_set("unittests") {
     "//src/ledger/bin/storage/public:parametrized_tests",
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
     "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//third_party/googletest:gmock",

@@ -48,7 +48,7 @@ source_set("lib") {
     "//src/ledger/bin/encryption/fake",
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/storage/impl:object_identifier_lib",
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

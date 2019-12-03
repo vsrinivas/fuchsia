@@ -9,8 +9,8 @@
 #include <memory>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -46,9 +46,9 @@ void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
     callback(Status::OK);
     return;
   }
-  fsl::SizedVmo vmo;
-  if (!fsl::VmoFromString(convert::ToStringView(value), &vmo)) {
-    LogOnError(Status::IO_ERROR, "fsl::VmoFromString");
+  ledger::SizedVmo vmo;
+  if (!ledger::VmoFromString(convert::ToStringView(value), &vmo)) {
+    LogOnError(Status::IO_ERROR, "ledger::VmoFromString");
     callback(Status::IO_ERROR);
     return;
   }

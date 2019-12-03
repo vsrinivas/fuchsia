@@ -12,9 +12,9 @@
 #include "src/ledger/bin/tests/cloud_provider/validation_test.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
-#include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/socket/strings.h"
+#include "src/ledger/lib/vmo/sized_vmo.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/uuid/uuid.h"
 
 using ::testing::AllOf;
@@ -253,8 +253,8 @@ TEST_F(PageCloudTest, AddAndGetObjects) {
   PageCloudSyncPtr page_cloud;
   ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
-  fsl::SizedVmo data;
-  ASSERT_TRUE(fsl::VmoFromString("bazinga!", &data));
+  ledger::SizedVmo data;
+  ASSERT_TRUE(ledger::VmoFromString("bazinga!", &data));
   Status status = Status::INTERNAL_ERROR;
   // Generate a random ID - the current cloud provider implementations don't
   // erase storage objects upon .Erase(), and we want to avoid interference from
@@ -270,7 +270,7 @@ TEST_F(PageCloudTest, AddAndGetObjects) {
   ASSERT_EQ(page_cloud->GetObject(convert::ToArray(id), &status, &buffer_ptr), ZX_OK);
   EXPECT_EQ(status, Status::OK);
   std::string read_data;
-  ASSERT_TRUE(fsl::StringFromVmo(*buffer_ptr, &read_data));
+  ASSERT_TRUE(ledger::StringFromVmo(*buffer_ptr, &read_data));
   EXPECT_EQ(read_data, "bazinga!");
 }
 
@@ -278,16 +278,16 @@ TEST_F(PageCloudTest, AddSameObjectTwice) {
   PageCloudSyncPtr page_cloud;
   ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
-  fsl::SizedVmo data;
-  ASSERT_TRUE(fsl::VmoFromString("bazinga!", &data));
+  ledger::SizedVmo data;
+  ASSERT_TRUE(ledger::VmoFromString("bazinga!", &data));
   Status status = Status::INTERNAL_ERROR;
   const std::string id = "some id";
   ASSERT_EQ(page_cloud->AddObject(convert::ToArray(id), std::move(data).ToTransport(), {}, &status),
             ZX_OK);
   EXPECT_EQ(status, Status::OK);
   // Adding the same object again must succeed as per cloud provider contract.
-  fsl::SizedVmo more_data;
-  ASSERT_TRUE(fsl::VmoFromString("bazinga!", &more_data));
+  ledger::SizedVmo more_data;
+  ASSERT_TRUE(ledger::VmoFromString("bazinga!", &more_data));
   ASSERT_EQ(
       page_cloud->AddObject(convert::ToArray(id), std::move(more_data).ToTransport(), {}, &status),
       ZX_OK);

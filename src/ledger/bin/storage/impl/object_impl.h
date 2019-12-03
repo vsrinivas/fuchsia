@@ -94,20 +94,20 @@ class ChunkObject : public BaseObject {
 // Object whose data is backed by a VMO.
 class VmoObject : public BaseObject {
  public:
-  VmoObject(ObjectIdentifier identifier, fsl::SizedVmo vmo);
+  VmoObject(ObjectIdentifier identifier, ledger::SizedVmo vmo);
   ~VmoObject() override;
 
   // Object:
   ObjectIdentifier GetIdentifier() const override;
   Status GetData(fxl::StringView* data) const override;
-  Status GetVmo(fsl::SizedVmo* vmo) const override;
+  Status GetVmo(ledger::SizedVmo* vmo) const override;
 
  private:
   Status Initialize() const;
 
   mutable bool initialized_ = false;
   const ObjectIdentifier identifier_;
-  fsl::SizedVmo vmo_;
+  ledger::SizedVmo vmo_;
   mutable zx::vmar vmar_;
   mutable fxl::StringView data_;
 };

@@ -25,8 +25,8 @@
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/strings/concatenate.h"
@@ -280,8 +280,8 @@ void PutBenchmark::PutEntry(std::vector<uint8_t> key, std::vector<uint8_t> value
     });
     return;
   }
-  fsl::SizedVmo vmo;
-  FXL_CHECK(fsl::VmoFromString(convert::ToStringView(value), &vmo));
+  ledger::SizedVmo vmo;
+  FXL_CHECK(ledger::VmoFromString(convert::ToStringView(value), &vmo));
   TRACE_ASYNC_BEGIN("benchmark", "create_reference", trace_event_id);
   page_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),

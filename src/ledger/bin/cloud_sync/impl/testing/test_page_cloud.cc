@@ -10,8 +10,8 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
-#include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/socket/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 
 namespace cloud_sync {
 
@@ -87,7 +87,7 @@ void TestPageCloud::AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data
                               AddObjectCallback callback) {
   add_object_calls++;
   std::string received_data;
-  if (!fsl::StringFromVmo(data, &received_data)) {
+  if (!ledger::StringFromVmo(data, &received_data)) {
     callback(cloud_provider::Status::INTERNAL_ERROR);
     return;
   }
@@ -120,7 +120,7 @@ void TestPageCloud::GetObject(std::vector<uint8_t> id, GetObjectCallback callbac
   }
 
   ::fuchsia::mem::Buffer buffer;
-  if (!fsl::VmoFromString(objects_to_return[object_id], &buffer)) {
+  if (!ledger::VmoFromString(objects_to_return[object_id], &buffer)) {
     callback(cloud_provider::Status::INTERNAL_ERROR, nullptr);
     return;
   }

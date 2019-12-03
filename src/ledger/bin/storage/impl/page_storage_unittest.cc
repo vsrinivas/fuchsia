@@ -42,13 +42,13 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/socket/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -646,13 +646,13 @@ class PageStorageTest : public StorageTest {
     return object;
   }
 
-  fsl::SizedVmo TryGetObjectPart(ObjectIdentifier object_identifier, size_t offset, size_t max_size,
-                                 PageStorage::Location location,
-                                 Status expected_status = Status::OK) {
+  ledger::SizedVmo TryGetObjectPart(ObjectIdentifier object_identifier, size_t offset,
+                                    size_t max_size, PageStorage::Location location,
+                                    Status expected_status = Status::OK) {
     RetrackIdentifier(&object_identifier);
     bool called;
     Status status;
-    fsl::SizedVmo vmo;
+    ledger::SizedVmo vmo;
     storage_->GetObjectPart(object_identifier, offset, max_size, location,
                             callback::Capture(callback::SetWhenCalled(&called), &status, &vmo));
     RunLoopUntilIdle();
@@ -1963,10 +1963,10 @@ TEST_F(PageStorageTest, GetObjectPart) {
     ObjectData data = MakeObject("_Some data_", InlineBehavior::PREVENT);
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
-    fsl::SizedVmo object_part =
+    ledger::SizedVmo object_part =
         TryGetObjectPart(data.object_identifier, 1, data.size - 2, PageStorage::Location::Local());
     std::string object_part_data;
-    ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+    ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
     EXPECT_EQ(convert::ToString(object_part_data), data.value.substr(1, data.size - 2));
   });
 }
@@ -1976,10 +1976,10 @@ TEST_F(PageStorageTest, GetObjectPartLargeOffset) {
     ObjectData data = MakeObject("_Some data_", InlineBehavior::PREVENT);
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
-    fsl::SizedVmo object_part = TryGetObjectPart(data.object_identifier, data.size * 2, data.size,
-                                                 PageStorage::Location::Local());
+    ledger::SizedVmo object_part = TryGetObjectPart(data.object_identifier, data.size * 2,
+                                                    data.size, PageStorage::Location::Local());
     std::string object_part_data;
-    ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+    ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
     EXPECT_EQ(convert::ToString(object_part_data), "");
   });
 }
@@ -1989,10 +1989,10 @@ TEST_F(PageStorageTest, GetObjectPartLargeMaxSize) {
     ObjectData data = MakeObject("_Some data_", InlineBehavior::PREVENT);
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
-    fsl::SizedVmo object_part =
+    ledger::SizedVmo object_part =
         TryGetObjectPart(data.object_identifier, 0, data.size * 2, PageStorage::Location::Local());
     std::string object_part_data;
-    ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+    ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
     EXPECT_EQ(convert::ToString(object_part_data), data.value);
   });
 }
@@ -2002,10 +2002,10 @@ TEST_F(PageStorageTest, GetObjectPartNegativeArgs) {
     ObjectData data = MakeObject("_Some data_", InlineBehavior::PREVENT);
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
-    fsl::SizedVmo object_part = TryGetObjectPart(data.object_identifier, -data.size + 1, -1,
-                                                 PageStorage::Location::Local());
+    ledger::SizedVmo object_part = TryGetObjectPart(data.object_identifier, -data.size + 1, -1,
+                                                    PageStorage::Location::Local());
     std::string object_part_data;
-    ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+    ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
     EXPECT_EQ(convert::ToString(object_part_data), data.value.substr(1, data.size - 1));
   });
 }
@@ -2032,10 +2032,10 @@ TEST_F(PageStorageTest, GetLargeObjectPart) {
   EXPECT_EQ(status, Status::OK);
   EXPECT_EQ(object_identifier, data.object_identifier);
 
-  fsl::SizedVmo object_part =
+  ledger::SizedVmo object_part =
       TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::Local());
   std::string object_part_data;
-  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
   std::string result_str = convert::ToString(object_part_data);
   EXPECT_EQ(result_str.size(), size);
   EXPECT_EQ(result_str, data.value.substr(offset, size));
@@ -2047,10 +2047,10 @@ TEST_F(PageStorageTest, GetObjectPartFromSync) {
   sync.AddObject(data.object_identifier, data.value, ObjectAvailability::P2P_AND_CLOUD);
   storage_->SetSyncDelegate(&sync);
 
-  fsl::SizedVmo object_part = TryGetObjectPart(data.object_identifier, 1, data.size - 2,
-                                               PageStorage::Location::ValueFromNetwork());
+  ledger::SizedVmo object_part = TryGetObjectPart(data.object_identifier, 1, data.size - 2,
+                                                  PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
-  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data.value.substr(1, data.size - 2));
 
   storage_->SetSyncDelegate(nullptr);
@@ -2097,10 +2097,10 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncEndOfChunk) {
   ASSERT_LT(size, chunk_lengths[0]);
   uint64_t offset = chunk_lengths[0] - size;
 
-  fsl::SizedVmo object_part =
+  ledger::SizedVmo object_part =
       TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
-  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
   EXPECT_THAT(sync.object_requests, Contains(Pair(object_identifier, RetrievedObjectType::BLOB)));
@@ -2143,10 +2143,10 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncStartOfChunk) {
   ASSERT_LT(size, chunk_lengths[1]);
   uint64_t offset = chunk_lengths[0];
 
-  fsl::SizedVmo object_part =
+  ledger::SizedVmo object_part =
       TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
-  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
   EXPECT_THAT(sync.object_requests, Contains(Pair(object_identifier, RetrievedObjectType::BLOB)));
@@ -2175,10 +2175,10 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytes) {
 
   // Read zero bytes inside a chunk. This succeeds and only reads the root
   // piece.
-  fsl::SizedVmo object_part =
+  ledger::SizedVmo object_part =
       TryGetObjectPart(object_identifier, 12, 0, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
-  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), "");
   EXPECT_THAT(sync.object_requests,
               ElementsAre(Pair(object_identifier, RetrievedObjectType::BLOB)));
@@ -2238,10 +2238,10 @@ TEST_F(PageStorageTestNoGc, GetHugeObjectPartFromSync) {
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   UntrackIdentifier(&object_identifier);
 
-  fsl::SizedVmo object_part =
+  ledger::SizedVmo object_part =
       TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
-  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
   EXPECT_THAT(sync.object_requests, Contains(Pair(object_identifier, RetrievedObjectType::BLOB)));
@@ -2292,10 +2292,10 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
 
-  fsl::SizedVmo object_part =
+  ledger::SizedVmo object_part =
       TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
-  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(data_str.size() + offset, size));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
   // Check that at least the root piece has been added to storage.
@@ -2335,7 +2335,7 @@ TEST_F(PageStorageTest, GetHugeObjectFromSyncMaxConcurrentDownloads) {
   // accumulated the maximum number of concurrent connections, ie. pending calls.
   bool called;
   Status status;
-  fsl::SizedVmo object_part;
+  ledger::SizedVmo object_part;
   storage_->GetObjectPart(
       object_identifier, /*offset=*/0, /*max_size=*/-1, PageStorage::Location::ValueFromNetwork(),
       callback::Capture(callback::SetWhenCalled(&called), &status, &object_part));
@@ -2355,7 +2355,7 @@ TEST_F(PageStorageTest, GetHugeObjectFromSyncMaxConcurrentDownloads) {
 
   EXPECT_EQ(status, Status::OK);
   std::string object_part_data;
-  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str);
   EXPECT_EQ(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
   EXPECT_THAT(sync.object_requests, Contains(Pair(object_identifier, RetrievedObjectType::BLOB)));
@@ -2410,10 +2410,10 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
   ASSERT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
   UntrackIdentifier(&object_identifier);
 
-  fsl::SizedVmo object_part =
+  ledger::SizedVmo object_part =
       TryGetObjectPart(object_identifier, offset, size, PageStorage::Location::ValueFromNetwork());
   std::string object_part_data;
-  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  ASSERT_TRUE(ledger::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
   TryGetObject(object_identifier, PageStorage::Location::Local(), Status::INTERNAL_NOT_FOUND);

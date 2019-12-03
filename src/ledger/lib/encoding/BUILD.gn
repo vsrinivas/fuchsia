@@ -16,7 +16,7 @@ source_set("encoding") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp",
-    "//src/lib/fsl",
+    "//src/ledger/lib/vmo",
     "//src/lib/fxl",
   ]
 

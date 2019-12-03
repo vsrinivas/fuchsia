@@ -8,7 +8,7 @@
 
 #include "lib/fit/result.h"
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 
 using testing::AllOf;
 using testing::Field;
@@ -23,7 +23,7 @@ MATCHER_P(InternalViewMatcher, sub_matcher, "") {  // NOLINT
 
 MATCHER_P(InternalBufferMatcher, sub_matcher, "") {  // NOLINT
   std::string vmo_content;
-  if (!TypedEq<bool>(true).MatchAndExplain(fsl::StringFromVmo(arg, &vmo_content),
+  if (!TypedEq<bool>(true).MatchAndExplain(ledger::StringFromVmo(arg, &vmo_content),
                                            result_listener)) {
     return false;
   }
@@ -70,7 +70,7 @@ ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(const Result& result) {
     return;
   }
   std::string value;
-  bool status = fsl::StringFromVmo(result.response().buffer, &value);
+  bool status = ledger::StringFromVmo(result.response().buffer, &value);
   if (!status) {
     result_ = fit::error(std::make_pair(ZX_ERR_BAD_HANDLE, fuchsia::ledger::Error::NETWORK_ERROR));
     return;

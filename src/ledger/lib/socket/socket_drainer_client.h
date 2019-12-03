@@ -11,12 +11,12 @@
 #include <memory>
 #include <string>
 
+#include "src/ledger/lib/socket/socket_drainer.h"
 #include "src/lib/callback/destruction_sentinel.h"
-#include "src/lib/fsl/socket/socket_drainer.h"
 
 namespace socket {
 
-class SocketDrainerClient : public fsl::SocketDrainer::Client {
+class SocketDrainerClient : public ledger::SocketDrainer::Client {
  public:
   SocketDrainerClient();
   SocketDrainerClient(const SocketDrainerClient&) = delete;
@@ -36,7 +36,7 @@ class SocketDrainerClient : public fsl::SocketDrainer::Client {
 
   fit::function<void(std::string)> callback_;
   std::string data_;
-  fsl::SocketDrainer drainer_;
+  ledger::SocketDrainer drainer_;
   fit::closure on_discardable_;
   bool discardable_ = false;
   callback::DestructionSentinel destruction_sentinel_;

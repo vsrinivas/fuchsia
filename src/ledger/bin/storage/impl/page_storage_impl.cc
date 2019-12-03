@@ -46,6 +46,8 @@
 #include "src/ledger/bin/synchronization/lock.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/vmo/sized_vmo.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
@@ -54,8 +56,6 @@
 #include "src/lib/files/file_descriptor.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -579,7 +579,7 @@ Status PageStorageImpl::DeleteObject(coroutine::CoroutineHandler* handler,
 
 void PageStorageImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t offset,
                                     int64_t max_size, Location location,
-                                    fit::function<void(Status, fsl::SizedVmo)> callback) {
+                                    fit::function<void(Status, ledger::SizedVmo)> callback) {
   FXL_DCHECK(IsDigestValid(object_identifier.object_digest()));
   FXL_DCHECK(GetObjectDigestInfo(object_identifier.object_digest()).object_type ==
              ObjectType::BLOB);
@@ -600,8 +600,8 @@ void PageStorageImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
 
         // If we are reading zero bytes, bail out now.
         if (max_size == 0) {
-          fsl::SizedVmo buffer;
-          if (!fsl::VmoFromString("", &buffer)) {
+          ledger::SizedVmo buffer;
+          if (!ledger::VmoFromString("", &buffer)) {
             callback(Status::INTERNAL_ERROR, nullptr);
             return;
           }
@@ -614,10 +614,10 @@ void PageStorageImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
         // If the piece is a chunk, then the piece represents the whole object.
         if (digest_info.is_chunk()) {
           const fxl::StringView data = piece->GetData();
-          fsl::SizedVmo buffer;
+          ledger::SizedVmo buffer;
           int64_t start = GetObjectPartStart(offset, data.size());
           int64_t length = GetObjectPartLength(max_size, data.size(), start);
-          if (!fsl::VmoFromString(data.substr(start, length), &buffer)) {
+          if (!ledger::VmoFromString(data.substr(start, length), &buffer)) {
             callback(Status::INTERNAL_ERROR, nullptr);
             return;
           }
@@ -679,8 +679,8 @@ void PageStorageImpl::GetObject(
         const Piece& piece_ref = *piece;
         GetIndexObject(piece_ref, 0, -1, location, child_identifiers,
                        [piece = std::move(piece), object_identifier,
-                        write_callback = std::move(write_callback),
-                        callback = std::move(callback)](Status status, fsl::SizedVmo vmo) mutable {
+                        write_callback = std::move(write_callback), callback = std::move(callback)](
+                           Status status, ledger::SizedVmo vmo) mutable {
                          if (status != Status::OK) {
                            callback(status, nullptr);
                            return;
@@ -1047,7 +1047,7 @@ std::string PageStorageImpl::GetEntryIdForMerge(fxl::StringView entry_name,
 void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t max_size,
                                      Location location,
                                      std::vector<ObjectIdentifier>* child_identifiers,
-                                     fit::function<void(Status, fsl::SizedVmo)> callback) {
+                                     fit::function<void(Status, ledger::SizedVmo)> callback) {
   ObjectDigestInfo digest_info = GetObjectDigestInfo(piece.GetIdentifier().object_digest());
 
   FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
@@ -1068,9 +1068,9 @@ void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t
     callback(Status::INTERNAL_ERROR, nullptr);
     return;
   }
-  fsl::SizedVmo vmo(std::move(raw_vmo), length);
+  ledger::SizedVmo vmo(std::move(raw_vmo), length);
 
-  fsl::SizedVmo vmo_copy;
+  ledger::SizedVmo vmo_copy;
   zx_status = vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
   if (zx_status != ZX_OK) {
     FXL_PLOG(ERROR, zx_status) << "Unable to duplicate vmo";
@@ -1094,7 +1094,7 @@ void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t
       });
 }
 
-void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, fsl::SizedVmo vmo,
+void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::SizedVmo vmo,
                                                   int64_t global_offset, int64_t global_size,
                                                   int64_t current_position, int64_t object_size,
                                                   Location location,
@@ -1168,7 +1168,7 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, fsl::Sized
       break;
     }
     // Create a copy of the VMO to be owned by the recursive call.
-    fsl::SizedVmo vmo_copy;
+    ledger::SizedVmo vmo_copy;
     zx_status_t zx_status = vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
     if (zx_status != ZX_OK) {
       FXL_PLOG(ERROR, zx_status) << "Unable to duplicate vmo";

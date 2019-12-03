@@ -18,9 +18,9 @@
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -64,7 +64,7 @@ size_t ComputeEntrySize(const InlinedEntry& entry) {
 
 // Fills an Entry from the content of object.
 Status FillSingleEntry(const storage::Object& object, Entry* entry) {
-  fsl::SizedVmo vmo;
+  ledger::SizedVmo vmo;
   RETURN_ON_ERROR(object.GetVmo(&vmo));
   entry->value = fidl::MakeOptional(std::move(vmo).ToTransport());
   return Status::OK;
@@ -319,7 +319,7 @@ void PageSnapshotImpl::Get(
         page_storage_->GetObjectPart(
             entry.object_identifier, 0u, std::numeric_limits<int64_t>::max(),
             storage::PageStorage::Location::Local(),
-            [callback = std::move(callback)](Status status, fsl::SizedVmo data) {
+            [callback = std::move(callback)](Status status, ledger::SizedVmo data) {
               if (status == Status::INTERNAL_NOT_FOUND) {
                 callback(Status::OK, ToErrorResult<fuchsia::ledger::PageSnapshot_Get_Result>(
                                          fuchsia::ledger::Error::NEEDS_FETCH));
@@ -420,7 +420,7 @@ void PageSnapshotImpl::FetchPartial(
         page_storage_->GetObjectPart(
             entry.object_identifier, offset, max_size,
             storage::PageStorage::Location::ValueFromNetwork(),
-            [callback = std::move(callback)](Status status, fsl::SizedVmo data) {
+            [callback = std::move(callback)](Status status, ledger::SizedVmo data) {
               if (status == Status::NETWORK_ERROR) {
                 callback(Status::OK,
                          ToErrorResult<fuchsia::ledger::PageSnapshot_FetchPartial_Result>(

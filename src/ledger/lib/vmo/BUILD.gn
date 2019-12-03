@@ -1,0 +1,48 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("vmo") {
+  visibility = [ "//src/ledger/*" ]
+
+  sources = [
+    "file.cc",
+    "file.h",
+    "shared_vmo.cc",
+    "shared_vmo.h",
+    "sized_vmo.cc",
+    "sized_vmo.h",
+    "strings.h",
+    "vector.h",
+    "vmo.cc",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-mem",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "file_unittest.cc",
+    "shared_vmo_unittest.cc",
+    "strings_unittest.cc",
+    "vector_unittest.cc",
+  ]
+
+  deps = [
+    ":vmo",
+    "//peridot/lib/scoped_tmpfs",
+    "//third_party/googletest:gtest",
+  ]
+}

@@ -12,8 +12,8 @@
 
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
-#include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/socket/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "third_party/murmurhash/murmurhash.h"
 
 namespace ledger {
@@ -253,7 +253,7 @@ void FakePageCloud::AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data
     return;
   }
   std::string bytes;
-  if (!fsl::StringFromVmo(data, &bytes)) {
+  if (!ledger::StringFromVmo(data, &bytes)) {
     callback(cloud_provider::Status::INTERNAL_ERROR);
     return;
   }
@@ -273,7 +273,7 @@ void FakePageCloud::GetObject(std::vector<uint8_t> id, GetObjectCallback callbac
     return;
   }
   ::fuchsia::mem::Buffer buffer;
-  if (!fsl::VmoFromString(objects_[id_str], &buffer)) {
+  if (!ledger::VmoFromString(objects_[id_str], &buffer)) {
     callback(cloud_provider::Status::INTERNAL_ERROR, nullptr);
     return;
   }

@@ -12,7 +12,6 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {

@@ -13,7 +13,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fsl/vmo/strings.h"
+#include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 
 namespace storage {
@@ -99,7 +99,7 @@ Status ChunkObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
-VmoObject::VmoObject(ObjectIdentifier identifier, fsl::SizedVmo vmo)
+VmoObject::VmoObject(ObjectIdentifier identifier, ledger::SizedVmo vmo)
     : identifier_(std::move(identifier)), vmo_(std::move(vmo)) {}
 
 VmoObject::~VmoObject() {
@@ -116,7 +116,7 @@ Status VmoObject::GetData(fxl::StringView* data) const {
   return Status::OK;
 }
 
-Status VmoObject::GetVmo(fsl::SizedVmo* vmo) const {
+Status VmoObject::GetVmo(ledger::SizedVmo* vmo) const {
   zx_status_t zx_status = vmo_.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, vmo);
   if (zx_status != ZX_OK) {
     FXL_PLOG(ERROR, zx_status) << "Unable to duplicate a vmo";
