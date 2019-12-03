@@ -1,8 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_ACPI_PRIVATE_H_
-#define ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_ACPI_PRIVATE_H_
+#ifndef ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_ACPI_PRIVATE_H_
+#define ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_ACPI_PRIVATE_H_
 #include <ddk/device.h>
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
@@ -75,12 +75,14 @@ typedef struct {
   auxdata_i2c_device_t* data;
 } pci_child_auxdata_ctx_t;
 
-// TODO(cja): this is here because of kpci.c and can be removed once
+__BEGIN_CDECLS
+// TODO(cja): this is here because of kpci.cc and can be removed once
 // kernel pci is out of the tree.
 zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI_HANDLE handle,
                             ACPI_DEVICE_INFO* info, const char* name, uint32_t protocol_id,
                             void* protocol_ops);
+__END_CDECLS
 
 const zx_protocol_device_t* get_acpi_root_device_proto(void);
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_ACPI_PRIVATE_H_
+#endif  // ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_ACPI_PRIVATE_H_

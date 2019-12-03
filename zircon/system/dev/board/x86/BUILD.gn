@@ -75,11 +75,11 @@ zx_driver("platform-bus-x86") {
 
   # Userspace PCI feature flag.  The scaffolding for the userspace pci bus
   # driver is in pci.cpp.  If not enabled then the kernel pci bus driver
-  # initialization code in ACPI (kpci.c) will be built instead.
+  # initialization code in ACPI (kpci.cc) will be built instead.
   if (enable_user_pci) {
     sources += [ "pci.cc" ]
   } else {
-    sources += [ "kpci.c" ]
+    sources += [ "kpci.cc" ]
   }
   configs += [ ":config" ]
   deps = [

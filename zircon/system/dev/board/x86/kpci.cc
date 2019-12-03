@@ -47,7 +47,8 @@ static ACPI_STATUS handle_prt(ACPI_HANDLE object, zx_pci_init_arg_t* arg, uint8_
     goto cleanup;
   }
 
-  uintptr_t entry_addr = (uintptr_t)buffer.Pointer;
+  uintptr_t entry_addr;
+  entry_addr = reinterpret_cast<uintptr_t>(buffer.Pointer);
   ACPI_PCI_ROUTING_TABLE* entry;
   for (entry = (ACPI_PCI_ROUTING_TABLE*)entry_addr; entry->Length != 0;
        entry_addr += entry->Length, entry = (ACPI_PCI_ROUTING_TABLE*)entry_addr) {
@@ -178,14 +179,16 @@ static zx_status_t find_pcie_config(zx_pci_init_arg_t* arg) {
     return ZX_ERR_NOT_FOUND;
   }
   ACPI_TABLE_MCFG* mcfg = (ACPI_TABLE_MCFG*)raw_table;
-  ACPI_MCFG_ALLOCATION* table_start = ((void*)mcfg) + sizeof(*mcfg);
-  ACPI_MCFG_ALLOCATION* table_end = ((void*)mcfg) + mcfg->Header.Length;
+  ACPI_MCFG_ALLOCATION* table_start =
+      reinterpret_cast<ACPI_MCFG_ALLOCATION*>(reinterpret_cast<uintptr_t>(mcfg) + sizeof(*mcfg));
+  ACPI_MCFG_ALLOCATION* table_end = reinterpret_cast<ACPI_MCFG_ALLOCATION*>(
+      reinterpret_cast<uintptr_t>(mcfg) + mcfg->Header.Length);
   uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
   if (table_bytes % sizeof(*table_start) != 0) {
     xprintf("MCFG has unexpected size\n");
     return ZX_ERR_INTERNAL;
   }
-  int num_entries = table_end - table_start;
+  size_t num_entries = table_end - table_start;
   if (num_entries == 0) {
     xprintf("MCFG has no entries\n");
     return ZX_ERR_NOT_FOUND;
@@ -227,7 +230,7 @@ static zx_status_t find_pcie_config(zx_pci_init_arg_t* arg) {
 /* @brief Device enumerator for platform_configure_pcie_legacy_irqs */
 static ACPI_STATUS get_pcie_devices_irq(ACPI_HANDLE object, UINT32 nesting_level, void* context,
                                         void** ret) {
-  zx_pci_init_arg_t* arg = context;
+  zx_pci_init_arg_t* arg = static_cast<zx_pci_init_arg_t*>(context);
   ACPI_STATUS status = handle_prt(object, arg, UINT8_MAX, UINT8_MAX);
   if (status != AE_OK) {
     return status;
@@ -337,7 +340,7 @@ zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size) {
 
   // TODO(teisenbe): We assume only one ECAM window right now...
   size_t obj_size = sizeof(*res) + sizeof(res->addr_windows[0]) * 1;
-  res = calloc(1, obj_size);
+  res = static_cast<zx_pci_init_arg_t*>(calloc(1, obj_size));
   if (!res) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -359,7 +362,8 @@ zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size) {
   }
 
   *arg = res;
-  *size = sizeof(*res) + sizeof(res->addr_windows[0]) * res->addr_window_count;
+  *size =
+      static_cast<uint32_t>(sizeof(*res) + sizeof(res->addr_windows[0]) * res->addr_window_count);
   return ZX_OK;
 fail:
   free(res);
@@ -373,7 +377,7 @@ struct report_current_resources_ctx {
 };
 
 static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void* _ctx) {
-  struct report_current_resources_ctx* ctx = _ctx;
+  auto* ctx = static_cast<report_current_resources_ctx*>(_ctx);
 
   bool is_mmio = false;
   uint64_t base = 0;
@@ -477,7 +481,7 @@ static ACPI_STATUS pci_report_current_resources_device_cb(ACPI_HANDLE object,
     return status;
   }
 
-  struct report_current_resources_ctx* ctx = _ctx;
+  auto* ctx = static_cast<report_current_resources_ctx*>(_ctx);
   ctx->device_is_root_bridge = (info->Flags & ACPI_PCI_ROOT_BRIDGE) != 0;
 
   ACPI_FREE(info);
