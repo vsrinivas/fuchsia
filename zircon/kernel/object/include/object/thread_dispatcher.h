@@ -226,6 +226,14 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
     const Blocked prev_reason;
   };
 
+  // callback from kernel when thread is exiting, just before it stops for good.
+  void Exiting();
+
+  // callback from kernel when thread is suspending
+  void Suspending();
+  // callback from kernel when thread is resuming
+  void Resuming();
+
  private:
   ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, thread_t* core_thread, uint32_t flags);
   ThreadDispatcher(const ThreadDispatcher&) = delete;
@@ -239,14 +247,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // kernel level entry point
   static int StartRoutine(void* arg);
 
-  // callback from kernel when thread is exiting, just before it stops for good.
-  void Exiting();
-
-  // callback from kernel when thread is suspending
-  void Suspending();
-  // callback from kernel when thread is resuming
-  void Resuming();
-
   // Return true if waiting for an exception response.
   bool InPortExceptionLocked() TA_REQ(get_lock());
   bool InChannelExceptionLocked() TA_REQ(get_lock());
@@ -257,10 +257,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // Helper routine to minimize code duplication.
   zx_status_t MarkExceptionHandledWorker(PortDispatcher* eport,
                                          ThreadState::Exception handled_state);
-
-  // Dispatch routine for state changes that LK tells us about
-  static void ThreadUserCallback(enum thread_user_state_change new_state, thread_t* arg);
-
   // change states of the object, do what is appropriate for the state transition
   void SetStateLocked(ThreadState::Lifecycle lifecycle) TA_REQ(get_lock());
 

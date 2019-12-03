@@ -70,7 +70,7 @@ ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, threa
       core_thread_(core_thread),
       exceptionate_(ExceptionPort::Type::THREAD) {
   LTRACE_ENTRY_OBJ;
-  core_thread_->user_thread = this;
+  thread_set_usermode_thread(core_thread_, this);
   kcounter_add(dispatcher_thread_create_count, 1);
 }
 
@@ -117,7 +117,6 @@ ThreadDispatcher::~ThreadDispatcher() {
 // complete initialization of the thread object outside of the constructor
 zx_status_t ThreadDispatcher::Initialize() {
   LTRACE_ENTRY_OBJ;
-  thread_set_user_callback(core_thread_, &ThreadUserCallback);
   // Associate the proc's address space with this thread.
   process_->aspace()->AttachToThread(core_thread_);
 
@@ -436,24 +435,6 @@ void ThreadDispatcher::Resuming() {
   }
 
   LTRACE_EXIT_OBJ;
-}
-
-// low level LK callback in thread's context just before exiting
-void ThreadDispatcher::ThreadUserCallback(enum thread_user_state_change new_state, thread_t* arg) {
-  ThreadDispatcher* t = arg->user_thread;
-  DEBUG_ASSERT(t != nullptr);
-
-  switch (new_state) {
-    case THREAD_USER_STATE_EXIT:
-      t->Exiting();
-      return;
-    case THREAD_USER_STATE_SUSPEND:
-      t->Suspending();
-      return;
-    case THREAD_USER_STATE_RESUME:
-      t->Resuming();
-      return;
-  }
 }
 
 // low level LK entry point for the thread

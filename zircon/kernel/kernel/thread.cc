@@ -147,18 +147,6 @@ static void initial_thread_func(void) {
   thread_exit(ret);
 }
 
-// Invoke |t|'s user_callback with |new_state|.
-//
-// Since user_callback may call into the scheduler it's crucial that the scheduler lock
-// (thread_lock) is not held when calling this function.  Otherwise, we risk recursive deadlock.
-static void invoke_user_callback(thread_t* t, enum thread_user_state_change new_state)
-    TA_EXCL(thread_lock) {
-  DEBUG_ASSERT(!arch_ints_disabled() || !spin_lock_held(&thread_lock));
-  if (t->user_callback) {
-    t->user_callback(new_state, t);
-  }
-}
-
 /**
  * @brief  Create a new thread
  *
@@ -606,7 +594,10 @@ void thread_exit(int retcode) {
   DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
   DEBUG_ASSERT(!thread_is_idle(current_thread));
 
-  invoke_user_callback(current_thread, THREAD_USER_STATE_EXIT);
+  if (current_thread->user_thread) {
+    DEBUG_ASSERT(!arch_ints_disabled() || !spin_lock_held(&thread_lock));
+    current_thread->user_thread->Exiting();
+  }
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
   thread_exit_locked(current_thread, retcode);
@@ -748,7 +739,10 @@ static void thread_do_suspend(void) {
   // because those callbacks act as barriers which control when it is
   // safe for the zx_thread_read_state()/zx_thread_write_state()
   // syscalls to access the userland register state kept by thread_t.
-  invoke_user_callback(current_thread, THREAD_USER_STATE_SUSPEND);
+  if (current_thread->user_thread) {
+    DEBUG_ASSERT(!arch_ints_disabled() || !spin_lock_held(&thread_lock));
+    current_thread->user_thread->Suspending();
+  }
 
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
@@ -779,7 +773,10 @@ static void thread_do_suspend(void) {
     }
   }
 
-  invoke_user_callback(current_thread, THREAD_USER_STATE_RESUME);
+  if (current_thread->user_thread) {
+    DEBUG_ASSERT(!arch_ints_disabled() || !spin_lock_held(&thread_lock));
+    current_thread->user_thread->Resuming();
+  }
 }
 
 // check for any pending signals and handle them
@@ -1094,15 +1091,6 @@ void thread_set_name(const char* name) {
 }
 
 /**
- * @brief Set the callback pointer to a function called on user thread state
- *        changes (e.g. exit, suspend, resume)
- */
-void thread_set_user_callback(thread_t* t, thread_user_callback_t cb) {
-  DEBUG_ASSERT(t->state == THREAD_INITIAL);
-  t->user_callback = cb;
-}
-
-/**
  * @brief Change priority of current thread
  *
  * Sets the thread to use the fair scheduling discipline using the given
@@ -1135,6 +1123,18 @@ void thread_set_deadline(thread_t* t, const zx_sched_deadline_params_t& params) 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
   sched_change_deadline(t, params);
 }
+
+/**
+* @brief Set the pointer to the user-mode thread, this will receive callbacks:
+* ThreadDispatcher::Exiting()
+* ThreadDispatcher::Suspending() / Resuming()
+*/
+void thread_set_usermode_thread(thread_t* t, ThreadDispatcher* user_thread) {
+  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+  DEBUG_ASSERT(t->state == THREAD_INITIAL);
+  t->user_thread = user_thread;
+}
+
 
 /**
  * @brief  Become an idle thread

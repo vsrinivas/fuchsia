@@ -45,19 +45,11 @@ enum thread_state {
 // Returns a string constant for the given thread state.
 const char* ToString(enum thread_state state);
 
-enum thread_user_state_change {
-  THREAD_USER_STATE_EXIT,
-  THREAD_USER_STATE_SUSPEND,
-  THREAD_USER_STATE_RESUME,
-};
-
 // scheduler lock
 extern spin_lock_t thread_lock;
 
 typedef int (*thread_start_routine)(void* arg);
 typedef void (*thread_trampoline_routine)(void) __NO_RETURN;
-typedef void (*thread_user_callback_t)(enum thread_user_state_change new_state,
-                                       thread_t* thread_context);
 typedef void (*thread_tls_callback_t)(void* tls_value);
 
 // clang-format off
@@ -163,10 +155,6 @@ struct thread_t {
   uint64_t user_tid;
   uint64_t user_pid;
 
-  // callback for user thread state changes; do not invoke directly, use invoke_user_callback
-  // helper function instead
-  thread_user_callback_t user_callback;
-
   // non-NULL if stopped in an exception
   const struct arch_exception_context* exception_context;
 
@@ -264,7 +252,7 @@ thread_t* thread_create_idle_thread(uint cpu_num);
 void thread_set_name(const char* name);
 void thread_set_priority(thread_t* t, int priority);
 void thread_set_deadline(thread_t* t, const zx_sched_deadline_params_t& params);
-void thread_set_user_callback(thread_t* t, thread_user_callback_t cb);
+void thread_set_usermode_thread(thread_t* t, ThreadDispatcher* user_thread);
 
 // Creates a thread with |name| that will execute |entry| at |priority|. |arg|
 // will be passed to |entry| when executed, the return value of |entry| will be
