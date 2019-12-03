@@ -11,7 +11,7 @@
 #include <stream_provider.h>
 #include <text_node.h>
 
-#include <queue>
+#include <map>
 #include <random>
 
 #include <src/lib/ui/base_view/base_view.h>
@@ -51,7 +51,7 @@ class DemoView : public scenic::BaseView {
     float shape_width;
     float shape_height;
     bool should_rotate;
-    std::queue<std::pair<std::unique_ptr<async::Wait>, zx::event>> waiters;
+    std::map<uint32_t, std::pair<std::unique_ptr<async::Wait>, zx::event>> waiters;
     std::unique_ptr<camera::ImageIOUtil> image_io_util;
   };
 

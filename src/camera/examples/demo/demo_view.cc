@@ -59,9 +59,8 @@ DemoView::~DemoView() {
   // Manually delete Wait instances before their corresponding events to avoid a failed assert.
   // TODO(36367): revisit async::Wait object lifetime requirements
   for (auto& ipp : image_pipe_properties_) {
-    while (ipp.waiters.size() > 0) {
-      ipp.waiters.front().first = nullptr;
-      ipp.waiters.pop();
+    for (auto& waiter : ipp.waiters) {
+      waiter.second.first = nullptr;
     }
   }
 };
@@ -111,8 +110,8 @@ std::unique_ptr<DemoView> DemoView::Create(scenic::ViewContext context, async::L
     }
 
     uint32_t image_pipe_id = view->session()->AllocResourceId();
-    view->session()->Enqueue(
-        scenic::NewCreateImagePipeCmd(image_pipe_id, ipp.image_pipe.NewRequest()));
+    view->session()->Enqueue(scenic::NewCreateImagePipeCmd(
+        image_pipe_id, ipp.image_pipe.NewRequest(loop->dispatcher())));
     scenic::Material material(view->session());
     material.SetTexture(image_pipe_id);
     view->session()->ReleaseResource(image_pipe_id);
@@ -239,7 +238,7 @@ void DemoView::OnFrameAvailable(uint32_t index, fuchsia::camera2::FrameAvailable
 
   auto waiter =
       std::make_unique<async::Wait>(release_fence.get(), ZX_EVENT_SIGNALED, 0,
-                                    [this, buffer_id = info.buffer_id, index](
+                                    [this, buffer_id = info.buffer_id, &ipp](
                                         async_dispatcher_t* dispatcher, async::Wait* wait,
                                         zx_status_t status, const zx_packet_signal_t* signal) {
                                       if (status != ZX_OK) {
@@ -248,22 +247,19 @@ void DemoView::OnFrameAvailable(uint32_t index, fuchsia::camera2::FrameAvailable
                                         return;
                                       }
                                       SleepIfChaos();
-                                      image_pipe_properties_[index].stream->ReleaseFrame(buffer_id);
+                                      ipp.stream->ReleaseFrame(buffer_id);
+                                      auto it = ipp.waiters.find(buffer_id);
+                                      ZX_ASSERT(it != ipp.waiters.end());
+                                      it->second.first = nullptr;
+                                      ipp.waiters.erase(it);
                                     });
-  ipp.waiters.emplace(std::move(waiter), std::move(release_fence));
-  status = ipp.waiters.back().first->Begin(loop_->dispatcher());
+  auto it = ipp.waiters.emplace(
+      std::make_pair(info.buffer_id, std::make_pair(std::move(waiter), std::move(release_fence))));
+  status = it.first->second.first->Begin(loop_->dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to start waiter";
     loop_->Quit();
     return;
-  }
-
-  // Remove any signaled waiters.
-  zx_signals_t signals{};
-  while (ipp.waiters.size() > 0 && zx_object_wait_one(ipp.waiters.front().second.get(),
-                                                      ZX_EVENT_SIGNALED, 0, &signals) == ZX_OK) {
-    ipp.waiters.front().first = nullptr;
-    ipp.waiters.pop();
   }
 
   SleepIfChaos();
