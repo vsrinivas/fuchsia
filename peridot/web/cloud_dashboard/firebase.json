@@ -1,9 +1,0 @@
-{
-  "hosting": {
-    "public": "dist/cloud_dashboard",
-    "rewrites": [ {
-        "source": "**",
-        "destination": "/index.html"
-    } ]
-  }
-}
