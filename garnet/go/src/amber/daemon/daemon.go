@@ -16,15 +16,11 @@ const (
 	PackageGarbageDir = "/pkgfs/ctl/garbage"
 )
 
-type Daemon struct {
-	pkgfs source.PkgfsDir
-}
+type Daemon struct{}
 
 // NewDaemon creates a Daemon
-func NewDaemon(pkgfs source.PkgfsDir) (*Daemon, error) {
-	d := &Daemon{
-		pkgfs: pkgfs,
-	}
+func NewDaemon() (*Daemon, error) {
+	d := &Daemon{}
 
 	return d, nil
 }
@@ -36,5 +32,5 @@ func (d *Daemon) GC() error {
 }
 
 func (d *Daemon) OpenRepository(config *pkg.RepositoryConfig) (source.Repository, error) {
-	return source.OpenRepository(config, d.pkgfs)
+	return source.OpenRepository(config)
 }

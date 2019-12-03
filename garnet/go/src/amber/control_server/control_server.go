@@ -102,31 +102,14 @@ type repoHandler struct {
 }
 
 func (h *repoHandler) GetUpdateComplete(name string, variant *string, merkle *string, result amber.FetchResultInterfaceRequest) error {
-	_, _ = variant, merkle
-	log.Printf("getting update for %s from %s", name, h.config.RepoUrl)
 	resultChannel := fidl.InterfaceRequest(result).Channel
 	resultProxy := (*amber.FetchResultEventProxy)(&fidl.ChannelProxy{Channel: resultChannel})
-	h.outstandingRequests.Add(1)
-
-	go func() {
-		defer h.outstandingRequests.Done()
-		defer resultProxy.Close()
-		result, status, err := h.repo.GetUpdateComplete(name, variant, merkle)
-		if err != nil {
-			err := resultProxy.OnError((int32)(status), err.Error())
-			if err != nil {
-				// Ignore errors here, it just means whoever asked for this has gone away already.
-				log.Printf("can't report error for update of %s; caller didn't care enough to stick around.", name)
-			}
-		} else {
-			err := resultProxy.OnSuccess(result)
-			if err != nil {
-				// Ignore errors here, it just means whoever asked for this has gone away already.
-				log.Printf("can't report success for update of %s; caller didn't care enough to stick around.", name)
-			}
-		}
-	}()
-
+	defer resultProxy.Close()
+	err := resultProxy.OnError(int32(zx.ErrNotSupported), moved("GetUpdateComplete", "fuchsia.pkg.PackageResolver").Error())
+	if err != nil {
+		// Ignore errors here, it just means whoever asked for this has gone away already.
+		log.Printf("can't report error for update of %s; caller didn't care enough to stick around.", name)
+	}
 	return nil
 }
 
