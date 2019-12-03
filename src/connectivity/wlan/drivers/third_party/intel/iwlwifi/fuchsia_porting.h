@@ -15,6 +15,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
 
+#include <lib/backtrace-request/backtrace-request.h>
 #include <netinet/if_ether.h>
 #include <stdint.h>
 #include <stdlib.h>

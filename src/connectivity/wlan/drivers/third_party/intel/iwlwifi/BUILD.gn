@@ -64,6 +64,7 @@ source_set("core") {
 
   public_deps = [
     "//zircon/public/lib/async-loop:async-loop",
+    "//zircon/public/lib/backtrace-request",
     "//zircon/public/lib/sync",
   ]
 

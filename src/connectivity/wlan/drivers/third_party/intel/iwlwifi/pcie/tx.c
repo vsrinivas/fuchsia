@@ -1870,9 +1870,7 @@ static zx_status_t iwl_pcie_send_hcmd_sync(struct iwl_trans* trans, struct iwl_h
   if (test_bit(STATUS_FW_ERROR, &trans->status)) {
     iwl_trans_pcie_dump_regs(trans);
     IWL_ERR(trans, "FW error in SYNC CMD %s\n", iwl_get_cmd_string(trans, cmd->id));
-#if 0   // NEEDS_PORTING
-         dump_stack();
-#endif  // NEEDS_PORTING
+    backtrace_request();
     status = ZX_ERR_IO;
     goto cancel;
   }
