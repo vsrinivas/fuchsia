@@ -99,7 +99,7 @@ void CameraManagerApp::ConnectToStream(
 
   uint32_t config_index = 0;
   uint32_t stream_type = 0;
-  uint32_t image_format_index = 0;
+  uint32_t image_format_index = constraints.has_format_index() ? constraints.format_index() : 0;
 
   // 2: Check constraints against the configs that the device offers.  If incompatible, fail.
   // 3: Pick a config, stream and image_format_index
@@ -108,7 +108,8 @@ void CameraManagerApp::ConnectToStream(
     FXL_LOG(ERROR) << "Failed to match constraints. status: " << status;
     return;
   }
-  FX_LOGS(INFO) << "Picked config " << config_index << " stream index: " << stream_type;
+  FX_LOGS(INFO) << "Picked config " << config_index << " stream index: " << stream_type
+                << " format index: " << image_format_index;
   // Get configs from the device:
   auto &out_configs = device->configs();
   ZX_ASSERT(out_configs.size() > config_index);

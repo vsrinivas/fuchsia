@@ -123,6 +123,7 @@ ManagerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::
   }
 
   constexpr uint32_t kCampingBufferCount = 2;
+  constexpr uint32_t kFormatIndex = 1;
   fuchsia::sysmem::BufferCollectionConstraints sysmem_constraints;
   sysmem_constraints.min_buffer_count_for_camping = kCampingBufferCount;
   sysmem_constraints.image_format_constraints_count = 0;
@@ -130,9 +131,10 @@ ManagerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::
   collection->SetConstraints(true, std::move(sysmem_constraints));
 
   fuchsia::camera2::StreamProperties stream_properties;
-  stream_properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+  stream_properties.set_stream_type(fuchsia::camera2::CameraStreamType::MONITORING);
   fuchsia::camera2::StreamConstraints stream_constraints;
   stream_constraints.set_properties(std::move(stream_properties));
+  stream_constraints.set_format_index(kFormatIndex);
   fuchsia::sysmem::ImageFormat_2 format_ret;
   manager_->ConnectToStream(kDeviceId, std::move(stream_constraints), std::move(manager_token),
                             std::move(request),

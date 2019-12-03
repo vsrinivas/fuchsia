@@ -127,7 +127,10 @@ zx_status_t VideoDeviceClient::MatchConstraints(
       auto &stream = config.stream_configs[j];
       if (stream.properties.has_stream_type() &&
           stream.properties.stream_type() == requested_stream_type) {
-        matches.emplace_back(i, j);
+        if (!constraints.has_format_index() ||
+            constraints.format_index() < stream.image_formats.size()) {
+          matches.emplace_back(i, j);
+        }
       }
     }
   }

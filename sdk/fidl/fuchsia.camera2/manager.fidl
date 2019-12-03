@@ -67,6 +67,10 @@ table StreamConstraints {
     /// A table that describes the properties of the stream. Any properties specified will
     /// be considered requirements for matching streams.
     1: StreamProperties properties;
+
+    /// If specified, the stream will be created using this index for the initial format index.
+    /// If unspecified, the first stream format will be used.
+    2: uint32 format_index;
 };
 
 enum DeviceType {
