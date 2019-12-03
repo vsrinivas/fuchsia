@@ -93,3 +93,27 @@ source_set("product_info_provider") {
     "//zircon/public/lib/fit",
   ]
 }
+
+# Exposed separately for unit test purposes.
+source_set("single_sync_annotation_provider") {
+  public = [
+    "single_sync_annotation_provider.h",
+  ]
+
+  sources = [
+    "annotation_provider.h",
+    "single_sync_annotation_provider.cc",
+    "single_sync_annotation_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+  ]
+  visibility = [ "//src/developer/feedback/feedback_agent/tests/*" ]
+}

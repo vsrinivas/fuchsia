@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/single_sync_annotation_provider_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

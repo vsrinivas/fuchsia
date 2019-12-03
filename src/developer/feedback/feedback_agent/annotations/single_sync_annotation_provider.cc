@@ -4,6 +4,8 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/single_sync_annotation_provider.h"
 
+#include <lib/fit/promise.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -13,12 +15,12 @@ using fuchsia::feedback::Annotation;
 
 SingleSyncAnnotationProvider::SingleSyncAnnotationProvider(const std::string& key) : key_(key) {}
 
-fit::promise<std::vector<fuchsia::feedback::Annotation>>
-SingleSyncAnnotationProvider::GetAnnotations() {
+fit::promise<std::vector<Annotation>> SingleSyncAnnotationProvider::GetAnnotations() {
   const auto annotation_value = GetAnnotation();
   if (!annotation_value) {
     FX_LOGS(WARNING) << "Failed to build annotation " << key_;
-    return {};
+
+    return fit::make_result_promise<std::vector<Annotation>>(fit::error());
   }
 
   Annotation annotation;

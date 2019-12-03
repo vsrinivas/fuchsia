@@ -72,6 +72,9 @@ test_package("feedback_agent_tests") {
       name = "screenshot_ptr_unittest"
     },
     {
+      name = "single_sync_annotation_provider_unittest"
+    },
+    {
       name = "system_log_ptr_unittest"
     },
   ]
@@ -141,6 +144,7 @@ test_package("feedback_agent_tests") {
     ":product_info_provider_unittest",
     ":ref_counted_delayed_task_unittest",
     ":screenshot_ptr_unittest",
+    ":single_sync_annotation_provider_unittest",
     ":system_log_ptr_unittest",
   ]
 }
@@ -409,6 +413,25 @@ executable("screenshot_ptr_unittest") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("single_sync_annotation_provider_unittest") {
+  testonly = true
+
+  sources = [
+    "single_sync_annotation_provider_unittest.cc",
+  ]
+
+  deps = [
+    "//src/developer/feedback/feedback_agent/annotations:single_sync_annotation_provider",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
   ]
 }
 
