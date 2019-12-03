@@ -6,7 +6,6 @@ group("testing") {
   testonly = true
   deps = [
     ":component_base",
-    ":component_context_fake",
     ":component_main",
     ":entity_resolver_fake",
     ":ledger_repository_for_testing",
@@ -52,21 +51,6 @@ source_set("component_main") {
     "//src/modular/lib/app_driver/cpp:app_driver",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-  ]
-}
-
-source_set("component_context_fake") {
-  testonly = true
-
-  sources = [
-    "component_context_fake.cc",
-    "component_context_fake.h",
-  ]
-
-  public_deps = [
-    ":entity_resolver_fake",
-    "//sdk/fidl/fuchsia.modular",
-    "//src/lib/fxl",
   ]
 }
 
