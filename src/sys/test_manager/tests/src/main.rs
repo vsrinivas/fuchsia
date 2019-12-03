@@ -7,11 +7,60 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_test as ftest, fuchsia_async as fasync,
+    fidl::endpoints::RequestStream,
+    fidl_fuchsia_test as ftest, fidl_fuchsia_test_manager as ftest_manager,
+    ftest_manager::Outcome,
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    futures::{StreamExt, TryStreamExt},
-    std::str::from_utf8,
+    fuchsia_zircon as zx,
+    futures::{
+        io::{self, AsyncRead},
+        prelude::*,
+        ready,
+        task::{Context, Poll},
+    },
+    std::{cell::RefCell, pin::Pin, str::from_utf8},
 };
+
+#[must_use = "futures/streams"]
+pub struct LoggerStream {
+    socket: fasync::Socket,
+}
+impl Unpin for LoggerStream {}
+
+thread_local! {
+    pub static BUFFER:
+        RefCell<[u8; 2048]> = RefCell::new([0; 2048]);
+}
+
+impl LoggerStream {
+    /// Creates a new `LoggerStream` for given `socket`.
+    pub fn new(socket: zx::Socket) -> Result<LoggerStream, failure::Error> {
+        let l = LoggerStream {
+            socket: fasync::Socket::from_socket(socket).context("Invalid zircon socket")?,
+        };
+        Ok(l)
+    }
+}
+
+fn process_log_bytes(bytes: &[u8]) -> Vec<u8> {
+    bytes.to_vec()
+}
+
+impl Stream for LoggerStream {
+    type Item = io::Result<Vec<u8>>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        BUFFER.with(|b| {
+            let mut b = b.borrow_mut();
+            let len = ready!(Pin::new(&mut self.socket).poll_read(cx, &mut *b)?);
+            if len == 0 {
+                return Poll::Ready(None);
+            }
+            Poll::Ready(Some(process_log_bytes(&b[0..len])).map(Ok))
+        })
+    }
+}
 
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("error creating executor")?;
@@ -26,45 +75,54 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
+fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
+    let (proxy, server) = zx::Channel::create()?;
+    let server = fasync::Channel::from_channel(server)?;
+    fasync::spawn_local(async move {
+        test_manager_lib::run_test_manager(ftest_manager::HarnessRequestStream::from_channel(
+            server,
+        ))
+        .await
+        .expect("failed to run test manager service")
+    });
+    let proxy = fasync::Channel::from_channel(proxy)?;
+    Ok(ftest_manager::HarnessProxy::new(proxy))
+}
+
 async fn run_test(
     logger: fuchsia_zircon::Socket,
     outcome: &mut ftest::Outcome,
 ) -> Result<(), Error> {
     let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
 
-    let mut output: Vec<u8> = vec![];
-    let (result, executed, passed) = test_manager_lib::run_test(test_url.to_string(), &mut output)
-        .await
-        .expect("error trying to run echo tests");
+    let proxy = connect_test_manager()?;
 
-    let expected_output = "[RUNNING]	EchoTest
+    let (client, log) = zx::Socket::create(zx::SocketOpts::STREAM)?;
+
+    let ls = LoggerStream::new(client)?;
+
+    let (log_fut, log_fut_remote) = ls.try_concat().remote_handle();
+    fasync::spawn_local(async move {
+        log_fut.await;
+    });
+    let result = proxy.run_suite(test_url, log).await?;
+    let logs = log_fut_remote.await?;
+    let logs = from_utf8(&logs).expect("should be a valid string").to_string();
+
+    let expected = "[RUNNING]	EchoTest
 [PASSED]	EchoTest
-";
 
-    if from_utf8(&output) != Ok(expected_output) {
-        logger.write(
-            format!("expected output: {}, got: {:?}", expected_output, from_utf8(&output))
-                .as_bytes(),
-        )?;
+1 out of 1 tests passed...
+fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm completed with outcome: Passed
+"
+    .to_owned();
+
+    if expected != logs {
+        logger.write(format!("invalid logs:\n{}", logs).as_bytes())?;
         outcome.status = Some(ftest::Status::Failed);
     }
-
-    if result != test_manager_lib::TestOutcome::Passed {
+    if result != Outcome::Passed {
         logger.write(format!("echo test failed with status {:?}", result).as_bytes())?;
-        outcome.status = Some(ftest::Status::Failed);
-    }
-
-    if executed != vec!["EchoTest"] {
-        logger.write(
-            format!("expected executed: {:?}, got: {:?}", vec!["EchoTest"], executed).as_bytes(),
-        )?;
-        outcome.status = Some(ftest::Status::Failed);
-    }
-
-    if passed != vec!["EchoTest"] {
-        logger.write(
-            format!("expected passed: {:?}, got: {:?}", vec!["EchoTest"], passed).as_bytes(),
-        )?;
         outcome.status = Some(ftest::Status::Failed);
     }
 

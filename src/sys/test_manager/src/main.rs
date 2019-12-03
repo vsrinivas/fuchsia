@@ -2,31 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::io;
+use {
+    failure::{Error, ResultExt},
+    fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    futures::StreamExt,
+};
 
-#[fuchsia_async::run_singlethreaded]
-async fn main() {
-    // TODO(anmittal): Introduce fidl protocol to run any tests.
-    // This is just for demoing the initial prototype.
-    let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
-
-    println!("\nRunning test '{}'", test_url);
-
-    let mut stdout = io::stdout();
-    let result = test_manager_lib::run_test(test_url.to_string(), &mut stdout).await;
-    if result.is_err() {
-        let err = result.unwrap_err();
-        println!("Test suite encountered error trying to run tests: {:?}", err);
-        std::process::exit(1);
-    }
-
-    let (outcome, executed, passed) = result.unwrap();
-
-    println!("\n{} out of {} tests passed...", passed.len(), executed.len());
-    println!("{} completed with outcome: {}", test_url, outcome);
-
-    if outcome == test_manager_lib::TestOutcome::Passed {
-        std::process::exit(0);
-    }
-    std::process::exit(1);
+fn main() -> Result<(), Error> {
+    let mut executor = fasync::Executor::new().context("error creating executor")?;
+    let mut fs = ServiceFs::new_local();
+    fs.dir("svc").add_fidl_service(move |stream| {
+        fasync::spawn_local(async move {
+            test_manager_lib::run_test_manager(stream)
+                .await
+                .unwrap_or_else(|e| eprintln!("test manager failed: {:?}", e))
+        });
+    });
+    fs.take_and_serve_directory_handle()?;
+    executor.run_singlethreaded(fs.collect::<()>());
+    Ok(())
 }

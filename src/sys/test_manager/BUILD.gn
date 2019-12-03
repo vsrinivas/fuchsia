@@ -19,6 +19,7 @@ rustc_library("lib") {
   ]
 
   deps = [
+    "fidl:test_manager-rustc",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
@@ -40,6 +41,9 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
   ]
 }
 

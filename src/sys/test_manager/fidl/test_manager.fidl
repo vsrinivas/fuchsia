@@ -1,0 +1,32 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.test.manager;
+
+using fuchsia.sys2;
+
+/// Runs test that implements the `fuchsia.test.Suite` protocol
+/// (either directly or via a runner adapter). The test must be a
+/// v2 component test.
+///
+/// Designed to be used by run_test_suite to execute v2 tests.
+[Discoverable]
+protocol Harness {
+    RunSuite(string:fuchsia.sys2.MAX_URL_LENGTH suite_url, handle<socket> logger) -> (Outcome outcome);
+};
+
+/// Outcome of running the suite.
+enum Outcome {
+    /// All tests in the suite passed.
+    PASSED = 0;
+
+    /// Some test in the suite failed.
+    FAILED = 1;
+
+    /// Some test in the suite did not complete and return outcome.
+    INCONCLUSIVE = 2;
+
+    /// Suite completed with some error, like it crashed or did not implement fuchsia.test.Suite properly.
+    ERROR = 3;
+};

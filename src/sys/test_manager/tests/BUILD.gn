@@ -16,6 +16,7 @@ rustc_binary("test_manager_test_bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//src/sys/test_manager:lib",
+    "//src/sys/test_manager/fidl:test_manager-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
   ]

@@ -6,42 +6,72 @@ use {
     failure::{format_err, Error, ResultExt},
     fidl::endpoints,
     fidl_fuchsia_io::{DirectoryMarker, MODE_TYPE_SERVICE},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_manager as ftest_manager,
+    ftest_manager::Outcome,
+    fuchsia_async as fasync,
     fuchsia_component::client,
+    futures::io::AsyncWrite,
     futures::{channel::mpsc, prelude::*},
     io_util::{self, OPEN_RIGHT_READABLE},
     std::collections::HashSet,
-    std::fmt,
-    std::io::Write,
     std::path::PathBuf,
     test_executor::TestEvent,
 };
 
-#[derive(PartialEq, Debug)]
-pub enum TestOutcome {
-    Passed,
-    Failed,
-    Inconclusive,
-    Error,
-}
+// Start test manager and serve it over `stream`.
+pub async fn run_test_manager(
+    mut stream: ftest_manager::HarnessRequestStream,
+) -> Result<(), Error> {
+    while let Some(event) = stream.try_next().await? {
+        match event {
+            ftest_manager::HarnessRequest::RunSuite { suite_url, logger, responder } => {
+                let mut logger = fasync::Socket::from_socket(logger)?;
 
-impl fmt::Display for TestOutcome {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TestOutcome::Passed => write!(f, "PASSED"),
-            TestOutcome::Failed => write!(f, "FAILED"),
-            TestOutcome::Inconclusive => write!(f, "INCONCLUSIVE"),
-            TestOutcome::Error => write!(f, "ERROR"),
+                let result = run_test(suite_url.to_string(), &mut logger).await;
+                if let Err(err) = result {
+                    logger
+                        .write(
+                            format!(
+                                "Test manager encountered error trying to run tests: {:?}\n",
+                                err
+                            )
+                            .as_bytes(),
+                        )
+                        .await
+                        .context("Can't write output")?;
+                    responder.send(Outcome::Error).context("Can't send result back")?;
+                    continue;
+                }
+
+                let (outcome, executed, passed) = result.unwrap();
+
+                logger
+                    .write(
+                        format!("\n{} out of {} tests passed...\n", passed.len(), executed.len())
+                            .as_bytes(),
+                    )
+                    .await
+                    .context("Can't write output")?;
+                logger
+                    .write(
+                        format!("{} completed with outcome: {:?}\n", suite_url, outcome).as_bytes(),
+                    )
+                    .await
+                    .context("Can't write output")?;
+
+                responder.send(outcome).context("Can't send result back")?;
+            }
         }
     }
+    Ok(())
 }
 
-// Runs test defined by `test_url`, and writes logs to writer.
-// Returns (Outcome, Names of tests executed, Names of tests passed)
-pub async fn run_test<W: Write>(
-    test_url: String,
+// Runs test defined by `suite_url`, and writes logs to writer.
+// Returns (Outcome, Names of tests executed, Names of tests passed).
+async fn run_test<W: std::marker::Unpin + AsyncWrite>(
+    suite_url: String,
     writer: &mut W,
-) -> Result<(TestOutcome, Vec<String>, Vec<String>), Error> {
+) -> Result<(Outcome, Vec<String>, Vec<String>), Error> {
     let realm = client::connect_to_service::<fsys::RealmMarker>()
         .context("could not connect to Realm service")?;
 
@@ -49,14 +79,14 @@ pub async fn run_test<W: Write>(
     let mut collection_ref = fsys::CollectionRef { name: "tests".to_string() };
     let child_decl = fsys::ChildDecl {
         name: Some(name.clone()),
-        url: Some(test_url.clone()),
+        url: Some(suite_url.clone()),
         startup: Some(fsys::StartupMode::Lazy),
     };
     realm
         .create_child(&mut collection_ref, child_decl)
         .await
-        .context(format!("create_child fidl call failed {}", test_url))?
-        .map_err(|e| format_err!("failed to create test: {:?} for {}", e, test_url))?;
+        .context(format!("create_child fidl call failed {}", suite_url))?
+        .map_err(|e| format_err!("failed to create test: {:?} for {}", e, suite_url))?;
 
     let mut child_ref =
         fsys::ChildRef { name: name.clone(), collection: Some("tests".to_string()) };
@@ -80,11 +110,11 @@ pub async fn run_test<W: Write>(
     let (sender, mut recv) = mpsc::channel(1);
 
     let (remote, test_fut) =
-        test_executor::run_and_collect_results(suite, sender, test_url.clone()).remote_handle();
+        test_executor::run_and_collect_results(suite, sender, suite_url.clone()).remote_handle();
 
     fasync::spawn(remote);
 
-    let mut test_outcome = TestOutcome::Passed;
+    let mut test_outcome = Outcome::Passed;
 
     let mut test_cases_in_progress = HashSet::new();
     let mut test_cases_executed = HashSet::new();
@@ -96,7 +126,10 @@ pub async fn run_test<W: Write>(
                 if test_cases_executed.contains(&test_case_name) {
                     return Err(format_err!("test case: '{}' started twice", test_case_name));
                 }
-                writeln!(writer, "[RUNNING]\t{}", test_case_name).expect("Cannot write logs");
+                writer
+                    .write(format!("[RUNNING]\t{}\n", test_case_name).as_bytes())
+                    .await
+                    .context("Can't write output")?;
                 test_cases_in_progress.insert(test_case_name.clone());
                 test_cases_executed.insert(test_case_name);
             }
@@ -114,18 +147,20 @@ pub async fn run_test<W: Write>(
                         "PASSED".to_string()
                     }
                     test_executor::Outcome::Failed => {
-                        if test_outcome == TestOutcome::Passed {
-                            test_outcome = TestOutcome::Failed;
+                        if test_outcome == Outcome::Passed {
+                            test_outcome = Outcome::Failed;
                         }
                         "FAILED".to_string()
                     }
                     test_executor::Outcome::Error => {
-                        test_outcome = TestOutcome::Error;
+                        test_outcome = Outcome::Error;
                         "ERROR".to_string()
                     }
                 };
-                writeln!(writer, "[{}]\t{}", outcome_str, test_case_name)
-                    .expect("Cannot write logs");
+                writer
+                    .write(format!("[{}]\t{}\n", outcome_str, test_case_name).as_bytes())
+                    .await
+                    .context("Can't write output")?;
             }
             TestEvent::LogMessage { test_case_name, msg } => {
                 if !test_cases_executed.contains(&test_case_name) {
@@ -136,7 +171,10 @@ pub async fn run_test<W: Write>(
                 }
                 let msgs = msg.trim().split("\n");
                 for msg in msgs {
-                    writeln!(writer, "[{}]\t{}", test_case_name, msg).expect("Cannot write logs");
+                    writer
+                        .write(format!("[{}]\t{}\n", test_case_name, msg).as_bytes())
+                        .await
+                        .context("Can't write output")?;
                 }
             }
         }
@@ -149,14 +187,17 @@ pub async fn run_test<W: Write>(
 
     if test_cases_in_progress.len() != 0 {
         match test_outcome {
-            TestOutcome::Passed | TestOutcome::Failed => {
-                test_outcome = TestOutcome::Inconclusive;
+            Outcome::Passed | Outcome::Failed => {
+                test_outcome = Outcome::Inconclusive;
             }
             _ => {}
         }
-        writeln!(writer, "\nThe following test(s) never completed:").expect("Cannot write logs");
+        writer
+            .write(format!("\nThe following test(s) never completed:\n").as_bytes())
+            .await
+            .context("Can't write output")?;
         for t in test_cases_in_progress {
-            writeln!(writer, "{}", t).expect("Cannot write logs");
+            writer.write(format!("{}\n", t).as_bytes()).await.context("Can't write output")?;
         }
     }
 
