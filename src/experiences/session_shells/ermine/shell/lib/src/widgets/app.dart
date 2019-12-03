@@ -28,8 +28,11 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<Locale>(
         stream: model.localeStream,
-        initialData: model.initialLocale,
         builder: (context, snapshot) {
+          // Check if [Locale] is loaded.
+          if (!snapshot.hasData) {
+            return Offstage();
+          }
           final locale = snapshot.data;
           // Needed to set the locale for anything that depends on the Intl
           // package.

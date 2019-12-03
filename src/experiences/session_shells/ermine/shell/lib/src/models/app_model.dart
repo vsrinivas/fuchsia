@@ -57,8 +57,8 @@ class AppModel {
   ValueNotifier<bool> helpVisibility = ValueNotifier(false);
   ValueNotifier<bool> peekNotifier = ValueNotifier(false);
   ValueNotifier<bool> recentsVisibility = ValueNotifier(false);
+  Stream<Locale> _localeStream;
   KeyboardShortcuts _keyboardShortcuts;
-  Locale _initialLocale;
   StatusModel status;
   TopbarModel topbarModel;
   String keyboardShortcuts = 'Help Me!';
@@ -75,6 +75,7 @@ class AppModel {
         .connectToService(_shortcutRegistry);
 
     StartupContext.fromStartupInfo().incoming.connectToService(_intl);
+    _localeStream = LocaleSource(_intl).stream().asBroadcastStream();
 
     sessionShell = SessionShell(
       startupContext: _startupContext,
@@ -96,19 +97,11 @@ class AppModel {
     status = StatusModel.fromStartupContext(_startupContext, onLogout);
   }
 
-  /// Performs initialization before the [App] widget are created.
-  Future<void> init() async {
-    /// Read the initial [Locale].
-    _initialLocale = await localeStream.asBroadcastStream().first;
-  }
-
   SuggestionService get suggestions => SuggestionService(_suggestionsService);
 
   modular.PuppetMaster get puppetMaster => _puppetMaster;
 
-  Stream<Locale> get localeStream => LocaleSource(_intl).stream();
-
-  Locale get initialLocale => _initialLocale;
+  Stream<Locale> get localeStream => _localeStream;
 
   bool get isFullscreen => clustersModel.fullscreenStory != null;
 

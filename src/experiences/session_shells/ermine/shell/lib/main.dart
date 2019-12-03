@@ -13,8 +13,6 @@ Future<void> main() async {
   setupLogger(name: 'ermine');
 
   final model = AppModel();
-  await model.init();
-
   final app = App(model: model);
 
   runApp(app);

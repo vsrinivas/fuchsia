@@ -21,11 +21,14 @@ void main() async {
     final swissFrench = Locale('fr', 'CH');
 
     final model = MockAppModel();
-    when(model.initialLocale).thenReturn(swissFrench);
+    when(model.localeStream).thenAnswer(
+        (_) => Stream<Locale>.value(swissFrench).asBroadcastStream());
     when(model.overviewVisibility).thenReturn(ValueNotifier<bool>(false));
 
     final app = App(model: model);
     await tester.pumpWidget(app);
+    // Pump widget for StreamBuilder<Locale>.
+    await tester.pump();
     expect(Intl.defaultLocale, swissFrench.toString());
   });
 }
