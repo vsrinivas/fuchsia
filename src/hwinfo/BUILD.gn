@@ -69,23 +69,36 @@ config_data("hwinfo_default_config") {
   ]
 }
 
-package("hwinfo") {
-  deps = [
-    ":hwinfo_bin",
-  ]
+template("hwinfo_package") {
+  package(target_name) {
+    deps = [
+      ":hwinfo_bin",
+    ]
 
-  binaries = [
-    {
-      name = "hwinfo"
-    },
-  ]
+    binaries = [
+      {
+        name = "hwinfo"
+      },
+    ]
 
-  meta = [
-    {
-      path = rebase_path("meta/hwinfo.cmx")
-      dest = "hwinfo.cmx"
-    },
-  ]
+    meta = [
+      {
+        path = rebase_path("meta/hwinfo.cmx")
+        dest = "hwinfo.cmx"
+      },
+    ]
+  }
+
+  # Suppress unused variable warnings as the invoker is expected to be empty.
+  not_needed(invoker, "*")
+}
+
+# The real package.
+hwinfo_package("hwinfo") {
+}
+
+# The fake package used for integration testing where we want control over config data.
+hwinfo_package("fake_hwinfo") {
 }
 
 rustc_test("hwinfo_positive_test") {
@@ -190,6 +203,7 @@ config_data("hwinfo_tests_config") {
 group("tests") {
   testonly = true
   deps = [
+    ":fake_hwinfo",
     ":hwinfo_negative_tests",
     ":hwinfo_positive_tests",
     ":hwinfo_tests_config",
