@@ -5,6 +5,8 @@
 #ifndef LIB_INSPECT_CPP_VMO_TYPES_H_
 #define LIB_INSPECT_CPP_VMO_TYPES_H_
 
+#include <lib/fit/function.h>
+#include <lib/fit/promise.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
@@ -14,6 +16,9 @@
 
 namespace inspect {
 class Node;
+class Inspector;
+
+using LazyNodeCallbackFn = fit::function<fit::promise<Inspector>()>;
 
 namespace internal {
 class State;
@@ -289,7 +294,7 @@ class Link final {
   Link(const Link& other) = delete;
   Link(Link&& other) = default;
   Link& operator=(const Link& other) = delete;
-  Link& operator=(Link&& other) noexcept;
+  Link& operator=(Link&& other) = default;
 
   // Return true if this node is stored in a buffer. False otherwise.
   explicit operator bool() { return state_ != nullptr; }
@@ -313,6 +318,40 @@ class Link final {
   internal::BlockIndex content_index_;
 };
 
+// A LazyNode has a value that is dynamically set by a callback.
+class LazyNode final {
+ public:
+  // Construct a default LazyNode.
+  LazyNode() = default;
+  ~LazyNode();
+
+  // Allow moving, disallow copying.
+  LazyNode(const LazyNode& other) = delete;
+  LazyNode(LazyNode&& other) = default;
+  LazyNode& operator=(const LazyNode& other) = delete;
+  LazyNode& operator=(LazyNode&& other) = default;
+
+  // Return true if this value is represented in a buffer. False otherwise.
+  explicit operator bool() { return state_ != nullptr; }
+
+ private:
+  friend class ::inspect::internal::State;
+  LazyNode(std::shared_ptr<internal::State> state, std::string content_value, Link link)
+      : state_(std::move(state)),
+        content_value_(std::move(content_value)),
+        link_(std::move(link)) {}
+
+  // Reference to the state containing this value.
+  std::shared_ptr<internal::State> state_;
+
+  // The value stored in the contents of the Link for this node. Used as a key for removal when
+  // deleted.
+  std::string content_value_;
+
+  // The Link node that references this LazyNode.
+  Link link_;
+};
+
 // A node under which properties, metrics, and other nodes may be nested.
 // All methods wrap the corresponding functionality on |State|.
 class Node final {
@@ -334,6 +373,9 @@ class Node final {
   Node CreateChild(const std::string& name);
 
   // Same as CreateChild, but emplaces the value in the given container.
+  //
+  // The type of |list| must have method emplace(Node).
+  // inspect::ValueList is recommended for most use cases.
   template <typename T>
   void CreateChild(const std::string& name, T* list) {
     list->emplace(CreateChild(name));
@@ -345,6 +387,9 @@ class Node final {
   IntProperty CreateInt(const std::string& name, int64_t value);
 
   // Same as CreateInt, but emplaces the value in the given container.
+  //
+  // The type of |list| must have method emplace(IntProperty).
+  // inspect::ValueList is recommended for most use cases.
   template <typename T>
   void CreateInt(const std::string& name, int64_t value, T* list) {
     list->emplace(CreateInt(name, value));
@@ -356,6 +401,9 @@ class Node final {
   UintProperty CreateUint(const std::string& name, uint64_t value);
 
   // Same as CreateUint, but emplaces the value in the given container.
+  //
+  // The type of |list| must have method emplace(UintProperty).
+  // inspect::ValueList is recommended for most use cases.
   template <typename T>
   void CreateUint(const std::string& name, uint64_t value, T* list) {
     list->emplace(CreateUint(name, value));
@@ -367,6 +415,9 @@ class Node final {
   DoubleProperty CreateDouble(const std::string& name, double value);
 
   // Same as CreateDouble, but emplaces the value in the given container.
+  //
+  // The type of |list| must have method emplace(DoubleProperty).
+  // inspect::ValueList is recommended for most use cases.
   template <typename T>
   void CreateDouble(const std::string& name, double value, T* list) {
     list->emplace(CreateDouble(name, value));
@@ -378,6 +429,9 @@ class Node final {
   StringProperty CreateString(const std::string& name, const std::string& value);
 
   // Same as CreateString, but emplaces the value in the given container.
+  //
+  // The type of |list| must have method emplace(StringProperty).
+  // inspect::ValueList is recommended for most use cases.
   template <typename T>
   void CreateString(const std::string& name, const std::string& value, T* list) {
     list->emplace(CreateString(name, value));
@@ -389,6 +443,9 @@ class Node final {
   ByteVectorProperty CreateByteVector(const std::string& name, const std::vector<uint8_t>& value);
 
   // Same as CreateByteVector, but emplaces the value in the given container.
+  //
+  // The type of |list| must have method emplace(ByteVectorProperty).
+  // inspect::ValueList is recommended for most use cases.
   template <typename T>
   void CreateByteVector(const std::string& name, const std::vector<uint8_t>& value, T* list) {
     list->emplace(CreateByteVector(name, value));
@@ -449,6 +506,82 @@ class Node final {
                                                               double step_multiplier,
                                                               size_t buckets);
 
+  // Create a new |LazyNode| with the given name that is populated by the given callback on demand.
+  //
+  // The passed |callback| will live as long as the returned LazyNode, and will not be called
+  // concurrently by multiple threads.
+  //
+  // For example:
+  //  auto a = root.CreateChild("a");
+  //  a.CreateLazyNode("b", [] {
+  //    Inspector insp;
+  //    ValueList values;
+  //    insp.GetRoot().CreateInt("val", 2, &values);
+  //    return fit::make_ok_result(insp);
+  //  });
+  //
+  //  Output:
+  //  root:
+  //    a:
+  //      b:
+  //        val = 2
+  LazyNode CreateLazyNode(const std::string& name, LazyNodeCallbackFn callback);
+
+  // Same as CreateLazyNode, but emplaces the value in the given container.
+  //
+  // The type of |list| must have method emplace(LazyNode).
+  // inspect::ValueList is recommended for most use cases.
+  template <typename F, typename T>
+  void CreateLazyNode(const std::string& name, F callback, T* list) {
+    list->emplace(CreateLazyNode(name, std::move(callback)));
+  }
+
+  // Create a new |LazyNode| whose children and properties are added to this node on demand.
+  //
+  // The passed |callback| will live as long as the returned LazyNode, and will not be called
+  // concurrently by multiple threads.
+  //
+  // The name is only used if inflating the tree callback fails.
+  //
+  // WARNING: It is the caller's responsibility to avoid name collisions with other properties
+  // on this node.
+  //
+  // For example:
+  //  auto a = root.CreateChild("a");
+  //  a.CreateLazy("b", [] {
+  //    Inspector insp;
+  //    ValueList values;
+  //    insp.GetRoot().CreateInt("val", 2).enlist(&values);
+  //    return fit::make_ok_promise(insp);
+  //  });
+  //
+  //  Output:
+  //  root:
+  //    a:
+  //      val = 2
+  //
+  //  Alternatively:
+  //
+  //  a.CreateLazyNode("b", [] {
+  //    return fit::make_error_promise();
+  //  });
+  //
+  //  Possible output:
+  //  root:
+  //    a:
+  //      b [Failed to open link]
+  LazyNode CreateLazyValues(const std::string& name, LazyNodeCallbackFn callback);
+
+  // Same as CreateLazyValues, but emplaces the value in the given container.
+  //
+  // The type of |list| must have method emplace(LazyNode).
+  // inspect::ValueList is recommended for most use cases.
+  template <typename F, typename T>
+  void CreateLazyValues(const std::string& name, F callback, T* list) {
+    list->emplace(CreateLazyValues(name, std::move(callback)));
+  }
+
+  // Create a new |LazyNode| whose children and properties are added to this node on demand.
   // Return true if this node is stored in a buffer. False otherwise.
   explicit operator bool() { return state_ != nullptr; }
 

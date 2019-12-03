@@ -33,13 +33,14 @@ TEST(Snapshot, ValidRead) {
   Snapshot snapshot;
   zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
 
-  EXPECT_OK(status);
-  EXPECT_EQ(4096u, snapshot.size());
+  ASSERT_OK(status);
+  ASSERT_EQ(4096u, snapshot.size());
 
   // Make sure that the data was actually fully copied to the snapshot.
-  uint8_t buf[snapshot.size() - sizeof(Block)];
-  memset(buf, 'a', snapshot.size() - sizeof(Block));
-  EXPECT_EQ(0, memcmp(snapshot.data() + sizeof(Block), buf, snapshot.size() - sizeof(Block)));
+  std::vector<uint8_t> buf;
+  buf.resize(4096u - sizeof(Block));
+  memset(buf.data(), 'a', buf.size());
+  EXPECT_EQ(0, memcmp(snapshot.data() + sizeof(Block), buf.data(), buf.size()));
 }
 
 TEST(Snapshot, InvalidBufferSize) {
@@ -113,7 +114,7 @@ TEST(Snapshot, InvalidWritePending) {
   zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
 
   EXPECT_EQ(ZX_ERR_INTERNAL, status);
-  EXPECT_FALSE(snapshot);
+  EXPECT_FALSE(!!snapshot);
 }
 
 TEST(Snapshot, ValidPendingSkipCheck) {

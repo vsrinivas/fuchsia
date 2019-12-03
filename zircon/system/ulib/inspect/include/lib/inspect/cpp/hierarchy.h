@@ -10,6 +10,7 @@
 #include <lib/fit/variant.h>
 
 #include <limits>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -38,6 +39,11 @@ class Value {
 
   // Construct an empty value.
   Value() = default;
+
+  Value(const Value&) = delete;
+  Value(Value&&) = default;
+  Value& operator=(const Value&) = delete;
+  Value& operator=(Value&&) = default;
 
   // Construct a Value wrapping the specific value.
   explicit Value(T value) : value_(std::move(value)) {}
@@ -202,6 +208,30 @@ class NamedValue final {
 
 }  // namespace internal
 
+// The disposition for a LinkValue describes how its contents should be included in the parent node.
+enum LinkDisposition {
+  // Include the linked Tree as a child of the parent node.
+  kChild = 0,
+  // Inline all children of the linked Tree's root as children of the parent node.
+  kInline = 1,
+};
+
+// Wrapper for a particular LINK_VALUE.
+class LinkValue final {
+ public:
+  explicit LinkValue(std::string name, std::string content, LinkDisposition disposition)
+      : name_(std::move(name)), content_(std::move(content)), disposition_(disposition) {}
+
+  const std::string& name() const { return name_; }
+  const std::string& content() const { return content_; }
+  LinkDisposition disposition() const { return disposition_; }
+
+ private:
+  std::string name_;
+  std::string content_;
+  LinkDisposition disposition_;
+};
+
 // Describes the format of a parsed property.
 enum class PropertyFormat : uint8_t {
   kInvalid = 0,
@@ -233,7 +263,9 @@ using PropertyValue = internal::NamedValue<
                            StringPropertyValue, ByteVectorPropertyValue>,
     PropertyFormat>;
 
-// A Node stored in a Hierarchy.
+// A Node parsed from a Hierarchy.
+//
+// This is named NodeValue to differentiate it from Node, the write-side definition of nodes.
 class NodeValue final {
  public:
   // Construct an empty NodeValue.
@@ -254,8 +286,24 @@ class NodeValue final {
   // Obtains reference to properties.
   const std::vector<PropertyValue>& properties() const { return properties_; }
 
+  // Takes the properties, leaving the vector owned by this node blank.
+  std::vector<PropertyValue> take_properties() {
+    std::vector<PropertyValue> ret;
+    ret.swap(properties_);
+    return ret;
+  }
+
   // Adds a property to this node.
   void add_property(PropertyValue property) { properties_.emplace_back(std::move(property)); }
+
+  // Obtains reference to links.
+  const std::vector<LinkValue>& links() const { return links_; }
+
+  // Adds a link to this node.
+  void add_link(LinkValue link) { links_.emplace_back(std::move(link)); }
+
+  // Sets the vector of links for this node.
+  void set_links(std::vector<LinkValue> links) { links_ = std::move(links); }
 
   // Sorts the properties of this node by name.
   //
@@ -268,9 +316,41 @@ class NodeValue final {
 
   // The properties for this NodeValue.
   std::vector<PropertyValue> properties_;
+
+  // The links for this NodeValue.
+  std::vector<LinkValue> links_;
+};
+
+enum class MissingValueReason {
+  // A referenced hierarchy in a link was not found.
+  kLinkNotFound = 1,
+
+  // A linked hierarchy at this location could not be parsed successfully.
+  kLinkHierarchyParseFailure = 2,
+
+  // A link we attempted to follow was not properly formatted, or its format is not known to this
+  // reader.
+  kLinkInvalid = 3,
+};
+
+// Wrapper for a value that was missing at a location in the hierarchy.
+struct MissingValue {
+  MissingValue() = default;
+  MissingValue(MissingValueReason reason, std::string name)
+      : reason(reason), name(std::move(name)) {}
+
+  // The reason why the value is missing.
+  MissingValueReason reason;
+
+  // The name of the missing value.
+  std::string name;
 };
 
 // Represents a hierarchy of node objects rooted under one particular node.
+//
+// NodeValues do not contain children because they are parsed directly from a buffer. Hierarchies
+// provide a wrapper around a hierarchy of nodes including named children. They additionally provide
+// links to hierarchies that can be parsed and spliced in from nested files.
 class Hierarchy final {
  public:
   Hierarchy() = default;
@@ -297,12 +377,37 @@ class Hierarchy final {
   // Gets the children of this object in the hierarchy.
   const std::vector<Hierarchy>& children() const { return children_; }
 
+  // Takes the children from this hierarchy.
+  std::vector<Hierarchy> take_children() { return std::move(children_); }
+
   // Adds a child to this hierarchy.
   void add_child(Hierarchy child) { children_.emplace_back(std::move(child)); }
 
+  // Gets the list of missing values for this location in the hierarchy.
+  const std::vector<MissingValue>& missing_values() const { return missing_values_; }
+
+  // Adds a missing value for this location in the hierarchy.
+  void add_missing_value(MissingValueReason reason, std::string name) {
+    missing_values_.emplace_back(reason, std::move(name));
+  }
+
   // Gets a child in this Hierarchy by path.
-  // Returns NULL if the requested child could not be found.
+  // Returns nullptr if the requested child could not be found.
+  //
+  // The returned pointer will be invalidated if the Hierarchy is modified.
   const Hierarchy* GetByPath(const std::vector<std::string>& path) const;
+
+  // Visit all descendents of this Hierarchy, calling the given callback with a mutable pointer to
+  // each child.
+  //
+  // Traversal stops when all descendents are visited or the callback returns false.
+  void Visit(fit::function<bool(const std::vector<std::string>&, Hierarchy*)> callback);
+
+  // Visit all descendents of this Hierarchy, calling the given callback with a const pointer to
+  // each child.
+  //
+  // Traversal stops when all descendents are visited or the callback returns false.
+  void Visit(fit::function<bool(const std::vector<std::string>&, const Hierarchy*)> callback) const;
 
   // Sort properties and children of this node by, and recursively sort each child.
   //
@@ -322,6 +427,7 @@ class Hierarchy final {
  private:
   NodeValue node_;
   std::vector<Hierarchy> children_;
+  std::vector<MissingValue> missing_values_;
 };
 }  // namespace inspect
 

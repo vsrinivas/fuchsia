@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/bridge.h>
+#include <lib/fit/sequencer.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/state.h>
 
@@ -11,6 +14,7 @@
 namespace inspect {
 namespace internal {
 
+namespace {
 // Helper class to support RAII locking of the generation count.
 class AutoGenerationIncrement final {
  public:
@@ -55,6 +59,8 @@ void AutoGenerationIncrement::Release(Block* block) {
   uint64_t* ptr = &block->payload.u64;
   __atomic_fetch_add(ptr, 1, std::memory_order_release);
 }
+
+}  // namespace
 
 template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
 WrapperType State::InnerCreateArray(const std::string& name, BlockIndex parent, size_t slots,
@@ -170,6 +176,11 @@ State::~State() { heap_->Free(header_); }
 const zx::vmo& State::GetVmo() const {
   std::lock_guard<std::mutex> lock(mutex_);
   return heap_->GetVmo();
+}
+
+bool State::DuplicateVmo(zx::vmo* vmo) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return ZX_OK == heap_->GetVmo().duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, vmo);
 }
 
 bool State::Copy(zx::vmo* vmo) const {
@@ -338,6 +349,30 @@ Link State::CreateLink(const std::string& name, BlockIndex parent, const std::st
 Node State::CreateRootNode() {
   std::lock_guard<std::mutex> lock(mutex_);
   return Node(weak_self_ptr_.lock(), 0, 0);
+}
+
+LazyNode State::InnerCreateLazyLink(const std::string& name, BlockIndex parent,
+                                    LazyNodeCallbackFn callback, LinkBlockDisposition disposition) {
+  auto content = UniqueLinkName(name);
+  auto link = CreateLink(name, parent, content, disposition);
+
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    link_callbacks_.emplace(content, LazyNodeCallbackHolder(std::move(callback)));
+
+    return LazyNode(weak_self_ptr_.lock(), std::move(content), std::move(link));
+  }
+}
+
+LazyNode State::CreateLazyNode(const std::string& name, BlockIndex parent,
+                               LazyNodeCallbackFn callback) {
+  return InnerCreateLazyLink(name, parent, std::move(callback), LinkBlockDisposition::kChild);
+}
+
+LazyNode State::CreateLazyValues(const std::string& name, BlockIndex parent,
+                                 LazyNodeCallbackFn callback) {
+  return InnerCreateLazyLink(name, parent, std::move(callback), LinkBlockDisposition::kInline);
 }
 
 Node State::CreateNode(const std::string& name, BlockIndex parent) {
@@ -685,6 +720,68 @@ void State::FreeNode(Node* object) {
   }
 }
 
+void State::FreeLazyNode(LazyNode* object) {
+  ZX_DEBUG_ASSERT_MSG(object->state_.get() == this, "Node being freed from the wrong state");
+  if (object->state_.get() != this) {
+    return;
+  }
+
+  // Free the contained link, which removes the reference to the value in the map.
+  FreeLink(&object->link_);
+
+  LazyNodeCallbackHolder holder;
+
+  {
+    // Separately lock the current state, and remove the callback for this lazy node.
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = link_callbacks_.find(object->content_value_);
+    if (it != link_callbacks_.end()) {
+      holder = it->second;
+      link_callbacks_.erase(it);
+    }
+    object->state_ = nullptr;
+  }
+
+  // Cancel the Holder without State locked. This avoids a deadlock in which we could be locking the
+  // holder with the state lock held, meanwhile the callback itself is modifying state (with holder
+  // locked).
+  //
+  // At this point in time, the LazyNode is still *live* and the callback may be getting executed.
+  // Following this cancel call, the LazyNode is no longer live and the callback will never be
+  // called again.
+  holder.cancel();
+}
+
+std::vector<std::string> State::GetLinkNames() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  std::vector<std::string> ret;
+  for (const auto& entry : link_callbacks_) {
+    ret.push_back(entry.first);
+  }
+  return ret;
+}
+
+fit::promise<Inspector> State::CallLinkCallback(const std::string& name) {
+  LazyNodeCallbackHolder holder;
+
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = link_callbacks_.find(name);
+    if (it == link_callbacks_.end()) {
+      return fit::make_result_promise<Inspector>(fit::error());
+    }
+    // Copy out the holder.
+    holder = it->second;
+  }
+
+  // Call the callback.
+  // This occurs without state locked, but deletion of the LazyNode synchronizes on the internal
+  // mutex in the Holder. If the LazyNode is deleted before this call, the callback will not be
+  // executed. If the LazyNode is being deleted concurrent with this call, it will be delayed until
+  // after the callback returns.
+  return holder.call();
+}
+
 zx_status_t State::InnerCreateValue(const std::string& name, BlockType type,
                                     BlockIndex parent_index, BlockIndex* out_name,
                                     BlockIndex* out_value, size_t min_size_required) {
@@ -808,6 +905,11 @@ zx_status_t State::InnerSetStringExtents(BlockIndex string_index, const char* va
   }
 
   return ZX_OK;
+}
+
+std::string State::UniqueLinkName(const std::string& prefix) {
+  return prefix + "-" +
+         std::to_string(next_unique_link_number_.fetch_add(1, std::memory_order_relaxed));
 }
 
 zx_status_t State::CreateName(const std::string& name, BlockIndex* out) {

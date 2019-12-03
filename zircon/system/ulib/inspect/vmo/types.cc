@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/inspect/cpp/vmo/block.h>
-#include <lib/inspect/cpp/vmo/state.h>
-#include <lib/inspect/cpp/vmo/types.h>
+#include <lib/inspect/cpp/inspect.h>
 
 using inspect::internal::ArrayBlockFormat;
 
@@ -439,9 +437,29 @@ ExponentialDoubleHistogram Node::CreateExponentialDoubleHistogram(const std::str
 
 std::string Node::UniqueName(const std::string& prefix) { return state_->UniqueName(prefix); }
 
+LazyNode Node::CreateLazyNode(const std::string& name, LazyNodeCallbackFn callback) {
+  if (state_) {
+    return state_->CreateLazyNode(name, value_index_, std::move(callback));
+  }
+  return LazyNode();
+}
+
+LazyNode Node::CreateLazyValues(const std::string& name, LazyNodeCallbackFn callback) {
+  if (state_) {
+    return state_->CreateLazyValues(name, value_index_, std::move(callback));
+  }
+  return LazyNode();
+}
+
 Link::~Link() {
   if (state_) {
     state_->FreeLink(this);
+  }
+}
+
+LazyNode::~LazyNode() {
+  if (state_) {
+    state_->FreeLazyNode(this);
   }
 }
 

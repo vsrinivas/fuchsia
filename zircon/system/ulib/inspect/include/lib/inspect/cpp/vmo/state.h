@@ -5,17 +5,25 @@
 #ifndef LIB_INSPECT_CPP_VMO_STATE_H_
 #define LIB_INSPECT_CPP_VMO_STATE_H_
 
+#include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/fit/promise.h>
+#include <lib/fit/sequencer.h>
+#include <lib/fit/thread_safety.h>
+#include <lib/inspect/cpp/inspector.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/heap.h>
 #include <lib/inspect/cpp/vmo/types.h>
 
+#include <iterator>
+#include <map>
 #include <mutex>
 
 namespace inspect {
+
 namespace internal {
 
-// |State| wraps a |Heap| and implements the Inspect File API on top of
+// |State| wraps a |Heap| and implements the Inspect VMO API on top of
 // that heap. This class contains the low-level operations necessary to
 // deal with the various Inspect types and wrappers to denote ownership of
 // those values.
@@ -31,6 +39,7 @@ class State final {
   // On failure, returns an empty shared_ptr.
   static std::shared_ptr<State> CreateWithSize(size_t size);
 
+  // Destructor for State, which performs necessary cleanup.
   ~State();
 
   // Disallow copy and assign.
@@ -42,6 +51,9 @@ class State final {
   // Obtain a reference to the wrapped VMO.
   // This may be duplicated read-only to pass to a reader process.
   const zx::vmo& GetVmo() const;
+
+  // Obtain a read-only duplicate of the VMO backing this State.
+  bool DuplicateVmo(zx::vmo* vmo) const;
 
   // Obtain a copy of the VMO backing this state.
   //
@@ -90,7 +102,11 @@ class State final {
   ByteVectorProperty CreateByteVectorProperty(const std::string& name, BlockIndex parent,
                                               const std::vector<uint8_t>& value);
 
-  // Create a new [Link] in the Inspect VMO. The returned value releases the link when destroyed.
+  // Create a new [Link] in the Inspect VMO. The returned node releases the link when destroyed.
+  //
+  // A Link is a low-level reference to a new Inspector linked off of the one managed by this
+  // state. A Link alone is not sufficient to populate the linked tree, see CreateLazyNode and
+  // CreateLazyValues.
   Link CreateLink(const std::string& name, BlockIndex parent, const std::string& content,
                   LinkBlockDisposition disposition);
 
@@ -102,6 +118,15 @@ class State final {
   // it allows clients to use the |Node| iterface to add properties and children directly to the
   // root of the VMO.
   Node CreateRootNode();
+
+  // Create a new |LazyNode| with a new named |Link| that calls the given callback with child
+  // disposition.
+  LazyNode CreateLazyNode(const std::string& name, BlockIndex parent, LazyNodeCallbackFn callback);
+
+  // Create a new |LazyNode| with a new named |Link| that calls the given callback with inline
+  // disposition.
+  LazyNode CreateLazyValues(const std::string& name, BlockIndex parent,
+                            LazyNodeCallbackFn callback);
 
   // Setters for various property types
   void SetIntProperty(IntProperty* property, int64_t value);
@@ -140,6 +165,13 @@ class State final {
   void FreeByteVectorProperty(ByteVectorProperty* property);
   void FreeLink(Link* link);
   void FreeNode(Node* node);
+  void FreeLazyNode(LazyNode* lazy_node);
+
+  // Get the names of all links in this state.
+  std::vector<std::string> GetLinkNames() const;
+
+  // Call a specific link by name, return a promise for the Inspector it produces.
+  fit::promise<Inspector> CallLinkCallback(const std::string& name);
 
   // Create a unique name for children in this State.
   //
@@ -147,8 +179,56 @@ class State final {
   std::string UniqueName(const std::string& prefix);
 
  private:
+  // Holder for a LazyNodeCallbackFn.
+  //
+  // This class ensures that the callback function is only called once at a time, and it allows
+  // future calls to the callback to be cancelled to prevent calling it when the corresponding
+  // LazyNode has been deleted.
+  //
+  // This class is copyable and thread-safe. Each copy refers to the same underlying callback, and
+  // cancelling one copy cancels all copies.
+  class LazyNodeCallbackHolder {
+   public:
+    LazyNodeCallbackHolder() = default;
+    explicit LazyNodeCallbackHolder(LazyNodeCallbackFn callback)
+        : inner_(new Inner(std::move(callback))) {}
+
+    // This class is copyable but not movable. This ensures LazyNodeCallbackHolder objects are
+    // always in a valid state.
+    LazyNodeCallbackHolder(const LazyNodeCallbackHolder&) = default;
+    LazyNodeCallbackHolder(LazyNodeCallbackHolder&&) = delete;
+    LazyNodeCallbackHolder& operator=(const LazyNodeCallbackHolder&) = default;
+    LazyNodeCallbackHolder& operator=(LazyNodeCallbackHolder&&) = delete;
+
+    // Cancel and release the callback. Future attempts to call the callback will do nothing.
+    void cancel() {
+      std::lock_guard<std::mutex> lock(inner_->mutex);
+      inner_->callback = {};
+    }
+
+    // Call the callback if it is not cancelled.
+    fit::promise<Inspector> call() {
+      std::lock_guard<std::mutex> lock(inner_->mutex);
+      if (inner_->callback) {
+        return inner_->callback();
+      } else {
+        return fit::make_result_promise<Inspector>(fit::error());
+      }
+    }
+
+   private:
+    // Inner structure to share a mutex and a callback.
+    struct Inner {
+      explicit Inner(LazyNodeCallbackFn fn) : callback(std::move(fn)) {}
+
+      std::mutex mutex;
+      LazyNodeCallbackFn callback FIT_GUARDED(mutex);
+    };
+    std::shared_ptr<Inner> inner_;
+  };
+
   State(std::unique_ptr<Heap> heap, BlockIndex header)
-      : heap_(std::move(heap)), header_(header), next_unique_id_(0) {}
+      : heap_(std::move(heap)), header_(header), next_unique_id_(0), next_unique_link_number_(0) {}
 
   void DecrementParentRefcount(BlockIndex value_index) __TA_REQUIRES(mutex_);
 
@@ -156,6 +236,10 @@ class State final {
   zx_status_t InnerCreateValue(const std::string& name, BlockType type, BlockIndex parent_index,
                                BlockIndex* out_name, BlockIndex* out_value,
                                size_t min_size_required = kMinOrderSize) __TA_REQUIRES(mutex_);
+
+  // Helper method to create a new LINK block that calls a callback when followed.
+  LazyNode InnerCreateLazyLink(const std::string& name, BlockIndex parent,
+                               LazyNodeCallbackFn callback, LinkBlockDisposition disposition);
 
   // Returns true if the block is an extent, false otherwise.
   constexpr bool IsExtent(const Block* block) {
@@ -204,21 +288,38 @@ class State final {
   template <typename WrapperType>
   void InnerFreeArray(WrapperType* value);
 
+  // Helper function to generate a unique name for a link.
+  std::string UniqueLinkName(const std::string& prefix);
+
   // Mutex wrapping all fields in the state.
+  // The mutex is mutable to support locking when reading fields of a
+  // const reference to state.
   mutable std::mutex mutex_;
 
   // Weak pointer reference to this object, used to pass shared pointers to children.
   std::weak_ptr<State> weak_self_ptr_;
 
   // The wrapped |Heap|, protected by the mutex.
-  std::unique_ptr<Heap> heap_ __TA_GUARDED(mutex_);
+  std::unique_ptr<Heap> heap_ FIT_GUARDED(mutex_);
+
+  // Map from the key of a linked inspect tree to the callback that populates that tree.
+  //
+  // An ordered map is used to ensure consistent iteration ordering for clients reading this data.
+  std::map<std::string, LazyNodeCallbackHolder> link_callbacks_ FIT_GUARDED(mutex_);
 
   // The index for the header block containing the generation count
   // to increment
-  BlockIndex header_ __TA_GUARDED(mutex_);
+  BlockIndex header_ FIT_GUARDED(mutex_);
 
   // The next unique ID to give out from UniqueName.
+  //
+  // Uses the fastest available atomic uint64 type for fetch_and_add.
   std::atomic_uint_fast64_t next_unique_id_;
+
+  // Next value to be used as a suffix for links.
+  //
+  // Uses the fastest available atomic uint64 type for fetch_and_add.
+  std::atomic_uint_fast64_t next_unique_link_number_;
 };
 
 }  // namespace internal

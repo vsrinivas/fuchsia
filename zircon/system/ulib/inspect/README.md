@@ -1,6 +1,6 @@
 # Inspect Library
 
-This document was last reviewed for accuracy on: 2019-08-20
+This document was last reviewed for accuracy on: 2019-10-31
 
 Inspect is a library for exposing structured, hierarchical
 diagnostics information from components at runtime.  Full
@@ -19,7 +19,7 @@ Inspect data may be read from components using the
 [iquery](https://fuchsia.dev/fuchsia-src/development/inspect/iquery.md)
 tool.
 
-TODO(4548): Inspect will be available in the SDK.
+Inspect is also available in the SDK.
 
 ### Includes
 

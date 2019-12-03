@@ -7,6 +7,7 @@ zx_library("inspect") {
   sdk_publishable = true
   sdk_headers = [
     "lib/inspect/cpp/inspect.h",
+    "lib/inspect/cpp/inspector.h",
     "lib/inspect/cpp/hierarchy.h",
     "lib/inspect/cpp/reader.h",
     "lib/inspect/cpp/health.h",
@@ -22,7 +23,7 @@ zx_library("inspect") {
   sources = [
     "health.cc",
     "hierarchy.cc",
-    "inspect.cc",
+    "inspector.cc",
     "reader.cc",
     "vmo/heap.cc",
     "vmo/scanner.cc",
@@ -32,11 +33,14 @@ zx_library("inspect") {
   ]
 
   public_deps = [
+    "$zx/system/ulib/async:headers",
     "$zx/system/ulib/fit:headers",
     "$zx/system/ulib/zx:headers",
   ]
 
   deps = [
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/zx",

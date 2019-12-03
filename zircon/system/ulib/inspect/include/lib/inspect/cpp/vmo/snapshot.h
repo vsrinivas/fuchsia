@@ -68,15 +68,17 @@ class Snapshot final {
   Snapshot() = default;
   ~Snapshot() = default;
   Snapshot(Snapshot&&) = default;
+  Snapshot(const Snapshot&) = default;
   Snapshot& operator=(Snapshot&&) = default;
+  Snapshot& operator=(const Snapshot&) = default;
 
-  explicit operator bool() const { return !buffer_.empty(); }
+  explicit operator bool() const { return buffer_ != nullptr && !buffer_->empty(); }
 
   // Returns the start of the snapshot data.
-  const uint8_t* data() const { return buffer_.data(); }
+  const uint8_t* data() const { return buffer_ ? buffer_->data() : nullptr; }
 
   // Returns the size of the snapshot.
-  size_t size() const { return buffer_.size(); }
+  size_t size() const { return buffer_ ? buffer_->size() : 0; }
 
  private:
   // Read from the VMO into a buffer.
@@ -90,7 +92,7 @@ class Snapshot final {
   explicit Snapshot(std::vector<uint8_t> buffer);
 
   // The buffer storing the snapshot.
-  std::vector<uint8_t> buffer_;
+  std::shared_ptr<std::vector<uint8_t>> buffer_;
 };
 
 namespace internal {

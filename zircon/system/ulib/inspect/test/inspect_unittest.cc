@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/single_threaded_executor.h>
+#include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/reader.h>
 
 #include <type_traits>
 
 #include <zxtest/zxtest.h>
-
-#include "lib/inspect/cpp/hierarchy.h"
-#include "lib/inspect/cpp/reader.h"
 
 using inspect::Inspector;
 using inspect::Node;
@@ -48,7 +48,6 @@ TEST(Inspect, CreateChildren) {
 }
 
 TEST(Inspect, CreateCopyVmo) {
-  // Make a 16MB heap.
   auto inspector = std::make_unique<Inspector>();
 
   // Store a string.
@@ -59,6 +58,30 @@ TEST(Inspect, CreateCopyVmo) {
   auto hierarchy = result.take_value();
 
   EXPECT_EQ(s, hierarchy.node().properties()[0].Get<inspect::StringPropertyValue>().value());
+}
+
+TEST(Inspect, GetLinks) {
+  Inspector inspector;
+
+  inspector.GetRoot().CreateLazyNode(
+      "lazy",
+      [] {
+        Inspector insp;
+        insp.GetRoot().CreateInt("val", 10, &insp);
+        return fit::make_ok_promise(insp);
+      },
+      &inspector);
+
+  auto children = inspector.GetChildNames();
+  ASSERT_EQ(1u, children.size());
+  EXPECT_EQ("lazy-0", children[0]);
+
+  fit::result<Inspector> result;
+  fit::single_threaded_executor exec;
+  exec.schedule_task(inspector.OpenChild("lazy-0").then(
+      [&](fit::result<Inspector>& res) { result = std::move(res); }));
+  exec.run();
+  EXPECT_TRUE(result.is_ok());
 }
 
 TEST(Inspect, CreateCopyBytes) {

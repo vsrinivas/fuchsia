@@ -30,9 +30,6 @@ See below for the quick start guide in your language of choice.
 ## C++
 
 ### Setup
-Note: If you need to support dynamic values, see [Dynamic Value
-Support](#dynamic-value-support). If you are unsure, keep reading.
-
 This section assumes you are writing an asynchronous component and that
 some part of your component (typically `main.cc`) looks like this:
 
@@ -87,22 +84,106 @@ Read on to learn how Inspect is meant to be used in C++.
 
 #### Dynamic Value Support
 
-Certain features, such as LazyProperty, LazyMetric, and ChildrenCallback
-are deprecated, but a replacement is on the way (CF-761). If you determine
-that you need one of these data types, you may use the deprecated API
-by replacing the setup code with the following:
+The C++ library has two property creators for lazily inflating Inspect
+trees at read-time: `CreateLazyNode` and `CreateLazyValues`.
+
+Both of these methods take a callback returning a promise for an
+inspect::Inspector, the only difference is how the dynamic values are
+stored in the tree.
+
+`root->CreateLazyNode(name, callback)` creates a child node of
+`root` with the given `name`. The `callback` returns a promise for an
+`inspect::Inspector` whose root node is spliced into the parent hierarchy
+when read. The example below shows that a child called "lazy" exists with
+the string property "version" and has an additional child that is called
+"lazy."
+
+`root->CreateLazyValues(name, callback)` works as
+`root->CreateLazyNode(name, callback)`, except all properties on the
+promised Inspector's root node are added directly as values to the
+original `root`. In the second output of the example below, the internal
+"lazy" nodes do not appear and their values are flattened into properties
+on `root`.
 
 ```
-#include "src/lib/inspect_deprecated/inspect.h"
+root->CreateLazy{Node,Values}("lazy", [] {
+  Inspector a;
+  a.GetRoot().CreateString("version", "1.0", &a);
+  a.GetRoot().CreateLazy{Node,Values}("lazy", [] {
+    Inspector b;
+    b.GetRoot().CreateInt("value", 10, &b);
+    return fit::make_ok_promise(std::move(b));
+  }, &a);
 
-// Legacy work required to expose an inspect hierarchy over FIDL.
-auto root = component::ObjectDir::Make("root");
-fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> inspect_bindings_;
-component_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
-    fuchsia::inspect::deprecated::Inspect::Name_,
-    std::make_unique<vfs::Service>(
-        inspect_bindings_.GetHandler(root.object().get())));
-auto root_node = inspect::Node(root);
+  return fit::make_ok_promise(std::move(a));
+});
+
+Output (CreateLazyNode):
+root:
+  lazy:
+    version = "1.0"
+    lazy:
+      val = 10
+
+Output (CreateLazyValues):
+root:
+  val = 10
+  version = "1.0"
+```
+
+Warning: It is the developer's responsibility to ensure that names
+flattened from multiple lazy value nodes do not conflict. If they do,
+output behavior is undefined.
+
+The return value of `CreateLazy{Node,Values}` is a `LazyNode` that owns
+the passed callback.  The callback is never called once the `LazyNode` is
+destroyed. If you destroy a `LazyNode` concurrently with the execution of
+a callback, the destroy operation is blocked until the callback returns
+its promise.
+
+If you want to dynamically expose properties on `this`, you may simply
+write the following:
+
+```
+class Employee {
+  public:
+    Employee(inspect::Node node) : node_(std::move(node)) {
+      calls_ = node_.CreateInt("calls", 0);
+
+      // Create a lazy node that populates values on its parent
+      // dynamically.
+      // Note: The callback will never be called after the LazyNode is
+      // destroyed, so it is safe to capture "this."
+      lazy_ = node_.CreateLazyValues("lazy", [this] {
+        // Create a new Inspector and put any data in it you want.
+        inspect::Inspector inspector;
+
+        // Keep track of the number of times this callback is executed.
+        // This is safe because the callback is executed without locking
+        // any state in the parent node.
+        calls_.Add(1);
+
+        // ERROR: You cannot modify the LazyNode from the callback. Doing
+        // so may deadlock!
+        // lazy_ = ...
+
+        // The value is set to the result of calling a method on "this".
+        inspector.GetRoot().CreateInt("performance_score",
+                                      this->CalculatePerformance(), &inspector);
+
+        // Callbacks return a fit::promise<Inspector>, so return a result
+        // promise containing the value we created.
+        // You can alternatively return a promise that is completed by
+        // some asynchronous task.
+        return fit::make_ok_promise(std::move(inspector));
+      });
+    }
+
+  private:
+    inspect::Node node_;
+    inspect::IntProperty calls_;
+    inspect::LazyNode lazy_;
+};
 ```
 
 ### C++ Library Concepts
@@ -384,5 +465,5 @@ Type | Description | Notes
   StringProperty | A property with a UTF-8 string value. | All Languages
   ByteVectorProperty | A property with an arbitrary byte value. | All Languages
   Node | A node under which metrics, properties, and more nodes may be nested. | All Languages
-  Link | Instantiates a complete tree of Nodes dynamically. | IN PROGRESS(CF-761): This will replace Lazy metrics, properties, and children
+  LazyNode | Instantiates a complete tree of Nodes dynamically. | C++, Rust (in progress).
 

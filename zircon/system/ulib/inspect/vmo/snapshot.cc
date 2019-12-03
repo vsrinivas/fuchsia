@@ -13,7 +13,8 @@ using inspect::internal::kMinOrderSize;
 
 namespace inspect {
 
-Snapshot::Snapshot(std::vector<uint8_t> buffer) : buffer_(std::move(buffer)) {}
+Snapshot::Snapshot(std::vector<uint8_t> buffer)
+    : buffer_(std::make_shared<std::vector<uint8_t>>(std::move(buffer))) {}
 
 zx_status_t Snapshot::Create(std::vector<uint8_t> buffer, Snapshot* out_snapshot) {
   ZX_ASSERT(out_snapshot);

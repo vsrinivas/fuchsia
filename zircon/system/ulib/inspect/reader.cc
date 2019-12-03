@@ -9,10 +9,75 @@
 #include <lib/inspect/cpp/vmo/snapshot.h>
 
 #include <iterator>
+#include <set>
 #include <stack>
 #include <unordered_map>
 
+using inspect::internal::BlockIndex;
+using inspect::internal::SnapshotTree;
+
 namespace inspect {
+
+namespace {
+
+// Traverses the given hierarchy and passes pointers to any hierarchy containing a link to the
+// callback.
+//
+// The callback is called before the passed hierarchy is traversed into, so it may be modified in
+// the context of the callback.
+void VisitHierarchiesWithLink(Hierarchy* root, fit::function<void(Hierarchy*)> callback) {
+  root->Visit([&](const std::vector<std::string>& path, Hierarchy* hierarchy) {
+    if (!hierarchy->node().links().empty()) {
+      callback(hierarchy);
+    }
+    return true;
+  });
+}
+
+// Iteratively snapshot individual inspectors and then snapshot the children of those inspectors,
+// collecting the results in a single SnapshotTree.
+//
+// Consistency of individual Snapshots is guaranteed.
+//
+// Child Snapshots are guaranteed only to be taken consistently after their parent Snapshot.
+//
+// Between the initial Snapshot and reading lazy children, it is possible that the lazy child was
+// deleted. In this case, the child snapshot will be missing.
+fit::promise<SnapshotTree> SnapshotTreeFromInspector(Inspector insp) {
+  SnapshotTree ret;
+  if (ZX_OK != Snapshot::Create(insp.DuplicateVmo(), &ret.snapshot)) {
+    return fit::make_result_promise<SnapshotTree>(fit::error());
+  }
+
+  // Sequence all promises to ensure depth-first traversal. Otherwise traversal may cause
+  // all children for a Snapshot to be instantiated simultaneously.
+  fit::sequencer seq;
+  std::vector<fit::promise<SnapshotTree>> promises;
+  auto child_names = insp.GetChildNames();
+  for (const auto& child_name : child_names) {
+    promises.emplace_back(
+        insp.OpenChild(child_name)
+            .and_then([](Inspector& insp) { return SnapshotTreeFromInspector(std::move(insp)); })
+            .wrap_with(seq));
+  }
+
+  return fit::join_promise_vector(std::move(promises))
+      .and_then([ret = std::move(ret), names = std::move(child_names)](
+                    std::vector<fit::result<SnapshotTree>>& children) mutable
+                -> fit::result<SnapshotTree> {
+        ZX_ASSERT(names.size() == children.size());
+
+        for (size_t i = 0; i < names.size(); i++) {
+          if (children[i].is_ok()) {
+            ret.children.emplace(std::move(names[i]), children[i].take_value());
+          }
+        }
+
+        return fit::ok(std::move(ret));
+      });
+}
+
+}  // namespace
 
 namespace internal {
 
@@ -79,6 +144,9 @@ class Reader {
   // Parse a property block and attach it to the given parent.
   void InnerParseProperty(ParsedNode* parent, const Block* block);
 
+  // Parse a link block and attach it to the given parent.
+  void InnerParseLink(ParsedNode* parent, const Block* block);
+
   // Helper to interpret the given block as a NAME block and return a
   // copy of the name contents.
   fit::optional<std::string> GetAndValidateName(BlockIndex index);
@@ -128,6 +196,12 @@ void Reader::InnerScanBlocks() {
       // into the properties field of the ParsedNode.
       auto parent_index = ValueBlockFields::ParentIndex::Get<BlockIndex>(block->header);
       InnerParseProperty(GetOrCreate(parent_index), block);
+    } else if (type == BlockType::kLinkValue) {
+      // This block defines a link to an adjacent hierarchy stored outside the currently parsed one.
+      // For now we parse and store the contents of the link with the NodeValue, and we will handle
+      // merging trees in a separate step.
+      auto parent_index = ValueBlockFields::ParentIndex::Get<BlockIndex>(block->header);
+      InnerParseLink(GetOrCreate(parent_index), block);
     }
 
     return true;
@@ -328,6 +402,32 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
   }
 }
 
+void Reader::InnerParseLink(ParsedNode* parent, const Block* block) {
+  auto name = GetAndValidateName(ValueBlockFields::NameIndex::Get<size_t>(block->header));
+  if (name->empty()) {
+    return;
+  }
+
+  auto content =
+      GetAndValidateName(LinkBlockPayload::ContentIndex::Get<size_t>(block->payload.u64));
+  if (content->empty()) {
+    return;
+  }
+
+  LinkDisposition disposition;
+  switch (LinkBlockPayload::Flags::Get<LinkBlockDisposition>(block->payload.u64)) {
+    case LinkBlockDisposition::kChild:
+      disposition = LinkDisposition::kChild;
+      break;
+    case LinkBlockDisposition::kInline:
+      disposition = LinkDisposition::kInline;
+      break;
+  }
+
+  parent->hierarchy.node_ptr()->add_link(
+      LinkValue(std::move(name.value()), std::move(content.value()), disposition));
+}
+
 void Reader::InnerCreateObject(BlockIndex index, const Block* block) {
   auto name = GetAndValidateName(ValueBlockFields::NameIndex::Get<BlockIndex>(block->header));
   if (!name.has_value()) {
@@ -342,6 +442,64 @@ void Reader::InnerCreateObject(BlockIndex index, const Block* block) {
     parent->children_count += 1;
   }
 }
+
+fit::result<Hierarchy> ReadFromSnapshotTree(const SnapshotTree& tree) {
+  auto read_result = internal::Reader(tree.snapshot).Read();
+  if (!read_result.is_ok()) {
+    return read_result;
+  }
+
+  auto ret = read_result.take_value();
+
+  VisitHierarchiesWithLink(&ret, [&](Hierarchy* cur) {
+    for (const auto& link : cur->node().links()) {
+      auto it = tree.children.find(link.content());
+      if (it == tree.children.end()) {
+        cur->add_missing_value(MissingValueReason::kLinkNotFound, link.name());
+        continue;
+      }
+
+      // TODO(crjohns): Remove recursion, or limit depth.
+      auto next_result = ReadFromSnapshotTree(it->second);
+      if (!next_result.is_ok()) {
+        cur->add_missing_value(MissingValueReason::kLinkHierarchyParseFailure, link.name());
+        continue;
+      }
+
+      if (link.disposition() == LinkDisposition::kChild) {
+        // The linked hierarchy is a child of this node, add it to the list of children.
+        next_result.value().node_ptr()->set_name(link.name());
+        cur->add_child(next_result.take_value());
+      } else if (link.disposition() == LinkDisposition::kInline) {
+        // The linked hierarchy is meant to have its contents inlined into this node.
+        auto next = next_result.take_value();
+
+        // Move properties into this node.
+        for (auto& prop : next.node_ptr()->take_properties()) {
+          cur->node_ptr()->add_property(std::move(prop));
+        }
+
+        // Move children into this node.
+        for (auto& child : next.take_children()) {
+          cur->add_child(std::move(child));
+        }
+
+        // Copy missing values.
+        for (const auto& missing : next.missing_values()) {
+          cur->add_missing_value(missing.reason, missing.name);
+        }
+
+        // There will be no further links that have not already been processed, since we recursively
+        // get the hierarchy from a SnapshotTree.
+      } else {
+        cur->add_missing_value(MissingValueReason::kLinkInvalid, link.name());
+      }
+    }
+  });
+
+  return fit::ok(std::move(ret));
+}
+
 }  // namespace internal
 
 fit::result<Hierarchy> ReadFromSnapshot(Snapshot snapshot) {
@@ -364,6 +522,10 @@ fit::result<Hierarchy> ReadFromBuffer(std::vector<uint8_t> buffer) {
     return fit::error();
   }
   return ReadFromSnapshot(std::move(snapshot));
+}
+
+fit::promise<Hierarchy> ReadFromInspector(Inspector inspector) {
+  return SnapshotTreeFromInspector(std::move(inspector)).and_then(internal::ReadFromSnapshotTree);
 }
 
 }  // namespace inspect

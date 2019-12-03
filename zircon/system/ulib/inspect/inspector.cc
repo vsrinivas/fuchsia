@@ -5,6 +5,8 @@
 #include <lib/fit/result.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/heap.h>
+#include <lib/inspect/cpp/vmo/state.h>
+#include <lib/inspect/cpp/vmo/types.h>
 
 #include <sstream>
 
@@ -19,7 +21,8 @@ const InspectSettings kDefaultInspectSettings = {.maximum_size = 256 * 1024};
 
 Inspector::Inspector() : Inspector(kDefaultInspectSettings) {}
 
-Inspector::Inspector(const InspectSettings& settings) : root_(std::make_unique<Node>()) {
+Inspector::Inspector(const InspectSettings& settings)
+    : root_(std::make_shared<Node>()), value_list_(std::make_shared<ValueList>()) {
   if (settings.maximum_size == 0) {
     return;
   }
@@ -32,7 +35,8 @@ Inspector::Inspector(const InspectSettings& settings) : root_(std::make_unique<N
   *root_ = state_->CreateRootNode();
 }
 
-Inspector::Inspector(zx::vmo vmo) : root_(std::make_unique<Node>()) {
+Inspector::Inspector(zx::vmo vmo)
+    : root_(std::make_shared<Node>()), value_list_(std::make_shared<ValueList>()) {
   size_t size;
 
   zx_status_t status;
@@ -62,7 +66,7 @@ zx::vmo Inspector::DuplicateVmo() const {
   zx::vmo ret;
 
   if (state_) {
-    state_->GetVmo().duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, &ret);
+    state_->DuplicateVmo(&ret);
   }
 
   return ret;
@@ -83,5 +87,15 @@ std::vector<uint8_t> Inspector::CopyBytes() const {
 }
 
 Node& Inspector::GetRoot() const { return *root_; }
+
+std::vector<std::string> Inspector::GetChildNames() const { return state_->GetLinkNames(); }
+
+fit::promise<Inspector> Inspector::OpenChild(const std::string& child_name) const {
+  return state_->CallLinkCallback(child_name);
+}
+
+namespace internal {
+std::shared_ptr<State> GetState(const Inspector* inspector) { return inspector->state_; }
+}  // namespace internal
 
 }  // namespace inspect
