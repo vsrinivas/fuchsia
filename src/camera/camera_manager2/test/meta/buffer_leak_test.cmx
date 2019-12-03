@@ -1,0 +1,25 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.camera2.Manager": "fuchsia-pkg://fuchsia.com/camera_manager2#meta/camera_manager2.cmx",
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/buffer_leak_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/camera",
+            "class/sysmem"
+        ],
+        "services": [
+            "fuchsia.camera2.Manager",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

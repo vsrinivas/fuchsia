@@ -38,6 +38,7 @@ group("tests") {
 test_package("camera_tests") {
   deps = [
     "//src/camera/calibration/blc/test:blc_test",
+    "//src/camera/camera_manager2/test:buffer_leak_test",
     "//src/camera/camera_manager2/test:camera-manager-test",
     "//src/camera/camera_manager2/test:camera_plug_detector_test",
     "//src/camera/camera_manager2/test:video_device_client_test",
@@ -187,6 +188,11 @@ test_package("camera_tests") {
       name = "fake_stream_test"
       manifest = "lib/fake_stream/test/test.cmx"
       environments = basic_envs
+    },
+    {
+      name = "buffer_leak_test"
+      manifest = "camera_manager2/test/meta/buffer_leak_test.cmx"
+      environments = [ sherlock_env ]
     },
 
     # Put additional camera tests here

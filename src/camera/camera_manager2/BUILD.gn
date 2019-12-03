@@ -76,6 +76,7 @@ group("tests") {
   testonly = true
   deps = [
     ":camera_manager2",
+    "test:buffer_leak_test",
     "test:camera-manager-test",
   ]
 }

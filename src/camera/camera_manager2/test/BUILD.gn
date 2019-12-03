@@ -111,3 +111,20 @@ executable("video_device_client_test") {
     "//zircon/public/lib/fzl",
   ]
 }
+
+executable("buffer_leak_test") {
+  testonly = true
+
+  sources = [
+    "buffer_leak_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.camera2",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fzl",
+  ]
+}
