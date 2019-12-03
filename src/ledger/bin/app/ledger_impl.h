@@ -15,7 +15,6 @@
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
@@ -37,6 +36,8 @@ class LedgerImpl : public fuchsia::ledger::LedgerSyncableDelegate {
     };
 
     Delegate() = default;
+    Delegate(const Delegate&) = delete;
+    Delegate& operator=(const Delegate&) = delete;
     virtual ~Delegate() = default;
 
     virtual void GetPage(convert::ExtendedStringView page_id, PageState page_state,
@@ -45,13 +46,12 @@ class LedgerImpl : public fuchsia::ledger::LedgerSyncableDelegate {
 
     virtual void SetConflictResolverFactory(
         fidl::InterfaceHandle<ConflictResolverFactory> factory) = 0;
-
-   private:
-    FXL_DISALLOW_COPY_AND_ASSIGN(Delegate);
   };
 
   // |delegate| outlives LedgerImpl.
   explicit LedgerImpl(Environment* environment, Delegate* delegate);
+  LedgerImpl(const LedgerImpl&) = delete;
+  LedgerImpl& operator=(const LedgerImpl&) = delete;
   ~LedgerImpl() override;
 
  private:
@@ -65,8 +65,6 @@ class LedgerImpl : public fuchsia::ledger::LedgerSyncableDelegate {
 
   Environment* const environment_;
   Delegate* const delegate_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerImpl);
 };
 }  // namespace ledger
 

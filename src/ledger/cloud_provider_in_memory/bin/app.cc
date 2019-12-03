@@ -12,7 +12,6 @@
 #include <memory>
 
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_provider {
 namespace {
@@ -23,6 +22,8 @@ class App {
       : dispatcher_(dispatcher), component_context_(sys::ComponentContext::Create()) {
     FXL_DCHECK(component_context_);
   }
+  App(const App&) = delete;
+  App& operator=(const App&) = delete;
   ~App() = default;
 
   bool Start() {
@@ -41,8 +42,6 @@ class App {
   std::unique_ptr<sys::ComponentContext> component_context_;
   std::unique_ptr<ledger::FakeCloudProvider> cloud_provider_impl_;
   fidl::BindingSet<CloudProvider> cloud_provider_bindings_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
 
 int Main(int argc, const char** argv) {

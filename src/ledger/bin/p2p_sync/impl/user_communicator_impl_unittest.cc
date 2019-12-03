@@ -23,7 +23,6 @@
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
-#include "src/lib/fxl/macros.h"
 
 namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest {
@@ -67,6 +66,8 @@ class FakeUserIdProvider : public p2p_provider::UserIdProvider {
 class UserCommunicatorImplTest : public ledger::TestWithEnvironment {
  public:
   UserCommunicatorImplTest() : overnet_factory_(dispatcher()) {}
+  UserCommunicatorImplTest(const UserCommunicatorImplTest&) = delete;
+  UserCommunicatorImplTest& operator=(const UserCommunicatorImplTest&) = delete;
 
   std::unique_ptr<UserCommunicator> GetUserCommunicator(uint64_t node_id,
                                                         std::string user_name = "user") {
@@ -81,9 +82,6 @@ class UserCommunicatorImplTest : public ledger::TestWithEnvironment {
 
  protected:
   ledger::OvernetFactory overnet_factory_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(UserCommunicatorImplTest);
 };
 
 TEST_F(UserCommunicatorImplTest, OneHost_NoCrash) {

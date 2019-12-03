@@ -27,7 +27,6 @@
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 namespace {
@@ -58,6 +57,8 @@ class PageUploadTest : public ledger::TestWithEnvironment, public PageUpload::De
                                                 &storage_, &encryption_service_, &page_cloud_ptr_,
                                                 this, std::move(test_backoff));
   }
+  PageUploadTest(const PageUploadTest&) = delete;
+  PageUploadTest& operator=(const PageUploadTest&) = delete;
   ~PageUploadTest() override = default;
 
  protected:
@@ -84,7 +85,6 @@ class PageUploadTest : public ledger::TestWithEnvironment, public PageUpload::De
  private:
   fit::closure new_state_callback_;
   callback::ScopedTaskRunner task_runner_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageUploadTest);
 };
 
 // Verifies that the backlog of commits to upload returned from

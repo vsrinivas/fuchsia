@@ -13,14 +13,13 @@ namespace storage {
 class CommitWatcher {
  public:
   CommitWatcher() = default;
+  CommitWatcher(const CommitWatcher&) = delete;
+  CommitWatcher& operator=(const CommitWatcher&) = delete;
   virtual ~CommitWatcher() = default;
 
   // Called when new commits have been created.
   virtual void OnNewCommits(const std::vector<std::unique_ptr<const Commit>>& commits,
                             ChangeSource source) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(CommitWatcher);
 };
 
 }  // namespace storage

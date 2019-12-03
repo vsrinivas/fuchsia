@@ -12,7 +12,6 @@
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/overnet/fake_overnet.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -23,6 +22,8 @@ class OvernetFactory : public FakeOvernet::Delegate {
  public:
   // If set to true, host lists of one host are not returned at all. This is a workaround for OV-8.
   OvernetFactory(async_dispatcher_t* dispatcher, bool return_one_host_list = false);
+  OvernetFactory(const OvernetFactory&) = delete;
+  OvernetFactory& operator=(const OvernetFactory&) = delete;
   ~OvernetFactory() override;
 
   // Creates a new virtual host with the given host name, and connects to its
@@ -59,8 +60,6 @@ class OvernetFactory : public FakeOvernet::Delegate {
   std::vector<fit::function<void(uint64_t, std::vector<FakeOvernet::Delegate::FakePeer>)>>
       pending_device_list_callbacks_;
   callback::AutoCleanableMap<uint64_t, Holder> net_connectors_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(OvernetFactory);
 };
 
 }  // namespace ledger

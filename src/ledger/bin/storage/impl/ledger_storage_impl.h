@@ -28,6 +28,8 @@ class LedgerStorageImpl : public LedgerStorage {
                     encryption::EncryptionService* encryption_service,
                     storage::DbFactory* db_factory, ledger::DetachedPath content_dir,
                     CommitPruningPolicy policy, clocks::DeviceIdManager* device_id_manager);
+  LedgerStorageImpl(const LedgerStorageImpl&) = delete;
+  LedgerStorageImpl& operator=(const LedgerStorageImpl&) = delete;
   ~LedgerStorageImpl() override;
 
   // Initializes this LedgerStorageImpl by creating the |content_dir| directory
@@ -75,8 +77,6 @@ class LedgerStorageImpl : public LedgerStorage {
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<LedgerStorageImpl> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerStorageImpl);
 };
 
 }  // namespace storage

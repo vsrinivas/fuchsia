@@ -14,6 +14,8 @@ namespace {
 class LockImpl : public Lock {
  public:
   LockImpl() : weak_ptr_factory_(this) {}
+  LockImpl(const LockImpl&) = delete;
+  LockImpl& operator=(const LockImpl&) = delete;
 
   ~LockImpl() override {
     if (serialization_callback_) {
@@ -46,7 +48,6 @@ class LockImpl : public Lock {
   fit::closure serialization_callback_;
 
   fxl::WeakPtrFactory<LockImpl> weak_ptr_factory_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(LockImpl);
 };
 }  // namespace
 

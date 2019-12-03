@@ -45,6 +45,8 @@ class PageManager : InspectablePage {
               std::vector<PageUsageListener*> page_usage_listeners,
               storage::LedgerStorage* ledger_storage, sync_coordinator::LedgerSync* ledger_sync,
               LedgerMergeManager* ledger_merge_manager, inspect_deprecated::Node inspect_node);
+  PageManager(const PageManager&) = delete;
+  PageManager& operator=(const PageManager&) = delete;
   ~PageManager() override;
 
   // Checks whether the given page is closed and synced. The result returned in
@@ -181,8 +183,6 @@ class PageManager : InspectablePage {
 
   // Must be the last member.
   fxl::WeakPtrFactory<PageManager> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageManager);
 };
 
 }  // namespace ledger

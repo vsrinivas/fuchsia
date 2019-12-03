@@ -55,6 +55,8 @@ class GetEntryBenchmark {
  public:
   GetEntryBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
                     size_t entry_count, size_t key_size, size_t value_size, bool use_inline);
+  GetEntryBenchmark(const GetEntryBenchmark&) = delete;
+  GetEntryBenchmark& operator=(const GetEntryBenchmark&) = delete;
 
   void Run();
 
@@ -82,8 +84,6 @@ class GetEntryBenchmark {
   PagePtr page_;
   PageSnapshotPtr snapshot_;
   std::vector<std::vector<uint8_t>> keys_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetEntryBenchmark);
 };
 
 GetEntryBenchmark::GetEntryBenchmark(async::Loop* loop,

@@ -38,7 +38,6 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
@@ -51,6 +50,8 @@ constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
 class PageManagerTest : public TestWithEnvironment {
  public:
   PageManagerTest() = default;
+  PageManagerTest(const PageManagerTest&) = delete;
+  PageManagerTest& operator=(const PageManagerTest&) = delete;
 
   ~PageManagerTest() override = default;
 
@@ -91,9 +92,6 @@ class PageManagerTest : public TestWithEnvironment {
   std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<PageManager> page_manager_;
   PageId page_id_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageManagerTest);
 };
 
 class StubConflictResolverFactory : public ConflictResolverFactory {

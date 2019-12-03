@@ -43,6 +43,8 @@ bool operator==(const sync_coordinator::SyncStateWatcher::SyncStateContainer& lh
 class SyncWatcherSet::SyncWatcherContainer : public sync_coordinator::SyncStateWatcher {
  public:
   explicit SyncWatcherContainer(SyncWatcherPtr watcher) : watcher_(std::move(watcher)) {}
+  SyncWatcherContainer(const SyncWatcherContainer&) = delete;
+  SyncWatcherContainer& operator=(const SyncWatcherContainer&) = delete;
 
   ~SyncWatcherContainer() override = default;
 
@@ -99,8 +101,6 @@ class SyncWatcherSet::SyncWatcherContainer : public sync_coordinator::SyncStateW
   SyncStateContainer pending_;
   // last_ contains the last sent notification.
   SyncStateContainer last_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherContainer);
 };
 
 SyncWatcherSet::SyncWatcherSet(async_dispatcher_t* dispatcher) : watchers_(dispatcher) {}

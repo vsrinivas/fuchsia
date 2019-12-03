@@ -20,7 +20,6 @@
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/macros.h"
 
 namespace p2p_sync {
 namespace {

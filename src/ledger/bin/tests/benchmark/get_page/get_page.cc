@@ -68,6 +68,8 @@ class GetPageBenchmark {
  public:
   GetPageBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
                    size_t requests_count, bool reuse, bool wait_for_cached_page, bool clear_pages);
+  GetPageBenchmark(const GetPageBenchmark&) = delete;
+  GetPageBenchmark& operator=(const GetPageBenchmark&) = delete;
 
   void Run();
 
@@ -90,8 +92,6 @@ class GetPageBenchmark {
   LedgerPtr ledger_;
   PageIdPtr page_id_;
   std::vector<PagePtr> pages_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);
 };
 
 GetPageBenchmark::GetPageBenchmark(async::Loop* loop,

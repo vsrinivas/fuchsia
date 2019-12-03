@@ -26,7 +26,6 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace cloud_sync {
@@ -45,6 +44,8 @@ class BaseBatchUploadTest : public ledger::TestWithEnvironment {
       : storage_(dispatcher()),
         encryption_service_(dispatcher()),
         page_cloud_(page_cloud_ptr_.NewRequest()) {}
+  BaseBatchUploadTest(const BaseBatchUploadTest&) = delete;
+  BaseBatchUploadTest& operator=(const BaseBatchUploadTest&) = delete;
   ~BaseBatchUploadTest() override = default;
 
  public:
@@ -88,9 +89,6 @@ class BaseBatchUploadTest : public ledger::TestWithEnvironment {
     return encryption_service_.MakeObjectIdentifier(
         storage_.GetObjectIdentifierFactory(), storage::ObjectDigest(std::move(object_digest)));
   }
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(BaseBatchUploadTest);
 };
 
 using BatchUploadTest = BaseBatchUploadTest<encryption::FakeEncryptionService>;

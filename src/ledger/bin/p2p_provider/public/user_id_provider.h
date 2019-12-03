@@ -7,8 +7,6 @@
 
 #include <lib/fit/function.h>
 
-#include "src/lib/fxl/macros.h"
-
 namespace p2p_provider {
 // UserIdProvider abstracts the unique User ID shared accross all devices of a
 // user and used to establish a connection.
@@ -20,13 +18,12 @@ class UserIdProvider {
   };
 
   UserIdProvider() = default;
+  UserIdProvider(const UserIdProvider&) = delete;
+  UserIdProvider& operator=(const UserIdProvider&) = delete;
   virtual ~UserIdProvider() = default;
 
   // GetUserId calls its callback with the user id.
   virtual void GetUserId(fit::function<void(Status, std::string)> callback) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(UserIdProvider);
 };
 
 }  // namespace p2p_provider

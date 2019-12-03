@@ -43,6 +43,8 @@ class LedgerSyncImplTest : public ledger::TestWithEnvironment {
     ledger_sync_ = std::make_unique<LedgerSyncImpl>(&environment_, &user_config_,
                                                     &encryption_service_, "test_app_id", nullptr);
   }
+  LedgerSyncImplTest(const LedgerSyncImplTest&) = delete;
+  LedgerSyncImplTest& operator=(const LedgerSyncImplTest&) = delete;
   ~LedgerSyncImplTest() override {}
 
  protected:
@@ -52,9 +54,6 @@ class LedgerSyncImplTest : public ledger::TestWithEnvironment {
   TestCloudProvider cloud_provider_;
   encryption::FakeEncryptionService encryption_service_;
   UserConfig user_config_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerSyncImplTest);
 };
 
 TEST_F(LedgerSyncImplTest, CreatePageSync) {

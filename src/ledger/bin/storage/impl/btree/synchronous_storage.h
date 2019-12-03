@@ -22,6 +22,8 @@ namespace btree {
 class SynchronousStorage {
  public:
   SynchronousStorage(PageStorage* page_storage, coroutine::CoroutineHandler* handler);
+  SynchronousStorage(const SynchronousStorage&) = delete;
+  SynchronousStorage& operator=(const SynchronousStorage&) = delete;
 
   PageStorage* page_storage() { return page_storage_; }
   coroutine::CoroutineHandler* handler() { return handler_; }
@@ -36,8 +38,6 @@ class SynchronousStorage {
  private:
   PageStorage* page_storage_;
   coroutine::CoroutineHandler* handler_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SynchronousStorage);
 };
 
 }  // namespace btree

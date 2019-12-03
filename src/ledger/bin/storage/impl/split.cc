@@ -20,7 +20,6 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/third_party/bup/bupsplit.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace storage {
@@ -72,6 +71,8 @@ class SplitContext {
         object_type_(object_type),
         roll_sum_split_(kMinChunkSize, kMaxChunkSize, std::move(chunk_permutation)) {}
   SplitContext(SplitContext&& other) = default;
+  SplitContext(const SplitContext&) = delete;
+  SplitContext& operator=(const SplitContext&) = delete;
   SplitContext& operator=(SplitContext&& other) = default;
   ~SplitContext() = default;
 
@@ -324,8 +325,6 @@ class SplitContext {
   // The most recent piece that is entirely consumed but not yet sent to
   // |callback_|.
   PendingPiece latest_piece_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SplitContext);
 };
 
 class CollectPiecesState : public fxl::RefCountedThreadSafe<CollectPiecesState> {

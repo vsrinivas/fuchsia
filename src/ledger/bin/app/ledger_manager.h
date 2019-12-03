@@ -30,7 +30,6 @@
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -51,6 +50,8 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
                 std::unique_ptr<storage::LedgerStorage> storage,
                 std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
                 std::vector<PageUsageListener*> page_usage_listeners);
+  LedgerManager(const LedgerManager&) = delete;
+  LedgerManager& operator=(const LedgerManager&) = delete;
   ~LedgerManager() override;
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
@@ -145,8 +146,6 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
 
   // Must be the last member.
   fxl::WeakPtrFactory<LedgerManager> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManager);
 };
 
 }  // namespace ledger

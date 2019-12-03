@@ -13,13 +13,14 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 
 class PageUtils {
  public:
+  PageUtils(const PageUtils&) = delete;
+  PageUtils& operator=(const PageUtils&) = delete;
   // Retrieves the data referenced by the given identifier as a StringView with
   // no offset.
   static void ResolveObjectIdentifierAsStringView(
@@ -29,9 +30,6 @@ class PageUtils {
 
   // Returns true if a key matches the provided prefix, false otherwise.
   static bool MatchesPrefix(const std::string& key, const std::string& prefix);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageUtils);
 };
 
 }  // namespace ledger

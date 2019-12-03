@@ -21,6 +21,8 @@ class ActivePageManager;
 class MergeStrategy {
  public:
   MergeStrategy() = default;
+  MergeStrategy(const MergeStrategy&) = delete;
+  MergeStrategy& operator=(const MergeStrategy&) = delete;
   virtual ~MergeStrategy() = default;
 
   // Sets a callback that will be called if this strategy is not to be used
@@ -41,9 +43,6 @@ class MergeStrategy {
   // Cancel an in-progress merge. This must be called after |Merge| has been
   // called, and before the |on_done| callback.
   virtual void Cancel() = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(MergeStrategy);
 };
 
 }  // namespace ledger

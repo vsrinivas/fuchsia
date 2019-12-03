@@ -9,7 +9,6 @@
 
 #include <vector>
 
-#include "src/lib/fxl/macros.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -18,6 +17,8 @@ namespace ledger {
 class InspectedEntry final {
  public:
   explicit InspectedEntry(inspect_deprecated::Node node, std::vector<uint8_t> value);
+  InspectedEntry(const InspectedEntry&) = delete;
+  InspectedEntry& operator=(const InspectedEntry&) = delete;
   ~InspectedEntry();
 
   void SetOnDiscardable(fit::closure on_discardable);
@@ -33,8 +34,6 @@ class InspectedEntry final {
   // TODO(nathaniel): This integer should be replaced with a (weak-pointer-less in this case)
   // TokenManager.
   int64_t outstanding_detachers_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(InspectedEntry);
 };
 
 }  // namespace ledger

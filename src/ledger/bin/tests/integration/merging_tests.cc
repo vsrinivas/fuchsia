@@ -20,7 +20,6 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/macros.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {
@@ -29,10 +28,9 @@ namespace {
 class MergingIntegrationTest : public IntegrationTest {
  public:
   MergingIntegrationTest() = default;
+  MergingIntegrationTest(const MergingIntegrationTest&) = delete;
+  MergingIntegrationTest& operator=(const MergingIntegrationTest&) = delete;
   ~MergingIntegrationTest() override = default;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(MergingIntegrationTest);
 };
 
 class Watcher : public PageWatcher {

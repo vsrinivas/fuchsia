@@ -31,6 +31,8 @@ class FakeBatch : public Db::Batch {
  public:
   FakeBatch(async_dispatcher_t* dispatcher, std::map<std::string, std::string>* key_value_store)
       : dispatcher_(dispatcher), key_value_store_(key_value_store) {}
+  FakeBatch(const FakeBatch&) = delete;
+  FakeBatch& operator=(const FakeBatch&) = delete;
   ~FakeBatch() override = default;
 
   Status Put(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
@@ -80,8 +82,6 @@ class FakeBatch : public Db::Batch {
   std::set<std::string> entries_to_delete_;
 
   std::map<std::string, std::string>* key_value_store_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeBatch);
 };
 
 // A wrapper storage::Iterator for the elements of an std::map that start with a
@@ -99,6 +99,8 @@ class PrefixIterator
     UpdateCurrentElement();
   }
 
+  PrefixIterator(const PrefixIterator&) = delete;
+  PrefixIterator& operator=(const PrefixIterator&) = delete;
   ~PrefixIterator() override = default;
 
   storage::Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>&
@@ -143,8 +145,6 @@ class PrefixIterator
   std::optional<std::pair<convert::ExtendedStringView, convert::ExtendedStringView>> current_;
   std::map<std::string, std::string>::const_iterator it_;
   std::map<std::string, std::string>::const_iterator end_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PrefixIterator);
 };
 
 }  // namespace

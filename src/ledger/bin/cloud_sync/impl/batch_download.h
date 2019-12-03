@@ -29,6 +29,8 @@ class BatchDownload {
                 std::vector<cloud_provider::Commit> commits,
                 std::unique_ptr<cloud_provider::PositionToken> position_token, fit::closure on_done,
                 fit::closure on_error);
+  BatchDownload(const BatchDownload&) = delete;
+  BatchDownload& operator=(const BatchDownload&) = delete;
   ~BatchDownload();
 
   // Can be called only once.
@@ -47,8 +49,6 @@ class BatchDownload {
 
   // Must be the last member.
   fxl::WeakPtrFactory<BatchDownload> weak_ptr_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(BatchDownload);
 };
 
 }  // namespace cloud_sync

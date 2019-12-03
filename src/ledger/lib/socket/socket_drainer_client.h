@@ -13,14 +13,14 @@
 
 #include "src/lib/callback/destruction_sentinel.h"
 #include "src/lib/fsl/socket/socket_drainer.h"
-#include "src/lib/fxl/macros.h"
 
 namespace socket {
 
 class SocketDrainerClient : public fsl::SocketDrainer::Client {
  public:
   SocketDrainerClient();
-
+  SocketDrainerClient(const SocketDrainerClient&) = delete;
+  SocketDrainerClient& operator=(const SocketDrainerClient&) = delete;
   ~SocketDrainerClient() override;
 
   void Start(zx::socket source, fit::function<void(std::string)> callback);
@@ -40,8 +40,6 @@ class SocketDrainerClient : public fsl::SocketDrainer::Client {
   fit::closure on_discardable_;
   bool discardable_ = false;
   callback::DestructionSentinel destruction_sentinel_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SocketDrainerClient);
 };
 
 }  // namespace socket

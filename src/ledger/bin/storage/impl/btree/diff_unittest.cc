@@ -14,7 +14,6 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 namespace btree {
@@ -49,6 +48,8 @@ class DiffTest : public StorageTest {
  public:
   DiffTest() : fake_storage_(&environment_, "page_id") {}
 
+  DiffTest(const DiffTest&) = delete;
+  DiffTest& operator=(const DiffTest&) = delete;
   ~DiffTest() override = default;
 
  protected:
@@ -64,9 +65,6 @@ class DiffTest : public StorageTest {
   }
 
   FakePageStorageValidDigest fake_storage_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(DiffTest);
 };
 
 TEST_F(DiffTest, ForEachDiff) {

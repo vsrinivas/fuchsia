@@ -74,6 +74,8 @@ class DiskSpaceBenchmark {
   DiskSpaceBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
                      size_t page_count, size_t unique_key_count, size_t commit_count,
                      size_t key_size, size_t value_size);
+  DiskSpaceBenchmark(const DiskSpaceBenchmark&) = delete;
+  DiskSpaceBenchmark& operator=(const DiskSpaceBenchmark&) = delete;
 
   void Run();
 
@@ -96,8 +98,6 @@ class DiskSpaceBenchmark {
   fuchsia::sys::ComponentControllerPtr component_controller_;
   LedgerPtr ledger_;
   std::vector<PagePtr> pages_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DiskSpaceBenchmark);
 };
 
 DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop,

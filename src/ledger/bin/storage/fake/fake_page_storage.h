@@ -21,7 +21,6 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
@@ -34,6 +33,8 @@ constexpr zx::duration kFakePageStorageDelay = zx::msec(5);
 class FakePageStorage : public PageStorageEmptyImpl {
  public:
   FakePageStorage(ledger::Environment* environment, PageId page_id);
+  FakePageStorage(const FakePageStorage&) = delete;
+  FakePageStorage& operator=(const FakePageStorage&) = delete;
   ~FakePageStorage() override;
 
   // PageStorage:
@@ -112,8 +113,6 @@ class FakePageStorage : public PageStorageEmptyImpl {
   std::vector<fit::closure> object_requests_;
   encryption::FakeEncryptionService encryption_service_;
   FakeObjectIdentifierFactory object_identifier_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakePageStorage);
 };
 
 }  // namespace fake

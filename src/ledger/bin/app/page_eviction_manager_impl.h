@@ -25,6 +25,8 @@ namespace ledger {
 class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionDelegate {
  public:
   PageEvictionManagerImpl(Environment* environment, PageUsageDb* db);
+  PageEvictionManagerImpl(const PageEvictionManagerImpl&) = delete;
+  PageEvictionManagerImpl& operator=(const PageEvictionManagerImpl&) = delete;
   ~PageEvictionManagerImpl() override;
 
   // Sets the delegate for this PageEvictionManagerImpl. The delegate should
@@ -77,8 +79,6 @@ class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionD
   PageUsageDb* db_;
   coroutine::CoroutineManager coroutine_manager_;
   TokenManager token_manager_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionManagerImpl);
 };
 
 }  // namespace ledger

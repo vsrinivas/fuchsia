@@ -15,7 +15,6 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 
@@ -23,6 +22,8 @@ namespace cloud_sync {
 class LedgerSync {
  public:
   LedgerSync() = default;
+  LedgerSync(const LedgerSync&) = delete;
+  LedgerSync& operator=(const LedgerSync&) = delete;
   virtual ~LedgerSync() = default;
 
   // Creates a new page sync for the given page. The page could already have
@@ -30,9 +31,6 @@ class LedgerSync {
   virtual void CreatePageSync(
       storage::PageStorage* page_storage, storage::PageSyncClient* page_sync_client,
       fit::function<void(storage::Status, std::unique_ptr<PageSync>)> callback) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerSync);
 };
 
 }  // namespace cloud_sync

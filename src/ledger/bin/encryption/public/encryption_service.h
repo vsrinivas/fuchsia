@@ -13,7 +13,6 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/macros.h"
 
 namespace encryption {
 
@@ -34,6 +33,8 @@ bool IsPermanentError(Status status);
 class EncryptionService {
  public:
   EncryptionService() = default;
+  EncryptionService(const EncryptionService&) = delete;
+  EncryptionService& operator=(const EncryptionService&) = delete;
   virtual ~EncryptionService() = default;
 
   // Construct the object identifier for the given digest using the latest key
@@ -100,9 +101,6 @@ class EncryptionService {
                                          storage::CommitId left_parent_id,
                                          storage::CommitId right_parent_id,
                                          fxl::StringView operation_list) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(EncryptionService);
 };
 
 }  // namespace encryption

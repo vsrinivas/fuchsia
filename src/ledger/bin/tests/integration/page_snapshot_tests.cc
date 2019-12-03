@@ -22,7 +22,6 @@
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
@@ -31,6 +30,8 @@ namespace {
 class PageSnapshotIntegrationTest : public IntegrationTest {
  public:
   PageSnapshotIntegrationTest() = default;
+  PageSnapshotIntegrationTest(const PageSnapshotIntegrationTest&) = delete;
+  PageSnapshotIntegrationTest& operator=(const PageSnapshotIntegrationTest&) = delete;
   ~PageSnapshotIntegrationTest() override = default;
 
   // Returns a snapshot of |page|, checking success.
@@ -84,9 +85,6 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
     EXPECT_TRUE(fsl::StringFromVmo(result.response().buffer, &result_as_string));
     return result_as_string;
   }
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageSnapshotIntegrationTest);
 };
 
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {

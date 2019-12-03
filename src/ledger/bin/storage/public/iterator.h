@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_ITERATOR_H_
 
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 
@@ -15,6 +14,8 @@ template <class T>
 class Iterator {
  public:
   Iterator() = default;
+  Iterator(const Iterator&) = delete;
+  Iterator& operator=(const Iterator&) = delete;
   virtual ~Iterator() = default;
 
   // Advances to the next element in the collection. Should only be called on a
@@ -31,9 +32,6 @@ class Iterator {
 
   virtual T& operator*() const = 0;
   virtual T* operator->() const = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Iterator);
 };
 
 }  // namespace storage

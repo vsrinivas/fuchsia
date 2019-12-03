@@ -13,7 +13,6 @@
 #include "src/ledger/bin/app/inspected_head.h"
 #include "src/ledger/bin/app/token_manager.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -25,6 +24,8 @@ class HeadsChildrenManager final : public inspect_deprecated::ChildrenManager {
   explicit HeadsChildrenManager(async_dispatcher_t* dispatcher,
                                 inspect_deprecated::Node* heads_node,
                                 InspectablePage* inspectable_page);
+  HeadsChildrenManager(const HeadsChildrenManager&) = delete;
+  HeadsChildrenManager& operator=(const HeadsChildrenManager&) = delete;
   ~HeadsChildrenManager() override;
 
   void SetOnDiscardable(fit::closure on_discardable);
@@ -42,8 +43,6 @@ class HeadsChildrenManager final : public inspect_deprecated::ChildrenManager {
   fit::closure on_discardable_;
   callback::AutoCleanableMap<storage::CommitId, InspectedHead> inspected_heads_;
   TokenManager token_manager_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(HeadsChildrenManager);
 };
 }  // namespace ledger
 

@@ -12,7 +12,6 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -24,6 +23,8 @@ struct CommitRecord {
 class FakePageCloud : public cloud_provider::PageCloud {
  public:
   explicit FakePageCloud(async_dispatcher_t* dispatcher, InjectNetworkError inject_network_error);
+  FakePageCloud(const FakePageCloud&) = delete;
+  FakePageCloud& operator=(const FakePageCloud&) = delete;
   ~FakePageCloud() override;
 
   bool IsDiscardable() const;
@@ -62,8 +63,6 @@ class FakePageCloud : public cloud_provider::PageCloud {
   // Watchers set by the client.
   class WatcherContainer;
   callback::AutoCleanableSet<WatcherContainer> containers_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakePageCloud);
 };
 
 }  // namespace ledger

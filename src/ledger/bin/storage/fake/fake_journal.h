@@ -13,7 +13,6 @@
 #include "src/ledger/bin/storage/fake/fake_journal_delegate.h"
 #include "src/ledger/bin/storage/public/journal.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 namespace fake {
@@ -22,6 +21,8 @@ namespace fake {
 class FakeJournal : public Journal {
  public:
   explicit FakeJournal(FakeJournalDelegate* delegate);
+  FakeJournal(const FakeJournal&) = delete;
+  FakeJournal& operator=(const FakeJournal&) = delete;
   ~FakeJournal() override;
 
   void Commit(fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback);
@@ -34,7 +35,6 @@ class FakeJournal : public Journal {
 
  private:
   FakeJournalDelegate* delegate_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeJournal);
 };
 
 }  // namespace fake

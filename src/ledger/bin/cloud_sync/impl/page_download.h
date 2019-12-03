@@ -17,7 +17,6 @@
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/managed_container.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
@@ -36,6 +35,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
                std::unique_ptr<backoff::Backoff> backoff);
+  PageDownload(const PageDownload&) = delete;
+  PageDownload& operator=(const PageDownload&) = delete;
 
   ~PageDownload() override;
 
@@ -154,8 +155,6 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
 
   // Must be the last member.
   fxl::WeakPtrFactory<PageDownload> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageDownload);
 };
 
 }  // namespace cloud_sync

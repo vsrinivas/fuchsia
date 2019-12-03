@@ -32,7 +32,6 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 namespace {

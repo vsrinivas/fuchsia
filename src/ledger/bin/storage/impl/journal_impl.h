@@ -20,7 +20,6 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 
@@ -40,6 +39,8 @@ class JournalImpl : public Journal {
  public:
   JournalImpl(Token token, ledger::Environment* environment, PageStorageImpl* page_storage,
               std::unique_ptr<const Commit> base);
+  JournalImpl(const JournalImpl&) = delete;
+  JournalImpl& operator=(const JournalImpl&) = delete;
   ~JournalImpl() override;
 
   // Creates a new Journal for a simple commit.
@@ -109,8 +110,6 @@ class JournalImpl : public Journal {
   // After |Commit| has been called, no further mutations are allowed on the
   // journal.
   bool committed_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(JournalImpl);
 };
 
 }  // namespace storage

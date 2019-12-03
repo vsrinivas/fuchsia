@@ -57,6 +57,8 @@ class DeleteEntryBenchmark {
   DeleteEntryBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
                        size_t entry_count, size_t transaction_size, size_t key_size,
                        size_t value_size);
+  DeleteEntryBenchmark(const DeleteEntryBenchmark&) = delete;
+  DeleteEntryBenchmark& operator=(const DeleteEntryBenchmark&) = delete;
 
   void Run();
 
@@ -81,8 +83,6 @@ class DeleteEntryBenchmark {
   LedgerPtr ledger_;
   PagePtr page_;
   std::vector<std::vector<uint8_t>> keys_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DeleteEntryBenchmark);
 };
 
 DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,

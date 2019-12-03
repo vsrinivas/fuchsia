@@ -63,6 +63,8 @@ class PageWatcherImpl : public PageWatcher {
   PageWatcherImpl(fidl::InterfaceRequest<PageWatcher> request,
                   fxl::RefPtr<RefCountedPageSnapshot> base_snapshot)
       : binding_(this, std::move(request)), current_snapshot_(std::move(base_snapshot)) {}
+  PageWatcherImpl(const PageWatcherImpl&) = delete;
+  PageWatcherImpl& operator=(const PageWatcherImpl&) = delete;
 
   int changes = 0;
 
@@ -90,13 +92,13 @@ class PageWatcherImpl : public PageWatcher {
 
   fidl::Binding<PageWatcher> binding_;
   fxl::RefPtr<RefCountedPageSnapshot> current_snapshot_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageWatcherImpl);
 };
 
 class SyncWatcherImpl : public SyncWatcher {
  public:
   SyncWatcherImpl() : binding_(this) {}
+  SyncWatcherImpl(const SyncWatcherImpl&) = delete;
+  SyncWatcherImpl& operator=(const SyncWatcherImpl&) = delete;
 
   auto NewBinding() { return binding_.NewBinding(); }
 
@@ -115,8 +117,6 @@ class SyncWatcherImpl : public SyncWatcher {
   }
 
   fidl::Binding<SyncWatcher> binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
 };
 
 // NonAssociativeConflictResolverImpl uses a merge function which is neither

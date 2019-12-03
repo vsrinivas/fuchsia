@@ -30,6 +30,8 @@ class InspectedCommit final : public inspect_deprecated::ChildrenManager {
   explicit InspectedCommit(async_dispatcher_t* dispatcher, inspect_deprecated::Node node,
                            std::unique_ptr<const storage::Commit> commit, ExpiringToken token,
                            InspectablePage* inspectable_page);
+  InspectedCommit(const InspectedCommit&) = delete;
+  InspectedCommit& operator=(const InspectedCommit&) = delete;
   ~InspectedCommit() override;
 
   void SetOnDiscardable(fit::closure on_discardable);
@@ -69,8 +71,6 @@ class InspectedCommit final : public inspect_deprecated::ChildrenManager {
   // (|ActivePageManagerContainer| and |ActivePageManager|), so it needs a |WeakPtrFactory| to keep
   // its callbacks scoped to itself. Must be the last member.
   fxl::WeakPtrFactory<InspectedCommit> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(InspectedCommit);
 };
 
 }  // namespace ledger

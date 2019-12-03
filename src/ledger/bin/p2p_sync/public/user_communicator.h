@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
@@ -17,6 +16,8 @@ namespace p2p_sync {
 class UserCommunicator {
  public:
   UserCommunicator() = default;
+  UserCommunicator(const UserCommunicator&) = delete;
+  UserCommunicator& operator=(const UserCommunicator&) = delete;
   virtual ~UserCommunicator() = default;
 
   // Connects this device to its device mesh. To be called exactly once before
@@ -26,9 +27,6 @@ class UserCommunicator {
   // All |LedgerCommunicator| objects obtained through this method must be
   // destroyed before |UserCommunicator|.
   virtual std::unique_ptr<LedgerCommunicator> GetLedgerCommunicator(std::string repository_id) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(UserCommunicator);
 };
 
 }  // namespace p2p_sync

@@ -9,7 +9,6 @@
 
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace sync_coordinator {
@@ -18,6 +17,8 @@ namespace sync_coordinator {
 class UserSync {
  public:
   UserSync() = default;
+  UserSync(const UserSync&) = delete;
+  UserSync& operator=(const UserSync&) = delete;
   virtual ~UserSync() = default;
 
   // Starts the user-level synchronization.
@@ -31,9 +32,6 @@ class UserSync {
   // synchronization must be started before calling this method.
   virtual std::unique_ptr<LedgerSync> CreateLedgerSync(
       fxl::StringView app_id, encryption::EncryptionService* encryption_service) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(UserSync);
 };
 
 }  // namespace sync_coordinator

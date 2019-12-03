@@ -21,6 +21,8 @@ namespace ledger {
 class TokenManager {
  public:
   TokenManager();
+  TokenManager(const TokenManager&) = delete;
+  TokenManager& operator=(const TokenManager&) = delete;
   ~TokenManager();
 
   // Sets the on_discardable callback, to be called every time this object becomes
@@ -38,8 +40,6 @@ class TokenManager {
   fit::closure on_discardable_;
   // Must be the last member.
   fxl::WeakPtrFactory<TokenManager> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(TokenManager);
 };
 
 }  // namespace ledger

@@ -229,6 +229,8 @@ class SubstituteInspectablePage : public InspectablePage {
 class InspectedCommitTest : public TestWithEnvironment {
  public:
   InspectedCommitTest() = default;
+  InspectedCommitTest(const InspectedCommitTest&) = delete;
+  InspectedCommitTest& operator=(const InspectedCommitTest&) = delete;
   ~InspectedCommitTest() override = default;
 
   // gtest::TestWithEnvironment:
@@ -246,9 +248,6 @@ class InspectedCommitTest : public TestWithEnvironment {
   // indirection that should be eliminable in Inspect's upcoming "VMO-World".
   inspect_deprecated::Node top_level_node_;
   inspect_deprecated::Node attachment_node_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(InspectedCommitTest);
 };
 
 TEST_F(InspectedCommitTest, OnDiscardableCalledNoChildrenManagement) {

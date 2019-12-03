@@ -11,7 +11,6 @@
 
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 
@@ -26,6 +25,8 @@ bool CommitHasIdAndData(const cloud_provider::Commit& commit);
 class TestPageCloud : public cloud_provider::PageCloud {
  public:
   explicit TestPageCloud(fidl::InterfaceRequest<cloud_provider::PageCloud> request);
+  TestPageCloud(const TestPageCloud&) = delete;
+  TestPageCloud& operator=(const TestPageCloud&) = delete;
   ~TestPageCloud() override;
 
   void RunPendingCallbacks();
@@ -79,8 +80,6 @@ class TestPageCloud : public cloud_provider::PageCloud {
   void UpdateClock(cloud_provider::ClockPack commits, UpdateClockCallback callback) override;
 
   fidl::Binding<cloud_provider::PageCloud> binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestPageCloud);
 };
 
 }  // namespace cloud_sync

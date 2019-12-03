@@ -22,7 +22,6 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/macros.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {
@@ -33,10 +32,9 @@ using ::testing::SizeIs;
 class PageWatcherIntegrationTest : public IntegrationTest {
  public:
   PageWatcherIntegrationTest() = default;
+  PageWatcherIntegrationTest(const PageWatcherIntegrationTest&) = delete;
+  PageWatcherIntegrationTest& operator=(const PageWatcherIntegrationTest&) = delete;
   ~PageWatcherIntegrationTest() override = default;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageWatcherIntegrationTest);
 };
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherSimple) {

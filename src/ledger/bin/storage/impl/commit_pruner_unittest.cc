@@ -18,7 +18,6 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/macros.h"
 
 using ::testing::_;
 using ::testing::AllOf;
@@ -119,11 +118,9 @@ class FakeCommitPrunerDelegate : public CommitPruner::CommitPrunerDelegate {
 class CommitPrunerTest : public ledger::TestWithEnvironment {
  public:
   CommitPrunerTest() = default;
-
+  CommitPrunerTest(const CommitPrunerTest&) = delete;
+  CommitPrunerTest& operator=(const CommitPrunerTest&) = delete;
   ~CommitPrunerTest() override = default;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(CommitPrunerTest);
 };
 
 TEST_F(CommitPrunerTest, NoPruningPolicy) {

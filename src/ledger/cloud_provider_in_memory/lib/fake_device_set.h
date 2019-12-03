@@ -13,7 +13,6 @@
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -21,6 +20,8 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
  public:
   FakeDeviceSet(CloudEraseOnCheck cloud_erase_on_check,
                 CloudEraseFromWatcher cloud_erase_from_watcher, fit::closure on_watcher_set);
+  FakeDeviceSet(const FakeDeviceSet&) = delete;
+  FakeDeviceSet& operator=(const FakeDeviceSet&) = delete;
   ~FakeDeviceSet() override;
 
  private:
@@ -45,8 +46,6 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
 
   // Watcher set by the client.
   cloud_provider::DeviceSetWatcherPtr watcher_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeDeviceSet);
 };
 
 }  // namespace ledger

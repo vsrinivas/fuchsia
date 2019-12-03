@@ -76,7 +76,8 @@ class NodeBuilder {
   NodeBuilder() { FXL_DCHECK(Validate()); }
 
   NodeBuilder(NodeBuilder&&) = default;
-
+  NodeBuilder(const NodeBuilder&) = delete;
+  NodeBuilder& operator=(const NodeBuilder&) = delete;
   NodeBuilder& operator=(NodeBuilder&&) = default;
 
   // Returns whether the builder is null.
@@ -208,8 +209,6 @@ class NodeBuilder {
   PageStorage::Location location_;
   std::vector<Entry> entries_;
   std::vector<NodeBuilder> children_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(NodeBuilder);
 };
 
 Status NodeBuilder::FromIdentifier(SynchronousStorage* page_storage,

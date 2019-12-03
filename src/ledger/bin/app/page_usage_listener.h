@@ -15,6 +15,8 @@ namespace ledger {
 class PageUsageListener {
  public:
   PageUsageListener() = default;
+  PageUsageListener(const PageUsageListener&) = delete;
+  PageUsageListener& operator=(const PageUsageListener&) = delete;
   virtual ~PageUsageListener() = default;
 
   // Called when an external page connection has been requested. In case of concurrent external
@@ -30,11 +32,6 @@ class PageUsageListener {
 
   // Called when the last open internal connection to a page is closed.
   virtual void OnInternallyUnused(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
-
-
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageUsageListener);
 };
 
 }  // namespace ledger

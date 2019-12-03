@@ -18,6 +18,8 @@ namespace ledger {
 class DiskCleanupManagerImpl : public DiskCleanupManager, public PageUsageListener {
  public:
   DiskCleanupManagerImpl(Environment* environment, PageUsageDb* db);
+  DiskCleanupManagerImpl(const DiskCleanupManagerImpl&) = delete;
+  DiskCleanupManagerImpl& operator=(const DiskCleanupManagerImpl&) = delete;
   ~DiskCleanupManagerImpl() override;
 
   // Sets the delegate for PageEvictionManager owned by DiskCleanupManagerImpl.
@@ -60,8 +62,6 @@ class DiskCleanupManagerImpl : public DiskCleanupManager, public PageUsageListen
 
   // TODO(nellyv): Add OnLowResources and OnPeriodicCleanUp to handle cleanup
   // opeations on the corresponding cases.
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DiskCleanupManagerImpl);
 };
 
 }  // namespace ledger

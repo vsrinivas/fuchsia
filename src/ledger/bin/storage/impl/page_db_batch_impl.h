@@ -17,6 +17,8 @@ class PageDbBatchImpl : public PageDb::Batch {
  public:
   explicit PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* page_db,
                            ObjectIdentifierFactory* factory);
+  PageDbBatchImpl(const PageDbBatchImpl&) = delete;
+  PageDbBatchImpl& operator=(const PageDbBatchImpl&) = delete;
   ~PageDbBatchImpl() override;
 
   // Heads.
@@ -79,8 +81,6 @@ class PageDbBatchImpl : public PageDb::Batch {
   ObjectIdentifierFactory* const factory_;
   // Object digests to be deleted when the batch is executed.
   std::set<ObjectDigest> pending_deletion_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageDbBatchImpl);
 };
 
 }  // namespace storage

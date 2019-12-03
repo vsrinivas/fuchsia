@@ -12,13 +12,14 @@
 #include <vector>
 
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 
 class Commit {
  public:
   Commit() = default;
+  Commit(const Commit&) = delete;
+  Commit& operator=(const Commit&) = delete;
   virtual ~Commit() = default;
 
   // Returns a copy of the commit.
@@ -49,9 +50,6 @@ class Commit {
 
   // Returns true if new commits can use this commit object as parent. False otherwise.
   virtual bool IsAlive() const = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Commit);
 };
 
 // Generate an id for a commit based on its content.

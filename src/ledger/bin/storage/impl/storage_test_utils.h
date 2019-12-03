@@ -104,7 +104,8 @@ class StorageTest : public ledger::TestWithEnvironment {
   StorageTest(GarbageCollectionPolicy gc_policy,
               DiffCompatibilityPolicy diff_compatibility_policy =
                   DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES);
-
+  StorageTest(const StorageTest&) = delete;
+  StorageTest& operator=(const StorageTest&) = delete;
   ~StorageTest() override;
 
   virtual PageStorage* GetStorage() = 0;
@@ -160,9 +161,6 @@ class StorageTest : public ledger::TestWithEnvironment {
   ::testing::AssertionResult CreateTreeFromChanges(const ObjectIdentifier& base_node_identifier,
                                                    const std::vector<EntryChange>& entries,
                                                    ObjectIdentifier* new_root_identifier);
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(StorageTest);
 };
 
 }  // namespace storage

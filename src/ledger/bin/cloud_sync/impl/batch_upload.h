@@ -18,7 +18,6 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace cloud_sync {
@@ -58,6 +57,8 @@ class BatchUpload {
               cloud_provider::PageCloudPtr* page_cloud,
               std::vector<std::unique_ptr<const storage::Commit>> commits, fit::closure on_done,
               fit::function<void(ErrorType)> on_error, unsigned int max_concurrent_uploads = 10);
+  BatchUpload(const BatchUpload&) = delete;
+  BatchUpload& operator=(const BatchUpload&) = delete;
   ~BatchUpload();
 
   // Starts a new upload attempt. Results are reported through |on_done|
@@ -146,8 +147,6 @@ class BatchUpload {
 
   // Must be the last member.
   fxl::WeakPtrFactory<BatchUpload> weak_ptr_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(BatchUpload);
 };
 
 }  // namespace cloud_sync

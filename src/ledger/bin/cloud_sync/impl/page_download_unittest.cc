@@ -32,7 +32,6 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 namespace {
@@ -79,6 +78,8 @@ class BasePageDownloadTest : public ledger::TestWithEnvironment, public PageDown
         std::make_unique<PageDownload>(&task_runner_, &storage_, &storage_, &encryption_service_,
                                        &page_cloud_ptr_, this, NewTestBackoff());
   }
+  BasePageDownloadTest(const BasePageDownloadTest&) = delete;
+  BasePageDownloadTest& operator=(const BasePageDownloadTest&) = delete;
   ~BasePageDownloadTest() override = default;
 
  protected:
@@ -125,7 +126,6 @@ class BasePageDownloadTest : public ledger::TestWithEnvironment, public PageDown
 
   fit::closure new_state_callback_;
   callback::ScopedTaskRunner task_runner_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(BasePageDownloadTest);
 };
 
 using PageDownloadTest = BasePageDownloadTest<encryption::FakeEncryptionService>;

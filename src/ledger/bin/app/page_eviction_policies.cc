@@ -41,6 +41,9 @@ class LeastRecentlyUsedPageEvictionPolicy : public PageEvictionPolicy {
  public:
   LeastRecentlyUsedPageEvictionPolicy(coroutine::CoroutineService* coroutine_service,
                                       PageEvictionDelegate* delegate);
+  LeastRecentlyUsedPageEvictionPolicy(const LeastRecentlyUsedPageEvictionPolicy&) = delete;
+  LeastRecentlyUsedPageEvictionPolicy& operator=(const LeastRecentlyUsedPageEvictionPolicy&) =
+      delete;
 
   void SelectAndEvict(std::unique_ptr<storage::Iterator<const PageInfo>> pages,
                       fit::function<void(Status)> callback) override;
@@ -48,8 +51,6 @@ class LeastRecentlyUsedPageEvictionPolicy : public PageEvictionPolicy {
  private:
   PageEvictionDelegate* delegate_;
   coroutine::CoroutineManager coroutine_manager_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LeastRecentlyUsedPageEvictionPolicy);
 };
 
 class AgeBasedPageEvictionPolicy : public PageEvictionPolicy {
@@ -57,6 +58,8 @@ class AgeBasedPageEvictionPolicy : public PageEvictionPolicy {
   AgeBasedPageEvictionPolicy(coroutine::CoroutineService* coroutine_service,
                              PageEvictionDelegate* delegate, timekeeper::Clock* clock,
                              zx::duration unused_time_limit);
+  AgeBasedPageEvictionPolicy(const AgeBasedPageEvictionPolicy&) = delete;
+  AgeBasedPageEvictionPolicy& operator=(const AgeBasedPageEvictionPolicy&) = delete;
 
   void SelectAndEvict(std::unique_ptr<storage::Iterator<const PageInfo>> pages,
                       fit::function<void(Status)> callback) override;
@@ -66,8 +69,6 @@ class AgeBasedPageEvictionPolicy : public PageEvictionPolicy {
   coroutine::CoroutineManager coroutine_manager_;
   timekeeper::Clock* clock_;
   zx::duration unused_time_limit_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(AgeBasedPageEvictionPolicy);
 };
 
 LeastRecentlyUsedPageEvictionPolicy::LeastRecentlyUsedPageEvictionPolicy(

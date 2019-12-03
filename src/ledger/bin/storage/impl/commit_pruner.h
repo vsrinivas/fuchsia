@@ -33,6 +33,8 @@ class CommitPruner {
   };
   CommitPruner(ledger::Environment* environment, CommitPrunerDelegate* delegate,
                LiveCommitTracker* commit_tracker, CommitPruningPolicy policy);
+  CommitPruner(const CommitPruner&) = delete;
+  CommitPruner& operator=(const CommitPruner&) = delete;
   ~CommitPruner();
 
   // Schedule a pruning cycle. If no pruning cycle is in progress, a task is posted to start pruning
@@ -81,8 +83,6 @@ class CommitPruner {
   PruningState state_ = PruningState::IDLE;
 
   coroutine::CoroutineManager coroutine_manager_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(CommitPruner);
 };
 
 }  // namespace storage

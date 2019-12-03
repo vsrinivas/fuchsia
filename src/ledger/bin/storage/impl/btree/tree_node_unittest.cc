@@ -37,7 +37,8 @@ class FakePageStorageValidDigest : public fake::FakePageStorage {
 class TreeNodeTest : public StorageTest {
  public:
   TreeNodeTest() : fake_storage_(&environment_, "page_id") {}
-
+  TreeNodeTest(const TreeNodeTest&) = delete;
+  TreeNodeTest& operator=(const TreeNodeTest&) = delete;
   ~TreeNodeTest() override = default;
 
  protected:
@@ -66,9 +67,6 @@ class TreeNodeTest : public StorageTest {
   }
 
   FakePageStorageValidDigest fake_storage_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(TreeNodeTest);
 };
 
 TEST_F(TreeNodeTest, CreateGetTreeNode) {

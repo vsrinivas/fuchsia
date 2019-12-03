@@ -14,7 +14,6 @@
 #include <memory>
 #include <string>
 
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace socket {
@@ -35,6 +34,8 @@ class SocketWriter {
 
   explicit SocketWriter(Client* client,
                         async_dispatcher_t* dispatcher = async_get_default_dispatcher());
+  SocketWriter(const SocketWriter&) = delete;
+  SocketWriter& operator=(const SocketWriter&) = delete;
   ~SocketWriter();
 
   void Start(zx::socket destination);
@@ -54,8 +55,6 @@ class SocketWriter {
   fxl::StringView data_view_;
   zx::socket destination_;
   async::Wait wait_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SocketWriter);
 };
 
 // Writes the content of a string to a socket. Deletes itself when done.

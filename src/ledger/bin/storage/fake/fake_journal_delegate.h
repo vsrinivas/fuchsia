@@ -15,7 +15,6 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 namespace fake {
@@ -36,6 +35,8 @@ class FakeJournalDelegate {
   // starts.
   FakeJournalDelegate(rng::Random* random, FakeObjectIdentifierFactory* factory, Data initial_data,
                       CommitId parent_id, CommitId other_id, bool autocommit, uint64_t generation);
+  FakeJournalDelegate(const FakeJournalDelegate&) = delete;
+  FakeJournalDelegate& operator=(const FakeJournalDelegate&) = delete;
   ~FakeJournalDelegate();
 
   const CommitId& GetId() const { return id_; }
@@ -69,8 +70,6 @@ class FakeJournalDelegate {
   fit::function<void(Status, std::unique_ptr<const storage::Commit>)> commit_callback_;
 
   FakeObjectIdentifierFactory* factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeJournalDelegate);
 };
 
 }  // namespace fake

@@ -49,7 +49,6 @@
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
@@ -445,6 +444,8 @@ class PageStorageTest : public StorageTest {
                                DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES)
       : StorageTest(gc_policy, diff_compatibility_policy), encryption_service_(dispatcher()) {}
 
+  PageStorageTest(const PageStorageTest&) = delete;
+  PageStorageTest& operator=(const PageStorageTest&) = delete;
   ~PageStorageTest() override = default;
 
   // Test:
@@ -829,9 +830,6 @@ class PageStorageTest : public StorageTest {
   // A fake factory to allocate test identifiers, ensuring they are not automatically tracked by
   // |storage_| (hence leaving more opportunities to find garbage-collection bugs).
   fake::FakeObjectIdentifierFactory fake_factory_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageStorageTest);
 };
 
 // A PageStorage test with garbage-collection disabled.

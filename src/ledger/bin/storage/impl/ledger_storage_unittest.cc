@@ -21,7 +21,6 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 namespace {
@@ -38,6 +37,8 @@ class LedgerStorageTest : public ledger::TestWithEnvironment {
                  ledger::DetachedPath(tmpfs_.root_fd()), CommitPruningPolicy::NEVER,
                  &device_id_manager_) {}
 
+  LedgerStorageTest(const LedgerStorageTest&) = delete;
+  LedgerStorageTest& operator=(const LedgerStorageTest&) = delete;
   ~LedgerStorageTest() override = default;
 
   // ledger::TestWithEnvironment:
@@ -55,8 +56,6 @@ class LedgerStorageTest : public ledger::TestWithEnvironment {
   fake::FakeDbFactory db_factory_;
   clocks::DeviceIdManagerEmptyImpl device_id_manager_;
   LedgerStorageImpl storage_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerStorageTest);
 };
 
 TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {

@@ -49,6 +49,8 @@ class P2PProviderImpl : public P2PProvider, public fuchsia::overnet::ServiceProv
   P2PProviderImpl(fuchsia::overnet::OvernetPtr overnet,
                   std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider,
                   rng::Random* random);
+  P2PProviderImpl(const P2PProviderImpl&) = delete;
+  P2PProviderImpl& operator=(const P2PProviderImpl&) = delete;
   ~P2PProviderImpl() override;
 
   // P2PProvider:
@@ -93,8 +95,6 @@ class P2PProviderImpl : public P2PProvider, public fuchsia::overnet::ServiceProv
   fuchsia::overnet::OvernetPtr const overnet_;
   std::unique_ptr<p2p_provider::UserIdProvider> const user_id_provider_;
   rng::Random* random_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(P2PProviderImpl);
 };
 
 }  // namespace p2p_provider

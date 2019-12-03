@@ -40,7 +40,6 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
@@ -223,6 +222,8 @@ class YieldingDeviceIdManager : public clocks::DeviceIdManager {
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryImplTest() = default;
+  LedgerRepositoryImplTest(const LedgerRepositoryImplTest&) = delete;
+  LedgerRepositoryImplTest& operator=(const LedgerRepositoryImplTest&) = delete;
 
   void SetUp() override {
     std::unique_ptr<storage::fake::FakeDbFactory> db_factory =
@@ -302,8 +303,6 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
   inspect_deprecated::Node attachment_node_;
   std::unique_ptr<LedgerRepositoryImpl> repository_;
 
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImplTest);
 };  // namespace
 
 TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {

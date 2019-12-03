@@ -6,19 +6,21 @@
 #define SRC_LEDGER_BIN_TESTS_CLOUD_PROVIDER_VALIDATION_TEST_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <gtest/gtest.h>
+
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/tests/cloud_provider/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_provider {
 
 class ValidationTest : public ::gtest::TestLoopFixture {
  public:
   ValidationTest();
+  ValidationTest(const ValidationTest&) = delete;
+  ValidationTest& operator=(const ValidationTest&) = delete;
   ~ValidationTest() override;
 
   void SetUp() override;
@@ -30,8 +32,6 @@ class ValidationTest : public ::gtest::TestLoopFixture {
  private:
   std::unique_ptr<sys::ComponentContext> component_context_;
   rng::TestRandom random_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ValidationTest);
 };
 
 }  // namespace cloud_provider

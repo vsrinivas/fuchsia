@@ -7,7 +7,6 @@
 
 #include <lib/fit/function.h>
 
-#include "src/lib/fxl/macros.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -18,6 +17,8 @@ namespace ledger {
 class InspectedHead final {
  public:
   explicit InspectedHead(inspect_deprecated::Node node);
+  InspectedHead(const InspectedHead&) = delete;
+  InspectedHead& operator=(const InspectedHead&) = delete;
   ~InspectedHead();
 
   void SetOnDiscardable(fit::closure on_discardable);
@@ -31,8 +32,6 @@ class InspectedHead final {
   // TODO(nathaniel): This integer should be replaced with a (weak-pointer-less in this case)
   // TokenManager.
   int64_t outstanding_detachers_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(InspectedHead);
 };
 
 }  // namespace ledger

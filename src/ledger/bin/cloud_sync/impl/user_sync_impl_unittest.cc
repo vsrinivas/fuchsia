@@ -19,7 +19,6 @@
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/files/file.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 
@@ -76,6 +75,8 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
         [this] { on_version_mismatch_calls_++; }, &fingerprint_manager_);
     user_sync_->SetSyncWatcher(&sync_state_watcher_);
   }
+  UserSyncImplTest(const UserSyncImplTest&) = delete;
+  UserSyncImplTest& operator=(const UserSyncImplTest&) = delete;
   ~UserSyncImplTest() override = default;
 
  protected:
@@ -93,9 +94,6 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
   TestDeviceFingerprintManager fingerprint_manager_;
 
   int on_version_mismatch_calls_ = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(UserSyncImplTest);
 };
 
 // Verifies that the mismatch callback is called if the fingerprint appears to

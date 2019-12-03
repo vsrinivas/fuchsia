@@ -9,7 +9,6 @@
 #include <lib/fit/function.h>
 
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -41,6 +40,8 @@ class FakeOvernet : public fuchsia::overnet::Overnet {
   };
 
   explicit FakeOvernet(async_dispatcher_t* dispatcher, uint64_t self_id, Delegate* delegate);
+  FakeOvernet(const FakeOvernet&) = delete;
+  FakeOvernet& operator=(const FakeOvernet&) = delete;
   ~FakeOvernet() override = default;
 
   // Connects to the service provider of this (virtual) host
@@ -77,8 +78,6 @@ class FakeOvernet : public fuchsia::overnet::Overnet {
   Delegate* const delegate_;
   callback::AutoCleanableMap<std::string, ServiceProviderHolder> service_providers_;
   std::shared_ptr<uint64_t> last_seen_peers_version_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeOvernet);
 };
 
 }  // namespace ledger

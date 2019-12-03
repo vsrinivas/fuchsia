@@ -22,7 +22,6 @@
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/macros.h"
 
 namespace p2p_provider {
 namespace {
@@ -81,6 +80,8 @@ class P2PProviderImplTest : public ledger::TestWithEnvironment,
                             public ::testing::WithParamInterface<bool> {
  public:
   P2PProviderImplTest() : overnet_factory_(dispatcher()) {}
+  P2PProviderImplTest(const P2PProviderImplTest&) = delete;
+  P2PProviderImplTest& operator=(const P2PProviderImplTest&) = delete;
   ~P2PProviderImplTest() override = default;
 
   std::unique_ptr<P2PProvider> GetProvider(uint64_t host_id, std::string user_name) {
@@ -99,9 +100,6 @@ class P2PProviderImplTest : public ledger::TestWithEnvironment,
   void SetUp() override { ::testing::Test::SetUp(); }
 
   ledger::OvernetFactory overnet_factory_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(P2PProviderImplTest);
 };
 
 TEST_P(P2PProviderImplTest, NoSelfPeerNoCrash) {

@@ -18,7 +18,6 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/lib/callback/operation_serializer.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
@@ -34,6 +33,8 @@ class ConflictResolverClient : public fuchsia::ledger::MergeResultProviderSyncab
                                   std::unique_ptr<const storage::Commit> right,
                                   std::unique_ptr<const storage::Commit> ancestor,
                                   fit::function<void(Status)> callback);
+  ConflictResolverClient(const ConflictResolverClient&) = delete;
+  ConflictResolverClient& operator=(const ConflictResolverClient&) = delete;
   ~ConflictResolverClient() override;
 
   void Start();
@@ -107,8 +108,6 @@ class ConflictResolverClient : public fuchsia::ledger::MergeResultProviderSyncab
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<ConflictResolverClient> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverClient);
 };
 
 }  // namespace ledger

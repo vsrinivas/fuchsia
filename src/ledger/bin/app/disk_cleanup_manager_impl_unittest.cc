@@ -50,6 +50,8 @@ class FakeDelegate : public PageEvictionManager::Delegate {
 class DiskCleanupManagerTest : public TestWithEnvironment {
  public:
   DiskCleanupManagerTest() : db_factory_(environment_.dispatcher()) {}
+  DiskCleanupManagerTest(const DiskCleanupManagerTest&) = delete;
+  DiskCleanupManagerTest& operator=(const DiskCleanupManagerTest&) = delete;
 
   // gtest::TestLoopFixture:
   void SetUp() override {
@@ -89,8 +91,6 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
  protected:
   FakeDelegate delegate_;
   std::unique_ptr<DiskCleanupManagerImpl> disk_cleanup_manager_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DiskCleanupManagerTest);
 };
 
 TEST_F(DiskCleanupManagerTest, DontEvictNonEmptyPagesOnPageUnused) {

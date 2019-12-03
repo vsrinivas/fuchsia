@@ -31,6 +31,8 @@ class Db {
    public:
     // A |Batch| can be used to execute a number of updates in |Db| atomically.
     Batch() = default;
+    Batch(const Batch&) = delete;
+    Batch& operator=(const Batch&) = delete;
     virtual ~Batch() = default;
 
     // Inserts the given key-value pair in the database.
@@ -45,9 +47,6 @@ class Db {
     // Executes this batch. No further operations in this batch are supported
     // after a successful execution.
     FXL_WARN_UNUSED_RESULT virtual Status Execute(coroutine::CoroutineHandler* handler) = 0;
-
-   private:
-    FXL_DISALLOW_COPY_AND_ASSIGN(Batch);
   };
 
   Db() = default;

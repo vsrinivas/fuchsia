@@ -39,6 +39,8 @@ namespace ledger {
 class PageUsageDb {
  public:
   PageUsageDb(Environment* environment, std::unique_ptr<storage::Db> db);
+  PageUsageDb(const PageUsageDb&) = delete;
+  PageUsageDb& operator=(const PageUsageDb&) = delete;
   ~PageUsageDb();
 
   // Marks the page with the given id as opened. |INTERNAL_ERROR| is returned if
@@ -93,8 +95,6 @@ class PageUsageDb {
   // single page (e.g. a page is opened and then closed) are written in |db_| in
   // the right order, i.e. the order in which they were called.
   callback::OperationSerializer serializer_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageUsageDb);
 };
 
 }  // namespace ledger

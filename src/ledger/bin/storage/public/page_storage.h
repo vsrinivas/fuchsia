@@ -18,7 +18,6 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
@@ -30,14 +29,13 @@ class PageStorage : public PageSyncClient {
     CommitIdAndBytes();
     CommitIdAndBytes(CommitId id, std::string bytes);
     CommitIdAndBytes(CommitIdAndBytes&& other) noexcept;
+    CommitIdAndBytes(const CommitIdAndBytes&) = delete;
+    CommitIdAndBytes& operator=(const CommitIdAndBytes&) = delete;
 
     CommitIdAndBytes& operator=(CommitIdAndBytes&& other) noexcept;
 
     CommitId id;
     std::string bytes;
-
-   private:
-    FXL_DISALLOW_COPY_AND_ASSIGN(CommitIdAndBytes);
   };
 
   // Location where to search an object. See |GetObject| call for usage.
@@ -82,6 +80,8 @@ class PageStorage : public PageSyncClient {
   };
 
   PageStorage() = default;
+  PageStorage(const PageStorage&) = delete;
+  PageStorage& operator=(const PageStorage&) = delete;
   ~PageStorage() override = default;
 
   // Returns the id of this page.
@@ -297,9 +297,6 @@ class PageStorage : public PageSyncClient {
   // Finds the commit id of the commit with the given |remote_commit_id|.
   virtual void GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
                                        fit::function<void(Status, CommitId)> callback) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageStorage);
 };
 
 bool operator==(const PageStorage::CommitIdAndBytes& lhs, const PageStorage::CommitIdAndBytes& rhs);

@@ -15,7 +15,6 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
@@ -28,6 +27,8 @@ class MergeResolver : public storage::CommitWatcher {
  public:
   MergeResolver(fit::closure on_destroyed, Environment* environment, storage::PageStorage* storage,
                 std::unique_ptr<backoff::Backoff> backoff);
+  MergeResolver(const MergeResolver&) = delete;
+  MergeResolver& operator=(const MergeResolver&) = delete;
   ~MergeResolver() override;
 
   void SetOnDiscardable(fit::closure on_discardable);
@@ -148,8 +149,6 @@ class MergeResolver : public storage::CommitWatcher {
 
   // ScopedTaskRunner must be the last member of the class.
   callback::ScopedTaskRunner task_runner_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MergeResolver);
 };
 
 }  // namespace ledger

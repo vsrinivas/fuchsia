@@ -12,7 +12,6 @@
 
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 
@@ -20,6 +19,8 @@ namespace storage {
 class LedgerStorage {
  public:
   LedgerStorage() = default;
+  LedgerStorage(const LedgerStorage&) = delete;
+  LedgerStorage& operator=(const LedgerStorage&) = delete;
   virtual ~LedgerStorage() = default;
 
   // Finds the PageIds of pages that occupy storage on disk.
@@ -40,9 +41,6 @@ class LedgerStorage {
   // This method can fail with a |PAGE_NOT_FOUND| error if the page is not
   // present in the local storage, or with an |IO_ERROR| if deletion fails.
   virtual void DeletePageStorage(PageIdView page_id, fit::function<void(Status)> callback) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerStorage);
 };
 
 }  // namespace storage

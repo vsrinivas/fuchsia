@@ -26,6 +26,8 @@ class LevelDb : public Db {
  public:
   explicit LevelDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);
 
+  LevelDb(const LevelDb&) = delete;
+  LevelDb& operator=(const LevelDb&) = delete;
   ~LevelDb() override;
 
   Status Init();
@@ -61,8 +63,6 @@ class LevelDb : public Db {
   const leveldb::ReadOptions read_options_;
 
   uint64_t active_batches_count_ = 0;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LevelDb);
 };
 
 }  // namespace storage

@@ -14,12 +14,13 @@
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_device_set.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 class TestCloudProvider : public cloud_provider::CloudProvider {
  public:
   explicit TestCloudProvider(fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
+  TestCloudProvider(const TestCloudProvider&) = delete;
+  TestCloudProvider& operator=(const TestCloudProvider&) = delete;
   ~TestCloudProvider() override;
 
   TestDeviceSet device_set;
@@ -37,8 +38,6 @@ class TestCloudProvider : public cloud_provider::CloudProvider {
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fidl::Binding<cloud_provider::DeviceSet> device_set_binding_;
   std::map<std::pair<std::string, std::string>, std::unique_ptr<TestPageCloud>> page_cloud_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestCloudProvider);
 };
 
 }  // namespace cloud_sync

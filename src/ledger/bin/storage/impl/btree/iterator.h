@@ -40,6 +40,8 @@ class BTreeIterator {
   explicit BTreeIterator(SynchronousStorage* storage);
 
   BTreeIterator(BTreeIterator&& other) noexcept;
+  BTreeIterator(const BTreeIterator&) = delete;
+  BTreeIterator& operator=(const BTreeIterator&) = delete;
   BTreeIterator& operator=(BTreeIterator&& other) noexcept;
 
   // Initializes the iterator with the root node of the tree.
@@ -103,8 +105,6 @@ class BTreeIterator {
   // entry index.
   std::vector<std::pair<std::unique_ptr<const TreeNode>, size_t>> stack_;
   bool descending_ = true;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(BTreeIterator);
 };
 
 // Retrieves the ids of all objects in the B-Tree, i.e tree nodes and values of

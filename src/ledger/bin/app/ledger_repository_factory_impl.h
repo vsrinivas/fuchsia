@@ -26,7 +26,6 @@
 #include "src/lib/callback/cancellable.h"
 #include "src/lib/callback/managed_container.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
@@ -39,6 +38,8 @@ class LedgerRepositoryFactoryImpl
       Environment* environment,
       std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
       inspect_deprecated::Node inspect_node);
+  LedgerRepositoryFactoryImpl(const LedgerRepositoryFactoryImpl&) = delete;
+  LedgerRepositoryFactoryImpl& operator=(const LedgerRepositoryFactoryImpl&) = delete;
   ~LedgerRepositoryFactoryImpl() override;
 
   // LedgerRepositoryFactorySyncableDelegate:
@@ -88,8 +89,6 @@ class LedgerRepositoryFactoryImpl
   coroutine::CoroutineManager coroutine_manager_;
 
   fxl::WeakPtrFactory<LedgerRepositoryFactoryImpl> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };
 
 }  // namespace ledger

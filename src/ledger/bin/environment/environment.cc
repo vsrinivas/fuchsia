@@ -11,7 +11,6 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 #include "src/lib/backoff/exponential_backoff.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 

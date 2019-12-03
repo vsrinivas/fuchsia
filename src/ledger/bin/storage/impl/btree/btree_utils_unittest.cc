@@ -71,6 +71,8 @@ class BTreeUtilsTest : public StorageTest {
  public:
   BTreeUtilsTest() : fake_storage_(&environment_, "page_id") {}
 
+  BTreeUtilsTest(const BTreeUtilsTest&) = delete;
+  BTreeUtilsTest& operator=(const BTreeUtilsTest&) = delete;
   ~BTreeUtilsTest() override = default;
 
  protected:
@@ -119,9 +121,6 @@ class BTreeUtilsTest : public StorageTest {
   }
 
   TrackGetObjectFakePageStorage fake_storage_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(BTreeUtilsTest);
 };
 
 TEST_F(BTreeUtilsTest, GetNodeLevel) {

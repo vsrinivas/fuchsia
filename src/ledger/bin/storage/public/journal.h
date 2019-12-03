@@ -10,7 +10,6 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 
@@ -18,6 +17,8 @@ namespace storage {
 class Journal {
  public:
   Journal() = default;
+  Journal(const Journal&) = delete;
+  Journal& operator=(const Journal&) = delete;
   virtual ~Journal() = default;
 
   // Adds an entry with the given |key| and |object_identifier| to this
@@ -32,9 +33,6 @@ class Journal {
   // present on the page. This doesn't prevent subsequent calls to update the
   // contents of this Journal (|Put|, |Delete| or |Clear|).
   virtual void Clear() = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Journal);
 };
 
 }  // namespace storage

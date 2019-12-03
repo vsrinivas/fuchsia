@@ -11,7 +11,6 @@
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace diff_utils {

@@ -11,7 +11,6 @@
 
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace storage {
 
@@ -28,6 +27,8 @@ enum class RetrievedObjectType {
 class PageSyncDelegate {
  public:
   PageSyncDelegate() = default;
+  PageSyncDelegate(const PageSyncDelegate&) = delete;
+  PageSyncDelegate& operator=(const PageSyncDelegate&) = delete;
   virtual ~PageSyncDelegate() = default;
 
   // Retrieves the piece of the given id from the network.
@@ -62,9 +63,6 @@ class PageSyncDelegate {
   virtual void GetDiff(
       CommitId commit_id, std::vector<CommitId> possible_bases,
       fit::function<void(Status, CommitId, std::vector<EntryChange>)> callback) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageSyncDelegate);
 };
 
 }  // namespace storage

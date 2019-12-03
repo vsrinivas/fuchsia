@@ -22,6 +22,8 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
  public:
   CoroutineHandlerImpl(std::unique_ptr<context::Stack> stack,
                        fit::function<void(CoroutineHandler*)> runnable);
+  CoroutineHandlerImpl(const CoroutineHandlerImpl&) = delete;
+  CoroutineHandlerImpl& operator=(const CoroutineHandlerImpl&) = delete;
   ~CoroutineHandlerImpl() override;
 
   // CoroutineHandler.
@@ -50,8 +52,6 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
   const void* origin_stack_ = nullptr;
   size_t origin_stacksize_ = 0;
 #endif
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(CoroutineHandlerImpl);
 };
 
 CoroutineServiceImpl::CoroutineHandlerImpl::CoroutineHandlerImpl(

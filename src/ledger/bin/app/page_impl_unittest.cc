@@ -34,7 +34,6 @@
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/macros.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 using testing::Contains;
@@ -58,6 +57,8 @@ std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
 class PageImplTest : public TestWithEnvironment {
  public:
   PageImplTest() = default;
+  PageImplTest(const PageImplTest&) = delete;
+  PageImplTest& operator=(const PageImplTest&) = delete;
   ~PageImplTest() override = default;
 
  protected:
@@ -163,9 +164,6 @@ class PageImplTest : public TestWithEnvironment {
   MergeResolver* resolver_;
 
   PagePtr page_ptr_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);
 };
 
 TEST_F(PageImplTest, GetId) {

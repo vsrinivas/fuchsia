@@ -12,7 +12,6 @@
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
@@ -23,6 +22,8 @@ using PageWasEvicted = bool;
 class PageEvictionPolicy {
  public:
   PageEvictionPolicy() = default;
+  PageEvictionPolicy(const PageEvictionPolicy&) = delete;
+  PageEvictionPolicy& operator=(const PageEvictionPolicy&) = delete;
   virtual ~PageEvictionPolicy() = default;
 
   // Given an iterator over all pages currently stored on disk, chooses and
@@ -32,9 +33,6 @@ class PageEvictionPolicy {
   // page was evited.
   virtual void SelectAndEvict(std::unique_ptr<storage::Iterator<const PageInfo>> pages,
                               fit::function<void(Status)> callback) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionPolicy);
 };
 
 // The condition to be checked before evicting a page.
@@ -50,6 +48,8 @@ enum PageEvictionCondition {
 class PageEvictionDelegate {
  public:
   PageEvictionDelegate() = default;
+  PageEvictionDelegate(const PageEvictionDelegate&) = delete;
+  PageEvictionDelegate& operator=(const PageEvictionDelegate&) = delete;
   virtual ~PageEvictionDelegate() = default;
 
   // Checks whether the given page can be evicted based on the given
@@ -64,9 +64,6 @@ class PageEvictionDelegate {
   virtual void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
                             PageEvictionCondition condition,
                             fit::function<void(Status, PageWasEvicted)> callback) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionDelegate);
 };
 
 // Creates and returns a new Least-Recently-Used policy, which evicts the least

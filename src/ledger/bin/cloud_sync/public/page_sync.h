@@ -10,7 +10,6 @@
 #include <functional>
 
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 
@@ -22,6 +21,8 @@ namespace cloud_sync {
 class PageSync {
  public:
   PageSync() = default;
+  PageSync(const PageSync&) = delete;
+  PageSync& operator=(const PageSync&) = delete;
   virtual ~PageSync() = default;
 
   // Starts syncing. Upon connection drop, the sync will restart automatically,
@@ -53,9 +54,6 @@ class PageSync {
   // when PageSync hits an error it cannot recover from. The class can be
   // deleted after that.
   virtual void SetOnUnrecoverableError(fit::closure on_unrecoverable_error) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageSync);
 };
 
 }  // namespace cloud_sync

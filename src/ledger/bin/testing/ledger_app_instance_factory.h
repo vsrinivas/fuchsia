@@ -18,7 +18,6 @@
 #include "peridot/lib/rng/random.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/testing/loop_controller.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 
 namespace ledger {
@@ -48,6 +47,8 @@ class LedgerAppInstanceFactory {
     LedgerAppInstance(LoopController* loop_controller, std::vector<uint8_t> test_ledger_name,
                       ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
                       fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr);
+    LedgerAppInstance(const LedgerAppInstance&) = delete;
+    LedgerAppInstance& operator=(const LedgerAppInstance&) = delete;
     virtual ~LedgerAppInstance();
 
     // Returns the LedgerRepositoryFactory associated with this application
@@ -76,8 +77,6 @@ class LedgerAppInstanceFactory {
     fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_;
 
     scoped_tmpfs::ScopedTmpFS tmpfs_;
-
-    FXL_DISALLOW_COPY_AND_ASSIGN(LedgerAppInstance);
   };
 
   virtual ~LedgerAppInstanceFactory() = default;

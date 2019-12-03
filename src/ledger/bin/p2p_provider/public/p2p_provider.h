@@ -7,7 +7,6 @@
 
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/macros.h"
 
 namespace p2p_provider {
 // P2PProvider handles the peer-to-peer connections between devices.
@@ -25,6 +24,8 @@ class P2PProvider {
   };
 
   P2PProvider() = default;
+  P2PProvider(const P2PProvider&) = delete;
+  P2PProvider& operator=(const P2PProvider&) = delete;
   virtual ~P2PProvider() = default;
 
   // Starts participating in the device mesh.
@@ -33,9 +34,6 @@ class P2PProvider {
   // Sends the provided message |data| to |destination|. Returns true if the
   // message was sent, false if the destination is not available.
   virtual bool SendMessage(const P2PClientId& destination, convert::ExtendedStringView data) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(P2PProvider);
 };
 
 }  // namespace p2p_provider

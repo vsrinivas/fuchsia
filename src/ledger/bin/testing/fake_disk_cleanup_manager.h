@@ -11,7 +11,6 @@
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
@@ -19,6 +18,8 @@ namespace ledger {
 class FakeDiskCleanupManager : public DiskCleanupManager, public PageUsageListener {
  public:
   FakeDiskCleanupManager() = default;
+  FakeDiskCleanupManager(const FakeDiskCleanupManager&) = delete;
+  FakeDiskCleanupManager& operator=(const FakeDiskCleanupManager&) = delete;
   ~FakeDiskCleanupManager() override = default;
 
   void set_on_OnExternallyUnused(fit::closure on_OnExternallyUnused_callback) {
@@ -77,9 +78,6 @@ class FakeDiskCleanupManager : public DiskCleanupManager, public PageUsageListen
   fit::closure on_OnExternallyUnused_callback_;
   fit::closure on_OnInternallyUnused_callback_;
   fit::function<void(Status)> cleanup_callback;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeDiskCleanupManager);
 };
 
 }  // namespace ledger

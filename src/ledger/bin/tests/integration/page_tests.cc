@@ -15,7 +15,6 @@
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {
@@ -23,6 +22,8 @@ namespace {
 class PageIntegrationTest : public IntegrationTest {
  public:
   PageIntegrationTest() = default;
+  PageIntegrationTest(const PageIntegrationTest&) = delete;
+  PageIntegrationTest& operator=(const PageIntegrationTest&) = delete;
   ~PageIntegrationTest() override = default;
 
   // Returns the id of the given page.
@@ -33,9 +34,6 @@ class PageIntegrationTest : public IntegrationTest {
     EXPECT_TRUE(loop_waiter->RunUntilCalled());
     return id;
   }
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageIntegrationTest);
 };
 
 TEST_P(PageIntegrationTest, LedgerRepositoryDuplicate) {

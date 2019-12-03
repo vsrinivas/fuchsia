@@ -19,7 +19,6 @@
 #include "src/lib/callback/cancellable_helper.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/macros.h"
 
 using testing::ElementsAre;
 using testing::IsEmpty;
@@ -30,6 +29,8 @@ namespace {
 class CommonAncestorTest : public TestWithPageStorage {
  public:
   CommonAncestorTest() = default;
+  CommonAncestorTest(const CommonAncestorTest&) = delete;
+  CommonAncestorTest& operator=(const CommonAncestorTest&) = delete;
   ~CommonAncestorTest() override = default;
 
  protected:
@@ -106,9 +107,6 @@ class CommonAncestorTest : public TestWithPageStorage {
   }
 
   std::unique_ptr<storage::PageStorage> storage_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(CommonAncestorTest);
 };
 
 TEST_F(CommonAncestorTest, TwoChildrenOfRoot) {

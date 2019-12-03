@@ -20,7 +20,6 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {
@@ -28,7 +27,8 @@ namespace {
 class PageUsageDbTest : public TestWithEnvironment {
  public:
   PageUsageDbTest() : db_factory_(dispatcher()) {}
-
+  PageUsageDbTest(const PageUsageDbTest&) = delete;
+  PageUsageDbTest& operator=(const PageUsageDbTest&) = delete;
   ~PageUsageDbTest() override = default;
 
   std::string RandomString(size_t size) {
@@ -65,9 +65,6 @@ class PageUsageDbTest : public TestWithEnvironment {
   storage::fake::FakeDbFactory db_factory_;
   std::unique_ptr<DbViewFactory> dbview_factory_;
   std::unique_ptr<PageUsageDb> db_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageUsageDbTest);
 };
 
 TEST_F(PageUsageDbTest, GetPagesEmpty) {

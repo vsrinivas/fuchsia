@@ -41,7 +41,6 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -76,7 +75,8 @@ PageId SpecificId(const storage::PageId& page_id) {
 class LedgerManagerTest : public TestWithEnvironment {
  public:
   LedgerManagerTest() = default;
-
+  LedgerManagerTest(const LedgerManagerTest&) = delete;
+  LedgerManagerTest& operator=(const LedgerManagerTest&) = delete;
   ~LedgerManagerTest() override = default;
 
   // gtest::TestWithEnvironment:
@@ -107,9 +107,6 @@ class LedgerManagerTest : public TestWithEnvironment {
   std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<LedgerManager> ledger_manager_;
   LedgerPtr ledger_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManagerTest);
 };
 
 class StubConflictResolverFactory : public ConflictResolverFactory {
@@ -511,6 +508,8 @@ testing::Matcher<const inspect_deprecated::ObjectHierarchy&> HierarchyMatcher(
 class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
  public:
   LedgerManagerWithRealStorageTest() = default;
+  LedgerManagerWithRealStorageTest(const LedgerManagerWithRealStorageTest&) = delete;
+  LedgerManagerWithRealStorageTest& operator=(const LedgerManagerWithRealStorageTest&) = delete;
   ~LedgerManagerWithRealStorageTest() override = default;
 
   // gtest::TestWithEnvironment:
@@ -563,9 +562,6 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
   inspect_deprecated::Node attachment_node_;
   std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
   std::unique_ptr<LedgerManager> ledger_manager_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManagerWithRealStorageTest);
 };
 
 TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {

@@ -16,7 +16,6 @@
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/lib/callback/capture.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 
@@ -73,14 +72,13 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 class BatchDownloadTest : public gtest::TestLoopFixture {
  public:
   BatchDownloadTest() : storage_(dispatcher()), encryption_service_(dispatcher()) {}
+  BatchDownloadTest(const BatchDownloadTest&) = delete;
+  BatchDownloadTest& operator=(const BatchDownloadTest&) = delete;
   ~BatchDownloadTest() override = default;
 
  protected:
   TestPageStorage storage_;
   encryption::FakeEncryptionService encryption_service_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(BatchDownloadTest);
 };
 
 TEST_F(BatchDownloadTest, AddCommit) {

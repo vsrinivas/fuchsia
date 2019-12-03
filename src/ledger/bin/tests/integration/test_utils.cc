@@ -18,7 +18,6 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/time/time_delta.h"
 
 namespace ledger {

@@ -25,7 +25,6 @@
 #include "src/lib/callback/cancellable_helper.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {
@@ -48,6 +47,8 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
  public:
   explicit FakePageStorageImpl(std::unique_ptr<storage::PageStorage> page_storage)
       : storage_(std::move(page_storage)) {}
+  FakePageStorageImpl(const FakePageStorageImpl&) = delete;
+  FakePageStorageImpl& operator=(const FakePageStorageImpl&) = delete;
 
   void MarkCommitContentsUnavailable(storage::CommitIdView commit_id) {
     removed_commit_ids_.insert(commit_id.ToString());
@@ -132,8 +133,6 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
   std::set<storage::CommitId> removed_commit_ids_;
 
   std::unique_ptr<storage::PageStorage> storage_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakePageStorageImpl);
 };
 
 class RecordingTestStrategy : public MergeStrategy {
@@ -188,6 +187,8 @@ class RecordingTestStrategy : public MergeStrategy {
 class MergeResolverTest : public TestWithPageStorage {
  public:
   MergeResolverTest() = default;
+  MergeResolverTest(const MergeResolverTest&) = delete;
+  MergeResolverTest& operator=(const MergeResolverTest&) = delete;
   ~MergeResolverTest() override = default;
 
  protected:
@@ -331,9 +332,6 @@ class MergeResolverTest : public TestWithPageStorage {
   }
 
   std::unique_ptr<FakePageStorageImpl> page_storage_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(MergeResolverTest);
 };
 
 TEST_F(MergeResolverTest, Empty) {

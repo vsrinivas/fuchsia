@@ -11,7 +11,6 @@
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
 #include "src/ledger/bin/cloud_sync/public/user_config.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace cloud_sync {
@@ -20,6 +19,8 @@ namespace cloud_sync {
 class UserSync {
  public:
   UserSync() = default;
+  UserSync(const UserSync&) = delete;
+  UserSync& operator=(const UserSync&) = delete;
   virtual ~UserSync() = default;
 
   // Sets a synchronization state watcher for this user.
@@ -32,9 +33,6 @@ class UserSync {
 
   virtual std::unique_ptr<LedgerSync> CreateLedgerSync(
       fxl::StringView app_id, encryption::EncryptionService* encryption_service) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(UserSync);
 };
 
 }  // namespace cloud_sync

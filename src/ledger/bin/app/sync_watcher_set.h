@@ -9,13 +9,14 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/sync_coordinator/public/sync_state_watcher.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
 class SyncWatcherSet : public sync_coordinator::SyncStateWatcher {
  public:
   SyncWatcherSet(async_dispatcher_t* dispatcher);
+  SyncWatcherSet(const SyncWatcherSet&) = delete;
+  SyncWatcherSet& operator=(const SyncWatcherSet&) = delete;
   ~SyncWatcherSet() override;
 
   // Adds a new SyncWatcher.
@@ -31,8 +32,6 @@ class SyncWatcherSet : public sync_coordinator::SyncStateWatcher {
 
   SyncStateContainer current_;
   callback::AutoCleanableSet<SyncWatcherContainer> watchers_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherSet);
 };
 
 }  // namespace ledger

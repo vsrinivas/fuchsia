@@ -16,7 +16,6 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -27,6 +26,8 @@ namespace ledger {
 class LedgerMergeManager {
  public:
   explicit LedgerMergeManager(Environment* environment);
+  LedgerMergeManager(const LedgerMergeManager&) = delete;
+  LedgerMergeManager& operator=(const LedgerMergeManager&) = delete;
   ~LedgerMergeManager();
 
   void AddFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory);
@@ -53,8 +54,6 @@ class LedgerMergeManager {
   bool using_default_conflict_resolver_ = true;
 
   std::map<storage::PageId, MergeResolver*> resolvers_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerMergeManager);
 };
 }  // namespace ledger
 #endif  // SRC_LEDGER_BIN_APP_MERGING_LEDGER_MERGE_MANAGER_H_

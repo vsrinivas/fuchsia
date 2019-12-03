@@ -143,6 +143,9 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     FXL_DCHECK(status == ZX_OK);
   }
 
+  LedgerRepositoryContainer(const LedgerRepositoryContainer&) = delete;
+  LedgerRepositoryContainer& operator=(const LedgerRepositoryContainer&) = delete;
+
   ~LedgerRepositoryContainer() {
     for (const auto& request : requests_) {
       request.second(Status::INTERNAL_ERROR);
@@ -215,8 +218,6 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
                         fit::function<void(Status)>>>
       requests_;
   std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>> detached_handles_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
 };
 
 struct LedgerRepositoryFactoryImpl::RepositoryInformation {

@@ -10,7 +10,6 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "src/ledger/bin/environment/environment.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 

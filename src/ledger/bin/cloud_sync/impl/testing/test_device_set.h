@@ -8,13 +8,14 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 
 class TestDeviceSet : public cloud_provider::DeviceSet {
  public:
   TestDeviceSet();
+  TestDeviceSet(const TestDeviceSet&) = delete;
+  TestDeviceSet& operator=(const TestDeviceSet&) = delete;
   ~TestDeviceSet() override;
 
   cloud_provider::Status status_to_return = cloud_provider::Status::OK;
@@ -38,8 +39,6 @@ class TestDeviceSet : public cloud_provider::DeviceSet {
                   SetWatcherCallback callback) override;
 
   void Erase(EraseCallback callback) override;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestDeviceSet);
 };
 
 }  // namespace cloud_sync

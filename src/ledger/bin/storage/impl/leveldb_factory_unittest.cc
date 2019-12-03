@@ -17,7 +17,6 @@
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
-#include "src/lib/fxl/macros.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace storage {
@@ -56,6 +55,8 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
         db_path_(base_path_.SubPath("databases")),
         db_factory_(&test_loop(), &environment_, cache_path_) {}
 
+  LevelDbFactoryTest(const LevelDbFactoryTest&) = delete;
+  LevelDbFactoryTest& operator=(const LevelDbFactoryTest&) = delete;
   ~LevelDbFactoryTest() override = default;
 
   // ledger::TestWithEnvironment:
@@ -77,8 +78,6 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
   ledger::DetachedPath cache_path_;
   ledger::DetachedPath db_path_;
   LevelDbFactoryWrapper db_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LevelDbFactoryTest);
 };
 
 TEST_F(LevelDbFactoryTest, GetOrCreateDb) {

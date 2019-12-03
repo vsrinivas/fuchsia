@@ -78,6 +78,8 @@ cloud_provider::Commit MakeFidlCommit(CommitRecord commit) {
 class FakePageCloud::WatcherContainer {
  public:
   WatcherContainer(cloud_provider::PageCloudWatcherPtr watcher, size_t next_commit_index);
+  WatcherContainer(const WatcherContainer&) = delete;
+  WatcherContainer& operator=(const WatcherContainer&) = delete;
 
   void SendCommits(std::vector<cloud_provider::Commit> commits, size_t next_commit_index,
                    fit::closure on_ack);
@@ -104,8 +106,6 @@ class FakePageCloud::WatcherContainer {
 
   // Index of the first commit to be sent to the watcher.
   size_t next_commit_index_ = 0;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(WatcherContainer);
 };
 
 FakePageCloud::WatcherContainer::WatcherContainer(cloud_provider::PageCloudWatcherPtr watcher,

@@ -57,6 +57,8 @@ class FakeDelegate : public PageEvictionManager::Delegate {
 class PageEvictionManagerTest : public TestWithEnvironment {
  public:
   PageEvictionManagerTest() : db_factory_(environment_.dispatcher()) {}
+  PageEvictionManagerTest(const PageEvictionManagerTest&) = delete;
+  PageEvictionManagerTest& operator=(const PageEvictionManagerTest&) = delete;
 
   // TestWithEnvironment:
   void SetUp() override {
@@ -99,8 +101,6 @@ class PageEvictionManagerTest : public TestWithEnvironment {
   FakeDelegate delegate_;
   std::unique_ptr<PageEvictionManagerImpl> page_eviction_manager_;
   std::unique_ptr<PageEvictionPolicy> policy_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionManagerTest);
 };
 
 TEST_F(PageEvictionManagerTest, NoEvictionWithoutPages) {

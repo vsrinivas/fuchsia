@@ -10,7 +10,6 @@
 #include <functional>
 
 #include "src/ledger/bin/sync_coordinator/public/sync_state_watcher.h"
-#include "src/lib/fxl/macros.h"
 
 namespace sync_coordinator {
 
@@ -23,6 +22,8 @@ namespace sync_coordinator {
 class PageSync {
  public:
   PageSync() = default;
+  PageSync(const PageSync&) = delete;
+  PageSync& operator=(const PageSync&) = delete;
   virtual ~PageSync() = default;
 
   // Starts syncing. Upon connection drop, the sync will restart automatically,
@@ -48,9 +49,6 @@ class PageSync {
   // Sets a watcher for the synchronization state of this page. Calling the
   // watcher must not destruct the PageSync object.
   virtual void SetSyncWatcher(SyncStateWatcher* watcher) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageSync);
 };
 
 }  // namespace sync_coordinator

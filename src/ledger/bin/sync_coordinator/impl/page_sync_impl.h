@@ -16,7 +16,6 @@
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/bin/sync_coordinator/impl/sync_watcher_converter.h"
 #include "src/ledger/bin/sync_coordinator/public/page_sync.h"
-#include "src/lib/fxl/macros.h"
 
 namespace sync_coordinator {
 

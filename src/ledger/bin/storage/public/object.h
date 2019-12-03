@@ -7,7 +7,6 @@
 
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
@@ -18,6 +17,8 @@ namespace storage {
 class Object {
  public:
   Object() = default;
+  Object(const Object&) = delete;
+  Object& operator=(const Object&) = delete;
   virtual ~Object() = default;
 
   // Returns the identifier of this storage object.
@@ -34,9 +35,6 @@ class Object {
   // |references|. Does not clear |references|. Does not add piece-level
   // references (use |Piece::AppendReferences| instead).
   virtual Status AppendReferences(ObjectReferencesAndPriority* references) const = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(Object);
 };
 
 // A piece is a chunk of data small enough that accessing it never fails.

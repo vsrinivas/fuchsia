@@ -50,6 +50,8 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
         top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent.ToString()));
   }
 
+  LedgerRepositoryFactoryImplTest(const LedgerRepositoryFactoryImplTest&) = delete;
+  LedgerRepositoryFactoryImplTest& operator=(const LedgerRepositoryFactoryImplTest&) = delete;
   ~LedgerRepositoryFactoryImplTest() override = default;
 
   void TearDown() override {
@@ -70,9 +72,6 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   inspect_deprecated::Node top_level_inspect_node_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> repository_factory_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImplTest);
 };
 
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CreateDirectory(

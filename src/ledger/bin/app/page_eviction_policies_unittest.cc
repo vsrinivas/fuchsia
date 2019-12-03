@@ -24,6 +24,8 @@ template <class T>
 class VectorIterator : public storage::Iterator<T> {
  public:
   explicit VectorIterator(const std::vector<T>& v) : it_(v.begin()), end_(v.end()) {}
+  VectorIterator(const VectorIterator&) = delete;
+  VectorIterator& operator=(const VectorIterator&) = delete;
 
   ~VectorIterator() override = default;
 
@@ -43,14 +45,14 @@ class VectorIterator : public storage::Iterator<T> {
  private:
   typename std::vector<T>::iterator it_;
   typename std::vector<T>::iterator end_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(VectorIterator);
 };
 
 // A fake PageEvictionDelegate, that stores the set of pages that were evicted.
 class FakePageEvictionDelegate : public PageEvictionDelegate {
  public:
   FakePageEvictionDelegate() = default;
+  FakePageEvictionDelegate(const FakePageEvictionDelegate&) = delete;
+  FakePageEvictionDelegate& operator=(const FakePageEvictionDelegate&) = delete;
   ~FakePageEvictionDelegate() override = default;
 
   void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
@@ -84,8 +86,6 @@ class FakePageEvictionDelegate : public PageEvictionDelegate {
   std::set<storage::PageId> pages_not_to_evict_;
   // The status to be returned by |TryEvictPage|.
   Status try_evict_page_status_ = Status::OK;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakePageEvictionDelegate);
 };
 
 using PageEvictionPoliciesTest = TestWithEnvironment;

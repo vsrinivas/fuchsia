@@ -9,13 +9,14 @@
 #include <lib/fidl/cpp/binding.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
 class TestSyncStateWatcher : public SyncWatcher {
  public:
   TestSyncStateWatcher();
+  TestSyncStateWatcher(const TestSyncStateWatcher&) = delete;
+  TestSyncStateWatcher& operator=(const TestSyncStateWatcher&) = delete;
   ~TestSyncStateWatcher() override;
 
   auto NewBinding() { return binding_.NewBinding(); }
@@ -34,8 +35,6 @@ class TestSyncStateWatcher : public SyncWatcher {
                         SyncStateChangedCallback callback) override;
 
   fidl::Binding<SyncWatcher> binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestSyncStateWatcher);
 };
 
 }  // namespace ledger

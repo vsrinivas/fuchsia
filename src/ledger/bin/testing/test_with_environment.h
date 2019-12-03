@@ -11,7 +11,6 @@
 
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -19,6 +18,8 @@ class TestWithEnvironment : public gtest::TestLoopFixture {
  public:
   // Creates a default test environment.
   TestWithEnvironment();
+  TestWithEnvironment(const TestWithEnvironment&) = delete;
+  TestWithEnvironment& operator=(const TestWithEnvironment&) = delete;
 
   // Modifies the default test environment by applying |builder_transformer|.
   TestWithEnvironment(fit::function<void(EnvironmentBuilder*)> builder_transformer);
@@ -33,9 +34,6 @@ class TestWithEnvironment : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider component_context_provider_;
   std::unique_ptr<async::LoopInterface> io_loop_interface_;
   Environment environment_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestWithEnvironment);
 };
 
 }  // namespace ledger

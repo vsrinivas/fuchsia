@@ -39,6 +39,8 @@ class PageCommunicatorImpl : public PageCommunicator,
   PageCommunicatorImpl(ledger::Environment* environment, storage::PageStorage* storage,
                        storage::PageSyncClient* sync_client, std::string namespace_id,
                        std::string page_id, DeviceMesh* mesh);
+  PageCommunicatorImpl(const PageCommunicatorImpl&) = delete;
+  PageCommunicatorImpl& operator=(const PageCommunicatorImpl&) = delete;
   ~PageCommunicatorImpl() override;
 
   void set_on_delete(fit::closure on_delete);
@@ -143,8 +145,6 @@ class PageCommunicatorImpl : public PageCommunicator,
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<PageCommunicatorImpl> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageCommunicatorImpl);
 };
 
 }  // namespace p2p_sync

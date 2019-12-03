@@ -67,6 +67,8 @@ class PutBenchmark : public PageWatcher {
   PutBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
                int entry_count, int transaction_size, int key_size, int value_size, bool update,
                PageDataGenerator::ReferenceStrategy reference_strategy, uint64_t seed);
+  PutBenchmark(const PutBenchmark&) = delete;
+  PutBenchmark& operator=(const PutBenchmark&) = delete;
 
   void Run();
 
@@ -119,8 +121,6 @@ class PutBenchmark : public PageWatcher {
   // should be blocked until this is set to true.
   bool all_watcher_notifications_received_ = false;
   LedgerMemoryEstimator memory_estimator_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PutBenchmark);
 };
 
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/put";

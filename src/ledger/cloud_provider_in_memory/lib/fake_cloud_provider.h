@@ -13,7 +13,6 @@
 #include "src/ledger/cloud_provider_in_memory/lib/fake_page_cloud.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -44,6 +43,8 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
 
   explicit FakeCloudProvider(async_dispatcher_t* dispatcher);
   explicit FakeCloudProvider(Builder&& builder);
+  FakeCloudProvider(const FakeCloudProvider&) = delete;
+  FakeCloudProvider& operator=(const FakeCloudProvider&) = delete;
   ~FakeCloudProvider() override;
 
  private:
@@ -61,8 +62,6 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
   callback::AutoCleanableMap<std::string, FakePageCloud> page_clouds_;
 
   InjectNetworkError inject_network_error_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeCloudProvider);
 };
 
 }  // namespace ledger

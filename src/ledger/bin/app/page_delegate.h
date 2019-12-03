@@ -24,7 +24,6 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/callback/operation_serializer.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
@@ -42,6 +41,8 @@ class PageDelegate {
   PageDelegate(Environment* environment, ActivePageManager* manager, storage::PageStorage* storage,
                MergeResolver* merge_resolver, SyncWatcherSet* watchers,
                std::unique_ptr<PageImpl> page_impl);
+  PageDelegate(const PageDelegate&) = delete;
+  PageDelegate& operator=(const PageDelegate&) = delete;
   ~PageDelegate();
 
   // Initializes this PageDelegate. |Init| may call the |on_discardable| callback if
@@ -119,8 +120,6 @@ class PageDelegate {
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<PageDelegate> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageDelegate);
 };
 
 }  // namespace ledger

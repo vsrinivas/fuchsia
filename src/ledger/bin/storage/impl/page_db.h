@@ -50,6 +50,8 @@ enum class PageDbObjectStatus {
 class PageDbMutator {
  public:
   PageDbMutator() = default;
+  PageDbMutator(const PageDbMutator&) = delete;
+  PageDbMutator& operator=(const PageDbMutator&) = delete;
   virtual ~PageDbMutator() = default;
 
   // Heads.
@@ -137,9 +139,6 @@ class PageDbMutator {
   // removing device entries missing from |clock| but present locally.
   FXL_WARN_UNUSED_RESULT virtual Status SetClock(coroutine::CoroutineHandler* handler,
                                                  const Clock& clock) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageDbMutator);
 };
 
 // |PageDb| manages all Ledger related data that are locally stored. This
@@ -157,17 +156,18 @@ class PageDb : public PageDbMutator {
   class Batch : public PageDbMutator {
    public:
     Batch() = default;
+    Batch(const Batch&) = delete;
+    Batch& operator=(const Batch&) = delete;
     ~Batch() override = default;
 
     // Executes this batch. No further operations in this batch are supported
     // after a successful execution.
     FXL_WARN_UNUSED_RESULT virtual Status Execute(coroutine::CoroutineHandler* handler) = 0;
-
-   private:
-    FXL_DISALLOW_COPY_AND_ASSIGN(Batch);
   };
 
   PageDb() = default;
+  PageDb(const PageDb&) = delete;
+  PageDb& operator=(const PageDb&) = delete;
   ~PageDb() override = default;
 
   // Starts a new batch. The batch will be written when Execute is called on the
@@ -287,9 +287,6 @@ class PageDb : public PageDbMutator {
 
   FXL_WARN_UNUSED_RESULT virtual Status GetCommitIdFromRemoteId(
       coroutine::CoroutineHandler* handler, fxl::StringView remote_id, CommitId* commit_id) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageDb);
 };
 
 }  // namespace storage

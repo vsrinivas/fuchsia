@@ -11,7 +11,6 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {
@@ -19,19 +18,21 @@ namespace {
 class SyncWatcherSetTest : public gtest::TestLoopFixture {
  public:
   SyncWatcherSetTest() = default;
+  SyncWatcherSetTest(const SyncWatcherSetTest&) = delete;
+  SyncWatcherSetTest& operator=(const SyncWatcherSetTest&) = delete;
   ~SyncWatcherSetTest() override = default;
 
  protected:
   void SetUp() override { ::testing::Test::SetUp(); }
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherSetTest);
 };
 
 class SyncWatcherImpl : public SyncWatcher {
  public:
   explicit SyncWatcherImpl(fidl::InterfaceRequest<SyncWatcher> request)
       : binding_(this, std::move(request)) {}
+  SyncWatcherImpl(const SyncWatcherImpl&) = delete;
+  SyncWatcherImpl& operator=(const SyncWatcherImpl&) = delete;
+
   void SyncStateChanged(SyncState download_status, SyncState upload_status,
                         SyncStateChangedCallback callback) override {
     download_states.push_back(download_status);
@@ -44,8 +45,6 @@ class SyncWatcherImpl : public SyncWatcher {
 
  private:
   fidl::Binding<SyncWatcher> binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
 };
 
 TEST_F(SyncWatcherSetTest, OneWatcher) {

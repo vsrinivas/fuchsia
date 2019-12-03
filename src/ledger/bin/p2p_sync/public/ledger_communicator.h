@@ -9,7 +9,6 @@
 
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
@@ -17,6 +16,8 @@ namespace p2p_sync {
 class LedgerCommunicator {
  public:
   LedgerCommunicator() = default;
+  LedgerCommunicator(const LedgerCommunicator&) = delete;
+  LedgerCommunicator& operator=(const LedgerCommunicator&) = delete;
   virtual ~LedgerCommunicator() = default;
 
   // Returns a page-specific communicator.
@@ -24,9 +25,6 @@ class LedgerCommunicator {
   // destroyed before |LedgerCommunicator|.
   virtual std::unique_ptr<PageCommunicator> GetPageCommunicator(
       storage::PageStorage* storage, storage::PageSyncClient* sync_client) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerCommunicator);
 };
 
 }  // namespace p2p_sync

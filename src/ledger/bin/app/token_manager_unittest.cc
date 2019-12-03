@@ -20,13 +20,12 @@ namespace {
 class TokenManagerTest : public TestWithEnvironment {
  public:
   TokenManagerTest() = default;
+  TokenManagerTest(const TokenManagerTest&) = delete;
+  TokenManagerTest& operator=(const TokenManagerTest&) = delete;
   ~TokenManagerTest() override = default;
 
  protected:
   TokenManager token_manager_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(TokenManagerTest);
 };
 
 TEST_F(TokenManagerTest, SingleExpiringTokenImmediatelyDiscarded) {

@@ -56,6 +56,8 @@ class PageUpload : public storage::CommitWatcher {
              encryption::EncryptionService* encryption_service,
              cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
              std::unique_ptr<backoff::Backoff> backoff);
+  PageUpload(const PageUpload&) = delete;
+  PageUpload& operator=(const PageUpload&) = delete;
 
   ~PageUpload() override;
 
@@ -120,8 +122,6 @@ class PageUpload : public storage::CommitWatcher {
 
   // Must be the last member.
   fxl::WeakPtrFactory<PageUpload> weak_ptr_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageUpload);
 };
 
 }  // namespace cloud_sync

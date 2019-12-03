@@ -43,6 +43,8 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
                   encryption::EncryptionService* encryption_service,
                   std::unique_ptr<PageDb> page_db, PageId page_id, CommitPruningPolicy policy);
 
+  PageStorageImpl(const PageStorageImpl&) = delete;
+  PageStorageImpl& operator=(const PageStorageImpl&) = delete;
   ~PageStorageImpl() override;
 
   // Initializes this PageStorageImpl. This includes initializing the underlying
@@ -331,8 +333,6 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<PageStorageImpl> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageStorageImpl);
 };
 
 }  // namespace storage

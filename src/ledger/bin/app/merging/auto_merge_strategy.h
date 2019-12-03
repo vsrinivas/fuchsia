@@ -13,13 +13,14 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 // Strategy for merging commits using the AUTOMATIC_WITH_FALLBACK policy.
 class AutoMergeStrategy : public MergeStrategy {
  public:
   explicit AutoMergeStrategy(ConflictResolverPtr conflict_resolver);
+  AutoMergeStrategy(const AutoMergeStrategy&) = delete;
+  AutoMergeStrategy& operator=(const AutoMergeStrategy&) = delete;
   ~AutoMergeStrategy() override;
 
   // MergeStrategy:
@@ -41,8 +42,6 @@ class AutoMergeStrategy : public MergeStrategy {
   ConflictResolverPtr conflict_resolver_;
 
   std::unique_ptr<AutoMerger> in_progress_merge_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(AutoMergeStrategy);
 };
 
 }  // namespace ledger

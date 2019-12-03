@@ -8,7 +8,6 @@
 #include <lib/zx/socket.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
 
 namespace socket {
 
@@ -16,13 +15,12 @@ namespace socket {
 class SocketPair {
  public:
   SocketPair();
+  SocketPair(const SocketPair&) = delete;
+  SocketPair& operator=(const SocketPair&) = delete;
   ~SocketPair();
 
   zx::socket socket1;
   zx::socket socket2;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(SocketPair);
 };
 
 inline SocketPair::SocketPair() { FXL_CHECK(zx::socket::create(0u, &socket1, &socket2) == ZX_OK); }

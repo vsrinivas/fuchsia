@@ -12,7 +12,6 @@
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -21,7 +20,8 @@ namespace ledger {
 class Completer {
  public:
   Completer(async_dispatcher_t* dispatcher);
-
+  Completer(const Completer&) = delete;
+  Completer& operator=(const Completer&) = delete;
   ~Completer();
 
   // Completes the operation with the given status and unblocks all pending
@@ -46,8 +46,6 @@ class Completer {
   std::vector<fit::function<void(Status)>> callbacks_;
 
   callback::ScopedTaskRunner task_runner_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Completer);
 };
 
 Status SyncWaitUntilDone(coroutine::CoroutineHandler* handler, Completer* completer);

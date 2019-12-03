@@ -56,6 +56,8 @@ class UpdateEntryBenchmark {
  public:
   UpdateEntryBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
                        int entry_count, int value_size, int transaction_size);
+  UpdateEntryBenchmark(const UpdateEntryBenchmark&) = delete;
+  UpdateEntryBenchmark& operator=(const UpdateEntryBenchmark&) = delete;
 
   void Run();
 
@@ -80,8 +82,6 @@ class UpdateEntryBenchmark {
   fuchsia::sys::ComponentControllerPtr component_controller_;
   LedgerPtr ledger_;
   PagePtr page_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(UpdateEntryBenchmark);
 };
 
 UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop,

@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/fxl/macros.h"
 
 namespace context {
 class Stack;
@@ -22,6 +21,8 @@ namespace coroutine {
 class CoroutineServiceImpl : public CoroutineService {
  public:
   CoroutineServiceImpl();
+  CoroutineServiceImpl(const CoroutineServiceImpl&) = delete;
+  CoroutineServiceImpl& operator=(const CoroutineServiceImpl&) = delete;
   ~CoroutineServiceImpl() override;
 
   // CoroutineService.
@@ -32,8 +33,6 @@ class CoroutineServiceImpl : public CoroutineService {
 
   std::vector<std::unique_ptr<context::Stack>> available_stack_;
   std::vector<std::unique_ptr<CoroutineHandlerImpl>> handlers_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(CoroutineServiceImpl);
 };
 
 }  // namespace coroutine

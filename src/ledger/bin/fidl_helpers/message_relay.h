@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "src/lib/callback/destruction_sentinel.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace fidl_helpers {
@@ -71,7 +70,8 @@ class MessageRelayBase {
 class MessageRelay : public MessageRelayBase {
  public:
   MessageRelay();
-
+  MessageRelay(const MessageRelay&) = delete;
+  MessageRelay& operator=(const MessageRelay&) = delete;
   ~MessageRelay() override;
 
   void SetMessageReceivedCallback(fit::function<void(std::vector<uint8_t>)> callback);
@@ -86,8 +86,6 @@ class MessageRelay : public MessageRelayBase {
  private:
   fit::function<void(std::vector<uint8_t>)> message_received_callback_;
   fit::closure channel_closed_callback_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MessageRelay);
 };
 
 }  // namespace fidl_helpers

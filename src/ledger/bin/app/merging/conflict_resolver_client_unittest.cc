@@ -22,13 +22,14 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 namespace {
 class ConflictResolverClientTest : public TestWithPageStorage {
  public:
   ConflictResolverClientTest() = default;
+  ConflictResolverClientTest(const ConflictResolverClientTest&) = delete;
+  ConflictResolverClientTest& operator=(const ConflictResolverClientTest&) = delete;
   ~ConflictResolverClientTest() override = default;
 
  protected:
@@ -79,8 +80,6 @@ class ConflictResolverClientTest : public TestWithPageStorage {
 
  private:
   std::unique_ptr<ActivePageManager> active_page_manager_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ConflictResolverClientTest);
 };
 
 class ConflictResolverImpl : public ConflictResolver {

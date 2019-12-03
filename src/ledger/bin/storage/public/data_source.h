@@ -14,7 +14,6 @@
 #include <memory>
 
 #include "src/lib/fsl/vmo/sized_vmo.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
@@ -28,6 +27,8 @@ class DataSource {
   class DataChunk {
    public:
     DataChunk() = default;
+    DataChunk(const DataChunk&) = delete;
+    DataChunk& operator=(const DataChunk&) = delete;
     virtual ~DataChunk() = default;
 
     virtual fxl::StringView Get() = 0;
@@ -36,9 +37,6 @@ class DataSource {
     static std::unique_ptr<DataChunk> Create(std::string value);
     static std::unique_ptr<DataChunk> Create(
         std::unique_ptr<flatbuffers::FlatBufferBuilder> builder);
-
-   private:
-    FXL_DISALLOW_COPY_AND_ASSIGN(DataChunk);
   };
 
   enum Status {
@@ -54,6 +52,8 @@ class DataSource {
   static std::unique_ptr<DataSource> Create(zx::socket socket, uint64_t size);
 
   DataSource() = default;
+  DataSource(const DataSource&) = delete;
+  DataSource& operator=(const DataSource&) = delete;
   virtual ~DataSource() = default;
 
   // Returns the total size of the data in the DataSource.
@@ -64,9 +64,6 @@ class DataSource {
   // data. If |Status| is |DONE|, all the data has been received. In case of
   // error, |callback| will be called with an |ERROR| status and a null |Data|.
   virtual void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(DataSource);
 };
 
 }  // namespace storage

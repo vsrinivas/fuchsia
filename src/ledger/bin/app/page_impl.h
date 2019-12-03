@@ -15,7 +15,6 @@
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 class PageDelegate;
@@ -25,6 +24,8 @@ class PageImpl : public fuchsia::ledger::PageSyncableDelegate {
  public:
   explicit PageImpl(async_dispatcher_t* dispatcher, storage::PageIdView page_id,
                     fidl::InterfaceRequest<Page> request);
+  PageImpl(const PageImpl&) = delete;
+  PageImpl& operator=(const PageImpl&) = delete;
   ~PageImpl() override;
 
   void SetPageDelegate(PageDelegate* page_delegate);
@@ -72,8 +73,6 @@ class PageImpl : public fuchsia::ledger::PageSyncableDelegate {
 
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageImpl);
 };
 
 }  // namespace ledger

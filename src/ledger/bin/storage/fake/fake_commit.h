@@ -21,7 +21,8 @@ namespace fake {
 class FakeCommit : public CommitEmptyImpl {
  public:
   explicit FakeCommit(FakeJournalDelegate* journal, FakeObjectIdentifierFactory* factory);
-
+  FakeCommit(const FakeCommit&) = delete;
+  FakeCommit& operator=(const FakeCommit&) = delete;
   ~FakeCommit() override;
 
   static std::unique_ptr<const Commit> MakeRootCommit();
@@ -44,7 +45,6 @@ class FakeCommit : public CommitEmptyImpl {
  private:
   FakeJournalDelegate* journal_;
   FakeObjectIdentifierFactory* factory_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeCommit);
 };
 
 }  // namespace fake

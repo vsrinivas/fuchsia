@@ -34,7 +34,6 @@
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
@@ -57,6 +56,8 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
                        std::vector<PageUsageListener*> page_usage_listeners,
                        std::unique_ptr<clocks::DeviceIdManager> device_id_manager,
                        inspect_deprecated::Node inspect_node);
+  LedgerRepositoryImpl(const LedgerRepositoryImpl&) = delete;
+  LedgerRepositoryImpl& operator=(const LedgerRepositoryImpl&) = delete;
   ~LedgerRepositoryImpl() override;
 
   void SetOnDiscardable(fit::closure on_discardable);
@@ -146,8 +147,6 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   inspect_deprecated::UIntMetric requests_metric_;
   inspect_deprecated::Node ledgers_inspect_node_;
   fit::deferred_callback children_manager_retainer_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };
 
 }  // namespace ledger

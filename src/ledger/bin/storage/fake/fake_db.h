@@ -17,6 +17,8 @@ namespace fake {
 class FakeDb : public Db {
  public:
   explicit FakeDb(async_dispatcher_t* dispatcher);
+  FakeDb(const FakeDb&) = delete;
+  FakeDb& operator=(const FakeDb&) = delete;
   ~FakeDb() override;
 
   // Db:
@@ -44,8 +46,6 @@ class FakeDb : public Db {
   async_dispatcher_t* const dispatcher_;
 
   std::map<std::string, std::string> key_value_store_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeDb);
 };
 
 }  // namespace fake

@@ -15,7 +15,6 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -25,13 +24,12 @@ using ::testing::IsEmpty;
 class OvernetFactoryTest : public gtest::TestLoopFixture {
  public:
   OvernetFactoryTest() : factory_(dispatcher()) {}
+  OvernetFactoryTest(const OvernetFactoryTest&) = delete;
+  OvernetFactoryTest& operator=(const OvernetFactoryTest&) = delete;
   ~OvernetFactoryTest() override = default;
 
  protected:
   OvernetFactory factory_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(OvernetFactoryTest);
 };
 
 // Verifies that the host list is correct for one host with the workaround.

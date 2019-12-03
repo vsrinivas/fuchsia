@@ -31,6 +31,8 @@ class LevelDbFactory : public DbFactory {
  public:
   LevelDbFactory(ledger::Environment* environment, ledger::DetachedPath cache_path);
 
+  LevelDbFactory(const LevelDbFactory&) = delete;
+  LevelDbFactory& operator=(const LevelDbFactory&) = delete;
   ~LevelDbFactory() override;
 
   // Initializes the LevelDbFactory by preparing the cached instance of LevelDb.
@@ -47,8 +49,6 @@ class LevelDbFactory : public DbFactory {
   bool initialized_;
   std::unique_ptr<IOLevelDbFactory> io_level_db_factory_;
   async::Executor main_executor_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LevelDbFactory);
 };
 
 }  // namespace storage

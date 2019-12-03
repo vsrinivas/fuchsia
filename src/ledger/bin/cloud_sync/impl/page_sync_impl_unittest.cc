@@ -28,7 +28,6 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fsl/socket/strings.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 namespace {
@@ -78,6 +77,8 @@ class PageSyncImplTest : public ledger::TestWithEnvironment {
         std::move(page_cloud_ptr_), std::move(download_backoff), std::move(upload_backoff),
         std::move(watcher));
   }
+  PageSyncImplTest(const PageSyncImplTest&) = delete;
+  PageSyncImplTest& operator=(const PageSyncImplTest&) = delete;
   ~PageSyncImplTest() override = default;
 
  protected:
@@ -107,9 +108,6 @@ class PageSyncImplTest : public ledger::TestWithEnvironment {
   backoff::TestBackoff* upload_backoff_ptr_;
   TestSyncStateWatcher* state_watcher_;
   std::unique_ptr<PageSyncImpl> page_sync_;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageSyncImplTest);
 };
 
 SyncStateWatcher::SyncStateContainer MakeStates(DownloadSyncState download,

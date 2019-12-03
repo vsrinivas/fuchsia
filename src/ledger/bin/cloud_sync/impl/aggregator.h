@@ -9,7 +9,6 @@
 #include <set>
 
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
-#include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
 
@@ -19,6 +18,8 @@ namespace cloud_sync {
 class Aggregator {
  public:
   Aggregator();
+  Aggregator(const Aggregator&) = delete;
+  Aggregator& operator=(const Aggregator&) = delete;
   ~Aggregator();
 
   // Sets the base watcher that will receive the aggregated notification stream.
@@ -39,8 +40,6 @@ class Aggregator {
 
   std::set<Listener*> listeners_;
   SyncStateWatcher* base_watcher_ = nullptr;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Aggregator);
 };
 
 }  // namespace cloud_sync

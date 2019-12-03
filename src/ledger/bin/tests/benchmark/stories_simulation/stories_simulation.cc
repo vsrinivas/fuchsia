@@ -161,6 +161,8 @@ class StoriesBenchmark {
  public:
   StoriesBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
                    int story_count, int active_story_count, bool wait_for_cached);
+  StoriesBenchmark(const StoriesBenchmark&) = delete;
+  StoriesBenchmark& operator=(const StoriesBenchmark&) = delete;
 
   void Run();
 
@@ -220,8 +222,6 @@ class StoriesBenchmark {
   std::list<ActiveStory> active_stories_;
   EmptyWatcher story_watcher1_;
   EmptyWatcher story_watcher2_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StoriesBenchmark);
 };
 
 StoriesBenchmark::StoriesBenchmark(async::Loop* loop,

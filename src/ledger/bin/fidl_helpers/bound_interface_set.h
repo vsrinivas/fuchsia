@@ -8,8 +8,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 
-#include "src/lib/fxl/macros.h"
-
 namespace ledger {
 namespace fidl_helpers {
 template <class Interface, class Impl>
@@ -17,6 +15,9 @@ class BoundInterfaceSet {
  public:
   template <class... Args>
   explicit BoundInterfaceSet(Args&&... args) : impl_(std::forward<Args>(args)...) {}
+
+  BoundInterfaceSet(const BoundInterfaceSet&) = delete;
+  BoundInterfaceSet& operator=(const BoundInterfaceSet&) = delete;
 
   void AddBinding(fidl::InterfaceRequest<Interface> request) {
     binding_.AddBinding(&impl_, std::move(request));
@@ -35,8 +36,6 @@ class BoundInterfaceSet {
  private:
   Impl impl_;
   fidl::BindingSet<Interface> binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(BoundInterfaceSet);
 };
 }  // namespace fidl_helpers
 }  // namespace ledger

@@ -14,13 +14,14 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/lib/fxl/macros.h"
 
 namespace ledger {
 // Strategy for merging commits using the CUSTOM policy.
 class CustomMergeStrategy : public MergeStrategy {
  public:
   explicit CustomMergeStrategy(ConflictResolverPtr conflict_resolver);
+  CustomMergeStrategy(const CustomMergeStrategy&) = delete;
+  CustomMergeStrategy& operator=(const CustomMergeStrategy&) = delete;
   ~CustomMergeStrategy() override;
 
   // MergeStrategy:
@@ -40,8 +41,6 @@ class CustomMergeStrategy : public MergeStrategy {
   ConflictResolverPtr conflict_resolver_;
 
   std::unique_ptr<ConflictResolverClient> in_progress_merge_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(CustomMergeStrategy);
 };
 
 }  // namespace ledger

@@ -15,7 +15,6 @@
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
@@ -64,6 +63,8 @@ class PageEvictionManager {
   };
 
   PageEvictionManager() = default;
+  PageEvictionManager(const PageEvictionManager&) = delete;
+  PageEvictionManager& operator=(const PageEvictionManager&) = delete;
   virtual ~PageEvictionManager() = default;
 
   // Sets the callback to be called every time the PageEvictionManager is empty.
@@ -85,9 +86,6 @@ class PageEvictionManager {
 
   // Marks the page as closed.
   virtual void MarkPageClosed(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionManager);
 };
 
 }  // namespace ledger

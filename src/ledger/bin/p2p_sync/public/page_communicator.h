@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
@@ -16,14 +15,13 @@ namespace p2p_sync {
 class PageCommunicator {
  public:
   PageCommunicator() = default;
+  PageCommunicator(const PageCommunicator&) = delete;
+  PageCommunicator& operator=(const PageCommunicator&) = delete;
   virtual ~PageCommunicator() = default;
 
   // Start should be called at most once. It signals that this page is active on
   // this device.
   virtual void Start() = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageCommunicator);
 };
 
 }  // namespace p2p_sync

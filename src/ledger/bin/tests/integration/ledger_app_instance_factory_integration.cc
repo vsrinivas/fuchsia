@@ -124,6 +124,8 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
                         std::move(repositories_node)),
           binding_(&factory_impl_, std::move(request)),
           inspect_binding_(inspect_impl, std::move(inspect_request)) {}
+    LedgerRepositoryFactoryContainer(const LedgerRepositoryFactoryContainer&) = delete;
+    LedgerRepositoryFactoryContainer& operator=(const LedgerRepositoryFactoryContainer&) = delete;
     ~LedgerRepositoryFactoryContainer() = default;
 
    private:
@@ -131,8 +133,6 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
     LedgerRepositoryFactoryImpl factory_impl_;
     SyncableBinding<fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate> binding_;
     fidl::Binding<fuchsia::inspect::deprecated::Inspect> inspect_binding_;
-
-    FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
   };
 
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
