@@ -16,9 +16,9 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.dirname(SCRIPT_DIR)
 FUCHSIA_ROOT = os.path.dirname(SCRIPTS_DIR)
 
-# Amount of file size change allowed, expressed as a percentage of the original
-# file size.
-SIZE_SHIFT_THRESHOLD_PERCENT = 1
+# The maximum number of size percentage points a binary is allowed to drop.
+# A greater amount will raise a flag.
+MAX_SIZE_DECREASE = 5
 
 
 class Type(object):
@@ -170,6 +170,8 @@ def compare_summaries(reference, current):
     '''Compares summaries for two states of the build.'''
     match = True
     for type in Type.all():
+        type_match = True
+
         reference_objects = reference.get_objects(type)
         current_objects = current.get_objects(type)
         reference_names = reference_objects.filenames()
@@ -177,7 +179,7 @@ def compare_summaries(reference, current):
 
         # Missing and new files.
         if reference_names != current_names:
-            match = False
+            type_match = False
             print(('-------[ ' + type + ' ]').ljust(32, '-'))
             removed = reference_names - current_names
             if removed:
@@ -197,10 +199,17 @@ def compare_summaries(reference, current):
             if current_size == reference_size:
                 continue
             diff_percentage = 100 * (current_size - reference_size) / reference_size
-            if abs(diff_percentage) >= SIZE_SHIFT_THRESHOLD_PERCENT:
-                match = False
-                print('Error: size change for ' + name + ': ' +
-                      str(diff_percentage) + '%')
+            if 0 > diff_percentage and diff_percentage > -MAX_SIZE_DECREASE:
+                # Ignore relatively small decreases in binary size.
+                continue
+            type_match = False
+            print('Error: size change for ' + name + ': ' +
+                  ('+' if diff_percentage > 0 else '') +
+                  str(diff_percentage) + '%')
+
+        if not type_match:
+            match = False
+            print('--> [%s] manifests do not match <--\n' % type)
 
     return match
 
