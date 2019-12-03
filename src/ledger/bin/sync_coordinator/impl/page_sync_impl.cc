@@ -34,6 +34,8 @@ class SyncProviderHolderBase : public storage::PageSyncClient, public storage::P
                                   std::vector<storage::EntryChange> diff_entries)>
                    callback) override;
 
+  void UpdateClock(storage::Clock clock, fit::function<void(ledger::Status)> callback) override;
+
  private:
   storage::PageSyncDelegate* page_sync_delegate_;
 };
@@ -62,6 +64,12 @@ void SyncProviderHolderBase::GetDiff(
   page_sync_delegate_->GetDiff(std::move(commit_id), std::move(possible_bases),
                                std::move(callback));
 }
+
+void SyncProviderHolderBase::UpdateClock(storage::Clock clock,
+                                         fit::function<void(ledger::Status)> callback) {
+  page_sync_delegate_->UpdateClock(clock, std::move(callback));
+}
+
 }  // namespace
 
 class PageSyncImpl::CloudSyncHolder : public SyncProviderHolderBase {
@@ -251,6 +259,17 @@ void PageSyncImpl::GetDiff(storage::CommitId commit_id,
   } else {
     callback(ledger::Status::INTERNAL_NOT_FOUND, {}, {});
   }
+}
+
+void PageSyncImpl::UpdateClock(storage::Clock clock, fit::function<void(ledger::Status)> callback) {
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(ledger::Status::OK);
+  if (cloud_sync_) {
+    cloud_sync_->UpdateClock(clock, waiter->NewCallback());
+  }
+  if (p2p_sync_) {
+    p2p_sync_->UpdateClock(clock, waiter->NewCallback());
+  }
+  waiter->Finalize(std::move(callback));
 }
 
 }  // namespace sync_coordinator

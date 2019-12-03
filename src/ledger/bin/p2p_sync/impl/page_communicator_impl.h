@@ -69,6 +69,8 @@ class PageCommunicatorImpl : public PageCommunicator,
       fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
           callback) override;
 
+  void UpdateClock(storage::Clock clock, fit::function<void(ledger::Status)> callback) override;
+
   // storage::CommitWatcher:
   void OnNewCommits(const std::vector<std::unique_ptr<const storage::Commit>>& commits,
                     storage::ChangeSource source) override;

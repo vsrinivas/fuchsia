@@ -21,6 +21,7 @@
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
@@ -49,6 +50,7 @@
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
@@ -299,6 +301,12 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
         }
         callback(Status::OK, diff_found->second.first, diff_found->second.second);
     }
+  }
+
+  void UpdateClock(storage::Clock /*clock*/,
+                   fit::function<void(ledger::Status)> callback) override {
+    FXL_NOTIMPLEMENTED();
+    callback(ledger::Status::NOT_IMPLEMENTED);
   }
 
   size_t GetNumberOfObjectsStored() { return digest_to_value_.size(); }
@@ -3152,8 +3160,8 @@ class PageStorageTestAddMultipleCommits : public PageStorageTest {
       commit4.reset();
       commit5.reset();
 
-      // Reset and clear the storage. We do not retrack the identifiers immediately because we want
-      // to leave the opportunity for the roots of commit 0 and 1 to be collected.
+      // Reset and clear the storage. We do not retrack the identifiers immediately because we
+      // want to leave the opportunity for the roots of commit 0 and 1 to be collected.
       ResetStorage();
       storage_->SetSyncDelegate(&sync_);
 
@@ -3216,7 +3224,8 @@ TEST_F(PageStorageTestAddMultipleCommits, FromCloudNoDiff) {
                                                           Pair(commit_identifiers_[4], _)));
 
     // The tree and eager objects of commits 2 and 4 have been requested.
-    // The tree has been first requested as a tree node (and received no response), then as a blob.
+    // The tree has been first requested as a tree node (and received no response), then as a
+    // blob.
     EXPECT_THAT(
         sync_.object_requests,
         UnorderedElementsAre(Pair(tree_object_identifiers_[2], RetrievedObjectType::TREE_NODE),
@@ -3245,8 +3254,8 @@ TEST_F(PageStorageTestAddMultipleCommits, FromCloudWithDiff) {
     // Commits 0 and 2 have been requested.
     EXPECT_THAT(sync_.diff_requests, UnorderedElementsAre(Pair(commit_identifiers_[2], _),
                                                           Pair(commit_identifiers_[4], _)));
-    // The tree and eager objects of commit 2 and 4 have been requested. The tree has been requested
-    // as a TREE_NODE, but not as a BLOB, as a diff has been received.
+    // The tree and eager objects of commit 2 and 4 have been requested. The tree has been
+    // requested as a TREE_NODE, but not as a BLOB, as a diff has been received.
     EXPECT_THAT(
         sync_.object_requests,
         UnorderedElementsAre(Pair(tree_object_identifiers_[2], RetrievedObjectType::TREE_NODE),
@@ -4413,8 +4422,8 @@ TEST_F(PageStorageTestEagerRootNodesGC, EagerRootNodesGarbageCollection) {
   });
 }
 
-// Tests that the object identifiers of parents are not garbage collected between the time the tree
-// is written to disk, and the time the commit is written to disk.
+// Tests that the object identifiers of parents are not garbage collected between the time the
+// tree is written to disk, and the time the commit is written to disk.
 TEST_F(PageStorageTest, CommitJournalKeepsParents) {
   // We create the following tree, with commits numbered by creation order:
   //    (1)

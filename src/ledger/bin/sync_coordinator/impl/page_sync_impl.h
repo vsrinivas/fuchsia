@@ -55,6 +55,7 @@ class PageSyncImpl : public PageSync, public storage::PageSyncDelegate {
       storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
       fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
           callback) override;
+  void UpdateClock(storage::Clock clock, fit::function<void(ledger::Status)> callback) override;
 
  private:
   class CloudSyncHolder;

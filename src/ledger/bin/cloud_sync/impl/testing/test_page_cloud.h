@@ -64,6 +64,9 @@ class TestPageCloud : public cloud_provider::PageCloud {
   std::vector<std::unique_ptr<cloud_provider::PositionToken>> set_watcher_position_tokens;
   cloud_provider::PageCloudWatcherPtr set_watcher;
 
+  // UpdateClock().
+  std::vector<std::pair<cloud_provider::ClockPack, UpdateClockCallback>> clocks;
+
  private:
   // cloud_provider::PageCloud:
   void AddCommits(cloud_provider::CommitPack commits, AddCommitsCallback callback) override;
@@ -77,7 +80,7 @@ class TestPageCloud : public cloud_provider::PageCloud {
                   SetWatcherCallback callback) override;
   void GetDiff(std::vector<uint8_t> commit_id, std::vector<std::vector<uint8_t>> possible_bases,
                GetDiffCallback callback) override;
-  void UpdateClock(cloud_provider::ClockPack commits, UpdateClockCallback callback) override;
+  void UpdateClock(cloud_provider::ClockPack clock_pack, UpdateClockCallback callback) override;
 
   fidl::Binding<cloud_provider::PageCloud> binding_;
 };

@@ -21,7 +21,7 @@
 
 namespace cloud_sync {
 // PageDownload handles all the download operations (commits and objects) for a page.
-class PageDownload : public cloud_provider::PageCloudWatcher, public storage::PageSyncDelegate {
+class PageDownload : public cloud_provider::PageCloudWatcher {
  public:
   // Delegate ensuring coordination between PageDownload and the class that owns it.
   class Delegate {
@@ -31,7 +31,6 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
   };
 
   PageDownload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
-               storage::PageSyncClient* sync_client,
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
                std::unique_ptr<backoff::Backoff> backoff);
@@ -48,6 +47,16 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
 
   // Returns if PageDownload is idle (all remote commits downloaded).
   bool IsIdle();
+
+  void GetObject(storage::ObjectIdentifier object_identifier,
+                 storage::RetrievedObjectType retrieved_object_type,
+                 fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
+                                    std::unique_ptr<storage::DataSource::DataChunk>)>
+                     callback);
+  void GetDiff(
+      storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
+      fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+          callback);
 
  private:
   // cloud_provider::PageCloudWatcher:
@@ -70,17 +79,6 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
   void DownloadBatch(std::vector<cloud_provider::Commit> entries,
                      std::unique_ptr<cloud_provider::PositionToken> position_token,
                      fit::closure on_done);
-
-  // storage::PageSyncDelegate:
-  void GetObject(storage::ObjectIdentifier object_identifier,
-                 storage::RetrievedObjectType retrieved_object_type,
-                 fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
-                                    std::unique_ptr<storage::DataSource::DataChunk>)>
-                     callback) override;
-  void GetDiff(
-      storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
-      fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
-          callback) override;
 
   // Actual implementation of |GetObject|: |retrieved_object_type| is ignored at this level.
   void GetObject(storage::ObjectIdentifier object_identifier,
@@ -125,7 +123,6 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
   // Owned by whoever owns this class.
   callback::ScopedTaskRunner* const task_runner_;
   storage::PageStorage* const storage_;
-  storage::PageSyncClient* sync_client_;
   encryption::EncryptionService* const encryption_service_;
   cloud_provider::PageCloudPtr* const page_cloud_;
   Delegate* const delegate_;

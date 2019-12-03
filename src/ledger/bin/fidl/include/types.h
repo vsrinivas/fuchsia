@@ -13,6 +13,12 @@
 // More convenient aliases for FIDL types.
 
 namespace cloud_provider {
+using ClockEntry = fuchsia::ledger::cloud::ClockEntry;
+using DeletionEntry = fuchsia::ledger::cloud::DeletionEntry;
+using TombstoneEntry = fuchsia::ledger::cloud::TombstoneEntry;
+using DeviceEntry = fuchsia::ledger::cloud::DeviceEntry;
+using DeviceClock = fuchsia::ledger::cloud::DeviceClock;
+using Clock = fuchsia::ledger::cloud::Clock;
 using ClockPack = fuchsia::ledger::cloud::ClockPack;
 using CloudProvider = fuchsia::ledger::cloud::CloudProvider;
 using CloudProviderPtr = fuchsia::ledger::cloud::CloudProviderPtr;

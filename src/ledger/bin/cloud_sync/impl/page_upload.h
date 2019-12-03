@@ -14,6 +14,7 @@
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -71,6 +72,8 @@ class PageUpload : public storage::CommitWatcher {
   // Returns true if PageUpload is paused.
   bool IsPaused();
 
+  void UpdateClock(storage::Clock clock, fit::function<void(ledger::Status)> callback);
+
  private:
   // storage::CommitWatcher:
   void OnNewCommits(const std::vector<std::unique_ptr<const storage::Commit>>& /*commits*/,
@@ -116,6 +119,11 @@ class PageUpload : public storage::CommitWatcher {
   std::unique_ptr<BatchUpload> batch_upload_;
   // Internal state.
   PageUploadState internal_state_ = PageUploadState::NO_COMMIT;
+
+  // Clock upload:
+  using ClockUploadCallback = fit::function<void(ledger::Status)>;
+  std::optional<std::pair<storage::Clock, ClockUploadCallback>> pending_clock_upload_;
+  bool clock_upload_in_progress_ = false;
 
   // External state.
   UploadSyncState external_state_ = UPLOAD_NOT_STARTED;

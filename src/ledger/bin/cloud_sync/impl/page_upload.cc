@@ -6,6 +6,13 @@
 
 #include <lib/fit/function.h>
 
+#include "fuchsia/ledger/cloud/cpp/fidl.h"
+#include "src/ledger/bin/cloud_sync/impl/clock_pack.h"
+#include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
+#include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/public/status.h"
+#include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/scoped_callback.h"
 
 namespace cloud_sync {
@@ -248,6 +255,47 @@ void PageUpload::PreviousState() {
       UploadUnsyncedCommits();
       return;
   }
+}
+
+void PageUpload::UpdateClock(storage::Clock clock, fit::function<void(ledger::Status)> callback) {
+  if (external_state_ == UploadSyncState::UPLOAD_NOT_STARTED ||
+      external_state_ == UploadSyncState::UPLOAD_PERMANENT_ERROR) {
+    return;
+  }
+  if (clock_upload_in_progress_) {
+    // We only send the latest clock, but we want to reply to all callbacks.
+    if (pending_clock_upload_) {
+      auto pending_callback = std::move(std::get<ClockUploadCallback>(*pending_clock_upload_));
+      pending_clock_upload_.emplace(
+          std::move(clock),
+          [callback = std::move(callback),
+           pending_callback = std::move(pending_callback)](ledger::Status status) {
+            pending_callback(status);
+            callback(status);
+          });
+    } else {
+      pending_clock_upload_.emplace(std::move(clock), std::move(callback));
+    }
+    return;
+  }
+  clock_upload_in_progress_ = true;
+  auto pack = EncodeClock(clock);
+  (*page_cloud_)
+      ->UpdateClock(std::move(pack), [this, callback = std::move(callback)](
+                                         cloud_provider::Status status,
+                                         fuchsia::ledger::cloud::ClockPackPtr /*new_clock*/) {
+        clock_upload_in_progress_ = false;
+        if (pending_clock_upload_) {
+          storage::Clock pending_clock;
+          ClockUploadCallback pending_callback;
+          std::tie(pending_clock, pending_callback) = std::move(*pending_clock_upload_);
+          pending_clock_upload_.reset();
+          UpdateClock(std::move(pending_clock), std::move(pending_callback));
+        }
+        // TODO(etiennej): Use better error codes.
+        callback(status == cloud_provider::Status::OK ? ledger::Status::OK
+                                                      : ledger::Status::INTERNAL_ERROR);
+      });
 }
 
 }  // namespace cloud_sync

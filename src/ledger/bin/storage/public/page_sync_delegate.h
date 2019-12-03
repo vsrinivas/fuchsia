@@ -63,6 +63,10 @@ class PageSyncDelegate {
   virtual void GetDiff(
       CommitId commit_id, std::vector<CommitId> possible_bases,
       fit::function<void(Status, CommitId, std::vector<EntryChange>)> callback) = 0;
+
+  // Notifies the PageSyncDelegate of a new clock for the page. The callback will be called once the
+  // update has been propagated.
+  virtual void UpdateClock(storage::Clock clock, fit::function<void(Status)> callback) = 0;
 };
 
 }  // namespace storage

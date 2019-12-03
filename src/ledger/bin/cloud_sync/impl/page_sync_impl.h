@@ -55,7 +55,10 @@ namespace cloud_sync {
 // Unrecoverable errors (such as internal errors accessing the storage) cause
 // the page sync to stop, in which case the client is notified using the error
 // callback set via SetOnUnrecoverableError().
-class PageSyncImpl : public PageSync, public PageDownload::Delegate, public PageUpload::Delegate {
+class PageSyncImpl : public PageSync,
+                     public PageDownload::Delegate,
+                     public PageUpload::Delegate,
+                     public storage::PageSyncDelegate {
  public:
   PageSyncImpl(async_dispatcher_t* dispatcher, coroutine::CoroutineService* coroutine_service,
                storage::PageStorage* storage, storage::PageSyncClient* sync_client,
@@ -94,6 +97,18 @@ class PageSyncImpl : public PageSync, public PageDownload::Delegate, public Page
   // PageUpload::Delegate:
   void SetUploadState(UploadSyncState next_upload_state) override;
   bool IsDownloadIdle() override;
+
+  // storage::PageSyncDelegate:
+  void GetObject(storage::ObjectIdentifier object_identifier,
+                 storage::RetrievedObjectType retrieved_object_type,
+                 fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
+                                    std::unique_ptr<storage::DataSource::DataChunk>)>
+                     callback) override;
+  void GetDiff(
+      storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
+      fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+          callback) override;
+  void UpdateClock(storage::Clock clock, fit::function<void(ledger::Status)> callback) override;
 
  private:
   // This may destruct the object.

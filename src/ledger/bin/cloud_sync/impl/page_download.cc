@@ -98,13 +98,11 @@ bool NormalizeDiff(std::vector<storage::EntryChange>* changes) {
 }  // namespace
 
 PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
-                           storage::PageSyncClient* sync_client,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
                            std::unique_ptr<backoff::Backoff> backoff)
     : task_runner_(task_runner),
       storage_(storage),
-      sync_client_(sync_client),
       encryption_service_(encryption_service),
       page_cloud_(page_cloud),
       delegate_(delegate),
@@ -114,12 +112,10 @@ PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner, storage::Pag
       watcher_binding_(this),
       weak_factory_(this) {}
 
-PageDownload::~PageDownload() { sync_client_->SetSyncDelegate(nullptr); }
+PageDownload::~PageDownload() = default;
 
 void PageDownload::StartDownload() {
   SetCommitState(DOWNLOAD_BACKLOG);
-
-  sync_client_->SetSyncDelegate(this);
 
   // Retrieve the server-side timestamp of the last commit we received.
   storage_->GetSyncMetadata(
@@ -635,7 +631,6 @@ void PageDownload::HandleDownloadCommitError(fxl::StringView error_description) 
   if (watcher_binding_.is_bound()) {
     watcher_binding_.Unbind();
   }
-  sync_client_->SetSyncDelegate(nullptr);
   SetCommitState(DOWNLOAD_PERMANENT_ERROR);
 }
 

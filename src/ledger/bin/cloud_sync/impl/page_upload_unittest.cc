@@ -14,24 +14,30 @@
 
 #include <gmock/gmock.h>
 
+#include "src/ledger/bin/cloud_sync/impl/clock_pack.h"
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
+#include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/encoding/encoding.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fsl/socket/strings.h"
 
 namespace cloud_sync {
 namespace {
 
 using ::testing::Each;
+using ::testing::SizeIs;
 using ::testing::Truly;
 
 constexpr zx::duration kBackoffInterval = zx::msec(10);
@@ -519,6 +525,96 @@ TEST_F(PageUploadTest, RetryOnError) {
   EXPECT_EQ(storage_.get_unsynced_commits_calls, 2u);
   EXPECT_EQ(page_cloud_.add_commits_calls, 1u);
   EXPECT_EQ(states_.back(), UploadSyncState::UPLOAD_IDLE);
+}
+
+// Verifies that clocks are uploaded.
+TEST_F(PageUploadTest, UploadClock) {
+  page_upload_->StartOrRestartUpload();
+  storage::Clock clock{
+      {clocks::DeviceId{"device_0", 1}, storage::ClockTombstone{}},
+      {clocks::DeviceId{"device_1", 1},
+       storage::DeviceEntry{storage::ClockEntry{"commit1", 1}, storage::ClockEntry{"commit0", 0}}},
+      {clocks::DeviceId{"device_2", 4},
+       storage::DeviceEntry{storage::ClockEntry{"commit4", 4}, storage::ClockEntry{"commit2", 2}}}};
+  bool called;
+  ledger::Status status;
+  page_upload_->UpdateClock(std::move(clock),
+                            callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+  EXPECT_THAT(page_cloud_.clocks, SizeIs(1));
+
+  page_cloud_.clocks[0].second(
+      cloud_provider::Status::OK,
+      std::make_unique<cloud_provider::ClockPack>(std::move(page_cloud_.clocks[0].first)));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::OK);
+}
+
+// Verifies that clocks uploads are buffered while waiting for the cloud response.
+TEST_F(PageUploadTest, UploadClockRateLimit) {
+  page_upload_->StartOrRestartUpload();
+  storage::Clock clock{
+      {clocks::DeviceId{"device_1", 1},
+       storage::DeviceEntry{storage::ClockEntry{"commit1", 1}, storage::ClockEntry{"commit0", 0}}}};
+  bool called_1;
+  ledger::Status status_1;
+  page_upload_->UpdateClock(clock,
+                            callback::Capture(callback::SetWhenCalled(&called_1), &status_1));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called_1);
+  EXPECT_THAT(page_cloud_.clocks, SizeIs(1));
+
+  bool called_2;
+  ledger::Status status_2;
+  page_upload_->UpdateClock(clock,
+                            callback::Capture(callback::SetWhenCalled(&called_2), &status_2));
+  // The second call is waiting for the first one to finish.
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called_2);
+  EXPECT_THAT(page_cloud_.clocks, SizeIs(1));
+
+  storage::Clock clock_3{
+      {clocks::DeviceId{"device_1", 1},
+       storage::DeviceEntry{storage::ClockEntry{"commit5", 5}, storage::ClockEntry{"commit0", 0}}}};
+  bool called_3;
+  ledger::Status status_3;
+  page_upload_->UpdateClock(clock_3,
+                            callback::Capture(callback::SetWhenCalled(&called_3), &status_3));
+  // The second call is waiting for the first one to finish.
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called_3);
+  EXPECT_THAT(page_cloud_.clocks, SizeIs(1));
+
+  // Respond to the first request. The second request should be sent, with the third clock.
+  page_cloud_.clocks[0].second(
+      cloud_provider::Status::OK,
+      std::make_unique<cloud_provider::ClockPack>(std::move(page_cloud_.clocks[0].first)));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called_1);
+  EXPECT_EQ(status_1, ledger::Status::OK);
+  EXPECT_THAT(page_cloud_.clocks, SizeIs(2));
+
+  auto golden_clock = clock_3;
+  // Remove the cloud entry from the clocks: it is not transmitted either way.
+  std::get<storage::DeviceEntry>(golden_clock.begin()->second).cloud.reset();
+  storage::Clock actual_clock;
+  EXPECT_TRUE(DecodeClock(std::move(page_cloud_.clocks[1].first), &actual_clock));
+  std::get<storage::DeviceEntry>(actual_clock.begin()->second).cloud.reset();
+  EXPECT_EQ(actual_clock, golden_clock);
+
+  auto return_clock_pack = EncodeClock(actual_clock);
+  page_cloud_.clocks[1].second(
+      cloud_provider::Status::OK,
+      std::make_unique<cloud_provider::ClockPack>(std::move(return_clock_pack)));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called_2);
+  EXPECT_EQ(status_2, ledger::Status::OK);
+  EXPECT_TRUE(called_3);
+  EXPECT_EQ(status_3, ledger::Status::OK);
 }
 
 }  // namespace

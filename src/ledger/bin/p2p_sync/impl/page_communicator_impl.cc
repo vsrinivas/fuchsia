@@ -405,6 +405,11 @@ void PageCommunicatorImpl::GetDiff(
   callback(ledger::Status::NOT_IMPLEMENTED, {}, {});
 }
 
+void PageCommunicatorImpl::UpdateClock(storage::Clock /*clock*/,
+                                       fit::function<void(ledger::Status)> /*callback*/) {
+  FXL_NOTIMPLEMENTED();
+};
+
 void PageCommunicatorImpl::OnNewCommits(
     const std::vector<std::unique_ptr<const storage::Commit>>& commits,
     storage::ChangeSource source) {

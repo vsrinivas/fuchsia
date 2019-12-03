@@ -25,6 +25,7 @@
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
@@ -32,6 +33,7 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fxl/logging.h"
 
 namespace cloud_sync {
 namespace {
@@ -66,6 +68,37 @@ std::unique_ptr<backoff::TestBackoff> NewTestBackoff() {
   return result;
 }
 
+class FakePageSyncDelegate : public storage::PageSyncDelegate {
+ public:
+  explicit FakePageSyncDelegate(PageDownload* page_download) : page_download_(page_download) {}
+  ~FakePageSyncDelegate() override = default;
+
+  void GetObject(storage::ObjectIdentifier object_identifier,
+                 storage::RetrievedObjectType retrieved_object_type,
+                 fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
+                                    std::unique_ptr<storage::DataSource::DataChunk>)>
+                     callback) override {
+    page_download_->GetObject(std::move(object_identifier), retrieved_object_type,
+                              std::move(callback));
+  }
+  void GetDiff(
+      storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
+      fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+          callback) override {
+    page_download_->GetDiff(std::move(commit_id), std::move(possible_bases), std::move(callback));
+  }
+
+  void UpdateClock(storage::Clock /*clock*/,
+                   fit::function<void(ledger::Status)> /*callback*/) override {
+    FXL_NOTIMPLEMENTED();
+  }
+
+ private:
+  PageDownload* const page_download_;
+};
+
+// Dummy implementation of a backoff policy, which always returns zero backoff
+// time.
 template <typename E>
 class BasePageDownloadTest : public ledger::TestWithEnvironment, public PageDownload::Delegate {
  public:
@@ -74,9 +107,10 @@ class BasePageDownloadTest : public ledger::TestWithEnvironment, public PageDown
         encryption_service_(dispatcher()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(dispatcher()) {
-    page_download_ =
-        std::make_unique<PageDownload>(&task_runner_, &storage_, &storage_, &encryption_service_,
-                                       &page_cloud_ptr_, this, NewTestBackoff());
+    page_download_ = std::make_unique<PageDownload>(&task_runner_, &storage_, &encryption_service_,
+                                                    &page_cloud_ptr_, this, NewTestBackoff());
+    sync_delegate_ = std::make_unique<FakePageSyncDelegate>(page_download_.get());
+    storage_.SetSyncDelegate(sync_delegate_.get());
   }
   BasePageDownloadTest(const BasePageDownloadTest&) = delete;
   BasePageDownloadTest& operator=(const BasePageDownloadTest&) = delete;
@@ -110,6 +144,7 @@ class BasePageDownloadTest : public ledger::TestWithEnvironment, public PageDown
   TestPageCloud page_cloud_;
   std::vector<DownloadSyncState> states_;
   std::unique_ptr<PageDownload> page_download_;
+  std::unique_ptr<FakePageSyncDelegate> sync_delegate_;
   int error_callback_calls_ = 0;
 
  private:

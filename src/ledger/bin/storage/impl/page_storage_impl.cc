@@ -903,7 +903,14 @@ Status PageStorageImpl::DeleteCommits(coroutine::CoroutineHandler* handler,
 }
 
 Status PageStorageImpl::SetClock(coroutine::CoroutineHandler* handler, const Clock& clock) {
-  return db_->SetClock(handler, clock);
+  RETURN_ON_ERROR(db_->SetClock(handler, clock));
+  if (page_sync_) {
+    page_sync_->UpdateClock(clock, [](ledger::Status /*status*/) {
+      // We don't care whether the clock propagated correctly here. We care only when we want to
+      // ensure we got all clock updates before performing garbage collection.
+    });
+  }
+  return Status::OK;
 }
 
 void PageStorageImpl::NotifyWatchersOfNewCommits(
