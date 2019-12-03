@@ -235,7 +235,10 @@ impl Player {
     }
 
     fn options_satisfied(&self) -> WatchOptions {
-        WatchOptions { only_active: Some(self.state.is_active().unwrap_or(false)) }
+        WatchOptions {
+            only_active: Some(self.state.is_active().unwrap_or(false)),
+            allowed_sessions: Some(vec![self.id]),
+        }
     }
 }
 

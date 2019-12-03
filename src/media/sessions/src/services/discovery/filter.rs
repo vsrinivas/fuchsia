@@ -32,7 +32,10 @@ pub struct FilterApplicant<T> {
 impl<T: Clone> Clone for FilterApplicant<T> {
     fn clone(&self) -> Self {
         Self {
-            options: WatchOptions { only_active: self.options.only_active },
+            options: WatchOptions {
+                only_active: self.options.only_active,
+                allowed_sessions: self.options.allowed_sessions.clone(),
+            },
             applicant: self.applicant.clone(),
         }
     }
@@ -54,7 +57,23 @@ impl Filter {
     }
 
     fn satisfies_filter(&self, options: &WatchOptions) -> bool {
-        !self.options.only_active.unwrap_or(false) || options.only_active.unwrap_or(false)
+        let passes_active_filter =
+            !self.options.only_active.unwrap_or(false) || options.only_active.unwrap_or(false);
+        let passes_allowlist_filter = self
+            .options
+            .allowed_sessions
+            .as_ref()
+            .map(|allowed_sessions| {
+                options
+                    .allowed_sessions
+                    .as_ref()
+                    .filter(|set| set.len() == 1)
+                    .and_then(|ids| ids.first().copied())
+                    .map(|id| allowed_sessions.contains(&id))
+                    .unwrap_or(false)
+            })
+            .unwrap_or(true);
+        passes_active_filter && passes_allowlist_filter
     }
 }
 
@@ -63,22 +82,101 @@ mod test {
     use super::*;
 
     #[test]
-    fn it_works() {
+    fn active_filter() {
         let loose_filter = Filter::new(Decodable::new_empty());
         assert_eq!(loose_filter, Filter::default());
 
         assert_eq!(loose_filter.filter(&FilterApplicant::new(Decodable::new_empty(), 1u32)), true);
 
-        let active_filter = Filter::new(WatchOptions { only_active: Some(true) });
+        let active_filter =
+            Filter::new(WatchOptions { only_active: Some(true), ..Decodable::new_empty() });
 
         assert_eq!(
             active_filter.filter(&FilterApplicant::new(Decodable::new_empty(), 1u32)),
             false
         );
         assert_eq!(
-            active_filter
-                .filter(&FilterApplicant::new(WatchOptions { only_active: Some(true) }, 2u32)),
+            active_filter.filter(&FilterApplicant::new(
+                WatchOptions { only_active: Some(true), ..Decodable::new_empty() },
+                2u32
+            )),
             true
+        );
+    }
+
+    #[test]
+    fn allowlist_filter() {
+        let loose_filter = Filter::new(Decodable::new_empty());
+        assert_eq!(loose_filter, Filter::default());
+
+        assert_eq!(loose_filter.filter(&FilterApplicant::new(Decodable::new_empty(), 1u32)), true);
+
+        let active_filter = Filter::new(WatchOptions {
+            allowed_sessions: Some(vec![0u64, 5u64]),
+            ..Decodable::new_empty()
+        });
+
+        assert_eq!(
+            active_filter.filter(&FilterApplicant::new(Decodable::new_empty(), 1u32)),
+            false
+        );
+
+        assert_eq!(
+            active_filter.filter(&FilterApplicant::new(
+                WatchOptions { allowed_sessions: Some(vec![0u64]), ..Decodable::new_empty() },
+                2u32
+            )),
+            true
+        );
+
+        assert_eq!(
+            active_filter.filter(&FilterApplicant::new(
+                WatchOptions { allowed_sessions: Some(vec![5u64]), ..Decodable::new_empty() },
+                2u32
+            )),
+            true
+        );
+
+        assert_eq!(
+            active_filter.filter(&FilterApplicant::new(
+                WatchOptions { allowed_sessions: Some(vec![7u64]), ..Decodable::new_empty() },
+                2u32
+            )),
+            false
+        );
+    }
+
+    #[test]
+    fn filter_is_intersection() {
+        let loose_filter = Filter::new(Decodable::new_empty());
+        assert_eq!(loose_filter, Filter::default());
+
+        assert_eq!(loose_filter.filter(&FilterApplicant::new(Decodable::new_empty(), 1u32)), true);
+
+        let active_filter = Filter::new(WatchOptions {
+            only_active: Some(true),
+            allowed_sessions: Some(vec![0u64, 5u64]),
+        });
+
+        assert_eq!(
+            active_filter.filter(&FilterApplicant::new(Decodable::new_empty(), 1u32)),
+            false
+        );
+
+        assert_eq!(
+            active_filter.filter(&FilterApplicant::new(
+                WatchOptions { only_active: Some(true), allowed_sessions: Some(vec![0u64]) },
+                2u32
+            )),
+            true
+        );
+
+        assert_eq!(
+            active_filter.filter(&FilterApplicant::new(
+                WatchOptions { only_active: Some(false), allowed_sessions: Some(vec![5u64]) },
+                2u32
+            )),
+            false
         );
     }
 }

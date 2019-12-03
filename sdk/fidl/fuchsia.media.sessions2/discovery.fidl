@@ -36,6 +36,8 @@ table SessionInfoDelta {
 };
 
 /// A protocol for clients to control sessions and view their status.
+///
+/// The channel will close if the backing player is removed.
 protocol SessionControl {
     /// Plays media.
     Play();
@@ -67,9 +69,14 @@ protocol SessionControl {
         request<fuchsia.media.audio.VolumeControl> volume_control_request);
 };
 
+/// Options that specify which sessions are watched when watching the collection.
+///
+/// The watched set is the set of sessions which satisfies all options.
 table WatchOptions {
     /// Watch only the active session. Watches all if not set.
     1: bool only_active;
+    /// Watch only sessions with these allowlisted ids. Watches all if not set.
+    2: vector<SessionId>:1000 allowed_sessions;
 };
 
 /// `SessionsWatcher` watches the collection of published sessions.
@@ -78,14 +85,14 @@ protocol SessionsWatcher {
     /// this will be called as many times as needed to communicate the state of the
     /// world.
     ///
-    /// `SessionsWatchers` must reply to acknlowledge receipt of the session info delta.
+    /// `SessionsWatcher` must reply to acknowledge receipt of the session info delta.
     /// Delinquent watchers who do not reply will eventually be disconnected.
     SessionUpdated(SessionId session_id, SessionInfoDelta session_info_delta) -> ();
 
     /// Called by the registry service when a session is removed from the registered
     /// collection.
     ///
-    /// `SessionsWatchers` must reply to acknlowledge receipt of the session removal.
+    /// `SessionsWatcher` must reply to acknlowledge receipt of the session removal.
     /// Delinquent watchers who do not reply will eventually be disconnected.
     SessionRemoved(SessionId session_id) -> ();
 };

@@ -148,14 +148,14 @@ mod test {
     async fn player_filter() -> Result<()> {
         let (watcher_client, watcher_server) = create_endpoints::<SessionsWatcherMarker>()?;
         let mut under_test = WatcherSink::new(
-            Filter::new(WatchOptions { only_active: Some(true) }),
+            Filter::new(WatchOptions { only_active: Some(true), ..Decodable::new_empty() }),
             watcher_client.into_proxy()?,
         );
         let mut watcher_requests = watcher_server.into_stream()?;
 
         let make_event = |player_id, is_active| {
             FilterApplicant::new(
-                WatchOptions { only_active: Some(is_active) },
+                WatchOptions { only_active: Some(is_active), ..Decodable::new_empty() },
                 (
                     player_id,
                     PlayerEvent::Updated {
