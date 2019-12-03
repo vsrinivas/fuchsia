@@ -115,6 +115,9 @@ def transform_build_file(build):
             sys.stdout.write('  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]\n')
             sys.stdout.write('  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]\n')
 
+        if starting_type in ['zx_executable', 'zx_test']:
+            sys.stdout.write('  configs += [ "//build/unification/config:zircon-migrated" ]\n')
+
 
     # Third pass: add manifest targets at the end of the file.
     with open(build, 'a') as build_file:

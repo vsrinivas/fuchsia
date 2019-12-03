@@ -1,0 +1,50 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The following config is applied to code migrated from the ZN build and is a
+# stepping stone to full conversion to the GN build.
+# It should not be used on any target native to the GN build.
+
+config("zircon-migrated") {
+  compiler_flags = [
+    "-O2",
+    "-no-canonical-prefixes",
+  ]
+
+  cflags = compiler_flags + [
+             "-fno-omit-frame-pointer",
+             "-fno-common",
+             "-UNDEBUG",
+             "-U_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+           ]
+
+  cflags_c = [
+    "-Wwrite-strings",
+    "-Wstrict-prototypes",
+  ]
+
+  cflags_cc = [
+    "-Wextra-semi",
+    "-Wconversion",
+    "-Wno-sign-conversion",
+    "-ftemplate-backtrace-limit=0",
+    "-fno-threadsafe-statics",
+  ]
+
+  ldflags = compiler_flags + [
+              "-Wl,-z,combreloc",
+              "-Wl,-z,relro",
+              "-Wl,-z,now",
+              "-Wl,-z,text",
+              "-Wl,-z,max-page-size=4096",
+            ]
+
+  asmflags = compiler_flags
+
+  defines = [
+    "_ALL_SOURCE",
+    "ZX_ASSERT_LEVEL=2",
+    "WITH_FRAME_POINTERS=1",
+  ]
+}
