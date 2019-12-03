@@ -14,7 +14,6 @@ group("bin") {
     "cs",
     "developer",
     "device_settings",
-    "display_manager",
     "far",
     "fidl_compatibility_test",
     "glob",

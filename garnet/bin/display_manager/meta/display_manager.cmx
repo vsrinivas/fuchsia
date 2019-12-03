@@ -1,8 +1,0 @@
-{
-    "program": {
-        "binary": "bin/app"
-    },
-    "sandbox": {
-        "dev": [ "class/backlight" ]
-    }
-}

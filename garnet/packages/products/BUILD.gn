@@ -10,7 +10,6 @@ group("interactive_minimal") {
   public_deps = [
     "//garnet/packages/config:mediasession",
     "//garnet/packages/config:shortcut",
-    "//garnet/packages/prod:display_manager",
     "//garnet/packages/prod:media_codec_factory",
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",

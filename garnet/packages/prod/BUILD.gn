@@ -187,7 +187,6 @@ group("all") {
     "//garnet/packages/prod:cpuperf",
     "//garnet/packages/prod:debug_agent",
     "//garnet/packages/prod:device_settings",
-    "//garnet/packages/prod:display_manager",
     "//garnet/packages/prod:drivers",
     "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:far",
@@ -347,13 +346,6 @@ group("openssh") {
   testonly = true
   public_deps = [
     "//garnet/bin/sshd-host",
-  ]
-}
-
-group("display_manager") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/display_manager",
   ]
 }
 
