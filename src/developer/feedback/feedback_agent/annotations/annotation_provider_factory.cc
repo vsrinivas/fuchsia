@@ -11,10 +11,20 @@
 #include "src/developer/feedback/feedback_agent/annotations/product_info_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/time_provider.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/timekeeper/system_clock.h"
 
 namespace feedback {
 namespace {
+
+// Generate a vector that contains all of the values of an enum class.
+template <typename Enum, Enum First, Enum Last>
+std::vector<Enum> AllEnumValues() {
+  std::vector<Enum> values(static_cast<size_t>(Last) - static_cast<size_t>(First) + 1);
+  std::generate(values.begin(), values.end(),
+                [n = static_cast<size_t>(First)]() mutable { return static_cast<Enum>(n++); });
+  return values;
+}
 
 // The type of annotations.
 enum class AnnotationType {
@@ -25,6 +35,9 @@ enum class AnnotationType {
   HardwareProductInfo,
   Time,
 };
+
+const auto GetAnnotationTypes =
+    AllEnumValues<AnnotationType, AnnotationType::BoardName, AnnotationType::Time>;
 
 std::set<std::string> GetSupportedAnnotations(const AnnotationType type) {
   switch (type) {
@@ -75,17 +88,16 @@ std::unique_ptr<AnnotationProvider> GetProvider(const AnnotationType type,
   }
 }
 
-void AddIfAnnotationsIntersect(const AnnotationType type, const std::set<std::string>& allowlist,
-                               async_dispatcher_t* dispatcher,
-                               std::shared_ptr<sys::ServiceDirectory> services,
-                               const zx::duration timeout,
-                               std::vector<std::unique_ptr<AnnotationProvider>>* providers) {
+std::set<std::string> AddIfAnnotationsIntersect(
+    const AnnotationType type, const std::set<std::string>& allowlist,
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    const zx::duration timeout, std::vector<std::unique_ptr<AnnotationProvider>>* providers) {
   auto annotations = AnnotationsToCollect(type, allowlist);
-  if (annotations.empty()) {
-    return;
+  if (!annotations.empty()) {
+    providers->push_back(GetProvider(type, annotations, dispatcher, services, timeout));
   }
 
-  providers->push_back(GetProvider(type, annotations, dispatcher, services, timeout));
+  return annotations;
 }
 
 }  // namespace
@@ -93,20 +105,23 @@ void AddIfAnnotationsIntersect(const AnnotationType type, const std::set<std::st
 std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
     const std::set<std::string>& allowlist, async_dispatcher_t* dispatcher,
     std::shared_ptr<sys::ServiceDirectory> services, const zx::duration timeout) {
-  std::vector<std::unique_ptr<AnnotationProvider>> providers;
+  static auto annotation_types = GetAnnotationTypes();
 
-  AddIfAnnotationsIntersect(AnnotationType::BoardName, allowlist, dispatcher, services, timeout,
-                            &providers);
-  AddIfAnnotationsIntersect(AnnotationType::BuildInfo, allowlist, dispatcher, services, timeout,
-                            &providers);
-  AddIfAnnotationsIntersect(AnnotationType::Channel, allowlist, dispatcher, services, timeout,
-                            &providers);
-  AddIfAnnotationsIntersect(AnnotationType::HardwareBoardInfo, allowlist, dispatcher, services,
-                            timeout, &providers);
-  AddIfAnnotationsIntersect(AnnotationType::HardwareProductInfo, allowlist, dispatcher, services,
-                            timeout, &providers);
-  AddIfAnnotationsIntersect(AnnotationType::Time, allowlist, dispatcher, services, timeout,
-                            &providers);
+  std::set<std::string> ignored_annotations = allowlist;
+  std::vector<std::unique_ptr<AnnotationProvider>> providers;
+  for (const auto& type : annotation_types) {
+    const auto annotations =
+        AddIfAnnotationsIntersect(type, allowlist, dispatcher, services, timeout, &providers);
+
+    for (const auto& annotation : annotations) {
+      ignored_annotations.erase(annotation);
+    }
+  }
+
+  for (const auto& annotation : ignored_annotations) {
+    FX_LOGS(WARNING) << "Annotation " << annotation
+                     << " is not supported and will not be collected";
+  }
 
   return providers;
 }
