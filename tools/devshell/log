@@ -1,23 +1,38 @@
 #!/bin/bash
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### listen for kernel logs.
+### listen for logs
 
-## This command delegates to the Zircon `loglistener` binary.
-## This will listen to the device specified with `fx set-device`; otherwise
-## one of the devices on the link-local network.
+## usage: fx syslog [--raw] [flags]
+##
+## Creates an SSH connection with a device and starts listening for logs.
+## Pass -h to get help with log-listener flags.
+## pass --raw as the first argument to get the raw, unsymbolized logs.
 
-set -e
 set -o pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
-fx-config-read
 
-if [[ $# > 0 && $1 = "--raw" ]]; then
+function listen {
+  while true; do
+    fx-command-run wait || return
+    fx-command-run shell log_listener "$@"
+    echo "Connection lost, reconnecting..."
+  done
+}
+
+for arg in "$@"; do
+  if [[ "$arg" = "-h" || "$arg" = "--help" ]]; then
+    fx-command-exec shell log_listener "$arg"
+  fi
+done
+
+echo "Connecting..."
+if [[ $# > 0 && "$1" = "--raw" ]]; then
   shift
-  exec "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)"
+  listen "$@"
 else
-  "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)" | fx-symbolize
+  listen "$@" | fx-symbolize
 fi

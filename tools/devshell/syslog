@@ -3,30 +3,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### listen for logs
+### deprecated: alias for log
 
 ## usage: fx syslog [--raw] [flags]
 ##
-## Creates an SSH connection with a device and starts listening for logs.
-## Pass -h to get help with log-listener flags.
-## pass --raw as the first argument to get the raw, unsymbolized logs.
+## Deprecated: runs fx log
 
 set -o pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
-function listen {
-  while true; do
-    fx-command-run wait || return
-    fx-command-run shell log_listener "$@"
-    echo "Connection lost, reconnecting..."
-  done
-}
+fx-warn "fx syslog was renamed -> fx log"
+fx-warn "fx klog provides kernel-only logs from netsvc"
+sleep 5
 
-echo "Connecting..."
-if [[ $# > 0 && "$1" = "--raw" ]]; then
-  shift
-  listen "$@"
-else
-  listen "$@" | fx-symbolize
-fi
+fx-command-exec log "$@"
