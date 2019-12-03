@@ -51,6 +51,15 @@ typedef struct fidl_txn fidl_txn_t;
 #define DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER (DEVICE_SUSPEND_FLAG_REBOOT | 0x01)
 #define DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY (DEVICE_SUSPEND_FLAG_REBOOT | 0x02)
 
+#define DEVICE_SUSPEND_REASON_POWEROFF UINT8_C(0x10)
+#define DEVICE_SUSPEND_REASON_SUSPEND_RAM UINT8_C(0x20)
+#define DEVICE_SUSPEND_REASON_MEXEC UINT8_C(0x30)
+#define DEVICE_SUSPEND_REASON_REBOOT UINT8_C(0x40)
+#define DEVICE_SUSPEND_REASON_REBOOT_RECOVERY UINT8_C(DEVICE_SUSPEND_REASON_REBOOT | 0x01)
+#define DEVICE_SUSPEND_REASON_REBOOT_BOOTLOADER UINT8_C(DEVICE_SUSPEND_REASON_REBOOT | 0x02)
+#define DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND UINT8_C(0x50)
+#define DEVICE_MASK_SUSPEND_REASON UINT8_C(0xf0)
+
 //@doc(docs/ddk/device-ops.md)
 
 //@ # The Device Protocol
@@ -230,6 +239,9 @@ typedef struct zx_protocol_device {
   // enable_wake is whether to configure the device for wakeup from the requested non
   // working sleep state. If enable_wake is true and the device does not support
   // wake up, the hook fails without suspending the device.
+  // suspend_reason provides information for the driver why the suspend hook is called.
+  // Bus drivers and platform drivers like acpi will find this information useful to
+  // issue any system calls or save the reboot reason.
   //
   // On success, the out_state is same as the requested_state.
   // On failure, the device is not suspended and the out_state is the sleep state
@@ -244,7 +256,7 @@ typedef struct zx_protocol_device {
   // TODO(ravoorir): Remove the old suspend when all the drivers are moved to
   // new suspend and rename suspend_new to suspend.
   zx_status_t (*suspend_new)(void* ctx, uint8_t requested_state, bool enable_wake,
-                             uint8_t* out_state);
+                             uint8_t suspend_reason, uint8_t* out_state);
 
   //@ ## resume_new
   // The resume_new hook is used for resuming a device from a non-working sleep

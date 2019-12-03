@@ -497,7 +497,7 @@ void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOC
     dev->unbind_cb(ZX_OK);
   } else {
     ZX_PANIC("device: %p(%s): cannot reply to unbind, no callback set, flags are 0x%x\n", dev.get(),
-           dev->name, dev->flags);
+             dev->name, dev->flags);
   }
 }
 
@@ -592,9 +592,28 @@ zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) R
   return dev->CloseOp(flags);
 }
 
+uint8_t devhost_device_get_suspend_reason(fuchsia_device_manager_SystemPowerState power_state) {
+  switch (power_state) {
+    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT:
+      return DEVICE_SUSPEND_REASON_REBOOT;
+    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT_RECOVERY:
+      return DEVICE_SUSPEND_REASON_REBOOT_RECOVERY;
+    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT_BOOTLOADER:
+      return DEVICE_SUSPEND_REASON_REBOOT_BOOTLOADER;
+    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_MEXEC:
+      return DEVICE_SUSPEND_REASON_MEXEC;
+    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_POWEROFF:
+      return DEVICE_SUSPEND_REASON_POWEROFF;
+    case fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_SUSPEND_RAM:
+      return DEVICE_SUSPEND_REASON_SUSPEND_RAM;
+    default:
+      return DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
+  }
+}
+
 zx_status_t devhost_device_get_dev_power_state_from_mapping(
     const fbl::RefPtr<zx_device>& dev, uint32_t flags,
-    ::llcpp::fuchsia::device::SystemPowerStateInfo* info) {
+    ::llcpp::fuchsia::device::SystemPowerStateInfo* info, uint8_t* suspend_reason) {
   // TODO(ravoorir) : When the usage of suspend flags is replaced with
   // system power states, this function will not need the switch case.
   // Some suspend flags might be translated to system power states with
@@ -622,6 +641,7 @@ zx_status_t devhost_device_get_dev_power_state_from_mapping(
   }
   auto& sys_power_states = dev->GetSystemPowerStateMapping();
   *info = sys_power_states[sys_state];
+  *suspend_reason = devhost_device_get_suspend_reason(sys_state);
   return ZX_OK;
 }
 
@@ -638,11 +658,13 @@ zx_status_t devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev,
   if (dev->ops->suspend_new) {
     ::llcpp::fuchsia::device::SystemPowerStateInfo new_state_info;
     uint8_t out_state;
+    uint8_t suspend_reason = DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
     ApiAutoRelock relock;
-    status = devhost_device_get_dev_power_state_from_mapping(dev, flags, &new_state_info);
+    status = devhost_device_get_dev_power_state_from_mapping(dev, flags, &new_state_info,
+                                                             &suspend_reason);
     if (status == ZX_OK) {
       status = dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
-                                     new_state_info.wakeup_enable, &out_state);
+                                     new_state_info.wakeup_enable, suspend_reason, &out_state);
     }
   } else if (dev->ops->suspend) {
     // Invoke suspend hook otherwise.
@@ -705,6 +727,7 @@ zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
   if (dev->ops->suspend_new) {
     uint8_t raw_out;
     status = dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(requested_state),
+                                   DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND,
                                    false /* wake_configured */, &raw_out);
     *out_state = static_cast<::llcpp::fuchsia::device::DevicePowerState>(raw_out);
     // We expect 1 outstanding transaction (and a copy of it) for the suspend operation itself.

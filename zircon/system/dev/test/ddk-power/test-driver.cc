@@ -41,6 +41,7 @@ class TestPowerDriver : public DeviceType,
                               AddDeviceWithPowerArgsCompleter::Sync completer) override;
 
   void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
+  void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync completer) override;
   void GetCurrentDevicePerformanceState(
       GetCurrentDevicePerformanceStateCompleter::Sync completer) override;
   void GetCurrentDeviceAutoSuspendConfig(
@@ -62,8 +63,7 @@ zx_status_t TestPowerDriver::Bind() { return DdkAdd("power-test"); }
 
 void TestPowerDriver::AddDeviceWithPowerArgs(
     ::fidl::VectorView<DevicePowerStateInfo> info,
-    ::fidl::VectorView<DevicePerformanceStateInfo> perf_states,
-    bool add_invisible,
+    ::fidl::VectorView<DevicePerformanceStateInfo> perf_states, bool add_invisible,
     AddDeviceWithPowerArgsCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result response;
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
@@ -74,9 +74,9 @@ void TestPowerDriver::AddDeviceWithPowerArgs(
 void TestPowerDriver::GetCurrentDevicePowerState(
     GetCurrentDevicePowerStateCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result;
-      llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response response{
-          .cur_state = current_power_state_,
-      };
+  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response response{
+      .cur_state = current_power_state_,
+  };
   result.set_response(&response);
   completer.Reply(std::move(result));
 }
@@ -84,7 +84,8 @@ void TestPowerDriver::GetCurrentDevicePowerState(
 void TestPowerDriver::GetCurrentDevicePerformanceState(
     GetCurrentDevicePerformanceStateCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result result;
-  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response response{
+  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response
+      response{
           .cur_state = static_cast<int32_t>(current_performance_state_),
       };
   result.set_response(&response);
@@ -94,12 +95,19 @@ void TestPowerDriver::GetCurrentDevicePerformanceState(
 void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
     GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
-  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response response{
+  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response
+      response{
           .enabled = auto_suspend_enabled_,
           .deepest_sleep_state = static_cast<llcpp::fuchsia::device::DevicePowerState>(
               deepest_autosuspend_sleep_state_),
       };
   result.set_response(&response);
+  completer.Reply(std::move(result));
+}
+
+void TestPowerDriver::GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync completer) {
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result result;
+  result.set_err(ZX_ERR_NOT_SUPPORTED);
   completer.Reply(std::move(result));
 }
 

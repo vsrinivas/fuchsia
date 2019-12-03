@@ -270,8 +270,9 @@ class SuspendableNew : public base_mixin {
 
  private:
   static zx_status_t Suspend_New(void* ctx, uint8_t requested_state, bool enable_wake,
-                                 uint8_t* out_state) {
-    return static_cast<D*>(ctx)->DdkSuspendNew(requested_state, enable_wake, out_state);
+                                 uint8_t suspend_reason, uint8_t* out_state) {
+    return static_cast<D*>(ctx)->DdkSuspendNew(requested_state, enable_wake, suspend_reason,
+                                               out_state);
   }
 };
 

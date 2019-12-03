@@ -11,6 +11,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
@@ -1064,6 +1065,18 @@ TEST_F(PowerTestCase, SystemSuspend) {
   ASSERT_OK(call_status);
   ASSERT_EQ(child_dev_suspend_response->result.response().cur_state,
             DevicePowerState::DEVICE_POWER_STATE_D2);
+
+  // Verify that the suspend reason is received correctly
+  auto suspend_reason_response =
+      TestDevice::Call::GetCurrentSuspendReason(zx::unowned(child2_device_handle));
+  ASSERT_OK(suspend_reason_response.status());
+  call_status = ZX_OK;
+  if (suspend_reason_response->result.is_err()) {
+    call_status = suspend_reason_response->result.err();
+  }
+  ASSERT_OK(call_status);
+  ASSERT_EQ(suspend_reason_response->result.response().cur_suspend_reason,
+            DEVICE_SUSPEND_REASON_REBOOT);
 
   // Verify the parent'd DdkSuspend routine gets called.
   auto parent_dev_suspend_response =

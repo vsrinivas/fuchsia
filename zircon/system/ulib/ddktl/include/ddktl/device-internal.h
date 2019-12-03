@@ -268,10 +268,10 @@ template <typename D>
 constexpr void CheckSuspendableNew() {
   static_assert(has_ddk_suspend_new<D>::value,
                 "SuspendableNew classes must implement DdkSuspendNew");
-  static_assert(
-      std::is_same<decltype(&D::DdkSuspendNew), zx_status_t (D::*)(uint8_t, bool, uint8_t*)>::value,
-      "DdkSuspendNew must be a public non-static member function with signature "
-      "'zx_status_t DdkSuspendNew(uint8_t, bool, uint8_t)'.");
+  static_assert(std::is_same<decltype(&D::DdkSuspendNew),
+                             zx_status_t (D::*)(uint8_t, bool, uint8_t, uint8_t*)>::value,
+                "DdkSuspendNew must be a public non-static member function with signature "
+                "'zx_status_t DdkSuspendNew(uint8_t, bool, uint8_t)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_auto_configure_suspend, DdkConfigureAutoSuspend);
