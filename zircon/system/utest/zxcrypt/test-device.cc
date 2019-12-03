@@ -125,7 +125,7 @@ bool TestDevice::SetupDevmgr() {
   END_HELPER;
 }
 
-bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm) {
+bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm, Volume::Version version) {
   BEGIN_HELPER;
 
   ASSERT_LT(device_size, SSIZE_MAX);
@@ -135,36 +135,30 @@ bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm) {
     ASSERT_TRUE(CreateRamdisk(device_size, block_size));
   }
 
-// TODO(aarongreen): See ZX-1130. The code below should be enabled when that bug is fixed.
-#if 0
-    crypto::digest::Algorithm digest;
-    switch (version) {
-    case Volume::kAES256_XTS_SHA256:
-        digest = crypto::digest::kSHA256;
-        break;
-    default:
-        digest = crypto::digest::kUninitialized;
-        break;
-    }
+  crypto::digest::Algorithm digest;
+  switch (version) {
+  case Volume::kAES256_XTS_SHA256:
+      digest = crypto::digest::kSHA256;
+      break;
+  default:
+      digest = crypto::digest::kUninitialized;
+      break;
+  }
 
     size_t digest_len;
-    key_.Reset();
+  zx_status_t rc;
+  key_.Clear();
     if ((rc = crypto::digest::GetDigestLen(digest, &digest_len)) != ZX_OK ||
-        (rc = key_.Randomize(digest_len)) != ZX_OK) {
+      (rc = key_.Generate(digest_len)) != ZX_OK) {
         return rc;
     }
-#else
-  uint8_t* buf;
-  ASSERT_OK(key_.Allocate(kZx1130KeyLen, &buf));
-  memset(buf, 0, key_.len());
-#endif
 
   END_HELPER;
 }
 
 bool TestDevice::Bind(Volume::Version version, bool fvm) {
   BEGIN_HELPER;
-  ASSERT_TRUE(Create(kDeviceSize, kBlockSize, fvm));
+  ASSERT_TRUE(Create(kDeviceSize, kBlockSize, fvm, version));
   ASSERT_OK(FdioVolume::Create(parent(), devfs_root(), key_));
   ASSERT_TRUE(Connect());
   END_HELPER;

@@ -71,7 +71,7 @@ bool TestInit(Volume::Version version, bool fvm) {
 
   TestDevice device;
   ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm));
+  ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm, version));
 
   // Invalid arguments
   fbl::unique_fd bad_fd;
@@ -96,7 +96,7 @@ bool TestCreate(Volume::Version version, bool fvm) {
 
   TestDevice device;
   ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm));
+  ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm, version));
 
   // Invalid file descriptor
   fbl::unique_fd bad_fd;
@@ -121,7 +121,7 @@ bool TestUnlock(Volume::Version version, bool fvm) {
 
   TestDevice device;
   ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm));
+  ASSERT_TRUE(device.Create(kDeviceSize, kBlockSize, fvm, version));
 
   // Invalid device
   std::unique_ptr<FdioVolume> volume;

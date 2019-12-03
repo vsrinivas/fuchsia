@@ -179,7 +179,7 @@ class TestDevice final {
   // |block_size| bytes each.  If |fvm| is true, it will be formatted as an FVM partition with the
   // appropriates number of slices of |fvm::kBlockSize| each.  A file descriptor for the block
   // device is returned via |out_fd|.
-  bool Create(size_t device_size, size_t block_size, bool fvm);
+  bool Create(size_t device_size, size_t block_size, bool fvm, Volume::Version version);
 
   // Test helper that generates a key and creates a device according to |version| and |fvm|.  It
   // sets up the device as a zxcrypt volume and binds to it.

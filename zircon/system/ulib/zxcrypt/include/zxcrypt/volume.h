@@ -34,10 +34,6 @@ namespace testing {
 class TestDevice;
 }
 
-// TODO(aarongreen): ZX-1130 workaround: Until we have a means to pass the root key on binding, we
-// simply use a null key of a fixed length. Remove this constant when ZX-1130 is resolved.
-const size_t kZx1130KeyLen = 32;
-
 using key_slot_t = zx_off_t;
 
 // Unifying types used for a couple of calls that will call either FIDL or Banjo
