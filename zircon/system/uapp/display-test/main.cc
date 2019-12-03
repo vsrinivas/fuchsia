@@ -43,6 +43,14 @@ zx::event client_event_;
 std::unique_ptr<sysmem::BufferCollection::SyncClient> collection_;
 zx::vmo capture_vmo;
 
+enum TestBundle {
+  SIMPLE = 0,  // BUNDLE0
+  FLIP,        // BUNDLE1
+  INTEL,       // BUNDLE2
+  BUNDLE3,
+  BUNDLE_COUNT,
+};
+
 static bool wait_for_driver_event(zx_time_t deadline) {
   zx_handle_t observed;
   uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
@@ -445,6 +453,33 @@ void capture_release() {
   dc->ReleaseCapture(capture_id);
   dc->ReleaseBufferCollection(kCollectionId);
 }
+
+void usage(void) {
+  printf(
+      "Usage: display-test [OPTIONS]\n\n"
+      "--controller N   : open controller N [/dev/class/display-controller/N]\n"
+      "--dump           : print properties of attached display\n"
+      "--mode-set D N   : Set Display D to mode N (use dump option for choices)\n"
+      "--format-set D N : Set Display D to format N (use dump option for choices)\n"
+      "--grayscale      : Display images in grayscale mode (default off)\n"
+      "--num-frames N   : Run test in N number of frames (default 120)\n"
+      "--delay N        : Add delay (ms) between Vsync complete and next configuration\n"
+      "--capture        : Capture each display frame and verify\n"
+      "\nTest Modes:\n\n"
+      "--bundle N       : Run test from test bundle N as described below\n\n"
+      "                   bundle %d: Display a single pattern using single buffer\n"
+      "                   bundle %d: Flip between two buffers to display a pattern\n"
+      "                   bundle %d: Run the standard Intel-based display tests. This includes\n"
+      "                             hardware composition of 1 color layer and 3 primary layers.\n"
+      "                             The tests include alpha blending, translation, scaling\n"
+      "                             and rotation\n"
+      "                   bundle %d: 4 layer hardware composition with alpha blending\n"
+      "                             and image translation\n"
+      "                   (default: bundle %d)\n\n"
+      "--help           : Show this help message\n",
+      SIMPLE, FLIP, INTEL, BUNDLE3, INTEL);
+}
+
 int main(int argc, const char* argv[]) {
   printf("Running display test\n");
 
@@ -457,17 +492,11 @@ int main(int argc, const char* argv[]) {
   bool verify_capture = false;
   const char* controller = "/dev/class/display-controller/000";
 
-  enum Platform {
-    SIMPLE,
-    INTEL,
-    ARM_MEDIATEK,
-    ARM_AMLOGIC,
-  };
-  Platform platform = INTEL;  // default to Intel
+  TestBundle testbundle = INTEL;  // default to Intel
 
-  for (int i = 1; i < argc-1; i++) {
+  for (int i = 1; i < argc - 1; i++) {
     if (!strcmp(argv[i], "--controller")) {
-      controller = argv[i+1];
+      controller = argv[i + 1];
       break;
     }
   }
@@ -531,25 +560,26 @@ int main(int argc, const char* argv[]) {
       delay = atoi(argv[1]);
       argv += 2;
       argc -= 2;
-    } else if (strcmp(argv[0], "--mediatek") == 0) {
-      platform = ARM_MEDIATEK;
-      argv += 1;
-      argc -= 1;
-    } else if (strcmp(argv[0], "--amlogic") == 0) {
-      platform = ARM_AMLOGIC;
-      argv += 1;
-      argc -= 1;
-    } else if (strcmp(argv[0], "--simple") == 0) {
-      platform = SIMPLE;
-      argv += 1;
-      argc -= 1;
+    } else if (strcmp(argv[0], "--bundle") == 0) {
+      testbundle = static_cast<TestBundle>(atoi(argv[1]));
+      if (testbundle >= BUNDLE_COUNT || testbundle < 0) {
+        printf("Invalid test bundle selected\n");
+        usage();
+        return -1;
+      }
+      argv += 2;
+      argc -= 2;
     } else if (strcmp(argv[0], "--capture") == 0) {
       capture = true;
       verify_capture = true;
       argv += 1;
       argc -= 1;
+    } else if (strcmp(argv[0], "--help") == 0) {
+      usage();
+      return 0;
     } else {
       printf("Unrecognized argument \"%s\"\n", argv[0]);
+      usage();
       return -1;
     }
   }
@@ -560,7 +590,7 @@ int main(int argc, const char* argv[]) {
   }
 
   fbl::AllocChecker ac;
-  if (platform == INTEL) {
+  if (testbundle == INTEL) {
     // Intel only supports 90/270 rotation for Y-tiled images, so enable it for testing.
     constexpr bool kIntelYTiling = true;
 
@@ -624,7 +654,7 @@ int main(int argc, const char* argv[]) {
     CursorLayer* layer4 = new CursorLayer(displays);
     layers.push_back(std::move(layer4));
 #endif
-  } else if (platform == ARM_MEDIATEK) {
+  } else if (testbundle == BUNDLE3) {
     // Mediatek display test
     uint32_t width = displays[0].mode().horizontal_resolution;
     uint32_t height = displays[0].mode().vertical_resolution;
@@ -665,7 +695,7 @@ int main(int argc, const char* argv[]) {
     }
     layer4->SetAlpha(true, (float)0.3);
     layers.push_back(std::move(layer4));
-  } else if (platform == ARM_AMLOGIC) {
+  } else if (testbundle == FLIP) {
     // Amlogic display test
     std::unique_ptr<PrimaryLayer> layer1 = fbl::make_unique_checked<PrimaryLayer>(&ac, displays);
     if (!ac.check()) {
@@ -673,7 +703,7 @@ int main(int argc, const char* argv[]) {
     }
     layer1->SetLayerFlipping(true);
     layers.push_back(std::move(layer1));
-  } else if (platform == SIMPLE) {
+  } else if (testbundle == SIMPLE) {
     // Simple display test
     bool mirrors = true;
     std::unique_ptr<PrimaryLayer> layer1 =
