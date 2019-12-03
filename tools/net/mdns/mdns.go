@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"strings"
 	"syscall"
@@ -761,7 +762,6 @@ func (c *mDNSConn4) InitReceiver(port int) error {
 // This allows us to listen on this specific interface.
 func (c *mDNSConn4) JoinGroup(iface net.Interface) error {
 	if err := c.receiver.JoinGroup(&iface, &c.dst); err != nil {
-		c.Close()
 		return fmt.Errorf("joining %v%%%v: %v", iface, c.dst, err)
 	}
 	return nil
@@ -770,7 +770,7 @@ func (c *mDNSConn4) JoinGroup(iface net.Interface) error {
 func (c *mDNSConn4) ConnectTo(port int, ip net.IP, iface *net.Interface) error {
 	ip4 := ip.To4()
 	if ip4 == nil {
-		return fmt.Errorf("Not a valid IPv4 address: %v", ip)
+		return fmt.Errorf("not a valid IPv4 address: %v", ip)
 	}
 	conn, err := c.netFactory.MakeUDPSocket(port, c.ttl, ip4, iface)
 	if err != nil {
@@ -824,7 +824,6 @@ func (c *mDNSConn6) InitReceiver(port int) error {
 // This allows us to listen on this specific interface.
 func (c *mDNSConn6) JoinGroup(iface net.Interface) error {
 	if err := c.receiver.JoinGroup(&iface, &c.dst); err != nil {
-		c.Close()
 		return fmt.Errorf("joining %v%%%v: %v", iface, c.dst, err)
 	}
 	return nil
@@ -833,7 +832,7 @@ func (c *mDNSConn6) JoinGroup(iface net.Interface) error {
 func (c *mDNSConn6) ConnectTo(port int, ip net.IP, iface *net.Interface) error {
 	ip6 := ip.To16()
 	if ip6 == nil {
-		return fmt.Errorf("Not a valid IPv6 address: %v", ip)
+		return fmt.Errorf("not a valid IPv6 address: %v", ip)
 	}
 	conn, err := c.netFactory.MakeUDPSocket(port, c.ttl, ip6, iface)
 	if err != nil {
@@ -1009,9 +1008,74 @@ func (m *mDNS) Send(packet Packet) error {
 	return err6
 }
 
-// Start causes m to start listening for MDNS packets on all interfaces on
-// the specified port. Listening will stop if ctx is done.
-func (m *mDNS) Start(ctx context.Context, port int) error {
+// connectToAnyAddr takes an mDNSConn and attempts to connect to the first
+// available addr on the interface.
+func connectToAnyAddr(c mDNSConn, iface *net.Interface, port int) (bool, error) {
+	if c == nil {
+		return false, nil
+	}
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return false, fmt.Errorf("getting addresses of %v: %v", iface, err)
+	}
+	if len(addrs) == 0 {
+		return false, fmt.Errorf("no addrs for iface %q", iface.Name)
+	}
+
+	var lastConnectErr error
+	connected := false
+	for _, addr := range addrs {
+		var ip net.IP
+		switch v := addr.(type) {
+		case *net.IPNet:
+			ip = v.IP
+		case *net.IPAddr:
+			ip = v.IP
+		}
+		if ip == nil {
+			continue
+		}
+		if err := c.ConnectTo(port, ip, iface); err != nil {
+			lastConnectErr = fmt.Errorf("creating socket for %v via %v: %v", iface, ip, err)
+			log.Println(lastConnectErr)
+			continue
+		}
+		connected = true
+		break
+	}
+	return connected, fmt.Errorf("unable to connect to any addr. last err: %v", lastConnectErr)
+}
+
+// connectOnAllIfaces is a helper function that takes an mDNSConn and attempts
+// to connect on the first available address of all accessible interfaces.
+func connectOnAllIfaces(c mDNSConn, ifaces []net.Interface, port int) error {
+	var lastConnectErr error
+	connected := false
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagMulticast == 0 || iface.Flags&net.FlagUp == 0 {
+			continue
+		}
+		if err := c.JoinGroup(iface); err != nil {
+			lastConnectErr = fmt.Errorf("joining %v: %v", iface, err)
+			log.Println(lastConnectErr)
+			continue
+		}
+		c, err := connectToAnyAddr(c, &iface, port)
+		if err != nil {
+			lastConnectErr = err
+		}
+		connected = connected || c
+	}
+	if !connected {
+		return fmt.Errorf("unable to connect to any addr. last error: %v", lastConnectErr)
+	}
+	return nil
+}
+
+func (m *mDNS) initMDNSConns(port int) error {
+	if m.conn4 == nil && m.conn6 == nil {
+		return fmt.Errorf("no connections active")
+	}
 	if m.conn4 != nil {
 		if err := m.conn4.InitReceiver(port); err != nil {
 			return err
@@ -1022,61 +1086,48 @@ func (m *mDNS) Start(ctx context.Context, port int) error {
 			return err
 		}
 	}
-	// Now we need to join this connection to every interface that supports
-	// Multicast.
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		m.Close()
 		return fmt.Errorf("listing interfaces: %v", err)
 	}
-	// We need to make sure to handle each interface.
-	for _, iface := range ifaces {
-		if iface.Flags&net.FlagMulticast == 0 || iface.Flags&net.FlagUp == 0 {
-			continue
-		}
-		if m.conn4 != nil {
-			if err := m.conn4.JoinGroup(iface); err != nil {
-				m.Close()
-				return fmt.Errorf("joining %v: %v", iface, err)
+	var v4Err error
+	var v6Err error
+	if m.conn4 != nil {
+		v4Err = connectOnAllIfaces(m.conn4, ifaces, port)
+		if v4Err != nil {
+			m.conn4.Close()
+			m.conn4 = nil
+			// If this is the only available mDNSConn just return the err.
+			if m.conn6 == nil {
+				return v4Err
 			}
 		}
-		if m.conn6 != nil {
-			if err := m.conn6.JoinGroup(iface); err != nil {
-				m.Close()
-				return fmt.Errorf("joining %v: %v", iface, err)
+	}
+	if m.conn6 != nil {
+		v6Err = connectOnAllIfaces(m.conn6, ifaces, port)
+		if v6Err != nil {
+			m.conn6.Close()
+			m.conn6 = nil
+			// If this is the only available mDNSConn just return the err.
+			if m.conn4 == nil {
+				return v6Err
 			}
 		}
-		addrs, err := iface.Addrs()
-		if err != nil {
-			return fmt.Errorf("getting addresses of %v: %v", iface, err)
-		}
-		// When both IPv4 and IPv6 are enabled, only connect to the interface
-		// through its IPv6 address if it doesn't have an IPv4 one.
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			}
-			if ip == nil {
-				continue
-			}
-			ip4 := ip.To4()
-			if m.conn4 != nil && ip4 != nil {
-				if err := m.conn4.ConnectTo(port, ip4, &iface); err != nil {
-					return fmt.Errorf("creating socket for %v via %v: %v", iface, ip, err)
-				}
-				break
-			}
-			if m.conn6 != nil && ip4 == nil {
-				if err := m.conn6.ConnectTo(port, ip, &iface); err != nil {
-					return fmt.Errorf("creating socket for %v via %v: %v", iface, ip, err)
-				}
-				break
-			}
-		}
+	}
+	// If we've made it here, at least one connection should have succeeded,
+	// else both mDNSConn's attempted to connect and failed.
+	if v4Err != nil && v6Err != nil {
+		return fmt.Errorf("mdns conn errors (v4, v6): %q, %q", v4Err, v6Err)
+	}
+	return nil
+}
+
+// Start causes m to start listening for MDNS packets on all interfaces on
+// the specified port. Listening will stop if ctx is done.
+func (m *mDNS) Start(ctx context.Context, port int) error {
+	if err := m.initMDNSConns(port); err != nil {
+		m.Close()
+		return err
 	}
 	go func() {
 		// NOTE: This defer statement will close connections, which will force
