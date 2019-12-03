@@ -45,6 +45,13 @@ class AddressSpace : public magma::AddressSpace<GpuMapping> {
   static const AddressSpace::pte_t kInvalidPte;
   static const AddressSpace::pte_t kInvalidPde;
 
+  bool AllocLocked(size_t size, uint8_t align_pow2, uint64_t* addr_out) override {
+    // TODO(fxb/42167): address space should allocate gpu addresses, currently they are allocated
+    // outside the driver. This is a temporary workaround for allocating a ringbuffer.
+    *addr_out = 0x0;
+    return true;
+  }
+
   static inline pte_t pte_encode_unsafe(uint64_t bus_addr, bool valid, bool writeable,
                                         bool exception) {
     // Must be a 4k page address.

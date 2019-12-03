@@ -10,6 +10,7 @@ executable("nonhardware_tests") {
     "test_address_space.cc",
     "test_connection.cc",
     "test_page_table_slot_allocator.cc",
+    "test_ringbuffer.cc",
   ]
 
   deps = [
