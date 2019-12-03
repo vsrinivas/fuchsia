@@ -17,6 +17,7 @@
 #include <vk_layer_utils_minimal.h>
 
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include <vulkan/vk_layer.h>
@@ -37,6 +38,7 @@ struct LayerData {
   VkInstance instance;
   VkLayerDispatchTable* device_dispatch_table;
   VkLayerInstanceDispatchTable* instance_dispatch_table;
+  std::unordered_map<VkDebugUtilsMessengerEXT, VkDebugUtilsMessengerCreateInfoEXT> debug_callbacks;
 };
 
 // Global because thats how the layer code in the loader works and I dont know
@@ -97,6 +99,8 @@ class ImagePipeSwapchain {
   VkResult Present(VkQueue queue, uint32_t index, uint32_t waitSemaphoreCount,
                    const VkSemaphore* pWaitSemaphores);
 
+  void DebugMessage(VkDebugUtilsMessageSeverityFlagBitsEXT severity, const char* message);
+
  private:
   ImagePipeSurface* surface() { return surface_; }
 
@@ -112,6 +116,26 @@ class ImagePipeSwapchain {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+
+void ImagePipeSwapchain::DebugMessage(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+                                      const char* message) {
+  LayerData* device_data = GetLayerDataPtr(get_dispatch_key(device_), layer_data_map);
+  LayerData* instance_data =
+      GetLayerDataPtr(get_dispatch_key(device_data->instance), layer_data_map);
+
+  VkDebugUtilsMessengerCallbackDataEXT callback_data = {};
+  callback_data.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CALLBACK_DATA_EXT;
+  callback_data.pMessage = message;
+
+  for (auto& callback : instance_data->debug_callbacks) {
+    if (!(severity & callback.second.messageSeverity))
+      continue;
+    if (!(VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT & callback.second.messageType))
+      continue;
+    callback.second.pfnUserCallback(severity, VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT,
+                                    &callback_data, callback.second.pUserData);
+  }
+}
 
 VkResult ImagePipeSwapchain::Initialize(VkDevice device,
                                         const VkSwapchainCreateInfoKHR* pCreateInfo,
@@ -230,12 +254,26 @@ VKAPI_ATTR VkResult VKAPI_CALL GetSwapchainImagesKHR(VkDevice device, VkSwapchai
   return swapchain->GetSwapchainImages(pCount, pSwapchainImages);
 }
 
+static void CrashDueToOutOfImages() { abort(); }
+
 VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore semaphore,
                                               uint32_t* pImageIndex) {
   if (pending_images_.empty()) {
     // All images acquired and none presented.  We will never acquire anything.
     if (timeout_ns == 0)
       return VK_NOT_READY;
+    if (timeout_ns == UINT64_MAX) {
+      // This goes against the VU, so we can crash to help detect bugs:
+      //
+      // If the number of currently acquired images is greater than the difference between the
+      // number of images in swapchain and the value of VkSurfaceCapabilitiesKHR::minImageCount as
+      // returned by a call to vkGetPhysicalDeviceSurfaceCapabilities2KHR with the surface used to
+      // create swapchain, timeout must not be UINT64_MAX
+      DebugMessage(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+                   "Currently all images are pending. Crashing program.");
+      CrashDueToOutOfImages();
+    }
+
     std::this_thread::sleep_for(std::chrono::nanoseconds(timeout_ns));
     return VK_TIMEOUT;
   }
@@ -702,6 +740,27 @@ EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice, const char* 
                                                                               pCount, pProperties);
 }
 
+VKAPI_ATTR VkResult VKAPI_CALL CreateDebugUtilsMessengerEXT(
+    VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+    const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pMessenger) {
+  dispatch_key key = get_dispatch_key(instance);
+  LayerData* my_data = GetLayerDataPtr(key, layer_data_map);
+  VkResult res = my_data->instance_dispatch_table->CreateDebugUtilsMessengerEXT(
+      instance, pCreateInfo, pAllocator, pMessenger);
+  if (res == VK_SUCCESS) {
+    my_data->debug_callbacks[*pMessenger] = *pCreateInfo;
+  }
+  return res;
+}
+
+VKAPI_ATTR void VKAPI_CALL DestroyDebugUtilsMessengerEXT(VkInstance instance,
+                                                         VkDebugUtilsMessengerEXT messenger,
+                                                         const VkAllocationCallbacks* pAllocator) {
+  dispatch_key key = get_dispatch_key(instance);
+  LayerData* my_data = GetLayerDataPtr(key, layer_data_map);
+  my_data->debug_callbacks.erase(messenger);
+}
+
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetDeviceProcAddr(VkDevice device, const char* funcName);
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL GetInstanceProcAddr(VkInstance instance,
                                                              const char* funcName);
@@ -738,6 +797,10 @@ static inline PFN_vkVoidFunction layer_intercept_proc(const char* name) {
     return reinterpret_cast<PFN_vkVoidFunction>(EnumerateDeviceLayerProperties);
   if (!strcmp("EnumerateInstanceLayerProperties", name))
     return reinterpret_cast<PFN_vkVoidFunction>(EnumerateInstanceLayerProperties);
+  if (!strcmp(name, "CreateDebugUtilsMessengerEXT"))
+    return reinterpret_cast<PFN_vkVoidFunction>(CreateDebugUtilsMessengerEXT);
+  if (!strcmp(name, "DestroyDebugUtilsMessengerEXT"))
+    return reinterpret_cast<PFN_vkVoidFunction>(DestroyDebugUtilsMessengerEXT);
   return NULL;
 }
 
@@ -763,6 +826,10 @@ static inline PFN_vkVoidFunction layer_intercept_instance_proc(const char* name)
     return reinterpret_cast<PFN_vkVoidFunction>(CreateImagePipeSurfaceFUCHSIA);
   if (!strcmp("DestroySurfaceKHR", name))
     return reinterpret_cast<PFN_vkVoidFunction>(DestroySurfaceKHR);
+  if (!strcmp(name, "CreateDebugUtilsMessengerEXT"))
+    return reinterpret_cast<PFN_vkVoidFunction>(CreateDebugUtilsMessengerEXT);
+  if (!strcmp(name, "DestroyDebugUtilsMessengerEXT"))
+    return reinterpret_cast<PFN_vkVoidFunction>(DestroyDebugUtilsMessengerEXT);
   return NULL;
 }
 

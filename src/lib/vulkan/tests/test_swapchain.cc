@@ -111,7 +111,13 @@ class FakeImagePipe : public fuchsia::images::testing::ImagePipe2_TestBase {
 };
 
 }  // namespace
-
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+debug_utils_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                     VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+  fprintf(stderr, "Got debug utils callback: %s\n", pCallbackData->pMessage);
+  return VK_FALSE;
+}
 class TestSwapchain {
  public:
   template <class T>
@@ -124,7 +130,8 @@ class TestSwapchain {
   TestSwapchain(bool protected_memory) : protected_memory_(protected_memory) {
     std::vector<const char*> instance_layers{"VK_LAYER_FUCHSIA_imagepipe_swapchain"};
     std::vector<const char*> instance_ext{VK_KHR_SURFACE_EXTENSION_NAME,
-                                          VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME};
+                                          VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME,
+                                          VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
     std::vector<const char*> device_ext{VK_KHR_SWAPCHAIN_EXTENSION_NAME,
                                         VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME};
 
@@ -194,6 +201,22 @@ class TestSwapchain {
       }
     }
 
+    auto pfnCreateDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+        vkGetInstanceProcAddr(vk_instance_, "vkCreateDebugUtilsMessengerEXT"));
+
+    VkDebugUtilsMessengerCreateInfoEXT callback = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+        .pNext = nullptr,
+        .flags = 0,
+        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT,
+        .pfnUserCallback = debug_utils_callback,
+        .pUserData = nullptr};
+    result = pfnCreateDebugUtilsMessengerEXT(vk_instance_, &callback, NULL, &messenger_cb_);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "Failed to install debug callback\n");
+      return;
+    }
     float queue_priorities[1] = {0.0};
     VkDeviceQueueCreateInfo queue_create_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -237,6 +260,14 @@ class TestSwapchain {
     LoadProc(&get_device_queue2_, "vkGetDeviceQueue2");
 
     init_ = true;
+  }
+
+  ~TestSwapchain() {
+    if (messenger_cb_) {
+      auto pfnDestroyDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+          vkGetInstanceProcAddr(vk_instance_, "vkDestroyDebugUtilsMessengerEXT"));
+      pfnDestroyDebugUtilsMessengerEXT(vk_instance_, messenger_cb_, nullptr);
+    }
   }
 
   VkResult CreateSwapchainHelper(VkSurfaceKHR surface, VkFormat format, VkImageUsageFlags usage,
@@ -320,6 +351,7 @@ class TestSwapchain {
 
   VkInstance vk_instance_;
   VkDevice vk_device_;
+  VkDebugUtilsMessengerEXT messenger_cb_ = nullptr;
   PFN_vkCreateSwapchainKHR create_swapchain_khr_;
   PFN_vkDestroySwapchainKHR destroy_swapchain_khr_;
   PFN_vkGetSwapchainImagesKHR get_swapchain_images_khr_;
@@ -459,6 +491,10 @@ TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
   EXPECT_EQ(VK_NOT_READY,
             test.acquire_next_image_khr_(test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
                                          VK_NULL_HANDLE, &image_index));
+
+  ASSERT_DEATH(test.acquire_next_image_khr_(test.vk_device_, swapchain, UINT64_MAX, VK_NULL_HANDLE,
+                                            VK_NULL_HANDLE, &image_index),
+               ".*Currently all images are pending.*");
 
   uint32_t present_index;  // Initialized below.
   VkResult present_result;
