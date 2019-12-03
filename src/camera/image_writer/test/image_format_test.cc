@@ -24,35 +24,18 @@ bool ComparePacked(fuchsia::sysmem::PixelFormatType format1, uint32_t value1,
   return (unpacked1 & min_mask) == (unpacked2 & min_mask);
 }
 
-// Make an array of values that should be tested, given a specific bit width
-// and the knowledge that the bit value will be shifted to the most significant
-// position in the byte.
-// For example, a bit width of 2 would only need to test the following binary values:
-// 00000000
-// 01000000
-// 10000000
-// 11000000
-std::vector<uint8_t> GetTestArray(uint8_t bit_width) {
-  if (bit_width < 8) {
-    size_t num_values = 1 << bit_width;
-    std::vector<uint8_t> ret(num_values);
-    for (size_t i = 0; i < num_values; ++i) {
-      ret[i] = i << (8 - bit_width);
-    }
-    return ret;
-  }
-  // for bit_width == 8, only use every 7th number, but include 255
-  std::vector<uint8_t> ret;
-  for (size_t i = 0; i < 256; i += 7) {
-    ret.push_back(i);
-  }
-  ret.push_back(255);
-  return ret;
-}
-
-std::array<std::vector<uint8_t>, 9> testing_arrays = {
-    GetTestArray(0), GetTestArray(1), GetTestArray(2), GetTestArray(3), GetTestArray(4),
-    GetTestArray(5), GetTestArray(6), GetTestArray(7), GetTestArray(8),
+// Fixed test colors using common patterns.
+constexpr Rgba kTestColors[] {
+  {0x00, 0x00, 0x00, 0x00}, // transparent black
+  {0xFF, 0xFF, 0xFF, 0x00}, // transparent white
+  {0x00, 0x00, 0x00, 0xFF}, // opaque black
+  {0xFF, 0xFF, 0xFF, 0xFF}, // opaque white
+  {0x00, 0x00, 0x00, 0x7F}, // 50% transparent black
+  {0xFF, 0xFF, 0xFF, 0x7F}, // 50% transparent white
+  {0xC5, 0x5C, 0x55, 0xCC}, // alternating bits 1
+  {0x55, 0x5C, 0xC5, 0xCC}, // alternating bits 2
+  {0x01, 0x23, 0x45, 0x67}, // sequential ascending
+  {0xFE, 0xDC, 0xBA, 0x98}, // sequential descending
 };
 
 TEST(RgbaImageFormat, RGBAColorConversionForAllFormats) {
@@ -61,21 +44,13 @@ TEST(RgbaImageFormat, RGBAColorConversionForAllFormats) {
     auto format1 = testing_formats[i];
     for (size_t j = i; j < testing_formats.size(); ++j) {
       auto format2 = testing_formats[j];
-      Rgba min_bit_width = Min(BitWidth(format1), BitWidth(format2));
-      for (uint8_t r : testing_arrays[min_bit_width.r]) {
-        for (uint8_t g : testing_arrays[min_bit_width.g]) {
-          for (uint8_t b : testing_arrays[min_bit_width.b]) {
-            for (uint8_t a : testing_arrays[min_bit_width.a]) {
-              Rgba color{r, g, b, a};
-              auto packed1 = RgbaPack(format1, color);
-              auto packed2 = RgbaPack(format2, color);
-              ASSERT_TRUE(ComparePacked(format1, packed1, format2, packed2))
-                  << "Format " << ToString(format1) << " did not match format " << ToString(format2)
-                  << "  At R: " << (int)r << " G: " << (int)g << " B: " << (int)b
-                  << " A: " << (int)a << "  packed1: " << packed1 << "  packed2: " << packed2;
-            }
-          }
-        }
+      for (auto color : kTestColors) {
+      auto packed1 = RgbaPack(format1, color);
+      auto packed2 = RgbaPack(format2, color);
+      ASSERT_TRUE(ComparePacked(format1, packed1, format2, packed2))
+          << "Format " << ToString(format1) << " did not match format " << ToString(format2)
+          << "  At R: " << (int)color.r << " G: " << (int)color.g << " B: " << (int)color.b
+          << " A: " << (int)color.a << "  packed1: " << packed1 << "  packed2: " << packed2;
       }
     }
   }
