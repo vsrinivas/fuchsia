@@ -10,7 +10,7 @@
 #include <utility>
 
 #include <cobalt-client/cpp/collector.h>
-#include <cobalt-client/cpp/in-memory-logger.h>
+#include <cobalt-client/cpp/in_memory_logger.h>
 #include <fs/metrics/cobalt_metrics.h>
 #include <fs/metrics/composite_latency_event.h>
 #include <fs/metrics/events.h>

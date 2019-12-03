@@ -16,7 +16,7 @@
 #include <set>
 #include <string>
 
-#include <cobalt-client/cpp/types-internal.h>
+#include <cobalt-client/cpp/types_internal.h>
 
 namespace cobalt_client {
 

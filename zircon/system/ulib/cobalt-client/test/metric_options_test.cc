@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cobalt-client/cpp/metric_options.h>
+
 #include <unistd.h>
 
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
 
-#include <cobalt-client/cpp/metric-options.h>
 #include <zxtest/zxtest.h>
 
 namespace cobalt_client {

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cobalt-client/cpp/histogram.h>
+
 #include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
@@ -14,10 +16,9 @@
 #include <thread>
 
 #include <cobalt-client/cpp/collector.h>
-#include <cobalt-client/cpp/histogram-internal.h>
-#include <cobalt-client/cpp/histogram.h>
-#include <cobalt-client/cpp/in-memory-logger.h>
-#include <cobalt-client/cpp/metric-options.h>
+#include <cobalt-client/cpp/histogram_internal.h>
+#include <cobalt-client/cpp/in_memory_logger.h>
+#include <cobalt-client/cpp/metric_options.h>
 #include <zxtest/zxtest.h>
 
 namespace cobalt_client {

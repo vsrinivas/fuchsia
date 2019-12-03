@@ -8,7 +8,7 @@
 
 #include <type_traits>
 
-#include <cobalt-client/cpp/metric-options.h>
+#include <cobalt-client/cpp/metric_options.h>
 
 namespace devmgr {
 namespace {

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cobalt-client/cpp/collector_internal.h>
+
 #include <fuchsia/cobalt/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -23,10 +25,9 @@
 #include <utility>
 #include <vector>
 
-#include <cobalt-client/cpp/collector-internal.h>
-#include <cobalt-client/cpp/in-memory-logger.h>
-#include <cobalt-client/cpp/metric-options.h>
-#include <cobalt-client/cpp/types-internal.h>
+#include <cobalt-client/cpp/in_memory_logger.h>
+#include <cobalt-client/cpp/metric_options.h>
+#include <cobalt-client/cpp/types_internal.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>

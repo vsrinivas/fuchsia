@@ -14,10 +14,10 @@
 #include <string_view>
 #include <thread>
 
-#include <cobalt-client/cpp/collector-internal.h>
-#include <cobalt-client/cpp/in-memory-logger.h>
-#include <cobalt-client/cpp/metric-options.h>
-#include <cobalt-client/cpp/types-internal.h>
+#include <cobalt-client/cpp/collector_internal.h>
+#include <cobalt-client/cpp/in_memory_logger.h>
+#include <cobalt-client/cpp/metric_options.h>
+#include <cobalt-client/cpp/types_internal.h>
 #include <zxtest/zxtest.h>
 
 namespace cobalt_client {

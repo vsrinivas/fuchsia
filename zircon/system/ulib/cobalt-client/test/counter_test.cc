@@ -12,9 +12,9 @@
 #include <mutex>
 #include <thread>
 
-#include <cobalt-client/cpp/counter-internal.h>
-#include <cobalt-client/cpp/in-memory-logger.h>
-#include <cobalt-client/cpp/metric-options.h>
+#include <cobalt-client/cpp/counter_internal.h>
+#include <cobalt-client/cpp/in_memory_logger.h>
+#include <cobalt-client/cpp/metric_options.h>
 #include <zxtest/zxtest.h>
 
 namespace cobalt_client {

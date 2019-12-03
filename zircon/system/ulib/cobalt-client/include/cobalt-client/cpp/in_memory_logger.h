@@ -9,7 +9,7 @@
 
 #include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
-#include <cobalt-client/cpp/types-internal.h>
+#include <cobalt-client/cpp/types_internal.h>
 
 namespace cobalt_client {
 

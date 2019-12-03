@@ -53,7 +53,7 @@ source_set("metrics-test") {
 source_set("in-memory-logger-test") {
   testonly= true
   sources = [
-    "in-memory-logger-test.cc",
+    "in_memory_logger_test.cc",
   ]
   include_dirs = [ "../include/" ]
   deps = [

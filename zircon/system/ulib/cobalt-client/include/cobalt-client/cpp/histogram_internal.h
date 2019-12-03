@@ -10,9 +10,9 @@
 
 #include <cstdint>
 
-#include <cobalt-client/cpp/counter-internal.h>
-#include <cobalt-client/cpp/metric-options.h>
-#include <cobalt-client/cpp/types-internal.h>
+#include <cobalt-client/cpp/counter_internal.h>
+#include <cobalt-client/cpp/metric_options.h>
+#include <cobalt-client/cpp/types_internal.h>
 
 namespace cobalt_client {
 namespace internal {

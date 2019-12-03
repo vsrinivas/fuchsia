@@ -58,7 +58,7 @@ zx_library("cobalt-client") {
 zx_library("in-memory-logger") {
   testonly = true
   sources = [
-    "in-memory-logger.cc",
+    "in_memory_logger.cc",
   ]
   public_deps = [
     ":metrics",

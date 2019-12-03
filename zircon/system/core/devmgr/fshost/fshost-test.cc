@@ -16,7 +16,7 @@
 #include <memory>
 
 #include <cobalt-client/cpp/collector.h>
-#include <cobalt-client/cpp/in-memory-logger.h>
+#include <cobalt-client/cpp/in_memory_logger.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo_dir.h>

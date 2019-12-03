@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <type_traits>
 
-#include <cobalt-client/cpp/metric-options.h>
+#include <cobalt-client/cpp/metric_options.h>
 
 namespace cobalt_client {
 namespace internal {

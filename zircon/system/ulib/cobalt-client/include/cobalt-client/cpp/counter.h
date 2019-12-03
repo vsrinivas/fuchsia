@@ -9,8 +9,8 @@
 #include <optional>
 
 #include <cobalt-client/cpp/collector.h>
-#include <cobalt-client/cpp/counter-internal.h>
-#include <cobalt-client/cpp/types-internal.h>
+#include <cobalt-client/cpp/counter_internal.h>
+#include <cobalt-client/cpp/types_internal.h>
 
 namespace cobalt_client {
 

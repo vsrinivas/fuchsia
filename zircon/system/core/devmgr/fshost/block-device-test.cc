@@ -11,8 +11,8 @@
 #include <zircon/hw/gpt.h>
 
 #include <cobalt-client/cpp/collector.h>
-#include <cobalt-client/cpp/in-memory-logger.h>
-#include <cobalt-client/cpp/metric-options.h>
+#include <cobalt-client/cpp/in_memory_logger.h>
+#include <cobalt-client/cpp/metric_options.h>
 #include <minfs/format.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>

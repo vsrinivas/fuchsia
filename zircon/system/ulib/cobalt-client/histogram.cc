@@ -10,8 +10,8 @@
 #include <cstring>
 #include <limits>
 
-#include <cobalt-client/cpp/histogram-internal.h>
-#include <cobalt-client/cpp/metric-options.h>
+#include <cobalt-client/cpp/histogram_internal.h>
+#include <cobalt-client/cpp/metric_options.h>
 
 namespace cobalt_client {
 namespace internal {

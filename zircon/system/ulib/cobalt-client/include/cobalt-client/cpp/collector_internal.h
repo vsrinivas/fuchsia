@@ -16,7 +16,7 @@
 #include <string>
 #include <string_view>
 
-#include <cobalt-client/cpp/types-internal.h>
+#include <cobalt-client/cpp/types_internal.h>
 
 namespace cobalt_client {
 namespace internal {

@@ -9,9 +9,9 @@
 #include <zircon/assert.h>
 
 #include <cobalt-client/cpp/collector.h>
-#include <cobalt-client/cpp/histogram-internal.h>
-#include <cobalt-client/cpp/metric-options.h>
-#include <cobalt-client/cpp/types-internal.h>
+#include <cobalt-client/cpp/histogram_internal.h>
+#include <cobalt-client/cpp/metric_options.h>
+#include <cobalt-client/cpp/types_internal.h>
 
 namespace cobalt_client {
 

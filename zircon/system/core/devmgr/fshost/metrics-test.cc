@@ -11,7 +11,7 @@
 #include <utility>
 
 #include <cobalt-client/cpp/collector.h>
-#include <cobalt-client/cpp/in-memory-logger.h>
+#include <cobalt-client/cpp/in_memory_logger.h>
 #include <fs/metrics/events.h>
 #include <zxtest/zxtest.h>
 
