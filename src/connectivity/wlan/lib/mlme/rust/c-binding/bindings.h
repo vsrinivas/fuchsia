@@ -103,6 +103,10 @@ typedef struct {
    */
   int32_t (*disable_beaconing)(void *device);
   /**
+   * Sets the link status to be UP or DOWN.
+   */
+  int32_t (*set_link_status)(void *device, uint8_t status);
+  /**
    * Configure the association context.
    * |assoc_ctx| is mutable because the underlying API does not take a const wlan_assoc_ctx_t.
    */
@@ -205,7 +209,7 @@ extern "C" wlan_client_sta_t *client_sta_new(mlme_device_ops_t device,
                                              mlme_buffer_provider_ops_t buf_provider,
                                              wlan_scheduler_ops_t scheduler,
                                              const uint8_t (*bssid)[6],
-                                             const uint8_t (*iface_mac)[6]);
+                                             const uint8_t (*iface_mac)[6], bool is_rsn);
 
 extern "C" int32_t client_sta_send_assoc_req_frame(wlan_client_sta_t *sta, uint16_t cap_info,
                                                    wlan_span_t ssid, wlan_span_t rates,

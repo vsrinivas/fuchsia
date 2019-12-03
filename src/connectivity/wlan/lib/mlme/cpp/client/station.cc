@@ -110,7 +110,7 @@ Station::Station(DeviceInterface* device, wlan_client_mlme_config_t* mlme_config
           },
   };
   rust_client_ = NewClientStation(rust_device, rust_buffer_provider, scheduler, join_ctx_->bssid(),
-                                  self_addr());
+                                  self_addr(), join_ctx_->bss()->rsne.has_value());
   Reset();
 }
 #undef STA

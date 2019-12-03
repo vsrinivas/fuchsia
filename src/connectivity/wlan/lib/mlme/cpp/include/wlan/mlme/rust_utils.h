@@ -21,7 +21,7 @@ using ApStation = std::unique_ptr<wlan_ap_sta_t, void (*)(wlan_ap_sta_t*)>;
 SequenceManager NewSequenceManager();
 ClientStation NewClientStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
                                wlan_scheduler_ops_t scheduler, common::MacAddr bssid,
-                               common::MacAddr iface_mac);
+                               common::MacAddr iface_mac, bool is_rsn);
 ApStation NewApStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
                        wlan_scheduler_ops_t scheduler, common::MacAddr bssid);
 

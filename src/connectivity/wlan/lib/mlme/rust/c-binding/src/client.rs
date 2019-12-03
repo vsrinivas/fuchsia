@@ -26,6 +26,7 @@ pub extern "C" fn client_sta_new(
     scheduler: Scheduler,
     bssid: &[u8; 6],
     iface_mac: &[u8; 6],
+    is_rsn: bool,
 ) -> *mut Client {
     Box::into_raw(Box::new(Client::new(
         device,
@@ -33,8 +34,7 @@ pub extern "C" fn client_sta_new(
         scheduler,
         Bssid(*bssid),
         *iface_mac,
-        // TODO(42079): Change binding to allow creating RSN clients.
-        false,
+        is_rsn,
     )))
 }
 
