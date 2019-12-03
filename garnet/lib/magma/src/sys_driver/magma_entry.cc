@@ -69,6 +69,7 @@ static zx_status_t device_fidl_query(void* context, uint64_t query_id, fidl_txn_
 #else
       result = 0;
 #endif
+      break;
     default:
       if (!device->magma_system_device->Query(query_id, &result))
         return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, result);

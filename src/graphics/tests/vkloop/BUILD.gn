@@ -12,6 +12,8 @@ executable("vkloop") {
 
   deps = [
     "//garnet/lib/magma/include:magma_abi",
+    "//garnet/lib/magma/src/libmagma",
+    "//garnet/lib/magma/tests/helper:test_device_helper",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
     "//zircon/public/lib/fdio",
   ]

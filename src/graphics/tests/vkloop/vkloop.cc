@@ -15,6 +15,7 @@
 #include <vulkan/vulkan.h>
 
 #include "gtest/gtest.h"
+#include "helper/test_device_helper.h"
 #include "magma_common_defs.h"
 
 #define PRINT_STDERR(format, ...) \
@@ -39,6 +40,7 @@ class VkLoopTest {
   VkPhysicalDevice vk_physical_device_;
   VkDevice vk_device_;
   VkQueue vk_queue_;
+  uint32_t vendor_id_ = 0;
 
   VkCommandPool vk_command_pool_;
   VkCommandBuffer vk_command_buffer_;
@@ -109,6 +111,11 @@ bool VkLoopTest::InitVulkan() {
     PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
     return false;
   }
+
+  VkPhysicalDeviceProperties device_properties;
+  vkGetPhysicalDeviceProperties(physical_devices[0], &device_properties);
+
+  vendor_id_ = device_properties.vendorID;
 
   uint32_t queue_family_count;
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
@@ -494,24 +501,17 @@ bool VkLoopTest::Exec(bool kill_driver) {
   }
 
   if (kill_driver) {
-    uint32_t fd = open("/dev/class/gpu/000", O_RDONLY);
-    if (fd < 0) {
-      printf("Couldn't find driver, skipping test");
-      return true;
-    }
-    fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
+    magma::TestDeviceBase test_device(vendor_id_);
     uint64_t is_supported = 0;
-    zx_status_t status = fuchsia_gpu_magma_DeviceQuery(
-        fdio_unsafe_borrow_channel(fdio), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
-    if (status != ZX_OK || !is_supported) {
-      fdio_unsafe_release(fdio);
+    magma_status_t status =
+        magma_query2(test_device.device(), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
+    if (status != MAGMA_STATUS_OK || !is_supported) {
       printf("Test restart not supported: status %d is_supported %lu", status, is_supported);
       return true;
     }
 
-    EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(fdio_unsafe_borrow_channel(fdio)));
-    fdio_unsafe_release(fdio);
-    close(fd);
+    // TODO: Unbind and rebind driver once that supports forcibly tearing down client connections.
+    EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(test_device.channel()->get()));
   }
 
   for (int i = 0; i < 5; i++) {

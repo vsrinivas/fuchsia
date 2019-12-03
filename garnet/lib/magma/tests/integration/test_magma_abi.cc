@@ -464,6 +464,13 @@ class TestConnection {
     EXPECT_EQ(0u, handle_out);
   }
 
+  void QueryTestRestartSupported() {
+    uint64_t is_supported = 0;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_query2(device_, MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported));
+    // We don't care about the value of |is_supported|, just that the query returns ok.
+  }
+
  private:
   int fd_ = -1;
   magma_device_t device_ = 0;
@@ -513,6 +520,11 @@ TEST(MagmaAbi, VendorId) {
 TEST(MagmaAbi, QueryReturnsBuffer) {
   TestConnection test;
   test.QueryReturnsBufferImported();
+}
+
+TEST(MagmaAbi, QueryTestRestartSupported) {
+  TestConnection test;
+  test.QueryTestRestartSupported();
 }
 
 TEST(MagmaAbi, TracingInit) {
