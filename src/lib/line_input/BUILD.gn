@@ -10,8 +10,6 @@ static_library("line_input") {
     "line_input.h",
     "modal_line_input.cc",
     "modal_line_input.h",
-    "options_line_input.cc",
-    "options_line_input.h",
   ]
 
   deps = []

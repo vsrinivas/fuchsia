@@ -10,7 +10,6 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/line_input/options_line_input.h"
 
 namespace zxdb {
 
@@ -37,35 +36,28 @@ class Console {
   void Output(const std::string& s);
   void Output(const Err& err);
 
-  // Synchronously prints the output if the async buffer is complete. Otherwise
-  // adds a listener and prints the output to the console when it is complete.
+  // Synchronously prints the output if the async buffer is complete. Otherwise adds a listener and
+  // prints the output to the console when it is complete.
   void Output(fxl::RefPtr<AsyncOutputBuffer> output);
 
   // Clears the contents of the console.
   virtual void Clear() = 0;
 
-  // The result of dispatching input is either to keep running or quit the
-  // message loop to exit.
+  // The result of dispatching input is either to keep running or quit the message loop to exit.
   enum class Result { kContinue, kQuit };
 
-  // DispatchInputLine will generate the result by parsing the command.
-  // Depending on this result, this function could stop the MessageLoop.
-  // We pass the result out for callers to use and react accordingly, which
-  // can indicate whether they want the console to continue processing
-  // commands.
+  // DispatchInputLine will generate the result by parsing the command. Depending on this result,
+  // this function could stop the MessageLoop. We pass the result out for callers to use and react
+  // accordingly, which can indicate whether they want the console to continue processing commands.
   virtual Result ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) = 0;
-
-  virtual void PromptOptions(const std::vector<std::string>& options,
-                             line_input::OptionsCallback callback);
 
  protected:
   static Console* singleton_;
   ConsoleContext context_;
 
  private:
-  // Track all asynchronous output pending. We want to store a reference and
-  // lookup by pointer, so the object is duplicated here (RefPtr doesn't like
-  // to be put in a set).
+  // Track all asynchronous output pending. We want to store a reference and lookup by pointer, so
+  // the object is duplicated here (RefPtr doesn't like to be put in a set).
   std::map<AsyncOutputBuffer*, fxl::RefPtr<AsyncOutputBuffer>> async_output_;
 
   fxl::WeakPtrFactory<Console> weak_factory_;

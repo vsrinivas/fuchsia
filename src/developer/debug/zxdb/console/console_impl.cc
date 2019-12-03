@@ -82,13 +82,11 @@ void PreserveStdoutTermios() {}
 
 }  // namespace
 
-ConsoleImpl::ConsoleImpl(Session* session)
-    : Console(session),
-      line_input_([this](const std::string& s) { OnLineInput(s); }, "[zxdb] "),
-      options_line_input_("> "),
-      impl_weak_factory_(this) {
-  // Set the line input completion callback that can know about our context.
-  // OK to bind |this| since we own the line_input object.
+ConsoleImpl::ConsoleImpl(Session* session) : Console(session), impl_weak_factory_(this) {
+  line_input_.Init([this](const std::string& s) { OnLineInput(s); }, "[zxdb] ");
+
+  // Set the line input completion callback that can know about our context. OK to bind |this| since
+  // we own the line_input object.
   FillCommandContextCallback fill_command_context([this](Command* cmd) {
     context_.FillOutCommand(cmd);  // Ignore errors, this is for autocomplete.
   });
@@ -99,14 +97,12 @@ ConsoleImpl::ConsoleImpl(Session* session)
 
   // EOF (ctrl-d) should exit gracefully.
   line_input_.SetEofCallback([this]() {
-    current_line_input_->Hide();
+    line_input_.Hide();
     debug_ipc::MessageLoop::Current()->QuitNow();
   });
 
   // Set stdin to async mode or OnStdinReadable will block.
   fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
-
-  current_line_input_ = &line_input_;
 }
 
 ConsoleImpl::~ConsoleImpl() {
@@ -165,18 +161,15 @@ bool ConsoleImpl::SaveHistoryFile() {
 }
 
 void ConsoleImpl::Output(const OutputBuffer& output) {
-  // Since most operations are asynchronous, we have to hide the input line
-  // before printing anything or it will get appended to whatever the user is
-  // typing on the screen.
+  // Since most operations are asynchronous, we have to hide the input line before printing anything
+  // or it will get appended to whatever the user is typing on the screen.
   //
-  // TODO(brettw) This can cause flickering. A more advanced system would
-  // do more fancy console stuff to output above the input line so we'd
-  // never have to hide it.
+  // TODO(brettw) This can cause flickering. A more advanced system would do more fancy console
+  // stuff to output above the input line so we'd never have to hide it.
 
-  // Make sure stdout is in blocking mode since normal output won't expect
-  // non-blocking mode. We can get in this state if stdin and stdout are the
-  // same underlying handle because the constructor sets stdin to O_NONBLOCK
-  // so we can asynchronously wait for input.
+  // Make sure stdout is in blocking mode since normal output won't expect non-blocking mode. We can
+  // get in this state if stdin and stdout are the same underlying handle because the constructor
+  // sets stdin to O_NONBLOCK so we can asynchronously wait for input.
   int old_bits = fcntl(STDIN_FILENO, F_GETFL, 0);
   if (old_bits & O_NONBLOCK)
     fcntl(STDOUT_FILENO, F_SETFL, old_bits & ~O_NONBLOCK);
@@ -190,8 +183,8 @@ void ConsoleImpl::Output(const OutputBuffer& output) {
 }
 
 void ConsoleImpl::Clear() {
-  // We write directly instead of using Output because WriteToStdout expects
-  // to append '\n' to outputs and won't flush it explicitly otherwise.
+  // We write directly instead of using Output because WriteToStdout expects to append '\n' to
+  // outputs and won't flush it explicitly otherwise.
   line_input_.Hide();
   const char ff[] = "\033c";  // Form feed.
   write(STDOUT_FILENO, ff, sizeof(ff));
@@ -199,15 +192,9 @@ void ConsoleImpl::Clear() {
 }
 
 void ConsoleImpl::OnLineInput(const std::string& line) {
-  // Getting here means that there is a line to be processed. Options line input would've
-  // triggered the callback by now, so the line is already handled. This means that there is no
-  // need to actually process the line.
-  if (options_line_input_.is_active())
-    return;
-
   Result result = ProcessInputLine(line);
   if (result == Result::kQuit) {
-    current_line_input_->Hide();
+    line_input_.Hide();
     return;
   }
 }
@@ -262,26 +249,7 @@ void ConsoleImpl::OnFDReady(int fd, bool readable, bool, bool) {
 
   char ch;
   while (read(STDIN_FILENO, &ch, 1) > 0)
-    current_line_input_->OnInput(ch);
-}
-
-void ConsoleImpl::PromptOptions(const std::vector<std::string>& options,
-                                line_input::OptionsCallback callback) {
-  FXL_DCHECK(!options_line_input_.is_active());
-
-  options_line_input_.PromptOptions(
-      options, [console = GetImplWeakPtr(), callback = std::move(callback)](
-                   fit::result<void, std::string> result, std::vector<int> chosen_options) mutable {
-        if (!console)
-          return;
-
-        // Switch back to the normal mode. If the user wants to go back to the options mode, it
-        // can re-ask for options immediatelly.
-        console->current_line_input_ = &console->line_input_;
-        callback(std::move(result), std::move(chosen_options));
-      });
-
-  current_line_input_ = &options_line_input_;
+    line_input_.OnInput(ch);
 }
 
 }  // namespace zxdb

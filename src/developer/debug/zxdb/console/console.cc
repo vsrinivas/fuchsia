@@ -47,8 +47,8 @@ void Console::Output(fxl::RefPtr<AsyncOutputBuffer> output) {
   } else {
     // Listen for completion.
     //
-    // Binds |this|. On our destruction we'll clear all the callbacks to
-    // prevent dangling pointers for anything not completed yet.
+    // Binds |this|. On our destruction we'll clear all the callbacks to prevent dangling pointers
+    // for anything not completed yet.
     AsyncOutputBuffer* output_ptr = output.get();
     output->SetCompletionCallback([this, output_ptr]() {
       Output(output_ptr->DestructiveFlatten());
@@ -61,11 +61,6 @@ void Console::Output(fxl::RefPtr<AsyncOutputBuffer> output) {
     });
     async_output_[output_ptr] = std::move(output);
   }
-}
-
-void Console::PromptOptions(const std::vector<std::string>& options,
-                            line_input::OptionsCallback callback) {
-  FXL_NOTREACHED() << "Console implementations should override this call.";
 }
 
 }  // namespace zxdb
