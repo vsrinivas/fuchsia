@@ -26,10 +26,6 @@ pwm_impl_protocol_ops_t fake_ops{
 
 pwm_impl_protocol_t fake_proto{.ops = &fake_ops, .ctx = nullptr};
 
-struct fake_mode_config {
-  uint32_t mode;
-};
-
 class FakePwmDevice : public PwmDevice {
  public:
   static std::unique_ptr<FakePwmDevice> Create() {
@@ -67,24 +63,7 @@ TEST_F(PwmDeviceTest, GetConfigTest) {
 }
 
 TEST_F(PwmDeviceTest, SetConfigTest) {
-  fake_mode_config fake_mode{
-      .mode = 0,
-  };
-  pwm_config_t fake_config{
-      .polarity = false,
-      .period_ns = 1000,
-      .duty_cycle = 45.0,
-      .mode_config_buffer = &fake_mode,
-      .mode_config_size = sizeof(fake_mode),
-  };
-  EXPECT_OK(pwm_->PwmSetConfig(&fake_config));
-
-  fake_mode.mode = 3;
-  fake_config.polarity = true;
-  fake_config.duty_cycle = 68.0;
-  EXPECT_OK(pwm_->PwmSetConfig(&fake_config));
-
-  EXPECT_OK(pwm_->PwmSetConfig(&fake_config));
+  EXPECT_EQ(pwm_->PwmSetConfig(nullptr), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(PwmDeviceTest, EnableTest) {
