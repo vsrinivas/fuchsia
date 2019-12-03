@@ -307,14 +307,21 @@
           },
           "legacy_service": {
             "title": "Exposed legacy service source path",
-            "description": "The path to the legacy service being exposed. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the legacy service was exposed by the child (if from \"#$CHILD\").",
-            "allOf": [
+            "description": "A path, or a list of paths, to legacy service being exposed. Each path must be from this component's outgoing namespace (if from \"self\"), or must be a legacy_service path exposed to this component by a child (if from \"#$CHILD\").",
+            "oneOf": [
               {
                 "$ref": "#/definitions/path-clause"
+              },
+              {
+                "$ref": "#/definitions/path-clause-multiple"
               }
             ],
             "examples": [
-              "/svc/fuchsia.ui.scenic.Scenic"
+              "/svc/fuchsia.ui.scenic.Scenic",
+              [
+                "/svc/fuchsia.ui.scenic.Scenic",
+                "/svc/fuchsia.net.Netstack"
+              ]
             ]
           },
           "directory": {
@@ -420,11 +427,6 @@
           {
             "required": [
               "legacy_service"
-            ]
-          },
-          {
-            "required": [
-              "legacy_services"
             ]
           },
           {

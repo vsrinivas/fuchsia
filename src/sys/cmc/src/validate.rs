@@ -1751,6 +1751,14 @@ mod tests {
                         "from": "#logger",
                         "as": "/svc/logger"
                     },
+                    {
+                        "legacy_service": "/svc/A",
+                        "from": "self",
+                    },
+                    {
+                        "legacy_service": ["/svc/B", "/svc/C"],
+                        "from": "self",
+                    },
                     { "directory": "/volumes/blobfs", "from": "self", "rights": ["r*"]},
                     { "directory": "/hub", "from": "framework" },
                     { "runner": "elf", "from": "#logger",  }
@@ -1817,6 +1825,52 @@ mod tests {
                 } ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /expose/0/from")),
+        },
+        // if "as" is specified, only 1 "legacy_service" array item is allowed.
+        test_cml_expose_bad_as => {
+            input = json!({
+                "expose": [
+                    {
+                        "legacy_service": ["/svc/A", "/svc/B"],
+                        "from": "self",
+                        "as": "/thing"
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "echo_server",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                    }
+                ]
+            }),
+            result = Err(Error::validate("\"as\" field can only be specified when one `legacy_service` is supplied.")),
+        },
+        test_cml_expose_bad_duplicate_targets => {
+            input = json!({
+                "expose": [
+                    {
+                        "legacy_service": ["/svc/A", "/svc/B"],
+                        "from": "self"
+                    },
+                    {
+                        "legacy_service": "/svc/A",
+                        "from": "self"
+                    },
+                ],
+            }),
+            result = Err(Error::validate("\"/svc/A\" is a duplicate \"expose\" target path for \"realm\"")),
+        },
+        test_cml_expose_empty_legacy_services => {
+            input = json!({
+                "expose": [
+                    {
+                        "legacy_service": [],
+                        "from": "self",
+                        "as": "/thing"
+                    }
+                ],
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /expose/0/legacy_service")),
         },
 
         // offer
@@ -2167,7 +2221,6 @@ mod tests {
             }),
             result = Err(Error::validate("\"elf\" is a duplicate \"offer\" target runner for \"#echo_server\"")),
         },
-
         // if "as" is specified, only 1 "legacy_service" array item is allowed.
         test_cml_offer_bad_as => {
             input = json!({

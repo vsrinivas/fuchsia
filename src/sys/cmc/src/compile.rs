@@ -160,29 +160,46 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     Ok(out_uses)
 }
 
-/// `expose` rules route a single capability from one source (self|framework) to one target (realm|framework).
-/// TODO(vardhan, 41896): Teach `expose` rules to route multiple capabilities using a single clause.
+/// `expose` rules route a single capability from one source (self|framework) to one target
+/// (realm|framework).
 fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let source = extract_expose_source(expose)?;
         let target = extract_expose_target(expose)?;
-        let target_id = one_target_capability_id(expose, expose)?;
         if let Some(p) = expose.service() {
+            let target_id = one_target_capability_id(expose, expose)?;
             out_exposes.push(cm::Expose::Service(cm::ExposeService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
                 target,
             }))
-        } else if let Some(OneOrMany::One(p)) = expose.legacy_service() {
-            out_exposes.push(cm::Expose::LegacyService(cm::ExposeLegacyService {
-                source,
-                source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_id)?,
-                target,
-            }))
+        } else if let Some(p) = expose.legacy_service() {
+            let source_ids = p.to_vec();
+            let target_ids = all_target_capability_ids(expose, expose)
+                .ok_or(Error::internal("no capability"))?
+                .to_vec();
+            for target_id in target_ids {
+                let target_path = cm::Path::new(target_id)?;
+                // When multiple source paths are provided, there is no way to alias each one, so
+                // source_path == target_path.
+                // When one source path is provided, source_path may be aliased to a different
+                // target_path, so we source_paths[0] to derive the source_path.
+                let source_path = if source_ids.len() == 1 {
+                    cm::Path::new(source_ids[0].clone())?
+                } else {
+                    target_path.clone()
+                };
+                out_exposes.push(cm::Expose::LegacyService(cm::ExposeLegacyService {
+                    source: source.clone(),
+                    source_path,
+                    target_path,
+                    target: target.clone(),
+                }))
+            }
         } else if let Some(p) = expose.directory() {
+            let target_id = one_target_capability_id(expose, expose)?;
             let rights = extract_expose_rights(expose)?;
             out_exposes.push(cm::Expose::Directory(cm::ExposeDirectory {
                 source,
@@ -192,6 +209,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
                 rights,
             }))
         } else if let Some(p) = expose.runner() {
+            let target_id = one_target_capability_id(expose, expose)?;
             out_exposes.push(cm::Expose::Runner(cm::ExposeRunner {
                 source,
                 source_name: cm::Name::new(p.clone())?,
@@ -711,6 +729,11 @@ mod tests {
                       "as": "/svc/fuchsia.logger.LegacyLog",
                       "to": "realm"
                     },
+                    {
+                        "legacy_service": [ "/A", "/B" ],
+                        "from": "self",
+                        "to": "realm"
+                    },
                     { "directory": "/volumes/blobfs", "from": "self", "to": "framework", "rights": ["r*"]},
                     { "directory": "/hub", "from": "framework" },
                     { "runner": "web", "from": "self" },
@@ -746,6 +769,26 @@ mod tests {
                 },
                 "source_path": "/loggers/fuchsia.logger.LegacyLog",
                 "target_path": "/svc/fuchsia.logger.LegacyLog",
+                "target": "realm"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "self": {}
+                },
+                "source_path": "/A",
+                "target_path": "/A",
+                "target": "realm"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "self": {}
+                },
+                "source_path": "/B",
+                "target_path": "/B",
                 "target": "realm"
             }
         },
