@@ -16,6 +16,10 @@ MagmaSystemConnection::MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> we
 }
 
 MagmaSystemConnection::~MagmaSystemConnection() {
+  // Remove all contexts before clearing buffers, to give the hardware driver an
+  // indication that faults afterwards may be due to buffer mappings having gone
+  // away due to the shutdown.
+  context_map_.clear();
   for (auto iter = buffer_map_.begin(); iter != buffer_map_.end();) {
     msd_connection_release_buffer(msd_connection(), iter->second.buffer->msd_buf());
     iter = buffer_map_.erase(iter);
@@ -24,7 +28,6 @@ MagmaSystemConnection::~MagmaSystemConnection() {
   // Reset all MSD objects before calling ConnectionClosed() because the msd device might go away
   // any time after ConnectionClosed() and we don't want any dangling dependencies.
   semaphore_map_.clear();
-  context_map_.clear();
   msd_connection_.reset();
   auto device = device_.lock();
   if (device) {

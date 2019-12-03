@@ -10,6 +10,7 @@
 #include "mock/mock_bus_mapper.h"
 #include "msd_arm_buffer.h"
 #include "msd_arm_connection.h"
+#include "msd_arm_context.h"
 
 namespace {
 
@@ -481,6 +482,22 @@ class TestConnection {
       owner.set_connection(connection);
     }
   }
+
+  void ContextCount() {
+    FakeConnectionOwner owner;
+    auto connection = MsdArmConnection::Create(0, &owner);
+    EXPECT_TRUE(connection);
+
+    EXPECT_EQ(0u, connection->context_count());
+    auto context = std::make_unique<MsdArmContext>(connection);
+    EXPECT_EQ(1u, connection->context_count());
+
+    auto context2 = std::make_unique<MsdArmContext>(connection);
+    EXPECT_EQ(2u, connection->context_count());
+    context.reset();
+    EXPECT_EQ(1u, connection->context_count());
+    connection.reset();
+  }
 };
 
 TEST(TestConnection, MapUnmap) {
@@ -536,4 +553,9 @@ TEST(TestConnection, PhysicalToVirtual) {
 TEST(TestConnection, DeregisterConnection) {
   TestConnection test;
   test.DeregisterConnection();
+}
+
+TEST(TestConnection, ContextCount) {
+  TestConnection test;
+  test.ContextCount();
 }

@@ -9,7 +9,15 @@
 
 class MsdArmContext : public msd_context_t {
  public:
-  MsdArmContext(std::weak_ptr<MsdArmConnection> connection) : connection_(connection) {}
+  MsdArmContext(std::weak_ptr<MsdArmConnection> connection) : connection_(connection) {
+    connection.lock()->IncrementContextCount();
+  }
+  ~MsdArmContext() {
+    auto locked = connection_.lock();
+    if (locked) {
+      locked->DecrementContextCount();
+    }
+  }
 
   std::weak_ptr<MsdArmConnection> connection() { return connection_; }
 

@@ -86,6 +86,10 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   // rarely.
   bool GetVirtualAddressFromPhysical(uint64_t address, uint64_t* virtual_address_out);
 
+  void IncrementContextCount() { context_count_++; }
+  void DecrementContextCount() { context_count_--; }
+  uint64_t context_count() const { return context_count_; }
+
  private:
   static const uint32_t kMagic = 0x636f6e6e;  // "conn" (Connection)
 
@@ -111,6 +115,7 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   msd_connection_notification_callback_t callback_;
   void* token_ = {};
   std::shared_ptr<MsdArmAtom> outstanding_atoms_[256];
+  std::atomic<uint32_t> context_count_;
 };
 
 class MsdArmAbiConnection : public msd_connection_t {
