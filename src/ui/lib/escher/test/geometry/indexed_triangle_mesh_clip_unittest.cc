@@ -177,4 +177,34 @@ TEST(IndexedTriangleMeshClip, MultipleClips3d) {
   TestMultipleClips(GetStandardTestMesh3d(), GetStandardTestMeshBoundingPlanes3d());
 }
 
+// Check to see that a flat rectangle is made correctly.
+TEST(FlatRectangleMeshClip, FlatRectangleTest) {
+  const auto& mesh = NewFlatRectangleMesh(vec2(0.5), vec2(0.25), vec2(0, 0), vec2(1, 1));
+
+  // Check that there are the right number of indices, verts and triangles.
+  EXPECT_EQ(mesh.index_count(), 6U);
+  EXPECT_EQ(mesh.vertex_count(), 4U);
+  EXPECT_EQ(mesh.triangle_count(), 2U);
+
+  // Make sure index values are correct.
+  EXPECT_EQ(mesh.indices[0], 0U);
+  EXPECT_EQ(mesh.indices[1], 1U);
+  EXPECT_EQ(mesh.indices[2], 2U);
+  EXPECT_EQ(mesh.indices[3], 0U);
+  EXPECT_EQ(mesh.indices[4], 2U);
+  EXPECT_EQ(mesh.indices[5], 3U);
+
+  // Make sure UV values are correct.
+  EXPECT_EQ(mesh.attributes1[0], vec2(0, 1));
+  EXPECT_EQ(mesh.attributes1[1], vec2(1, 1));
+  EXPECT_EQ(mesh.attributes1[2], vec2(1, 0));
+  EXPECT_EQ(mesh.attributes1[3], vec2(0, 0));
+
+  // Make sure position values are correct.
+  EXPECT_EQ(mesh.positions[0], vec2(0.5, 0.75));
+  EXPECT_EQ(mesh.positions[1], vec2(0.75, 0.75));
+  EXPECT_EQ(mesh.positions[2], vec2(0.75, 0.5));
+  EXPECT_EQ(mesh.positions[3], vec2(0.5, 0.5));
+}
+
 }  // namespace

@@ -24,14 +24,12 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
 IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
                                                          uint32_t subdivisions, vec2 center,
                                                          float radius);
-// Tessellate a basic rectangle.
-MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader);
 
 // Tessellate a rectangle with multiple vertices along the top and bottom edges.
 // Increasing subdivisions by 1 doubles the number of vertices. If the spec
 // has kPositionOffset, the top offset points up and the bottom points down.
 MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
-                         const MeshSpec& spec, int subdivisions, vec2 size,
+                         const MeshSpec& spec, int subdivisions, vec2 extent,
                          vec2 top_left = vec2(0.f, 0.f), float top_offset_magnitude = 0.f,
                          float bottom_offset_magnitude = 0.f);
 
@@ -77,6 +75,13 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploade
 // To get boxes of different dimensions, this mesh can just be scaled in a
 // non-uniform manner in the (x,y,z) directions with its transformation matrix.
 IndexedTriangleMesh3d<vec2> NewCubeIndexedTriangleMesh(const MeshSpec& spec);
+
+// Tessellate a basic rectangle on the XY plane with no depth. The origin refers
+// to the top-left hand corner of rectangle, and the extent is the width and height.
+// UV coordinates are also provided directly by the caller.
+IndexedTriangleMesh2d<vec2> NewFlatRectangleMesh(vec2 origin, vec2 extent,
+                                                 vec2 top_left_uv = vec2(0, 0),
+                                                 vec2 bottom_right_uv = vec2(1, 1));
 
 // The following functions are used for convenience during unit testing.
 IndexedTriangleMesh2d<vec2> GetStandardTestMesh2d();

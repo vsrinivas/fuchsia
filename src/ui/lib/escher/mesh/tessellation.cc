@@ -77,7 +77,6 @@ IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
   mesh.resize_vertices(vertex_count);
 
   // Generate vertex positions.
-
   vec2* pos = mesh.positions.data();
   vec2* uv = mesh.attributes1.data();
 
@@ -111,6 +110,43 @@ IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
     current_tri[2] = i;
     current_tri += 3;
   }
+
+  return mesh;
+}
+
+IndexedTriangleMesh2d<vec2> NewFlatRectangleMesh(vec2 origin, vec2 extent, vec2 top_left_uv,
+                                                 vec2 bottom_right_uv) {
+  MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
+  IndexedTriangleMesh2d<vec2> mesh;
+
+  const size_t vertex_count = 4;
+  const size_t index_count = 6;
+
+  mesh.resize_indices(index_count);
+  mesh.resize_vertices(vertex_count);
+
+  vec2* pos = mesh.positions.data();
+  vec2* uv = mesh.attributes1.data();
+  auto* indices = mesh.indices.data();
+
+  // Positions. Start from the bottom left-hand corner
+  // and wind counterclockwise.
+  pos[0] = vec2(origin.x, origin.y + extent.y);
+  pos[1] = origin + extent;
+  pos[2] = vec2(origin.x + extent.x, origin.y);
+  pos[3] = origin;
+
+  uv[0] = vec2(top_left_uv.x, bottom_right_uv.y);
+  uv[1] = bottom_right_uv;
+  uv[2] = vec2(bottom_right_uv.x, top_left_uv.y);
+  uv[3] = top_left_uv;
+
+  indices[0] = 0;
+  indices[1] = 1;
+  indices[2] = 2;
+  indices[3] = 0;
+  indices[4] = 2;
+  indices[5] = 3;
 
   return mesh;
 }
@@ -341,32 +377,8 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
   return mesh;
 }
 
-MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader) {
-  MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
-
-  // In each vertex, the first two floats represent the position and the second
-  // two are UV coordinates.
-  vec4 v0(0.f, 0.f, 0.f, 0.f);
-  vec4 v1(1.f, 0.f, 1.f, 0.f);
-  vec4 v2(1.f, 1.f, 1.f, 1.f);
-  vec4 v3(0.f, 1.f, 0.f, 1.f);
-
-  MeshBuilderPtr builder = factory->NewMeshBuilder(gpu_uploader, spec, 4, 6);
-  return builder->AddVertex(v0)
-      .AddVertex(v1)
-      .AddVertex(v2)
-      .AddVertex(v3)
-      .AddIndex(0)
-      .AddIndex(1)
-      .AddIndex(2)
-      .AddIndex(0)
-      .AddIndex(2)
-      .AddIndex(3)
-      .Build();
-}
-
 MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uploader,
-                         const MeshSpec& spec, int subdivisions, vec2 size, vec2 top_left,
+                         const MeshSpec& spec, int subdivisions, vec2 extent, vec2 top_left,
                          float top_offset_magnitude, float bottom_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
@@ -389,7 +401,7 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uplo
   const float vertices_per_side_reciprocal = 1.f / (vertices_per_side - 1);
   for (size_t i = 0; i < vertices_per_side; ++i) {
     // Build bottom vertex.
-    (*vertex_p.pos2) = top_left + vec2(size.x * i * vertices_per_side_reciprocal, size.y);
+    (*vertex_p.pos2) = top_left + vec2(extent.x * i * vertices_per_side_reciprocal, extent.y);
     if (vertex_p.uv)
       (*vertex_p.uv) = vec2(i * vertices_per_side_reciprocal, 1.f);
     if (vertex_p.pos_offset)
@@ -399,7 +411,7 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, BatchGpuUploader* gpu_uplo
     builder->AddVertexData(vertex, builder->vertex_stride());
 
     // Build top vertex.
-    (*vertex_p.pos2) = top_left + vec2(size.x * i * vertices_per_side_reciprocal, 0);
+    (*vertex_p.pos2) = top_left + vec2(extent.x * i * vertices_per_side_reciprocal, 0);
     if (vertex_p.uv)
       (*vertex_p.uv) = vec2(i * vertices_per_side_reciprocal, 0);
     if (vertex_p.pos_offset)
