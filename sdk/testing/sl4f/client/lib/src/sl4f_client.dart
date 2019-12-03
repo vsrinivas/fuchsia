@@ -207,7 +207,10 @@ class Sl4f {
 
     // Start decoding the stderr stream to ensure something consumes it,
     // otherwise it could cause dart to hang waiting for it to be consumed.
-    final stderr = systemEncoding.decodeStream(proc.stderr);
+    // The timeout is important so that the decodeStream future ends even if
+    // proc.stderr never completes, otherwise the test binary can hang.
+    final stderr = systemEncoding.decodeStream(proc.stderr
+        .timeout(_diagnosticTimeout, onTimeout: (sink) => sink.close()));
 
     // Print something about the process in case it fails.
     Future<void> exitCode() async {
