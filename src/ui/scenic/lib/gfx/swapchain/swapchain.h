@@ -33,6 +33,9 @@ class Swapchain {
   // - the framebuffer to render into.
   // - the semaphore to wait upon before rendering into the framebuffer
   // - the semaphore to signal when rendering is complete.
+  //
+  // Callbacks are allowed to return before the wait semaphore has been observed, e.g. they may
+  // queue GPU work and return immediately.
   using DrawCallback =
       fit::function<void(zx::time target_presentation_time, const escher::ImagePtr&,
                          const HardwareLayerAssignment::Item&, const escher::SemaphorePtr&,
