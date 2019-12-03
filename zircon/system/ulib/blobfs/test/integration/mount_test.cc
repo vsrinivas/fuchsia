@@ -88,7 +88,8 @@ class OutgoingMountTest : public MountTest {
 
 // merkle root for a file containing the string "test content". in order to create a file on blobfs
 // we need the filename to be a valid merkle root whether or not we ever write the content.
-#define FILE_NAME "be901a14ec42ee0a8ee220eb119294cdd40d26d573139ee3d51e4430e7d08c28"
+constexpr std::string_view kFileName =
+    "be901a14ec42ee0a8ee220eb119294cdd40d26d573139ee3d51e4430e7d08c28";
 
 TEST_F(DataMountTest, DataRootHasNoRootDirectoryInIt) {
   errno = 0;
@@ -98,7 +99,7 @@ TEST_F(DataMountTest, DataRootHasNoRootDirectoryInIt) {
 }
 
 TEST_F(DataMountTest, DataRootCanHaveBlobsCreated) {
-  fbl::unique_fd foo_fd(openat(root_fd(), FILE_NAME, O_CREAT));
+  fbl::unique_fd foo_fd(openat(root_fd(), kFileName.data(), O_CREAT));
   ASSERT_TRUE(foo_fd.is_valid());
 }
 
@@ -108,12 +109,13 @@ TEST_F(OutgoingMountTest, OutgoingDirectoryHasRootDirectoryInIt) {
 }
 
 TEST_F(OutgoingMountTest, OutgoingDirectoryIsReadOnly) {
-  fbl::unique_fd foo_fd(openat(root_fd(), FILE_NAME, O_CREAT));
+  fbl::unique_fd foo_fd(openat(root_fd(), kFileName.data(), O_CREAT));
   ASSERT_FALSE(foo_fd.is_valid());
 }
 
 TEST_F(OutgoingMountTest, OutgoingDirectoryDataRootCanHaveBlobsCreated) {
-  fbl::unique_fd foo_fd(openat(root_fd(), "root/" FILE_NAME, O_CREAT));
+  std::string path = std::string("root/") + kFileName.data();
+  fbl::unique_fd foo_fd(openat(root_fd(), path.c_str(), O_CREAT));
   ASSERT_TRUE(foo_fd.is_valid());
 }
 

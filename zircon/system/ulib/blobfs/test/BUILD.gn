@@ -27,7 +27,6 @@ zx_test("blobfs-unit") {
     "unit/extent-reserver-test.cc",
     "unit/format-test.cc",
     "unit/get-allocated-regions-test.cc",
-    "unit/mount_test.cc",
     "unit/node-populator-test.cc",
     "unit/node-reserver-test.cc",
     "unit/utils.cc",
@@ -88,6 +87,7 @@ zx_test("blobfs-integration") {
   sources = [
     "integration/blobfs_integration_test.cc",
     "integration/integration_main.cc",
+    "integration/mount_test.cc",
     "integration/superblock-test.cc",
   ]
   deps = [
@@ -101,11 +101,14 @@ zx_test("blobfs-integration") {
     "$zx/system/ulib/fs/test_support",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fzl",
+    "$zx/system/ulib/id_allocator",
     "$zx/system/ulib/memfs",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
+
+  include_dirs = [ ".." ]
 }
 
 zx_test("blobfs-large-integration") {
