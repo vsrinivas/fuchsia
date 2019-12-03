@@ -83,6 +83,7 @@ group("acts_tests") {
   ]
 }
 
+# WARNING: Known to topaz.
 group("scenic") {
   testonly = true
   public_deps = [
@@ -1023,6 +1024,7 @@ group("terminal") {
   ]
 }
 
+# WARNING: Known to topaz.
 group("run_test_component") {
   testonly = true
   public_deps = [

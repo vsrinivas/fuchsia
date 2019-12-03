@@ -5,6 +5,7 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
+# WARNING: Known to infrastructure.
 group("all") {
   testonly = true
   public_deps = [

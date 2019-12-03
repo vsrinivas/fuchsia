@@ -58,6 +58,7 @@ group("sl4f") {
   ]
 }
 
+# WARNING: Known to infrastructure.
 group("amber_auto_ota") {
   testonly = true
   public_deps = [

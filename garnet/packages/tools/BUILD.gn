@@ -5,6 +5,7 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
+# WARNING: Known to topaz.
 group("scenic") {
   testonly = true
   public_deps = [
@@ -125,6 +126,7 @@ group("magma") {
   ]
 }
 
+# WARNING: Known to infrastructure.
 group("sl4f") {
   testonly = true
   public_deps = [

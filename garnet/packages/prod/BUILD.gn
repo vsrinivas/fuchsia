@@ -66,6 +66,7 @@ group("bluetooth_intel") {
   ]
 }
 
+# WARNING: Known to topaz.
 group("scenic") {
   testonly = true
   public_deps = [
@@ -125,6 +126,7 @@ group("sysmgr") {
   ]
 }
 
+# WARNING: Known to topaz.
 group("drivers") {
   testonly = true
   public_deps = [

@@ -43,6 +43,7 @@ group("kitchen_sink") {
   ]
 }
 
+# WARNING: Known to infrastructure.
 group("garnet") {
   testonly = true
   public_deps = [
