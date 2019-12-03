@@ -477,7 +477,7 @@ pub struct EncoderProcess {
 impl Future for EncoderProcess {
     type Output = Result<usize, Error>;
 
-    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut write = self.inner.write();
         match write.process_events(cx) {
             Ok(0) => Poll::Pending,
