@@ -26,9 +26,7 @@ pub struct Selection {
 
 impl Default for Selection {
     fn default() -> Selection {
-        Selection {
-            semantic_escape_chars: String::from(",│`|:\"' ()[]{}<>")
-        }
+        Selection { semantic_escape_chars: String::from(",│`|:\"' ()[]{}<>") }
     }
 }
 
@@ -36,15 +34,15 @@ impl Default for Selection {
 /// Penner's Easing Functions.
 #[derive(Clone, Copy, Debug)]
 pub enum VisualBellAnimation {
-    Ease,          // CSS
-    EaseOut,       // CSS
-    EaseOutSine,   // Penner
-    EaseOutQuad,   // Penner
-    EaseOutCubic,  // Penner
-    EaseOutQuart,  // Penner
-    EaseOutQuint,  // Penner
-    EaseOutExpo,   // Penner
-    EaseOutCirc,   // Penner
+    Ease,         // CSS
+    EaseOut,      // CSS
+    EaseOutSine,  // Penner
+    EaseOutQuad,  // Penner
+    EaseOutCubic, // Penner
+    EaseOutQuart, // Penner
+    EaseOutQuint, // Penner
+    EaseOutExpo,  // Penner
+    EaseOutCirc,  // Penner
     Linear,
 }
 
@@ -79,10 +77,7 @@ impl VisualBellConfig {
 
 impl Default for VisualBellConfig {
     fn default() -> VisualBellConfig {
-        VisualBellConfig {
-            animation: VisualBellAnimation::default(),
-            duration: 150,
-        }
+        VisualBellConfig { animation: VisualBellAnimation::default(), duration: 150 }
     }
 }
 
@@ -116,6 +111,10 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn new(colors: Colors) -> Config {
+        Config { colors, ..Config::default() }
+    }
+
     /// Get list of colors
     ///
     /// The ordering returned here is expected by the terminal. Colors are simply indexed in this
@@ -177,8 +176,24 @@ impl Default for Config {
             visual_bell: VisualBellConfig::default(),
             dynamic_title: true,
             cursor_style: CursorStyle::default(),
-            tabspaces: 8
+            tabspaces: 8,
         }
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use {super::*, color::PrimaryColors, rgb::Rgb};
+    #[test]
+    fn can_create_non_default_config() {
+        let colors = Colors {
+            primary: PrimaryColors {
+                background: Rgb { r: 255, g: 0, b: 0 },
+                foreground: Rgb { r: 0, g: 0, b: 255 },
+            },
+            ..Colors::default()
+        };
+        let config = Config::new(colors);
+        assert_eq!(config.colors(), &colors);
+    }
+}
