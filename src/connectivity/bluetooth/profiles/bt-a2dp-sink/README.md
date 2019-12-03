@@ -21,7 +21,7 @@ Without too many extra dependencies, adding the `audio` package group and `media
 to the available packages will provide all the required services so adding the following to your
 Fuchsia set configuration should build them all and make them available:
 
-`--with //src/connectivity/bluetooth/profiles/bt-a2dp-sink --with //src/media/audio/bundles:services --with //src/media/playback/mediaplayer`
+`--with //src/connectivity/bluetooth/profiles/bt-a2dp-sink --with //src/media/audio/bundles:audio --with //src/media/playback/mediaplayer`
 
 The profile makes an effort to determine if playing media will fail, and crash with a log message
 on startup.

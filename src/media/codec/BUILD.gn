@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 
-group("codec") {
+group("media") {
   testonly = true
   deps = [
     ":codec_factory",
@@ -12,19 +12,8 @@ group("codec") {
     ":codec_runner_sw_ffmpeg",
     ":codec_runner_sw_sbc",
     ":services",
-    ":tests",
     "codecs",
     "factory",
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [
-    "//garnet/examples/media:use_media_decoder",
-    "//garnet/examples/media:use_vp9_decoder_secure_output_test",
-    "//garnet/examples/media:use_vp9_decoder_test",
-    "//src/media/codec/codecs:tests",
   ]
 }
 

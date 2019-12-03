@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("services") {
+group("audio") {
   testonly = true
   deps = [
     "//src/media/audio/audio",
@@ -10,62 +10,15 @@ group("services") {
   ]
 }
 
-group("virtual_audio_service") {
+group("tests") {
   testonly = true
   deps = [
+    ":audio",
+    "//src/media/audio:tests",
     "//src/media/audio/virtual_audio_service",
   ]
 }
 
-group("tools") {
-  testonly = true
-  deps = [
-    "//src/media/audio/tools/signal_generator",
-    "//src/media/audio/tools/virtual_audio_util",
-    "//src/media/audio/tools/vol",
-    "//src/media/audio/tools/wav_recorder",
-  ]
-}
-
-group("examples") {
-  testonly = true
-  deps = [
-    "//src/media/audio/examples/fx",
-    "//src/media/audio/examples/simple_sine",
-    "//src/media/audio/examples/sync_sine",
-    "//src/media/audio/examples/tones",
-  ]
-}
-
-group("config") {
-  testonly = true
-  deps = [
-    "//src/media/audio/config",
-  ]
-}
-
-group("vim2_media_config") {
-  testonly = true
-  deps = [
-    "//src/media/audio/vim2_media_config",
-  ]
-}
-
-group("virtual_audio_config") {
-  testonly = true
-  public_deps = [
-    "//src/media/audio/virtual_audio_service:virtual_audio_config",
-  ]
-}
-
-group("virtual_audio_driver") {
-  testonly = true
-  public_deps = [
-    "//src/media/audio/drivers/virtual_audio",
-  ]
-}
-
-# TODO(dalesat): Here for soft transition...remove
 group("audio_config") {
   testonly = true
   deps = [

@@ -9,7 +9,7 @@ It's recommended to include the bt-avrcp-controller package to provide a simple 
 commands to peers either by including the bt tools package in your build or directly with
 ```--with //src/connectivity/bluetooth/tools/bt-avrcp-controller```
 
-eg: `fx set core.x64 --with //src/media/bundles:services --with //src/connectivity/bluetooth/tools/bt-avrcp-controller --with src/connectivity/bluetooth/profiles/bt-avrcp --with //src/connectivity/bluetooth/profiles/bt-a2dp-sink`
+eg: `fx set core.x64 --with //garnet/packages/prod:media --with //src/connectivity/bluetooth/tools/bt-avrcp-controller --with src/connectivity/bluetooth/profiles/bt-avrcp --with //src/connectivity/bluetooth/profiles/bt-a2dp-sink --with //garnet/packages/prod:mediaplayer`
 
 
 ## Using AVRCP from the shell
