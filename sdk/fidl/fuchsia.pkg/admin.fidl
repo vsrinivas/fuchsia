@@ -25,9 +25,6 @@ enum ExperimentToggle : uint64 {
     /// Does nothing, but visible in inspect.
     LIGHTBULB = 0;
 
-    /// Perform blob downloading in the package resolver instead of amber.
-    DOWNLOAD_BLOB = 1;
-
     /// Resolve package merkle roots using rust-tuf instead of amber.
     RUST_TUF = 2;
 };
