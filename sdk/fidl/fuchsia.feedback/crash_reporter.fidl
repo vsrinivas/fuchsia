@@ -17,10 +17,15 @@ protocol CrashReporter {
     File(CrashReport report) -> () error zx.status;
 };
 
+const uint32 MAX_PROGRAM_NAME_LENGTH = 1024;
+const uint32 MAX_NUM_ANNOTATIONS = 32;
+const uint32 MAX_NUM_ATTACHMENTS = 16;
+const uint32 MAX_EVENT_ID_LENGTH = 128;
+
 /// Represents a crash report.
 table CrashReport {
     /// The name of the program that crashed, e.g., the process or component's name.
-    1: string:1024 program_name;
+    1: string:MAX_PROGRAM_NAME_LENGTH program_name;
 
     /// How long the program was running before it crashed.
     6: zx.duration program_uptime;
@@ -30,11 +35,11 @@ table CrashReport {
 
     /// A vector of key-value string pairs representing arbitrary data that should be attached to a
     /// crash report. Keys should be unique.
-    3: vector<Annotation>:32 annotations;
+    3: vector<Annotation>:MAX_NUM_ANNOTATIONS annotations;
 
     /// A vector of key-value string-to-VMO pairs representing arbitrary data that should be
     /// attached to a crash report. Keys should be unique.
-    4: vector<Attachment>:16 attachments;
+    4: vector<Attachment>:MAX_NUM_ATTACHMENTS attachments;
 
     /// A text ID that the crash server can use to group multiple crash reports related to the
     /// same event.
@@ -42,7 +47,7 @@ table CrashReport {
     /// Unlike the crash signature, crash reports sharing the same ID correspond to different
     /// crashes, but can be considered as belonging to the same event, e.g., a crash in a low-level
     /// server causing a crash in a high-level UI widget.
-    5: string:128 event_id;
+    5: string:MAX_EVENT_ID_LENGTH event_id;
 };
 
 /// Represents a specific crash report.
@@ -60,6 +65,8 @@ xunion SpecificCrashReport {
     RuntimeCrashReport dart;
 };
 
+const uint32 MAX_CRASH_SIGNATURE_LENGTH = 128;
+
 /// Represents a generic crash report.
 table GenericCrashReport {
     /// A text signature that the crash server can use to track the same crash over time, e.g.,
@@ -68,7 +75,7 @@ table GenericCrashReport {
     /// Unlike the event ID, crash reports sharing the same signature correspond to the same crash,
     /// but happening over multiple events, e.g., a null pointer exception in a server whenever
     /// asked the same request.
-    1: string:128 crash_signature;
+    1: string:MAX_CRASH_SIGNATURE_LENGTH crash_signature;
 };
 
 /// Represents a crash report for a native exception out of which the client has built a minidump.
@@ -77,13 +84,16 @@ table NativeCrashReport {
     1: fuchsia.mem.Buffer minidump;
 };
 
+const uint32 MAX_EXCEPTION_TYPE_LENGTH = 128;
+const uint32 MAX_EXCEPTION_MESSAGE_LENGTH = 1024;
+
 /// Represents a crash report for a runtime exception, applicable to most languages.
 table RuntimeCrashReport {
     /// The exception type, e.g., "FileSystemException".
-    1: string:128 exception_type;
+    1: string:MAX_EXCEPTION_TYPE_LENGTH exception_type;
 
     /// The exception message, e.g., "cannot open file".
-    2: string:1024 exception_message;
+    2: string:MAX_EXCEPTION_MESSAGE_LENGTH exception_message;
 
     /// The text representation of the exception stack trace.
     3: fuchsia.mem.Buffer exception_stack_trace;
