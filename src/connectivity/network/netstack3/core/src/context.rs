@@ -539,7 +539,7 @@ pub(crate) mod testutil {
             }
         }
 
-        /// Skip current time forward by `duration`, triggering all timers until
+        /// Skip current time forward until `instant`, triggering all timers until
         /// then, inclusive.
         ///
         /// Returns the number of timers triggered.
@@ -567,6 +567,17 @@ pub(crate) mod testutil {
             self.as_mut().instant.time = instant;
 
             timers_fired
+        }
+
+        /// Skip current time forward by `duration`, triggering all timers until
+        /// then, inclusive.
+        ///
+        /// Returns the number of timers triggered.
+        fn trigger_timers_for<H: TimerHandler<Self, Id>>(&mut self, duration: Duration) -> usize {
+            let instant = self.as_mut().now() + duration;
+            // We know the call to `self.trigger_timers_until_instant` will not panic because
+            // we provide an instant that is greater than or equal to the current time.
+            self.trigger_timers_until_instant::<H>(instant)
         }
     }
 
