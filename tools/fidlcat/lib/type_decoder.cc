@@ -862,221 +862,157 @@ void VmoTypeName(uint32_t type, std::ostream& os) {
   VmoTypeNameCase(ZX_INFO_VMO_CONTIGUOUS);
 }
 
-void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostream& os) {
+std::string_view TypeName(SyscallType type) {
   switch (type) {
     case SyscallType::kBool:
-      os << ":" << colors.green << "bool" << colors.reset << ": ";
-      break;
+      return "bool";
     case SyscallType::kChar:
-      os << ":" << colors.green << "char" << colors.reset << ": ";
-      break;
+      return "char";
     case SyscallType::kCharArray:
-      os << ":" << colors.green << "char[]" << colors.reset << ": ";
-      break;
+      return "char[]";
     case SyscallType::kInt32:
-      os << ":" << colors.green << "int32" << colors.reset << ": ";
-      break;
+      return "int32";
     case SyscallType::kInt64:
-      os << ":" << colors.green << "int64" << colors.reset << ": ";
-      break;
+      return "int64";
     case SyscallType::kUint8:
     case SyscallType::kUint8Hexa:
-      os << ":" << colors.green << "uint8" << colors.reset << ": ";
-      break;
+      return "uint8";
     case SyscallType::kUint8ArrayDecimal:
     case SyscallType::kUint8ArrayHexa:
-      os << ":" << colors.green << "uint8[]" << colors.reset << ": ";
-      break;
+      return "uint8[]";
     case SyscallType::kUint16:
     case SyscallType::kUint16Hexa:
-      os << ":" << colors.green << "uint16" << colors.reset << ": ";
-      break;
+      return "uint16";
     case SyscallType::kUint16ArrayDecimal:
     case SyscallType::kUint16ArrayHexa:
-      os << ":" << colors.green << "uint16[]" << colors.reset << ": ";
-      break;
+      return "uint16[]";
     case SyscallType::kUint32:
     case SyscallType::kUint32Hexa:
-      os << ":" << colors.green << "uint32" << colors.reset << ": ";
-      break;
+      return "uint32";
     case SyscallType::kUint32ArrayDecimal:
     case SyscallType::kUint32ArrayHexa:
-      os << ":" << colors.green << "uint32[]" << colors.reset << ": ";
-      break;
+      return "uint32[]";
     case SyscallType::kUint64:
     case SyscallType::kUint64Hexa:
-      os << ":" << colors.green << "uint64" << colors.reset << ": ";
-      break;
+      return "uint64";
     case SyscallType::kUint64ArrayDecimal:
     case SyscallType::kUint64ArrayHexa:
-      os << ":" << colors.green << "uint64[]" << colors.reset << ": ";
-      break;
+      return "uint64[]";
     case SyscallType::kUint128Hexa:
-      os << ":" << colors.green << "uint128" << colors.reset << ": ";
-      break;
+      return "uint128";
     case SyscallType::kUint128ArrayHexa:
-      os << ":" << colors.green << "uint128[]" << colors.reset << ": ";
-      break;
+      return "uint128[]";
     case SyscallType::kBtiPerm:
-      os << ":" << colors.green << "zx_bti_perm_t" << colors.reset << ": ";
-      break;
+      return "zx_bti_perm_t";
     case SyscallType::kCachePolicy:
-      os << ":" << colors.green << "zx_cache_policy_t" << colors.reset << ": ";
-      break;
+      return "zx_cache_policy_t";
     case SyscallType::kClock:
-      os << ":" << colors.green << "clock" << colors.reset << ": ";
-      break;
+      return "clock";
     case SyscallType::kDuration:
-      os << ":" << colors.green << "duration" << colors.reset << ": ";
-      break;
+      return "duration";
     case SyscallType::kExceptionChannelType:
-      os << ":" << colors.green << "zx_info_thread_t::wait_exception_channel_type" << colors.reset
-         << ": ";
-      break;
+      return "zx_info_thread_t::wait_exception_channel_type";
     case SyscallType::kExceptionState:
-      os << ":" << colors.green << "zx_exception_state_t" << colors.reset << ": ";
-      break;
+      return "zx_exception_state_t";
     case SyscallType::kFeatureKind:
-      os << ":" << colors.green << "zx_feature_kind_t" << colors.reset << ": ";
-      break;
+      return "zx_feature_kind_t";
     case SyscallType::kFutex:
-      os << ":" << colors.green << "zx_futex_t" << colors.reset << ": ";
-      break;
+      return "zx_futex_t";
     case SyscallType::kGpAddr:
-      os << ":" << colors.green << "zx_gpaddr_t" << colors.reset << ": ";
-      break;
+      return "zx_gpaddr_t";
     case SyscallType::kGuestTrap:
-      os << ":" << colors.green << "zx_guest_trap_t" << colors.reset << ": ";
-      break;
+      return "zx_guest_trap_t";
     case SyscallType::kHandle:
-      os << ":" << colors.green << "handle" << colors.reset << ": ";
-      break;
+      return "handle";
     case SyscallType::kInfoMapsType:
-      os << ":" << colors.green << "zx_info_maps_type_t" << colors.reset << ": ";
-      break;
+      return "zx_info_maps_type_t";
     case SyscallType::kInterruptFlags:
-      os << ":" << colors.green << "zx_interrupt_flags_t" << colors.reset << ": ";
-      break;
+      return "zx_interrupt_flags_t";
     case SyscallType::kIommuType:
-      os << ":" << colors.green << "zx_iommu_type_t" << colors.reset << ": ";
-      break;
+      return "zx_iommu_type_t";
     case SyscallType::kKoid:
-      os << ":" << colors.green << "zx_koid_t" << colors.reset << ": ";
-      break;
+      return "zx_koid_t";
     case SyscallType::kKtraceControlAction:
-      os << ":" << colors.green << "zx_ktrace_control_action_t" << colors.reset << ": ";
-      break;
+      return "zx_ktrace_control_action_t";
     case SyscallType::kMonotonicTime:
-      os << ":" << colors.green << "zx_time_t" << colors.reset << ": ";
-      break;
+      return "zx_time_t";
     case SyscallType::kObjectInfoTopic:
-      os << ":" << colors.green << "zx_object_info_topic_t" << colors.reset << ": ";
-      break;
+      return "zx_object_info_topic_t";
     case SyscallType::kObjProps:
-      os << ":" << colors.green << "zx_obj_props_t" << colors.reset << ": ";
-      break;
+      return "zx_obj_props_t";
     case SyscallType::kObjType:
-      os << ":" << colors.green << "zx_obj_type_t" << colors.reset << ": ";
-      break;
+      return "zx_obj_type_t";
     case SyscallType::kPacketGuestVcpuType:
-      os << ":" << colors.green << "zx_packet_guest_vcpu_t::type" << colors.reset << ": ";
-      break;
+      return "zx_packet_guest_vcpu_t::type";
     case SyscallType::kPacketPageRequestCommand:
-      os << ":" << colors.green << "zx_packet_page_request_t::command" << colors.reset << ": ";
-      break;
+      return "zx_packet_page_request_t::command";
     case SyscallType::kPaddr:
-      os << ":" << colors.green << "zx_paddr_t" << colors.reset << ": ";
-      break;
+      return "zx_paddr_t";
     case SyscallType::kPciBarType:
-      os << ":" << colors.green << "zx_pci_bar_type_t" << colors.reset << ": ";
-      break;
+      return "zx_pci_bar_type_t";
     case SyscallType::kPolicyAction:
-      os << ":" << colors.green << "zx_policy_action_t" << colors.reset << ": ";
-      break;
+      return "zx_policy_action_t";
     case SyscallType::kPolicyCondition:
-      os << ":" << colors.green << "zx_policy_condition_t" << colors.reset << ": ";
-      break;
+      return "zx_policy_condition_t";
     case SyscallType::kPolicyTopic:
-      os << ":" << colors.green << "zx_policy_topic_t" << colors.reset << ": ";
-      break;
+      return "zx_policy_topic_t";
     case SyscallType::kPortPacketType:
-      os << ":" << colors.green << "zx_port_packet_t::type" << colors.reset << ": ";
-      break;
+      return "zx_port_packet_t::type";
     case SyscallType::kProfileInfoFlags:
-      os << ":" << colors.green << "zx_profile_info_flags_t" << colors.reset << ": ";
-      break;
+      return "zx_profile_info_flags_t";
     case SyscallType::kPropType:
-      os << ":" << colors.green << "zx_prop_type_t" << colors.reset << ": ";
-      break;
+      return "zx_prop_type_t";
     case SyscallType::kRights:
-      os << ":" << colors.green << "zx_rights_t" << colors.reset << ": ";
-      break;
+      return "zx_rights_t";
     case SyscallType::kRsrcKind:
-      os << ":" << colors.green << "zx_rsrc_kind_t" << colors.reset << ": ";
-      break;
+      return "zx_rsrc_kind_t";
     case SyscallType::kSignals:
-      os << ":" << colors.green << "signals" << colors.reset << ": ";
-      break;
+      return "signals";
     case SyscallType::kSize:
-      os << ":" << colors.green << "size_t" << colors.reset << ": ";
-      break;
+      return "size_t";
     case SyscallType::kSocketCreateOptions:
-      os << ":" << colors.green << "zx_socket_create_options_t" << colors.reset << ": ";
-      break;
+      return "zx_socket_create_options_t";
     case SyscallType::kSocketReadOptions:
-      os << ":" << colors.green << "zx_socket_read_options_t" << colors.reset << ": ";
-      break;
+      return "zx_socket_read_options_t";
     case SyscallType::kSocketShutdownOptions:
-      os << ":" << colors.green << "zx_socket_shutdown_options_t" << colors.reset << ": ";
-      break;
+      return "zx_socket_shutdown_options_t";
     case SyscallType::kStatus:
-      os << ":" << colors.green << "status_t" << colors.reset << ": ";
-      break;
+      return "status_t";
     case SyscallType::kSystemEventType:
-      os << ":" << colors.green << "zx_system_event_type_t" << colors.reset << ": ";
-      break;
+      return "zx_system_event_type_t";
     case SyscallType::kSystemPowerctl:
-      os << ":" << colors.green << "zx_system_powerctl_t" << colors.reset << ": ";
-      break;
+      return "zx_system_powerctl_t";
     case SyscallType::kThreadState:
-      os << ":" << colors.green << "zx_info_thread_t::state" << colors.reset << ": ";
-      break;
+      return "zx_info_thread_t::state";
     case SyscallType::kThreadStateTopic:
-      os << ":" << colors.green << "zx_thread_state_topic_t" << colors.reset << ": ";
-      break;
+      return "zx_thread_state_topic_t";
     case SyscallType::kTime:
-      os << ":" << colors.green << "time" << colors.reset << ": ";
-      break;
+      return "time";
     case SyscallType::kTimerOption:
-      os << ":" << colors.green << "zx_timer_option_t" << colors.reset << ": ";
-      break;
+      return "zx_timer_option_t";
     case SyscallType::kUintptr:
-      os << ":" << colors.green << "uintptr_t" << colors.reset << ": ";
-      break;
+      return "uintptr_t";
     case SyscallType::kVaddr:
-      os << ":" << colors.green << "zx_vaddr_t" << colors.reset << ": ";
-      break;
+      return "zx_vaddr_t";
     case SyscallType::kVcpu:
-      os << ":" << colors.green << "zx_vcpu_t" << colors.reset << ": ";
-      break;
+      return "zx_vcpu_t";
     case SyscallType::kVmOption:
-      os << ":" << colors.green << "zx_vm_option_t" << colors.reset << ": ";
-      break;
+      return "zx_vm_option_t";
     case SyscallType::kVmoCreationOption:
-      os << ":" << colors.green << "zx_vmo_creation_option_t" << colors.reset << ": ";
-      break;
+      return "zx_vmo_creation_option_t";
     case SyscallType::kVmoOp:
-      os << ":" << colors.green << "zx_vmo_op_t" << colors.reset << ": ";
-      break;
+      return "zx_vmo_op_t";
     case SyscallType::kVmoOption:
-      os << ":" << colors.green << "zx_vmo_option_t" << colors.reset << ": ";
-      break;
+      return "zx_vmo_option_t";
     case SyscallType::kVmoType:
-      os << ":" << colors.green << "zx_info_vmo_type_t" << colors.reset << ": ";
-      break;
+      return "zx_info_vmo_type_t";
     case SyscallType::kStruct:
-      break;
+      return "";
   }
+}
+
+void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostream& os) {
+  os << ":" << colors.green << TypeName(type) << colors.reset << ": ";
 }
 
 }  // namespace fidlcat

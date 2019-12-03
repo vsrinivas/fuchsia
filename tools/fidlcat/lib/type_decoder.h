@@ -158,6 +158,7 @@ void VmoCreationOptionName(uint32_t option, std::ostream& os);
 void VmoOpName(uint32_t op, std::ostream& os);
 void VmoOptionName(uint32_t option, std::ostream& os);
 void VmoTypeName(uint32_t type, std::ostream& os);
+std::string_view TypeName(SyscallType type);
 void DisplayType(const fidl_codec::Colors& colors, SyscallType type, std::ostream& os);
 
 class DisplayDuration {
