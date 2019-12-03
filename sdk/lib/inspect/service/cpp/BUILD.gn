@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+
+sdk_source_set("cpp") {
+  category = "partner"
+
+  sdk_name = "inspect_service_cpp"
+
+  include_base = "//sdk"
+  sources = [
+    "reader.cc",
+    "reader.h",
+    "service.cc",
+    "service.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/inspect",
+    "//zircon/system/fidl/fuchsia-inspect",
+  ]
+
+  public_configs = [ "//sdk/config" ]
+}

@@ -447,6 +447,7 @@ group("inspect_tests") {
     ":inspect_contrib_cpp_tests",
     ":inspect_health_unittests",
     ":inspect_query_unittests",
+    ":inspect_service_cpp_tests",
     ":inspect_unittests",
     ":libinspect_integration_tests",
     ":sys_inspect_cpp_tests",
@@ -472,6 +473,13 @@ group("sys_inspect_cpp_tests") {
   testonly = true
   public_deps = [
     "//sdk/lib/sys/inspect/cpp/tests:sys_inspect_cpp_tests",
+  ]
+}
+
+group("inspect_service_cpp_tests") {
+  testonly = true
+  public_deps = [
+    "//sdk/lib/inspect/service/cpp/tests:inspect_service_cpp_tests",
   ]
 }
 

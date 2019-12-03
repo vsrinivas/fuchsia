@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/package/component.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+test("inspect_service_cpp_unittests") {
+  sources = [
+    "reader_unittests.cc",
+    "service_unittests.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/inspect/service/cpp",
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/public/lib/inspect",
+    "//zircon/system/fidl/fuchsia-inspect",
+  ]
+}
+
+test_package("inspect_service_cpp_tests") {
+  deps = [
+    ":inspect_service_cpp_unittests",
+  ]
+
+  tests = [
+    {
+      name = "inspect_service_cpp_unittests"
+      environments = basic_envs
+    },
+  ]
+}
