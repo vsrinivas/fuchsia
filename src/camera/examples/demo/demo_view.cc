@@ -53,7 +53,8 @@ DemoView::DemoView(scenic::ViewContext context, async::Loop* loop, bool chaos, b
       chaos_(chaos),
       chaos_dist_(kChaosMaxSleepMsec, static_cast<float>(kChaosMeanSleepMsec) / kChaosMaxSleepMsec),
       text_node_(session()),
-      image_io_(image_io) {}
+      image_io_(image_io),
+      trace_provider_(loop->dispatcher()) {}
 
 DemoView::~DemoView() {
   // Manually delete Wait instances before their corresponding events to avoid a failed assert.
@@ -178,7 +179,7 @@ void DemoView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation
 
   std::stringstream ss;
   if (rotated_count > 0) {
-    ss << "(" << rotated_count << " of " << image_pipe_properties_.size()
+    ss << " (" << rotated_count << " of " << image_pipe_properties_.size()
        << " nodes rotated by Scenic)";
   }
   text_node_.SetText(stream_provider_->GetName() + ss.str());
@@ -194,10 +195,13 @@ void DemoView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
 void DemoView::OnScenicError(std::string error) { FX_LOGS(ERROR) << "Scenic Error " << error; }
 
 void DemoView::OnFrameAvailable(uint32_t index, fuchsia::camera2::FrameAvailableInfo info) {
+  auto async_id = TRACE_NONCE();
+  TRACE_ASYNC_BEGIN("camera", "FrameHeld", async_id, "buffer_id", info.buffer_id);
   SleepIfChaos();
   auto& ipp = image_pipe_properties_[index];
   if (!has_logical_size()) {
     ipp.stream->ReleaseFrame(info.buffer_id);
+    TRACE_ASYNC_END("camera", "FrameHeld", async_id, "buffer_id", info.buffer_id);
     return;
   }
   if (info.frame_status != fuchsia::camera2::FrameStatus::OK) {
@@ -236,23 +240,24 @@ void DemoView::OnFrameAvailable(uint32_t index, fuchsia::camera2::FrameAvailable
       ipp.image_ids[info.buffer_id], now_ns, std::move(acquire_fences), std::move(release_fences),
       [this](fuchsia::images::PresentationInfo presentation_info) { SleepIfChaos(); });
 
-  auto waiter =
-      std::make_unique<async::Wait>(release_fence.get(), ZX_EVENT_SIGNALED, 0,
-                                    [this, buffer_id = info.buffer_id, &ipp](
-                                        async_dispatcher_t* dispatcher, async::Wait* wait,
-                                        zx_status_t status, const zx_packet_signal_t* signal) {
-                                      if (status != ZX_OK) {
-                                        FX_PLOGS(ERROR, status) << "Wait failed";
-                                        loop_->Quit();
-                                        return;
-                                      }
-                                      SleepIfChaos();
-                                      ipp.stream->ReleaseFrame(buffer_id);
-                                      auto it = ipp.waiters.find(buffer_id);
-                                      ZX_ASSERT(it != ipp.waiters.end());
-                                      it->second.first = nullptr;
-                                      ipp.waiters.erase(it);
-                                    });
+  auto waiter = std::make_unique<async::Wait>(
+      release_fence.get(), ZX_EVENT_SIGNALED, 0,
+      [this, async_id, buffer_id = info.buffer_id, &ipp](async_dispatcher_t* dispatcher,
+                                                         async::Wait* wait, zx_status_t status,
+                                                         const zx_packet_signal_t* signal) {
+        if (status != ZX_OK) {
+          FX_PLOGS(ERROR, status) << "Wait failed";
+          loop_->Quit();
+          return;
+        }
+        SleepIfChaos();
+        ipp.stream->ReleaseFrame(buffer_id);
+        TRACE_ASYNC_END("camera", "FrameHeld", async_id, "buffer_id", buffer_id);
+        auto it = ipp.waiters.find(buffer_id);
+        ZX_ASSERT(it != ipp.waiters.end());
+        it->second.first = nullptr;
+        ipp.waiters.erase(it);
+      });
   auto it = ipp.waiters.emplace(
       std::make_pair(info.buffer_id, std::make_pair(std::move(waiter), std::move(release_fence))));
   status = it.first->second.first->Begin(loop_->dispatcher());

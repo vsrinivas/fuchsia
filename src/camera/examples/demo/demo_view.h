@@ -15,6 +15,8 @@
 #include <random>
 
 #include <src/lib/ui/base_view/base_view.h>
+#include <trace-provider/provider.h>
+#include <trace/event.h>
 
 #include "lib/ui/scenic/cpp/session.h"
 #include "src/camera/stream_utils/image_io_util.h"
@@ -64,8 +66,8 @@ class DemoView : public scenic::BaseView {
   float total_width_;
   float max_height_;
   TextNode text_node_;
-
-  __UNUSED bool image_io_;
+  bool image_io_;
+  trace::TraceProviderWithFdio trace_provider_;
 };
 
 }  // namespace camera
