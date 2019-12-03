@@ -1,0 +1,37 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.cpu.ctrl;
+
+using zx;
+
+/// CpuPerformanceStateInfo::frequency_hz and CpuPerformanceStateInfo::voltage_uv
+/// are set to this if the frequency and voltage for the given performance state
+/// are unknown respectively.
+const int64 FREQUENCY_UNKNOWN = -1;
+const int64 VOLTAGE_UNKNOWN = -1;
+
+/// A collection of some basic information for a given performance state.
+struct CpuPerformanceStateInfo {
+    /// Frequency the core is operating at in hertz.
+    int64 frequency_hz;
+
+    // Voltage the core is operating at in microvolts.
+    int64 voltage_uv;
+};
+
+protocol Device {
+    /// Returns information about a given performance state for this performance
+    /// domain.
+    GetPerformanceStateInfo(uint32 state) -> (CpuPerformanceStateInfo info) error zx.status;
+
+    /// Returns the number of logical cores contained within this performance
+    /// domain.
+    GetNumLogicalCores() -> (uint64 count);
+
+    /// Returns a global system-wide core ID for the nth core in this
+    /// performance domain. `index` must be a value in the range [0, n) where
+    /// n is the value returned by GetNumLogicalCores().
+    GetLogicalCoreId(uint64 index) -> (uint64 id);
+};

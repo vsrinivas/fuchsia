@@ -28,6 +28,7 @@ group("fidl") {
     "fuchsia-hardware-bluetooth",
     "fuchsia-hardware-camera",
     "fuchsia-hardware-clock",
+    "fuchsia-hardware-cpu-ctrl",
     "fuchsia-hardware-cpu-insntrace",
     "fuchsia-hardware-display",
     "fuchsia-hardware-dotmatrixdisplay",
