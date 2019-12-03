@@ -33,16 +33,18 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, BinaryHeap, HashMap};
 use std::convert::TryFrom;
+use std::marker::PhantomData;
 use std::time::Duration;
 
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
 use net_types::ip::{Ip, IpAddress};
+use never::Never;
 use packet::{BufferViewMut, ParsablePacket};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::{ByteSlice, ByteSliceMut};
 
-use crate::context::{StateContext, TimerContext};
+use crate::context::{StateContext, TimerContext, TimerHandler};
 use crate::ip::{IpExtByteSlice, IpPacket};
 use crate::wire::ipv4::{
     IPV4_CHECKSUM_BYTE_RANGE, IPV4_FRAGMENT_DATA_BYTE_RANGE, IPV4_TOTAL_LENGTH_BYTE_RANGE,
@@ -83,14 +85,39 @@ impl<I: Ip, C: TimerContext<FragmentCacheKey<I::Addr>> + StateContext<IpLayerFra
 {
 }
 
+/// A handler for reassembly timer events.
+///
+/// See [`IpLayerFragmentCache::handle_reassembly_timer`] for more information.
+///
+/// This type cannot be constructed, and is only meant to be used at the type
+/// level. We implement [`TimerHandler`] for `FragmentTimerHandler` rather than just
+/// provide the top-level `handle_timer` functions so that `FragmentTimerHandler`
+/// can be used in tests with the [`DummyTimerContextExt`] trait and with the
+/// [`DummyNetwork`] type.
+///
+/// [`DummyTimerContextExt`]: crate::context::testutil::DummyTimerContextExt
+/// [`DummyNetwork`]: crate::context::testutil::DummyNetwork
+pub(crate) struct FragmentTimerHandler<I> {
+    _ip: PhantomData<I>,
+    _never: Never,
+}
+
+impl<I: Ip, C: FragmentContext<I>> TimerHandler<C, FragmentCacheKey<I::Addr>>
+    for FragmentTimerHandler<I>
+{
+    fn handle_timer(ctx: &mut C, key: FragmentCacheKey<I::Addr>) {
+        ctx.get_state_mut().handle_reassembly_timer(key);
+    }
+}
+
 /// Handles reassembly timers.
 ///
-/// See [`IpLayerFragmentCache::handle_reassembly_timer`].
+/// See [`FragmentTimerHandler`] for more information.
 pub(crate) fn handle_reassembly_timer<I: Ip, C: FragmentContext<I>>(
     ctx: &mut C,
     key: FragmentCacheKey<I::Addr>,
 ) {
-    ctx.get_state_mut().handle_reassembly_timer(key);
+    FragmentTimerHandler::<I>::handle_timer(ctx, key)
 }
 
 /// Trait that must be implemented by any packet type that is fragmentable.
@@ -728,14 +755,39 @@ mod tests {
     use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
+    use crate::context::testutil::DummyTimerContextExt;
     use crate::ip::{IpProto, Ipv6ExtHdrType};
-    use crate::testutil::{
-        get_dummy_config, run_for, trigger_next_timer, DummyEventDispatcher,
-        DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
-    };
+    use crate::testutil::{get_dummy_config, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6};
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
-    use crate::{Context, EventDispatcher};
+
+    /// A dummy [`FragmentContext`] that stores an [`IpLayerFragmentCache`].
+    struct DummyFragmentContext<I: Ip> {
+        cache: IpLayerFragmentCache<I>,
+    }
+
+    impl<I: Ip> Default for DummyFragmentContext<I> {
+        fn default() -> Self {
+            DummyFragmentContext { cache: IpLayerFragmentCache::new() }
+        }
+    }
+
+    type DummyContext<I> = crate::context::testutil::DummyContext<
+        DummyFragmentContext<I>,
+        FragmentCacheKey<<I as Ip>::Addr>,
+    >;
+
+    impl<I: Ip> StateContext<IpLayerFragmentCache<I>> for DummyContext<I> {
+        fn get_state_with(&self, _id: ()) -> &IpLayerFragmentCache<I> {
+            &self.get_ref().cache
+        }
+
+        fn get_state_mut_with(&mut self, _id: ()) -> &mut IpLayerFragmentCache<I> {
+            &mut self.get_mut().cache
+        }
+    }
+
+    impl<I: Ip> FragmentContext<I> for DummyContext<I> {}
 
     macro_rules! assert_frag_proc_state_need_more {
         ($lhs:expr) => {{
@@ -822,8 +874,8 @@ mod tests {
     /// be called when `process_ip_fragment` is specialized for `Ipv4` and
     /// `Ipv6`, respectively.
     #[specialize_ip]
-    fn process_ip_fragment<I: Ip, D: EventDispatcher>(
-        ctx: &mut Context<D>,
+    fn process_ip_fragment<I: Ip, C: FragmentContext<I>>(
+        ctx: &mut C,
         fragment_id: u16,
         fragment_offset: u8,
         fragment_count: u8,
@@ -844,8 +896,8 @@ mod tests {
     ///
     /// `process_ipv4_fragment` will expect the result specified by
     /// `expected_result` when processing the result.
-    fn process_ipv4_fragment<D: EventDispatcher>(
-        ctx: &mut Context<D>,
+    fn process_ipv4_fragment<C: FragmentContext<Ipv4>>(
+        ctx: &mut C,
         fragment_id: u16,
         fragment_offset: u8,
         fragment_count: u8,
@@ -910,8 +962,8 @@ mod tests {
     ///
     /// `process_ipv6_fragment` will expect the result specified by
     /// `expected_result` when processing the result.
-    fn process_ipv6_fragment<D: EventDispatcher>(
-        ctx: &mut Context<D>,
+    fn process_ipv6_fragment<C: FragmentContext<Ipv6>>(
+        ctx: &mut C,
         fragment_id: u16,
         fragment_offset: u8,
         fragment_count: u8,
@@ -976,8 +1028,7 @@ mod tests {
 
     #[test]
     fn test_ipv4_reassembly_not_needed() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyContext::default();
 
         //
         // Test that we don't attempt reassembly if the packet is not
@@ -996,8 +1047,7 @@ mod tests {
         expected = "internal error: entered unreachable code: Should never call this function if the packet does not have a fragment header"
     )]
     fn test_ipv6_reassembly_not_needed() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyContext::default();
 
         //
         // Test that we panic if we call `fragment_data` on a packet that has no
@@ -1013,8 +1063,7 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassembly<I: Ip>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyContext::default();
         let fragment_id = 5;
 
         //
@@ -1034,8 +1083,7 @@ mod tests {
     #[ip_test]
     fn test_ip_reassemble_with_missing_blocks<I: Ip>() {
         let dummy_config = get_dummy_config::<I::Addr>();
-        let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyContext::default();
         let fragment_id = 5;
 
         //
@@ -1065,12 +1113,11 @@ mod tests {
     #[ip_test]
     fn test_ip_reassemble_after_timer<I: Ip>() {
         let dummy_config = get_dummy_config::<I::Addr>();
-        let mut ctx = DummyEventDispatcherBuilder::from_config(dummy_config.clone())
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyContext::default();
         let fragment_id = 5;
 
         // Make sure no timers in the dispatcher yet.
-        assert_eq!(ctx.dispatcher.timer_events().count(), 0);
+        assert_eq!(ctx.timers().len(), 0);
 
         //
         // Test that we properly reset fragment cache on timer.
@@ -1079,23 +1126,23 @@ mod tests {
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 0, 3, ExpectedResult::NeedMore);
         // Make sure a timer got added.
-        assert_eq!(ctx.dispatcher.timer_events().count(), 1);
+        assert_eq!(ctx.timers().len(), 1);
 
         // Process fragment #1
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 1, 3, ExpectedResult::NeedMore);
         // Make sure no new timers got added or fired.
-        assert_eq!(ctx.dispatcher.timer_events().count(), 1);
+        assert_eq!(ctx.timers().len(), 1);
 
         // Process fragment #2
         process_ip_fragment::<I, _>(&mut ctx, fragment_id, 2, 3, ExpectedResult::Ready);
         // Make sure no new timers got added or fired.
-        assert_eq!(ctx.dispatcher.timer_events().count(), 1);
+        assert_eq!(ctx.timers().len(), 1);
 
         // Trigger the timer (simulate a timer for the fragmented packet)
-        assert!(trigger_next_timer(&mut ctx));
+        assert!(ctx.trigger_next_timer::<FragmentTimerHandler<I>>());
 
         // Make sure no other times exist..
-        assert_eq!(ctx.dispatcher.timer_events().count(), 0);
+        assert_eq!(ctx.timers().len(), 0);
 
         // Attempt to reassemble the packet but get an error since the fragment
         // data would have been reset/cleared.
@@ -1115,8 +1162,7 @@ mod tests {
 
     #[ip_test]
     fn test_ip_overlapping_single_fragment<I: Ip>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyContext::default();
         let fragment_id = 5;
 
         //
@@ -1132,8 +1178,7 @@ mod tests {
 
     #[test]
     fn test_ipv4_fragment_not_multiple_of_offset_unit() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyContext::default();
         let fragment_id = 0;
 
         //
@@ -1189,8 +1234,7 @@ mod tests {
 
     #[test]
     fn test_ipv6_fragment_not_multiple_of_offset_unit() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6)
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyContext::default();
         let fragment_id = 0;
 
         //
@@ -1256,8 +1300,7 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassembly_with_multiple_intertwined_packets<I: Ip>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyContext::default();
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
 
@@ -1287,8 +1330,7 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassembly_timer_with_multiple_intertwined_packets<I: Ip>() {
-        let mut ctx = DummyEventDispatcherBuilder::from_config(get_dummy_config::<I::Addr>())
-            .build::<DummyEventDispatcher>();
+        let mut ctx = DummyContext::default();
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
         let fragment_id_2 = 15;
@@ -1329,13 +1371,13 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_2, 2, 3, ExpectedResult::NeedMore);
 
         // Advance time by 30s (should be at 30s now).
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(30)), 0);
+        assert_eq!(ctx.trigger_timers_for::<FragmentTimerHandler<I>>(Duration::from_secs(30)), 0);
 
         // Process fragment #2 for packet #0
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_0, 2, 3, ExpectedResult::NeedMore);
 
         // Advance time by 10s (should be at 40s now).
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(10)), 0);
+        assert_eq!(ctx.trigger_timers_for::<FragmentTimerHandler<I>>(Duration::from_secs(10)), 0);
 
         // Process fragment #1 for packet #2
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_2, 1, 3, ExpectedResult::NeedMore);
@@ -1344,7 +1386,7 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_0, 1, 3, ExpectedResult::ReadyReassemble);
 
         // Advance time by 10s (should be at 50s now).
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(10)), 0);
+        assert_eq!(ctx.trigger_timers_for::<FragmentTimerHandler<I>>(Duration::from_secs(10)), 0);
 
         // Process fragment #0 for packet #1
         process_ip_fragment::<I, _>(&mut ctx, fragment_id_1, 0, 3, ExpectedResult::NeedMore);
@@ -1354,10 +1396,10 @@ mod tests {
 
         // Advance time by 10s (should be at 60s now)), triggering the timer for
         // the reassembly of packet #1
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(10)), 1);
+        assert_eq!(ctx.trigger_timers_for::<FragmentTimerHandler<I>>(Duration::from_secs(10)), 1);
 
         // Make sure no other times exist.
-        assert_eq!(ctx.dispatcher.timer_events().count(), 0);
+        assert_eq!(ctx.timers().len(), 0);
 
         // Process fragment #2 for packet #1 Should get a need more return value
         // since even though we technically received all the fragments, the last
