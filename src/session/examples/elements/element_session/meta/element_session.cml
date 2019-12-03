@@ -17,11 +17,10 @@
     ],
     "expose": [
         {
-            "legacy_service": "/svc/fuchsia.session.ElementManager",
-            "from": "self",
-        },
-        {
-            "legacy_service": "/svc/fuchsia.session.examples.ElementPing",
+            "legacy_service": [
+                "/svc/fuchsia.session.ElementManager",
+                "/svc/fuchsia.session.examples.ElementPing",
+            ],
             "from": "self",
         },
     ],
