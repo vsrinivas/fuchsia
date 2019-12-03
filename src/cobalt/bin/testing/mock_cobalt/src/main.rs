@@ -181,9 +181,13 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
 
         while let Some(hanging_get_state) = log_state.hanging.pop() {
             let mut last_observed = hanging_get_state.last_observed.lock().await;
+            let events = (&mut log_state.log)
+                .iter()
+                .skip(*last_observed)
+                .take(MAX_QUERY_LENGTH)
+                .map(Clone::clone)
+                .collect();
             *last_observed = log_state.log.len();
-            let events =
-                (&mut log_state.log).iter().take(MAX_QUERY_LENGTH).map(Clone::clone).collect();
             let _ = hanging_get_state.responder.send(&mut Ok((events, false)));
         }
     }
@@ -224,11 +228,15 @@ async fn run_cobalt_query_service(
                     let mut last_observed_len = last_observed.lock().await;
                     let current_len = log_state.log.len();
                     if current_len != *last_observed_len {
-                        *last_observed_len = current_len;
                         let events = &mut log_state.log;
                         let more = events.len() > cobalt_test::MAX_QUERY_LENGTH as usize;
-                        let events =
-                            events.iter().take(MAX_QUERY_LENGTH).map(Clone::clone).collect();
+                        let events = events
+                            .iter()
+                            .skip(*last_observed_len)
+                            .take(MAX_QUERY_LENGTH)
+                            .map(Clone::clone)
+                            .collect();
+                        *last_observed_len = current_len;
                         responder.send(&mut Ok((events, more)))?;
                     } else {
                         log_state.hanging.push(HangingGetState {
@@ -550,15 +558,12 @@ mod tests {
         let project_id = 765;
         let mut create_logger = futures::future::select(
             services,
-            factory_proxy.create_logger_from_project_id(
-                project_id,
-                logger_proxy_server_end,
-            ),
+            factory_proxy.create_logger_from_project_id(project_id, logger_proxy_server_end),
         );
         let create_logger_poll = executor.run_until_stalled(&mut create_logger);
         assert!(create_logger_poll.is_ready());
 
-        let continuation = match create_logger_poll {
+        let mut continuation = match create_logger_poll {
             core::task::Poll::Pending => unreachable!("we asserted that create_logger_poll was ready"),
             core::task::Poll::Ready(either) => match either {
                 futures::future::Either::Left(_services_future_returned) => unreachable!("unexpected services future return (cannot be formatted with default formatter)"),
@@ -569,51 +574,55 @@ mod tests {
             }
         };
 
-        let watch_logs_hanging_get = querier_proxy.watch_logs(project_id, LogMethod::LogEvent);
-        let mut watch_logs_hanging_get =
-            futures::future::select(continuation, watch_logs_hanging_get);
-        let watch_logs_poll = executor.run_until_stalled(&mut watch_logs_hanging_get);
-        assert!(watch_logs_poll.is_pending());
+        // Resolve two hanging gets and ensure that only the novel data (the same data both times)
+        // is returned.
+        for _ in 0..2 {
+            let watch_logs_hanging_get = querier_proxy.watch_logs(project_id, LogMethod::LogEvent);
+            let mut watch_logs_hanging_get =
+                futures::future::select(continuation, watch_logs_hanging_get);
+            let watch_logs_poll = executor.run_until_stalled(&mut watch_logs_hanging_get);
+            assert!(watch_logs_poll.is_pending());
 
-        let event_metric_id = 1;
-        let event_code = 2;
-        let log_event = logger_proxy.log_event(event_metric_id, event_code);
+            let event_metric_id = 1;
+            let event_code = 2;
+            let log_event = logger_proxy.log_event(event_metric_id, event_code);
 
-        let mut resolved_hanging_get = futures::future::join(watch_logs_hanging_get, log_event);
-        let resolved_hanging_get = executor.run_until_stalled(&mut resolved_hanging_get);
-        assert!(resolved_hanging_get.is_ready());
+            let mut resolved_hanging_get = futures::future::join(watch_logs_hanging_get, log_event);
+            let resolved_hanging_get = executor.run_until_stalled(&mut resolved_hanging_get);
+            assert!(resolved_hanging_get.is_ready());
 
-        let mut continuation = match resolved_hanging_get {
-            core::task::Poll::Pending => {
-                unreachable!("we asserted that resolved_hanging_get was ready")
-            }
-            core::task::Poll::Ready((watch_logs_result, log_event_result)) => {
-                assert_eq!(
-                    log_event_result.expect("expected log event to succeed"),
-                    fidl_fuchsia_cobalt::Status::Ok
-                );
+            continuation = match resolved_hanging_get {
+                core::task::Poll::Pending => {
+                    unreachable!("we asserted that resolved_hanging_get was ready")
+                }
+                core::task::Poll::Ready((watch_logs_result, log_event_result)) => {
+                    assert_eq!(
+                        log_event_result.expect("expected log event to succeed"),
+                        fidl_fuchsia_cobalt::Status::Ok
+                    );
 
-                match watch_logs_result {
-                    futures::future::Either::Left(_services_future_returned) => unreachable!("unexpected services future return (cannot be formatted with the default formatter)"),
-                    futures::future::Either::Right((
-                        cobalt_query_result,
-                        services_continuation,
-                    )) => {
-                        let (mut logged_events, more) = cobalt_query_result
-                            .expect("expect cobalt query FIDL call to succeed")
-                            .expect("expect cobalt query call to return success");
-                        assert_eq!(logged_events.len(), 1);
-                        let mut logged_event = logged_events.pop().unwrap();
-                        assert_eq!(logged_event.metric_id, event_metric_id);
-                        assert_eq!(logged_event.event_codes.len(), 1);
-                        assert_eq!(logged_event.event_codes.pop().unwrap(), event_code);
-                        assert_eq!(more, false);
-                        services_continuation
+                    match watch_logs_result {
+                        futures::future::Either::Left(_services_future_returned) => unreachable!("unexpected services future return (cannot be formatted with the default formatter)"),
+                        futures::future::Either::Right((
+                            cobalt_query_result,
+                            services_continuation,
+                        )) => {
+                            let (mut logged_events, more) = cobalt_query_result
+                                .expect("expect cobalt query FIDL call to succeed")
+                                .expect("expect cobalt query call to return success");
+                            assert_eq!(logged_events.len(), 1);
+                            let mut logged_event = logged_events.pop().unwrap();
+                            assert_eq!(logged_event.metric_id, event_metric_id);
+                            assert_eq!(logged_event.event_codes.len(), 1);
+                            assert_eq!(logged_event.event_codes.pop().unwrap(), event_code);
+                            assert_eq!(more, false);
+                            services_continuation
+                        }
                     }
                 }
-            }
-        };
+            };
 
-        assert!(executor.run_until_stalled(&mut continuation).is_pending());
+            assert!(executor.run_until_stalled(&mut continuation).is_pending());
+        }
     }
 }
