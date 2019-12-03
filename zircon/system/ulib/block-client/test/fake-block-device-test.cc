@@ -45,13 +45,13 @@ void CreateAndRegisterVmo(BlockDevice* device, size_t blocks, zx::vmo* vmo,
 }
 
 TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
-  std::unique_ptr<BlockDevice> device =
-      std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+  auto fake_device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+  BlockDevice* device = fake_device.get();
 
   const size_t kVmoBlocks = 4;
   zx::vmo vmo;
   fuchsia_hardware_block_VmoID vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   // Write some data to the device.
   char src[kVmoBlocks * kBlockSizeDefault];
@@ -64,6 +64,12 @@ TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
   ASSERT_OK(device->FifoTransaction(&request, 1));
+
+  fuchsia_hardware_block_BlockStats stats;
+  fake_device->GetStats(false, &stats);
+  ASSERT_EQ(1, stats.write.success.total_calls);
+  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.write.success.bytes_transferred);
+  ASSERT_LT(0, stats.write.success.total_time_spent);
 
   // Clear out the registered VMO.
   char dst[kVmoBlocks * kBlockSizeDefault];
@@ -80,16 +86,21 @@ TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
   ASSERT_OK(device->FifoTransaction(&request, 1));
   ASSERT_OK(vmo.read(dst, 0, sizeof(dst)));
   EXPECT_BYTES_EQ(src, dst, sizeof(src));
+
+  fake_device->GetStats(false, &stats);
+  ASSERT_EQ(1, stats.read.success.total_calls);
+  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.read.success.bytes_transferred);
+  ASSERT_LT(0, stats.read.success.total_time_spent);
 }
 
 TEST(FakeBlockDeviceTest, FifoTransactionFlush) {
-  std::unique_ptr<BlockDevice> device =
-      std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+  auto fake_device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+  BlockDevice* device = fake_device.get();
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   fuchsia_hardware_block_VmoID vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_FLUSH;
@@ -98,6 +109,12 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlush) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
   EXPECT_OK(device->FifoTransaction(&request, 1));
+
+  fuchsia_hardware_block_BlockStats stats;
+  fake_device->GetStats(false, &stats);
+  ASSERT_EQ(1, stats.flush.success.total_calls);
+  ASSERT_EQ(0, stats.flush.success.bytes_transferred);
+  ASSERT_LT(0, stats.flush.success.total_time_spent);
 }
 
 // Tests that writing followed by a flush acts like a regular write.
@@ -211,13 +228,13 @@ TEST(FakeBlockDeviceTest, FifoTransactionClose) {
 }
 
 TEST(FakeBlockDeviceTest, FifoTransactionUnsupportedTrim) {
-  std::unique_ptr<BlockDevice> device =
-      std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+  auto fake_device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+  BlockDevice* device = fake_device.get();
 
   const size_t kVmoBlocks = 1;
   zx::vmo vmo;
   fuchsia_hardware_block_VmoID vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device.get(), kVmoBlocks, &vmo, &vmoid));
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
 
   block_fifo_request_t request;
   request.opcode = BLOCKIO_TRIM;
@@ -226,6 +243,97 @@ TEST(FakeBlockDeviceTest, FifoTransactionUnsupportedTrim) {
   request.vmo_offset = 0;
   request.dev_offset = 0;
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device->FifoTransaction(&request, 1));
+
+  fuchsia_hardware_block_BlockStats stats;
+  fake_device->GetStats(true, &stats);
+  ASSERT_EQ(1, stats.trim.failure.total_calls);
+  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.trim.failure.bytes_transferred);
+  ASSERT_LT(0, stats.trim.failure.total_time_spent);
+}
+
+TEST(FakeBlockDeviceTest, ReadWriteWithBarrier) {
+  auto fake_device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+  BlockDevice* device = fake_device.get();
+
+  const size_t kVmoBlocks = 4;
+  zx::vmo vmo;
+  fuchsia_hardware_block_VmoID vmoid;
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
+
+  // Write some data to the device.
+  char src[kVmoBlocks * kBlockSizeDefault];
+  memset(src, 'a', sizeof(src));
+  ASSERT_OK(vmo.write(src, 0, sizeof(src)));
+  block_fifo_request_t request;
+  request.opcode = BLOCKIO_WRITE | BLOCKIO_BARRIER_BEFORE;
+  request.vmoid = vmoid.id;
+  request.length = kVmoBlocks;
+  request.vmo_offset = 0;
+  request.dev_offset = 0;
+  ASSERT_OK(device->FifoTransaction(&request, 1));
+
+  fuchsia_hardware_block_BlockStats stats;
+  fake_device->GetStats(false, &stats);
+  ASSERT_EQ(1, stats.write.success.total_calls);
+  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.write.success.bytes_transferred);
+  ASSERT_LT(0, stats.write.success.total_time_spent);
+  ASSERT_EQ(1, stats.barrier_before.success.total_calls);
+  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.barrier_before.success.bytes_transferred);
+  ASSERT_LT(0, stats.barrier_before.success.total_time_spent);
+
+  // Clear out the registered VMO.
+  char dst[kVmoBlocks * kBlockSizeDefault];
+  static_assert(sizeof(src) == sizeof(dst), "Mismatched input/output buffer size");
+  memset(dst, 0, sizeof(dst));
+  ASSERT_OK(vmo.write(dst, 0, sizeof(dst)));
+
+  // Read data from the fake back into the registered VMO.
+  request.opcode = BLOCKIO_READ | BLOCKIO_BARRIER_AFTER;
+  request.vmoid = vmoid.id;
+  request.length = kVmoBlocks;
+  request.vmo_offset = 0;
+  request.dev_offset = 0;
+  ASSERT_OK(device->FifoTransaction(&request, 1));
+  ASSERT_OK(vmo.read(dst, 0, sizeof(dst)));
+  EXPECT_BYTES_EQ(src, dst, sizeof(src));
+
+  fake_device->GetStats(false, &stats);
+  ASSERT_EQ(1, stats.read.success.total_calls);
+  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.read.success.bytes_transferred);
+  ASSERT_LT(0, stats.read.success.total_time_spent);
+  ASSERT_EQ(1, stats.barrier_after.success.total_calls);
+  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.barrier_after.success.bytes_transferred);
+  ASSERT_LT(0, stats.barrier_after.success.total_time_spent);
+}
+
+TEST(FakeBlockDeviceTest, ClearStats) {
+  auto fake_device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
+  BlockDevice* device = fake_device.get();
+
+  const size_t kVmoBlocks = 1;
+  zx::vmo vmo;
+  fuchsia_hardware_block_VmoID vmoid;
+  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
+
+  block_fifo_request_t request;
+  request.opcode = BLOCKIO_FLUSH;
+  request.vmoid = vmoid.id;
+  request.length = 0;
+  request.vmo_offset = 0;
+  request.dev_offset = 0;
+  EXPECT_OK(device->FifoTransaction(&request, 1));
+
+  fuchsia_hardware_block_BlockStats stats;
+  fake_device->GetStats(true, &stats);
+  ASSERT_EQ(1, stats.flush.success.total_calls);
+  ASSERT_EQ(0, stats.flush.success.bytes_transferred);
+  ASSERT_LT(0, stats.flush.success.total_time_spent);
+
+  // We cleared stats during previous GetStats.
+  fake_device->GetStats(false, &stats);
+  ASSERT_EQ(0, stats.flush.success.total_calls);
+  ASSERT_EQ(0, stats.flush.success.bytes_transferred);
+  ASSERT_EQ(0, stats.flush.success.total_time_spent);
 }
 
 TEST(FakeBlockDeviceTest, BlockLimitPartialyFailTransaction) {
@@ -281,7 +389,6 @@ TEST(FakeBlockDeviceTest, BlockLimitPartialyFailTransaction) {
     ASSERT_OK(vmo.read(dst.data(), i * dst.size(), dst.size()));
     ASSERT_BYTES_EQ(zero_block.data(), dst.data(), dst.size());
   }
-
 }
 TEST(FakeBlockDeviceTest, BlockLimitFailsDistinctTransactions) {
   auto device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);

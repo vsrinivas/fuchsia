@@ -43,6 +43,7 @@ zx_library("fake-device") {
     ":block-client",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/range",
+    "$zx/system/ulib/storage-metrics",
     "$zx/system/ulib/zx",
   ]
   deps = [

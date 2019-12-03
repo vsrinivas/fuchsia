@@ -64,6 +64,15 @@ bool FakeBlockDevice::IsRegisteredLocked(vmoid_t vmoid) const {
   return vmos_.find(vmoid) != vmos_.end();
 }
 
+void FakeBlockDevice::GetStats(bool clear, fuchsia_hardware_block_BlockStats* out_stats) {
+  ZX_ASSERT(out_stats != nullptr);
+  fbl::AutoLock lock(&lock_);
+  stats_.CopyToFidl(out_stats);
+  if (clear) {
+    stats_.Reset();
+  }
+}
+
 void FakeBlockDevice::ResizeDeviceToAtLeast(uint64_t new_size) {
   fbl::AutoLock lock(&lock_);
   uint64_t size;
@@ -77,15 +86,24 @@ void FakeBlockDevice::AdjustBlockDeviceSizeLocked(uint64_t new_size) {
   EXPECT_OK(block_device_.set_size(new_size));
 }
 
+void FakeBlockDevice::UpdateStats(bool success, zx::ticks start_tick,
+                                  const block_fifo_request_t& op) {
+  stats_.UpdateStats(success, start_tick, op.opcode, block_size_ * op.length);
+}
+
 zx_status_t FakeBlockDevice::ReadBlock(uint64_t block_num, uint64_t fs_block_size,
                                        void* block) const {
+  zx::ticks start_tick = zx::ticks::now();
   fbl::AutoLock lock(&lock_);
-  return block_device_.read(block, block_num * fs_block_size, fs_block_size);
+  zx_status_t status = block_device_.read(block, block_num * fs_block_size, fs_block_size);
+  stats_.UpdateStats(status == ZX_OK, start_tick, BLOCKIO_READ, fs_block_size);
+  return status;
 }
 
 zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, size_t count) {
   fbl::AutoLock lock(&lock_);
   for (size_t i = 0; i < count; i++) {
+    zx::ticks start_tick = zx::ticks::now();
     switch (requests[i].opcode & BLOCKIO_OP_MASK) {
       case BLOCKIO_READ: {
         vmoid_t vmoid = requests[i].vmoid;
@@ -98,6 +116,7 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
           offset = (requests[i].vmo_offset + j) * block_size_;
           EXPECT_OK(target_vmoid.write(buffer, offset, block_size_));
         }
+        UpdateStats(true, start_tick, requests[i]);
         break;
       }
       case BLOCKIO_WRITE: {
@@ -117,17 +136,21 @@ zx_status_t FakeBlockDevice::FifoTransaction(block_fifo_request_t* requests, siz
           EXPECT_OK(block_device_.write(buffer, offset, block_size_));
           write_block_count_++;
         }
+        UpdateStats(true, start_tick, requests[i]);
         break;
       }
       case BLOCKIO_TRIM:
+        UpdateStats(false, start_tick, requests[i]);
         return ZX_ERR_NOT_SUPPORTED;
       case BLOCKIO_FLUSH:
+        UpdateStats(true, start_tick, requests[i]);
         continue;
       case BLOCKIO_CLOSE_VMO:
         EXPECT_TRUE(IsRegisteredLocked(requests[i].vmoid), "Closing unregistered VMO");
         vmos_.erase(requests[i].vmoid);
         break;
       default:
+        UpdateStats(false, start_tick, requests[i]);
         return ZX_ERR_NOT_SUPPORTED;
     }
   }

@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef BLOCK_CLIENT_CPP_FAKE_DEVICE_H_
+#define BLOCK_CLIENT_CPP_FAKE_DEVICE_H_
+
+#include <lib/zx/vmo.h>
+#include <zircon/assert.h>
 
 #include <map>
 #include <optional>
 
 #include <block-client/cpp/block-device.h>
 #include <fbl/mutex.h>
-#include <lib/zx/vmo.h>
 #include <range/range.h>
-#include <zircon/assert.h>
+#include <storage-metrics/block-metrics.h>
 
 namespace block_client {
 
@@ -48,6 +51,8 @@ class FakeBlockDevice : public BlockDevice {
   void SetBlockSize(uint32_t block_size);
   bool IsRegistered(vmoid_t vmoid) const;
 
+  void GetStats(bool clear, fuchsia_hardware_block_BlockStats* out_stats);
+
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) const override {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -82,6 +87,8 @@ class FakeBlockDevice : public BlockDevice {
  private:
   bool IsRegisteredLocked(vmoid_t) const __TA_REQUIRES(lock_);
   void AdjustBlockDeviceSizeLocked(uint64_t new_size) __TA_REQUIRES(lock_);
+  void UpdateStats(bool success, zx::ticks start_tick, const block_fifo_request_t& op)
+      __TA_REQUIRES(lock_);
 
   mutable fbl::Mutex lock_ = {};
   // The number of transactions which may occur before I/O errors are returned
@@ -95,6 +102,7 @@ class FakeBlockDevice : public BlockDevice {
   vmoid_t next_vmoid_ __TA_GUARDED(lock_) = 1;
   std::map<vmoid_t, zx::vmo> vmos_ __TA_GUARDED(lock_);
   zx::vmo block_device_ __TA_GUARDED(lock_);
+  mutable storage_metrics::BlockDeviceMetrics stats_ __TA_GUARDED(lock_) = {};
 };
 
 // An extension of FakeBlockDevice that allows for testing on FVM devices.
@@ -126,3 +134,5 @@ class FakeFVMBlockDevice final : public FakeBlockDevice {
 };
 
 }  // namespace block_client
+
+#endif  // BLOCK_CLIENT_CPP_FAKE_DEVICE_H_
