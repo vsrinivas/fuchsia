@@ -214,6 +214,11 @@ impl ClientSme {
         req: fidl_sme::ConnectRequest,
     ) -> oneshot::Receiver<ConnectResult> {
         let (responder, receiver) = Responder::new();
+        if req.ssid.len() > wlan_common::ie::SSID_MAX_LEN {
+            // TODO(42081): Use a more accurate error (InvalidSsidArg) for this error.
+            responder.respond(SelectNetworkFailure::NoScanResultWithSsid.into());
+            return receiver;
+        }
         // Cancel any ongoing connect attempt
         self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
 
@@ -896,6 +901,19 @@ mod tests {
 
         assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
             assert_eq!(failure, SelectNetworkFailure::NoCompatibleNetwork.into());
+        });
+    }
+
+    #[test]
+    fn connection_rejected_ssid_too_long() {
+        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        // SSID is one byte too long
+        let mut connect_fut = sme.on_connect_command(connect_req([65; 33].to_vec(), credential));
+
+        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
+            assert_eq!(failure, SelectNetworkFailure::NoScanResultWithSsid.into());
         });
     }
 

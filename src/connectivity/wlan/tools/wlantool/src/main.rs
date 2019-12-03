@@ -22,6 +22,7 @@ use std::str::FromStr;
 use structopt::StructOpt;
 use wlan_common::{
     channel::{Cbw, Phy},
+    ie::SSID_MAX_LEN,
     RadioConfig,
 };
 use wlan_rsn::psk;
@@ -194,6 +195,9 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 
 async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     let opts::ClientConnectCmd { iface_id, ssid, password, psk, phy, cbw, scan_type } = cmd;
+    if ssid.len() > SSID_MAX_LEN {
+        bail!("SSID is too long ({} bytes). Max is {}", ssid.len(), SSID_MAX_LEN);
+    }
     let credential = match make_credential(password, psk) {
         Ok(c) => c,
         Err(e) => {
@@ -795,5 +799,32 @@ mod tests {
             "1ec9ee30fdff1961a9abd083f571464cc0fe27f62f9f59992bd39f8e625e9f52"
         );
         assert!(generate_psk("short", "coolnet").is_err());
+    }
+
+    #[test]
+    fn reject_connect_ssid_too_long() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let (wlansvc_local, wlansvc_remote) =
+            create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
+        let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
+        // SSID is one byte too long.
+        let cmd = opts::ClientConnectCmd {
+            iface_id: 0,
+            ssid: String::from_utf8(vec![65; 33]).unwrap(),
+            password: None,
+            psk: None,
+            phy: None,
+            cbw: None,
+            scan_type: opts::ScanTypeArg::Passive,
+        };
+
+        let connect_fut = do_client_connect(cmd, wlansvc_local.clone());
+        pin_mut!(connect_fut);
+
+        assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Err(e)) => {
+          assert!(format!("{}", e).contains("SSID is too long (33 bytes). Max is 32") );
+        });
+        // No connect request is sent to SME because the command is invalid and rejected.
+        assert_variant!(exec.run_until_stalled(&mut wlansvc_stream.next()), Poll::Pending);
     }
 }

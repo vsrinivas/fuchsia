@@ -66,7 +66,7 @@ group("tests") {
     "//src/connectivity/wlan/testing/wlan-devmgr:wlan_devmgr",
     "//src/connectivity/wlan/testing/wlantap-client",
     "//src/connectivity/wlan/testing/wlantap-driver:wlantap",
-    "//src/connectivity/wlan/tools/wlantool:wlan-tests",
+    "//src/connectivity/wlan/tools/wlantool:wlantool-tests",
     "//src/connectivity/wlan/wlancfg:wlancfg-tests",
     "//src/connectivity/wlan/wlanstack:wlanstack-tests",
   ]

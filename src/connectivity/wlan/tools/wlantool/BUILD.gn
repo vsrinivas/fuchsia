@@ -48,7 +48,7 @@ package("wlan") {
   ]
 }
 
-test_package("wlan-tests") {
+test_package("wlantool-tests") {
   deps = [
     ":bin_test",
   ]
