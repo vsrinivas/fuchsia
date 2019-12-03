@@ -113,6 +113,7 @@ zx_test("blobfs-large-integration") {
   sources = [
     "integration/large_integration_main.cc",
     "integration/large_integration_test.cc",
+    "integration/load_generator.cc",
   ]
   deps = [
     ":integration-fixtures",

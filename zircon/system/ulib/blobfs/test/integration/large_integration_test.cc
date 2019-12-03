@@ -17,6 +17,7 @@
 #include <zxtest/zxtest.h>
 
 #include "blobfs_fixtures.h"
+#include "load_generator.h"
 
 namespace {
 
@@ -103,135 +104,48 @@ TEST_F(BlobfsTest, HugeBlobCompressible) { RunHugeBlobCompressibleTest(this); }
 
 TEST_F(BlobfsTestWithFvm, HugeBlobCompressible) { RunHugeBlobCompressibleTest(this); }
 
-/*
+void RunSingleThreadStressTest(FilesystemTest* test) {
+  BlobList blob_list(kMountPath);
+  unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
+  blob_list.GenerateLoad(5000, &seed);
 
-static bool CreateUmountRemountLarge(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    fs_test_utils::BlobList bl(MOUNT_PATH);
-    // TODO(smklein): Here, and elsewhere in this file, remove this source
-    // of randomness to make the unit test deterministic -- fuzzing should
-    // be the tool responsible for introducing randomness into the system.
-    unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
-    unittest_printf("unmount_remount test using seed: %u\n", seed);
+  blob_list.CloseFiles();
+  ASSERT_NO_FAILURES(test->Remount());
 
-    // Do some operations...
-    size_t num_ops = 5000;
-    for (size_t i = 0; i < num_ops; ++i) {
-        switch (rand_r(&seed) % 6) {
-        case 0:
-            ASSERT_TRUE(bl.CreateBlob(&seed));
-            break;
-        case 1:
-            ASSERT_TRUE(bl.ConfigBlob());
-            break;
-        case 2:
-            ASSERT_TRUE(bl.WriteData());
-            break;
-        case 3:
-            ASSERT_TRUE(bl.ReadData());
-            break;
-        case 4:
-            ASSERT_TRUE(bl.ReopenBlob());
-            break;
-        case 5:
-            ASSERT_TRUE(bl.UnlinkBlob());
-            break;
-        }
-    }
-
-    // Close all currently opened nodes (REGARDLESS of their state)
-    bl.CloseAll();
-
-    // Unmount, remount
-    ASSERT_TRUE(blobfsTest->Remount(), "Could not re-mount blobfs");
-
-    // Reopen all (readable) blobs
-    bl.OpenAll();
-
-    // Verify state of all blobs
-    bl.VerifyAll();
-
-    // Close everything again
-    bl.CloseAll();
-
-    END_HELPER;
+  blob_list.VerifyFiles();
 }
 
-int unmount_remount_thread(void* arg) {
-    fs_test_utils::BlobList* bl = static_cast<fs_test_utils::BlobList*>(arg);
-    unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
-    unittest_printf("unmount_remount thread using seed: %u\n", seed);
+TEST_F(BlobfsTest, SingleThreadStress) { RunSingleThreadStressTest(this); }
 
-    // Do some operations...
-    size_t num_ops = 1000;
-    for (size_t i = 0; i < num_ops; ++i) {
-        switch (rand_r(&seed) % 6) {
-        case 0:
-            ASSERT_TRUE(bl->CreateBlob(&seed));
-            break;
-        case 1:
-            ASSERT_TRUE(bl->ConfigBlob());
-            break;
-        case 2:
-            ASSERT_TRUE(bl->WriteData());
-            break;
-        case 3:
-            ASSERT_TRUE(bl->ReadData());
-            break;
-        case 4:
-            ASSERT_TRUE(bl->ReopenBlob());
-            break;
-        case 5:
-            ASSERT_TRUE(bl->UnlinkBlob());
-            break;
-        }
-    }
+TEST_F(BlobfsTestWithFvm, SingleThreadStress) { RunSingleThreadStressTest(this); }
 
-    return 0;
+void StressThread(BlobList* blob_list, unsigned int seed) {
+  unsigned int rand_state = seed;
+  blob_list->GenerateLoad(1000, &rand_state);
 }
 
-static bool CreateUmountRemountLargeMultithreaded(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    fs_test_utils::BlobList bl(MOUNT_PATH);
+void RunMultiThreadStressTest(FilesystemTest* test) {
+  BlobList blob_list(kMountPath);
+  unsigned int seed = zxtest::Runner::GetInstance()->random_seed();
 
-    size_t num_threads = 10;
-    fbl::AllocChecker ac;
-    fbl::Array<thrd_t> threads(new (&ac) thrd_t[num_threads](), num_threads);
-    ASSERT_TRUE(ac.check());
+  std::array<std::thread, 10> threads;
+  for (std::thread& thread : threads) {
+    thread = std::thread(StressThread, &blob_list, rand_r(&seed));
+  }
 
-    // Launch all threads
-    for (size_t i = 0; i < num_threads; i++) {
-        ASSERT_EQ(thrd_create(&threads[i], unmount_remount_thread, &bl),
-                  thrd_success);
-    }
+  for (std::thread& thread : threads) {
+    thread.join();
+  }
 
-    // Wait for all threads to complete.
-    // Currently, threads will always return a successful status.
-    for (size_t i = 0; i < num_threads; i++) {
-        int res;
-        ASSERT_EQ(thrd_join(threads[i], &res), thrd_success);
-        ASSERT_EQ(res, 0);
-    }
+  blob_list.CloseFiles();
+  ASSERT_NO_FAILURES(test->Remount());
 
-    // Close all currently opened nodes (REGARDLESS of their state)
-    bl.CloseAll();
-
-    // Unmount, remount
-    ASSERT_TRUE(blobfsTest->Remount(), "Could not re-mount blobfs");
-
-    // reopen all blobs
-    bl.OpenAll();
-
-    // verify all blob contents
-    bl.VerifyAll();
-
-    // close everything again
-    bl.CloseAll();
-
-    END_HELPER;
+  blob_list.VerifyFiles();
 }
 
-*/
+TEST_F(BlobfsTest, MultiThreadStress) { RunMultiThreadStressTest(this); }
+
+TEST_F(BlobfsTestWithFvm, MultiThreadStress) { RunMultiThreadStressTest(this); }
 
 void RunNoSpaceTest() {
   std::unique_ptr<fs_test_utils::BlobInfo> last_info = nullptr;
@@ -599,12 +513,3 @@ TEST_F(LargeBlobTest, UseSecondBitmap) {
 }
 
 }  // namespace
-
-/*
-
-BEGIN_TEST_CASE(blobfs_tests)
-RUN_TESTS(LARGE, CreateUmountRemountLarge)
-RUN_TESTS(LARGE, CreateUmountRemountLargeMultithreaded)
-END_TEST_CASE(blobfs_tests)
-
-*/
