@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::common::{
+    generate_random_string, FIREBASE_TOKEN_EMAIL_DOMAIN, TOKEN_LIFETIME_SECONDS,
+    USER_PROFILE_INFO_DISPLAY_NAME, USER_PROFILE_INFO_ID_DOMAIN, USER_PROFILE_INFO_IMAGE_URL,
+    USER_PROFILE_INFO_URL,
+};
 use fidl::encoding::OutOfLine;
 use fidl::Error;
 use fidl_fuchsia_auth::{
@@ -11,27 +16,9 @@ use fidl_fuchsia_auth::{
     AuthProviderGetPersistentCredentialResponder, AuthProviderRequest, AuthProviderRequestStream,
     AuthProviderRevokeAppOrPersistentCredentialResponder, AuthProviderStatus, UserProfileInfo,
 };
-use fuchsia_async as fasync;
 use futures::future;
 use futures::prelude::*;
 use log::warn;
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
-use std::time::Duration;
-
-const TOKEN_LIFETIME: Duration = Duration::from_secs(3600); // one hour lifetime
-const USER_PROFILE_INFO_ID_DOMAIN: &str = "@example.com";
-const USER_PROFILE_INFO_DISPLAY_NAME: &str = "test_user_display_name";
-const USER_PROFILE_INFO_URL: &str = "http://test_user/profile/url";
-const USER_PROFILE_INFO_IMAGE_URL: &str = "http://test_user/profile/image/url";
-const FIREBASE_TOKEN_EMAIL_DOMAIN: &str = "@firebase.example.com";
-const RANDOM_STRING_LENGTH: usize = 10;
-
-/// Generate random alphanumeric string of fixed length RANDOM_STRING_LENGTH
-/// for creating unique tokens or id.
-fn generate_random_string() -> String {
-    thread_rng().sample_iter(&Alphanumeric).take(RANDOM_STRING_LENGTH).collect()
-}
 
 /// The AuthProvider struct is holding implementation of the `AuthProvider` fidl
 /// interface. This implementation is serving as a testing endpoint for token
@@ -39,15 +26,12 @@ fn generate_random_string() -> String {
 pub struct AuthProvider;
 
 impl AuthProvider {
-    /// Spawn a new task of handling request from the
-    /// `AuthProviderRequestStream` by calling the `handle_request` method.
-    /// Create a warning on error.
-    pub fn spawn(request_stream: AuthProviderRequestStream) {
-        fasync::spawn(
-            request_stream
-                .try_for_each(|r| future::ready(Self::handle_request(r)))
-                .unwrap_or_else(|e| warn!("Error running AuthProvider{:?}", e)),
-        );
+    /// Handles requests received over the given `request_stream`.
+    pub async fn handle_requests_for_stream(request_stream: AuthProviderRequestStream) {
+        request_stream
+            .try_for_each(|r| future::ready(Self::handle_request(r)))
+            .unwrap_or_else(|e| warn!("Error running AuthProvider{:?}", e))
+            .await;
     }
 
     /// Handle single `AuthProviderRequest` by calling the corresponding method
@@ -124,7 +108,7 @@ impl AuthProvider {
                 + &client_id.unwrap_or("none".to_string())
                 + ":at_"
                 + &generate_random_string(),
-            expires_in: TOKEN_LIFETIME.as_secs(),
+            expires_in: TOKEN_LIFETIME_SECONDS,
         });
 
         responder.send(AuthProviderStatus::Ok, auth_token.as_mut().map(OutOfLine))
@@ -139,7 +123,7 @@ impl AuthProvider {
         let mut auth_token = Some(fidl_fuchsia_auth::AuthToken {
             token_type: fidl_fuchsia_auth::TokenType::IdToken,
             token: credential + ":idt_" + &generate_random_string(),
-            expires_in: TOKEN_LIFETIME.as_secs(),
+            expires_in: TOKEN_LIFETIME_SECONDS,
         });
 
         responder.send(AuthProviderStatus::Ok, auth_token.as_mut().map(OutOfLine))
@@ -155,7 +139,7 @@ impl AuthProvider {
             id_token: firebase_api_key + ":fbt_" + &generate_random_string(),
             local_id: Some("local_id_".to_string() + &generate_random_string()),
             email: Some(generate_random_string() + FIREBASE_TOKEN_EMAIL_DOMAIN),
-            expires_in: TOKEN_LIFETIME.as_secs(),
+            expires_in: TOKEN_LIFETIME_SECONDS,
         });
 
         responder.send(AuthProviderStatus::Ok, firebase_token.as_mut().map(OutOfLine))
@@ -192,10 +176,11 @@ mod tests {
     use super::*;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_auth::{AuthProviderMarker, AuthProviderProxy};
+    use fuchsia_async as fasync;
 
     fn get_auth_provider_connection_proxy() -> AuthProviderProxy {
         let (proxy, stream) = create_proxy_and_stream::<AuthProviderMarker>().unwrap();
-        AuthProvider::spawn(stream);
+        fasync::spawn(async move { AuthProvider::handle_requests_for_stream(stream).await });
         proxy
     }
 
@@ -232,7 +217,7 @@ mod tests {
             .map_ok(move |response| match response {
                 (AuthProviderStatus::Ok, Some(access_token)) => {
                     assert_eq!(access_token.token_type, fidl_fuchsia_auth::TokenType::AccessToken);
-                    assert_eq!(access_token.expires_in, TOKEN_LIFETIME.as_secs());
+                    assert_eq!(access_token.expires_in, TOKEN_LIFETIME_SECONDS);
                     assert!(access_token.token.contains(&credential));
                     assert!(access_token.token.contains(&client_id));
                     assert!(access_token.token.contains("at_"));
@@ -254,7 +239,7 @@ mod tests {
             .map_ok(move |response| match response {
                 (AuthProviderStatus::Ok, Some(id_token)) => {
                     assert_eq!(id_token.token_type, fidl_fuchsia_auth::TokenType::IdToken);
-                    assert_eq!(id_token.expires_in, TOKEN_LIFETIME.as_secs());
+                    assert_eq!(id_token.expires_in, TOKEN_LIFETIME_SECONDS);
                     assert!(id_token.token.contains(&credential));
                     assert!(id_token.token.contains("idt_"));
                 }
@@ -274,7 +259,7 @@ mod tests {
             .map_ok(move |response| match response {
                 (AuthProviderStatus::Ok, Some(firebase_token)) => {
                     assert!(firebase_token.id_token.contains("test_firebase_api_key"));
-                    assert_eq!(firebase_token.expires_in, TOKEN_LIFETIME.as_secs());
+                    assert_eq!(firebase_token.expires_in, TOKEN_LIFETIME_SECONDS);
                 }
                 _ => panic!(
                     "AuthProviderStatus not correct. Or response doesn't contain \
