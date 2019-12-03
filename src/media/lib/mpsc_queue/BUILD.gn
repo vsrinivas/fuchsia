@@ -39,7 +39,7 @@ executable("mpsc_queue_unittest_bin") {
 
   deps = [
     ":mpsc_queue",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

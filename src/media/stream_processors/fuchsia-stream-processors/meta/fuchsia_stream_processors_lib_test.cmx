@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/fuchsia_stream_processors_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

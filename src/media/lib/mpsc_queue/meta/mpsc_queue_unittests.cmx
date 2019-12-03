@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/mpsc_queue_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

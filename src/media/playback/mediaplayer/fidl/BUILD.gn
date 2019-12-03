@@ -63,7 +63,7 @@ test("tests") {
     ":fidl",
     "//garnet/public/lib/gtest",
     "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/process",
     "//zircon/public/lib/zx",

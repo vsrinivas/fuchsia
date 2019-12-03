@@ -46,7 +46,7 @@ executable("audio_admin_test_bin") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/syslog/cpp",
     "//src/media/audio/lib/test",
     "//zircon/public/lib/fzl",
@@ -93,7 +93,7 @@ executable("audio_core_hardware_tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/syslog/cpp",
     "//src/media/audio/lib/test:test_fixture",
@@ -128,7 +128,7 @@ executable("audio_device_service_tests_bin") {
     "//garnet/public/lib/fostr/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.virtualaudio",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/fxl/test:test_settings",
     "//src/media/audio/audio_core/testing",
     "//src/media/audio/lib/test:hermetic_audio_test",
@@ -164,7 +164,7 @@ executable("audio_fidl_tests_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.media",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/media/audio/lib/test:hermetic_audio_test",
   ]
 }
@@ -200,7 +200,7 @@ executable("audio_pipeline_tests_bin") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/media/cpp:no_converters",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/syslog/cpp",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/test:hermetic_audio_test",

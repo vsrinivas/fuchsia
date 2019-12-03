@@ -44,7 +44,7 @@ executable("test") {
 
   deps = [
     ":effects_loader",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
   ]
 }
 

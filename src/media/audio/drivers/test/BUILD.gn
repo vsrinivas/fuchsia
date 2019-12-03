@@ -50,7 +50,7 @@ executable("audio_driver_tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/fxl/test:test_settings",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/test:message_transceiver",

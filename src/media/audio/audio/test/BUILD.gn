@@ -40,7 +40,7 @@ executable("audio_loopback_tests_bin") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/syslog/cpp",
     "//src/media/audio/lib/test:hermetic_audio_test",
     "//zircon/public/lib/fzl",

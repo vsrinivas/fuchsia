@@ -4,8 +4,8 @@
         "binary": "test/stream_processor_test_lib_test"
     },
     "sandbox": {
-        "dev": [],
-        "features": [],
-        "services": []
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

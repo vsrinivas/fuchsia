@@ -234,7 +234,7 @@ executable("unittest_bin") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/test:null_renderer_capturer",
     "//zircon/public/lib/async-loop-cpp",

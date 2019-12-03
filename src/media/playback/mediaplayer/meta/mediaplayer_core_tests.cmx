@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/mediaplayer_core_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

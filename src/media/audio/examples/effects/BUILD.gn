@@ -60,7 +60,7 @@ executable("test_bin") {
     ":headers",
     "//sdk/lib/media/audio/effects",
     "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/media/audio/lib/effects_loader",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/fbl",

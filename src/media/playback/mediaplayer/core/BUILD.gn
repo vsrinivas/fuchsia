@@ -64,7 +64,7 @@ test("tests") {
     ":core",
     "//garnet/public/lib/gtest",
     "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/syslog/cpp",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/graph",

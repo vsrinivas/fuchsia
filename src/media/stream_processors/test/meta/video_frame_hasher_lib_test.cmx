@@ -3,7 +3,8 @@
         "binary": "test/video_frame_hasher_lib_test"
     },
     "sandbox": {
-        "features": [],
-        "services": []
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

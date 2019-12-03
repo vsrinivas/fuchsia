@@ -165,8 +165,6 @@ using FidlAudioRendererFixture = ::gtest::RealLoopFixture;
 /// inserting gaps of silence
 ///
 TEST_F(FidlAudioRendererFixture, DISABLED_DontUnderrunJitteryNoPtsData) {
-  syslog::InitLogger({"mediaplayer"});
-
   static constexpr AudioStreamType::SampleFormat kSampleFormat =
       AudioStreamType::SampleFormat::kSigned16;
   static constexpr uint32_t kChannels = 2;

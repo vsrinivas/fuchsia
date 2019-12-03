@@ -331,8 +331,6 @@ TEST(ProcessConfigLoaderTest, NulloptOnMissingConfig) {
 }
 
 TEST(ProcessConfigLoaderTest, RejectConfigWithoutVolumeCurve) {
-  syslog::InitLogger({"process_config_loader_test"});
-
   static const std::string kConfigWithoutVolumeCurve = R"JSON({  })JSON";
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithoutVolumeCurve.data(),
                                kConfigWithoutVolumeCurve.size()));
@@ -341,8 +339,6 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithoutVolumeCurve) {
 }
 
 TEST(ProcessConfigLoaderTest, RejectConfigWithUnknownKeys) {
-  syslog::InitLogger({"process_config_loader_test"});
-
   static const std::string kConfigWithExtraKeys =
       R"JSON({
     "extra_key": 3,

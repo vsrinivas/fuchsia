@@ -21,7 +21,7 @@ executable("codec_impl_unit_tests_bin") {
 
   deps = [
     ":codec_impl_tests",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//third_party/googletest:gtest",
   ]
 }
@@ -69,8 +69,8 @@ executable("decryptor_adapter_tests_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/media/lib/codec_impl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
