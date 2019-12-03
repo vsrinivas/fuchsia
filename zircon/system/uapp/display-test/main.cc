@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fzl/fdio.h>
@@ -31,6 +32,7 @@
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 namespace sysmem = ::llcpp::fuchsia::sysmem;
+namespace sysinfo = ::llcpp::fuchsia::sysinfo;
 
 static zx_handle_t device_handle;
 static std::unique_ptr<fhd::Controller::SyncClient> dc;
@@ -50,6 +52,18 @@ enum TestBundle {
   BUNDLE3,
   BUNDLE_COUNT,
 };
+
+enum Platforms {
+  INTEL_PLATFORM = 0,
+  AMLOGIC_PLATFORM,
+  MEDIATEK_PLATFORM,
+  AEMU_PLATFORM,
+  QEMU_PLATFORM,
+  UNKNOWN_PLATFORM,
+  PLATFORM_COUNT,
+};
+
+Platforms platform = UNKNOWN_PLATFORM;
 
 static bool wait_for_driver_event(zx_time_t deadline) {
   zx_handle_t observed;
@@ -480,6 +494,48 @@ void usage(void) {
       SIMPLE, FLIP, INTEL, BUNDLE3, INTEL);
 }
 
+Platforms GetPlatform() {
+  zx::channel sysinfo_server_channel, sysinfo_client_channel;
+  auto status = zx::channel::create(0, &sysinfo_server_channel, &sysinfo_client_channel);
+  if (status != ZX_OK) {
+    return UNKNOWN_PLATFORM;
+  }
+
+  const char* sysinfo_path = "dev/misc/sysinfo";
+  fbl::unique_fd sysinfo_fd(open(sysinfo_path, O_RDWR));
+  if (!sysinfo_fd) {
+    return UNKNOWN_PLATFORM;
+  }
+  fzl::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
+  auto result = sysinfo::Device::Call::GetBoardName(caller_sysinfo.channel());
+  if (!result.ok() || result.value().status != ZX_OK) {
+    return UNKNOWN_PLATFORM;
+  }
+
+  printf("Found board %s\n", result.value().name.data());
+
+  if (!strcmp(result.value().name.data(), "pc") ||
+      !strcmp(result.value().name.data(), "chromebook-x64") ||
+      !strcmp(result.value().name.data(), "Eve") ||
+      strstr(result.value().name.data(), "Nocturne")) {
+    return INTEL_PLATFORM;
+  }
+  if (!strcmp(result.value().name.data(), "astro") ||
+      !strcmp(result.value().name.data(), "sherlock") ||
+      !strcmp(result.value().name.data(), "vim2")) {
+    return AMLOGIC_PLATFORM;
+  }
+  if (!strcmp(result.value().name.data(), "cleo") ||
+      !strcmp(result.value().name.data(), "mt8167s_ref")) {
+    return MEDIATEK_PLATFORM;
+  }
+  if (!strcmp(result.value().name.data(), "qemu") ||
+      !strcmp(result.value().name.data(), "Standard PC (Q35 + ICH9, 2009)")) {
+    return QEMU_PLATFORM;
+  }
+  return UNKNOWN_PLATFORM;
+}
+
 int main(int argc, const char* argv[]) {
   printf("Running display test\n");
 
@@ -492,7 +548,22 @@ int main(int argc, const char* argv[]) {
   bool verify_capture = false;
   const char* controller = "/dev/class/display-controller/000";
 
-  TestBundle testbundle = INTEL;  // default to Intel
+  platform = GetPlatform();
+
+  TestBundle testbundle;
+  switch (platform) {
+    case INTEL_PLATFORM:
+      testbundle = INTEL;
+      break;
+    case AMLOGIC_PLATFORM:
+      testbundle = FLIP;
+      break;
+    case MEDIATEK_PLATFORM:
+      testbundle = BUNDLE3;
+      break;
+    default:
+      testbundle = SIMPLE;
+  }
 
   for (int i = 1; i < argc - 1; i++) {
     if (!strcmp(argv[i], "--controller")) {
