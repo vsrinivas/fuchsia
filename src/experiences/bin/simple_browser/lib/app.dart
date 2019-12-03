@@ -29,50 +29,56 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Locale>(
-      stream: model.localeStream,
-      initialData: model.initialLocale,
-      builder: (context, snapshot) {
-        final locale = snapshot.data;
-        Intl.defaultLocale = locale.toString();
-        return MaterialApp(
-          title: Strings.browser,
-          theme: ThemeData(
-            fontFamily: 'RobotoMono',
-            textSelectionColor: _kSelectionColor,
-            textSelectionHandleColor: _kForegroundColor,
-            hintColor: _kForegroundColor,
-            cursorColor: _kForegroundColor,
-            primaryColor: _kBackgroundColor,
-            canvasColor: _kBackgroundColor,
-            accentColor: _kForegroundColor,
-            textTheme: TextTheme(
-              body1: _kTextStyle,
-              subhead: _kTextStyle,
-            ),
-          ),
-          locale: locale,
-          localizationsDelegates: [
-            localizations.delegate(),
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-          ],
-          supportedLocales: supported_locales.locales,
-          home: Scaffold(
-            body: Column(
-              children: <Widget>[
-                AnimatedBuilder(
-                  animation: model.tabsBloc.currentTabNotifier,
-                  builder: (_, __) => NavigationBar(
-                      bloc: model.tabsBloc.currentTab, newTab: model.newTab),
-                ),
-                TabsWidget(bloc: model.tabsBloc),
-                Expanded(child: _buildContent()),
-              ],
-            ),
-          ),
-        );
-      },
+    return FutureBuilder(
+      future: model.localeStream.first,
+      builder: (context, snapshot) => snapshot.hasData
+          ? StreamBuilder<Locale>(
+              stream: model.localeStream,
+              initialData: snapshot.data,
+              builder: (context, snapshot) {
+                final locale = snapshot.data;
+                Intl.defaultLocale = locale.toString();
+                return MaterialApp(
+                  title: Strings.browser,
+                  theme: ThemeData(
+                    fontFamily: 'RobotoMono',
+                    textSelectionColor: _kSelectionColor,
+                    textSelectionHandleColor: _kForegroundColor,
+                    hintColor: _kForegroundColor,
+                    cursorColor: _kForegroundColor,
+                    primaryColor: _kBackgroundColor,
+                    canvasColor: _kBackgroundColor,
+                    accentColor: _kForegroundColor,
+                    textTheme: TextTheme(
+                      body1: _kTextStyle,
+                      subhead: _kTextStyle,
+                    ),
+                  ),
+                  locale: locale,
+                  localizationsDelegates: [
+                    localizations.delegate(),
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                  ],
+                  supportedLocales: supported_locales.locales,
+                  home: Scaffold(
+                    body: Column(
+                      children: <Widget>[
+                        AnimatedBuilder(
+                          animation: model.tabsBloc.currentTabNotifier,
+                          builder: (_, __) => NavigationBar(
+                              bloc: model.tabsBloc.currentTab,
+                              newTab: model.newTab),
+                        ),
+                        TabsWidget(bloc: model.tabsBloc),
+                        Expanded(child: _buildContent()),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            )
+          : Offstage(),
     );
   }
 

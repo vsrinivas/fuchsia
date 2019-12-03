@@ -20,7 +20,6 @@ import '../models/tabs_action.dart';
 class AppModel {
   final TabsBloc<WebPageBloc> tabsBloc;
   Stream<Locale> _localeStream;
-  Locale _initialLocale;
   final KeyboardShortcuts _keyboardShortcuts;
 
   AppModel({
@@ -36,7 +35,7 @@ class AppModel {
   }) {
     final _intl = PropertyProviderProxy();
     StartupContext.fromStartupInfo().incoming.connectToService(_intl);
-    final localStream = LocaleSource(_intl).stream();
+    final localStream = LocaleSource(_intl).stream().asBroadcastStream();
 
     return AppModel(
       tabsBloc: tabsBloc,
@@ -45,12 +44,8 @@ class AppModel {
     );
   }
 
-  Future<void> init() async {
-    _initialLocale = await _localeStream.asBroadcastStream().first;
-  }
-
   Stream<Locale> get localeStream => _localeStream;
-  Locale get initialLocale => _initialLocale;
+
   KeyboardShortcuts get keyboardShortcuts => _keyboardShortcuts;
 
   void newTab() => tabsBloc.request.add(NewTabAction<WebPageBloc>());

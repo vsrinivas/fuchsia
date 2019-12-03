@@ -5,7 +5,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_logger/logger.dart';
-import 'package:intl/intl.dart';
 import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
@@ -20,10 +19,9 @@ void main() {
 
   testWidgets('localized text is displayed in the widgets',
       (WidgetTester tester) async {
- 
-    final defaultLocale = Locale('sr', 'RS');
     Stream<Locale> lstream = Stream.fromIterable(
-        [Locale.fromSubtags(languageCode: 'sr', countryCode: 'RS')]);
+            [Locale.fromSubtags(languageCode: 'sr', countryCode: 'RS')])
+        .asBroadcastStream();
     TabsBloc<WebPageBloc> tabsBloc;
     tabsBloc = TabsBloc(
       tabFactory: () => WebPageBloc(
@@ -35,15 +33,18 @@ void main() {
     );
 
     final model = MockAppModel();
+
     when(model.tabsBloc).thenAnswer((_) => tabsBloc);
-    when(model.initialLocale).thenReturn(defaultLocale);
     when(model.localeStream).thenAnswer((_) => lstream);
 
     final app = App(model);
 
     await tester.pumpWidget(app);
-    expect(Intl.defaultLocale, defaultLocale.toString());
+
+    // to resolve the FutureBuilder in the App widget.
     await tester.pumpWidget(app);
+    await tester.pump();
+
     expect(
         find.byWidgetPredicate(
             (Widget widget) => widget is Title && widget.title == 'Прегледач',
