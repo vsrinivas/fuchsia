@@ -923,25 +923,28 @@ static zx_status_t prepare_start(launchpad_t* lp, launchpad_start_data_t* result
     zx_vaddr_t stack_base;
     status = zx_vmar_map(lp_vmar(lp), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, stack_vmo, 0,
                          stack_size, &stack_base);
-    if (status == ZX_OK) {
-      ZX_DEBUG_ASSERT(stack_size % PAGE_SIZE == 0);
-      sp = compute_initial_stack_pointer(stack_base, stack_size);
-      // Pass the stack VMO to the process.  Our protocol with the
-      // new process is that we warrant that this is the VMO from
-      // which the initial stack is mapped and that we've exactly
-      // mapped the entire thing, so vm_object_get_size on this in
-      // concert with the initial SP value tells it the exact bounds
-      // of its stack.
-      //
-      // Note this expands the handle list after we've already
-      // built the bootstrap message.  We shoved an extra info
-      // slot with PA_VMO_STACK into the message, so now this new
-      // final handle will correspond to that slot.
-      status = launchpad_add_handle(lp, stack_vmo, PA_VMO_STACK);
-    }
     if (status != ZX_OK) {
       zx_handle_close(stack_vmo);
       lp_error(lp, status, "cannot map stack vmo");
+      goto cleanup;
+    }
+
+    ZX_DEBUG_ASSERT(stack_size % PAGE_SIZE == 0);
+    sp = compute_initial_stack_pointer(stack_base, stack_size);
+    // Pass the stack VMO to the process.  Our protocol with the
+    // new process is that we warrant that this is the VMO from
+    // which the initial stack is mapped and that we've exactly
+    // mapped the entire thing, so vm_object_get_size on this in
+    // concert with the initial SP value tells it the exact bounds
+    // of its stack.
+    //
+    // Note this expands the handle list after we've already
+    // built the bootstrap message.  We shoved an extra info
+    // slot with PA_VMO_STACK into the message, so now this new
+    // final handle will correspond to that slot.
+    status = launchpad_add_handle(lp, stack_vmo, PA_VMO_STACK);
+    if (status != ZX_OK) {
+      // launchpad_add_handle consumed the handle even in the error case.
       goto cleanup;
     }
   }
