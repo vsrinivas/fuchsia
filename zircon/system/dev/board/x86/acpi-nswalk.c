@@ -499,9 +499,15 @@ zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI
   if ((info->Valid & ACPI_VALID_CID) && (info->CompatibleIdList.Count > 0) &&
       ((info->CompatibleIdList.Ids[0].Length - 1) <= sizeof(uint64_t))) {
     props[propcount].id = BIND_ACPI_CID_0_3;
-    props[propcount++].value = htobe32(*((uint32_t*)(cid)));
+
+    // Use memcpy() to safely access a uint32_t from a misaligned address.
+    uint32_t value;
+    memcpy(&value, cid, sizeof(value));
+    props[propcount++].value = htobe32(value);
     props[propcount].id = BIND_ACPI_CID_4_7;
-    props[propcount++].value = htobe32(*((uint32_t*)(cid + 4)));
+
+    memcpy(&value, cid + 4, sizeof(value));
+    props[propcount++].value = htobe32(value);
   }
 
   if (driver_get_log_flags() & DDK_LOG_SPEW) {
