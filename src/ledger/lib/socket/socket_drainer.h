@@ -9,12 +9,11 @@
 #include <lib/async/default.h>
 #include <lib/zx/socket.h>
 
-#include "src/lib/fxl/fxl_export.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {
 
-class FXL_EXPORT SocketDrainer {
+class SocketDrainer {
  public:
   class Client {
    public:

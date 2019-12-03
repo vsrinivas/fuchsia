@@ -11,27 +11,25 @@
 #include <string>
 
 #include "src/ledger/lib/vmo/sized_vmo.h"
-#include "src/lib/fxl/fxl_export.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 
 // Make a new shared buffer with the contents of a string.
-FXL_EXPORT bool VmoFromString(const fxl::StringView& string, SizedVmo* handle_ptr);
+bool VmoFromString(const fxl::StringView& string, SizedVmo* handle_ptr);
 
 // Make a new shared buffer with the contents of a string.
-FXL_EXPORT bool VmoFromString(const fxl::StringView& string, fuchsia::mem::Buffer* buffer_ptr);
+bool VmoFromString(const fxl::StringView& string, fuchsia::mem::Buffer* buffer_ptr);
 
 // Copy the contents of a shared buffer into a string.
-FXL_EXPORT bool StringFromVmo(const SizedVmo& handle, std::string* string_ptr);
+bool StringFromVmo(const SizedVmo& handle, std::string* string_ptr);
 
 // Copy the contents of a shared buffer into a string.
-FXL_EXPORT bool StringFromVmo(const fuchsia::mem::Buffer& handle, std::string* string_ptr);
+bool StringFromVmo(const fuchsia::mem::Buffer& handle, std::string* string_ptr);
 
 // Copy the contents of a shared buffer upto |num_bytes| into a string.
 // |num_bytes| should be <= |handle.size|.
-FXL_EXPORT bool StringFromVmo(const fuchsia::mem::Buffer& handle, size_t num_bytes,
-                              std::string* string_ptr);
+bool StringFromVmo(const fuchsia::mem::Buffer& handle, size_t num_bytes, std::string* string_ptr);
 
 }  // namespace ledger
 

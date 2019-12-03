@@ -9,7 +9,6 @@
 
 #include <string>
 
-#include "src/lib/fxl/fxl_export.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
@@ -17,13 +16,13 @@ namespace ledger {
 // Copies the data from |source| into |contents| and returns true on success and
 // false on error. In case of I/O error, |contents| holds the data that could
 // be read from source before the error occurred.
-FXL_EXPORT bool BlockingCopyToString(zx::socket source, std::string* contents);
+bool BlockingCopyToString(zx::socket source, std::string* contents);
 
-FXL_EXPORT bool BlockingCopyFromString(fxl::StringView source, const zx::socket& destination);
+bool BlockingCopyFromString(fxl::StringView source, const zx::socket& destination);
 
 // Copies the string |source| to a temporary socket and returns the
 // consumer handle.
-FXL_EXPORT zx::socket WriteStringToSocket(fxl::StringView source);
+zx::socket WriteStringToSocket(fxl::StringView source);
 
 }  // namespace ledger
 

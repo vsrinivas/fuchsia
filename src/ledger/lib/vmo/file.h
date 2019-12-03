@@ -11,18 +11,17 @@
 
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/fxl_export.h"
 
 namespace ledger {
 
 // Make a new shared buffer with the contents of a file.
-FXL_EXPORT bool VmoFromFd(fbl::unique_fd fd, SizedVmo* handle_ptr);
+bool VmoFromFd(fbl::unique_fd fd, SizedVmo* handle_ptr);
 
 // Make a new shared buffer with the contents of a file.
-FXL_EXPORT bool VmoFromFilename(const std::string& filename, SizedVmo* handle_ptr);
+bool VmoFromFilename(const std::string& filename, SizedVmo* handle_ptr);
 
 // Make a new shared buffer with the contents of a file.
-FXL_EXPORT bool VmoFromFilenameAt(int dirfd, const std::string& filename, SizedVmo* handle_ptr);
+bool VmoFromFilenameAt(int dirfd, const std::string& filename, SizedVmo* handle_ptr);
 
 }  // namespace ledger
 

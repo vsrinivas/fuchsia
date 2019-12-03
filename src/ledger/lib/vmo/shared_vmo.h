@@ -9,7 +9,6 @@
 
 #include <mutex>
 
-#include "src/lib/fxl/fxl_export.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
@@ -20,7 +19,7 @@ namespace ledger {
 // object have been released.
 //
 // This object is thread-safe.
-class FXL_EXPORT SharedVmo : public fxl::RefCountedThreadSafe<SharedVmo> {
+class SharedVmo : public fxl::RefCountedThreadSafe<SharedVmo> {
  public:
   // Initializes a shared VMO.
   //
