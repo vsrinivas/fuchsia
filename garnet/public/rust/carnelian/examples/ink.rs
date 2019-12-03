@@ -7,7 +7,7 @@ use {
         AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Rect, Size, ViewAssistant,
         ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
-    euclid::{Transform2D, Vector2D},
+    euclid::{Angle, Transform2D, Vector2D},
     failure::Error,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_hardware_input as hid, fidl_fuchsia_input_report as hid_input_report,
@@ -42,8 +42,12 @@ const COLORS: [[f32; 4]; 6] = [
     [0.24, 0.52, 0.69, 0.8],
     [0.14, 0.50, 0.42, 0.8],
 ];
+
 // Pencil constants.
 const PENCILS: [f32; 3] = [1.5, 3.0, 10.0];
+
+// Delay before starting to draw flowers after clearing the screen.
+const FLOWER_DELAY_SECONDS: i64 = 10;
 
 fn lerp(t: f32, p0: Point, p1: Point) -> Point {
     Point::new(p0.x * (1.0 - t) + p1.x * t, p0.y * (1.0 - t) + p1.y * t)
@@ -222,8 +226,8 @@ impl AppAssistant for InkAppAssistant {
         } else {
             const BLOCK_POOL_SIZE: u64 = 1 << 26; // 64 MB
             const HANDLE_COUNT: u32 = 1 << 14; // 16K handles
-            const LAYERS_COUNT: u32 = (MAX_STROKES + COLORS.len() * 2) as u32;
-            const CMDS_COUNT: u32 = ((MAX_STROKES + COLORS.len() * 2) * 8 + 32) as u32;
+            const LAYERS_COUNT: u32 = (MAX_STROKES + (COLORS.len() + PENCILS.len()) * 2) as u32;
+            const CMDS_COUNT: u32 = LAYERS_COUNT * 8 + 32;
 
             Ok(Box::new(InkViewAssistant::new(SpinelContext::new(
                 token,
@@ -286,10 +290,6 @@ impl Box2D {
             min: Point::new(std::f32::MAX, std::f32::MAX),
             max: Point::new(std::f32::MIN, std::f32::MIN),
         }
-    }
-
-    fn from_rect(rect: &Rect) -> Self {
-        Box2D { min: rect.origin, max: rect.bottom_right() }
     }
 
     fn union(&self, point: &Point) -> Self {
@@ -528,7 +528,9 @@ impl Stroke {
         // Create raster if bounding box intersects size.
         let rect = Rect::from_size(*size);
         for (_, segment) in self.segments.iter_mut() {
-            if segment.raster.is_none() && segment.bbox.to_rect().intersects(&rect) {
+            if segment.raster.is_none()
+                && self.transform.transform_rect(&segment.bbox.to_rect()).intersects(&rect)
+            {
                 segment.raster = Some(Self::raster(context, &segment.path, &self.transform));
             }
         }
@@ -539,7 +541,6 @@ impl Stroke {
 
         // Re-create rasters during next call to update.
         for (_, segment) in self.segments.iter_mut() {
-            segment.bbox = Box2D::from_rect(&transform.transform_rect(&segment.bbox.to_rect()));
             segment.raster = None;
         }
     }
@@ -827,6 +828,7 @@ struct InkViewAssistant<T> {
     pencil: usize,
     pan_origin: Vector2D<f32>,
     scale_distance: f32,
+    rotation_angle: f32,
     clear_origin: Vector2D<f32>,
 }
 
@@ -838,7 +840,7 @@ impl<T: Context> InkViewAssistant<T> {
         let flower_start = Time::from_nanos(
             Time::get(ClockId::Monotonic)
                 .into_nanos()
-                .saturating_add(zx::Duration::from_seconds(5).into_nanos()),
+                .saturating_add(zx::Duration::from_seconds(FLOWER_DELAY_SECONDS).into_nanos()),
         );
 
         Self {
@@ -857,6 +859,7 @@ impl<T: Context> InkViewAssistant<T> {
             pencil: 1,
             pan_origin: Vector2D::zero(),
             scale_distance: 0.0,
+            rotation_angle: 0.0,
             clear_origin: Vector2D::zero(),
         }
     }
@@ -928,23 +931,37 @@ impl<T: Context> ViewAssistant for InkViewAssistant<T> {
                 _ => {}
             }
 
-            // Pinch to zoom.
+            // Rotation & zoom.
             if self.touch_points.len() == 2 {
                 let mut iter = self.touch_points.iter();
                 let point0 = iter.next().unwrap();
                 let point1 = iter.next().unwrap();
+
+                let origin = (point0.to_vector() + point1.to_vector()) / 2.0;
+                transform = transform.post_translate(-origin);
+
+                // Rotation.
+                let line = *point0 - *point1;
+                let angle = line.x.atan2(line.y);
+                if self.touch_points.len() != previous_touch_points_count {
+                    self.rotation_angle = angle;
+                }
+                let rotation_angle = angle - self.rotation_angle;
+                transform = transform.post_rotate(Angle::radians(rotation_angle));
+                self.rotation_angle = angle;
+
+                // Pinch to zoom.
                 let distance = (*point0 - *point1).length();
                 if distance != 0.0 {
                     if self.touch_points.len() != previous_touch_points_count {
                         self.scale_distance = distance;
                     }
                     let sxsy = distance / self.scale_distance;
-                    let scale_origin = (point0.to_vector() + point1.to_vector()) / 2.0;
-                    transform = transform.post_translate(-scale_origin);
                     transform = transform.post_scale(sxsy, sxsy);
-                    transform = transform.post_translate(scale_origin);
                     self.scale_distance = distance;
                 }
+
+                transform = transform.post_translate(origin);
             }
 
             // Clear using 3 finger swipe across screen.
@@ -960,11 +977,9 @@ impl<T: Context> ViewAssistant for InkViewAssistant<T> {
                 const MIN_CLEAR_SWIPE_DISTANCE: f32 = 512.0;
                 let distance = (origin - self.clear_origin).length();
                 if distance >= MIN_CLEAR_SWIPE_DISTANCE {
-                    self.flower_start = Time::from_nanos(
-                        time_now
-                            .into_nanos()
-                            .saturating_add(zx::Duration::from_seconds(5).into_nanos()),
-                    );
+                    self.flower_start = Time::from_nanos(time_now.into_nanos().saturating_add(
+                        zx::Duration::from_seconds(FLOWER_DELAY_SECONDS).into_nanos(),
+                    ));
                     self.flower = None;
                     self.scene.clear_strokes();
                 }

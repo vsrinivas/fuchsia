@@ -240,9 +240,9 @@ impl RasterBuilder for SpinelRasterBuilder {
     fn add(&mut self, path: &Path, transform: &Transform2D<f32>, clip: &[f32; 4]) {
         let transform = SpnTransform {
             sx: transform.m11 * 32.0,
-            shx: transform.m12 * 32.0,
+            shx: transform.m21 * 32.0,
             tx: transform.m31 * 32.0,
-            shy: transform.m21 * 32.0,
+            shy: transform.m12 * 32.0,
             sy: transform.m22 * 32.0,
             ty: transform.m32 * 32.0,
             w0: 0.0,
@@ -1294,9 +1294,9 @@ impl RasterBuilder for MoldRasterBuilder {
     fn add(&mut self, path: &Path, transform: &Transform2D<f32>, _clip: &[f32; 4]) {
         let transform: [f32; 9] = [
             transform.m11,
-            transform.m12,
-            transform.m31,
             transform.m21,
+            transform.m31,
+            transform.m12,
             transform.m22,
             transform.m32,
             0.0,
