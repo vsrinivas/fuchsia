@@ -15,7 +15,7 @@
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 
-Exceptionate::Exceptionate(ExceptionPort::Type port_type) : port_type_(port_type) {}
+Exceptionate::Exceptionate(uint32_t type) : type_(type) {}
 
 Exceptionate::~Exceptionate() { Shutdown(); }
 

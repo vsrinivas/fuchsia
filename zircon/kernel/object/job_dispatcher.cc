@@ -148,8 +148,8 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/, fbl::RefPtr<JobDispatcher> pare
       return_code_(0),
       kill_on_oom_(false),
       policy_(policy),
-      exceptionate_(ExceptionPort::Type::JOB),
-      debug_exceptionate_(ExceptionPort::Type::JOB_DEBUGGER) {
+      exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_JOB),
+      debug_exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER) {
   kcounter_add(dispatcher_job_create_count, 1);
 }
 
@@ -594,101 +594,6 @@ zx_status_t JobDispatcher::set_name(const char* name, size_t len) {
   return name_.set(name, len);
 }
 
-zx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
-  canary_.Assert();
-  bool debugger = false;
-  switch (eport->type()) {
-    case ExceptionPort::Type::JOB_DEBUGGER:
-      debugger = true;
-      break;
-    case ExceptionPort::Type::JOB:
-      break;
-    default:
-      DEBUG_ASSERT_MSG(false, "unexpected port type: %d", static_cast<int>(eport->type()));
-      break;
-  }
-
-  Guard<fbl::Mutex> guard{get_lock()};
-  if (debugger) {
-    if (debugger_exception_port_)
-      return ZX_ERR_ALREADY_BOUND;
-    debugger_exception_port_ = ktl::move(eport);
-  } else {
-    if (exception_port_)
-      return ZX_ERR_ALREADY_BOUND;
-    exception_port_ = ktl::move(eport);
-  }
-  return ZX_OK;
-}
-
-class OnExceptionPortRemovalEnumerator final : public JobEnumerator {
- public:
-  OnExceptionPortRemovalEnumerator(fbl::RefPtr<ExceptionPort> eport) : eport_(ktl::move(eport)) {}
-  OnExceptionPortRemovalEnumerator(const OnExceptionPortRemovalEnumerator&) = delete;
-
- private:
-  bool OnProcess(ProcessDispatcher* process) override {
-    process->OnExceptionPortRemoval(eport_);
-    // Keep looking.
-    return true;
-  }
-
-  fbl::RefPtr<ExceptionPort> eport_;
-};
-
-bool JobDispatcher::ResetExceptionPort(bool debugger) {
-  canary_.Assert();
-
-  fbl::RefPtr<ExceptionPort> eport;
-  {
-    Guard<fbl::Mutex> lock{get_lock()};
-    if (debugger) {
-      debugger_exception_port_.swap(eport);
-    } else {
-      exception_port_.swap(eport);
-    }
-    if (eport == nullptr) {
-      // Attempted to unbind when no exception port is bound.
-      return false;
-    }
-    // This method must guarantee that no caller will return until
-    // OnTargetUnbind has been called on the port-to-unbind.
-    // This becomes important when a manual unbind races with a
-    // PortDispatcher::on_zero_handles auto-unbind.
-    //
-    // If OnTargetUnbind were called outside of the lock, it would lead to
-    // a race (for threads A and B):
-    //
-    //   A: Calls ResetExceptionPort; acquires the lock
-    //   A: Sees a non-null exception_port_, swaps it into the eport local.
-    //      exception_port_ is now null.
-    //   A: Releases the lock
-    //
-    //   B: Calls ResetExceptionPort; acquires the lock
-    //   B: Sees a null exception_port_ and returns. But OnTargetUnbind()
-    //      hasn't yet been called for the port.
-    //
-    // So, call it before releasing the lock.
-    eport->OnTargetUnbind();
-  }
-
-  OnExceptionPortRemovalEnumerator remover(eport);
-  if (!EnumerateChildren(&remover, true)) {
-    DEBUG_ASSERT(false);
-  }
-  return true;
-}
-
-fbl::RefPtr<ExceptionPort> JobDispatcher::exception_port() {
-  Guard<fbl::Mutex> lock{get_lock()};
-  return exception_port_;
-}
-
-fbl::RefPtr<ExceptionPort> JobDispatcher::debugger_exception_port() {
-  Guard<fbl::Mutex> guard{get_lock()};
-  return debugger_exception_port_;
-}
-
 Exceptionate* JobDispatcher::exceptionate(Exceptionate::Type type) {
   canary_.Assert();
   return type == Exceptionate::Type::kDebug ? &debug_exceptionate_ : &exceptionate_;
@@ -711,5 +616,5 @@ void JobDispatcher::GetInfo(zx_info_job_t* info) const {
   info->return_code = return_code_;
   info->exited = (state_ == State::DEAD);
   info->kill_on_oom = kill_on_oom_;
-  info->debugger_attached = debugger_exception_port_ != nullptr;
+  info->debugger_attached = debug_exceptionate_.HasValidChannel();
 }

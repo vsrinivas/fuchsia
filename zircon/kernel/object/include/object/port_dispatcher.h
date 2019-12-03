@@ -19,7 +19,6 @@
 #include <kernel/spinlock.h>
 #include <ktl/unique_ptr.h>
 #include <object/dispatcher.h>
-#include <object/excp_port.h>
 #include <object/handle.h>
 #include <object/state_observer.h>
 
@@ -164,15 +163,14 @@ class PortObserver final : public StateObserver {
 };
 
 // The PortDispatcher implements the port kernel object which is the cornerstone
-// for waiting on object changes in Zircon. The PortDispatcher handles 4 usage
+// for waiting on object changes in Zircon. The PortDispatcher handles 3 usage
 // cases:
-//  1- Exception notification: task_bind_exception_port()
-//  2- Object state change notification: zx_object_wait_async()
-//  3- Manual queuing: zx_port_queue()
-//  4- Interrupt change notification: zx_interrupt_bind()
+//  1- Object state change notification: zx_object_wait_async()
+//  2- Manual queuing: zx_port_queue()
+//  3- Interrupt change notification: zx_interrupt_bind()
 //
-// This makes the implementation non-trivial. Cases 1, 2 and 3 uses the
-// |packets_| linked list and case 4 uses |interrupt_packets_| linked list.
+// This makes the implementation non-trivial. Cases 1 and 2 use the |packets_|
+// linked list and case 3 uses |interrupt_packets_| linked list.
 //
 // The threads that wish to receive notifications block on Dequeue() (which
 // maps to zx_port_wait()) and will receive packets from any of the four sources
@@ -225,27 +223,15 @@ class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PO
   bool CancelQueued(PortPacket* port_packet);
 
  private:
-  friend ExceptionPort;
-
   explicit PortDispatcher(uint32_t options);
-
-  // Adopts a RefPtr to |eport|, and adds it to |eports_|.
-  // Called by ExceptionPort under |eport|'s lock.
-  void LinkExceptionPortEportLocked(ExceptionPort* eport) TA_REQ(eport->lock_);
-
-  // Removes |eport| from |eports_|, dropping its RefPtr.
-  // Does nothing if |eport| is not on the list.
-  // Called by ExceptionPort under |eport|'s lock.
-  void UnlinkExceptionPortEportLocked(ExceptionPort* eport) TA_REQ(eport->lock_);
 
   const uint32_t options_;
   Semaphore sema_;
   bool zero_handles_ TA_GUARDED(get_lock());
 
-  // Next three members handle the object, manual and exception notifications.
+  // Next three members handle the object and manual notifications.
   size_t num_ephemeral_packets_ TA_GUARDED(get_lock());
   fbl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(get_lock());
-  fbl::DoublyLinkedList<fbl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(get_lock());
   // Next two members handle the interrupt notifications.
   DECLARE_SPINLOCK(PortDispatcher) spinlock_;
   fbl::DoublyLinkedList<PortInterruptPacket*> interrupt_packets_ TA_GUARDED(spinlock_);

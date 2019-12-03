@@ -14,7 +14,7 @@
 
 #include <arch/exception.h>
 #include <fbl/auto_call.h>
-#include <object/excp_port.h>
+#include <object/exception_dispatcher.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
@@ -52,106 +52,61 @@ static const char* excp_type_to_string(uint type) {
 // This isn't an "iterator" in the pure c++ sense. We don't need all that
 // complexity. I just couldn't think of a better term.
 //
-// Exception ports are tried in the following order:
+// Exception handlers are tried in the following order:
 // - debugger
 // - thread
 // - thread channel
 // - process
 // - job (first owning job, then its parent job, and so on up to root job)
-class ExceptionPortIterator final {
+class ExceptionHandlerIterator final {
  public:
-  // All exception handler types, including both ports and channels.
-  // TODO(ZX-3072): remove ports once everyone is switched to channels.
-  enum class Type {
-    NONE,
-    JOB_DEBUGGER,
-    JOB_DEBUGGER_CHANNEL,
-    DEBUGGER,
-    DEBUGGER_CHANNEL,
-    THREAD,
-    THREAD_CHANNEL,
-    PROCESS,
-    PROCESS_CHANNEL,
-    JOB,
-    JOB_CHANNEL
-  };
+  explicit ExceptionHandlerIterator(ThreadDispatcher* thread,
+                                    fbl::RefPtr<ExceptionDispatcher> exception)
+      : thread_(thread), exception_(ktl::move(exception)) {}
 
-  explicit ExceptionPortIterator(ThreadDispatcher* thread,
-                                 fbl::RefPtr<ExceptionDispatcher> exception)
-      : thread_(thread), exception_(ktl::move(exception)), previous_type_(Type::NONE) {}
-
-  // Returns true with |eport| filled in if the caller should dispatch the
-  // exception to the given exception port.
-  // Returns true with empty |eport| and filled |channel_result| if the
-  // exception was sent to a channel handler.
-  // Returns false if there are no more to try.
-  bool Next(fbl::RefPtr<ExceptionPort>* eport, zx_status_t* channel_result) {
-    eport->reset(nullptr);
-    bool sent_to_channel = false;
+  // Sends the exception to the next registered handler, starting with
+  // ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER (the process debug channel) on the first
+  // call.
+  //
+  // Returns true with and fills |result| if the exception was sent to a
+  // handler, or returns false if there are no more to try. Do not call this
+  // function again after it returns false.
+  bool Next(zx_status_t* result) {
+    bool sent = false;
 
     while (true) {
-      switch (previous_type_) {
-        case Type::NONE:
-          *eport = thread_->process()->debugger_exception_port();
-          previous_type_ = Type::DEBUGGER;
+      switch (next_type_) {
+        case ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER:
+          *result = thread_->HandleException(
+              thread_->process()->exceptionate(Exceptionate::Type::kDebug), exception_, &sent);
+          next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_THREAD;
           break;
-        case Type::DEBUGGER:
-          *channel_result =
-              thread_->HandleException(thread_->process()->exceptionate(Exceptionate::Type::kDebug),
-                                       exception_, &sent_to_channel);
-          previous_type_ = Type::DEBUGGER_CHANNEL;
+        case ZX_EXCEPTION_CHANNEL_TYPE_THREAD:
+          *result = thread_->HandleException(thread_->exceptionate(), exception_, &sent);
+          next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_PROCESS;
           break;
-        case Type::DEBUGGER_CHANNEL:
-          *eport = thread_->exception_port();
-          previous_type_ = Type::THREAD;
+        case ZX_EXCEPTION_CHANNEL_TYPE_PROCESS:
+          *result = thread_->HandleException(
+              thread_->process()->exceptionate(Exceptionate::Type::kStandard), exception_, &sent);
+          next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_JOB;
+          next_job_ = thread_->process()->job();
           break;
-        case Type::THREAD:
-          *channel_result =
-              thread_->HandleException(thread_->exceptionate(), exception_, &sent_to_channel);
-          previous_type_ = Type::THREAD_CHANNEL;
-          break;
-        case Type::THREAD_CHANNEL:
-          *eport = thread_->process()->exception_port();
-          previous_type_ = Type::PROCESS;
-          break;
-        case Type::PROCESS:
-          *channel_result = thread_->HandleException(
-              thread_->process()->exceptionate(Exceptionate::Type::kStandard), exception_,
-              &sent_to_channel);
-          previous_type_ = Type::PROCESS_CHANNEL;
-          break;
-        case Type::PROCESS_CHANNEL:
-          previous_job_ = thread_->process()->job();
-          *eport = previous_job_->exception_port();
-          previous_type_ = Type::JOB;
-          break;
-        case Type::JOB:
-          *channel_result =
-              thread_->HandleException(previous_job_->exceptionate(Exceptionate::Type::kStandard),
-                                       exception_, &sent_to_channel);
-          previous_type_ = Type::JOB_CHANNEL;
-          break;
-        case Type::JOB_CHANNEL:
-          previous_job_ = previous_job_->parent();
-          if (previous_job_) {
-            *eport = previous_job_->exception_port();
-          } else {
+        case ZX_EXCEPTION_CHANNEL_TYPE_JOB:
+          *result = thread_->HandleException(next_job_->exceptionate(Exceptionate::Type::kStandard),
+                                             exception_, &sent);
+          next_job_ = next_job_->parent();
+          if (!next_job_) {
             // Reached the root job and there was no handler.
             return false;
           }
-          previous_type_ = Type::JOB;
           break;
         default:
-          ASSERT_MSG(0, "unexpected exception type %d", static_cast<int>(previous_type_));
+          ASSERT_MSG(0, "unexpected exception type %u", next_type_);
           __UNREACHABLE;
       }
 
-      // Only service one port or channel exception per call, not both.
-      DEBUG_ASSERT(!(eport->get() && sent_to_channel));
-
-      // Return to the caller once we find either a port to process or
-      // a channel that was processed.
-      if (eport->get() || sent_to_channel) {
+      // Return to the caller once a handler was activated.
+      if (sent) {
         return true;
       }
     }
@@ -161,46 +116,30 @@ class ExceptionPortIterator final {
  private:
   ThreadDispatcher* thread_;
   fbl::RefPtr<ExceptionDispatcher> exception_;
-  Type previous_type_;
-  // Jobs are traversed up their hierarchy. This is the previous one.
-  fbl::RefPtr<JobDispatcher> previous_job_;
+  uint32_t next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER;
+  fbl::RefPtr<JobDispatcher> next_job_;
 
-  DISALLOW_COPY_ASSIGN_AND_MOVE(ExceptionPortIterator);
-};
-
-static zx_status_t try_exception_handler(fbl::RefPtr<ExceptionPort> eport, ThreadDispatcher* thread,
-                                         const zx_exception_report_t* report,
-                                         const arch_exception_context_t* arch_context,
-                                         ThreadState::Exception* estatus) {
-  LTRACEF("Trying exception port type %d\n", static_cast<int>(eport->type()));
-  auto status = thread->ExceptionHandlerExchange(eport, report, arch_context, estatus);
-  LTRACEF("ExceptionHandlerExchange returned status %d, estatus %d\n", status,
-          static_cast<int>(*estatus));
-
-  return status;
-}
-
-enum handler_status_t {
-  // thread is to be resumed
-  HS_RESUME,
-  // thread was killed
-  HS_KILLED,
-  // exception not handled (process will be killed)
-  HS_NOT_HANDLED
+  DISALLOW_COPY_ASSIGN_AND_MOVE(ExceptionHandlerIterator);
 };
 
 // Subroutine of dispatch_user_exception to simplify the code.
-// One useful thing this does is guarantee ExceptionPortIterator is properly
+// One useful thing this does is guarantee ExceptionHandlerIterator is properly
 // destructed.
+//
 // |*out_processed| is set to a boolean indicating if at least one
 // handler processed the exception.
-static handler_status_t exception_handler_worker(uint exception_type,
-                                                 const arch_exception_context_t* context,
-                                                 ThreadDispatcher* thread, bool* out_processed) {
+//
+// Returns:
+//   ZX_OK if the thread has been resumed.
+//   ZX_ERR_NEXT if we ran out of handlers before the thread resumed.
+//   ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed.
+//   ZX_ERR_NO_MEMORY on allocation failure (TODO(33566): remove this case)
+static zx_status_t exception_handler_worker(uint exception_type,
+                                            const arch_exception_context_t* context,
+                                            ThreadDispatcher* thread, bool* out_processed) {
   *out_processed = false;
 
-  zx_exception_report_t report;
-  ExceptionPort::BuildArchReport(&report, exception_type, context);
+  zx_exception_report_t report = ExceptionDispatcher::BuildArchReport(exception_type, *context);
 
   fbl::RefPtr<ExceptionDispatcher> exception =
       ExceptionDispatcher::Create(fbl::RefPtr(thread), exception_type, &report, context);
@@ -209,7 +148,7 @@ static handler_status_t exception_handler_worker(uint exception_type,
     // will kill the process.
     printf("KERN: failed to allocate memory for %s exception in user thread %lu.%lu\n",
            excp_type_to_string(exception_type), thread->process()->get_koid(), thread->get_koid());
-    return HS_NOT_HANDLED;
+    return ZX_ERR_NO_MEMORY;
   }
 
   // Most of the time we'll be holding the last reference to the exception
@@ -221,66 +160,24 @@ static handler_status_t exception_handler_worker(uint exception_type,
   // out the exception before returning no matter what.
   auto exception_cleaner = fbl::MakeAutoCall([&exception]() { exception->Clear(); });
 
-  ExceptionPortIterator iter(thread, exception);
-  fbl::RefPtr<ExceptionPort> eport;
-  // This should always be overwritten, either by iter.Next() for channels
-  // or try_exception_handler() for ports.
-  zx_status_t status = ZX_ERR_INTERNAL;
+  ExceptionHandlerIterator iter(thread, exception);
+  zx_status_t status = ZX_ERR_NEXT;
+  while (iter.Next(&status)) {
+    LTRACEF("handler returned %d\n", status);
 
-  while (iter.Next(&eport, &status)) {
-    // Initialize for paranoia's sake.
-    ThreadState::Exception estatus = ThreadState::Exception::UNPROCESSED;
-    if (eport) {
-      status = try_exception_handler(eport, thread, &report, context, &estatus);
-    } else {
-      // Channels return a single status value, for now map this to the
-      // existing port logic which combines resume/try_next into ZX_OK.
-      if (status == ZX_OK) {
-        estatus = ThreadState::Exception::RESUME;
-      } else if (status == ZX_ERR_NEXT) {
-        status = ZX_OK;
-        estatus = ThreadState::Exception::TRY_NEXT;
-      }
+    // ZX_ERR_NEXT means the handler wants to pass it up to the next in the
+    // chain, keep looping but mark that at least one handler saw the exception.
+    if (status == ZX_ERR_NEXT) {
+      *out_processed = true;
+      continue;
     }
 
-    LTRACEF("handler returned %d/%d\n", static_cast<int>(status), static_cast<int>(estatus));
-    switch (status) {
-      case ZX_ERR_INTERNAL_INTR_KILLED:
-        // thread was killed, probably with zx_task_kill
-        return HS_KILLED;
-      case ZX_OK:
-        switch (estatus) {
-          case ThreadState::Exception::TRY_NEXT:
-            *out_processed = true;
-            break;
-          case ThreadState::Exception::RESUME:
-            return HS_RESUME;
-          default:
-            ASSERT_MSG(0, "invalid exception status %d", static_cast<int>(estatus));
-            __UNREACHABLE;
-        }
-        break;
-      default:
-        // Instead of requiring exception processing to only return
-        // specific kinds of errors (and thus requiring us to be updated
-        // every time a change causes a new error to be returned), treat
-        // all other errors as fatal. It's debatable whether to give the
-        // next handler a try or immediately kill the task. By immediately
-        // killing the task we bypass the root job exception handler,
-        // but it feels safer.
-        // TODO(ZX-2853): Are there times when we should try harder to
-        // process the exception?
-        // Print something to give the user a clue.
-        printf("KERN: Error %d processing exception in user thread %lu.%lu\n", status,
-               thread->process()->get_koid(), thread->get_koid());
-        // Still mark the exception as processed so that we don't trigger
-        // later bare-bones crash reporting (TRACE_EXCEPTIONS).
-        *out_processed = true;
-        return HS_NOT_HANDLED;
-    }
+    // Anything other than ZX_ERR_NEXT means we're done.
+    return status;
   }
 
-  return HS_NOT_HANDLED;
+  // If we got here we ran out of handlers and nobody resumed the thread.
+  return ZX_ERR_NEXT;
 }
 
 // Dispatches an exception to the appropriate handler. Called by arch code
@@ -311,70 +208,40 @@ zx_status_t dispatch_user_exception(uint exception_type, const arch_exception_co
   ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::EXCEPTION);
 
   arch_install_context_regs(lk_thread, context);
-  bool processed;
-  handler_status_t hstatus = exception_handler_worker(exception_type, context, thread, &processed);
+  bool processed = false;
+  zx_status_t status = exception_handler_worker(exception_type, context, thread, &processed);
   arch_remove_context_regs(lk_thread);
 
-  switch (hstatus) {
-    case HS_RESUME:
-      return ZX_OK;
-    case HS_KILLED:
-      thread->Exit();
-      __UNREACHABLE;
-    case HS_NOT_HANDLED:
-      break;
-    default:
-      ASSERT_MSG(0, "unexpected exception worker result %d", static_cast<int>(hstatus));
-      __UNREACHABLE;
+  if (status == ZX_OK) {
+    return ZX_OK;
   }
 
-  auto process = thread->process();
+  // If the thread wasn't resumed or explicitly killed, kill the whole process.
+  if (status != ZX_ERR_INTERNAL_INTR_KILLED) {
+    auto process = thread->process();
 
 #if TRACE_EXCEPTIONS
-  if (!processed) {
-    // only print this if an exception handler wasn't involved
-    // in handling the exception
-    char pname[ZX_MAX_NAME_LEN];
-    process->get_name(pname);
-    char tname[ZX_MAX_NAME_LEN];
-    thread->get_name(tname);
-    printf("KERN: %s in user thread '%s' in process '%s'\n", excp_type_to_string(exception_type),
-           tname, pname);
+    // If no handlers even saw the exception, dump some info. Normally at least
+    // crashsvc will handle the exception and make a smarter decision about what
+    // to do with it, but in case it doesn't, dump some info to the kernel logs.
+    if (!processed) {
+      char pname[ZX_MAX_NAME_LEN];
+      process->get_name(pname);
+      char tname[ZX_MAX_NAME_LEN];
+      thread->get_name(tname);
+      printf("KERN: %s in user thread '%s' in process '%s'\n", excp_type_to_string(exception_type),
+             tname, pname);
 
-    arch_dump_exception_context(context);
-  }
+      arch_dump_exception_context(context);
+    }
 #endif
 
-  // kill our process
-  process->Kill(ZX_TASK_RETCODE_EXCEPTION_KILL);
+    process->Kill(ZX_TASK_RETCODE_EXCEPTION_KILL);
+  }
 
-  // exit
+  // Either the current thread or its whole process was killed, we can now stop
+  // it from running.
   thread->Exit();
-
-  // should not get here
   panic("fell out of thread exit somehow!\n");
   __UNREACHABLE;
-}
-
-zx_status_t dispatch_debug_exception(fbl::RefPtr<ExceptionPort> eport, uint exception_type,
-                                     const arch_exception_context_t* context) {
-  LTRACEF("type %u, context %p\n", exception_type, context);
-
-  thread_t* lk_thread = get_current_thread();
-  ThreadDispatcher* thread = lk_thread->user_thread;
-  // This function can only be called on behalf of user threads.
-  DEBUG_ASSERT(thread);
-
-  // From now until the exception is resolved the thread is in an exception.
-  ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::EXCEPTION);
-
-  arch_install_context_regs(lk_thread, context);
-  auto ac = fbl::MakeAutoCall([&lk_thread]() { arch_remove_context_regs(lk_thread); });
-
-  zx_exception_report_t report;
-  ExceptionPort::BuildArchReport(&report, exception_type, context);
-
-  ThreadState::Exception estatus;
-  return thread->ExceptionHandlerExchange(eport, &report, context, &estatus);
-  // We can ignore |estatus| here (TRY_NEXT/RESUME) as they're not used.
 }

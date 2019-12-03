@@ -16,6 +16,15 @@
 KCOUNTER(dispatcher_exception_create_count, "dispatcher.exception.create")
 KCOUNTER(dispatcher_exception_destroy_count, "dispatcher.exception.destroy")
 
+zx_exception_report_t ExceptionDispatcher::BuildArchReport(
+    uint32_t type, const arch_exception_context_t& context) {
+  zx_exception_report_t report = {};
+  report.header.size = sizeof(report);
+  report.header.type = type;
+  arch_fill_in_exception_context(&context, &report);
+  return report;
+}
+
 fbl::RefPtr<ExceptionDispatcher> ExceptionDispatcher::Create(
     fbl::RefPtr<ThreadDispatcher> thread, zx_excp_type_t exception_type,
     const zx_exception_report_t* report, const arch_exception_context_t* arch_context) {

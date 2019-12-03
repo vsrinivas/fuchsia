@@ -20,7 +20,6 @@
 #include <ktl/array.h>
 #include <object/dispatcher.h>
 #include <object/exceptionate.h>
-#include <object/excp_port.h>
 #include <object/handle.h>
 #include <object/job_policy.h>
 #include <object/process_dispatcher.h>
@@ -142,15 +141,6 @@ class JobDispatcher final
   fbl::RefPtr<ProcessDispatcher> LookupProcessById(zx_koid_t koid);
   fbl::RefPtr<JobDispatcher> LookupJobById(zx_koid_t koid);
 
-  // exception handling support
-  zx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
-  // Returns true if a port had been set.
-  bool ResetExceptionPort(bool debugger);
-  fbl::RefPtr<ExceptionPort> exception_port();
-  fbl::RefPtr<ExceptionPort> debugger_exception_port();
-
-  // TODO(ZX-3072): remove the port-based exception code once everyone is
-  // switched over to channels.
   Exceptionate* exceptionate(Exceptionate::Type type);
 
   void set_kill_on_oom(bool kill);
@@ -247,8 +237,6 @@ class JobDispatcher final
 
   JobPolicy policy_ TA_GUARDED(get_lock());
 
-  fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
-  fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(get_lock());
   Exceptionate exceptionate_;
   Exceptionate debug_exceptionate_;
 };

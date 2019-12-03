@@ -36,6 +36,9 @@ class ExceptionDispatcher final
                                                  const zx_exception_report_t* report,
                                                  const arch_exception_context_t* arch_context);
 
+  static zx_exception_report_t BuildArchReport(uint32_t type,
+                                               const arch_exception_context_t& arch_context);
+
   ~ExceptionDispatcher() final;
 
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_EXCEPTION; }

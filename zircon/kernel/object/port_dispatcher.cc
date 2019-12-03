@@ -19,14 +19,12 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/arena.h>
 #include <fbl/auto_lock.h>
-#include <object/excp_port.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 
 // All port sub-packets must be exactly 32 bytes
 static_assert(sizeof(zx_packet_user_t) == 32, "incorrect size for zx_packet_signal_t");
 static_assert(sizeof(zx_packet_signal_t) == 32, "incorrect size for zx_packet_signal_t");
-static_assert(sizeof(zx_packet_exception_t) == 32, "incorrect size for zx_packet_exception_t");
 static_assert(sizeof(zx_packet_guest_bell_t) == 32, "incorrect size for zx_packet_guest_bell_t");
 static_assert(sizeof(zx_packet_guest_mem_t) == 32, "incorrect size for zx_packet_guest_mem_t");
 static_assert(sizeof(zx_packet_guest_io_t) == 32, "incorrect size for zx_packet_guest_io_t");
@@ -204,15 +202,6 @@ void PortDispatcher::on_zero_handles() {
   DEBUG_ASSERT(!zero_handles_);
   zero_handles_ = true;
 
-  // Unlink and unbind exception ports.
-  while (!eports_.is_empty()) {
-    auto eport = eports_.pop_back();
-
-    // Tell the eport to unbind itself, then drop our ref to it. Called
-    // unlocked because the eport may call our ::UnlinkExceptionPort.
-    guard.CallUnlocked([&eport]() { eport->OnPortZeroHandles(); });
-  }
-
   // Free any queued packets.
   while (!packets_.is_empty()) {
     auto packet = packets_.pop_front();
@@ -335,7 +324,6 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline, zx_port_packet_t* 
   canary_.Assert();
 
   while (true) {
-
     // Wait until one of the queues has a packet.
     {
       ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PORT);
@@ -509,23 +497,4 @@ bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
   }
 
   return false;
-}
-
-void PortDispatcher::LinkExceptionPortEportLocked(ExceptionPort* eport) {
-  canary_.Assert();
-
-  Guard<fbl::Mutex> guard{get_lock()};
-  DEBUG_ASSERT_COND(eport->PortMatchesLocked(this, /* allow_null */ false));
-  DEBUG_ASSERT(!eport->InContainer());
-  eports_.push_back(AdoptRef(eport));
-}
-
-void PortDispatcher::UnlinkExceptionPortEportLocked(ExceptionPort* eport) {
-  canary_.Assert();
-
-  Guard<fbl::Mutex> guard{get_lock()};
-  DEBUG_ASSERT_COND(eport->PortMatchesLocked(this, /* allow_null */ true));
-  if (eport->InContainer()) {
-    eports_.erase(*eport);
-  }
 }

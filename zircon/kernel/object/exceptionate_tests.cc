@@ -6,10 +6,10 @@
 
 #include <lib/unittest/unittest.h>
 #include <zircon/rights.h>
+#include <zircon/syscalls/exception.h>
 
 #include <fbl/ref_ptr.h>
 #include <object/channel_dispatcher.h>
-#include <object/excp_port.h>
 #include <object/handle.h>
 
 #include "object/exceptionate.h"
@@ -24,7 +24,7 @@ bool overwrite_valid_channel_fails() {
   ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[0], &channels[1], &rights));
   ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[2], &channels[3], &rights));
 
-  Exceptionate exceptionate(ExceptionPort::Type::THREAD);
+  Exceptionate exceptionate(ZX_EXCEPTION_CHANNEL_TYPE_THREAD);
   ASSERT_EQ(ZX_OK, exceptionate.SetChannel(ktl::move(channels[0]), 0, 0));
 
   EXPECT_EQ(ZX_ERR_ALREADY_BOUND, exceptionate.SetChannel(ktl::move(channels[2]), 0, 0));
@@ -40,7 +40,7 @@ bool overwrite_invalid_channel_succeeds() {
   ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[0], &channels[1], &rights));
   ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[2], &channels[3], &rights));
 
-  Exceptionate exceptionate(ExceptionPort::Type::THREAD);
+  Exceptionate exceptionate(ZX_EXCEPTION_CHANNEL_TYPE_THREAD);
   ASSERT_EQ(ZX_OK, exceptionate.SetChannel(ktl::move(channels[0]), 0, 0));
 
   channels[1].reset();

@@ -267,17 +267,6 @@ class ProcessDispatcher final
 
   zx_status_t GetThreads(fbl::Array<zx_koid_t>* threads) const;
 
-  // exception handling support
-  zx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
-  // Returns true if a port had been set.
-  bool ResetExceptionPort(bool debugger);
-  fbl::RefPtr<ExceptionPort> exception_port();
-  fbl::RefPtr<ExceptionPort> debugger_exception_port();
-  // |eport| can either be the process's eport or that of any parent job.
-  void OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& eport);
-
-  // TODO(ZX-3072): remove the port-based exception code once everyone is
-  // switched over to channels.
   Exceptionate* exceptionate(Exceptionate::Type type);
 
   // The following two methods can be slow and inaccurate and should only be
@@ -451,9 +440,6 @@ class ProcessDispatcher final
   // process return code
   int64_t retcode_ = 0;
 
-  // Exception ports bound to the process.
-  fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
-  fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(get_lock());
   Exceptionate exceptionate_;
   Exceptionate debug_exceptionate_;
 

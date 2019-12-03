@@ -18,7 +18,6 @@
 #include <lk/init.h>
 #include <object/diagnostics.h>
 #include <object/event_dispatcher.h>
-#include <object/excp_port.h>
 #include <object/job_dispatcher.h>
 #include <object/port_dispatcher.h>
 #include <platform/halt_helper.h>

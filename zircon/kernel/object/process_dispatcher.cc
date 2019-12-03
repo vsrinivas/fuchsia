@@ -104,8 +104,8 @@ ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job, fbl::String
                                      uint32_t flags)
     : job_(ktl::move(job)),
       policy_(job_->GetPolicy()),
-      exceptionate_(ExceptionPort::Type::PROCESS),
-      debug_exceptionate_(ExceptionPort::Type::DEBUGGER),
+      exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_PROCESS),
+      debug_exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER),
       name_(name.data(), name.length()) {
   LTRACE_ENTRY_OBJ;
 
@@ -128,8 +128,6 @@ ProcessDispatcher::~ProcessDispatcher() {
 
   // Assert that the -> DEAD transition cleaned up what it should have.
   DEBUG_ASSERT(handles_.is_empty());
-  DEBUG_ASSERT(exception_port_ == nullptr);
-  DEBUG_ASSERT(debugger_exception_port_ == nullptr);
   DEBUG_ASSERT(!aspace_ || aspace_->is_destroyed());
 
   kcounter_add(dispatcher_process_destroy_count, 1);
@@ -424,9 +422,6 @@ void ProcessDispatcher::FinishDeadTransition() {
     to_clean.swap(handles_);
   }
 
-  // zx-1544: Here is where if we're the last holder of a handle of one of
-  // our exception ports then ResetExceptionPort will get called (by
-  // ExceptionPort::OnPortZeroHandles) and will need to grab |get_lock()|.
   // This needs to be done outside of |get_lock()|.
   while (!to_clean.is_empty()) {
     // Delete handle via HandleOwner dtor.
@@ -561,8 +556,7 @@ zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) const {
     state = state_;
     info->return_code = retcode_;
     // TODO: Protect with rights if necessary.
-    info->debugger_attached =
-        debugger_exception_port_ != nullptr || debug_exceptionate_.HasValidChannel();
+    info->debugger_attached = debug_exceptionate_.HasValidChannel();
   }
 
   switch (state) {
@@ -654,98 +648,6 @@ zx_status_t ProcessDispatcher::GetThreads(fbl::Array<zx_koid_t>* out_threads) co
   DEBUG_ASSERT(i == n);
   *out_threads = ktl::move(threads);
   return ZX_OK;
-}
-
-zx_status_t ProcessDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
-  LTRACE_ENTRY_OBJ;
-  bool debugger = false;
-  switch (eport->type()) {
-    case ExceptionPort::Type::DEBUGGER:
-      debugger = true;
-      break;
-    case ExceptionPort::Type::PROCESS:
-      break;
-    default:
-      DEBUG_ASSERT_MSG(false, "unexpected port type: %d", static_cast<int>(eport->type()));
-      break;
-  }
-
-  // Lock |get_lock()| to ensure the process doesn't transition to dead
-  // while we're setting the exception handler.
-  Guard<fbl::Mutex> guard{get_lock()};
-  if (state_ == State::DEAD)
-    return ZX_ERR_NOT_FOUND;
-  if (debugger) {
-    if (debugger_exception_port_)
-      return ZX_ERR_ALREADY_BOUND;
-    debugger_exception_port_ = eport;
-  } else {
-    if (exception_port_)
-      return ZX_ERR_ALREADY_BOUND;
-    exception_port_ = eport;
-  }
-
-  return ZX_OK;
-}
-
-bool ProcessDispatcher::ResetExceptionPort(bool debugger) {
-  LTRACE_ENTRY_OBJ;
-  fbl::RefPtr<ExceptionPort> eport;
-
-  // Remove the exception handler first. As we resume threads we don't
-  // want them to hit another exception and get back into
-  // ExceptionHandlerExchange.
-  {
-    Guard<fbl::Mutex> guard{get_lock()};
-    if (debugger) {
-      debugger_exception_port_.swap(eport);
-    } else {
-      exception_port_.swap(eport);
-    }
-    if (eport == nullptr) {
-      // Attempted to unbind when no exception port is bound.
-      return false;
-    }
-    // This method must guarantee that no caller will return until
-    // OnTargetUnbind has been called on the port-to-unbind.
-    // This becomes important when a manual unbind races with a
-    // PortDispatcher::on_zero_handles auto-unbind.
-    //
-    // If OnTargetUnbind were called outside of the lock, it would lead to
-    // a race (for threads A and B):
-    //
-    //   A: Calls ResetExceptionPort; acquires the lock
-    //   A: Sees a non-null exception_port_, swaps it into the eport local.
-    //      exception_port_ is now null.
-    //   A: Releases the lock
-    //
-    //   B: Calls ResetExceptionPort; acquires the lock
-    //   B: Sees a null exception_port_ and returns. But OnTargetUnbind()
-    //      hasn't yet been called for the port.
-    //
-    // So, call it before releasing the lock.
-    eport->OnTargetUnbind();
-  }
-
-  OnExceptionPortRemoval(eport);
-  return true;
-}
-
-fbl::RefPtr<ExceptionPort> ProcessDispatcher::exception_port() {
-  Guard<fbl::Mutex> guard{get_lock()};
-  return exception_port_;
-}
-
-fbl::RefPtr<ExceptionPort> ProcessDispatcher::debugger_exception_port() {
-  Guard<fbl::Mutex> guard{get_lock()};
-  return debugger_exception_port_;
-}
-
-void ProcessDispatcher::OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& eport) {
-  Guard<fbl::Mutex> guard{get_lock()};
-  for (auto& thread : thread_list_) {
-    thread.OnExceptionPortRemoval(eport);
-  }
 }
 
 Exceptionate* ProcessDispatcher::exceptionate(Exceptionate::Type type) {
@@ -900,12 +802,6 @@ void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher* t,
                                                      const arch_exception_context_t* context) {
   auto job = job_;
   while (job) {
-    auto port = job->debugger_exception_port();
-    if (port) {
-      port->OnProcessStartForDebugger(t, context);
-      break;
-    }
-
     if (t->HandleSingleShotException(job->exceptionate(Exceptionate::Type::kDebug),
                                      ZX_EXCP_PROCESS_STARTING, *context)) {
       break;

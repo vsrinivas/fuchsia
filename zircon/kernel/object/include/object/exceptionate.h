@@ -13,7 +13,6 @@
 #include <fbl/ref_ptr.h>
 #include <kernel/mutex.h>
 #include <object/channel_dispatcher.h>
-#include <object/excp_port.h>
 #include <object/handle.h>
 
 class ExceptionDispatcher;
@@ -27,11 +26,10 @@ class Exceptionate {
   // exception handlers.
   enum class Type { kStandard, kDebug };
 
-  // Once ports are removed we can switch to using the userspace exception
-  // constants directly, but for now this keeps the code cleaner.
-  Exceptionate(ExceptionPort::Type port_type);
+  // |type| must be a valid ZX_EXCEPTION_CHANNEL_TYPE_* constant.
+  Exceptionate(uint32_t type);
 
-  ExceptionPort::Type port_type() const { return port_type_; }
+  uint32_t type() const { return type_; }
 
   // Shuts the underlying channel down if it's still connected to be sure the
   // userspace endpoint gets the PEER_CLOSED signal.
@@ -81,7 +79,7 @@ class Exceptionate {
  private:
   bool HasValidChannelLocked() const TA_REQ(lock_);
 
-  const ExceptionPort::Type port_type_;
+  const uint32_t type_;
   mutable DECLARE_MUTEX(Exceptionate) lock_;
   KernelHandle<ChannelDispatcher> channel_handle_ TA_GUARDED(lock_);
   zx_rights_t thread_rights_ TA_GUARDED(lock_) = 0;

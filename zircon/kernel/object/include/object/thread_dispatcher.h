@@ -28,7 +28,6 @@
 #include <object/dispatcher.h>
 #include <object/exception_dispatcher.h>
 #include <object/exceptionate.h>
-#include <object/excp_port.h>
 #include <object/handle.h>
 #include <object/thread_state.h>
 #include <vm/vm_address_region.h>
@@ -119,48 +118,11 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   uint64_t runtime_ns() const { return thread_runtime(core_thread_); }
   cpu_num_t last_cpu() const { return thread_last_cpu(core_thread_); }
 
-  zx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
-  // Returns true if a port had been set.
-  bool ResetExceptionPort();
-  fbl::RefPtr<ExceptionPort> exception_port();
-
-  // Send a report to the associated exception handler of |eport| and wait
-  // for a response.
-  // Note this takes a specific exception port as an argument because there are several:
-  // debugger, thread, process, and system. The kind of the exception port is
-  // specified by |eport->type()|.
-  // Returns:
-  // ZX_OK: the exception was handled in some way, and |*out_estatus|
-  // specifies how.
-  // ZX_ERR_INTERNAL_INTR_KILLED: the thread was killed (probably via zx_task_kill)
-  zx_status_t ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort> eport,
-                                       const zx_exception_report_t* report,
-                                       const arch_exception_context_t* arch_context,
-                                       ThreadState::Exception* out_estatus);
-
-  // Record entry/exit to being in an exception.
-  void EnterException(fbl::RefPtr<ExceptionPort> eport, const zx_exception_report_t* report,
-                      const arch_exception_context_t* arch_context);
-  void ExitExceptionLocked() TA_REQ(get_lock());
-
-  // Called when an exception handler is finished processing the exception.
-  // If |eport| is non-nullptr, then the exception is only continued if
-  // |eport| corresponds to the current exception port.
-  zx_status_t MarkExceptionHandled(PortDispatcher* eport);
-  zx_status_t MarkExceptionNotHandled(PortDispatcher* eport);
-
-  // Called when exception port |eport| is removed.
-  // If the thread is waiting for the associated exception handler, continue
-  // exception processing as if the exception port had not been installed.
-  void OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& eport);
-
   // Assuming the thread is stopped waiting for an exception response,
   // fill in |*report| with the exception report.
   // Returns ZX_ERR_BAD_STATE if not in an exception.
   zx_status_t GetExceptionReport(zx_exception_report_t* report);
 
-  // TODO(ZX-3072): remove the port-based exception code once everyone is
-  // switched over to channels.
   Exceptionate* exceptionate();
 
   // Sends an exception over the exception channel and blocks for a response.
@@ -248,15 +210,11 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   static int StartRoutine(void* arg);
 
   // Return true if waiting for an exception response.
-  bool InPortExceptionLocked() TA_REQ(get_lock());
-  bool InChannelExceptionLocked() TA_REQ(get_lock());
+  bool InExceptionLocked() TA_REQ(get_lock());
 
   // Returns true if the thread is suspended or processing an exception.
   bool SuspendedOrInExceptionLocked() TA_REQ(get_lock());
 
-  // Helper routine to minimize code duplication.
-  zx_status_t MarkExceptionHandledWorker(PortDispatcher* eport,
-                                         ThreadState::Exception handled_state);
   // change states of the object, do what is appropriate for the state transition
   void SetStateLocked(ThreadState::Lifecycle lifecycle) TA_REQ(get_lock());
 
@@ -291,25 +249,18 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // get put on a wait queue, the thread was never really blocked.
   volatile Blocked blocked_reason_ = Blocked::NONE;
 
-  // Thread-level exception handler.
+  // Support for sending an exception to an exception handler and then waiting for a response.
   // Exceptionates have internal locking so we don't need to guard it here.
   Exceptionate exceptionate_;
-  fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
-
-  // Support for sending an exception to an exception handler and then waiting for a response.
-
-  // The exception port of the handler the thread is waiting for a response from.
-  fbl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(get_lock());
   const zx_exception_report_t* exception_report_ TA_GUARDED(get_lock());
   event_t exception_event_ = EVENT_INITIAL_VALUE(exception_event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 
   // Non-null if the thread is currently processing a channel exception.
   fbl::RefPtr<ExceptionDispatcher> exception_ TA_GUARDED(get_lock());
 
-  // Some glue to temporarily bridge state between channel-based and
-  // port-based exception handling until we remove ports.
-  ExceptionPort::Type channel_exception_wait_type_ TA_GUARDED(get_lock()) =
-      ExceptionPort::Type::NONE;
+  // Holds the type of the exceptionate currently processing the exception,
+  // which may be our |exceptionate_| or one of our parents'.
+  uint32_t exceptionate_type_ TA_GUARDED(get_lock()) = ZX_EXCEPTION_CHANNEL_TYPE_NONE;
 
   // cleanup dpc structure
   dpc_t cleanup_dpc_ = {LIST_INITIAL_CLEARED_VALUE, nullptr, nullptr};

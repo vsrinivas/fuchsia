@@ -16,7 +16,6 @@ zx_library("object") {
     "exception.cc",
     "exception_dispatcher.cc",
     "exceptionate.cc",
-    "excp_port.cc",
     "fifo_dispatcher.cc",
     "futex_context.cc",
     "glue.cc",

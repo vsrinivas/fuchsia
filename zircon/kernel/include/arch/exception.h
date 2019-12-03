@@ -7,13 +7,11 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_ARCH_EXCEPTION_H_
 #define ZIRCON_KERNEL_INCLUDE_ARCH_EXCEPTION_H_
 
-#include <fbl/ref_ptr.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 struct thread_t;
-class ExceptionPort;
 typedef struct arch_exception_context arch_exception_context_t;
 typedef struct zx_exception_report zx_exception_report_t;
 
@@ -21,12 +19,6 @@ typedef struct zx_exception_report zx_exception_report_t;
 // |context| is architecture-specific, and can be dumped to the console
 // using arch_dump_exception_context(). Implemented by non-arch code.
 zx_status_t dispatch_user_exception(uint exception_type, const arch_exception_context_t* context);
-
-// Dispatches a debug exception to |eport|.
-// The returned value is the result of calling
-// |ThreadDispatcher::ExceptionHandlerExchange()|.
-zx_status_t dispatch_debug_exception(fbl::RefPtr<ExceptionPort> eport, uint exception_type,
-                                     const arch_exception_context_t* context);
 
 // Dispatches an exception that was raised by a syscall using
 // thread_signal_policy_exception() (see <kernel/thread.h>), causing

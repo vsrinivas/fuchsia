@@ -24,7 +24,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <kernel/thread.h>
-#include <object/excp_port.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -68,7 +67,7 @@ ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, threa
                                    uint32_t flags)
     : process_(ktl::move(process)),
       core_thread_(core_thread),
-      exceptionate_(ExceptionPort::Type::THREAD) {
+      exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_THREAD) {
   LTRACE_ENTRY_OBJ;
   thread_set_usermode_thread(core_thread_, this);
   kcounter_add(dispatcher_thread_create_count, 1);
@@ -351,14 +350,7 @@ void ThreadDispatcher::Exiting() {
   // try to read thread registers. The debugger still has to handle the case
   // where the process is also dying (and thus the thread could transition
   // DYING->DEAD from underneath it), but that's life (or death :-)).
-  // N.B. OnThreadExitForDebugger will block in ExceptionHandlerExchange, so
-  // don't hold the process's |state_lock_| across the call.
-  {
-    fbl::RefPtr<ExceptionPort> eport(process_->debugger_exception_port());
-    if (eport) {
-      eport->OnThreadExitForDebugger(this);
-    }
-  }
+  //
   // Thread exit exceptions don't currently provide an iframe.
   arch_exception_context_t context{};
   HandleSingleShotException(process_->exceptionate(Exceptionate::Type::kDebug),
@@ -472,15 +464,6 @@ int ThreadDispatcher::StartRoutine(void* arg) {
   }
 
   // Notify debugger if attached.
-  // This is done by first obtaining our own reference to the port so the
-  // test can be done safely. Note that this function doesn't return so we
-  // need the reference to go out of scope before then.
-  {
-    fbl::RefPtr<ExceptionPort> debugger_port(t->process_->debugger_exception_port());
-    if (debugger_port) {
-      debugger_port->OnThreadStartForDebugger(t, &context);
-    }
-  }
   t->HandleSingleShotException(t->process_->exceptionate(Exceptionate::Type::kDebug),
                                ZX_EXCP_THREAD_STARTING, context);
 
@@ -520,263 +503,7 @@ void ThreadDispatcher::SetStateLocked(ThreadState::Lifecycle lifecycle) {
   }
 }
 
-zx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
-  canary_.Assert();
-
-  DEBUG_ASSERT(eport->type() == ExceptionPort::Type::THREAD);
-
-  // Lock |state_lock_| to ensure the thread doesn't transition to dead
-  // while we're setting the exception handler.
-  Guard<fbl::Mutex> guard{get_lock()};
-  if (state_.lifecycle() == ThreadState::Lifecycle::DEAD)
-    return ZX_ERR_NOT_FOUND;
-  if (exception_port_)
-    return ZX_ERR_ALREADY_BOUND;
-  exception_port_ = eport;
-
-  return ZX_OK;
-}
-
-bool ThreadDispatcher::ResetExceptionPort() {
-  canary_.Assert();
-
-  fbl::RefPtr<ExceptionPort> eport;
-
-  // Remove the exception handler first. If the thread resumes execution
-  // we don't want it to hit another exception and get back into
-  // ExceptionHandlerExchange.
-  {
-    Guard<fbl::Mutex> guard{get_lock()};
-    exception_port_.swap(eport);
-    if (eport == nullptr) {
-      // Attempted to unbind when no exception port is bound.
-      return false;
-    }
-    // This method must guarantee that no caller will return until
-    // OnTargetUnbind has been called on the port-to-unbind.
-    // This becomes important when a manual unbind races with a
-    // PortDispatcher::on_zero_handles auto-unbind.
-    //
-    // If OnTargetUnbind were called outside of the lock, it would lead to
-    // a race (for threads A and B):
-    //
-    //   A: Calls ResetExceptionPort; acquires the lock
-    //   A: Sees a non-null exception_port_, swaps it into the eport local.
-    //      exception_port_ is now null.
-    //   A: Releases the lock
-    //
-    //   B: Calls ResetExceptionPort; acquires the lock
-    //   B: Sees a null exception_port_ and returns. But OnTargetUnbind()
-    //      hasn't yet been called for the port.
-    //
-    // So, call it before releasing the lock
-    eport->OnTargetUnbind();
-  }
-
-  OnExceptionPortRemoval(eport);
-  return true;
-}
-
-fbl::RefPtr<ExceptionPort> ThreadDispatcher::exception_port() {
-  canary_.Assert();
-
-  Guard<fbl::Mutex> guard{get_lock()};
-  return exception_port_;
-}
-
-zx_status_t ThreadDispatcher::ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort> eport,
-                                                       const zx_exception_report_t* report,
-                                                       const arch_exception_context_t* arch_context,
-                                                       ThreadState::Exception* out_estatus) {
-  canary_.Assert();
-
-  LTRACE_ENTRY_OBJ;
-
-  // Note: As far as userspace is concerned there is no state change that we would notify state
-  // tracker observers of, currently.
-  //
-  // Send message, wait for reply. Note that there is a "race" that we need handle: We need to
-  // send the exception report before going to sleep, but what if the receiver of the report gets
-  // it and processes it before we are asleep? This is handled by locking state_lock_ in places
-  // where the handler can see/modify thread state.
-
-  EnterException(eport, report, arch_context);
-
-  zx_status_t status;
-
-  {
-    // The caller may have already done this, but do it again for the
-    // one-off callers like the debugger synthetic exceptions.
-    AutoBlocked by(Blocked::EXCEPTION);
-
-    // There's no need to send the message under the lock, but we do need to make sure our
-    // exception state and blocked state are up to date before sending the message. Otherwise, a
-    // debugger could get the packet and observe them before we've updated them. Thus, send the
-    // packet after updating both exception state and blocked state.
-    status = eport->SendPacket(this, report->header.type);
-    if (status != ZX_OK) {
-      // Can't send the request to the exception handler. Report the error, which will
-      // probably kill the process.
-      LTRACEF("SendPacket returned %d\n", status);
-
-      Guard<fbl::Mutex> guard{get_lock()};
-
-      // The report didn't go out, but we're in an exception here so a
-      // buggy handler could have tried to respond. Clear any event out.
-      event_unsignal(&exception_event_);
-
-      ExitExceptionLocked();
-      return status;
-    }
-
-    // Continue to wait for the exception response if we get suspended.
-    // If it is suspended, the suspension will be processed after the
-    // exception response is received (requiring a second resume).
-    // Exceptions and suspensions are essentially treated orthogonally.
-
-    do {
-      status = event_wait_with_mask(&exception_event_, THREAD_SIGNAL_SUSPEND);
-    } while (status == ZX_ERR_INTERNAL_INTR_RETRY);
-  }
-
-  Guard<fbl::Mutex> guard{get_lock()};
-
-  // If both the thread was killed and the exception was resumed before we
-  // started waiting, the exception resume status (ZX_OK) might be returned,
-  // but we want thread kill to always take priority and stop exception
-  // handling immediately.
-  //
-  // Note that this logic will always trigger for ZX_EXCP_THREAD_EXITING
-  // whether the thread was killed or is exiting normally, but that's fine
-  // because that exception only ever goes to a single handler so we ignore
-  // the handler return value anyway.
-  if (IsDyingOrDeadLocked()) {
-    status = ZX_ERR_INTERNAL_INTR_KILLED;
-  }
-
-  // Note: If |status| != ZX_OK, then |state_| is still
-  // ThreadState::Exception::UNPROCESSED.
-  switch (status) {
-    case ZX_OK:
-      // Fetch TRY_NEXT/RESUME status.
-      *out_estatus = state_.exception();
-      DEBUG_ASSERT(*out_estatus == ThreadState::Exception::TRY_NEXT ||
-                   *out_estatus == ThreadState::Exception::RESUME);
-      break;
-    case ZX_ERR_INTERNAL_INTR_KILLED:
-      // Thread was killed.
-      // Ensure |exception_event_| is no longer signaled.
-      event_unsignal(&exception_event_);
-      break;
-    default:
-      ASSERT_MSG(false, "unexpected exception result: %d\n", status);
-      __UNREACHABLE;
-  }
-
-  ExitExceptionLocked();
-
-  LTRACEF("returning status %d, estatus %d\n", status, static_cast<int>(*out_estatus));
-  return status;
-}
-
-void ThreadDispatcher::EnterException(fbl::RefPtr<ExceptionPort> eport,
-                                      const zx_exception_report_t* report,
-                                      const arch_exception_context_t* arch_context) {
-  Guard<fbl::Mutex> guard{get_lock()};
-
-  // |exception_event_| can't be signaled yet, we're not in an exception yet.
-  DEBUG_ASSERT(!event_signaled(&exception_event_));
-
-  // Mark that we're in an exception.
-  core_thread_->exception_context = arch_context;
-
-  // For GetExceptionReport.
-  exception_report_ = report;
-
-  // For OnExceptionPortRemoval in case the port is unbound.
-  DEBUG_ASSERT(exception_wait_port_ == nullptr);
-  exception_wait_port_ = eport;
-
-  state_.set(ThreadState::Exception::UNPROCESSED);
-}
-
-void ThreadDispatcher::ExitExceptionLocked() {
-  // It's critical that at this point the event no longer be armed.
-  // Otherwise the next time we get an exception we'll fall right through
-  // without waiting for an exception response.
-  // Note: The event could be signaled after event_wait_with_mask returns
-  // if the thread was killed while the event was signaled.
-  DEBUG_ASSERT(!event_signaled(&exception_event_));
-
-  exception_wait_port_.reset();
-  exception_report_ = nullptr;
-  core_thread_->exception_context = nullptr;
-  state_.set(ThreadState::Exception::IDLE);
-}
-
-zx_status_t ThreadDispatcher::MarkExceptionHandledWorker(PortDispatcher* eport,
-                                                         ThreadState::Exception handled_state) {
-  canary_.Assert();
-
-  LTRACEF("obj %p, handled_state %d\n", this, static_cast<int>(handled_state));
-
-  Guard<fbl::Mutex> guard{get_lock()};
-  if (!InPortExceptionLocked())
-    return ZX_ERR_BAD_STATE;
-
-  // The exception port isn't used directly but is instead proof that the caller has
-  // permission to resume from the exception. So validate that it corresponds to the
-  // task being resumed.
-  if (!exception_wait_port_->PortMatches(eport, /* allow_null */ false))
-    return ZX_ERR_ACCESS_DENIED;
-
-  // The thread can be in several states at this point. Alas this is a bit complicated because
-  // there is a window in the middle of ExceptionHandlerExchange between the thread going to sleep
-  // and after the thread waking up where we can obtain the lock. Things are further complicated
-  // by the fact that OnExceptionPortRemoval could get there first, or we might get called a
-  // second time for the same exception. It's critical that we don't re-arm the event after the
-  // thread wakes up. To keep things simple we take a first-one-wins approach.
-  if (state_.exception() != ThreadState::Exception::UNPROCESSED)
-    return ZX_ERR_BAD_STATE;
-
-  state_.set(handled_state);
-  event_signal(&exception_event_, true);
-  return ZX_OK;
-}
-
-zx_status_t ThreadDispatcher::MarkExceptionHandled(PortDispatcher* eport) {
-  return MarkExceptionHandledWorker(eport, ThreadState::Exception::RESUME);
-}
-
-zx_status_t ThreadDispatcher::MarkExceptionNotHandled(PortDispatcher* eport) {
-  return MarkExceptionHandledWorker(eport, ThreadState::Exception::TRY_NEXT);
-}
-
-void ThreadDispatcher::OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& eport) {
-  canary_.Assert();
-
-  LTRACE_ENTRY_OBJ;
-  Guard<fbl::Mutex> guard{get_lock()};
-  if (!InPortExceptionLocked())
-    return;
-  if (exception_wait_port_ == eport) {
-    // Leave things alone if already processed. See MarkExceptionHandled.
-    if (state_.exception() == ThreadState::Exception::UNPROCESSED) {
-      state_.set(ThreadState::Exception::TRY_NEXT);
-      event_signal(&exception_event_, true);
-    }
-  }
-}
-
-bool ThreadDispatcher::InPortExceptionLocked() {
-  canary_.Assert();
-
-  LTRACE_ENTRY_OBJ;
-  DEBUG_ASSERT(get_lock()->lock().IsHeld());
-  return thread_stopped_in_exception(core_thread_);
-}
-
-bool ThreadDispatcher::InChannelExceptionLocked() {
+bool ThreadDispatcher::InExceptionLocked() {
   canary_.Assert();
 
   LTRACE_ENTRY_OBJ;
@@ -786,8 +513,7 @@ bool ThreadDispatcher::InChannelExceptionLocked() {
 
 bool ThreadDispatcher::SuspendedOrInExceptionLocked() {
   canary_.Assert();
-  return state_.lifecycle() == ThreadState::Lifecycle::SUSPENDED || InPortExceptionLocked() ||
-         InChannelExceptionLocked();
+  return state_.lifecycle() == ThreadState::Lifecycle::SUSPENDED || InExceptionLocked();
 }
 
 static zx_thread_state_t ThreadLifecycleToState(ThreadState::Lifecycle lifecycle,
@@ -837,52 +563,12 @@ static zx_thread_state_t ThreadLifecycleToState(ThreadState::Lifecycle lifecycle
   }
 }
 
-static uint32_t ExceptionPortTypeToUserspaceVal(ExceptionPort::Type type) {
-  switch (type) {
-    case ExceptionPort::Type::NONE:
-      return ZX_EXCEPTION_PORT_TYPE_NONE;
-    case ExceptionPort::Type::DEBUGGER:
-      return ZX_EXCEPTION_PORT_TYPE_DEBUGGER;
-    case ExceptionPort::Type::JOB_DEBUGGER:
-      return ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER;
-    case ExceptionPort::Type::THREAD:
-      return ZX_EXCEPTION_PORT_TYPE_THREAD;
-    case ExceptionPort::Type::PROCESS:
-      return ZX_EXCEPTION_PORT_TYPE_PROCESS;
-    case ExceptionPort::Type::JOB:
-      return ZX_EXCEPTION_PORT_TYPE_JOB;
-    default:
-      DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d", static_cast<int>(type));
-      return ZX_EXCEPTION_PORT_TYPE_NONE;
-  }
-}
-
 zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
   canary_.Assert();
   Guard<fbl::Mutex> guard{get_lock()};
 
-  // Calculate thread state.
   info->state = ThreadLifecycleToState(state_.lifecycle(), blocked_reason_);
-
-  // Calculate exception status.
-  if (InChannelExceptionLocked()) {
-    info->wait_exception_port_type = ExceptionPortTypeToUserspaceVal(channel_exception_wait_type_);
-  } else if (InPortExceptionLocked() &&
-             // A port type of !NONE here indicates to the caller that the
-             // thread is waiting for an exception response. So don't return
-             // !NONE if the thread just woke up but hasn't reacquired
-             // |state_lock_|.
-             state_.exception() == ThreadState::Exception::UNPROCESSED) {
-    DEBUG_ASSERT(exception_wait_port_ != nullptr);
-    info->wait_exception_port_type = ExceptionPortTypeToUserspaceVal(exception_wait_port_->type());
-  } else {
-    // Either we're not in an exception, or we're in the window where
-    // event_wait_deadline has woken up but |state_lock_| has
-    // not been reacquired.
-    DEBUG_ASSERT(exception_wait_port_ == nullptr ||
-                 state_.exception() != ThreadState::Exception::UNPROCESSED);
-    info->wait_exception_port_type = ExceptionPortTypeToUserspaceVal(ExceptionPort::Type::NONE);
-  }
+  info->wait_exception_channel_type = exceptionate_type_;
 
   // Get CPU affinity.
   //
@@ -912,10 +598,7 @@ zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) 
   LTRACE_ENTRY_OBJ;
   Guard<fbl::Mutex> guard{get_lock()};
 
-  if (InPortExceptionLocked()) {
-    DEBUG_ASSERT(exception_report_ != nullptr);
-    *report = *exception_report_;
-  } else if (InChannelExceptionLocked()) {
+  if (InExceptionLocked()) {
     // We always leave exception handling before the report gets wiped
     // so this must succeed.
     [[maybe_unused]] bool success = exception_->FillReport(report);
@@ -958,7 +641,7 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
 
     // This state is needed by GetInfoForUserspace().
     exception_ = exception;
-    channel_exception_wait_type_ = exceptionate->port_type();
+    exceptionate_type_ = exceptionate->type();
     state_.set(ThreadState::Exception::UNPROCESSED);
   }
 
@@ -984,7 +667,6 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
   }
 
   exception_.reset();
-  channel_exception_wait_type_ = ExceptionPort::Type::NONE;
   state_.set(ThreadState::Exception::IDLE);
 
   return status;
@@ -1008,8 +690,7 @@ bool ThreadDispatcher::HandleSingleShotException(Exceptionate* exceptionate,
   arch_install_context_regs(core_thread_, &context);
   auto auto_call = fbl::MakeAutoCall([this]() { arch_remove_context_regs(core_thread_); });
 
-  zx_exception_report_t report;
-  ExceptionPort::BuildArchReport(&report, exception_type, &context);
+  zx_exception_report_t report = ExceptionDispatcher::BuildArchReport(exception_type, context);
 
   fbl::RefPtr<ExceptionDispatcher> exception =
       ExceptionDispatcher::Create(fbl::RefPtr(this), exception_type, &report, &context);
