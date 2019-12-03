@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"golang.org/x/crypto/ssh"
@@ -22,13 +22,13 @@ import (
 func TestTester(t *testing.T) {
 	cases := []struct {
 		name   string
-		test   testsharder.Test
+		test   build.Test
 		stdout string
 		stderr string
 	}{
 		{
 			name: "should run a command a local subprocess",
-			test: testsharder.Test{
+			test: build.Test{
 				Name:  "hello_world_test",
 				Label: "//a/b/c/hello_word:hello_world_test(//toolchain)",
 				// Assumes that we're running on a Unix system.
@@ -89,13 +89,13 @@ func TestSSHTester(t *testing.T) {
 
 	cases := []struct {
 		name   string
-		tests  []testsharder.Test
+		tests  []build.Test
 		stdout string
 		stderr string
 	}{
 		{
 			name: "should run a command over SSH",
-			tests: []testsharder.Test{
+			tests: []build.Test{
 				{
 					Name: "hello_world_test",
 					// Just 'echo' and not '/bin/echo' because this assumes we're running on
@@ -107,7 +107,7 @@ func TestSSHTester(t *testing.T) {
 		},
 		{
 			name: "should run successive commands over SSH",
-			tests: []testsharder.Test{
+			tests: []build.Test{
 				{
 					Name:    "test_1",
 					Command: []string{"echo", "this is test 1"},

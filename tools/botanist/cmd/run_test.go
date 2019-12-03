@@ -7,10 +7,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"go.fuchsia.dev/fuchsia/tools/botanist/target"
-	"go.fuchsia.dev/fuchsia/tools/build/api"
-	"go.fuchsia.dev/fuchsia/tools/lib/color"
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"io"
 	"io/ioutil"
 	"os"
@@ -18,6 +14,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/botanist/target"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 func TestExecute(t *testing.T) {

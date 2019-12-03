@@ -22,7 +22,7 @@ type TestModifier struct {
 	Target string `json:"target"`
 
 	// OS is the operating system in which this test must be executed; treated as "fuchsia" if not present.
-	OS OS `json:"os,omitempty"`
+	OS string `json:"os,omitempty"`
 
 	// TotalRuns is the number of times to run the test; treated as 1 if not present.
 	TotalRuns int `json:"total_runs,omitempty"`
@@ -53,7 +53,7 @@ func LoadTestModifiers(manifestPath string) ([]TestModifier, error) {
 			specs[i].TotalRuns = 1
 		}
 		if specs[i].OS == "" {
-			specs[i].OS = Fuchsia
+			specs[i].OS = "fuchsia"
 		}
 	}
 	return specs, nil

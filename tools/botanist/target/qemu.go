@@ -15,7 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
 )
 
@@ -114,7 +114,7 @@ func (t *QEMUTarget) SSHKey() string {
 }
 
 // Start starts the QEMU target.
-func (t *QEMUTarget) Start(ctx context.Context, images build.Images, args []string) error {
+func (t *QEMUTarget) Start(ctx context.Context, images []build.Image, args []string) error {
 	qemuTarget, ok := qemuTargetMapping[t.config.Target]
 	if !ok {
 		return fmt.Errorf("invalid target %q", t.config.Target)
@@ -128,20 +128,34 @@ func (t *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 		return fmt.Errorf("could not find qemu-system binary %q: %v", qemuSystem, err)
 	}
 
-	qemuKernel := images.Get("qemu-kernel")
-	if qemuKernel == nil {
-		return fmt.Errorf("could not find qemu-kernel")
+	absImagePath := func(name string) (string, error) {
+		var img *build.Image
+		for i := range images {
+			if images[i].Name == name {
+				img = &images[i]
+			}
+		}
+		if img == nil {
+			return "", fmt.Errorf("could not find %s", name)
+		}
+		return filepath.Abs(img.Path)
 	}
-	zirconA := images.Get("zircon-a")
-	if zirconA == nil {
-		return fmt.Errorf("could not find zircon-a")
+
+	qemuKernel, err := absImagePath("qemu-kernel")
+	if err != nil {
+		return err
+	}
+	zirconA, err := absImagePath("zircon-a")
+	if err != nil {
+		return err
 	}
 
 	var drives []qemu.Drive
-	if storageFull := images.Get("storage-full"); storageFull != nil {
+	storageFull, err := absImagePath("storage-full")
+	if err == nil {
 		drives = append(drives, qemu.Drive{
 			ID:   "maindisk",
-			File: storageFull.Path,
+			File: storageFull,
 		})
 	}
 	if t.config.MinFS != nil {
@@ -184,8 +198,8 @@ func (t *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 		CPU:      t.config.CPU,
 		Memory:   t.config.Memory,
 		KVM:      t.config.KVM,
-		Kernel:   qemuKernel.Path,
-		Initrd:   zirconA.Path,
+		Kernel:   qemuKernel,
+		Initrd:   zirconA,
 		Drives:   drives,
 		Networks: networks,
 	}

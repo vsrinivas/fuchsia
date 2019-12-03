@@ -29,7 +29,7 @@ go_library("main") {
     ":lib",
     "//third_party/golibs:cloud.google.com/go/storage",
     "//third_party/golibs:github.com/google/subcommands",
-    "//tools/build/api",
+    "//tools/build",
     "//tools/lib/color",
     "//tools/lib/logger",
   ]
@@ -38,7 +38,7 @@ go_library("main") {
 go_library("lib") {
   name = "go.fuchsia.dev/fuchsia/tools/artifactory/lib"
   deps = [
-    "//tools/build/api",
+    "//tools/build",
     "//tools/lib/logger",
   ]
 }

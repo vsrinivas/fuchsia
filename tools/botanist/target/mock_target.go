@@ -9,7 +9,7 @@ import (
 	"io"
 	"net"
 
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
 // MockTarget represents a mock target device to use for testing.
@@ -48,7 +48,7 @@ func (t *MockTarget) SSHKey() string {
 }
 
 // Start starts the target.
-func (t *MockTarget) Start(ctx context.Context, images build.Images, args []string) error {
+func (t *MockTarget) Start(ctx context.Context, images []build.Image, args []string) error {
 	return nil
 }
 

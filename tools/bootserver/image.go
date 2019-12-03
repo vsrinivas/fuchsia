@@ -5,7 +5,7 @@
 package bootserver
 
 import (
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
 // Image is a fuchsia image as viewed by bootserver; a simplified version of build.Image.

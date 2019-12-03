@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -15,7 +16,7 @@ import (
 	"os"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
 )
@@ -84,7 +85,7 @@ func main() {
 
 	// Load tests.
 	testsPath := flag.Arg(0)
-	tests, err := testsharder.LoadTests(testsPath)
+	tests, err := loadTests(testsPath)
 	if err != nil {
 		log.Fatalf("failed to load tests from %q: %v", testsPath, err)
 	}
@@ -108,15 +109,29 @@ func main() {
 	}
 }
 
-func execute(tests []testsharder.Test, output *Output, nodename, sshKeyFile string) error {
-	var linux, mac, fuchsia, unknown []testsharder.Test
+func loadTests(path string) ([]build.Test, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %q: %v", path, err)
+	}
+
+	var tests []build.Test
+	if err := json.Unmarshal(bytes, &tests); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal %q: %v", path, err)
+	}
+
+	return tests, nil
+}
+
+func execute(tests []build.Test, output *Output, nodename, sshKeyFile string) error {
+	var linux, mac, fuchsia, unknown []build.Test
 	for _, test := range tests {
 		switch test.OS {
-		case testsharder.Fuchsia:
+		case "fuchsia":
 			fuchsia = append(fuchsia, test)
-		case testsharder.Linux:
+		case "linux":
 			linux = append(linux, test)
-		case testsharder.Mac:
+		case "mac":
 			mac = append(mac, test)
 		default:
 			unknown = append(unknown, test)
@@ -143,7 +158,7 @@ func execute(tests []testsharder.Test, output *Output, nodename, sshKeyFile stri
 	return runFuchsiaTests(fuchsia, output, nodename, sshKeyFile)
 }
 
-func runFuchsiaTests(tests []testsharder.Test, output *Output, nodename, sshKeyFile string) error {
+func runFuchsiaTests(tests []build.Test, output *Output, nodename, sshKeyFile string) error {
 	if len(tests) == 0 {
 		return nil
 	} else if nodename == "" {
@@ -164,7 +179,7 @@ func runFuchsiaTests(tests []testsharder.Test, output *Output, nodename, sshKeyF
 	return runTests(tests, tester.Test, output)
 }
 
-func runTests(tests []testsharder.Test, tester Tester, output *Output) error {
+func runTests(tests []build.Test, tester Tester, output *Output) error {
 	for _, test := range tests {
 		result, err := runTest(context.Background(), test, tester)
 		if err != nil {
@@ -177,7 +192,7 @@ func runTests(tests []testsharder.Test, tester Tester, output *Output) error {
 	return nil
 }
 
-func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testrunner.TestResult, error) {
+func runTest(ctx context.Context, test build.Test, tester Tester) (*testrunner.TestResult, error) {
 	result := runtests.TestSuccess
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
@@ -210,7 +225,7 @@ func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testru
 	// test.Name is available but is not necessarily a unique identifier for
 	// each test, so we use either path or package URL instead.
 	name := test.Path
-	if test.OS == testsharder.Fuchsia {
+	if test.OS == "fuchsia" {
 		name = test.PackageURL
 	}
 

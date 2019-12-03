@@ -10,7 +10,7 @@ go_library("bootserver_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/bootserver/lib"
   deps = [
     "//third_party/golibs:golang.org/x/crypto",
-    "//tools/build/api",
+    "//tools/build",
     "//tools/lib/logger",
     "//tools/lib/retry",
     "//tools/net/netboot",

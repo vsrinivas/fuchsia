@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
 )
@@ -60,23 +61,32 @@ func init() {
 
 func main() {
 	flag.Parse()
+	if err := execute(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func execute() error {
 
 	if buildDir == "" {
-		log.Fatal("must specify a Fuchsia build output directory")
+		return fmt.Errorf("must specify a Fuchsia build output directory")
 	}
 
-	specs, err := testsharder.LoadTestSpecs(buildDir)
+	modCtx, err := build.NewModules(buildDir)
 	if err != nil {
-		log.Fatal(err)
-	}
-	platforms, err := testsharder.LoadPlatforms(buildDir)
-	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	// Verify that the produced specs specify valid test environments.
-	if err = testsharder.ValidateTestSpecs(specs, platforms); err != nil {
-		log.Fatal(err)
+	if err = testsharder.ValidateTests(modCtx.TestSpecs(), modCtx.Platforms()); err != nil {
+		return err
+	}
+
+	// TODO(fxbug.dev/37955): Fetch test specs via modCtx once the
+	// `DepsFile`-related logic has been separated out into a separate
+	// utility.
+	specs, err := testsharder.LoadTestSpecs(modCtx.BuildDir())
+	if err != nil {
+		return err
 	}
 
 	// Create shards and write them to an output file if specifed, else stdout.
@@ -84,7 +94,7 @@ func main() {
 	if multipliersPath != "" {
 		multipliers, err := testsharder.LoadTestModifiers(multipliersPath)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		shards = testsharder.MultiplyShards(shards, multipliers)
 	}
@@ -94,7 +104,7 @@ func main() {
 		var err error
 		f, err = os.Create(outputFile)
 		if err != nil {
-			log.Fatalf("unable to create %s: %v", outputFile, err)
+			return fmt.Errorf("unable to create %s: %v", outputFile, err)
 		}
 		defer f.Close()
 	}
@@ -102,6 +112,7 @@ func main() {
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(&shards); err != nil {
-		log.Fatal("failed to encode shards: ", err)
+		return fmt.Errorf("failed to encode shards: ", err)
 	}
+	return nil
 }

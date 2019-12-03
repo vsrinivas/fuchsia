@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/subcommands"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 

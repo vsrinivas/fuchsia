@@ -21,12 +21,12 @@ var barTestModifier = TestModifier{
 
 var bazTestModifier = TestModifier{
 	Name: "baz_host_tests",
-	OS:   Linux,
+	OS:   "linux",
 }
 
 var deprecatedTestModifier = TestModifier{
 	Target:    "this_field_is_deprecated",
-	OS:        Linux,
+	OS:        "linux",
 	TotalRuns: 2,
 }
 
@@ -34,7 +34,7 @@ var deprecatedTestModifier = TestModifier{
 // instead of Target.
 var parsedDeprecatedTestModifier = TestModifier{
 	Name:      "this_field_is_deprecated",
-	OS:        Linux,
+	OS:        "linux",
 	TotalRuns: 2,
 }
 
@@ -81,7 +81,7 @@ func TestLoadTestModifiers(t *testing.T) {
 	bazOut.TotalRuns = 1
 	barOut := barTestModifier
 	// If OS is missing, it gets set to default Fuchsia.
-	barOut.OS = Fuchsia
+	barOut.OS = "fuchsia"
 	expected := []TestModifier{barOut, bazOut, parsedDeprecatedTestModifier}
 
 	if !areEqual(expected, actual) {

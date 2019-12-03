@@ -13,88 +13,88 @@ import (
 	"sort"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
-var qemuPlatform = DimensionSet{
+var qemuPlatform = build.DimensionSet{
 	DeviceType: "QEMU",
 }
 
-var nucPlatform = DimensionSet{
+var nucPlatform = build.DimensionSet{
 	DeviceType: "NUC",
 }
 
-var linuxPlatform = DimensionSet{
+var linuxPlatform = build.DimensionSet{
 	OS: "Linux",
 }
 
-var macPlatform = DimensionSet{
+var macPlatform = build.DimensionSet{
 	OS: "Mac",
 }
 
-var qemuEnv = Environment{
+var qemuEnv = build.Environment{
 	Dimensions: qemuPlatform,
 }
 
-var nucEnv = Environment{
+var nucEnv = build.Environment{
 	Dimensions: nucPlatform,
 }
 
-var linuxEnv = Environment{
+var linuxEnv = build.Environment{
 	Dimensions: linuxPlatform,
 }
 
-var macEnv = Environment{
+var macEnv = build.Environment{
 	Dimensions: macPlatform,
 }
 
-var specFoo1 = TestSpec{
-	Test: Test{
+var specFoo1 = build.TestSpec{
+	Test: build.Test{
 		Name:    "foo_unittests",
 		Label:   "//obsidian/bin/foo:foo_unittests(//build/toolchain/fuchsia:x64",
 		Path:    "/system/test/foo_unittests",
-		OS:      Fuchsia,
+		OS:      "fuchsia",
 		Command: []string{"/system/test/foo_unittests", "bar", "baz"},
 	},
-	Envs: []Environment{qemuEnv},
+	Envs: []build.Environment{qemuEnv},
 }
 
-var specFoo2 = TestSpec{
-	Test: Test{
-		Name:  "foo_integration_tests",
+var specFoo2 = build.TestSpec{
+	Test: build.Test{
+		Name:  "//obsidian/bin/foo:foo_integration_tests",
 		Label: "//obsidian/bin/foo:foo_integration_tests(//build/toolchain/fuchsia:x64",
 		Path:  "/system/test/foo_integration_tests",
-		OS:    Fuchsia,
+		OS:    "fuchsia",
 	},
-	Envs: []Environment{qemuEnv, nucEnv},
+	Envs: []build.Environment{qemuEnv, nucEnv},
 }
 
-var specBar = TestSpec{
-	Test: Test{
-		Name:  "bar_tests",
+var specBar = build.TestSpec{
+	Test: build.Test{
+		Name:  "//obsidian/lib/bar:bar_tests",
 		Label: "//obsidian/lib/bar:bar_tests(//build/toolchain/fuchsia:x64",
 		Path:  "/system/test/bar_tests",
-		OS:    Fuchsia,
+		OS:    "fuchsia",
 	},
-	Envs: []Environment{qemuEnv},
+	Envs: []build.Environment{qemuEnv},
 }
 
-var specBaz = TestSpec{
-	Test: Test{
-		Name:  "baz_host_tests",
+var specBaz = build.TestSpec{
+	Test: build.Test{
+		Name:  "//obsidian/public/lib/baz:baz_host_tests",
 		Label: "//obsidian/public/lib/baz:baz_host_tests(//build/toolchain/fuchsia:x64",
 		Path:  "/$root_build_dir/baz_host_tests",
-		OS:    Linux,
+		OS:    "linux",
 	},
-	Envs: []Environment{linuxEnv, macEnv},
+	Envs: []build.Environment{linuxEnv, macEnv},
 }
 
 func TestLoadTestSpecs(t *testing.T) {
-	areEqual := func(a, b []TestSpec) bool {
-		stringify := func(spec TestSpec) string {
+	areEqual := func(a, b []build.TestSpec) bool {
+		stringify := func(spec build.TestSpec) string {
 			return fmt.Sprintf("%#v", spec)
 		}
-		sort := func(list []TestSpec) {
+		sort := func(list []build.TestSpec) {
 			sort.Slice(list[:], func(i, j int) bool {
 				return stringify(list[i]) < stringify(list[j])
 			})
@@ -123,9 +123,9 @@ func TestLoadTestSpecs(t *testing.T) {
 
 	specBazIn := specBaz
 	specBazIn.RuntimeDepsFile = "deps.json"
-	initial := []TestSpec{specBar, specBazIn}
+	initial := []build.TestSpec{specBar, specBazIn}
 
-	manifest := filepath.Join(tmpDir, build.TestSpecManifestName)
+	manifest := filepath.Join(tmpDir, build.TestModuleName)
 	m, err := os.Create(manifest)
 	if err != nil {
 		t.Fatal(err)
@@ -142,84 +142,84 @@ func TestLoadTestSpecs(t *testing.T) {
 
 	specBazOut := specBaz
 	specBazOut.Deps = deps
-	expected := []TestSpec{specBar, specBazOut}
+	expected := []build.TestSpec{specBar, specBazOut}
 
 	if !areEqual(expected, actual) {
 		t.Fatalf("test specs not properly loaded:\nexpected:\n%+v\nactual:\n%+v", expected, actual)
 	}
 }
 
-func TestValidateTestSpecs(t *testing.T) {
-	noTestNameSpec := TestSpec{
-		Test: Test{
+func TestValidateTests(t *testing.T) {
+	noTestNameSpec := build.TestSpec{
+		Test: build.Test{
 			Label: "//obsidian/public/lib/baz:baz_tests(//toolchain)",
 			Path:  "/system/test/baz_tests",
-			OS:    Linux,
+			OS:    "linux",
 		},
-		Envs: []Environment{qemuEnv},
+		Envs: []build.Environment{qemuEnv},
 	}
-	noTestLabelSpec := TestSpec{
-		Test: Test{
+	noTestLabelSpec := build.TestSpec{
+		Test: build.Test{
 			Name: "something_tests",
 			Path: "/system/test/something_tests",
-			OS:   Linux,
+			OS:   "linux",
 		},
-		Envs: []Environment{qemuEnv},
+		Envs: []build.Environment{qemuEnv},
 	}
-	noTestPathSpec := TestSpec{
-		Test: Test{
+	noTestPathSpec := build.TestSpec{
+		Test: build.Test{
 			Name:  "baz_tests",
 			Label: "//obsidian/public/lib/baz:baz_tests(//toolchain)",
-			OS:    Linux,
+			OS:    "linux",
 		},
-		Envs: []Environment{qemuEnv},
+		Envs: []build.Environment{qemuEnv},
 	}
-	noOSSpec := TestSpec{
-		Test: Test{
+	noOSSpec := build.TestSpec{
+		Test: build.Test{
 			Name:  "foo_unittests",
 			Label: "//obsidian/bin/foo:foo_unittests(//toolchain)",
 			Path:  "/system/test/foo_unittests",
 		},
 	}
-	badEnvSpec := TestSpec{
-		Test: Test{
+	badEnvSpec := build.TestSpec{
+		Test: build.Test{
 			Name:  "baz_tests",
 			Label: "//obsidian/public/lib/baz:baz_tests(//toolchain)",
 			Path:  "/system/test/baz_tests",
-			OS:    Linux,
+			OS:    "linux",
 		},
-		Envs: []Environment{
+		Envs: []build.Environment{
 			{
-				Dimensions: DimensionSet{
+				Dimensions: build.DimensionSet{
 					DeviceType: "NON-EXISTENT-DEVICE",
 				},
 			},
 		},
 	}
-	platforms := []DimensionSet{qemuPlatform, nucPlatform}
+	platforms := []build.DimensionSet{qemuPlatform, nucPlatform}
 
 	t.Run("valid specs are validated", func(t *testing.T) {
-		validSpecLists := [][]TestSpec{
+		validSpecLists := [][]build.TestSpec{
 			{specFoo1}, {specFoo2}, {specBar},
 			{specFoo1, specFoo2}, {specFoo1, specBar}, {specFoo2, specBar},
 			{specFoo1, specFoo2, specBar},
 		}
 		for _, list := range validSpecLists {
-			if err := ValidateTestSpecs(list, platforms); err != nil {
+			if err := ValidateTests(list, platforms); err != nil {
 				t.Fatalf("valid specs marked as invalid: %+v: %v", list, err)
 			}
 		}
 	})
 
 	t.Run("invalid specs are invalidated", func(t *testing.T) {
-		invalidSpecLists := [][]TestSpec{
+		invalidSpecLists := [][]build.TestSpec{
 			{noOSSpec}, {noTestNameSpec}, {noTestPathSpec}, {noTestLabelSpec},
 			{badEnvSpec}, {noTestNameSpec, noTestPathSpec},
 			{noTestNameSpec, badEnvSpec}, {noTestPathSpec, badEnvSpec},
 			{noTestNameSpec, noTestPathSpec, badEnvSpec},
 		}
 		for _, list := range invalidSpecLists {
-			if err := ValidateTestSpecs(list, platforms); err == nil {
+			if err := ValidateTests(list, platforms); err == nil {
 				t.Fatalf("invalid specs marked as valid: %+v", list)
 			}
 		}

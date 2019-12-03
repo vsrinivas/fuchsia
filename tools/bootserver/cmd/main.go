@@ -13,7 +13,7 @@ import (
 	"os"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )

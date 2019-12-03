@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
@@ -80,7 +80,7 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.serialLogFile, "serial-log", "", "file to write the serial logs to.")
 }
 
-func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, t tftp.Client, cmdlineArgs []string) error {
+func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []build.Image, t tftp.Client, cmdlineArgs []string) error {
 	logger.Debugf(ctx, "waiting for %q\n", cmd.summaryFilename)
 	return runtests.PollForSummary(ctx, t, cmd.summaryFilename, cmd.testResultsDir, cmd.outputArchive, cmd.filePollInterval)
 }

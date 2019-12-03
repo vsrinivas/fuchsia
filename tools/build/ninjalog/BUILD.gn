@@ -6,11 +6,11 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("ninjalog") {
-  name = "go.fuchsia.dev/fuchsia/tools/build/ninjalog"
+  name = "go.fuchsia.dev/fuchsia/tools/build/lib/ninjalog"
 }
 
 go_test("ninjalog_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjalog" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/lib/ninjalog" ]
   deps = [
     ":ninjalog",
   ]

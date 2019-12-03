@@ -7,11 +7,11 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("gndoc_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/build/gndoc/lib"
+  name = "go.fuchsia.dev/fuchsia/tools/build/lib/gndoc/lib"
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/build/gndoc/cmd"
+  name = "go.fuchsia.dev/fuchsia/tools/build/lib/gndoc/cmd"
   source_dir = "cmd"
   deps = [
     ":gndoc_lib",
@@ -19,14 +19,14 @@ go_library("main") {
 }
 
 go_binary("gndoc") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/build/gndoc/cmd"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/build/lib/gndoc/cmd"
   deps = [
     ":main",
   ]
 }
 
 go_test("gndoc_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/gndoc/lib" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/lib/gndoc/lib" ]
   deps = [
     ":gndoc_lib",
   ]

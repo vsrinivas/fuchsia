@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
@@ -25,7 +25,7 @@ func TestRunTest(t *testing.T) {
 		{
 			name:    "timeout set on ctx",
 			timeout: time.Second, // Arbitrary positive timeout
-			tester: func(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer) error {
+			tester: func(ctx context.Context, test build.Test, stdout, stderr io.Writer) error {
 				if _, ok := ctx.Deadline(); !ok {
 					return fmt.Errorf("Expected ctx to have a deadline, but it does not")
 				}
@@ -41,7 +41,7 @@ func TestRunTest(t *testing.T) {
 			defer func() {
 				perTestTimeout = oldPerTestTimeout
 			}()
-			result, err := runTest(context.Background(), testsharder.Test{}, tt.tester)
+			result, err := runTest(context.Background(), build.Test{}, tt.tester)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}

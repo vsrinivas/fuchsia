@@ -5,33 +5,13 @@
 package testsharder
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"path/filepath"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
-// Environment describes the full environment a test requires.
-// The GN environments specified by test authors in the Fuchsia source
-// correspond directly to the Environment struct defined here.
-type Environment struct {
-	// Dimensions gives the Swarming dimensions a test wishes to target.
-	Dimensions DimensionSet `json:"dimensions"`
-
-	// Tags are keys given to an environment on which the testsharder may filter.
-	Tags []string `json:"tags,omitempty"`
-
-	// ServiceAccount gives a service account to attach to Swarming task.
-	ServiceAccount string `json:"service_account,omitempty"`
-
-	// Netboot tells whether to "netboot" instead of paving before running the tests.
-	Netboot bool `json:"netboot,omitempty"`
-}
-
 // Name returns a name calculated from its specfied properties.
-func (env Environment) Name() string {
+func environmentName(env build.Environment) string {
 	tokens := []string{}
 	addToken := func(s string) {
 		if s != "" {
@@ -55,57 +35,20 @@ func (env Environment) Name() string {
 	return strings.Join(tokens, "-")
 }
 
-// DimensionSet encapsulates the Swarming dimensions a test wishes to target.
-type DimensionSet struct {
-	// DeviceType represents the class of device the test should run on.
-	// This is a required field.
-	DeviceType string `json:"device_type,omitempty"`
-
-	// The OS to run the test on (e.g., "Linux" or "Mac"). Used for host-side testing.
-	OS string `json:"os,omitempty"`
-
-	// The CPU type that the test is meant to run on.
-	CPU string `json:"cpu,omitempty"`
-
-	// Testbed denotes a physical test device configuration to run a test on (e.g., multi-device set-ups or devices inside chambers for connectivity testing).
-	Testbed string `json:"testbed,omitempty"`
-
-	// Pool denotes the swarming pool to run a test in.
-	Pool string `json:"pool,omitempty"`
-}
-
 // resolvesTo gives a partial ordering on DimensionSets in which one resolves to
-// another if the former's dimensions are given the latter.
-func (dims DimensionSet) resolvesTo(other DimensionSet) bool {
-	if dims.DeviceType != "" && dims.DeviceType != other.DeviceType {
+// anthat if the former's dimensions are given the latter.
+func resolvesTo(this, that build.DimensionSet) bool {
+	if this.DeviceType != "" && this.DeviceType != that.DeviceType {
 		return false
 	}
-	if dims.OS != "" && dims.OS != other.OS {
+	if this.OS != "" && this.OS != that.OS {
 		return false
 	}
-	if dims.Testbed != "" && dims.Testbed != other.Testbed {
+	if this.Testbed != "" && this.Testbed != that.Testbed {
 		return false
 	}
-	if dims.Pool != "" && dims.Pool != other.Pool {
+	if this.Pool != "" && this.Pool != that.Pool {
 		return false
 	}
 	return true
-}
-
-// LoadPlatforms loads the list of test platforms specified as a JSON list
-// produced by a build, given the root of the build directory.
-// Note that by "platforms" we mean a specific group of dimension sets which
-// correspond to the currently available test platforms supported by the
-// infrastructure.
-func LoadPlatforms(fuchsiaBuildDir string) ([]DimensionSet, error) {
-	platformManifestPath := filepath.Join(fuchsiaBuildDir, build.PlatformManifestName)
-	bytes, err := ioutil.ReadFile(platformManifestPath)
-	if err != nil {
-		return nil, err
-	}
-	var platforms []DimensionSet
-	if err = json.Unmarshal(bytes, &platforms); err != nil {
-		return nil, err
-	}
-	return platforms, err
 }

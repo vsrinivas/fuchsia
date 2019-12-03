@@ -12,10 +12,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -36,7 +37,7 @@ const (
 )
 
 // Tester is executes a Test.
-type Tester func(context.Context, testsharder.Test, io.Writer, io.Writer) error
+type Tester func(context.Context, build.Test, io.Writer, io.Writer) error
 
 // SubprocessTester executes tests in local subprocesses.
 type SubprocessTester struct {
@@ -44,7 +45,7 @@ type SubprocessTester struct {
 	env []string
 }
 
-func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
+func (t *SubprocessTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) error {
 	command := test.Command
 	if len(test.Command) == 0 {
 		if test.Path == "" {
@@ -77,7 +78,7 @@ func NewSSHTester(newClient func(context.Context) (*ssh.Client, error)) (*SSHTes
 	return &SSHTester{client: client, newClient: newClient}, nil
 }
 
-func (t *SSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
+func (t *SSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) error {
 	if _, _, err := t.client.Conn.SendRequest(keepAliveOpenSSH, true, nil); err != nil {
 		logger.Errorf(ctx, "SSH client not responsive: %v", err)
 		client, err := t.newClient(ctx)
@@ -144,7 +145,7 @@ func NewFuchsiaTester(nodename string, sshKey []byte, useRuntests bool) (*Fuchsi
 	return tester, nil
 }
 
-func (t *FuchsiaTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
+func (t *FuchsiaTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) error {
 	if len(test.Command) == 0 {
 		if !useRuntests && test.PackageURL != "" {
 			if strings.HasSuffix(test.PackageURL, componentV2Suffix) {

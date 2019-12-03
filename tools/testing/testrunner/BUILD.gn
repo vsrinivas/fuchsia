@@ -19,7 +19,7 @@ go_library("outputs") {
   deps = [
     ":testrunner_lib",
     "//third_party/golibs:golang.org/x/crypto",
-    "//tools/integration/testsharder:testsharder_lib",
+    "//tools/build",
     "//tools/lib/runner",
     "//tools/net/sshutil",
     "//tools/testing/tap",

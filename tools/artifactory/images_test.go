@@ -5,93 +5,93 @@
 package artifactory
 
 import (
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
+// Implements imgModules
+type mockModules struct {
+	imgs []build.Image
+}
+
+func (m mockModules) BuildDir() string {
+	return "BUILD_DIR"
+}
+
+func (m mockModules) ImageManifest() string {
+	return "BUILD_DIR/IMAGE_MANIFEST"
+}
+
+func (m mockModules) Images() []build.Image {
+	return m.imgs
+}
+
 func TestImageUploads(t *testing.T) {
-	var mockManifest = `[
-  {
-    "bootserver_pave": [
-      "--bootloader"
-    ],
-    "name": "bootloader",
-    "path": "bootloader"
-  },
-  {
-    "bootserver_pave": [
-      "--zirconr"
-    ],
-    "name": "zircon-r",
-    "path": "zedboot.zbi",
-    "type": "zbi"
-  },
-  {
-    "bootserver_pave": [
-      "--zircona"
-    ],
-    "name": "zircon-a",
-    "path": "fuchsia.zbi",
-    "type": "zbi"
-  },
-  {
-    "bootserver_netboot": [
-      "--boot"
-    ],
-    "name": "fuchsia",
-    "path": "fuchsia.zbi",
-    "type": "zbi"
-  },
-  {
-    "name": "qemu-kernel",
-    "path": "qemu-kernel.bin",
-    "type": "kernel"
-  },
-  {
-    "name": "pave",
-    "path": "pave.sh",
-    "type": "sh"
-  }
-]`
-	tmpDir, err := ioutil.TempDir("", "test-data")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
+	m := &mockModules{
+		imgs: []build.Image{
+			{
+				PaveArgs: []string{"--bootloader"},
+				Name:     "bootloader",
+				Path:     "bootloader",
+			},
+			{
+				PaveArgs: []string{"--zirconr"},
+				Name:     "zircon-r",
+				Path:     "zedboot.zbi",
+				Type:     "zbi",
+			},
+			{
+				PaveArgs: []string{"--zircona"},
+				Name:     "zircon-a",
+				Path:     "fuchsia.zbi",
+				Type:     "zbi",
+			},
+			{
+				NetbootArgs: []string{"--boot"},
+				Name:        "fuchsia",
+				Path:        "fuchsia.zbi",
+				Type:        "zbi",
+			},
+			{
+				Name: "qemu-kernel",
+				Path: "qemu-kernel.bin",
+				Type: "kernel",
+			},
+			{
+				Name: "pave",
+				Path: "pave.sh",
+				Type: "sh",
+			},
+		},
 	}
-	defer os.RemoveAll(tmpDir)
-	imgManifest := filepath.Join(tmpDir, "images.json")
-	if err := ioutil.WriteFile(imgManifest, []byte(mockManifest), 0444); err != nil {
-		t.Fatalf("failed to write image manifest: %v", err)
-	}
+
 	expected := []Upload{
 		{
-			Source:      imgManifest,
-			Destination: "namespace/images.json",
+			Source:      "BUILD_DIR/IMAGE_MANIFEST",
+			Destination: "namespace/IMAGE_MANIFEST",
 		},
 		{
-			Source:      filepath.Join(tmpDir, "bootloader"),
+			Source:      filepath.Join("BUILD_DIR", "bootloader"),
 			Destination: "namespace/bootloader",
 		},
 		{
-			Source:      filepath.Join(tmpDir, "zedboot.zbi"),
+			Source:      filepath.Join("BUILD_DIR", "zedboot.zbi"),
 			Destination: "namespace/zedboot.zbi",
 		},
 		{
-			Source:      filepath.Join(tmpDir, "fuchsia.zbi"),
+			Source:      filepath.Join("BUILD_DIR", "fuchsia.zbi"),
 			Destination: "namespace/fuchsia.zbi",
 		},
 		{
-			Source:      filepath.Join(tmpDir, "qemu-kernel.bin"),
+			Source:      filepath.Join("BUILD_DIR", "qemu-kernel.bin"),
 			Destination: "namespace/qemu-kernel.bin",
 		},
 	}
-	actual, err := ImageUploads(tmpDir, "namespace")
-	if err != nil {
-		t.Fatalf("failed to get image Uploads: %v", err)
-	}
+	actual := imageUploads(m, "namespace")
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("unexpected image uploads: actual: %v, expected: %v", actual, expected)
+		t.Fatalf("unexpected image uploads:\nexpected: %v\nactual: %v\n", expected, actual)
 	}
 }

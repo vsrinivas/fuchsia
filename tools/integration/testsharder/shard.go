@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
 // Shard represents a set of tests with a common execution environment.
@@ -16,24 +18,24 @@ type Shard struct {
 	Name string `json:"name"`
 
 	// Tests is the set of tests to be executed in this shard.
-	Tests []Test `json:"tests"`
+	Tests []build.Test `json:"tests"`
 
 	// Env is a generalized notion of the execution environment for the shard.
-	Env Environment `json:"environment"`
+	Env build.Environment `json:"environment"`
 }
 
 // MakeShards is the core algorithm to this tool. It takes a set of test specs and produces
 // a set of shards which may then be converted into Swarming tasks.
 // A single output Shard will contain only tests that have the same Envs.
 //
-// Environments that do not match all tags will be ignored.
+// build.Environments that do not match all tags will be ignored.
 //
 // In Restricted mode, environments that don't specify a ServiceAccount will be ignored.
-func MakeShards(specs []TestSpec, mode Mode, tags []string) []*Shard {
+func MakeShards(specs []build.TestSpec, mode Mode, tags []string) []*Shard {
 	// Collect the order of the shards so our shard ordering is deterministic with
 	// respect to the input.
 	envToSuites := newEnvMap()
-	envs := []Environment{}
+	envs := []build.Environment{}
 	for _, spec := range specs {
 		for _, env := range spec.Envs {
 			if !stringSlicesEq(tags, env.Tags) {
@@ -61,12 +63,12 @@ func MakeShards(specs []TestSpec, mode Mode, tags []string) []*Shard {
 		sort.Slice(specs, func(i, j int) bool {
 			return specs[i].Test.Name < specs[j].Test.Name
 		})
-		var tests []Test
+		var tests []build.Test
 		for _, spec := range specs {
 			tests = append(tests, spec.Test)
 		}
 		shards = append(shards, &Shard{
-			Name:  env.Name(),
+			Name:  environmentName(env),
 			Tests: tests,
 			Env:   env,
 		})
@@ -144,8 +146,8 @@ func normalizeTestName(name string) string {
 }
 
 // Returns a list of Tests containing the same test multiplied by the number of runs.
-func multiplyTest(test Test, runs int) []Test {
-	var tests []Test
+func multiplyTest(test build.Test, runs int) []build.Test {
+	var tests []build.Test
 	for i := 1; i <= runs; i++ {
 		testCopy := test
 		testCopy.Name = fmt.Sprintf("%s (%d)", test.Name, i)
@@ -154,22 +156,22 @@ func multiplyTest(test Test, runs int) []Test {
 	return tests
 }
 
-// Abstracts a mapping Environment -> []string, as Environment contains non-comparable
+// Abstracts a mapping build.Environment -> []string, as build.Environment contains non-comparable
 // members (e.g., string slices), which makes it invalid for a map key.
 type envMap struct {
-	m map[string][]TestSpec
+	m map[string][]build.TestSpec
 }
 
 func newEnvMap() envMap {
-	return envMap{m: make(map[string][]TestSpec)}
+	return envMap{m: make(map[string][]build.TestSpec)}
 }
 
-func (em envMap) get(e Environment) ([]TestSpec, bool) {
+func (em envMap) get(e build.Environment) ([]build.TestSpec, bool) {
 	specs, ok := em.m[fmt.Sprintf("%v", e)]
 	return specs, ok
 }
 
-func (em *envMap) set(e Environment, specs []TestSpec) {
+func (em *envMap) set(e build.Environment, specs []build.TestSpec) {
 	em.m[fmt.Sprintf("%v", e)] = specs
 }
 

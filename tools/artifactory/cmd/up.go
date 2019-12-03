@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"go.fuchsia.dev/fuchsia/tools/artifactory/lib"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 
 	"cloud.google.com/go/storage"
@@ -99,6 +100,11 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		return fmt.Errorf("-uuid is required")
 	}
 
+	m, err := build.NewModules(buildDir)
+	if err != nil {
+		return err
+	}
+
 	sink, err := newCloudSink(ctx, cmd.gcsBucket)
 	if err != nil {
 		return err
@@ -109,10 +115,6 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	metadataDir := path.Join(repo, metadataDirName)
 	keyDir := path.Join(repo, keyDirName)
 	blobDir := path.Join(metadataDir, blobDirName)
-	imgFiles, err := artifactory.ImageUploads(buildDir, path.Join(cmd.uuid, imageDirName))
-	if err != nil {
-		return err
-	}
 
 	uploads := []struct {
 		// Path on disk to a directory from which to upload.
@@ -160,7 +162,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 				j:               1,
 				failOnCollision: true,
 			},
-			files: imgFiles,
+			files: artifactory.ImageUploads(m, path.Join(cmd.uuid, imageDirName)),
 		},
 	}
 

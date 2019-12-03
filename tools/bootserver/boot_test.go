@@ -10,7 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
 func TestFilterZedbootShimImages(t *testing.T) {

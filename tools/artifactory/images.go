@@ -5,50 +5,45 @@
 package artifactory
 
 import (
-	"fmt"
-	"path"
 	"path/filepath"
 
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
 // ImageUploads parses the image manifest located in buildDir and returns a
 // list of Uploads for the images used for testing.
-func ImageUploads(buildDir, namespace string) ([]Upload, error) {
-	imageManifest := path.Join(buildDir, build.ImageManifestName)
-	imgs, err := build.LoadImages(imageManifest)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load images: %v", err)
+func ImageUploads(mods *build.Modules, namespace string) []Upload {
+	return imageUploads(mods, namespace)
+}
+
+func imageUploads(mods imgModules, namespace string) []Upload {
+	manifestName := filepath.Base(mods.ImageManifest())
+
+	files := []Upload{
+		{
+			Source:      mods.ImageManifest(),
+			Destination: filepath.Join(namespace, manifestName),
+		},
 	}
-	// build.LoadImages makes all image paths absolute, so in order to get
-	// the relative path to the build dir (to use as the relative path to the
-	// images dir in GCS), we need to make sure buildDir is absolute as well.
-	if !filepath.IsAbs(buildDir) {
-		buildDir, err = filepath.Abs(buildDir)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get absolute path to build dir: %v", err)
-		}
-	}
-	files := []Upload{{
-		Source:      imageManifest,
-		Destination: filepath.Join(namespace, build.ImageManifestName)}}
+
+	// The same image might appear in multiple entries.
 	seen := make(map[string]bool)
-	for _, img := range imgs {
-		if isActualImage(img) {
-			relPath, err := filepath.Rel(buildDir, img.Path)
-			if err != nil {
-				return nil, err
-			}
-			if _, ok := seen[img.Path]; !ok {
-				files = append(files, Upload{
-					Source:      img.Path,
-					Destination: filepath.Join(namespace, relPath),
-				})
-				seen[img.Path] = true
-			}
+	for _, img := range mods.Images() {
+		if _, ok := seen[img.Path]; !ok && isActualImage(img) {
+			files = append(files, Upload{
+				Source:      filepath.Join(mods.BuildDir(), img.Path),
+				Destination: filepath.Join(namespace, img.Path),
+			})
+			seen[img.Path] = true
 		}
 	}
-	return files, nil
+	return files
+}
+
+type imgModules interface {
+	BuildDir() string
+	Images() []build.Image
+	ImageManifest() string
 }
 
 func isActualImage(img build.Image) bool {

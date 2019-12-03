@@ -18,7 +18,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
-	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
@@ -46,7 +46,7 @@ type Target interface {
 	SSHKey() string
 
 	// Start starts the target.
-	Start(ctx context.Context, images build.Images, args []string) error
+	Start(ctx context.Context, images []build.Image, args []string) error
 
 	// Restart restarts the target.
 	Restart(ctx context.Context) error
