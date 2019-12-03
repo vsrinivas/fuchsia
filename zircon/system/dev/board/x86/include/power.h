@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_POWER_H_
-#define ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_POWER_H_
+#ifndef ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_POWER_H_
+#define ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_POWER_H_
 
 #include <zircon/types.h>
+
+__BEGIN_CDECLS
 
 typedef struct {
   uint32_t type;
@@ -71,4 +73,6 @@ void reboot_recovery(void);
 void reboot_bootloader(void);
 zx_status_t suspend_to_ram(void);
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_POWER_H_
+__END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_POWER_H_

@@ -26,7 +26,8 @@ void reboot(void) {
 
 void reboot_bootloader(void) {
   // Please do not use get_root_resource() in new code. See ZX-1467.
-  zx_status_t status = zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, NULL);
+  zx_status_t status =
+      zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, NULL);
   if (status != ZX_OK)
     zxlogf(ERROR, "acpi: Failed to enter bootloader reboot: %d\n", status);
   AcpiReset();
@@ -34,7 +35,8 @@ void reboot_bootloader(void) {
 
 void reboot_recovery(void) {
   // Please do not use get_root_resource() in new code. See ZX-1467.
-  zx_status_t status = zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, NULL);
+  zx_status_t status =
+      zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, NULL);
   if (status != ZX_OK)
     zxlogf(ERROR, "acpi: Failed to enter recovery reboot: %d\n", status);
   AcpiReset();
@@ -53,7 +55,8 @@ zx_status_t suspend_to_ram(void) {
     goto cleanup;
   }
 
-  ACPI_STATUS acpi_status = AcpiEnterSleepStatePrep(3);
+  ACPI_STATUS acpi_status;
+  acpi_status = AcpiEnterSleepStatePrep(3);
   if (acpi_status != AE_OK) {
     zxlogf(ERROR, "acpi: Failed to prep enter sleep state: %x\n", acpi_status);
     // TODO: I think we need to do LeaveSleepState{Prep,} on failure
@@ -81,8 +84,8 @@ zx_status_t suspend_to_ram(void) {
     zxlogf(ERROR, "acpi: Failed to leave sleep state: %x\n", acpi_status);
   }
 
-  zx_status_t status2;
 cleanup:
+  zx_status_t status2;
   // Please do not use get_root_resource() in new code. See ZX-1467.
   status2 = zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS, NULL);
   if (status2 != ZX_OK) {
