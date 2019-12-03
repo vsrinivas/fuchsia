@@ -92,6 +92,7 @@ bits ContextFeatureFlags : uint64 {
 table CreateContextParams {
     /// Service directory to be used by the context. The following services must be present in the
     /// directory:
+    /// - [`fuchsia.accessibility.semantics.SemanticsManager`]
     /// - [`fuchsia.deprecatedtimezone.Timezone`]
     /// - [`fuchsia.device.NameProvider`]
     /// - [`fuchsia.fonts.Provider`]
