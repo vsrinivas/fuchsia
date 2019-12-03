@@ -15,6 +15,7 @@ use {
         directory::{self, entry::DirectoryEntry},
         file::simple::read_only,
     },
+    fuchsia_zircon::{AsHandleRef, Koid},
     futures::{future::BoxFuture, lock::Mutex, prelude::*},
     std::{
         boxed::Box,
@@ -164,6 +165,10 @@ struct MockRunnerInner {
 
     /// Set of URLs that the MockRunner will fail the `start` call for.
     failing_urls: HashSet<String>,
+
+    /// Map from the `Koid` of `Channel` owned by a `ComponentController` to
+    /// the messages received by that controller.
+    runner_requests: Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>>,
 }
 
 pub struct MockRunner {
@@ -185,6 +190,7 @@ impl MockRunner {
                 outgoing_host_fns: HashMap::new(),
                 runtime_host_fns: HashMap::new(),
                 failing_urls: HashSet::new(),
+                runner_requests: Arc::new(Mutex::new(HashMap::new())),
             }),
         }
     }
@@ -213,17 +219,27 @@ impl MockRunner {
     pub fn get_namespace(&self, name: &str) -> Option<Arc<ManagedNamespace>> {
         self.inner.lock().unwrap().namespaces.get(name).map(Arc::clone)
     }
+
+    pub fn get_request_map(&self) -> Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>> {
+        self.inner.lock().unwrap().runner_requests.clone()
+    }
 }
 
 impl Runner for MockRunner {
     fn start(
         &self,
         start_info: fsys::ComponentStartInfo,
-        _server_chan: ServerEnd<fsys::ComponentControllerMarker>,
+        server_end: ServerEnd<fsys::ComponentControllerMarker>,
     ) -> BoxFuture<Result<(), RunnerError>> {
         let outgoing_host_fn;
         let runtime_host_fn;
-
+        let runner_requests;
+        // The koid is the only unique piece of information we have about a
+        // component start request. Two start requests for the same component
+        // URL look identical to the Runner, the only difference being the
+        // Channel passed to the Runner to use for the ComponentController
+        // protocol.
+        let channel_koid = server_end.as_handle_ref().basic_info().expect("basic info failed").koid;
         {
             let mut state = self.inner.lock().unwrap();
 
@@ -252,6 +268,7 @@ impl Runner for MockRunner {
             // function.
             outgoing_host_fn = state.outgoing_host_fns.get(&resolved_url).map(Arc::clone);
             runtime_host_fn = state.runtime_host_fns.get(&resolved_url).map(Arc::clone);
+            runner_requests = state.runner_requests.clone();
         }
 
         // Start serving the outgoing/runtime directories.
@@ -261,6 +278,7 @@ impl Runner for MockRunner {
         if let Some(runtime_host_fn) = runtime_host_fn {
             runtime_host_fn(start_info.runtime_dir.unwrap());
         }
+        MockController::new(server_end, runner_requests, channel_koid).serve();
 
         Box::pin(futures::future::ready(Ok(())))
     }
@@ -286,5 +304,67 @@ impl Binder for FakeBinder {
             Ok(Arc::new(Realm::new_root_realm(resolver, root_component_url)))
         }
         .boxed()
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum ControlMessage {
+    Stop,
+    Kill,
+}
+
+pub struct MockController {
+    pub messages: Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>>,
+    request_stream: fsys::ComponentControllerRequestStream,
+    koid: Koid,
+}
+
+impl MockController {
+    pub fn new(
+        server_end: ServerEnd<fsys::ComponentControllerMarker>,
+        messages: Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>>,
+        koid: Koid,
+    ) -> MockController {
+        MockController {
+            messages: messages,
+            request_stream: server_end.into_stream().expect("stream conversion failed"),
+            koid: koid,
+        }
+    }
+    /// Spawn an async execution context which takes ownership of `server_end`
+    /// and inserts `ControlMessage`s into `messages` based on events sent on
+    /// the `ComponentController` channel.
+    pub fn serve(mut self) {
+        // Listen to the ComponentController server end and record the messages
+        // that arrive. Exit after the first one, as this is the contract we
+        // have implemented so far. Exiting will cause our handle to the
+        // channel to drop and close the channel.
+        fasync::spawn(async move {
+            self.messages.lock().await.insert(self.koid, Vec::new());
+            while let Ok(Some(request)) = self.request_stream.try_next().await {
+                match request {
+                    fsys::ComponentControllerRequest::Stop { control_handle: c } => {
+                        self.messages
+                            .lock()
+                            .await
+                            .get_mut(&self.koid)
+                            .expect("component channel koid key missing from mock runner map")
+                            .push(ControlMessage::Stop);
+                        c.shutdown();
+                        break;
+                    }
+                    fsys::ComponentControllerRequest::Kill { control_handle: c } => {
+                        self.messages
+                            .lock()
+                            .await
+                            .get_mut(&self.koid)
+                            .expect("component channel koid key missing from mock runner map")
+                            .push(ControlMessage::Kill);
+                        c.shutdown();
+                        break;
+                    }
+                }
+            }
+        });
     }
 }

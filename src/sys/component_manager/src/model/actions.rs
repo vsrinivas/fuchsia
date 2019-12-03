@@ -262,6 +262,7 @@ mod tests {
         },
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
+        fuchsia_zircon::{AsHandleRef, Koid},
         std::{convert::TryFrom, sync::Weak, task::Context},
     };
 
@@ -332,6 +333,7 @@ mod tests {
         pub builtin_environment: Arc<BuiltinEnvironment>,
         test_hook: TestHook,
         realm_proxy: Option<fsys::RealmProxy>,
+        pub runner: Arc<MockRunner>,
     }
 
     impl ActionsTest {
@@ -353,7 +355,7 @@ mod tests {
             let _ = klog::KernelLogger::init();
 
             let mut resolver = ResolverRegistry::new();
-            let runner = MockRunner::new();
+            let runner = Arc::new(MockRunner::new());
 
             let mut mock_resolver = MockResolver::new();
             for (name, decl) in &components {
@@ -365,7 +367,7 @@ mod tests {
             let model = Arc::new(Model::new(ModelParams {
                 root_component_url: format!("test:///{}", root_component),
                 root_resolver_registry: resolver,
-                elf_runner: Arc::new(runner),
+                elf_runner: runner.clone(),
             }));
             // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
             // to start and stop in a certain lifecycle ordering. In particular, some unit
@@ -400,7 +402,7 @@ mod tests {
                 None
             };
 
-            Self { model, builtin_environment, test_hook, realm_proxy }
+            Self { model, builtin_environment, test_hook, realm_proxy, runner }
         }
 
         async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<Realm> {
@@ -450,25 +452,61 @@ mod tests {
         let realm = test.look_up(vec!["a:0"].into()).await;
         test.model.bind(&realm.abs_moniker).await.expect("could not bind to a");
         assert!(is_executing(&realm).await);
+        let a_info = ComponentInfo::new(realm.clone()).await;
 
         // Register shutdown action, and wait for it. Component should shut down (no more
         // `Execution`).
-        execute_action(test.model.clone(), realm.clone(), Action::Shutdown)
+        execute_action(test.model.clone(), a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm).await);
+        check_is_shut_down(&a_info, &test.runner).await;
 
         // Trying to bind to the component should fail because it's shut down.
         test.model
-            .bind(&realm.abs_moniker)
+            .bind(&a_info.realm.abs_moniker)
             .await
             .expect_err("successfully bound to a after shutdown");
 
         // Shut down the component again. This succeeds, but has no additional effect.
-        execute_action(test.model.clone(), realm.clone(), Action::Shutdown)
+        execute_action(test.model.clone(), a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm).await);
+        check_is_shut_down(&a_info, &test.runner).await;
+    }
+
+    struct ComponentInfo {
+        realm: Arc<Realm>,
+        channel_id: Koid,
+    }
+
+    impl ComponentInfo {
+        /// Given a `Realm` which has been bound, look up the resolved URL
+        /// and package into a `ComponentInfo` struct.
+        async fn new(realm: Arc<Realm>) -> ComponentInfo {
+            // The koid is the only unique piece of information we have about
+            // a component start request. Two start requests for the same
+            // component URL look identical to the Runner, the only difference
+            // being the Channel passed to the Runner to use for the
+            // ComponentController protocol.
+            let koid = {
+                let realm = realm.lock_execution().await;
+                let controller = realm
+                    .runtime
+                    .as_ref()
+                    .expect("runtime is unexpectedly missing")
+                    .controller
+                    .as_ref()
+                    .expect("controller is unexpectedly missing");
+                let basic_info = controller
+                    .as_handle_ref()
+                    .basic_info()
+                    .expect("error getting basic info about controller channel");
+                // should be the koid of the other side of the channel
+                basic_info.related_koid
+            };
+
+            ComponentInfo { realm, channel_id: koid }
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -527,19 +565,22 @@ mod tests {
         assert!(has_child(&realm_container, "coll:a:1").await);
         assert!(has_child(&realm_container, "coll:b:2").await);
 
+        let realm_a_info = ComponentInfo::new(realm_a).await;
+        let realm_b_info = ComponentInfo::new(realm_b).await;
+        let realm_container_info = ComponentInfo::new(realm_container).await;
+
         // Register shutdown action, and wait for it. Components should shut down (no more
         // `Execution`). Also, the instances in the collection should have been destroyed because
         // they were transient.
-        let realm_container = test.look_up(vec!["container:0"].into()).await;
-        execute_action(test.model.clone(), realm_container.clone(), Action::Shutdown)
+        execute_action(test.model.clone(), realm_container_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_container).await);
-        assert!(!has_child(&realm_container, "coll:a:1").await);
-        assert!(!has_child(&realm_container, "coll:b:2").await);
-        assert!(has_child(&realm_container, "c:0").await);
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
+        check_is_shut_down(&realm_container_info, &test.runner).await;
+        assert!(!has_child(&realm_container_info.realm, "coll:a:1").await);
+        assert!(!has_child(&realm_container_info.realm, "coll:b:2").await);
+        assert!(has_child(&realm_container_info.realm, "c:0").await);
+        check_is_shut_down(&realm_a_info, &test.runner).await;
+        check_is_shut_down(&realm_b_info, &test.runner).await;
 
         // Verify events.
         {
@@ -610,16 +651,16 @@ mod tests {
         execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
+        assert!(execution_is_shut_down(&realm_a).await);
+        assert!(execution_is_shut_down(&realm_b).await);
 
         // Now "a" is shut down. There should be no events though because the component was
         // never started.
         execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
+        assert!(execution_is_shut_down(&realm_a).await);
+        assert!(execution_is_shut_down(&realm_b).await);
         {
             let events: Vec<_> = test
                 .test_hook
@@ -681,14 +722,14 @@ mod tests {
         execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
+        assert!(execution_is_shut_down(&realm_a).await);
         // Get realm_b without resolving it.
         let realm_b = {
             let state = realm_a.lock_state().await;
             let state = state.as_ref().unwrap();
             state.get_live_child_realm(&PartialMoniker::from("b")).expect("child b not found")
         };
-        assert!(is_shut_down(&realm_b).await);
+        assert!(execution_is_shut_down(&realm_b).await);
         assert!(is_unresolved(&realm_b).await);
 
         // Now "a" is shut down. There should be no event for "b" because it was never started
@@ -772,15 +813,20 @@ mod tests {
         assert!(is_executing(&realm_c).await);
         assert!(is_executing(&realm_d).await);
 
+        let realm_a_info = ComponentInfo::new(realm_a).await;
+        let realm_b_info = ComponentInfo::new(realm_b).await;
+        let realm_c_info = ComponentInfo::new(realm_c).await;
+        let realm_d_info = ComponentInfo::new(realm_d).await;
+
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
-        assert!(is_shut_down(&realm_c).await);
-        assert!(is_shut_down(&realm_d).await);
+        check_is_shut_down(&realm_a_info, &test.runner).await;
+        check_is_shut_down(&realm_b_info, &test.runner).await;
+        check_is_shut_down(&realm_c_info, &test.runner).await;
+        check_is_shut_down(&realm_d_info, &test.runner).await;
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -927,16 +973,22 @@ mod tests {
         assert!(is_executing(&realm_d).await);
         assert!(is_executing(&realm_e).await);
 
+        let realm_a_info = ComponentInfo::new(realm_a).await;
+        let realm_b_info = ComponentInfo::new(realm_b).await;
+        let realm_c_info = ComponentInfo::new(realm_c).await;
+        let realm_d_info = ComponentInfo::new(realm_d).await;
+        let realm_e_info = ComponentInfo::new(realm_e).await;
+
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
-        assert!(is_shut_down(&realm_c).await);
-        assert!(is_shut_down(&realm_d).await);
-        assert!(is_shut_down(&realm_e).await);
+        check_is_shut_down(&realm_a_info, &test.runner).await;
+        check_is_shut_down(&realm_b_info, &test.runner).await;
+        check_is_shut_down(&realm_c_info, &test.runner).await;
+        check_is_shut_down(&realm_d_info, &test.runner).await;
+        check_is_shut_down(&realm_e_info, &test.runner).await;
 
         {
             let mut events: Vec<_> = test
@@ -1129,17 +1181,24 @@ mod tests {
         assert!(is_executing(&realm_e).await);
         assert!(is_executing(&realm_f).await);
 
+        let realm_a_info = ComponentInfo::new(realm_a).await;
+        let realm_b_info = ComponentInfo::new(realm_b).await;
+        let realm_c_info = ComponentInfo::new(realm_c).await;
+        let realm_d_info = ComponentInfo::new(realm_d).await;
+        let realm_e_info = ComponentInfo::new(realm_e).await;
+        let realm_f_info = ComponentInfo::new(realm_f).await;
+
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
-        assert!(is_shut_down(&realm_c).await);
-        assert!(is_shut_down(&realm_d).await);
-        assert!(is_shut_down(&realm_e).await);
-        assert!(is_shut_down(&realm_f).await);
+        check_is_shut_down(&realm_a_info, &test.runner).await;
+        check_is_shut_down(&realm_b_info, &test.runner).await;
+        check_is_shut_down(&realm_c_info, &test.runner).await;
+        check_is_shut_down(&realm_d_info, &test.runner).await;
+        check_is_shut_down(&realm_e_info, &test.runner).await;
+        check_is_shut_down(&realm_f_info, &test.runner).await;
 
         let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
         comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
@@ -1364,17 +1423,24 @@ mod tests {
         assert!(is_executing(&realm_e).await);
         assert!(is_executing(&realm_f).await);
 
+        let realm_a_info = ComponentInfo::new(realm_a).await;
+        let realm_b_info = ComponentInfo::new(realm_b).await;
+        let realm_c_info = ComponentInfo::new(realm_c).await;
+        let realm_d_info = ComponentInfo::new(realm_d).await;
+        let realm_e_info = ComponentInfo::new(realm_e).await;
+        let realm_f_info = ComponentInfo::new(realm_f).await;
+
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
-        assert!(is_shut_down(&realm_c).await);
-        assert!(is_shut_down(&realm_d).await);
-        assert!(is_shut_down(&realm_e).await);
-        assert!(is_shut_down(&realm_f).await);
+        check_is_shut_down(&realm_a_info, &test.runner).await;
+        check_is_shut_down(&realm_b_info, &test.runner).await;
+        check_is_shut_down(&realm_c_info, &test.runner).await;
+        check_is_shut_down(&realm_d_info, &test.runner).await;
+        check_is_shut_down(&realm_e_info, &test.runner).await;
+        check_is_shut_down(&realm_f_info, &test.runner).await;
 
         let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
         comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
@@ -1512,20 +1578,22 @@ mod tests {
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
-        assert!(is_executing(&realm_a).await);
-        assert!(is_executing(&realm_b).await);
-        assert!(is_executing(&realm_c).await);
-        assert!(is_executing(&realm_d).await);
+
+        let realm_a_info = ComponentInfo::new(realm_a).await;
+        let realm_b_info = ComponentInfo::new(realm_b).await;
+        let realm_c_info = ComponentInfo::new(realm_c).await;
+        let realm_d_info = ComponentInfo::new(realm_d).await;
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up and dependency order.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
-        assert!(is_shut_down(&realm_c).await);
-        assert!(is_shut_down(&realm_d).await);
+        check_is_shut_down(&realm_a_info, &test.runner).await;
+        check_is_shut_down(&realm_b_info, &test.runner).await;
+        check_is_shut_down(&realm_c_info, &test.runner).await;
+        check_is_shut_down(&realm_d_info, &test.runner).await;
+
         {
             let events: Vec<_> = test
                 .test_hook
@@ -1606,14 +1674,18 @@ mod tests {
         assert!(is_executing(&realm_b).await);
         assert!(is_executing(&realm_b2).await);
 
+        let realm_a_info = ComponentInfo::new(realm_a).await;
+        let realm_b_info = ComponentInfo::new(realm_b).await;
+        let realm_b2_info = ComponentInfo::new(realm_b2).await;
+
         // Register shutdown action on "a", and wait for it. This should cause all components
-        // that were started to shut down, in bottom-up order.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+        // to shut down, in bottom-up and dependency order.
+        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
-        assert!(is_shut_down(&realm_b2).await);
+        check_is_shut_down(&realm_a_info, &test.runner).await;
+        check_is_shut_down(&realm_b_info, &test.runner).await;
+        check_is_shut_down(&realm_b2_info, &test.runner).await;
         {
             let events: Vec<_> = test
                 .test_hook
@@ -1751,15 +1823,20 @@ mod tests {
         assert!(is_executing(&realm_c).await);
         assert!(is_executing(&realm_d).await);
 
+        let realm_a_info = ComponentInfo::new(realm_a).await;
+        let realm_b_info = ComponentInfo::new(realm_b).await;
+        let realm_c_info = ComponentInfo::new(realm_c).await;
+        let realm_d_info = ComponentInfo::new(realm_d).await;
+
         // Register shutdown action on "a", and wait for it. "b"'s realm shuts down, but "b"
         // returns an error so "a" does not.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect_err("shutdown succeeded unexpectedly");
-        assert!(!is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
-        assert!(is_shut_down(&realm_c).await);
-        assert!(is_shut_down(&realm_d).await);
+        check_not_shut_down(&realm_a_info, &test.runner).await;
+        check_is_shut_down(&realm_b_info, &test.runner).await;
+        check_is_shut_down(&realm_c_info, &test.runner).await;
+        check_is_shut_down(&realm_d_info, &test.runner).await;
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -1783,13 +1860,13 @@ mod tests {
 
         // Register shutdown action on "a" again. "b"'s shutdown succeeds (it's a no-op), and
         // "a" is allowed to shut down this time.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+        execute_action(test.model.clone(), realm_a_info.realm.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
-        assert!(is_shut_down(&realm_c).await);
-        assert!(is_shut_down(&realm_d).await);
+        check_is_shut_down(&realm_a_info, &test.runner).await;
+        check_is_shut_down(&realm_b_info, &test.runner).await;
+        check_is_shut_down(&realm_c_info, &test.runner).await;
+        check_is_shut_down(&realm_d_info, &test.runner).await;
         {
             let mut events: Vec<_> = test
                 .test_hook
@@ -1973,8 +2050,8 @@ mod tests {
         execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
-        assert!(is_shut_down(&realm_a).await);
-        assert!(is_shut_down(&realm_b).await);
+        assert!(execution_is_shut_down(&realm_a.clone()).await);
+        assert!(execution_is_shut_down(&realm_b.clone()).await);
 
         // Now delete child "a". This should cause all components to be destroyed.
         execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
@@ -2530,9 +2607,39 @@ mod tests {
         realm.lock_execution().await.runtime.is_some()
     }
 
-    async fn is_shut_down(realm: &Realm) -> bool {
+    async fn execution_is_shut_down(realm: &Realm) -> bool {
         let execution = realm.lock_execution().await;
         execution.runtime.is_none() && execution.is_shut_down()
+    }
+
+    /// Checks that the component is shut down, panics if this is not true.
+    async fn check_is_shut_down(component_info: &ComponentInfo, runner: &MockRunner) {
+        // Check the list of requests for this component
+        let request_map = runner.get_request_map();
+        let unlocked_map = request_map.lock().await;
+        let request_vec = unlocked_map
+            .get(&component_info.channel_id)
+            .expect("request map didn't have channel id, perhaps the controller wasn't started?");
+        assert_eq!(*request_vec, vec![ControlMessage::Stop]);
+
+        let execution = component_info.realm.lock_execution().await;
+        assert!(execution.runtime.is_none());
+        assert!(execution.is_shut_down());
+    }
+
+    /// Checks that the component has not been shut down, panics if it has.
+    async fn check_not_shut_down(component_info: &ComponentInfo, runner: &MockRunner) {
+        // Check the list of requests for this component
+        let request_map = runner.get_request_map();
+        let unlocked_map = request_map.lock().await;
+        let request_vec = unlocked_map
+            .get(&component_info.channel_id)
+            .expect("request map didn't have channel id, perhaps the controller wasn't started?");
+        assert_eq!(*request_vec, vec![]);
+
+        let execution = component_info.realm.lock_execution().await;
+        assert!(execution.runtime.is_some());
+        assert!(!execution.is_shut_down());
     }
 
     /// Verifies that a child realm is deleted by checking its RealmState

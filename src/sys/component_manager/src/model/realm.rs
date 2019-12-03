@@ -11,9 +11,12 @@ use {
     failure::format_err,
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_DIRECTORY},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::{BoxFuture, FutureExt},
-    futures::lock::{Mutex, MutexLockFuture},
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_zircon::{self as zx, AsHandleRef},
+    futures::{
+        future::{BoxFuture, FutureExt},
+        lock::{Mutex, MutexLockFuture},
+    },
     std::convert::TryInto,
     std::iter::Iterator,
     std::{
@@ -296,13 +299,12 @@ impl Realm {
         }
     }
 
-    /// Performs the shutdown protocol for this component instance.
+    /// Performs the stop protocol for this component instance.
     ///
     /// Returns whether the instance was already running, and notifications to wait on for
     /// transient children to be destroyed.
     ///
     /// REQUIRES: All dependents have already been stopped.
-    // TODO: This is a stub because currently the shutdown protocol is not implemented.
     pub async fn stop_instance(
         model: Arc<Model>,
         realm: Arc<Realm>,
@@ -313,6 +315,30 @@ impl Realm {
             let was_running = {
                 let mut execution = realm.lock_execution().await;
                 let was_running = execution.runtime.is_some();
+                if let Some(runtime) = &mut execution.runtime {
+                    if let Some(controller) = &runtime.controller {
+                        // Tell the controller to stop the component, but
+                        // ignore any FIDL error since we will proceed with
+                        // our shutdown procedure even if the channel is closed.
+                        match controller.stop() {
+                            Ok(()) | Err(fidl::Error::ClientChannelClosed(_)) => {}
+                            Err(e) => {
+                                return Err(ModelError::RunnerCommunicationError {
+                                    moniker: realm.abs_moniker.clone(),
+                                    operation: "stop".to_string(),
+                                    err: clonable_error::ClonableError::from(failure::Error::from(
+                                        e,
+                                    )),
+                                });
+                            }
+                        }
+                    }
+
+                    // component runner closed the control channel, shutdown is
+                    // complete
+                    runtime.wait_on_channel_close().await;
+                }
+
                 execution.runtime = None;
                 execution.shut_down |= shut_down;
                 was_running
@@ -677,7 +703,6 @@ impl RealmState {
 }
 
 /// The execution state for a component instance that has started running.
-// TODO: Hold the component instance's controller.
 pub struct Runtime {
     /// The resolved component URL returned by the resolver.
     pub resolved_url: String,
@@ -710,5 +735,18 @@ impl Runtime {
             exposed_dir,
             controller,
         })
+    }
+
+    pub async fn wait_on_channel_close(&mut self) {
+        if let Some(controller) = &self.controller {
+            let controller_ref = controller.as_ref();
+            fasync::OnSignals::new(
+                &controller_ref.as_handle_ref(),
+                zx::Signals::CHANNEL_PEER_CLOSED,
+            )
+            .await
+            .expect("failed waiting for channel to close");
+            self.controller = None;
+        }
     }
 }
