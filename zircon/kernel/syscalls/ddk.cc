@@ -471,7 +471,8 @@ zx_status_t sys_pmt_unpin(zx_handle_t handle) {
     return ZX_ERR_WRONG_TYPE;
   }
 
-  pmt_dispatcher->MarkUnpinned();
+  pmt_dispatcher->Unpin();
+
   return ZX_OK;
 }
 

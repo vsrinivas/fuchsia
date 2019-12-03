@@ -48,9 +48,9 @@ class PinnedMemoryTokenDispatcher final
     }
   };
 
-  // Mark this PMT as unpinned.  When on_zero_handles() runs, this PMT will
-  // be removed from its BTI rather than moved to the quarantine.
-  void MarkUnpinned();
+  // Unpin this PMT. If this is not done before on_zero_handles() runs, then it will get moved to
+  // the quarantine.
+  void Unpin();
 
   // |mapped_addrs_count| must be either
   // 1) If |compress_results|, |pinned_vmo_.size()|/|bti_.minimum_contiguity()|, rounded up, in
@@ -94,7 +94,7 @@ class PinnedMemoryTokenDispatcher final
 
   PinnedVmObject pinned_vmo_;
 
-  // Set to true by MarkUnpinned()
+  // Set to true by Unpin()
   bool explicitly_unpinned_ TA_GUARDED(get_lock()) = false;
 
   const fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_;

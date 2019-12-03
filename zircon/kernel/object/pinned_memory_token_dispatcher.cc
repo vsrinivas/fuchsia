@@ -174,9 +174,16 @@ zx_status_t PinnedMemoryTokenDispatcher::UnmapFromIommuLocked() {
   return status;
 }
 
-void PinnedMemoryTokenDispatcher::MarkUnpinned() {
+void PinnedMemoryTokenDispatcher::Unpin() {
   Guard<fbl::Mutex> guard{get_lock()};
   explicitly_unpinned_ = true;
+
+  // Unmap the memory prior to unpinning to prevent continued access.
+  zx_status_t status = UnmapFromIommuLocked();
+  ASSERT(status == ZX_OK);
+
+  // Move the pinned vmo to a temporary and to let its dtor unpin.
+  auto destroy = ktl::move(pinned_vmo_);
 }
 
 void PinnedMemoryTokenDispatcher::InvalidateMappedAddrsLocked() {
@@ -190,23 +197,12 @@ void PinnedMemoryTokenDispatcher::InvalidateMappedAddrsLocked() {
 void PinnedMemoryTokenDispatcher::on_zero_handles() {
   Guard<fbl::Mutex> guard{get_lock()};
 
-  // Once usermode has dropped the handle, either through zx_handle_close(),
-  // zx_pmt_unpin(), or process crash, prevent access to the pinned memory.
-  //
-  // We do not unpin the VMO until this object is destroyed, to allow usermode
-  // to protect against stray DMA via the quarantining mechanism.
-  zx_status_t status = UnmapFromIommuLocked();
-  ASSERT(status == ZX_OK);
+  if (!explicitly_unpinned_ && initialized_) {
+    // The user failed to call zx_pmt_unpin. Unmap the memory to prevent continued access, but leave
+    // the VMO pinned and use the quarantine mechanism to protect against stray DMA.
+    zx_status_t status = UnmapFromIommuLocked();
+    ASSERT(status == ZX_OK);
 
-  if (explicitly_unpinned_ || !initialized_) {
-    // The cleanup will happen when the reference that on_zero_handles()
-    // was called on goes away.
-    //
-    // In the uninitialized case, we were never added to the BTI list
-    // in the first place so no need to worry about quarantine.
-  } else {
-    // Add to the quarantine list to prevent the underlying VMO from being
-    // unpinned.
     bti_->Quarantine(fbl::RefPtr(this));
   }
 }
