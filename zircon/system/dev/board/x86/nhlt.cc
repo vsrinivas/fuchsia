@@ -10,6 +10,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <fbl/auto_call.h>
 
 #include "errors.h"
 
@@ -35,19 +36,28 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   ACPI_OBJECT objs[] = {
       {
           // uuid
-          .Buffer.Type = ACPI_TYPE_BUFFER,
-          .Buffer.Length = sizeof(NHLT_UUID),
-          .Buffer.Pointer = (void*)NHLT_UUID,
+          .Buffer =
+              {
+                  .Type = ACPI_TYPE_BUFFER,
+                  .Length = sizeof(NHLT_UUID),
+                  .Pointer = (uint8_t*)NHLT_UUID,
+              },
       },
       {
           // revision id
-          .Integer.Type = ACPI_TYPE_INTEGER,
-          .Integer.Value = 1,
+          .Integer =
+              {
+                  .Type = ACPI_TYPE_INTEGER,
+                  .Value = 1,
+              },
       },
       {
           // function id
-          .Integer.Type = ACPI_TYPE_INTEGER,
-          .Integer.Value = 1,
+          .Integer =
+              {
+                  .Type = ACPI_TYPE_INTEGER,
+                  .Value = 1,
+              },
       },
   };
   ACPI_OBJECT_LIST params = {
@@ -68,25 +78,25 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
     return acpi_to_zx_status(acpi_status);
   }
 
-  ACPI_OBJECT* out_obj = out.Pointer;
+  auto release_object = fbl::MakeAutoCall([&out] { ACPI_FREE(out.Pointer); });
+
+  ACPI_OBJECT* out_obj = static_cast<ACPI_OBJECT*>(out.Pointer);
   if (out_obj->Type != ACPI_TYPE_BUFFER) {
     zxlogf(ERROR, "acpi: unexpected object type (%u) for NHLT blob\n", out_obj->Type);
-    status = ZX_ERR_INTERNAL;
-    goto out;
+    return ZX_ERR_INTERNAL;
   }
 
   ACPI_RESOURCE* res = NULL;
-  acpi_status = AcpiBufferToResource(out_obj->Buffer.Pointer, out_obj->Buffer.Length, &res);
+  acpi_status = AcpiBufferToResource(out_obj->Buffer.Pointer,
+                                     static_cast<uint16_t>(out_obj->Buffer.Length), &res);
   if (acpi_status != AE_OK) {
     zxlogf(ERROR, "acpi: failed to parse NHLT resource (acpi_status 0x%x)\n", acpi_status);
-    status = acpi_to_zx_status(acpi_status);
-    goto out;
+    return acpi_to_zx_status(acpi_status);
   }
 
   if (res->Type != ACPI_RESOURCE_TYPE_ADDRESS64) {
     zxlogf(ERROR, "acpi: unexpected NHLT resource type (%u)\n", res->Type);
-    status = ZX_ERR_INTERNAL;
-    goto out;
+    return ZX_ERR_INTERNAL;
   }
 
   zx_paddr_t paddr = (zx_paddr_t)res->Data.Address64.Address.Minimum;
@@ -101,7 +111,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   status = zx_vmo_create_physical(get_root_resource(), page_start, page_size, &vmo);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: failed to create NHLT VMO (res %d)\n", status);
-    goto out;
+    return status;
   }
 
   // We cannot read physical VMOs directly and must map it
@@ -109,7 +119,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, page_size, &vaddr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: failed to map NHLT blob (res %d)\n", status);
-    goto out;
+    return status;
   }
   void* nhlt = (void*)(vaddr + page_offset);
 
@@ -126,7 +136,6 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   zxlogf(TRACE, "acpi: published NHLT metadata for device at %s\n", path);
 
   zx_vmar_unmap(zx_vmar_root_self(), vaddr, ROUNDUP(size, PAGE_SIZE));
-out:
-  ACPI_FREE(out.Pointer);
+
   return status;
 }

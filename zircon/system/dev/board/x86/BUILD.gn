@@ -63,7 +63,7 @@ zx_driver("platform-bus-x86") {
     "init.cc",
     "iommu.c",
     "methods.cc",
-    "nhlt.c",
+    "nhlt.cc",
     "pciroot.cc",
     "power.c",
     "resources.c",
