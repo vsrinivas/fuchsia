@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <limits>
 
+#include "src/developer/debug/zxdb/common/largest_less_or_equal.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/logging.h"
 
@@ -47,21 +48,19 @@ LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_con
     return FoundRow();
 
   TargetPointer rel_address = address_context.AbsoluteToRelative(absolute_address);
-  auto found =
-      std::lower_bound(seq.begin(), seq.end(), rel_address,
-                       [](const Row& row, TargetPointer addr) { return row.Address < addr; });
-  if (found == seq.end())
-    return FoundRow(seq, seq.size() - 1);  // Last row covers addresses past the end.
+  auto found = LargestLessOrEqual(
+      seq.begin(), seq.end(), rel_address,
+      [](const Row& row, TargetPointer addr) { return row.Address < addr; },
+      [](const Row& row, TargetPointer addr) { return row.Address == addr; });
 
+  // The address should not be before the beginning of this sequence (the only end() case for
+  // LargestLessOrEqual()). Otherwise GetRowSequenceForAddress() shouldn't have returned it.
+  FXL_DCHECK(found != seq.end());
+
+  // Skip duplicates if there are any. LargestLessOrEqual() may have returned the last one of a
+  // series of duplicates preceeding the address in question. We want the first entry for this
+  // address range.
   size_t found_index = found - seq.begin();
-  if (seq[found_index].Address > rel_address)
-    found_index--;  // Row that covers the address for non-matches is the *previous* one.
-
-  // The address should not be before the beginning of this sequence. Otherwwise
-  // GetRowSequenceForAddress() shouldn't have returned it.
-  FXL_DCHECK(seq[found_index].Address <= rel_address);
-
-  // Skip duplicates if there are any. We want the first entry for this address range.
   while (found_index > 0 && seq[found_index].Address == seq[found_index - 1].Address)
     found_index--;
 

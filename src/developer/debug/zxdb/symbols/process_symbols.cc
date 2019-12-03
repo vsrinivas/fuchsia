@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/zxdb/common/largest_less_or_equal.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
@@ -282,13 +283,15 @@ bool ProcessSymbols::RefersToSameModule(const debug_ipc::Module& a, const Module
 const ProcessSymbols::ModuleInfo* ProcessSymbols::InfoForAddress(uint64_t address) const {
   if (modules_.empty())
     return nullptr;
-  auto found = modules_.lower_bound(address);
-  if (found == modules_.end() || found->first > address) {
-    if (found == modules_.begin())
-      return nullptr;  // Address below first module.
-    // Move to previous item to get the module starting before this address.
-    --found;
-  }
+
+  // TODO(bug 42243) we should be able to tell the size of the module and fail when it's outside
+  // the extent of one.
+  auto found = LargestLessOrEqual(
+      modules_.begin(), modules_.end(), address,
+      [](const ModuleMap::value_type& v, uint64_t a) { return v.first < a; },
+      [](const ModuleMap::value_type& v, uint64_t a) { return v.first == a; });
+  if (found == modules_.end())
+    return nullptr;  // Address below first module.
   return &found->second;
 }
 

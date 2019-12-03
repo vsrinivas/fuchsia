@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/common/mock_memory.h"
 
+#include "src/developer/debug/zxdb/common/largest_less_or_equal.h"
+
 namespace zxdb {
 
 void MockMemory::AddMemory(uint64_t address, std::vector<uint8_t> data) {
@@ -27,18 +29,16 @@ std::vector<uint8_t> MockMemory::ReadMemory(uint64_t address, uint32_t size) con
 
 MockMemory::RegisteredMemory::const_iterator MockMemory::FindBlockForAddress(
     uint64_t address) const {
-  // Finds the first block >= address.
-  auto found = mem_.lower_bound(address);
+  // Locates the potential map entry covering this address.
+  auto found = LargestLessOrEqual(
+      mem_.begin(), mem_.end(), address,
+      [](const RegisteredMemory::value_type& v, uint64_t a) { return v.first < a; },
+      [](const RegisteredMemory::value_type& v, uint64_t a) { return v.first == a; });
 
-  // We need the first block <= address.
-  if (found != mem_.end() && found->first == address)
-    return found;  // Got exact match.
+  if (found == mem_.end())
+    return mem_.end();
 
-  // Now find the first block < address.
-  if (found == mem_.begin())
-    return mem_.end();  // Nothing before the address.
-
-  --found;
+  // Validate the address is within the data range.
   if (address >= found->first + found->second.size())
     return mem_.end();  // Address is after this range.
   return found;
