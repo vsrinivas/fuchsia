@@ -128,6 +128,10 @@ class HashTable {
     HashType ndx = GetHash(KeyTraits::GetKey(obj));
     return iterator(this, ndx, buckets_[ndx].make_iterator(obj));
   }
+  const_iterator make_iterator(const ValueType& obj) const {
+    HashType ndx = GetHash(KeyTraits::GetKey(obj));
+    return const_iterator(this, ndx, buckets_[ndx].make_iterator(obj));
+  }
 
   void insert(const PtrType& ptr) { insert(PtrType(ptr)); }
   void insert(PtrType&& ptr) {

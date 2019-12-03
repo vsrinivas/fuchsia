@@ -675,6 +675,27 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
         EXPECT_TRUE(other_iter == iter);
       }
     }
+
+    // Repeat using a const iterator.
+    for (size_t i = 0; i < OBJ_COUNT; ++i) {
+      ASSERT_NOT_NULL(objects()[i]);
+      auto iter = const_container().make_iterator(*objects()[i]);
+
+      ASSERT_TRUE(iter != container().cend());
+      EXPECT_EQ(objects()[i]->value(), iter->value());
+      EXPECT_EQ(objects()[i], iter->raw_ptr());
+
+      if (ContainerType::IsSequenced) {
+        auto other_iter = container().cbegin();
+
+        for (size_t j = 0; j < i; ++j) {
+          EXPECT_FALSE(other_iter == iter);
+          ++other_iter;
+        }
+
+        EXPECT_TRUE(other_iter == iter);
+      }
+    }
   }
 
   void Swap() {

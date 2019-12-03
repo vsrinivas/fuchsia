@@ -318,6 +318,9 @@ class SinglyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
 
   // make_iterator : construct an iterator out of a reference to an object.
   iterator make_iterator(ValueType& obj) { return iterator(&obj); }
+  const_iterator make_iterator(const ValueType& obj) const {
+    return const_iterator(&const_cast<ValueType&>(obj));
+  }
 
   // is_empty
   //

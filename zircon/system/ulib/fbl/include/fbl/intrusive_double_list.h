@@ -190,6 +190,9 @@ class DoublyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
 
   // make_iterator : construct an iterator out of a pointer to an object
   iterator make_iterator(ValueType& obj) { return iterator(&obj); }
+  const_iterator make_iterator(const ValueType& obj) const {
+    return const_iterator(&const_cast<ValueType&>(obj));
+  }
 
   // is_empty : True if the list has at least one element in it, false otherwise.
   bool is_empty() const {
