@@ -41,8 +41,14 @@ kernel_cmdline_args += [
 #
 # TODO(IN-1097): Support a package server on bots so this can be added to
 # universe like the tests.
-cache_package_labels += [ "//src/tests/end_to_end/bundles:end_to_end_deps" ]
+cache_package_labels += [
+  "//src/tests/end_to_end/bundles:end_to_end_deps",
+  "//src/tests/end_to_end/bundles:workstation_end_to_end_deps",
+]
 
 # E2E Product Tests. They don't produce fuchsia packages, but host executables,
 # and must just be included somewhere in the build configuration of the product.
-universe_package_labels += [ "//src/experiences/tests/e2e:test" ]
+universe_package_labels += [
+  "//src/experiences/tests/e2e:test",
+  "//src/tests/end_to_end/can_browse_web:test",
+]

@@ -28,7 +28,7 @@ void main() {
   });
 
   tearDownAll(() async {
-    webDriverConnector.tearDown();
+    await webDriverConnector.tearDown();
 
     await sl4fDriver.stopServer();
     sl4fDriver.close();
