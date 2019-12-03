@@ -7,21 +7,28 @@ library fuchsia.media;
 using zx;
 using fuchsia.media.audio;
 
+/// Interface for creating audio consumers bound to a session
 [Discoverable]
+protocol SessionAudioConsumerFactory {
+    /// Creates an `AudioConsumer` which is an interface for playing audio bound
+    /// to a particular session. `session_id` is the identifier of the media session
+    /// for which audio is to be rendered.
+    // TODO(dalesat): Can't use fuchsia.media.sessions2.SessionId here, because dependencies.
+    CreateAudioConsumer(
+        uint64 session_id,
+        request<AudioConsumer> audio_consumer_request);
+};
+
+/// Interface for playing and controlling audio
 protocol AudioConsumer {
-    /// Creates a stream sink for the consumer with the indicated properties. `session_id` is the
-    /// identifier of the media session for which audio is to be rendered.
+    /// Creates a `StreamSink` for the consumer with the indicated properties.
     ///
     /// Multiple stream sinks may be acquired using this method, but they are intended to be used
     /// sequentially rather than concurrently. The first stream sink that's created using this
     /// method is used as the sole source of packets incoming to the logical consumer until that
     /// stream sink is closed or the `EndOfStream` method is called on that sink. At that point,
     /// the second stream sink is used, and so on.
-    // TODO(dalesat): Need something about timestamp interpretation.
-    // TODO(dalesat): Can't use fuchsia.media.sessions2.SessionId here, because dependencies.
-    // TODO(dalesat): Do we want the service to drop an old StreamSink when a new one is created?
     CreateStreamSink(
-        uint64 session_id,
         vector<handle<vmo>>:16 buffers,
         AudioStreamType stream_type,
         Compression? compression,
