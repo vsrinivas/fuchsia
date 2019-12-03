@@ -44,6 +44,14 @@ protocol PlayReadyFactoryStoreProvider {
   compose FactoryStoreProvider;
 };
 
+/// This protocol  exposes a method to connect to a directory containing
+/// Weave-specific factory data: public certificates, signing keys, and
+/// identity files for interoperation with a Weave-based home-area-network.
+[Discoverable]
+protocol WeaveFactoryStoreProvider {
+  compose FactoryStoreProvider;
+};
+
 /// This protocol exposes a method to connect to a directory containing
 /// miscellaneous factory data such as tuning/calibration files, region-specific
 /// audio files, factory process metadata files, and more. Any raw files not
