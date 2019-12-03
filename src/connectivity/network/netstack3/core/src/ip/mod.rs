@@ -50,9 +50,7 @@ use crate::ip::reassembly::{
 };
 use crate::ip::socket::{IpSock, IpSockUpdate};
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
-use crate::wire::ipv4::{
-    Ipv4Packet, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions, Ipv4PacketRaw,
-};
+use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketRaw};
 use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketRaw};
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
@@ -1627,20 +1625,7 @@ impl<D: EventDispatcher> FrameContext<EmptyBuf, IgmpPacketMetadata<DeviceId>> fo
         meta: IgmpPacketMetadata<DeviceId>,
         body: S,
     ) -> Result<(), S> {
-        let builder = match Ipv4PacketBuilderWithOptions::new(
-            Ipv4PacketBuilder::new(meta.src_ip, meta.dst_ip, 1, IpProto::Igmp),
-            &[Ipv4Option {
-                copied: true,
-                data: crate::ip::Ipv4OptionData::RouterAlert { data: 0 },
-            }],
-        ) {
-            None => return Err(body),
-            Some(builder) => builder,
-        };
-
-        let body = body.encapsulate(builder);
         crate::device::send_ip_frame(self, meta.device, meta.dst_ip.into_specified(), body)
-            .map_err(|ser| ser.into_inner())
     }
 }
 
