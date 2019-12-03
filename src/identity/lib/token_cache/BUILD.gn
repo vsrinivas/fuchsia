@@ -9,8 +9,8 @@ rustc_library("token_cache") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
-    "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:log",
   ]

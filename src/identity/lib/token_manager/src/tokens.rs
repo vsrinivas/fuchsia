@@ -3,19 +3,19 @@
 // found in the LICENSE file.
 
 use failure::{format_err, Error};
+use fuchsia_zircon::{ClockId, Duration, Time};
 use std::ops::Deref;
-use std::time::{Duration, SystemTime};
 use token_cache::{CacheKey, CacheToken, KeyFor};
 
 /// Representation of a single OAuth token including its expiry time.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OAuthToken {
-    expiry_time: SystemTime,
+    expiry_time: Time,
     token: String,
 }
 
 impl CacheToken for OAuthToken {
-    fn expiry_time(&self) -> &SystemTime {
+    fn expiry_time(&self) -> &Time {
         &self.expiry_time
     }
 }
@@ -31,7 +31,7 @@ impl Deref for OAuthToken {
 impl From<fidl_fuchsia_auth::AuthToken> for OAuthToken {
     fn from(auth_token: fidl_fuchsia_auth::AuthToken) -> OAuthToken {
         OAuthToken {
-            expiry_time: SystemTime::now() + Duration::from_secs(auth_token.expires_in),
+            expiry_time: get_current_time() + Duration::from_seconds(auth_token.expires_in as i64),
             token: auth_token.token,
         }
     }
@@ -43,11 +43,11 @@ pub struct FirebaseAuthToken {
     id_token: String,
     local_id: Option<String>,
     email: Option<String>,
-    expiry_time: SystemTime,
+    expiry_time: Time,
 }
 
 impl CacheToken for FirebaseAuthToken {
-    fn expiry_time(&self) -> &SystemTime {
+    fn expiry_time(&self) -> &Time {
         &self.expiry_time
     }
 }
@@ -58,7 +58,8 @@ impl From<fidl_fuchsia_auth::FirebaseToken> for FirebaseAuthToken {
             id_token: firebase_token.id_token,
             local_id: firebase_token.local_id,
             email: firebase_token.email,
-            expiry_time: SystemTime::now() + Duration::from_secs(firebase_token.expires_in),
+            expiry_time: get_current_time()
+                + Duration::from_seconds(firebase_token.expires_in as i64),
         }
     }
 }
@@ -71,10 +72,7 @@ impl FirebaseAuthToken {
             id_token: self.id_token.clone(),
             local_id: self.local_id.clone(),
             email: self.email.clone(),
-            expires_in: match self.expiry_time.duration_since(SystemTime::now()) {
-                Ok(duration) => duration.as_secs(),
-                Err(_) => 0,
-            },
+            expires_in: expires_in_sec(self.expiry_time),
         }
     }
 }
@@ -236,12 +234,28 @@ fn validate_provider_and_id(auth_provider_type: &str, user_profile_id: &str) -> 
     }
 }
 
+/// Obtains the current time in UTC.
+fn get_current_time() -> Time {
+    Time::get(ClockId::UTC)
+}
+
+/// Calculates the seconds to expiration given an expiration time.
+fn expires_in_sec(expiry_time: Time) -> u64 {
+    let remaining_duration = expiry_time - get_current_time();
+    let remaining_secs = remaining_duration.into_seconds();
+    if remaining_secs < 0 {
+        0
+    } else {
+        remaining_secs as u64
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use fidl_fuchsia_auth::TokenType;
 
-    const LONG_EXPIRY: Duration = Duration::from_secs(3000);
+    const LONG_EXPIRY: Duration = Duration::from_seconds(3000);
     const TEST_ACCESS_TOKEN: &str = "access token";
     const TEST_FIREBASE_ID_TOKEN: &str = "firebase token";
     const TEST_FIREBASE_LOCAL_ID: &str = "firebase local id";
@@ -257,13 +271,13 @@ mod tests {
     fn test_oauth_from_fidl() {
         let fidl_type = fidl_fuchsia_auth::AuthToken {
             token_type: TokenType::AccessToken,
-            expires_in: LONG_EXPIRY.as_secs(),
+            expires_in: LONG_EXPIRY.into_seconds() as u64,
             token: TEST_ACCESS_TOKEN.to_string(),
         };
 
-        let time_before_conversion = SystemTime::now();
+        let time_before_conversion = get_current_time();
         let native_type = OAuthToken::from(fidl_type);
-        let time_after_conversion = SystemTime::now();
+        let time_after_conversion = get_current_time();
 
         assert_eq!(&native_type.token, TEST_ACCESS_TOKEN);
         assert!(native_type.expiry_time >= time_before_conversion + LONG_EXPIRY);
@@ -279,12 +293,12 @@ mod tests {
             id_token: TEST_FIREBASE_ID_TOKEN.to_string(),
             local_id: Some(TEST_FIREBASE_LOCAL_ID.to_string()),
             email: Some(TEST_EMAIL.to_string()),
-            expires_in: LONG_EXPIRY.as_secs(),
+            expires_in: LONG_EXPIRY.into_seconds() as u64,
         };
 
-        let time_before_conversion = SystemTime::now();
+        let time_before_conversion = get_current_time();
         let native_type = FirebaseAuthToken::from(fidl_type);
-        let time_after_conversion = SystemTime::now();
+        let time_after_conversion = get_current_time();
 
         assert_eq!(&native_type.id_token, TEST_FIREBASE_ID_TOKEN);
         assert_eq!(native_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
@@ -295,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_firebase_to_fidl() {
-        let time_before_conversion = SystemTime::now();
+        let time_before_conversion = get_current_time();
         let native_type = FirebaseAuthToken {
             id_token: TEST_FIREBASE_ID_TOKEN.to_string(),
             local_id: Some(TEST_FIREBASE_LOCAL_ID.to_string()),
@@ -304,16 +318,17 @@ mod tests {
         };
 
         let fidl_type = native_type.to_fidl();
-        let elapsed_time_during_conversion =
-            SystemTime::now().duration_since(time_before_conversion).unwrap();
+        let elapsed_time_during_conversion = get_current_time() - time_before_conversion;
 
         assert_eq!(&fidl_type.id_token, TEST_FIREBASE_ID_TOKEN);
         assert_eq!(fidl_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
         assert_eq!(fidl_type.email, Some(TEST_EMAIL.to_string()));
-        assert!(fidl_type.expires_in <= LONG_EXPIRY.as_secs());
+        assert!(fidl_type.expires_in <= LONG_EXPIRY.into_seconds() as u64);
         assert!(
             fidl_type.expires_in
-                >= (LONG_EXPIRY.as_secs() - elapsed_time_during_conversion.as_secs()) - 1
+                >= (LONG_EXPIRY.into_seconds() - elapsed_time_during_conversion.into_seconds())
+                    as u64
+                    - 1
         );
     }
 

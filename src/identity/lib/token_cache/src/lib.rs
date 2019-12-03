@@ -5,20 +5,18 @@
 //! AuthCache manages an in-memory cache of recently used short-lived authentication tokens.
 #![deny(missing_docs)]
 
-use chrono::offset::Utc;
-use chrono::DateTime;
 use failure::Fail;
+use fuchsia_zircon::{ClockId, Duration, Time};
 use log::{info, warn};
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
 
 /// Constant offset for the cache expiry. Tokens will only be returned from
 /// the cache if they have at least this much life remaining.
-const PADDING_FOR_TOKEN_EXPIRY: Duration = Duration::from_secs(600);
+const PADDING_FOR_TOKEN_EXPIRY: Duration = Duration::from_seconds(600);
 
 /// Number of invalid entries tolerated in the expiry queue before invalid
 /// entries are purged.  This is expressed as a fraction of the cache capacity.
@@ -82,7 +80,7 @@ pub trait KeyFor {
 /// `CacheToken` may not contain references of non-'static lifetimes.
 pub trait CacheToken: Any + Send + Sync {
     /// Returns the time at which a token becomes invalid.
-    fn expiry_time(&self) -> &SystemTime;
+    fn expiry_time(&self) -> &Time;
 }
 
 /// An entry in the `TokenCache` expiry queue.
@@ -90,12 +88,12 @@ struct ExpiryQueueEntry {
     /// Cache entry this entry tracks.
     cache_key: Arc<dyn CacheKey>,
     /// Time at which the referenced token expires.
-    expiry_time: SystemTime,
+    expiry_time: Time,
 }
 
 impl ExpiryQueueEntry {
     /// Construct a new `ExpiryQueueEntry`.
-    fn new(cache_key: Arc<dyn CacheKey>, expiry_time: SystemTime) -> ExpiryQueueEntry {
+    fn new(cache_key: Arc<dyn CacheKey>, expiry_time: Time) -> ExpiryQueueEntry {
         ExpiryQueueEntry { cache_key: cache_key, expiry_time: expiry_time }
     }
 }
@@ -163,8 +161,8 @@ pub struct TokenCache {
     expiry_queue: BinaryHeap<ExpiryQueueEntry>,
     /// Maximum number of tokens the cache will hold.
     capacity: usize,
-    /// `SystemTime` of the last cache operation.  Used to validate time progression.
-    last_time: SystemTime,
+    /// `Time` of the last cache operation.  Used to validate time progression.
+    last_time: Time,
 }
 
 impl TokenCache {
@@ -175,7 +173,7 @@ impl TokenCache {
             token_map: HashMap::with_capacity(capacity),
             expiry_queue: BinaryHeap::with_capacity(expiry_queue_capacity),
             capacity: capacity,
-            last_time: SystemTime::now(),
+            last_time: Self::get_current_time(),
         }
     }
 
@@ -184,12 +182,12 @@ impl TokenCache {
     /// If time is normal, this method does nothing.
     /// TODO(dnordstrom): Long term solution involving time service or monotonic clocks.
     fn validate_time_progression(&mut self) {
-        let current_time = SystemTime::now();
+        let current_time = Self::get_current_time();
         if current_time < self.last_time {
             warn!(
                 "time jumped backwards from {:?} to {:?}, clearing {:?} token cache entries",
-                <DateTime<Utc>>::from(current_time),
-                <DateTime<Utc>>::from(self.last_time),
+                self.last_time,
+                current_time,
                 self.token_map.len(),
             );
             self.token_map.clear();
@@ -224,7 +222,8 @@ impl TokenCache {
     {
         self.validate_time_progression();
         self.evict_expired();
-        if self.token_map.len() == self.capacity && !self.token_map.contains_key(&key as &dyn CacheKey)
+        if self.token_map.len() == self.capacity
+            && !self.token_map.contains_key(&key as &dyn CacheKey)
         {
             self.evict_random();
         }
@@ -268,7 +267,7 @@ impl TokenCache {
     /// Evicts all expired tokens from the cache.  Invalid entries in the expiry
     /// queue are silently discarded.
     fn evict_expired(&mut self) {
-        let current_time = SystemTime::now();
+        let current_time = Self::get_current_time();
         while let Some(expiry_entry) = pop_if(&mut self.expiry_queue, |entry| {
             current_time > (entry.expiry_time - PADDING_FOR_TOKEN_EXPIRY)
         }) {
@@ -314,6 +313,10 @@ impl TokenCache {
     fn num_tolerated_invalid_entries(capacity: usize) -> usize {
         ((capacity as f32) * INVALID_ENTRY_FLUSH_THRESHOLD) as usize
     }
+
+    fn get_current_time() -> Time {
+        Time::get(ClockId::UTC)
+    }
 }
 
 /// Pop and return top element in a heap if it passes some condition.
@@ -337,17 +340,17 @@ mod tests {
     const TEST_AUTH_PROVIDER: &str = "test_auth_provider";
     const TEST_USER_ID: &str = "test_auth_provider/profiles/user";
     const TEST_TOKEN_CONTENTS: &str = "Token contents";
-    const LONG_EXPIRY: Duration = Duration::from_secs(3000);
-    const ALREADY_EXPIRED: Duration = Duration::from_secs(1);
+    const LONG_EXPIRY: Duration = Duration::from_seconds(3000);
+    const ALREADY_EXPIRED: Duration = Duration::from_seconds(1);
 
     #[derive(Clone, Debug, PartialEq, Eq)]
     struct TestToken {
-        expiry_time: SystemTime,
+        expiry_time: Time,
         token: String,
     }
 
     impl CacheToken for TestToken {
-        fn expiry_time(&self) -> &SystemTime {
+        fn expiry_time(&self) -> &Time {
             &self.expiry_time
         }
     }
@@ -379,13 +382,13 @@ mod tests {
 
     #[derive(Clone, Debug, PartialEq, Eq)]
     struct AlternateTestToken {
-        expiry_time: SystemTime,
+        expiry_time: Time,
         metadata: Vec<String>,
         token: String,
     }
 
     impl CacheToken for AlternateTestToken {
-        fn expiry_time(&self) -> &SystemTime {
+        fn expiry_time(&self) -> &Time {
             &self.expiry_time
         }
     }
@@ -433,7 +436,7 @@ mod tests {
 
     fn build_test_token(time_until_expiry: Duration, suffix: &str) -> Arc<TestToken> {
         Arc::new(TestToken {
-            expiry_time: SystemTime::now() + time_until_expiry,
+            expiry_time: Time::get(ClockId::UTC) + time_until_expiry,
             token: TEST_TOKEN_CONTENTS.to_string() + suffix,
         })
     }
@@ -443,7 +446,7 @@ mod tests {
         suffix: &str,
     ) -> Arc<AlternateTestToken> {
         Arc::new(AlternateTestToken {
-            expiry_time: SystemTime::now() + time_until_expiry,
+            expiry_time: Time::get(ClockId::UTC) + time_until_expiry,
             token: TEST_TOKEN_CONTENTS.to_string() + suffix,
             metadata: vec![suffix.to_string()],
         })
@@ -625,5 +628,4 @@ mod tests {
             CACHE_SIZE
         );
     }
-
 }
