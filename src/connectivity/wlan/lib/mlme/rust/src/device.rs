@@ -81,7 +81,9 @@ impl Device {
     }
 
     #[allow(deprecated)] // Until Rust MLME is powered by a Rust-written message loop.
-    pub fn access_sme_sender<F: FnOnce(&fidl_mlme::MlmeServerSender<'_>) -> Result<(), fidl::Error>>(
+    pub fn access_sme_sender<
+        F: FnOnce(&fidl_mlme::MlmeServerSender<'_>) -> Result<(), fidl::Error>,
+    >(
         &self,
         fun: F,
     ) -> Result<(), Error> {
@@ -345,9 +347,7 @@ impl FakeDevice {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        banjo_ddk_hw_wlan_ieee80211::*,
-        banjo_wlan_protocol_info::*,
+        super::*, banjo_ddk_hw_wlan_ieee80211::*, banjo_wlan_protocol_info::*,
         wlan_common::assert_variant,
     };
 
@@ -507,7 +507,7 @@ mod tests {
             qos: false,
             rates_cnt: 4,
             rates: [0; WLAN_MAC_MAX_RATES as usize],
-            cap_info: [1, 2],
+            cap_info: 0x0102,
 
             has_ht_cap: false,
             // Safe: This is not read by the driver.

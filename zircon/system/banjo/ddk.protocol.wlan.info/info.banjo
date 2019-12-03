@@ -140,7 +140,7 @@ struct WlanAssocCtx {
     array<uint8>:WLAN_MAC_MAX_RATES rates;
 
     /// IEEE Std 802.11-2016, 9.4.1.4
-    array<uint8>:2 cap_info;
+    uint16 cap_info;
 
     /// IEEE Std 802.11-2016, 9.4.2.56, 57
     /// Rx MCS Bitmask in Supported MCS Set field represents the set of MCS

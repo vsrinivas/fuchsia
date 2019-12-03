@@ -2268,7 +2268,8 @@ static void ath10k_mac_vif_sta_connection_loss_work(struct work_struct* work) {
 /* Station management */
 /**********************/
 
-static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar, const wlan_assoc_ctx_t* assoc) {
+static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar,
+                                                  const wlan_assoc_ctx_t* assoc) {
   /* Some firmware revisions have unstable STA powersave when listen
    * interval is set too high (e.g. 5). The symptoms are firmware doesn't
    * generate NullFunc frames properly even if buffered frames have been
@@ -2284,8 +2285,7 @@ static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar, const wlan_
   return assoc->listen_interval;
 }
 
-static void ath10k_peer_assoc_h_basic(struct ath10k* ar,
-                                      const wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_basic(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
                                       struct wmi_peer_assoc_complete_arg* arg) {
   struct ath10k_vif* arvif = &ar->arvif;
 
@@ -2297,11 +2297,10 @@ static void ath10k_peer_assoc_h_basic(struct ath10k* ar,
   arg->peer_flags |= arvif->ar->wmi.peer_flags->auth;
   arg->peer_listen_intval = ath10k_peer_assoc_h_listen_intval(ar, assoc);
   arg->peer_num_spatial_streams = 1;
-  arg->peer_caps = assoc->cap_info[0] | (assoc->cap_info[1] << 8);
+  arg->peer_caps = assoc->cap_info;
 }
 
-static void ath10k_peer_assoc_h_crypto(struct ath10k* ar,
-                                       const wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_crypto(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
                                        struct wmi_peer_assoc_complete_arg* arg) {
   // TODO(WLAN-493): Come back later when we want to enable the security feature on AP mode.
 #if 0   // NEEDS PORTING
@@ -2353,8 +2352,7 @@ static void ath10k_peer_assoc_h_crypto(struct ath10k* ar,
 #endif  // NEEDS PORTING
 }
 
-static void ath10k_peer_assoc_h_rates(struct ath10k* ar,
-                                      const wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_rates(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
                                       struct wmi_peer_assoc_complete_arg* arg) {
   struct wmi_rate_set_arg* rateset = &arg->peer_legacy_rates;
   size_t i;
@@ -2368,8 +2366,7 @@ static void ath10k_peer_assoc_h_rates(struct ath10k* ar,
   }
 }
 
-static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
-                                   const wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_ht(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
                                    struct wmi_peer_assoc_complete_arg* arg) {
   const ieee80211_ht_capabilities_t* ht_cap = &assoc->ht_cap;
   size_t i, n;
@@ -2577,8 +2574,7 @@ ath10k_peer_assoc_h_vht_limit(uint16_t tx_mcs_set,
 }
 #endif  // NEEDS PORTING
 
-static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
-                                    const wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_vht(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
                                     struct wmi_peer_assoc_complete_arg* arg) {
   if (!assoc->has_vht_cap) {
     return;
@@ -2661,8 +2657,7 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
   }
 }
 
-static void ath10k_peer_assoc_h_qos(struct ath10k* ar,
-                                    const wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_qos(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
                                     struct wmi_peer_assoc_complete_arg* arg) {
   struct ath10k_vif* arvif = &ar->arvif;
   if (assoc->qos) {
@@ -3087,8 +3082,7 @@ static void ath10k_bss_disassoc(struct ieee80211_hw* hw,
 #endif  // NEEDS PORTING
 
 // Used by AP role to add a remote client.
-static zx_status_t ath10k_station_assoc(struct ath10k* ar,
-                                        const wlan_assoc_ctx_t* assoc,
+static zx_status_t ath10k_station_assoc(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
                                         bool reassoc) {
   struct ath10k_vif* arvif = &ar->arvif;
   struct wmi_peer_assoc_complete_arg peer_arg;
@@ -4211,7 +4205,8 @@ static zx_status_t ath10k_mac_build_tx_pkt(struct ath10k* ar, struct ath10k_msg_
 
   struct ath10k_msg_buf* tx_buf;
   size_t head_size = pkt->packet_head.data_size;
-  size_t tail_size = pkt->packet_tail_list ? (pkt->packet_tail_list->data_size - pkt->tail_offset) : 0;
+  size_t tail_size =
+      pkt->packet_tail_list ? (pkt->packet_tail_list->data_size - pkt->tail_offset) : 0;
   // This 64 gives us headroom to add fields. It would be nice if we could be more specific...
   size_t extra_bytes = head_size + tail_size + 64;
 

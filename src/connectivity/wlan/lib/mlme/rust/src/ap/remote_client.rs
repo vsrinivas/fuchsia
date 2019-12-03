@@ -20,7 +20,7 @@ use {
         TimeUnit,
     },
     wlan_statemachine::StateMachine,
-    zerocopy::{AsBytes, ByteSlice},
+    zerocopy::ByteSlice,
 };
 
 /// dot11BssMaxIdlePeriod (IEEE Std 802.11-2016, 11.24.13 and Annex C.3): This attribute indicates
@@ -362,9 +362,6 @@ impl RemoteClient {
         let mut rates_arr = [0; WLAN_MAC_MAX_RATES as usize];
         rates_arr[..rates.len()].copy_from_slice(rates);
 
-        let mut cap_info = [0; 2];
-        cap_info.copy_from_slice(capabilities.as_bytes());
-
         if let State::Associated { .. } = self.state.as_ref() {
             // Reset the client's activeness as soon as it is associated, kicking off the BSS max
             // idle timer.
@@ -384,7 +381,7 @@ impl RemoteClient {
                     qos: false,
                     rates_cnt: rates.len() as u16,
                     rates: rates_arr,
-                    cap_info,
+                    cap_info: 0,
 
                     // TODO(40917): Correctly support all of this.
                     has_ht_cap: false,
