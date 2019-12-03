@@ -117,11 +117,11 @@ void ArmIspDevice::HandleDmaError() {
   global_mon_status.Print();
   global_mon_failures.Print();
 
-  zxlogf(INFO, "DMA Writer statuses:\n");
+  zxlogf(TRACE, "DMA Writer statuses:\n");
   full_resolution_dma_->PrintStatus(&isp_mmio_);
   downscaled_dma_->PrintStatus(&isp_mmio_);
 
-  zxlogf(INFO, "Clearing dma alarm\n");
+  zxlogf(TRACE, "Clearing dma alarm\n");
   IspGlobalMonitor_ClearError::Get()
       .ReadFrom(&isp_mmio_)
       .set_output_dma_clr_alarm(0)

@@ -21,6 +21,8 @@ namespace camera {
 
 std::unique_ptr<CameraManagerApp> CameraManagerApp::Create(
     std::unique_ptr<sys::ComponentContext> context) {
+  FX_LOGS(INFO) << "Starting";
+
   auto camera_manager = std::make_unique<CameraManagerApp>(std::move(context));
 
   zx_status_t status =

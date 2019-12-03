@@ -35,8 +35,6 @@ void InitFakeBufferCollectionLogging() {
 zx_status_t CreateContiguousBufferCollectionInfo(
     fuchsia_sysmem_BufferCollectionInfo* buffer_collection, zx_handle_t bti_handle, uint32_t width,
     uint32_t height, uint32_t num_buffers) {
-  FX_LOG(INFO, "", "CreateContiguousBufferCollectionInfo\n");
-
   // Initialize all the vmo handles to invalid.
   for (unsigned int& vmo : buffer_collection->vmos) {
     vmo = ZX_HANDLE_INVALID;
@@ -124,8 +122,6 @@ zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buf
                                                  zx_handle_t bti_handle, uint32_t num_buffers) {
   InitFakeBufferCollectionLogging();
 
-  FX_LOG(INFO, "", "CreateContiguousBufferCollectionInfo(2)");
-
   // Initialize all the vmo handles to invalid.
   for (auto& buffer : buffer_collection.buffers) {
     buffer.vmo = ZX_HANDLE_INVALID;
@@ -154,7 +150,6 @@ zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buf
 zx_status_t DestroyContiguousBufferCollection(
     fuchsia_sysmem_BufferCollectionInfo* buffer_collection) {
   auto result = ZX_OK;
-  FX_LOG(INFO, "", "DestroyContiguousBufferCollectionInfo.");
 
   // Release all the vmo handles.
   for (auto& vmo : buffer_collection->vmos) {
@@ -172,7 +167,6 @@ zx_status_t DestroyContiguousBufferCollection(
 zx_status_t DestroyContiguousBufferCollection(
     fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection) {
   auto result = ZX_OK;
-  FX_LOG(INFO, "Mem", "DestroyContiguousBufferCollectionInfo(2)");
 
   // Release all the vmo handles.
   for (auto& vmo_buffer : buffer_collection.buffers) {

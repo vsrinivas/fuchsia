@@ -67,7 +67,6 @@ zx_status_t VideoDeviceClient::CreateStream(
 
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
-  FX_LOGS(INFO) << "Waiting for buffers to be allocated.";
   status =
       sysmem_collection_ptr->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
   if (allocation_status != ZX_OK) {
@@ -79,7 +78,6 @@ zx_status_t VideoDeviceClient::CreateStream(
     return status;
   }
 
-  FX_LOGS(INFO) << "Buffers are allocated.";
   status = camera_control_->CreateStream(config_index, stream_type, image_format_index,
                                          std::move(buffer_collection_info), std::move(stream));
   if (status != ZX_OK) {

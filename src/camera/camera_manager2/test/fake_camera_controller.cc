@@ -117,8 +117,6 @@ void FakeController::GetDeviceInfo(GetDeviceInfoCallback callback) {
 }
 
 bool FakeController::HasMatchingChannel(const zx::channel& client_side) const {
-  FX_LOGS(INFO) << "Looking for matching channels.  Currently have " << connections_.size()
-                << " connections";
   for (auto& connection : connections_) {
     if (CheckMatchingChannel(connection.stream.channel(), client_side)) {
       return true;

@@ -185,7 +185,7 @@ zx_status_t UsbVideoStream::AllocUsbRequestsLocked(uint64_t size) {
 
 zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index, uint8_t frame_index,
                                             uint32_t default_frame_interval) {
-  zxlogf(INFO, "trying format %u, frame desc %u\n", format_index, frame_index);
+  zxlogf(TRACE, "trying format %u, frame desc %u\n", format_index, frame_index);
 
   usb_video_vc_probe_and_commit_controls proposal;
   memset(&proposal, 0, sizeof(usb_video_vc_probe_and_commit_controls));
@@ -260,8 +260,8 @@ zx_status_t UsbVideoStream::TryFormatLocked(uint8_t format_index, uint8_t frame_
       return ZX_ERR_BAD_STATE;
   }
 
-  zxlogf(INFO, "configured video: format index %u frame index %u\n", format_index, frame_index);
-  zxlogf(INFO, "alternate setting %d, packet size %u transactions per mf %u\n",
+  zxlogf(TRACE, "configured video: format index %u frame index %u\n", format_index, frame_index);
+  zxlogf(TRACE, "alternate setting %d, packet size %u transactions per mf %u\n",
          cur_streaming_setting_->alt_setting, cur_streaming_setting_->max_packet_size,
          cur_streaming_setting_->transactions_per_microframe);
 

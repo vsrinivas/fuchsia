@@ -19,6 +19,8 @@ namespace camera {
 static const char* kCameraDevicePath = "/dev/class/camera";
 
 CameraManagerImpl::CameraManagerImpl(async::Loop* loop) {
+  FX_LOGS(INFO) << "Starting";
+
   // Step #1: Begin monitoring for plug/unplug events for pluggable cameras
   bool idle_seen = false;
   device_watcher_ = fsl::DeviceWatcher::CreateWithIdleCallback(

@@ -206,7 +206,7 @@ zx_status_t Imx227Device::CameraSensorInit() {
   ctx_.param.isp_exposure_channel_delay = 0;
 
   initialized_ = true;
-  zxlogf(INFO, "%s IMX227 Camera Sensor Brought out of reset\n", __func__);
+  zxlogf(TRACE, "%s IMX227 Camera Sensor Brought out of reset\n", __func__);
   return ZX_OK;
 }
 
@@ -246,7 +246,7 @@ zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* ou
 }
 
 zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
-  zxlogf(INFO, "%s IMX227 Camera Sensor Mode Set request to %d\n", __func__, mode);
+  zxlogf(TRACE, "%s IMX227 Camera Sensor Mode Set request to %d\n", __func__, mode);
 
   // Get Sensor ID to see if sensor is initialized.
   if (!IsSensorInitialized() || !ValidateSensorID()) {
@@ -326,7 +326,7 @@ zx_status_t Imx227Device::CameraSensorStartStreaming() {
   if (!IsSensorInitialized() || ctx_.streaming_flag) {
     return ZX_ERR_BAD_STATE;
   }
-  zxlogf(INFO, "%s Camera Sensor Start Streaming\n", __func__);
+  zxlogf(TRACE, "%s Camera Sensor Start Streaming\n", __func__);
   ctx_.streaming_flag = 1;
   Write8(kModeSelectReg, 0x01);
   return ZX_OK;

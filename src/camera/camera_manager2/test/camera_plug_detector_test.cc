@@ -56,10 +56,7 @@ class FakeCameraDevice : public fuchsia::hardware::camera::Device {
 class DeviceTracker {
  public:
   fit::function<void(fidl::InterfaceHandle<fuchsia::camera2::hal::Controller>)> GetHandler() {
-    return [this](auto handler) {
-      FX_LOGS(INFO) << "Handler called";
-      controller_handles_.push_back(std::move(handler));
-    };
+    return [this](auto handler) { controller_handles_.push_back(std::move(handler)); };
   }
 
   size_t size() const { return controller_handles_.size(); }
