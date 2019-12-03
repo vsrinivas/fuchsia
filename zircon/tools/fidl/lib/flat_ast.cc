@@ -24,6 +24,14 @@ namespace flat {
 
 namespace {
 
+// This value is defined such that all explicit xunion ordinals must be <= than
+// the cutoff, and all hashed xunion ordinals must be > than the cutoff. This
+// ensures that explicit/hashed ordinals are unique and allows the bindings to
+// accept both sets of ordinals, and will be removed after the explicit xunion
+// ordinal migration is complete.
+// TODO(fxb/42311) remove this check
+constexpr uint32_t kXunionOrdinalCutoff = 512;
+
 class ScopeInsertResult {
  public:
   explicit ScopeInsertResult(std::unique_ptr<SourceLocation> previous_occurrence)
@@ -1762,6 +1770,9 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
   std::vector<Union::Member> members;
   for (auto& member : union_declaration->members) {
     auto xunion_ordinal = std::move(member->ordinal);
+    if (xunion_ordinal->value > kXunionOrdinalCutoff) {
+      return Fail(member->location(), "explicit union ordinal must be <= 512");
+    }
 
     if (member->maybe_used) {
       auto location = member->maybe_used->identifier->location();
@@ -1806,6 +1817,15 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
       if (!ordinal) {
         ordinal = std::make_unique<raw::Ordinal32>(
             fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
+        if (ordinal->value <= kXunionOrdinalCutoff) {
+          return Fail(member->location(),
+                      "hashed ordinal is <= 512, and conflicts with explicit ordinal space, try "
+                      "using a different Selector");
+        }
+      } else {
+        if (ordinal->value > kXunionOrdinalCutoff) {
+          return Fail(member->location(), "explicit union ordinal must be <= 512");
+        }
       }
       auto location = member->maybe_used->identifier->location();
       std::unique_ptr<TypeConstructor> type_ctor;

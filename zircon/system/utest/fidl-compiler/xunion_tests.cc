@@ -274,7 +274,6 @@ protocol Example {
   END_TEST;
 }
 
-
 bool no_nullable_members_in_xunions() {
   BEGIN_TEST;
 
@@ -294,6 +293,40 @@ xunion Foo {
   END_TEST;
 }
 
+bool ordinal_cutoff() {
+  BEGIN_TEST;
+
+  TestLibrary below_cutoff(R"FIDL(
+library example;
+
+union Foo {
+  512: string bar;
+};
+
+)FIDL");
+  ASSERT_FALSE(below_cutoff.Compile());
+  auto errors = below_cutoff.errors();
+  ASSERT_EQ(errors.size(), 1);
+  // the ordinal cutoff is enforced before checking for a dense ordinal space.
+  ASSERT_STR_STR(errors[0].c_str(), "missing ordinal 1 (ordinals must be dense)");
+
+  TestLibrary above_cutoff(R"FIDL(
+library example;
+
+union Foo {
+  513: string bar;
+};
+
+)FIDL");
+  ASSERT_FALSE(above_cutoff.Compile());
+  errors = above_cutoff.errors();
+  ASSERT_EQ(errors.size(), 1);
+  // the ordinal cutoff is enforced before checking for a dense ordinal space.
+  ASSERT_STR_STR(errors[0].c_str(), "explicit union ordinal must be <= 512");
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(xunion_tests)
@@ -303,4 +336,5 @@ RUN_TEST(invalid_empty_xunions)
 RUN_TEST(union_xunion_same_ordinals_explicit)
 RUN_TEST(error_syntax_explicit_ordinals)
 RUN_TEST(no_nullable_members_in_xunions)
+RUN_TEST(ordinal_cutoff)
 END_TEST_CASE(xunion_tests)

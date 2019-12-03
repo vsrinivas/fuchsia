@@ -248,7 +248,6 @@ union Foo {
   END_TEST;
 }
 
-
 bool no_nullable_members_in_unions() {
   BEGIN_TEST;
 
@@ -268,6 +267,40 @@ union Foo {
   END_TEST;
 }
 
+bool ordinal_cutoff() {
+  BEGIN_TEST;
+
+  TestLibrary below_cutoff(R"FIDL(
+library example;
+
+union Foo {
+  512: string bar;
+};
+
+)FIDL");
+  ASSERT_FALSE(below_cutoff.Compile());
+  auto errors = below_cutoff.errors();
+  ASSERT_EQ(errors.size(), 1);
+  // the ordinal cutoff is enforced before checking for a dense ordinal space.
+  ASSERT_STR_STR(errors[0].c_str(), "missing ordinal 1 (ordinals must be dense)");
+
+  TestLibrary above_cutoff(R"FIDL(
+library example;
+
+union Foo {
+  513: string bar;
+};
+
+)FIDL");
+  ASSERT_FALSE(above_cutoff.Compile());
+  errors = above_cutoff.errors();
+  ASSERT_EQ(errors.size(), 1);
+  // the ordinal cutoff is enforced before checking for a dense ordinal space.
+  ASSERT_STR_STR(errors[0].c_str(), "explicit union ordinal must be <= 512");
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(union_tests)
@@ -281,4 +314,5 @@ RUN_TEST(cannot_start_at_zero)
 RUN_TEST(default_not_allowed)
 RUN_TEST(must_be_dense)
 RUN_TEST(no_nullable_members_in_unions)
+RUN_TEST(ordinal_cutoff)
 END_TEST_CASE(union_tests)
