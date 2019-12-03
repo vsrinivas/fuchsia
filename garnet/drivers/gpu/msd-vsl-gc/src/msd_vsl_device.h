@@ -53,7 +53,7 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   magma::RegisterIo* register_io() { return register_io_.get(); }
 
   // MsdVslConnection::Owner
-  magma::PlatformBusMapper* bus_mapper() override { return bus_mapper_.get(); }
+  magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 
   void ConnectionReleased(MsdVslConnection* connection) override {
     page_table_slot_allocator_->Free(connection->page_table_array_slot());

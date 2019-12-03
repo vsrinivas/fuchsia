@@ -36,7 +36,7 @@ class TestMsdVslDevice : public drm_test_info {
       return DRETF(false, "device not idle");
 
     address_space_owner_ =
-        std::make_unique<AddressSpaceOwner>(device_.msd_vsl_device->bus_mapper());
+        std::make_unique<AddressSpaceOwner>(device_.msd_vsl_device->GetBusMapper());
     address_space_ = AddressSpace::Create(address_space_owner_.get());
     if (!address_space_)
       return DRETF(false, "failed to create address space");
@@ -74,7 +74,7 @@ class TestMsdVslDevice : public drm_test_info {
     if (!buffer)
       return DRETF(false, "Couldn't create buffer");
 
-    auto bus_mapping = device->bus_mapper()->MapPageRangeBus(buffer.get(), 0, kPageCount);
+    auto bus_mapping = device->GetBusMapper()->MapPageRangeBus(buffer.get(), 0, kPageCount);
     if (!bus_mapping)
       return DRETF(false, "couldn't create bus mapping");
 
@@ -138,7 +138,7 @@ class TestMsdVslDevice : public drm_test_info {
 
   MsdVslDevice* device() { return device_.msd_vsl_device.get(); }
 
-  magma::PlatformBusMapper* bus_mapper() { return device_.msd_vsl_device->bus_mapper(); }
+  magma::PlatformBusMapper* GetBusMapper() { return device_.msd_vsl_device->GetBusMapper(); }
 
   magma::RegisterIo* register_io() { return device_.msd_vsl_device->register_io(); }
 
@@ -160,7 +160,7 @@ class TestMsdVslDevice : public drm_test_info {
     AddressSpaceOwner(magma::PlatformBusMapper* bus_mapper) : bus_mapper_(bus_mapper) {}
     virtual ~AddressSpaceOwner() = default;
 
-    magma::PlatformBusMapper* bus_mapper() override { return bus_mapper_; }
+    magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_; }
 
    private:
     magma::PlatformBusMapper* bus_mapper_;
@@ -236,14 +236,14 @@ struct etna_bo* etna_bo_new(void* dev, uint32_t size, uint32_t flags) {
   uint32_t page_count = etna_buffer->buffer->size() / PAGE_SIZE;
 
   etna_buffer->bus_mapping =
-      etna_device->test->bus_mapper()->MapPageRangeBus(etna_buffer->buffer.get(), 0, page_count);
+      etna_device->test->GetBusMapper()->MapPageRangeBus(etna_buffer->buffer.get(), 0, page_count);
   if (!etna_buffer->bus_mapping)
     return DRETP(nullptr, "failed to bus map buffer");
 
   etna_buffer->gpu_addr = etna_device->test->next_gpu_addr(etna_buffer->buffer->size());
 
   if (!etna_device->test->address_space()->Insert(etna_buffer->gpu_addr,
-                                                  etna_buffer->bus_mapping.get(), page_count))
+                                                  etna_buffer->bus_mapping.get()))
     return DRETP(nullptr, "couldn't insert into address space");
 
   return etna_buffer.release();

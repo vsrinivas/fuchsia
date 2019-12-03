@@ -8,7 +8,7 @@
 
 class TestMsdVslConnection : public MsdVslConnection::Owner {
  public:
-  magma::PlatformBusMapper* bus_mapper() override { return &mock_bus_mapper_; }
+  magma::PlatformBusMapper* GetBusMapper() override { return &mock_bus_mapper_; }
 
   void ConnectionReleased(MsdVslConnection* connection) override {
     connection_released_ = connection;

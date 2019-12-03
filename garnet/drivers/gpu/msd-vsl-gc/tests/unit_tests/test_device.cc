@@ -39,9 +39,8 @@ TEST_F(MsdVslDeviceTest, ChipIdentity) {
 
   // Now try to get it as a buffer.
   uint32_t identity_buffer;
-  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(device_.get(),
-                                                             kMsdVslVendorQueryChipIdentity,
-                                                             &identity_buffer));
+  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(
+                                 device_.get(), kMsdVslVendorQueryChipIdentity, &identity_buffer));
   magma_vsl_gc_chip_identity identity_from_buf;
   auto buffer = magma::PlatformBuffer::Import(identity_buffer);
   EXPECT_TRUE(buffer);
@@ -61,9 +60,8 @@ TEST_F(MsdVslDeviceTest, ChipOption) {
 
   // Now try to get it as a buffer.
   uint32_t option_buffer;
-  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(device_.get(),
-                                                             kMsdVslVendorQueryChipOption,
-                                                             &option_buffer));
+  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(
+                                 device_.get(), kMsdVslVendorQueryChipOption, &option_buffer));
   magma_vsl_gc_chip_option option_from_buf;
   auto buffer = magma::PlatformBuffer::Import(option_buffer);
   EXPECT_TRUE(buffer);
@@ -81,7 +79,7 @@ TEST_F(MsdVslDeviceTest, FetchEngineDma) {
       magma::PlatformBuffer::Create(PAGE_SIZE * kPageCount, "test");
   ASSERT_NE(buffer, nullptr);
 
-  auto bus_mapping = device_->bus_mapper()->MapPageRangeBus(buffer.get(), 0, kPageCount);
+  auto bus_mapping = device_->GetBusMapper()->MapPageRangeBus(buffer.get(), 0, kPageCount);
   ASSERT_NE(bus_mapping, nullptr);
 
   uint32_t length = 0;
@@ -103,8 +101,8 @@ TEST_F(MsdVslDeviceTest, FetchEngineDma) {
 
   auto start = std::chrono::high_resolution_clock::now();
   while (!device_->IsIdle() && std::chrono::duration_cast<std::chrono::milliseconds>(
-                                  std::chrono::high_resolution_clock::now() - start)
-                                      .count() < 1000) {
+                                   std::chrono::high_resolution_clock::now() - start)
+                                       .count() < 1000) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 
@@ -119,7 +117,7 @@ TEST_F(MsdVslDeviceTest, LoadAddressSpace) {
    public:
     AddressSpaceOwner(magma::PlatformBusMapper* bus_mapper) : bus_mapper_(bus_mapper) {}
 
-    magma::PlatformBusMapper* bus_mapper() override { return bus_mapper_; }
+    magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_; }
 
    private:
     magma::PlatformBusMapper* bus_mapper_;
@@ -132,7 +130,7 @@ TEST_F(MsdVslDeviceTest, LoadAddressSpace) {
 
     EXPECT_TRUE(device_->IsIdle());
 
-    AddressSpaceOwner owner(device_->bus_mapper());
+    AddressSpaceOwner owner(device_->GetBusMapper());
 
     std::unique_ptr<AddressSpace> address_space = AddressSpace::Create(&owner);
     ASSERT_NE(device, nullptr);
@@ -149,7 +147,7 @@ TEST_F(MsdVslDeviceTest, LoadAddressSpace) {
         magma::PlatformBuffer::Create(PAGE_SIZE * kPageCount, "test");
     ASSERT_NE(buffer, nullptr);
 
-    auto bus_mapping = device_->bus_mapper()->MapPageRangeBus(buffer.get(), 0, kPageCount);
+    auto bus_mapping = device_->GetBusMapper()->MapPageRangeBus(buffer.get(), 0, kPageCount);
     ASSERT_NE(bus_mapping, nullptr);
 
     uint32_t length = 0;
@@ -176,8 +174,8 @@ TEST_F(MsdVslDeviceTest, LoadAddressSpace) {
 
     auto start = std::chrono::high_resolution_clock::now();
     while (!device_->IsIdle() && std::chrono::duration_cast<std::chrono::milliseconds>(
-                                    std::chrono::high_resolution_clock::now() - start)
-                                        .count() < 1000) {
+                                     std::chrono::high_resolution_clock::now() - start)
+                                         .count() < 1000) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 

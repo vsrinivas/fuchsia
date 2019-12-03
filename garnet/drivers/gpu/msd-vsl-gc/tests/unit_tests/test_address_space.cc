@@ -13,7 +13,7 @@ class TestAddressSpace {
     // Put bus addresses close to the 40 bit limit
     MockAddressSpaceOwner() : bus_mapper_((1ul << (40 - 1))) {}
 
-    magma::PlatformBusMapper* bus_mapper() override { return &bus_mapper_; }
+    magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
 
    private:
     MockBusMapper bus_mapper_;
@@ -77,45 +77,33 @@ class TestAddressSpace {
     check_pte_entries_clear(address_space.get(), (1 << 31) - kPageCount * PAGE_SIZE, kPageCount);
   }
 
-  static void Insert(AddressSpace::gpu_addr_t gpu_addr, uint32_t size_in_pages,
-                     uint32_t mapping_page_count) {
+  static void Insert(uint64_t gpu_addr, uint32_t size_in_pages, uint32_t mapping_page_count) {
     MockAddressSpaceOwner owner;
     auto address_space = AddressSpace::Create(&owner);
     auto buffer = magma::PlatformBuffer::Create(size_in_pages * PAGE_SIZE, "test");
-    auto bus_mapping = owner.bus_mapper()->MapPageRangeBus(buffer.get(), 0, size_in_pages);
-    EXPECT_TRUE(address_space->Insert(gpu_addr, bus_mapping.get(), mapping_page_count));
+    auto bus_mapping = owner.GetBusMapper()->MapPageRangeBus(buffer.get(), 0, mapping_page_count);
+    EXPECT_TRUE(address_space->Insert(gpu_addr, bus_mapping.get()));
     check_pte_entries(address_space.get(), bus_mapping.get(), gpu_addr, mapping_page_count);
   }
 
-  static void Clear(AddressSpace::gpu_addr_t gpu_addr, uint32_t size_in_pages) {
+  static void Clear(uint64_t gpu_addr, uint32_t size_in_pages) {
     MockAddressSpaceOwner owner;
     auto address_space = AddressSpace::Create(&owner);
-    EXPECT_TRUE(address_space->Clear(gpu_addr, size_in_pages));
+    auto buffer = magma::PlatformBuffer::Create(size_in_pages * PAGE_SIZE, "test");
+    auto bus_mapping = owner.GetBusMapper()->MapPageRangeBus(buffer.get(), 0, size_in_pages);
+    EXPECT_TRUE(address_space->Clear(gpu_addr, bus_mapping.get()));
     check_pte_entries_clear(address_space.get(), gpu_addr, size_in_pages);
   }
 
-  static void InsertAndClear(AddressSpace::gpu_addr_t gpu_addr, uint32_t size_in_pages,
+  static void InsertAndClear(uint64_t gpu_addr, uint32_t size_in_pages,
                              uint32_t mapping_page_count) {
     MockAddressSpaceOwner owner;
     auto address_space = AddressSpace::Create(&owner);
     auto buffer = magma::PlatformBuffer::Create(size_in_pages * PAGE_SIZE, "test");
-    auto bus_mapping = owner.bus_mapper()->MapPageRangeBus(buffer.get(), 0, size_in_pages);
-    EXPECT_TRUE(address_space->Insert(gpu_addr, bus_mapping.get(), mapping_page_count));
-    EXPECT_TRUE(address_space->Clear(gpu_addr, mapping_page_count));
+    auto bus_mapping = owner.GetBusMapper()->MapPageRangeBus(buffer.get(), 0, mapping_page_count);
+    EXPECT_TRUE(address_space->Insert(gpu_addr, bus_mapping.get()));
+    EXPECT_TRUE(address_space->Clear(gpu_addr, bus_mapping.get()));
     check_pte_entries_clear(address_space.get(), gpu_addr, mapping_page_count);
-  }
-
-  static void InsertManyClearOnce(AddressSpace::gpu_addr_t gpu_addr) {
-    MockAddressSpaceOwner owner;
-    auto address_space = AddressSpace::Create(&owner);
-    auto buffer = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
-    auto bus_mapping = owner.bus_mapper()->MapPageRangeBus(buffer.get(), 0, 1);
-    EXPECT_TRUE(address_space->Insert(gpu_addr, bus_mapping.get(), 1));
-    EXPECT_TRUE(address_space->Insert(gpu_addr + 2 * buffer->size(), bus_mapping.get(), 1));
-    EXPECT_TRUE(address_space->Insert(gpu_addr + 5 * buffer->size(), bus_mapping.get(), 1));
-    EXPECT_TRUE(address_space->Insert(gpu_addr + 15 * buffer->size(), bus_mapping.get(), 1));
-    EXPECT_TRUE(address_space->Clear(gpu_addr, 1024));
-    check_pte_entries_clear(address_space.get(), gpu_addr, 1024);
   }
 
   static void GarbageCollect() {
@@ -130,10 +118,10 @@ class TestAddressSpace {
 
     uint32_t size_in_pages = 1024 + 1;
     auto buffer = magma::PlatformBuffer::Create(size_in_pages * PAGE_SIZE, "test");
-    auto bus_mapping = owner.bus_mapper()->MapPageRangeBus(buffer.get(), 0, size_in_pages);
+    auto bus_mapping = owner.GetBusMapper()->MapPageRangeBus(buffer.get(), 0, size_in_pages);
 
     // Insert 1st
-    EXPECT_TRUE(address_space->Insert(gpu_addr, bus_mapping.get(), size_in_pages));
+    EXPECT_TRUE(address_space->Insert(gpu_addr, bus_mapping.get()));
     check_pte_entries(address_space.get(), bus_mapping.get(), gpu_addr, size_in_pages);
 
     EXPECT_EQ(1024u, address_space->root_->valid_count(page_directory_index));
@@ -143,8 +131,7 @@ class TestAddressSpace {
     EXPECT_NE(nullptr, address_space->root_->GetPageTable(page_directory_index + 1, false));
 
     // Insert 2nd
-    EXPECT_TRUE(address_space->Insert(gpu_addr + PAGE_SIZE * size_in_pages, bus_mapping.get(),
-                                      size_in_pages));
+    EXPECT_TRUE(address_space->Insert(gpu_addr + PAGE_SIZE * size_in_pages, bus_mapping.get()));
     check_pte_entries(address_space.get(), bus_mapping.get(), gpu_addr + PAGE_SIZE * size_in_pages,
                       size_in_pages);
 
@@ -155,7 +142,7 @@ class TestAddressSpace {
     EXPECT_NE(nullptr, address_space->root_->GetPageTable(page_directory_index + 2, false));
 
     // Clear 1st
-    EXPECT_TRUE(address_space->Clear(gpu_addr, size_in_pages));
+    EXPECT_TRUE(address_space->Clear(gpu_addr, bus_mapping.get()));
     check_pte_entries_clear(address_space.get(), gpu_addr, size_in_pages);
 
     EXPECT_EQ(0u, address_space->root_->valid_count(page_directory_index));
@@ -168,7 +155,7 @@ class TestAddressSpace {
     EXPECT_NE(nullptr, address_space->root_->GetPageTable(page_directory_index + 2, false));
 
     // Clear 2nd
-    EXPECT_TRUE(address_space->Clear(gpu_addr + PAGE_SIZE * size_in_pages, size_in_pages));
+    EXPECT_TRUE(address_space->Clear(gpu_addr + PAGE_SIZE * size_in_pages, bus_mapping.get()));
     check_pte_entries_clear(address_space.get(), gpu_addr + PAGE_SIZE * size_in_pages,
                             size_in_pages);
 
@@ -197,7 +184,5 @@ TEST(AddressSpace, Clear) { TestAddressSpace::Clear(0, 10); }
 TEST(AddressSpace, InsertShort) { TestAddressSpace::Insert(0, 10, 5); }
 
 TEST(AddressSpace, InsertShortAndClear) { TestAddressSpace::InsertAndClear(0, 10, 5); }
-
-TEST(AddressSpace, InsertManyClearOnce) { TestAddressSpace::InsertManyClearOnce(0); }
 
 TEST(AddressSpace, GarbageCollect) { TestAddressSpace::GarbageCollect(); }

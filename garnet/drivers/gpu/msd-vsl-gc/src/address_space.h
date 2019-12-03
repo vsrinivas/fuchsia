@@ -9,8 +9,9 @@
 
 #include <vector>
 
-#include "address_space_base.h"
+#include "gpu_mapping.h"
 #include "macros.h"
+#include "magma_util/address_space.h"
 #include "platform_buffer.h"
 #include "platform_bus_mapper.h"
 
@@ -19,20 +20,18 @@
 #endif
 static_assert(PAGE_SHIFT == 12, "Need 4k page");
 
-class AddressSpace : public AddressSpaceBase {
+class AddressSpace : public magma::AddressSpace<GpuMapping> {
  public:
-  class Owner {
-   public:
-    virtual magma::PlatformBusMapper* bus_mapper() = 0;
-  };
+  using Owner = magma::AddressSpaceOwner;
 
   static std::unique_ptr<AddressSpace> Create(Owner* owner);
 
-  AddressSpace(Owner* owner) : owner_(owner) {}
+  AddressSpace(Owner* owner) : magma::AddressSpace<GpuMapping>(owner), owner_(owner) {}
 
-  bool Insert(gpu_addr_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
-              uint64_t page_count) override;
-  bool Clear(gpu_addr_t addr, uint64_t page_count) override;
+  bool InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override;
+  bool ClearLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) override;
+
+  uint64_t Size() const override { return 1ull << 40; }
 
   uint64_t bus_addr() { return root_->bus_addr(); }
 

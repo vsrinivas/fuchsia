@@ -8,7 +8,6 @@ executable("nonhardware_tests") {
 
   sources = [
     "test_address_space.cc",
-    "test_address_space_base.cc",
     "test_connection.cc",
     "test_page_table_slot_allocator.cc",
   ]

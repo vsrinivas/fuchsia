@@ -34,7 +34,7 @@ class MsdVslConnection : AddressSpace::Owner {
   std::shared_ptr<AddressSpace> address_space() { return address_space_; }
 
   // AddressSpace::Owner
-  magma::PlatformBusMapper* bus_mapper() override { return owner_->bus_mapper(); }
+  magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
 
  private:
   Owner* owner_;

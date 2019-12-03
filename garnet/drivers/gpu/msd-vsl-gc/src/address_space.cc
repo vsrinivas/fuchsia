@@ -22,7 +22,7 @@ bool AddressSpace::Page::Init(bool cached) {
   if (!buffer_->MapCpu(&mapping_))
     return DRETF(false, "failed to map cpu");
 
-  bus_mapping_ = owner_->bus_mapper()->MapPageRangeBus(buffer_.get(), 0, 1);
+  bus_mapping_ = owner_->GetBusMapper()->MapPageRangeBus(buffer_.get(), 0, 1);
   if (!bus_mapping_)
     return DRETF(false, "failed to map page range bus");
 
@@ -108,11 +108,11 @@ bool AddressSpace::Init() {
   return true;
 }
 
-bool AddressSpace::Insert(gpu_addr_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
-                          uint64_t page_count) {
+bool AddressSpace::InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) {
   DASSERT(magma::is_page_aligned(addr));
-
   auto& bus_addr_array = bus_mapping->Get();
+  uint64_t page_count = bus_addr_array.size();
+
   if (page_count > bus_addr_array.size())
     return DRETF(false, "page_count %lu larger than bus mapping length %zu", page_count,
                  bus_addr_array.size());
@@ -157,8 +157,9 @@ bool AddressSpace::Insert(gpu_addr_t addr, magma::PlatformBusMapper::BusMapping*
   return true;
 }
 
-bool AddressSpace::Clear(gpu_addr_t addr, uint64_t page_count) {
+bool AddressSpace::ClearLocked(uint64_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping) {
   DASSERT(magma::is_page_aligned(addr));
+  uint64_t page_count = bus_mapping->page_count();
 
   if ((addr >> PAGE_SHIFT) + page_count > (1l << (kVirtualAddressBits - PAGE_SHIFT)))
     return DRETF(false, "Virtual address too large");
