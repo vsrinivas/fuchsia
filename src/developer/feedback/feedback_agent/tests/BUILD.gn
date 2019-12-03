@@ -5,11 +5,14 @@
 import("//build/config.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/hwinfo/hwinfo_config.gni")
 
 group("tests") {
   testonly = true
 
   public_deps = [
+    ":fake_hwinfo_board_config",
+    ":fake_hwinfo_product_config",
     ":feedback_agent_tests",
     ":invalid_override_config",
     ":valid_override_config",
@@ -22,6 +25,7 @@ group("tests") {
     "//src/developer/feedback/feedback_agent:fake_feedback_agent_invalid_override_config",
     "//src/developer/feedback/feedback_agent:fake_feedback_agent_valid_override_config",
     "//src/diagnostics/archivist",
+    "//src/hwinfo:tests",
   ]
 }
 
@@ -191,6 +195,7 @@ executable("data_provider_unittest") {
   deps = [
     ":stub_channel_provider",
     ":stub_logger",
+    ":stub_product",
     ":stub_scenic",
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.feedback",
@@ -227,6 +232,7 @@ executable("feedback_agent_integration_test") {
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/fidl/cpp",
@@ -520,5 +526,59 @@ config_data("invalid_override_config") {
 
   outputs = [
     "override_config.json",
+  ]
+}
+
+hwinfo_config_validate("fake_hwinfo_product_config_validate") {
+  type = "product"
+  config = "configs/hwinfo_product_config.json"
+}
+
+hwinfo_config_validate("fake_hwinfo_board_config_validate") {
+  type = "board"
+  config = "configs/hwinfo_board_config.json"
+}
+
+config_data("fake_hwinfo_product_config") {
+  for_pkg = "fake_hwinfo"
+
+  sources = [
+    rebase_path("configs/hwinfo_product_config.json"),
+  ]
+
+  outputs = [
+    "product_config.json",
+  ]
+
+  deps = [
+    ":fake_hwinfo_product_config_validate",
+  ]
+}
+
+config_data("fake_hwinfo_board_config") {
+  for_pkg = "fake_hwinfo"
+
+  sources = [
+    rebase_path("configs/hwinfo_board_config.json"),
+  ]
+
+  outputs = [
+    "board_config.json",
+  ]
+
+  deps = [
+    ":fake_hwinfo_board_config_validate",
+  ]
+}
+
+config_data("fake_hwinfo_factory_config") {
+  for_pkg = "fake_factory_store_providers"
+
+  sources = [
+    "configs/hwinfo_factory_config.json",
+  ]
+
+  outputs = [
+    "fuchsia.factory.MiscFactoryStoreProvider.config",
   ]
 }

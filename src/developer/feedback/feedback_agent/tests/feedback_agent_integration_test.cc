@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/update/channel/cpp/fidl.h>
@@ -50,6 +51,8 @@ using fuchsia::feedback::DataProviderPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
+using fuchsia::hwinfo::ProductInfo;
+using fuchsia::hwinfo::ProductPtr;
 using inspect::testing::PropertyList;
 using inspect::testing::UintIs;
 
@@ -139,6 +142,17 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
                                   inspect_test_app_controller_.NewRequest());
     bool ready = false;
     inspect_test_app_controller_.events().OnDirectoryReady = [&ready] { ready = true; };
+    RunLoopUntil([&ready] { return ready; });
+  }
+
+  // Makes sure the component serving fuchsia.hwinfo.ProductInfo is up and running as the
+  // GetInfo() request could time out on machines where the component is too slow to start.
+  void WaitForProductProvider() {
+    fuchsia::hwinfo::ProductPtr product_provider;
+    environment_services_->Connect(product_provider.NewRequest());
+
+    bool ready = false;
+    product_provider->GetInfo([&](ProductInfo product_info) { ready = true; });
     RunLoopUntil([&ready] { return ready; });
   }
 
@@ -307,6 +321,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   WaitForLogger();
   WaitForChannelProvider();
   WaitForInspect();
+  WaitForProductProvider();
 
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
@@ -333,6 +348,13 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                                       MatchesKey(kAnnotationDeviceBoardName),
                                       MatchesKey(kAnnotationDeviceUptime),
                                       MatchesKey(kAnnotationDeviceUTCTime),
+                                      MatchesKey(kAnnotationHardwareProductSKU),
+                                      MatchesKey(kAnnotationHardwareProductLanguage),
+                                      MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
+                                      MatchesKey(kAnnotationHardwareProductLocaleList),
+                                      MatchesKey(kAnnotationHardwareProductName),
+                                      MatchesKey(kAnnotationHardwareProductModel),
+                                      MatchesKey(kAnnotationHardwareProductManufacturer),
                                   }));
 
   ASSERT_TRUE(data.has_attachments());
@@ -360,6 +382,8 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
 
 TEST_F(FeedbackAgentIntegrationTest, OneDataProviderPerRequest) {
   auto env = CreateDataProviderEnvironment();
+
+  WaitForProductProvider();
 
   DataProviderPtr data_provider_1;
   env->ConnectToService(data_provider_1.NewRequest());

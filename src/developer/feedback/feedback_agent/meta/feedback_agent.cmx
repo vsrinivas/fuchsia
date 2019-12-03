@@ -8,7 +8,7 @@
         ],
         "features": [
             "build-info",
-            "config-data",
+	    "config-data",
             "hub",
             "isolated-temp"
         ],
@@ -16,6 +16,7 @@
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
+            "fuchsia.hwinfo.Product",
             "fuchsia.process.Launcher",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.update.channel.Provider"

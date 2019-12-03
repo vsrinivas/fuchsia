@@ -2,10 +2,15 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.factory.MiscFactoryStoreProvider": [
+                    "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/misc.cmx",
+                    "--config=/config/data/fuchsia.factory.MiscFactoryStoreProvider.config"
+                ],
                 "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
                 "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
+                "fuchsia.hwinfo.Product": "fuchsia-pkg://fuchsia.com/fake_hwinfo#meta/hwinfo.cmx",
                 "fuchsia.update.channel.Provider": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx"
             },
             "system-services": [
@@ -26,7 +31,9 @@
         ],
         "services": [
             "fuchsia.boot.ReadOnlyLog",
+            "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.feedback.DataProvider",
+            "fuchsia.hwinfo.Product",
             "fuchsia.logger.Log",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",

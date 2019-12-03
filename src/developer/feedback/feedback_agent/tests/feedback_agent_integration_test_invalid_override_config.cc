@@ -61,6 +61,13 @@ TEST_F(FeedbackAgentIntegrationTest, InvalidOverrideConfig_SmokeTest) {
                                       MatchesKey(kAnnotationDeviceBoardName),
                                       MatchesKey(kAnnotationDeviceUptime),
                                       MatchesKey(kAnnotationDeviceUTCTime),
+                                      MatchesKey(kAnnotationHardwareProductSKU),
+                                      MatchesKey(kAnnotationHardwareProductLanguage),
+                                      MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
+                                      MatchesKey(kAnnotationHardwareProductLocaleList),
+                                      MatchesKey(kAnnotationHardwareProductName),
+                                      MatchesKey(kAnnotationHardwareProductModel),
+                                      MatchesKey(kAnnotationHardwareProductManufacturer),
                                   }));
 
   ASSERT_TRUE(data.has_attachments());

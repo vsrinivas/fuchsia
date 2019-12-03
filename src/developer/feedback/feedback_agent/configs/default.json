@@ -8,7 +8,14 @@
         "channel",
         "device.board-name",
         "device.uptime",
-	"device.utc-time"
+        "device.utc-time",
+        "hardware.product.language",
+        "hardware.product.locale-list",
+        "hardware.product.manufacturer",
+        "hardware.product.model",
+        "hardware.product.name",
+        "hardware.product.regulatory-domain",
+        "hardware.product.sku"
     ],
     "attachment_allowlist": [
         "build.snapshot.xml",

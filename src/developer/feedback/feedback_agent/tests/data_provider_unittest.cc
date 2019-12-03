@@ -5,6 +5,8 @@
 #include "src/developer/feedback/feedback_agent/data_provider.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/hwinfo/cpp/fidl.h>
+#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/result.h>
@@ -24,6 +26,7 @@
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
+#include "src/developer/feedback/feedback_agent/tests/stub_product.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
@@ -34,8 +37,11 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
@@ -48,11 +54,28 @@ using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
+using fuchsia::hwinfo::ProductInfo;
+using fuchsia::intl::LocaleId;
+using fuchsia::intl::RegulatoryDomain;
+using fxl::SplitResult::kSplitWantNonEmpty;
+using fxl::WhiteSpaceHandling::kTrimWhitespace;
 
 const std::set<std::string> kDefaultAnnotations = {
-    kAnnotationBuildBoard,      kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
-    kAnnotationBuildProduct,    kAnnotationBuildVersion, kAnnotationChannel,
-    kAnnotationDeviceBoardName, kAnnotationDeviceUptime, kAnnotationDeviceUTCTime,
+    kAnnotationBuildBoard,
+    kAnnotationBuildLatestCommitDate,
+    kAnnotationBuildProduct,
+    kAnnotationBuildVersion,
+    kAnnotationChannel,
+    kAnnotationDeviceBoardName,
+    kAnnotationDeviceUptime,
+    kAnnotationDeviceUTCTime,
+    kAnnotationHardwareProductSKU,
+    kAnnotationHardwareProductLanguage,
+    kAnnotationHardwareProductRegulatoryDomain,
+    kAnnotationHardwareProductLocaleList,
+    kAnnotationHardwareProductName,
+    kAnnotationHardwareProductModel,
+    kAnnotationHardwareProductManufacturer,
 };
 
 const std::set<std::string> kDefaultAttachments = {
@@ -61,6 +84,15 @@ const std::set<std::string> kDefaultAttachments = {
     // kAttachmentInspect,
     kAttachmentLogKernel,
     kAttachmentLogSystem,
+};
+const std::map<std::string, std::string> kProductInfoValues = {
+    {kAnnotationHardwareProductSKU, "sku"},
+    {kAnnotationHardwareProductLanguage, "language"},
+    {kAnnotationHardwareProductRegulatoryDomain, "regulatory-domain"},
+    {kAnnotationHardwareProductLocaleList, "locale1, locale2, locale3"},
+    {kAnnotationHardwareProductName, "name"},
+    {kAnnotationHardwareProductModel, "model"},
+    {kAnnotationHardwareProductManufacturer, "manufacturer"},
 };
 const Config kDefaultConfig = Config{kDefaultAnnotations, kDefaultAttachments};
 
@@ -130,6 +162,32 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
   return true;
 }
 
+ProductInfo CreateProductInfo() {
+  ProductInfo info;
+
+  info.set_sku(kProductInfoValues.at(kAnnotationHardwareProductSKU));
+  info.set_language(kProductInfoValues.at(kAnnotationHardwareProductLanguage));
+  info.set_name(kProductInfoValues.at(kAnnotationHardwareProductName));
+  info.set_model(kProductInfoValues.at(kAnnotationHardwareProductModel));
+  info.set_manufacturer(kProductInfoValues.at(kAnnotationHardwareProductManufacturer));
+
+  RegulatoryDomain domain;
+  domain.set_country_code(kProductInfoValues.at(kAnnotationHardwareProductRegulatoryDomain));
+  info.set_regulatory_domain(std::move(domain));
+
+  auto locale_strings =
+      fxl::SplitStringCopy(kProductInfoValues.at(kAnnotationHardwareProductLocaleList), ",",
+                           kTrimWhitespace, kSplitWantNonEmpty);
+  std::vector<LocaleId> locales;
+  for (const auto& locale : locale_strings) {
+    locales.emplace_back();
+    locales.back().id = locale;
+  }
+  info.set_locale_list(locales);
+
+  return info;
+}
+
 // Returns true if gMock |arg| matches |expected|, assuming two GetScreenshotResponse objects.
 MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expected.get())) {
   return DoGetScreenshotResponseMatch(arg, expected, result_listener);
@@ -176,6 +234,13 @@ class DataProviderTest : public UnitTestFixture {
     }
   }
 
+  void SetUpProductProvider(std::unique_ptr<StubProduct> product_provider) {
+    product_provider_ = std::move(product_provider);
+    if (product_provider_) {
+      InjectServiceProvider(product_provider_.get());
+    }
+  }
+
   GetScreenshotResponse GetScreenshot() {
     GetScreenshotResponse out_response;
     data_provider_->GetScreenshot(ImageEncoding::PNG,
@@ -215,6 +280,7 @@ class DataProviderTest : public UnitTestFixture {
   std::unique_ptr<StubChannelProvider> channel_provider_;
   std::unique_ptr<StubScenic> scenic_;
   std::unique_ptr<StubLogger> logger_;
+  std::unique_ptr<StubProduct> product_provider_;
 };
 
 TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
@@ -400,46 +466,71 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
     rapidjson::Document json;
     ASSERT_FALSE(json.Parse(annotations_json.c_str()).HasParseError());
     rapidjson::Document schema_json;
-    ASSERT_FALSE(schema_json
-                     .Parse(fxl::Substitute(R"({
+    ASSERT_FALSE(
+        schema_json
+            .Parse(fxl::StringPrintf(
+                R"({
   "type": "object",
-  "properties": {
-    "$0": {
+ "properties": {
+    "%s": {
       "type": "string"
     },
-    "$1": {
+    "%s": {
       "type": "string"
     },
-    "$2": {
+    "%s": {
       "type": "string"
     },
-    "$3": {
+    "%s": {
       "type": "string"
     },
-    "$4": {
+    "%s": {
       "type": "string"
     },
-    "$5": {
+    "%s": {
       "type": "string"
     },
-    "$6": {
+    "%s": {
       "type": "string"
     },
-    "$7": {
+    "%s": {
       "type": "string"
     },
-    "$8": {
+    "%s": {
+      "type": "string"
+    },
+    "%s": {
+      "type": "string"
+    },
+    "%s": {
+      "type": "string"
+    },
+    "%s": {
+      "type": "string"
+    },
+    "%s": {
+      "type": "string"
+    },
+    "%s": {
+      "type": "string"
+    },
+    "%s": {
+      "type": "string"
+    },
+    "%s": {
       "type": "string"
     }
   },
   "additionalProperties": false
 })",
-                                            kAnnotationBuildBoard, kAnnotationBuildIsDebug,
-                                            kAnnotationBuildLatestCommitDate,
-                                            kAnnotationBuildProduct, kAnnotationBuildVersion,
-                                            kAnnotationChannel, kAnnotationDeviceBoardName,
-                                            kAnnotationDeviceUptime, kAnnotationDeviceUTCTime))
-                     .HasParseError());
+                kAnnotationBuildBoard, kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
+                kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationChannel,
+                kAnnotationDeviceBoardName, kAnnotationDeviceUptime, kAnnotationDeviceUTCTime,
+                kAnnotationHardwareProductLanguage, kAnnotationHardwareProductLocaleList,
+                kAnnotationHardwareProductManufacturer, kAnnotationHardwareProductModel,
+                kAnnotationHardwareProductName, kAnnotationHardwareProductRegulatoryDomain,
+                kAnnotationHardwareProductSKU))
+            .HasParseError());
     rapidjson::SchemaDocument schema(schema_json);
     rapidjson::SchemaValidator validator(schema);
     EXPECT_TRUE(json.Accept(validator));
@@ -493,6 +584,39 @@ TEST_F(DataProviderTest, GetData_Channel) {
   ASSERT_TRUE(data.has_annotations());
   EXPECT_THAT(data.annotations(),
               testing::Contains(MatchesAnnotation(kAnnotationChannel, "my-channel")));
+}
+
+TEST_F(DataProviderTest, GetData_ProductInfo) {
+  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo()));
+
+  std::set<std::string> keys;
+  for (const auto& [key, _] : kProductInfoValues) {
+    keys.insert(key);
+  }
+
+  fit::result<Data, zx_status_t> result = GetData();
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  ASSERT_TRUE(data.has_annotations());
+  EXPECT_THAT(
+      data.annotations(),
+      testing::IsSupersetOf({
+          MatchesAnnotation(kAnnotationHardwareProductSKU,
+                            kProductInfoValues.at(kAnnotationHardwareProductSKU)),
+          MatchesAnnotation(kAnnotationHardwareProductLanguage,
+                            kProductInfoValues.at(kAnnotationHardwareProductLanguage)),
+          MatchesAnnotation(kAnnotationHardwareProductRegulatoryDomain,
+                            kProductInfoValues.at(kAnnotationHardwareProductRegulatoryDomain)),
+          MatchesAnnotation(kAnnotationHardwareProductLocaleList,
+                            kProductInfoValues.at(kAnnotationHardwareProductLocaleList)),
+          MatchesAnnotation(kAnnotationHardwareProductName,
+                            kProductInfoValues.at(kAnnotationHardwareProductName)),
+          MatchesAnnotation(kAnnotationHardwareProductModel,
+                            kProductInfoValues.at(kAnnotationHardwareProductModel)),
+          MatchesAnnotation(kAnnotationHardwareProductManufacturer,
+                            kProductInfoValues.at(kAnnotationHardwareProductManufacturer)),
+      }));
 }
 
 TEST_F(DataProviderTest, GetData_Time) {
@@ -577,8 +701,8 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
   // sufficient period of time.
   //
   // We setup the system such that requests for both data and screentshots hang,
-  // relying on their respective timeouts to ensure that an error is returned. Additionally, we set
-  // the idle timeout of the data provider to be half as long as the time it takes for a
+  // relying on their respective timeouts to ensure that an error is returned. Additionally, we
+  // set the idle timeout of the data provider to be half as long as the time it takes for a
   // request to return in order to determine that neither is interruped by the idle timeout while
   // completing.
   //
@@ -599,10 +723,11 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
 
   SetUpScenic(std::make_unique<StubScenicNeverReturns>());
   SetUpChannelProvider(std::make_unique<StubChannelProviderNeverReturns>());
+  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo()));
 
-  // In the following tests we list the current time of a stopwatch that starts at 0 seconds and the
-  // point in time at which the idle timeout function is expected to run. In the circumstance the
-  // idle timeout function is blocked from running we denote the timeout as X.
+  // In the following tests we list the current time of a stopwatch that starts at 0 seconds and
+  // the point in time at which the idle timeout function is expected to run. In the circumstance
+  // the idle timeout function is blocked from running we denote the timeout as X.
 
   // Make a single request for a screenshot to check that the idle timeout happens after the
   // screenshot has been returned.
@@ -735,8 +860,8 @@ class DataProviderTestWithEnv : public sys::testing::TestWithEnvironment {
   // Injects a test app that exposes some Inspect data in the test environment.
   //
   // Useful to guarantee there is a component within the environment that exposes Inspect data as
-  // we are excluding system_objects paths from the Inspect discovery and the test component itself
-  // only has a system_objects Inspect node.
+  // we are excluding system_objects paths from the Inspect discovery and the test component
+  // itself only has a system_objects Inspect node.
   void InjectInspectTestApp() {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/inspect_test_app.cmx";
