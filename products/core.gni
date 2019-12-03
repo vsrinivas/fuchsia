@@ -65,6 +65,8 @@ base_package_labels += [
   "//src/developer/feedback/crashpad_agent",
   "//src/developer/feedback/feedback_agent",
   "//src/diagnostics/archivist",
+  "//src/hwinfo:hwinfo",
+  "//src/hwinfo:hwinfo_service_config",
   "//src/identity/bin:core",
   "//src/media/audio/bundles:audio_config",
   "//src/recovery/factory_reset",
