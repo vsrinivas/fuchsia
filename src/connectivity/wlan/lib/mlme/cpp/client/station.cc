@@ -44,73 +44,17 @@ using common::dBm;
 #define STA(c) static_cast<Station*>(c)
 Station::Station(DeviceInterface* device, wlan_client_mlme_config_t* mlme_config,
                  TimerManager<TimeoutTarget>* timer_mgr, ChannelScheduler* chan_sched,
-                 JoinContext* join_ctx)
+                 JoinContext* join_ctx, wlan_client_mlme_t* rust_mlme)
     : device_(device),
       mlme_config_(mlme_config),
       rust_client_(nullptr, client_sta_delete),
       timer_mgr_(timer_mgr),
       chan_sched_(chan_sched),
-      join_ctx_(join_ctx) {
-  auto rust_device = mlme_device_ops_t{
-      .device = static_cast<void*>(this),
-      .deliver_eth_frame = [](void* sta, const uint8_t* data, size_t len) -> zx_status_t {
-        return STA(sta)->device_->DeliverEthernet({data, len});
-      },
-      .send_wlan_frame = [](void* sta, mlme_out_buf_t buf, uint32_t flags) -> zx_status_t {
-        auto pkt = FromRustOutBuf(buf);
-        if (MgmtFrameView<>::CheckType(pkt.get())) {
-          return STA(sta)->SendMgmtFrame(std::move(pkt));
-        } else if (DataFrameView<>::CheckType(pkt.get())) {
-          return STA(sta)->SendDataFrame(std::move(pkt), flags);
-        }
-        return STA(sta)->SendCtrlFrame(std::move(pkt));
-      },
-      .get_sme_channel = [](void* sta) -> zx_handle_t {
-        return STA(sta)->device_->GetSmeChannelRef();
-      },
-      .set_wlan_channel = [](void* sta, wlan_channel_t chan) -> zx_status_t {
-        return STA(sta)->device_->SetChannel(chan);
-      },
-      .get_wlan_channel = [](void* sta) -> wlan_channel_t {
-        return STA(sta)->device_->GetState()->channel();
-      },
-      .set_key = [](void* sta, wlan_key_config_t* key) -> zx_status_t {
-        return STA(sta)->device_->SetKey(key);
-      },
-      .configure_bss = [](void* sta, wlan_bss_config_t* cfg) -> zx_status_t {
-        return STA(sta)->device_->ConfigureBss(cfg);
-      },
-      .enable_beaconing = [](void* sta, const uint8_t* beacon_tmpl_data, size_t beacon_tmpl_len,
-                             size_t tim_ele_offset, uint16_t beacon_interval) -> zx_status_t {
-        // The client never needs to enable beaconing.
-        return ZX_ERR_NOT_SUPPORTED;
-      },
-      .disable_beaconing = [](void* sta) -> zx_status_t {
-        // The client never needs to disable beaconing.
-        return ZX_ERR_NOT_SUPPORTED;
-      },
-      .configure_assoc = [](void* sta, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
-        return STA(sta)->device_->ConfigureAssoc(assoc_ctx);
-      },
-      .clear_assoc = [](void* sta, const uint8_t (*addr)[6]) -> zx_status_t {
-        return STA(sta)->device_->ClearAssoc(common::MacAddr(*addr));
-      },
-  };
-  wlan_scheduler_ops_t scheduler = {
-      .cookie = static_cast<void*>(this),
-      .now = [](void* cookie) -> zx_time_t { return STA(cookie)->timer_mgr_->Now().get(); },
-      .schedule = [](void* cookie, int64_t deadline) -> wlan_scheduler_event_id_t {
-        TimeoutId id = {};
-        STA(cookie)->timer_mgr_->Schedule(zx::time(deadline), TimeoutTarget::kRust, &id);
-        return {._0 = id.raw()};
-      },
-      .cancel =
-          [](void* cookie, wlan_scheduler_event_id_t id) {
-            STA(cookie)->timer_mgr_->Cancel(TimeoutId(id._0));
-          },
-  };
-  rust_client_ = NewClientStation(rust_device, rust_buffer_provider, scheduler, join_ctx_->bssid(),
-                                  self_addr(), join_ctx_->bss()->rsne.has_value());
+      join_ctx_(join_ctx),
+      rust_mlme_(rust_mlme) {
+  rust_client_ = ClientStation(client_sta_new(&join_ctx_->bssid().byte, &self_addr().byte,
+                                              join_ctx_->bss()->rsne.has_value()),
+                               client_sta_delete);
   Reset();
 }
 #undef STA
@@ -216,7 +160,7 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
       rx_info != nullptr && rx_info->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
   bool is_controlled_port_open = controlled_port_ == eapol::PortState::kOpen;
   auto frame_span = fbl::Span<uint8_t>{pkt->data(), pkt->len()};
-  client_sta_handle_data_frame(rust_client_.get(), AsWlanSpan(frame_span), has_padding,
+  client_sta_handle_data_frame(rust_client_.get(), rust_mlme_, AsWlanSpan(frame_span), has_padding,
                                is_controlled_port_open);
 
   return ZX_OK;
@@ -251,7 +195,7 @@ zx_status_t Station::Authenticate(wlan_mlme::AuthenticationTypes auth_type, uint
     return status;
   }
 
-  status = client_sta_send_open_auth_frame(rust_client_.get());
+  status = client_sta_send_open_auth_frame(rust_client_.get(), rust_mlme_);
   if (status != ZX_OK) {
     errorf("could not send open auth frame: %d\n", status);
     timer_mgr_->Cancel(auth_timeout_);
@@ -273,7 +217,7 @@ zx_status_t Station::Deauthenticate(wlan_mlme::ReasonCode reason_code) {
     return ZX_OK;
   }
 
-  client_sta_send_deauth_frame(rust_client_.get(), static_cast<uint16_t>(reason_code));
+  client_sta_send_deauth_frame(rust_client_.get(), rust_mlme_, static_cast<uint16_t>(reason_code));
   infof("deauthenticating from \"%s\" (%s), reason=%hu\n",
         debug::ToAsciiOrHexStr(join_ctx_->bss()->ssid).c_str(),
         join_ctx_->bssid().ToString().c_str(), reason_code);
@@ -320,7 +264,7 @@ zx_status_t Station::Associate(const wlan_mlme::AssociateRequest& req) {
   }
 
   zx_status_t status = client_sta_send_assoc_req_frame(
-      rust_client_.get(), req.cap_info, AsWlanSpan({join_ctx_->bss()->ssid}),
+      rust_client_.get(), rust_mlme_, req.cap_info, AsWlanSpan({join_ctx_->bss()->ssid}),
       AsWlanSpan({req.rates}), AsWlanSpan(rsne), AsWlanSpan(ht_cap), AsWlanSpan(vht_cap));
   if (status != ZX_OK) {
     errorf("could not send assoc packet: %d\n", status);
@@ -556,7 +500,7 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
   mgmt_hdr->addr1 = join_ctx_->bssid();
   mgmt_hdr->addr2 = self_addr();
   mgmt_hdr->addr3 = join_ctx_->bssid();
-  auto seq_mgr = client_sta_seq_mgr(rust_client_.get());
+  auto seq_mgr = client_mlme_seq_mgr(rust_mlme_);
   auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr, &mgmt_hdr->addr1.byte);
   mgmt_hdr->sc.set_seq(seq_num);
 
@@ -618,19 +562,13 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
   bool needs_protection =
       join_ctx_->bss()->rsne.has_value() && controlled_port_ == eapol::PortState::kOpen;
   auto eth_hdr = eth_frame.hdr();
-  return client_sta_send_data_frame(rust_client_.get(), &eth_hdr->src.byte, &eth_hdr->dest.byte,
-                                    needs_protection, IsQosReady(), eth_hdr->ether_type(),
-                                    AsWlanSpan(eth_frame.body_data()));
+  return client_sta_send_data_frame(rust_client_.get(), rust_mlme_, &eth_hdr->src.byte,
+                                    &eth_hdr->dest.byte, needs_protection, IsQosReady(),
+                                    eth_hdr->ether_type(), AsWlanSpan(eth_frame.body_data()));
 }
 
 void Station::HandleTimeout(zx::time now, TimeoutTarget target, TimeoutId timeout_id) {
   debugfn();
-
-  if (target == TimeoutTarget::kRust) {
-    client_sta_timeout_fired(rust_client_.get(), wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
-    return;
-  }
-
   ZX_ASSERT(target == TimeoutTarget::kDefault);
 
   if (timeout_id == auth_timeout_) {
@@ -670,7 +608,8 @@ void Station::HandleTimeout(zx::time now, TimeoutTarget target, TimeoutId timeou
 
       auto reason_code = wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH;
       service::SendDeauthIndication(device_, join_ctx_->bssid(), reason_code);
-      client_sta_send_deauth_frame(rust_client_.get(), static_cast<uint16_t>(reason_code));
+      client_sta_send_deauth_frame(rust_client_.get(), rust_mlme_,
+                                   static_cast<uint16_t>(reason_code));
     }
   }
 }
@@ -700,7 +639,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
   mgmt_hdr->addr1 = join_ctx_->bssid();
   mgmt_hdr->addr2 = self_addr();
   mgmt_hdr->addr3 = join_ctx_->bssid();
-  auto seq_mgr = client_sta_seq_mgr(rust_client_.get());
+  auto seq_mgr = client_mlme_seq_mgr(rust_mlme_);
   auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr, &mgmt_hdr->addr1.byte);
   mgmt_hdr->sc.set_seq(seq_num);
 
@@ -750,8 +689,8 @@ zx_status_t Station::SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
 
   bool needs_protection =
       join_ctx_->bss()->rsne.has_value() && controlled_port_ == eapol::PortState::kOpen;
-  client_sta_send_eapol_frame(rust_client_.get(), &src.byte, &dst.byte, needs_protection,
-                              AsWlanSpan(eapol_frame));
+  client_sta_send_eapol_frame(rust_client_.get(), rust_mlme_, &src.byte, &dst.byte,
+                              needs_protection, AsWlanSpan(eapol_frame));
   return ZX_OK;
 }
 
@@ -850,7 +789,7 @@ zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
   data_hdr->addr1 = join_ctx_->bssid();
   data_hdr->addr2 = self_addr();
   data_hdr->addr3 = join_ctx_->bssid();
-  auto seq_mgr = client_sta_seq_mgr(rust_client_.get());
+  auto seq_mgr = client_mlme_seq_mgr(rust_mlme_);
   auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr, &data_hdr->addr1.byte);
   data_hdr->sc.set_seq(seq_num);
 
@@ -871,7 +810,7 @@ zx_status_t Station::SendPsPoll() {
     return ZX_OK;
   }
 
-  auto status = client_sta_send_ps_poll_frame(rust_client_.get(), assoc_ctx_.aid);
+  auto status = client_sta_send_ps_poll_frame(rust_client_.get(), rust_mlme_, assoc_ctx_.aid);
   if (status != ZX_OK) {
     errorf("could not send power management packet: %d\n", status);
     return status;
@@ -1090,5 +1029,7 @@ std::optional<AssocContext> Station::BuildAssocCtx(const MgmtFrameView<Associati
 
   return ctx;
 }
+
+wlan_client_sta_t* Station::GetRustClientSta() { return rust_client_.get(); }
 
 }  // namespace wlan

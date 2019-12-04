@@ -32,6 +32,10 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
+#define CHAN_SCHED(c) static_cast<ChannelScheduler*>(c)
+#define TIMER_MGR(c) static_cast<TimerManager<TimeoutTarget>*>(c)
+#define DEVICE(c) static_cast<DeviceInterface*>(c)
+
 wlan_client_mlme_config_t ClientMlmeDefaultConfig() {
   return wlan_client_mlme_config_t{
       .signal_report_beacon_timeout = 10,
@@ -44,7 +48,10 @@ ClientMlme::ClientMlme(DeviceInterface* device) : ClientMlme(device, ClientMlmeD
 }
 
 ClientMlme::ClientMlme(DeviceInterface* device, wlan_client_mlme_config_t config)
-    : device_(device), on_channel_handler_(this), config_(config) {
+    : device_(device),
+      on_channel_handler_(this),
+      rust_mlme_(nullptr, client_mlme_delete),
+      config_(config) {
   debugfn();
 }
 
@@ -67,6 +74,69 @@ zx_status_t ClientMlme::Init() {
   chan_sched_ = std::make_unique<ChannelScheduler>(&on_channel_handler_, device_, timer_mgr_.get());
   scanner_ = std::make_unique<Scanner>(device_, chan_sched_.get(), timer_mgr_.get());
 
+  // Initialize Rust dependencies
+  auto rust_device = mlme_device_ops_t{
+      .device = static_cast<void*>(this->device_),
+      .deliver_eth_frame = [](void* device, const uint8_t* data, size_t len) -> zx_status_t {
+        return DEVICE(device)->DeliverEthernet({data, len});
+      },
+      .send_wlan_frame = [](void* device, mlme_out_buf_t buf, uint32_t flags) -> zx_status_t {
+        auto pkt = FromRustOutBuf(buf);
+        return DEVICE(device)->SendWlan(std::move(pkt), flags);
+      },
+      .get_sme_channel = [](void* device) -> zx_handle_t {
+        return DEVICE(device)->GetSmeChannelRef();
+      },
+      .set_wlan_channel = [](void* device, wlan_channel_t chan) -> zx_status_t {
+        return DEVICE(device)->SetChannel(chan);
+      },
+      .get_wlan_channel = [](void* device) -> wlan_channel_t {
+        return DEVICE(device)->GetState()->channel();
+      },
+      .set_key = [](void* device, wlan_key_config_t* key) -> zx_status_t {
+        return DEVICE(device)->SetKey(key);
+      },
+      .configure_bss = [](void* device, wlan_bss_config_t* cfg) -> zx_status_t {
+        return DEVICE(device)->ConfigureBss(cfg);
+      },
+      .enable_beaconing = [](void* device, const uint8_t* beacon_tmpl_data, size_t beacon_tmpl_len,
+                             size_t tim_ele_offset, uint16_t beacon_interval) -> zx_status_t {
+        // The client never needs to enable beaconing.
+        return ZX_ERR_NOT_SUPPORTED;
+      },
+      .disable_beaconing = [](void* device) -> zx_status_t {
+        // The client never needs to disable beaconing.
+        return ZX_ERR_NOT_SUPPORTED;
+      },
+      .configure_assoc = [](void* device, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
+        return DEVICE(device)->ConfigureAssoc(assoc_ctx);
+      },
+      .clear_assoc = [](void* device, const uint8_t(*addr)[6]) -> zx_status_t {
+        return DEVICE(device)->ClearAssoc(common::MacAddr(*addr));
+      },
+  };
+  auto scheduler = wlan_scheduler_ops_t{
+      .cookie = static_cast<void*>(this->timer_mgr_.get()),
+      .now = [](void* cookie) -> zx_time_t { return TIMER_MGR(cookie)->Now().get(); },
+      .schedule = [](void* cookie, int64_t deadline) -> wlan_scheduler_event_id_t {
+        TimeoutId id = {};
+        TIMER_MGR(cookie)->Schedule(zx::time(deadline), TimeoutTarget::kRust, &id);
+        return {._0 = id.raw()};
+      },
+      .cancel = [](void* cookie,
+                   wlan_scheduler_event_id_t id) { TIMER_MGR(cookie)->Cancel(TimeoutId(id._0)); },
+  };
+  auto chan_sched_proxy = wlan_cpp_chan_sched_t{
+      .chan_sched = static_cast<void*>(this->chan_sched_.get()),
+      .ensure_on_channel =
+          [](void* chan_sched, zx_time_t end) {
+            CHAN_SCHED(chan_sched)->EnsureOnChannel(zx::time(end));
+          },
+  };
+  rust_mlme_ = RustClientMlme(
+      client_mlme_new(config_, rust_device, rust_buffer_provider, scheduler, chan_sched_proxy),
+      client_mlme_delete);
+
   return status;
 }
 
@@ -79,12 +149,21 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
   auto status = timer_mgr_->HandleTimeout([&](auto now, auto target, auto timeout_id) {
     switch (target) {
       case TimeoutTarget::kDefault:
-      case TimeoutTarget::kRust:
         if (sta_ != nullptr) {
           sta_->HandleTimeout(now, target, timeout_id);
         } else {
           warnf("timeout for unknown STA: %zu\n", id.mac());
         }
+        break;
+      case TimeoutTarget::kRust:
+        wlan_client_sta_t* rust_client;
+        if (sta_ != nullptr) {
+          rust_client = sta_->GetRustClientSta();
+        } else {
+          rust_client = nullptr;
+        }
+        client_mlme_timeout_fired(rust_mlme_.get(), rust_client,
+                                  wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
         break;
       case TimeoutTarget::kChannelScheduler:
         chan_sched_->HandleTimeout();
@@ -260,7 +339,7 @@ zx_status_t ClientMlme::SpawnStation() {
   }
 
   auto client = std::make_unique<Station>(device_, &config_, timer_mgr_.get(), chan_sched_.get(),
-                                          &join_ctx_.value());
+                                          &join_ctx_.value(), rust_mlme_.get());
 
   if (!client) {
     return ZX_ERR_INTERNAL;

@@ -10,14 +10,6 @@ SequenceManager NewSequenceManager() {
   return SequenceManager(mlme_sequence_manager_new(), mlme_sequence_manager_delete);
 }
 
-ClientStation NewClientStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
-                               wlan_scheduler_ops_t scheduler, common::MacAddr bssid,
-                               common::MacAddr iface_mac, bool is_rsn) {
-  return ClientStation(
-      client_sta_new(device, buf_provider, scheduler, &bssid.byte, &iface_mac.byte, is_rsn),
-      client_sta_delete);
-}
-
 ApStation NewApStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
                        wlan_scheduler_ops_t scheduler, common::MacAddr bssid) {
   return ApStation(ap_sta_new(device, buf_provider, scheduler, &bssid.byte), ap_sta_delete);

@@ -19,7 +19,7 @@ impl LinkStatus {
 }
 
 #[derive(Debug)]
-pub struct TxFlags(u32);
+pub struct TxFlags(pub u32);
 impl TxFlags {
     pub const NONE: Self = Self(0);
     pub const PROTECTED: Self = Self(1);

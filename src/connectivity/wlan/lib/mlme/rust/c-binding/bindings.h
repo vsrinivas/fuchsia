@@ -26,6 +26,8 @@ typedef struct wlan_ap_sta_t wlan_ap_sta_t;
  */
 typedef struct wlan_client_sta_t wlan_client_sta_t;
 
+typedef struct wlan_client_mlme_t wlan_client_mlme_t;
+
 /**
  * Manages all SNS for a STA.
  */
@@ -178,6 +180,17 @@ typedef struct {
   zx_duration_t ensure_on_channel_time;
 } wlan_client_mlme_config_t;
 
+/**
+ * Proxy to C++ channel scheduler
+ */
+typedef struct {
+  void *chan_sched;
+  /**
+   * Make sure that MLME remains on the main channel until deadline
+   */
+  void (*ensure_on_channel)(void *chan_sched, zx_time_t end);
+} wlan_cpp_chan_sched_t;
+
 extern "C" void ap_sta_delete(wlan_ap_sta_t *sta);
 
 extern "C" int32_t ap_sta_handle_eth_frame(wlan_ap_sta_t *sta, const uint8_t (*dst_addr)[6],
@@ -198,43 +211,52 @@ extern "C" int32_t ap_sta_send_open_auth_frame(wlan_ap_sta_t *sta, const uint8_t
 
 extern "C" void ap_sta_timeout_fired(wlan_ap_sta_t *sta, wlan_scheduler_event_id_t event_id);
 
+extern "C" void client_mlme_delete(wlan_client_mlme_t *mlme);
+
+extern "C" int32_t client_mlme_handle_mlme_msg(wlan_client_mlme_t *mlme, wlan_span_t bytes);
+
+extern "C" wlan_client_mlme_t *client_mlme_new(wlan_client_mlme_config_t config,
+                                               mlme_device_ops_t device,
+                                               mlme_buffer_provider_ops_t buf_provider,
+                                               wlan_scheduler_ops_t scheduler,
+                                               wlan_cpp_chan_sched_t cpp_chan_sched);
+
+extern "C" mlme_sequence_manager_t *client_mlme_seq_mgr(wlan_client_mlme_t *mlme);
+
+extern "C" void client_mlme_timeout_fired(wlan_client_mlme_t *mlme, wlan_client_sta_t *sta,
+                                          wlan_scheduler_event_id_t event_id);
+
 extern "C" void client_sta_delete(wlan_client_sta_t *sta);
 
-extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, wlan_span_t data_frame,
-                                                bool has_padding, bool controlled_port_open);
+extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
+                                                wlan_span_t data_frame, bool has_padding,
+                                                bool controlled_port_open);
 
-extern "C" int32_t client_sta_handle_mlme_msg(wlan_client_sta_t *sta, wlan_span_t bytes);
-
-extern "C" wlan_client_sta_t *client_sta_new(mlme_device_ops_t device,
-                                             mlme_buffer_provider_ops_t buf_provider,
-                                             wlan_scheduler_ops_t scheduler,
-                                             const uint8_t (*bssid)[6],
+extern "C" wlan_client_sta_t *client_sta_new(const uint8_t (*bssid)[6],
                                              const uint8_t (*iface_mac)[6], bool is_rsn);
 
-extern "C" int32_t client_sta_send_assoc_req_frame(wlan_client_sta_t *sta, uint16_t cap_info,
-                                                   wlan_span_t ssid, wlan_span_t rates,
-                                                   wlan_span_t rsne, wlan_span_t ht_cap,
-                                                   wlan_span_t vht_cap);
+extern "C" int32_t client_sta_send_assoc_req_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
+                                                   uint16_t cap_info, wlan_span_t ssid,
+                                                   wlan_span_t rates, wlan_span_t rsne,
+                                                   wlan_span_t ht_cap, wlan_span_t vht_cap);
 
-extern "C" int32_t client_sta_send_data_frame(wlan_client_sta_t *sta, const uint8_t (*src)[6],
-                                              const uint8_t (*dest)[6], bool is_protected,
-                                              bool is_qos, uint16_t ether_type,
+extern "C" int32_t client_sta_send_data_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
+                                              const uint8_t (*src)[6], const uint8_t (*dest)[6],
+                                              bool is_protected, bool is_qos, uint16_t ether_type,
                                               wlan_span_t payload);
 
-extern "C" int32_t client_sta_send_deauth_frame(wlan_client_sta_t *sta, uint16_t reason_code);
+extern "C" int32_t client_sta_send_deauth_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
+                                                uint16_t reason_code);
 
-extern "C" void client_sta_send_eapol_frame(wlan_client_sta_t *sta, const uint8_t (*src)[6],
-                                            const uint8_t (*dest)[6], bool is_protected,
-                                            wlan_span_t payload);
+extern "C" void client_sta_send_eapol_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
+                                            const uint8_t (*src)[6], const uint8_t (*dest)[6],
+                                            bool is_protected, wlan_span_t payload);
 
-extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta);
+extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta,
+                                                   wlan_client_mlme_t *mlme);
 
-extern "C" int32_t client_sta_send_ps_poll_frame(wlan_client_sta_t *sta, uint16_t aid);
-
-extern "C" mlme_sequence_manager_t *client_sta_seq_mgr(wlan_client_sta_t *sta);
-
-extern "C" void client_sta_timeout_fired(wlan_client_sta_t *sta,
-                                         wlan_scheduler_event_id_t event_id);
+extern "C" int32_t client_sta_send_ps_poll_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
+                                                 uint16_t aid);
 
 extern "C" int32_t mlme_is_valid_open_auth_resp(wlan_span_t auth_resp);
 

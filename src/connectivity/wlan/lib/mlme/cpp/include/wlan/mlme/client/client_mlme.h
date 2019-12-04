@@ -69,6 +69,7 @@ class ClientMlme : public Mlme {
   DeviceInterface* const device_;
   OnChannelHandlerImpl on_channel_handler_;
   std::unique_ptr<TimerManager<TimeoutTarget>> timer_mgr_;
+  RustClientMlme rust_mlme_;
   wlan_client_mlme_config_t config_;
   std::unique_ptr<ChannelScheduler> chan_sched_;
   std::unique_ptr<Scanner> scanner_;

@@ -43,6 +43,8 @@ class ClientInterface {
   virtual ::fuchsia::wlan::stats::ClientMlmeStats stats() const = 0;
   virtual void ResetStats() = 0;
 
+  virtual wlan_client_sta_t* GetRustClientSta() = 0;
+
  protected:
   ClientInterface() = default;
 };

@@ -38,7 +38,7 @@ class Station : public ClientInterface {
  public:
   Station(DeviceInterface* device, wlan_client_mlme_config_t* mlme_config,
           TimerManager<TimeoutTarget>* timer_mgr, ChannelScheduler* chan_sched,
-          JoinContext* join_ctx);
+          JoinContext* join_ctx, wlan_client_mlme_t* rust_mlme);
   ~Station() = default;
 
   enum class WlanState {
@@ -66,6 +66,8 @@ class Station : public ClientInterface {
 
   ::fuchsia::wlan::stats::ClientMlmeStats stats() const override;
   void ResetStats() override;
+
+  wlan_client_sta_t* GetRustClientSta() override;
 
  private:
   static constexpr size_t kAssocBcnCountTimeout = 20;
@@ -124,6 +126,7 @@ class Station : public ClientInterface {
   TimerManager<TimeoutTarget>* timer_mgr_;
   ChannelScheduler* chan_sched_;
   JoinContext* join_ctx_;
+  wlan_client_mlme_t* rust_mlme_;
 
   WlanState state_ = WlanState::kIdle;
   TimeoutId auth_timeout_;
