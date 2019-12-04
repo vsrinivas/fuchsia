@@ -7,7 +7,7 @@
     },
     "use": [
         {
-            "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
+            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
         },
     ],
 }

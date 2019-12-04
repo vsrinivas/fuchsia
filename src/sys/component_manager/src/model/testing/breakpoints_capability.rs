@@ -34,7 +34,7 @@ impl BreakpointCapabilityHook {
         capability: Option<Box<dyn ComponentManagerCapabilityProvider>>,
     ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
         match (capability, capability_decl) {
-            (None, ComponentManagerCapability::LegacyService(source_path))
+            (None, ComponentManagerCapability::ServiceProtocol(source_path))
                 if *source_path == *BREAKPOINT_SYSTEM_SERVICE =>
             {
                 return Ok(Some(Box::new(BreakpointCapabilityProvider::new(

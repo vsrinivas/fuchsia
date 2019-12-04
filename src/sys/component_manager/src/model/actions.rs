@@ -256,8 +256,8 @@ pub mod tests {
         },
         cm_rust::{
             CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-            ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, NativeIntoFidl, OfferDecl,
-            OfferLegacyServiceDecl, OfferServiceSource, OfferTarget, UseDecl, UseLegacyServiceDecl,
+            ExposeServiceProtocolDecl, ExposeSource, ExposeTarget, NativeIntoFidl, OfferDecl,
+            OfferServiceProtocolDecl, OfferServiceSource, OfferTarget, UseDecl, UseServiceProtocolDecl,
             UseSource,
         },
         fidl::endpoints,
@@ -871,13 +871,13 @@ pub mod tests {
                         },
                     ],
                     offers: vec![
-                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                             source: OfferServiceSource::Child("d".to_string()),
                             source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target: OfferTarget::Child("c".to_string()),
                         }),
-                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                             source: OfferServiceSource::Child("d".to_string()),
                             source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -890,7 +890,7 @@ pub mod tests {
             (
                 "c",
                 ComponentDecl {
-                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -901,7 +901,7 @@ pub mod tests {
             (
                 "d",
                 ComponentDecl {
-                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -913,7 +913,7 @@ pub mod tests {
             (
                 "e",
                 ComponentDecl {
-                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -1048,19 +1048,19 @@ pub mod tests {
                         },
                     ],
                     offers: vec![
-                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                             source: OfferServiceSource::Child("d".to_string()),
                             source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target: OfferTarget::Child("c".to_string()),
                         }),
-                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                             source: OfferServiceSource::Child("d".to_string()),
                             source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target: OfferTarget::Child("e".to_string()),
                         }),
-                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                             source: OfferServiceSource::Child("e".to_string()),
                             source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
@@ -1073,7 +1073,7 @@ pub mod tests {
             (
                 "c",
                 ComponentDecl {
-                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -1084,7 +1084,7 @@ pub mod tests {
             (
                 "d",
                 ComponentDecl {
-                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -1096,12 +1096,12 @@ pub mod tests {
             (
                 "e",
                 ComponentDecl {
-                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     })],
-                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
@@ -1113,7 +1113,7 @@ pub mod tests {
             (
                 "f",
                 ComponentDecl {
-                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
@@ -1277,25 +1277,25 @@ pub mod tests {
                         },
                     ],
                     offers: vec![
-                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                             source: OfferServiceSource::Child("d".to_string()),
                             source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target: OfferTarget::Child("c".to_string()),
                         }),
-                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                             source: OfferServiceSource::Child("d".to_string()),
                             source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target: OfferTarget::Child("e".to_string()),
                         }),
-                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                             source: OfferServiceSource::Child("d".to_string()),
                             source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target: OfferTarget::Child("f".to_string()),
                         }),
-                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                             source: OfferServiceSource::Child("e".to_string()),
                             source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
@@ -1308,7 +1308,7 @@ pub mod tests {
             (
                 "c",
                 ComponentDecl {
-                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -1319,7 +1319,7 @@ pub mod tests {
             (
                 "d",
                 ComponentDecl {
-                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -1331,12 +1331,12 @@ pub mod tests {
             (
                 "e",
                 ComponentDecl {
-                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                     })],
-                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
@@ -1349,12 +1349,12 @@ pub mod tests {
                 "f",
                 ComponentDecl {
                     uses: vec![
-                        UseDecl::LegacyService(UseLegacyServiceDecl {
+                        UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                             source: UseSource::Realm,
                             source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         }),
-                        UseDecl::LegacyService(UseLegacyServiceDecl {
+                        UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                             source: UseSource::Realm,
                             source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
@@ -1501,7 +1501,7 @@ pub mod tests {
                             startup: fsys::StartupMode::Eager,
                         },
                     ],
-                    offers: vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                         source: OfferServiceSource::Child("c".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
@@ -1513,7 +1513,7 @@ pub mod tests {
             (
                 "c",
                 ComponentDecl {
-                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
@@ -1525,7 +1525,7 @@ pub mod tests {
             (
                 "d",
                 ComponentDecl {
-                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),

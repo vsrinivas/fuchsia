@@ -186,8 +186,8 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                             source: s.source.fidl_into_native(),
                             source_path: s.source_path.fidl_into_native(),
                         }),
-                    fsys::ExposeDecl::LegacyService(ls) => {
-                        exposes.push(ExposeDecl::LegacyService(ls.fidl_into_native()))
+                    fsys::ExposeDecl::ServiceProtocol(ls) => {
+                        exposes.push(ExposeDecl::ServiceProtocol(ls.fidl_into_native()))
                     }
                     fsys::ExposeDecl::Directory(d) => {
                         exposes.push(ExposeDecl::Directory(d.fidl_into_native()))
@@ -218,8 +218,8 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                             source: s.source.fidl_into_native(),
                             source_path: s.source_path.fidl_into_native(),
                         }),
-                    fsys::OfferDecl::LegacyService(ls) => {
-                        offers.push(OfferDecl::LegacyService(ls.fidl_into_native()))
+                    fsys::OfferDecl::ServiceProtocol(ls) => {
+                        offers.push(OfferDecl::ServiceProtocol(ls.fidl_into_native()))
                     }
                     fsys::OfferDecl::Directory(d) => {
                         offers.push(OfferDecl::Directory(d.fidl_into_native()))
@@ -268,8 +268,8 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                         }))
                     }
                 }
-                ExposeDecl::LegacyService(ls) => {
-                    exposes.push(fsys::ExposeDecl::LegacyService(ls.native_into_fidl()))
+                ExposeDecl::ServiceProtocol(ls) => {
+                    exposes.push(fsys::ExposeDecl::ServiceProtocol(ls.native_into_fidl()))
                 }
                 ExposeDecl::Directory(d) => {
                     exposes.push(fsys::ExposeDecl::Directory(d.native_into_fidl()))
@@ -292,8 +292,8 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                         }))
                     }
                 }
-                OfferDecl::LegacyService(ls) => {
-                    offers.push(fsys::OfferDecl::LegacyService(ls.native_into_fidl()))
+                OfferDecl::ServiceProtocol(ls) => {
+                    offers.push(fsys::OfferDecl::ServiceProtocol(ls.native_into_fidl()))
                 }
                 OfferDecl::Directory(d) => {
                     offers.push(fsys::OfferDecl::Directory(d.native_into_fidl()))
@@ -354,7 +354,7 @@ impl ComponentDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExposeDecl {
     Service(ExposeServiceDecl),
-    LegacyService(ExposeLegacyServiceDecl),
+    ServiceProtocol(ExposeServiceProtocolDecl),
     Directory(ExposeDirectoryDecl),
     Runner(ExposeRunnerDecl),
 }
@@ -369,7 +369,7 @@ pub struct ExposeServiceDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub enum OfferDecl {
     Service(OfferServiceDecl),
-    LegacyService(OfferLegacyServiceDecl),
+    ServiceProtocol(OfferServiceProtocolDecl),
     Directory(OfferDirectoryDecl),
     Storage(OfferStorageDecl),
     Runner(OfferRunnerDecl),
@@ -385,7 +385,7 @@ pub struct OfferServiceDecl {
 fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
                 {
                     Service(UseServiceDecl),
-                    LegacyService(UseLegacyServiceDecl),
+                    ServiceProtocol(UseServiceProtocolDecl),
                     Directory(UseDirectoryDecl),
                     Storage(UseStorageDecl),
                     Runner(UseRunnerDecl),
@@ -396,7 +396,7 @@ fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::Us
                       source_path: CapabilityPath,
                       target_path: CapabilityPath,
                   });
-fidl_into_struct!(UseLegacyServiceDecl, UseLegacyServiceDecl, fsys::UseLegacyServiceDecl, fsys::UseLegacyServiceDecl,
+fidl_into_struct!(UseServiceProtocolDecl, UseServiceProtocolDecl, fsys::UseServiceProtocolDecl, fsys::UseServiceProtocolDecl,
                   {
                       source: UseSource,
                       source_path: CapabilityPath,
@@ -416,8 +416,8 @@ fidl_into_struct!(UseRunnerDecl, UseRunnerDecl, fsys::UseRunnerDecl,
                       source_name: CapabilityName,
                   });
 
-fidl_into_struct!(ExposeLegacyServiceDecl, ExposeLegacyServiceDecl, fsys::ExposeLegacyServiceDecl,
-                  fsys::ExposeLegacyServiceDecl,
+fidl_into_struct!(ExposeServiceProtocolDecl, ExposeServiceProtocolDecl, fsys::ExposeServiceProtocolDecl,
+                  fsys::ExposeServiceProtocolDecl,
                   {
                       source: ExposeSource,
                       source_path: CapabilityPath,
@@ -449,8 +449,8 @@ fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
                       source: StorageDirectorySource,
                       source_path: CapabilityPath,
                   });
-fidl_into_struct!(OfferLegacyServiceDecl, OfferLegacyServiceDecl, fsys::OfferLegacyServiceDecl,
-                  fsys::OfferLegacyServiceDecl,
+fidl_into_struct!(OfferServiceProtocolDecl, OfferServiceProtocolDecl, fsys::OfferServiceProtocolDecl,
+                  fsys::OfferServiceProtocolDecl,
                   {
                       source: OfferServiceSource,
                       source_path: CapabilityPath,
@@ -570,7 +570,7 @@ impl UseDecl {
     pub fn path(&self) -> Option<&CapabilityPath> {
         let path = match self {
             UseDecl::Service(d) => &d.target_path,
-            UseDecl::LegacyService(d) => &d.target_path,
+            UseDecl::ServiceProtocol(d) => &d.target_path,
             UseDecl::Directory(d) => &d.target_path,
             UseDecl::Storage(UseStorageDecl::Data(p)) => &p,
             UseDecl::Storage(UseStorageDecl::Cache(p)) => &p,
@@ -1310,7 +1310,7 @@ mod tests {
                        source_path: Some("/svc/netstack".to_string()),
                        target_path: Some("/svc/mynetstack".to_string()),
                    }),
-                   fsys::UseDecl::LegacyService(fsys::UseLegacyServiceDecl {
+                   fsys::UseDecl::ServiceProtocol(fsys::UseServiceProtocolDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        source_path: Some("/svc/legacy_netstack".to_string()),
                        target_path: Some("/svc/legacy_mynetstack".to_string()),
@@ -1334,7 +1334,7 @@ mod tests {
                    }),
                ]),
                exposes: Some(vec![
-                   fsys::ExposeDecl::LegacyService(fsys::ExposeLegacyServiceDecl {
+                   fsys::ExposeDecl::ServiceProtocol(fsys::ExposeServiceProtocolDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
                            name: "netstack".to_string(),
                            collection: None,
@@ -1382,7 +1382,7 @@ mod tests {
                    }),
                ]),
                offers: Some(vec![
-                   fsys::OfferDecl::LegacyService(fsys::OfferLegacyServiceDecl {
+                   fsys::OfferDecl::ServiceProtocol(fsys::OfferServiceProtocolDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        source_path: Some("/svc/legacy_netstack".to_string()),
                        target: Some(fsys::Ref::Child(
@@ -1504,7 +1504,7 @@ mod tests {
                             source_path: "/svc/netstack".try_into().unwrap(),
                             target_path: "/svc/mynetstack".try_into().unwrap(),
                         }),
-                        UseDecl::LegacyService(UseLegacyServiceDecl {
+                        UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                             source: UseSource::Realm,
                             source_path: "/svc/legacy_netstack".try_into().unwrap(),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
@@ -1522,7 +1522,7 @@ mod tests {
                         }),
                     ],
                     exposes: vec![
-                        ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                             source: ExposeSource::Child("netstack".to_string()),
                             source_path: "/svc/legacy_netstack".try_into().unwrap(),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
@@ -1557,7 +1557,7 @@ mod tests {
                         }),
                     ],
                     offers: vec![
-                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                             source: OfferServiceSource::Realm,
                             source_path: "/svc/legacy_netstack".try_into().unwrap(),
                             target: OfferTarget::Child("echo".to_string()),

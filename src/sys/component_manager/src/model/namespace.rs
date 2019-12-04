@@ -84,7 +84,7 @@ impl IncomingNamespace {
                         abs_moniker.clone(),
                     )?;
                 }
-                cm_rust::UseDecl::LegacyService(s) => {
+                cm_rust::UseDecl::ServiceProtocol(s) => {
                     Self::add_service_use(&mut svc_dirs, s, model.clone(), abs_moniker.clone())?;
                 }
                 cm_rust::UseDecl::Service(_) => {
@@ -243,7 +243,7 @@ impl IncomingNamespace {
     /// proxied to the outgoing directory of the source component.
     fn add_service_use(
         svc_dirs: &mut HashMap<String, fvfs::directory::simple::Simple>,
-        use_: &cm_rust::UseLegacyServiceDecl,
+        use_: &cm_rust::UseServiceProtocolDecl,
         model: Model,
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -253,7 +253,7 @@ impl IncomingNamespace {
                   mode: u32,
                   relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
-                let use_ = UseDecl::LegacyService(use_clone.clone());
+                let use_ = UseDecl::ServiceProtocol(use_clone.clone());
                 let model = model.clone();
                 let abs_moniker = abs_moniker.clone();
                 fasync::spawn(async move {

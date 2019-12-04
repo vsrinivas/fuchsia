@@ -5,7 +5,7 @@
     // Route Echo service from server to client.
     "offer": [
         {
-            "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
+            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
             "from": "#echo_server",
             "to": [ "#reporter" ]
         },

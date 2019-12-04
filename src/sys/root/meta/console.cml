@@ -1,9 +1,9 @@
 {
   "program": { "binary": "bin/console" },
   "use": [
-    { "legacy_service": "/svc/fuchsia.boot.RootResource" },
+    { "service_protocol": "/svc/fuchsia.boot.RootResource" },
   ],
   "expose": [
-    { "legacy_service": "/svc/fuchsia.hardware.pty.Device", "from": "self" },
+    { "service_protocol": "/svc/fuchsia.hardware.pty.Device", "from": "self" },
   ],
 }

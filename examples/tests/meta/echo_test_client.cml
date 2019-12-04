@@ -6,12 +6,12 @@
     },
     "use": [
         {
-            "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
+            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
         },
     ],
     "expose": [
         {
-            "legacy_service": "/svc/fuchsia.test.Suite",
+            "service_protocol": "/svc/fuchsia.test.Suite",
             "from": "self",
         },
     ],

@@ -14,10 +14,10 @@
             "directory": "/sibling_hub", "from": "realm", "rights":["r*"]
         },
         {
-            "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
+            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
         },
         {
-            "legacy_service": [
+            "service_protocol": [
                 "/svc/fuchsia.test.hub.HubReport",
                 "/svc/fuchsia.test.breakpoints.BreakpointSystem",
             ],

@@ -739,7 +739,7 @@ mod connect_tests {
         hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
 
         let capability_provider = Arc::new(Mutex::new(None));
-        let capability = ComponentManagerCapability::LegacyService(
+        let capability = ComponentManagerCapability::ServiceProtocol(
             WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
         );
 

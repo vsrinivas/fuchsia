@@ -106,7 +106,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
             }));
-        } else if let Some(p) = use_.legacy_service() {
+        } else if let Some(p) = use_.service_protocol() {
             let source = extract_use_source(use_)?;
             let target_ids = all_target_capability_ids(use_, use_)
                 .ok_or(Error::internal("no capability"))?
@@ -123,7 +123,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 } else {
                     target_path.clone()
                 };
-                out_uses.push(cm::Use::LegacyService(cm::UseLegacyService {
+                out_uses.push(cm::Use::ServiceProtocol(cm::UseServiceProtocol {
                     source: source.clone(),
                     source_path,
                     target_path,
@@ -175,7 +175,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
                 target_path: cm::Path::new(target_id)?,
                 target,
             }))
-        } else if let Some(p) = expose.legacy_service() {
+        } else if let Some(p) = expose.service_protocol() {
             let source_ids = p.to_vec();
             let target_ids = all_target_capability_ids(expose, expose)
                 .ok_or(Error::internal("no capability"))?
@@ -191,7 +191,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
                 } else {
                     target_path.clone()
                 };
-                out_exposes.push(cm::Expose::LegacyService(cm::ExposeLegacyService {
+                out_exposes.push(cm::Expose::ServiceProtocol(cm::ExposeServiceProtocol {
                     source: source.clone(),
                     source_path,
                     target_path,
@@ -243,7 +243,7 @@ fn translate_offer(
                     target_path: cm::Path::new(target_id)?,
                 }));
             }
-        } else if let Some(p) = offer.legacy_service() {
+        } else if let Some(p) = offer.service_protocol() {
             let source = extract_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             let source_ids = p.to_vec();
@@ -257,7 +257,7 @@ fn translate_offer(
                 } else {
                     cm::Path::new(target_id.clone())?
                 };
-                out_offers.push(cm::Offer::LegacyService(cm::OfferLegacyService {
+                out_offers.push(cm::Offer::ServiceProtocol(cm::OfferServiceProtocol {
                     source_path,
                     source: source.clone(),
                     target,
@@ -500,7 +500,7 @@ where
     } else {
         if let Some(p) = in_obj.service() {
             Some(OneOrMany::One(p.clone()))
-        } else if let Some(p) = in_obj.legacy_service() {
+        } else if let Some(p) = in_obj.service_protocol() {
             Some(p.clone())
         } else if let Some(p) = in_obj.directory() {
             Some(OneOrMany::One(p.clone()))
@@ -618,8 +618,8 @@ mod tests {
                 "use": [
                     { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                     { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
-                    { "legacy_service": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
-                    { "legacy_service": "/svc/fuchsia.sys2.LegacyRealm", "from": "framework" },
+                    { "service_protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
+                    { "service_protocol": "/svc/fuchsia.sys2.LegacyRealm", "from": "framework" },
                     { "directory": "/data/assets", "rights" : ["read_bytes"]},
                     { "directory": "/data/config", "from": "realm", "rights": ["read_bytes"]},
                     { "storage": "meta" },
@@ -649,7 +649,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "realm": {}
                 },
@@ -658,7 +658,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "framework": {}
                 },
@@ -724,13 +724,13 @@ mod tests {
                       "as": "/svc/fuchsia.logger.Log"
                     },
                     {
-                      "legacy_service": "/loggers/fuchsia.logger.LegacyLog",
+                      "service_protocol": "/loggers/fuchsia.logger.LegacyLog",
                       "from": "#logger",
                       "as": "/svc/fuchsia.logger.LegacyLog",
                       "to": "realm"
                     },
                     {
-                        "legacy_service": [ "/A", "/B" ],
+                        "service_protocol": [ "/A", "/B" ],
                         "from": "self",
                         "to": "realm"
                     },
@@ -761,7 +761,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -773,7 +773,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "self": {}
                 },
@@ -783,7 +783,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "self": {}
                 },
@@ -867,18 +867,18 @@ mod tests {
                         "as": "/svc/fuchsia.logger.SysLog"
                     },
                     {
-                        "legacy_service": "/svc/fuchsia.logger.LegacyLog",
+                        "service_protocol": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": [ "#netstack" ]
                     },
                     {
-                        "legacy_service": "/svc/fuchsia.logger.LegacyLog",
+                        "service_protocol": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": [ "#modular" ],
                         "as": "/svc/fuchsia.logger.LegacySysLog"
                     },
                     {
-                        "legacy_service": [
+                        "service_protocol": [
                             "/svc/fuchsia.setui.SetUiService",
                             "/svc/fuchsia.wlan.service.Wlan"
                         ],
@@ -981,7 +981,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -997,7 +997,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -1013,7 +1013,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "realm": {}
                 },
@@ -1027,7 +1027,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "realm": {}
                 },
@@ -1309,8 +1309,8 @@ mod tests {
                 },
                 "use": [
                     { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                    { "legacy_service": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
-                    { "legacy_service": [ "/fonts/ReallyGoodFonts", "/fonts/IWouldNeverUseTheseFonts"]},
+                    { "service_protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
+                    { "service_protocol": [ "/fonts/ReallyGoodFonts", "/fonts/IWouldNeverUseTheseFonts"]},
                 ],
                 "expose": [
                     { "directory": "/volumes/blobfs", "from": "self", "rights": ["r*"]},
@@ -1322,7 +1322,7 @@ mod tests {
                         "to": [ "#netstack", "#modular" ]
                     },
                     {
-                        "legacy_service": "/svc/fuchsia.logger.LegacyLog",
+                        "service_protocol": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": [ "#netstack", "#modular" ]
                     },
@@ -1363,7 +1363,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "realm": {}
                 },
@@ -1372,7 +1372,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "realm": {}
                 },
@@ -1381,7 +1381,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "realm": {}
                 },
@@ -1443,7 +1443,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -1459,7 +1459,7 @@ mod tests {
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -1506,11 +1506,11 @@ mod tests {
         let input = json!({
             "use": [
                 { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                { "legacy_service": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
+                { "service_protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
                 { "directory": "/data/assets", "rights": ["read_bytes"] }
             ]
         });
-        let output = r#"{"uses":[{"service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"legacy_service":{"source":{"realm":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets","rights":["read_bytes"]}}]}"#;
+        let output = r#"{"uses":[{"service":{"source":{"realm":{}},"source_path":"/fonts/CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"service_protocol":{"source":{"realm":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"realm":{}},"source_path":"/data/assets","target_path":"/data/assets","rights":["read_bytes"]}}]}"#;
         compile_test(input, &output, false);
     }
 

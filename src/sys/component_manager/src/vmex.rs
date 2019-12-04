@@ -76,7 +76,7 @@ impl VmexServiceInner {
         capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
     ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
         match capability {
-            ComponentManagerCapability::LegacyService(capability_path)
+            ComponentManagerCapability::ServiceProtocol(capability_path)
                 if *capability_path == *VMEX_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(VmexCapabilityProvider::new())
@@ -215,7 +215,7 @@ mod tests {
         hooks.install(vmex_service.hooks()).await;
 
         let capability_provider = Arc::new(Mutex::new(None));
-        let capability = ComponentManagerCapability::LegacyService(VMEX_CAPABILITY_PATH.clone());
+        let capability = ComponentManagerCapability::ServiceProtocol(VMEX_CAPABILITY_PATH.clone());
 
         let (client, server) = zx::Channel::create()?;
 

@@ -24,7 +24,7 @@ enum OfferSource<'a> {
     // TODO(CF-908): Enable this once unified services are implemented.
     #[allow(dead_code)]
     Service(&'a OfferServiceSource),
-    LegacyService(&'a OfferServiceSource),
+    ServiceProtocol(&'a OfferServiceSource),
     Directory(&'a OfferDirectorySource),
     Storage(&'a OfferStorageSource),
     Runner(&'a OfferRunnerSource),
@@ -33,7 +33,7 @@ enum OfferSource<'a> {
 /// Describes the source of a capability, for any type of capability.
 #[derive(Debug)]
 enum ExposeSource<'a> {
-    LegacyService(&'a cm_rust::ExposeSource),
+    ServiceProtocol(&'a cm_rust::ExposeSource),
     Directory(&'a cm_rust::ExposeSource),
     Runner(&'a cm_rust::ExposeSource),
 }
@@ -69,7 +69,7 @@ pub async fn route_use_capability<'a>(
 ) -> Result<(), ModelError> {
     match use_decl {
         UseDecl::Service(_)
-        | UseDecl::LegacyService(_)
+        | UseDecl::ServiceProtocol(_)
         | UseDecl::Directory(_)
         | UseDecl::Runner(_) => {
             let source = find_used_capability_source(model, use_decl, &abs_moniker).await?;
@@ -548,7 +548,7 @@ async fn walk_offer_chain<'a>(
         )?;
         let source = match offer {
             OfferDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
-            OfferDecl::LegacyService(s) => OfferSource::LegacyService(&s.source),
+            OfferDecl::ServiceProtocol(s) => OfferSource::ServiceProtocol(&s.source),
             OfferDecl::Directory(d) => OfferSource::Directory(&d.source),
             OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
             OfferDecl::Runner(r) => OfferSource::Runner(&r.source),
@@ -568,7 +568,7 @@ async fn walk_offer_chain<'a>(
                     })?;
                 return Ok(Some(CapabilitySource::Framework(capability, current_realm.clone())));
             }
-            OfferSource::LegacyService(OfferServiceSource::Realm)
+            OfferSource::ServiceProtocol(OfferServiceSource::Realm)
             | OfferSource::Directory(OfferDirectorySource::Realm)
             | OfferSource::Storage(OfferStorageSource::Realm)
             | OfferSource::Runner(OfferRunnerSource::Realm) => {
@@ -579,7 +579,7 @@ async fn walk_offer_chain<'a>(
                 pos.moniker = pos.moniker().parent();
                 continue 'offerloop;
             }
-            OfferSource::LegacyService(OfferServiceSource::Self_)
+            OfferSource::ServiceProtocol(OfferServiceSource::Self_)
             | OfferSource::Directory(OfferDirectorySource::Self_) => {
                 // The offered capability comes from the current component,
                 // return our current location in the tree.
@@ -608,7 +608,7 @@ async fn walk_offer_chain<'a>(
                     current_realm.clone(),
                 )));
             }
-            OfferSource::LegacyService(OfferServiceSource::Child(child_name))
+            OfferSource::ServiceProtocol(OfferServiceSource::Child(child_name))
             | OfferSource::Directory(OfferDirectorySource::Child(child_name))
             | OfferSource::Runner(OfferRunnerSource::Child(child_name)) => {
                 // The offered capability comes from a child, break the loop
@@ -670,7 +670,7 @@ async fn walk_expose_chain<'a>(
             )))?;
         let (source, target) = match expose {
             ExposeDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
-            ExposeDecl::LegacyService(ls) => (ExposeSource::LegacyService(&ls.source), &ls.target),
+            ExposeDecl::ServiceProtocol(ls) => (ExposeSource::ServiceProtocol(&ls.source), &ls.target),
             ExposeDecl::Directory(d) => (ExposeSource::Directory(&d.source), &d.target),
             ExposeDecl::Runner(r) => (ExposeSource::Runner(&r.source), &r.target),
         };
@@ -682,7 +682,7 @@ async fn walk_expose_chain<'a>(
             )));
         }
         match source {
-            ExposeSource::LegacyService(cm_rust::ExposeSource::Self_)
+            ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Self_)
             | ExposeSource::Directory(cm_rust::ExposeSource::Self_) => {
                 // The offered capability comes from the current component, return our
                 // current location in the tree.
@@ -711,7 +711,7 @@ async fn walk_expose_chain<'a>(
                     current_realm.clone(),
                 ));
             }
-            ExposeSource::LegacyService(cm_rust::ExposeSource::Child(child_name))
+            ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Child(child_name))
             | ExposeSource::Directory(cm_rust::ExposeSource::Child(child_name))
             | ExposeSource::Runner(cm_rust::ExposeSource::Child(child_name)) => {
                 // The offered capability comes from a child, so follow the child.
@@ -727,7 +727,7 @@ async fn walk_expose_chain<'a>(
                     )?);
                 continue;
             }
-            ExposeSource::LegacyService(cm_rust::ExposeSource::Framework)
+            ExposeSource::ServiceProtocol(cm_rust::ExposeSource::Framework)
             | ExposeSource::Directory(cm_rust::ExposeSource::Framework) => {
                 let capability = ComponentManagerCapability::framework_from_expose_decl(expose)
                     .map_err(|_| {

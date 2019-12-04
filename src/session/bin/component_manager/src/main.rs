@@ -43,7 +43,7 @@ use {
 ///
 /// "expose": [
 ///   {
-///     "legacy_service": "some service",
+///     "service_protocol": "some service",
 ///     "from": "self",
 ///   }
 /// ],
@@ -57,7 +57,7 @@ use {
 /// ```
 /// "use": [
 ///        {
-///           "legacy_service": "some service",
+///           "service_protocol": "some service",
 ///           "from": "realm",
 ///        }
 ///    ]

@@ -625,8 +625,8 @@ mod tests {
         },
         cm_rust::{
             self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-            ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
-            UseLegacyServiceDecl, UseSource,
+            ExposeServiceProtocolDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
+            UseServiceProtocolDecl, UseSource,
         },
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
@@ -930,7 +930,7 @@ mod tests {
                             target_path: CapabilityPath::try_from("/hub").unwrap(),
                             rights: fio2::Operations::Connect,
                         }),
-                        UseDecl::LegacyService(UseLegacyServiceDecl {
+                        UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                             source: UseSource::Realm,
                             source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
@@ -985,7 +985,7 @@ mod tests {
                         startup: fsys::StartupMode::Lazy,
                     }],
                     exposes: vec![
-                        ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                             source: ExposeSource::Self_,
                             source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/bar").unwrap(),

@@ -9,7 +9,7 @@
             "rights": [ "r*",]
         },
         {
-            "legacy_service": "/svc/fuchsia.logger.LogSink",
+            "service_protocol": "/svc/fuchsia.logger.LogSink",
             "from": "realm",
         },
     ]

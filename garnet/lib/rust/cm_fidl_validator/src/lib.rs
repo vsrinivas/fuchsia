@@ -311,9 +311,9 @@ impl<'a> ValidationContext<'a> {
                     u.target_path.as_ref(),
                 );
             }
-            fsys::UseDecl::LegacyService(u) => {
+            fsys::UseDecl::ServiceProtocol(u) => {
                 self.validate_use_fields(
-                    "UseLegacyServiceDecl",
+                    "UseServiceProtocolDecl",
                     u.source.as_ref(),
                     u.source_path.as_ref(),
                     u.target_path.as_ref(),
@@ -500,9 +500,9 @@ impl<'a> ValidationContext<'a> {
                     prev_target_paths,
                 );
             }
-            fsys::ExposeDecl::LegacyService(e) => {
+            fsys::ExposeDecl::ServiceProtocol(e) => {
                 self.validate_expose_fields(
-                    "ExposeLegacyServiceDecl",
+                    "ExposeServiceProtocolDecl",
                     AllowablePaths::One,
                     e.source.as_ref(),
                     e.source_path.as_ref(),
@@ -650,9 +650,9 @@ impl<'a> ValidationContext<'a> {
                     o.target_path.as_ref(),
                 );
             }
-            fsys::OfferDecl::LegacyService(o) => {
+            fsys::OfferDecl::ServiceProtocol(o) => {
                 self.validate_offers_fields(
-                    "OfferLegacyServiceDecl",
+                    "OfferServiceProtocolDecl",
                     AllowablePaths::One,
                     o.source.as_ref(),
                     o.source_path.as_ref(),
@@ -1100,11 +1100,11 @@ mod tests {
         fidl_fuchsia_io2 as fio2,
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
-            ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeRunnerDecl,
-            ExposeServiceDecl, FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferLegacyServiceDecl,
+            ExposeDecl, ExposeDirectoryDecl, ExposeServiceProtocolDecl, ExposeRunnerDecl,
+            ExposeServiceDecl, FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferServiceProtocolDecl,
             OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref, RunnerDecl,
             SelfRef, StartupMode, StorageDecl, StorageRef, StorageType, UseDecl, UseDirectoryDecl,
-            UseLegacyServiceDecl, UseRunnerDecl, UseServiceDecl, UseStorageDecl,
+            UseServiceProtocolDecl, UseRunnerDecl, UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -1359,7 +1359,7 @@ mod tests {
                         source_path: None,
                         target_path: None,
                     }),
-                    UseDecl::LegacyService(UseLegacyServiceDecl {
+                    UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: None,
                         source_path: None,
                         target_path: None,
@@ -1388,9 +1388,9 @@ mod tests {
                 Error::missing_field("UseServiceDecl", "source"),
                 Error::missing_field("UseServiceDecl", "source_path"),
                 Error::missing_field("UseServiceDecl", "target_path"),
-                Error::missing_field("UseLegacyServiceDecl", "source"),
-                Error::missing_field("UseLegacyServiceDecl", "source_path"),
-                Error::missing_field("UseLegacyServiceDecl", "target_path"),
+                Error::missing_field("UseServiceProtocolDecl", "source"),
+                Error::missing_field("UseServiceProtocolDecl", "source_path"),
+                Error::missing_field("UseServiceProtocolDecl", "target_path"),
                 Error::missing_field("UseDirectoryDecl", "source"),
                 Error::missing_field("UseDirectoryDecl", "source_path"),
                 Error::missing_field("UseDirectoryDecl", "target_path"),
@@ -1409,7 +1409,7 @@ mod tests {
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
                     }),
-                    UseDecl::LegacyService(UseLegacyServiceDecl {
+                    UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
@@ -1435,9 +1435,9 @@ mod tests {
                 Error::invalid_field("UseServiceDecl", "source"),
                 Error::invalid_field("UseServiceDecl", "source_path"),
                 Error::invalid_field("UseServiceDecl", "target_path"),
-                Error::invalid_field("UseLegacyServiceDecl", "source"),
-                Error::invalid_field("UseLegacyServiceDecl", "source_path"),
-                Error::invalid_field("UseLegacyServiceDecl", "target_path"),
+                Error::invalid_field("UseServiceProtocolDecl", "source"),
+                Error::invalid_field("UseServiceProtocolDecl", "source_path"),
+                Error::invalid_field("UseServiceProtocolDecl", "target_path"),
                 Error::invalid_field("UseDirectoryDecl", "source"),
                 Error::invalid_field("UseDirectoryDecl", "source_path"),
                 Error::invalid_field("UseDirectoryDecl", "target_path"),
@@ -1471,7 +1471,7 @@ mod tests {
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                     }),
-                    UseDecl::LegacyService(UseLegacyServiceDecl {
+                    UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
@@ -1495,8 +1495,8 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::field_too_long("UseServiceDecl", "source_path"),
                 Error::field_too_long("UseServiceDecl", "target_path"),
-                Error::field_too_long("UseLegacyServiceDecl", "source_path"),
-                Error::field_too_long("UseLegacyServiceDecl", "target_path"),
+                Error::field_too_long("UseServiceProtocolDecl", "source_path"),
+                Error::field_too_long("UseServiceProtocolDecl", "target_path"),
                 Error::field_too_long("UseDirectoryDecl", "source_path"),
                 Error::field_too_long("UseDirectoryDecl", "target_path"),
                 Error::field_too_long("UseStorageDecl", "target_path"),
@@ -1515,7 +1515,7 @@ mod tests {
                         target_path: None,
                         target: None,
                     }),
-                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: None,
                         source_path: None,
                         target_path: None,
@@ -1542,10 +1542,10 @@ mod tests {
                 Error::missing_field("ExposeServiceDecl", "target"),
                 Error::missing_field("ExposeServiceDecl", "source_path"),
                 Error::missing_field("ExposeServiceDecl", "target_path"),
-                Error::missing_field("ExposeLegacyServiceDecl", "source"),
-                Error::missing_field("ExposeLegacyServiceDecl", "target"),
-                Error::missing_field("ExposeLegacyServiceDecl", "source_path"),
-                Error::missing_field("ExposeLegacyServiceDecl", "target_path"),
+                Error::missing_field("ExposeServiceProtocolDecl", "source"),
+                Error::missing_field("ExposeServiceProtocolDecl", "target"),
+                Error::missing_field("ExposeServiceProtocolDecl", "source_path"),
+                Error::missing_field("ExposeServiceProtocolDecl", "target_path"),
                 Error::missing_field("ExposeDirectoryDecl", "source"),
                 Error::missing_field("ExposeDirectoryDecl", "target"),
                 Error::missing_field("ExposeDirectoryDecl", "source_path"),
@@ -1569,7 +1569,7 @@ mod tests {
                         target_path: Some("/svc/logger".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                     }),
-                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "logger".to_string(),
                             collection: Some("modular".to_string()),
@@ -1602,7 +1602,7 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::extraneous_field("ExposeServiceDecl", "source.child.collection"),
-                Error::extraneous_field("ExposeLegacyServiceDecl", "source.child.collection"),
+                Error::extraneous_field("ExposeServiceProtocolDecl", "source.child.collection"),
                 Error::extraneous_field("ExposeDirectoryDecl", "source.child.collection"),
                 Error::extraneous_field("ExposeRunnerDecl", "source.child.collection"),
             ])),
@@ -1638,7 +1638,7 @@ mod tests {
                         target_path: Some("/".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                     }),
-                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "^bad".to_string(),
                             collection: None,
@@ -1673,9 +1673,9 @@ mod tests {
                 Error::invalid_character_in_field("ExposeServiceDecl", "source.child.name", '^'),
                 Error::invalid_field("ExposeServiceDecl", "source_path"),
                 Error::invalid_field("ExposeServiceDecl", "target_path"),
-                Error::invalid_character_in_field("ExposeLegacyServiceDecl", "source.child.name", '^'),
-                Error::invalid_field("ExposeLegacyServiceDecl", "source_path"),
-                Error::invalid_field("ExposeLegacyServiceDecl", "target_path"),
+                Error::invalid_character_in_field("ExposeServiceProtocolDecl", "source.child.name", '^'),
+                Error::invalid_field("ExposeServiceProtocolDecl", "source_path"),
+                Error::invalid_field("ExposeServiceProtocolDecl", "target_path"),
                 Error::invalid_character_in_field("ExposeDirectoryDecl", "source.child.name", '^'),
                 Error::invalid_field("ExposeDirectoryDecl", "source_path"),
                 Error::invalid_field("ExposeDirectoryDecl", "target_path"),
@@ -1694,7 +1694,7 @@ mod tests {
                         target_path: Some("/b".to_string()),
                         target: None,
                     }),
-                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: Some(Ref::Realm(RealmRef {})),
                         source_path: Some("/c".to_string()),
                         target_path: Some("/d".to_string()),
@@ -1726,8 +1726,8 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::missing_field("ExposeServiceDecl", "source"),
                 Error::missing_field("ExposeServiceDecl", "target"),
-                Error::invalid_field("ExposeLegacyServiceDecl", "source"),
-                Error::invalid_field("ExposeLegacyServiceDecl", "target"),
+                Error::invalid_field("ExposeServiceProtocolDecl", "source"),
+                Error::invalid_field("ExposeServiceProtocolDecl", "target"),
                 Error::invalid_field("ExposeDirectoryDecl", "source"),
                 Error::invalid_field("ExposeDirectoryDecl", "target"),
                 Error::invalid_field("ExposeDirectoryDecl", "source"),
@@ -1749,7 +1749,7 @@ mod tests {
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                         target: Some(Ref::Realm(RealmRef {})),
                     }),
-                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "b".repeat(101),
                             collection: None,
@@ -1784,9 +1784,9 @@ mod tests {
                 Error::field_too_long("ExposeServiceDecl", "source.child.name"),
                 Error::field_too_long("ExposeServiceDecl", "source_path"),
                 Error::field_too_long("ExposeServiceDecl", "target_path"),
-                Error::field_too_long("ExposeLegacyServiceDecl", "source.child.name"),
-                Error::field_too_long("ExposeLegacyServiceDecl", "source_path"),
-                Error::field_too_long("ExposeLegacyServiceDecl", "target_path"),
+                Error::field_too_long("ExposeServiceProtocolDecl", "source.child.name"),
+                Error::field_too_long("ExposeServiceProtocolDecl", "source_path"),
+                Error::field_too_long("ExposeServiceProtocolDecl", "target_path"),
                 Error::field_too_long("ExposeDirectoryDecl", "source.child.name"),
                 Error::field_too_long("ExposeDirectoryDecl", "source_path"),
                 Error::field_too_long("ExposeDirectoryDecl", "target_path"),
@@ -1808,7 +1808,7 @@ mod tests {
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Realm(RealmRef {})),
                     }),
-                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                    ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "netstack".to_string(),
                             collection: None,
@@ -1841,7 +1841,7 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_child("ExposeServiceDecl", "source", "netstack"),
-                Error::invalid_child("ExposeLegacyServiceDecl", "source", "netstack"),
+                Error::invalid_child("ExposeServiceProtocolDecl", "source", "netstack"),
                 Error::invalid_child("ExposeDirectoryDecl", "source", "netstack"),
                 Error::invalid_child("ExposeRunnerDecl", "source", "netstack"),
             ])),
@@ -1942,7 +1942,7 @@ mod tests {
                         target: None,
                         target_path: None,
                     }),
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                         source: None,
                         source_path: None,
                         target: None,
@@ -1974,10 +1974,10 @@ mod tests {
                 Error::missing_field("OfferServiceDecl", "source_path"),
                 Error::missing_field("OfferServiceDecl", "target"),
                 Error::missing_field("OfferServiceDecl", "target_path"),
-                Error::missing_field("OfferLegacyServiceDecl", "source"),
-                Error::missing_field("OfferLegacyServiceDecl", "source_path"),
-                Error::missing_field("OfferLegacyServiceDecl", "target"),
-                Error::missing_field("OfferLegacyServiceDecl", "target_path"),
+                Error::missing_field("OfferServiceProtocolDecl", "source"),
+                Error::missing_field("OfferServiceProtocolDecl", "source_path"),
+                Error::missing_field("OfferServiceProtocolDecl", "target"),
+                Error::missing_field("OfferServiceProtocolDecl", "target_path"),
                 Error::missing_field("OfferDirectoryDecl", "source"),
                 Error::missing_field("OfferDirectoryDecl", "source_path"),
                 Error::missing_field("OfferDirectoryDecl", "target"),
@@ -2019,7 +2019,7 @@ mod tests {
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                     }),
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "a".repeat(101),
                             collection: None,
@@ -2033,7 +2033,7 @@ mod tests {
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                     }),
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                         source: Some(Ref::Self_(SelfRef {})),
                         source_path: Some("/a".to_string()),
                         target: Some(Ref::Collection(
@@ -2109,12 +2109,12 @@ mod tests {
                 Error::field_too_long("OfferServiceDecl", "target_path"),
                 Error::field_too_long("OfferServiceDecl", "target.collection.name"),
                 Error::field_too_long("OfferServiceDecl", "target_path"),
-                Error::field_too_long("OfferLegacyServiceDecl", "source.child.name"),
-                Error::field_too_long("OfferLegacyServiceDecl", "source_path"),
-                Error::field_too_long("OfferLegacyServiceDecl", "target.child.name"),
-                Error::field_too_long("OfferLegacyServiceDecl", "target_path"),
-                Error::field_too_long("OfferLegacyServiceDecl", "target.collection.name"),
-                Error::field_too_long("OfferLegacyServiceDecl", "target_path"),
+                Error::field_too_long("OfferServiceProtocolDecl", "source.child.name"),
+                Error::field_too_long("OfferServiceProtocolDecl", "source_path"),
+                Error::field_too_long("OfferServiceProtocolDecl", "target.child.name"),
+                Error::field_too_long("OfferServiceProtocolDecl", "target_path"),
+                Error::field_too_long("OfferServiceProtocolDecl", "target.collection.name"),
+                Error::field_too_long("OfferServiceProtocolDecl", "target_path"),
                 Error::field_too_long("OfferDirectoryDecl", "source.child.name"),
                 Error::field_too_long("OfferDirectoryDecl", "source_path"),
                 Error::field_too_long("OfferDirectoryDecl", "target.child.name"),
@@ -2169,7 +2169,7 @@ mod tests {
                         )),
                         target_path: Some("/data/realm_assets".to_string()),
                     }),
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "logger".to_string(),
                             collection: Some("modular".to_string()),
@@ -2228,8 +2228,8 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::extraneous_field("OfferServiceDecl", "source.child.collection"),
                 Error::extraneous_field("OfferServiceDecl", "target.child.collection"),
-                Error::extraneous_field("OfferLegacyServiceDecl", "source.child.collection"),
-                Error::extraneous_field("OfferLegacyServiceDecl", "target.child.collection"),
+                Error::extraneous_field("OfferServiceProtocolDecl", "source.child.collection"),
+                Error::extraneous_field("OfferServiceProtocolDecl", "target.child.collection"),
                 Error::extraneous_field("OfferDirectoryDecl", "source.child.collection"),
                 Error::extraneous_field("OfferDirectoryDecl", "target.child.collection"),
                 Error::extraneous_field("OfferStorageDecl", "target.child.collection"),
@@ -2255,7 +2255,7 @@ mod tests {
                         )),
                         target_path: Some("/svc/logger".to_string()),
                     }),
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "logger".to_string(),
                             collection: None,
@@ -2308,7 +2308,7 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::offer_target_equals_source("OfferServiceDecl", "logger"),
-                Error::offer_target_equals_source("OfferLegacyServiceDecl", "logger"),
+                Error::offer_target_equals_source("OfferServiceProtocolDecl", "logger"),
                 Error::offer_target_equals_source("OfferDirectoryDecl", "logger"),
                 Error::offer_target_equals_source("OfferRunnerDecl", "logger"),
             ])),
@@ -2370,7 +2370,7 @@ mod tests {
                         )),
                         target_path: Some("/data/realm_assets".to_string()),
                     }),
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                         source: Some(Ref::Child(ChildRef {
                             name: "logger".to_string(),
                             collection: None,
@@ -2425,7 +2425,7 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::invalid_child("StorageDecl", "source", "logger"),
                 Error::invalid_child("OfferServiceDecl", "source", "logger"),
-                Error::invalid_child("OfferLegacyServiceDecl", "source", "logger"),
+                Error::invalid_child("OfferServiceProtocolDecl", "source", "logger"),
                 Error::invalid_child("OfferDirectoryDecl", "source", "logger"),
             ])),
         },
@@ -2542,7 +2542,7 @@ mod tests {
                         )),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
                     }),
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/legacy_logger".to_string()),
                         target: Some(Ref::Child(
@@ -2553,7 +2553,7 @@ mod tests {
                         )),
                         target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
                     }),
-                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/legacy_logger".to_string()),
                         target: Some(Ref::Collection(
@@ -2624,8 +2624,8 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::invalid_child("OfferServiceDecl", "target", "netstack"),
                 Error::invalid_collection("OfferServiceDecl", "target", "modular"),
-                Error::invalid_child("OfferLegacyServiceDecl", "target", "netstack"),
-                Error::invalid_collection("OfferLegacyServiceDecl", "target", "modular"),
+                Error::invalid_child("OfferServiceProtocolDecl", "target", "netstack"),
+                Error::invalid_collection("OfferServiceProtocolDecl", "target", "modular"),
                 Error::invalid_child("OfferDirectoryDecl", "target", "netstack"),
                 Error::invalid_collection("OfferDirectoryDecl", "target", "modular"),
                 Error::invalid_child("OfferStorageDecl", "target", "netstack"),

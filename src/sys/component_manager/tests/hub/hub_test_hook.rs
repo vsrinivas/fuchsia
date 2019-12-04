@@ -76,7 +76,7 @@ impl HubTestHook {
         capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
     ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
         match (capability_provider, capability) {
-            (None, ComponentManagerCapability::LegacyService(source_path))
+            (None, ComponentManagerCapability::ServiceProtocol(source_path))
                 if *source_path == *HUB_REPORT_SERVICE =>
             {
                 return Ok(Some(Box::new(HubTestCapabilityProvider::new(

@@ -135,7 +135,7 @@
           },
           {
             "required": [
-              "legacy_service"
+              "service_protocol"
             ]
           },
           {
@@ -167,7 +167,7 @@
               "/svc/fuchsia.logger.Log"
             ]
           },
-          "legacy_service": {
+          "service_protocol": {
             "title": "Used legacy service source path",
             "description": "A path, or a list of paths, under which a legacy service is offered to this component",
             "oneOf": [
@@ -278,7 +278,7 @@
           },
           {
             "required": [
-              "legacy_service"
+              "service_protocol"
             ]
           },
           {
@@ -305,9 +305,9 @@
               "/svc/fuchsia.ui.scenic.Scenic"
             ]
           },
-          "legacy_service": {
+          "service_protocol": {
             "title": "Exposed legacy service source path",
-            "description": "A path, or a list of paths, to legacy service being exposed. Each path must be from this component's outgoing namespace (if from \"self\"), or must be a legacy_service path exposed to this component by a child (if from \"#$CHILD\").",
+            "description": "A path, or a list of paths, to legacy service being exposed. Each path must be from this component's outgoing namespace (if from \"self\"), or must be a service_protocol path exposed to this component by a child (if from \"#$CHILD\").",
             "oneOf": [
               {
                 "$ref": "#/definitions/path-clause"
@@ -426,7 +426,7 @@
           },
           {
             "required": [
-              "legacy_service"
+              "service_protocol"
             ]
           },
           {
@@ -458,7 +458,7 @@
               "/svc/fuchsia.ui.scenic.Scenic"
             ]
           },
-          "legacy_service": {
+          "service_protocol": {
             "title": "Offered legacy service source path",
             "description": "A path, or a list of paths, to legacy services offered to children. Each path must either come from this component's namespace (if from \"self\"), or must be a path which was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
             "oneOf": [

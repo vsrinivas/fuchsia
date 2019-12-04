@@ -6,7 +6,7 @@
     // Expose my Trigger service so the integration test can invoke it.
     "expose": [
         {
-            "legacy_service": "/svc/fidl.test.components.Trigger",
+            "service_protocol": "/svc/fidl.test.components.Trigger",
             "from": "self",
         },
     ],

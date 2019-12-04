@@ -9,7 +9,7 @@
       "as": "/svc/fuchsia.fonts.Provider",
     },
     {
-      "legacy_service": "/fonts/LegacyCoolFonts",
+      "service_protocol": "/fonts/LegacyCoolFonts",
       "as": "/svc/fuchsia.fonts.LegacyProvider",
     },
   ],
@@ -20,7 +20,7 @@
       "as": "/svc/fuchsia.logger.Log",
     },
     {
-      "legacy_service": "/loggers/fuchsia.logger.LegacyLog",
+      "service_protocol": "/loggers/fuchsia.logger.LegacyLog",
       "from": "#logger",
       "as": "/svc/fuchsia.logger.LegacyLog",
       "to": "realm",
@@ -39,7 +39,7 @@
       "to": [ "#modular" ]
     },
     {
-      "legacy_service": "/svc/fuchsia.logger.LegacyLog",
+      "service_protocol": "/svc/fuchsia.logger.LegacyLog",
       "from": "#logger",
       "to": [ "#modular" ]
     },

@@ -171,7 +171,7 @@
             "required": [ "service" ]
           },
           {
-            "required": [ "legacy_service" ]
+            "required": [ "service_protocol" ]
           },
           {
             "required": [ "directory" ]
@@ -207,9 +207,9 @@
               }
             }
           },
-          "legacy_service": {
+          "service_protocol": {
             "type": "object",
-            "title": "Used legacy service capability",
+            "title": "Used service protocol capability",
             "required": [
               "source",
               "source_path",
@@ -217,15 +217,15 @@
             ],
             "properties": {
               "source": {
-                "title": "Used legacy service source",
+                "title": "Used service protocol source",
                 "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "source_path": {
-                "title": "Used legacy service source path",
+                "title": "Used service protocol source path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
               },
               "target_path": {
-                "title": "Used legacy service target path",
+                "title": "Used service protocol target path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
               }
             }
@@ -302,7 +302,7 @@
             "required": [ "service" ]
           },
           {
-            "required": [ "legacy_service" ]
+            "required": [ "service_protocol" ]
           },
           {
             "required": [ "directory" ]
@@ -340,9 +340,9 @@
               }
             }
           },
-          "legacy_service": {
+          "service_protocol": {
             "type": "object",
-            "title": "Exposed legacy service capability",
+            "title": "Exposed service protocol capability",
             "required": [
               "source",
               "source_path",
@@ -351,20 +351,20 @@
             ],
             "properties": {
               "source": {
-                "title": "Exposed legacy service source component",
+                "title": "Exposed service protocol source component",
                 "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "source_path": {
-                "title": "Exposed legacy service source path",
+                "title": "Exposed service protocol source path",
                 "allOf": [{ "$ref": "#/definitions/path-clause" }]
               },
               "target": {
-                "title": "Exposed legacy service target component",
+                "title": "Exposed service protocol target component",
                 "allOf": [{ "$ref": "#/definitions/reference-clause" }]
               },
               "target_path": {
                 "allOf": [{ "$ref": "#/definitions/path-clause" }],
-                "title": "Exposed legacy service target path"
+                "title": "Exposed service protocol target path"
               }
             }
           },
@@ -442,7 +442,7 @@
             "required": [ "service" ]
           },
           {
-            "required": [ "legacy_service" ]
+            "required": [ "service_protocol" ]
           },
           {
             "required": [ "directory" ]
@@ -459,8 +459,8 @@
             "title": "Offered service",
             "allOf": [{ "$ref": "#/definitions/offer-clause" }]
           },
-          "legacy_service": {
-            "title": "Offered legacy service",
+          "service_protocol": {
+            "title": "Offered service protocol",
             "allOf": [{ "$ref": "#/definitions/offer-clause" }]
           },
         "directory": {

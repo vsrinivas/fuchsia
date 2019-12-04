@@ -421,7 +421,7 @@ impl Realm {
         let state = state.as_ref().expect("is_service_exposed_to_framework: not resolved");
 
         state.decl.exposes.iter().any(|expose| match expose {
-            ExposeDecl::LegacyService(ls) => {
+            ExposeDecl::ServiceProtocol(ls) => {
                 ls.target == ExposeTarget::Framework && ls.target_path == *target_path
             }
             _ => false,

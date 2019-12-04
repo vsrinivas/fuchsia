@@ -4,12 +4,13 @@
     },
     "expose": [
         {
-            "legacy_service": "/svc/fuchsia.sys2.Worker", "from": "self", "to": "framework",
+            "service_protocol": "/svc/fuchsia.sys2.Worker", "from": "self", "to": "framework",
         },
     ],
     "use": [
         {
-            "legacy_service": "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter", "from": "framework",
+            "service_protocol": "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter",
+            "from": "framework",
         },
     ],
 }

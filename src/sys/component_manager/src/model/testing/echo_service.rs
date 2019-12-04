@@ -83,7 +83,7 @@ impl EchoServiceInner {
     ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
         println!("Capability_path: {:?}", capability.path());
         match capability {
-            ComponentManagerCapability::LegacyService(capability_path)
+            ComponentManagerCapability::ServiceProtocol(capability_path)
                 if *capability_path == *ECHO_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(EchoCapabilityProvider::new())

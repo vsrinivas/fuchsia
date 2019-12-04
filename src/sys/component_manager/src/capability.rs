@@ -29,7 +29,7 @@ pub enum Error {
 #[derive(Debug, Clone)]
 pub enum ComponentManagerCapability {
     Service(CapabilityPath),
-    LegacyService(CapabilityPath),
+    ServiceProtocol(CapabilityPath),
     Directory(CapabilityPath),
     Runner(CapabilityName),
 }
@@ -38,7 +38,7 @@ impl ComponentManagerCapability {
     pub fn path(&self) -> Option<&CapabilityPath> {
         match self {
             ComponentManagerCapability::Service(source_path) => Some(&source_path),
-            ComponentManagerCapability::LegacyService(source_path) => Some(&source_path),
+            ComponentManagerCapability::ServiceProtocol(source_path) => Some(&source_path),
             ComponentManagerCapability::Directory(source_path) => Some(&source_path),
             _ => None,
         }
@@ -49,8 +49,8 @@ impl ComponentManagerCapability {
             UseDecl::Service(s) if s.source == UseSource::Realm => {
                 Ok(ComponentManagerCapability::Service(s.source_path.clone()))
             }
-            UseDecl::LegacyService(s) if s.source == UseSource::Realm => {
-                Ok(ComponentManagerCapability::LegacyService(s.source_path.clone()))
+            UseDecl::ServiceProtocol(s) if s.source == UseSource::Realm => {
+                Ok(ComponentManagerCapability::ServiceProtocol(s.source_path.clone()))
             }
             UseDecl::Directory(d) if d.source == UseSource::Realm => {
                 Ok(ComponentManagerCapability::Directory(d.source_path.clone()))
@@ -64,8 +64,8 @@ impl ComponentManagerCapability {
 
     pub fn builtin_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
-            OfferDecl::LegacyService(s) if s.source == OfferServiceSource::Realm => {
-                Ok(ComponentManagerCapability::LegacyService(s.source_path.clone()))
+            OfferDecl::ServiceProtocol(s) if s.source == OfferServiceSource::Realm => {
+                Ok(ComponentManagerCapability::ServiceProtocol(s.source_path.clone()))
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Realm => {
                 Ok(ComponentManagerCapability::Directory(d.source_path.clone()))
@@ -84,8 +84,8 @@ impl ComponentManagerCapability {
             UseDecl::Service(s) if s.source == UseSource::Framework => {
                 Ok(ComponentManagerCapability::Service(s.source_path.clone()))
             }
-            UseDecl::LegacyService(s) if s.source == UseSource::Framework => {
-                Ok(ComponentManagerCapability::LegacyService(s.source_path.clone()))
+            UseDecl::ServiceProtocol(s) if s.source == UseSource::Framework => {
+                Ok(ComponentManagerCapability::ServiceProtocol(s.source_path.clone()))
             }
             UseDecl::Directory(d) if d.source == UseSource::Framework => {
                 Ok(ComponentManagerCapability::Directory(d.source_path.clone()))

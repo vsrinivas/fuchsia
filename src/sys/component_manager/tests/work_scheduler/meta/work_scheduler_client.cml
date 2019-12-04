@@ -4,15 +4,15 @@
     },
     "expose": [
         {
-            "legacy_service": "/svc/fuchsia.sys2.Worker", "from": "self", "to": "framework",
+            "service_protocol": "/svc/fuchsia.sys2.Worker", "from": "self", "to": "framework",
         },
     ],
     "use": [
         {
-            "legacy_service": "/svc/fuchsia.sys2.WorkSchedulerControl",
+            "service_protocol": "/svc/fuchsia.sys2.WorkSchedulerControl",
         },
         {
-            "legacy_service": [
+            "service_protocol": [
                 "/svc/fuchsia.sys2.WorkScheduler",
                 "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter",
              ],

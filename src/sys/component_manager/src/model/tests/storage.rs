@@ -424,7 +424,7 @@ async fn use_in_collection_from_parent() {
         (
             "b",
             ComponentDecl {
-                uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
@@ -568,7 +568,7 @@ async fn use_in_collection_from_grandparent() {
         (
             "b",
             ComponentDecl {
-                uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),

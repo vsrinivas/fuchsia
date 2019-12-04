@@ -159,7 +159,7 @@ impl DirTree {
     ) {
         let path = match expose {
             cm_rust::ExposeDecl::Service(d) => &d.target_path,
-            cm_rust::ExposeDecl::LegacyService(d) => &d.target_path,
+            cm_rust::ExposeDecl::ServiceProtocol(d) => &d.target_path,
             cm_rust::ExposeDecl::Directory(d) => &d.target_path,
             cm_rust::ExposeDecl::Runner(_) => {
                 // Runners do not add directory entries.
@@ -192,8 +192,8 @@ mod tests {
         crate::model::testing::{mocks, test_helpers, test_helpers::*},
         cm_rust::{
             CapabilityName, CapabilityPath, ExposeDecl, ExposeDirectoryDecl,
-            ExposeLegacyServiceDecl, ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl,
-            UseDirectoryDecl, UseLegacyServiceDecl, UseRunnerDecl, UseSource, UseStorageDecl,
+            ExposeServiceProtocolDecl, ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl,
+            UseDirectoryDecl, UseServiceProtocolDecl, UseRunnerDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -217,7 +217,7 @@ mod tests {
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                     rights: fio2::Operations::Connect,
                 }),
-                UseDecl::LegacyService(UseLegacyServiceDecl {
+                UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
@@ -291,7 +291,7 @@ mod tests {
                     target: ExposeTarget::Realm,
                     rights: Some(fio2::Operations::Connect),
                 }),
-                ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),

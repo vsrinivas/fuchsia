@@ -60,7 +60,7 @@ impl SystemControllerInner {
         capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
     ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
         match capability {
-            ComponentManagerCapability::LegacyService(capability_path)
+            ComponentManagerCapability::ServiceProtocol(capability_path)
                 if *capability_path == *SYSTEM_CONTROLLER_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(SystemControllerCapabilityProvider::new(self.model.clone()))

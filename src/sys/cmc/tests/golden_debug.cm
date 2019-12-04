@@ -13,7 +13,7 @@
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "realm": {}
                 },
@@ -36,7 +36,7 @@
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "child": {
                         "name": "logger"
@@ -86,7 +86,7 @@
             }
         },
         {
-            "legacy_service": {
+            "service_protocol": {
                 "source": {
                     "child": {
                         "name": "logger"

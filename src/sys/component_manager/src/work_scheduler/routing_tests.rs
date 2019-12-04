@@ -9,9 +9,9 @@ use {
         },
     },
     cm_rust::{
-        self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeLegacyServiceDecl,
-        ExposeSource, ExposeTarget, OfferDecl, OfferLegacyServiceDecl, OfferServiceSource,
-        OfferTarget, UseDecl, UseLegacyServiceDecl, UseSource,
+        self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeServiceProtocolDecl,
+        ExposeSource, ExposeTarget, OfferDecl, OfferServiceProtocolDecl, OfferServiceSource,
+        OfferTarget, UseDecl, UseServiceProtocolDecl, UseSource,
     },
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
@@ -147,13 +147,13 @@ async fn use_work_scheduler_with_expose_to_framework() {
         (
             "b",
             ComponentDecl {
-                exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target: ExposeTarget::Framework,
                 })],
-                uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
@@ -193,7 +193,7 @@ async fn use_work_scheduler_without_expose() {
         (
             "b",
             ComponentDecl {
-                uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
@@ -233,13 +233,13 @@ async fn use_work_scheduler_with_expose_to_realm() {
         (
             "b",
             ComponentDecl {
-                exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target: ExposeTarget::Realm,
                 })],
-                uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
@@ -268,7 +268,7 @@ async fn use_work_scheduler_control_routed() {
         (
             "a",
             ComponentDecl {
-                offers: vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
                     target_path: offer_use_path.clone(),
@@ -285,7 +285,7 @@ async fn use_work_scheduler_control_routed() {
         (
             "b",
             ComponentDecl {
-                uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Realm,
                     source_path: offer_use_path.clone(),
                     target_path: offer_use_path.clone(),
@@ -316,7 +316,7 @@ async fn use_work_scheduler_control_fail() {
         (
             "a",
             ComponentDecl {
-                offers: vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
                     target_path: offer_use_path.clone(),
@@ -333,7 +333,7 @@ async fn use_work_scheduler_control_fail() {
         (
             "b",
             ComponentDecl {
-                uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: offer_use_path.clone(),
                     target_path: offer_use_path.clone(),

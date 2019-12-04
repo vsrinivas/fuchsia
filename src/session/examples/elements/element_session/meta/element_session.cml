@@ -17,7 +17,7 @@
     ],
     "expose": [
         {
-            "legacy_service": [
+            "service_protocol": [
                 "/svc/fuchsia.session.ElementManager",
                 "/svc/fuchsia.session.examples.ElementPing",
             ],
@@ -26,18 +26,18 @@
     ],
     "use": [
         {
-            "legacy_service": "/svc/fuchsia.sys2.Realm",
+            "service_protocol": "/svc/fuchsia.sys2.Realm",
             "from": "framework",
         },
     ],
     "offer": [
         {
-            "legacy_service": "/svc/fuchsia.session.examples.ElementPing",
+            "service_protocol": "/svc/fuchsia.session.examples.ElementPing",
             "from": "self",
             "to": [ "#elements" ],
         },
         {
-            "legacy_service": "/svc/fuchsia.session.ElementManager",
+            "service_protocol": "/svc/fuchsia.session.ElementManager",
             "from": "self",
             "to": [ "#element_proposer" ],
         },

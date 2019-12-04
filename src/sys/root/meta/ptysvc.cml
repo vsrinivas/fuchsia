@@ -1,6 +1,6 @@
 {
   "program": { "binary": "bin/ptysvc" },
   "expose": [
-    { "legacy_service": "/svc/fuchsia.hardware.pty.Device", "from": "self" },
+    { "service_protocol": "/svc/fuchsia.hardware.pty.Device", "from": "self" },
   ]
 }

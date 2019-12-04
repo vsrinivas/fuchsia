@@ -3,7 +3,7 @@
   "use": [
     {"directory": "/boot" , "rights": ["rx*"]},
     {
-      "legacy_service": [
+      "service_protocol": [
         "/svc/console",
         "/svc/fuchsia.boot.Arguments",
         "/svc/fuchsia.boot.FactoryItems",

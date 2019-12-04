@@ -260,7 +260,7 @@ impl ProcessLauncherInner {
         capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
     ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
         match capability {
-            ComponentManagerCapability::LegacyService(capability_path)
+            ComponentManagerCapability::ServiceProtocol(capability_path)
                 if *capability_path == *PROCESS_LAUNCHER_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(ProcessLauncherCapabilityProvider::new())
@@ -377,7 +377,7 @@ mod tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let capability =
-            ComponentManagerCapability::LegacyService(PROCESS_LAUNCHER_CAPABILITY_PATH.clone());
+            ComponentManagerCapability::ServiceProtocol(PROCESS_LAUNCHER_CAPABILITY_PATH.clone());
 
         let (client, server) = zx::Channel::create()?;
 

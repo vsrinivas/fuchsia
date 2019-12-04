@@ -9,7 +9,7 @@
 
     "use": [
         {
-            "legacy_service": "/svc/fuchsia.sys2.SystemController",
+            "service_protocol": "/svc/fuchsia.sys2.SystemController",
         },
     ]
 }

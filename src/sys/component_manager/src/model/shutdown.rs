@@ -348,7 +348,7 @@ pub fn process_component_dependencies(
         // itself in which case the relationship is not relevant for ordering
         // here.
         let source_target_pairs = match dep {
-            OfferDecl::LegacyService(svc_offer) => {
+            OfferDecl::ServiceProtocol(svc_offer) => {
                 match &svc_offer.source {
                     OfferServiceSource::Child(source) => match &svc_offer.target {
                         OfferTarget::Child(target) => vec![(
@@ -487,8 +487,8 @@ mod tests {
         super::*,
         crate::model::testing::test_helpers::default_component_decl,
         cm_rust::{
-            CapabilityPath, ChildDecl, ExposeDecl, ExposeLegacyServiceDecl, ExposeSource,
-            ExposeTarget, OfferLegacyServiceDecl, OfferServiceSource, OfferTarget,
+            CapabilityPath, ChildDecl, ExposeDecl, ExposeServiceProtocolDecl, ExposeSource,
+            ExposeTarget, OfferServiceProtocolDecl, OfferServiceSource, OfferTarget,
         },
         failure::Error,
         fidl_fuchsia_sys2 as fsys,
@@ -525,7 +525,7 @@ mod tests {
     #[test]
     fn test_service_from_parent() -> Result<(), Error> {
         let decl = ComponentDecl {
-            offers: vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
+            offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                 source: OfferServiceSource::Self_,
                 source_path: CapabilityPath::try_from("/svc/serviceParent").unwrap(),
                 target_path: CapabilityPath::try_from("/svc/serviceParent").unwrap(),
@@ -548,7 +548,7 @@ mod tests {
     #[test]
     fn test_service_from_child() -> Result<(), Error> {
         let decl = ComponentDecl {
-            exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+            exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                 target: ExposeTarget::Realm,
                 source_path: CapabilityPath::try_from("/svc/serviceFromChild").unwrap(),
                 target_path: CapabilityPath::try_from("/svc/serviceFromChild").unwrap(),
@@ -582,13 +582,13 @@ mod tests {
         };
         let decl = ComponentDecl {
             offers: vec![
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/serviceParent").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceParent").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                 }),
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childBOffer").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
@@ -624,19 +624,19 @@ mod tests {
         };
         let decl = ComponentDecl {
             offers: vec![
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/serviceParent").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceParent").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                 }),
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childBOffer").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                 }),
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childBOtherOffer").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceOtherSibling").unwrap(),
@@ -677,13 +677,13 @@ mod tests {
         };
         let decl = ComponentDecl {
             offers: vec![
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childBOffer").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
                     target: OfferTarget::Child("childA".to_string()),
                 }),
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childBToC").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
@@ -728,13 +728,13 @@ mod tests {
         };
         let decl = ComponentDecl {
             offers: vec![
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childA".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childBOffer").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
                     target: OfferTarget::Child("childC".to_string()),
                 }),
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childBToC").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
@@ -780,13 +780,13 @@ mod tests {
         };
         let decl = ComponentDecl {
             offers: vec![
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childA".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childBOffer").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
                     target: OfferTarget::Child("childB".to_string()),
                 }),
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childBToC").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
@@ -851,31 +851,31 @@ mod tests {
         };
         let decl = ComponentDecl {
             offers: vec![
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childA".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childAService").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/childAService").unwrap(),
                     target: OfferTarget::Child("childB".to_string()),
                 }),
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childA".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childAService").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/childAService").unwrap(),
                     target: OfferTarget::Child("childC".to_string()),
                 }),
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childB".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childBService").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/childBService").unwrap(),
                     target: OfferTarget::Child("childD".to_string()),
                 }),
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childC".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childAService").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/childAService").unwrap(),
                     target: OfferTarget::Child("childD".to_string()),
                 }),
-                OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Child("childC".to_string()),
                     source_path: CapabilityPath::try_from("/svc/childAService").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/childAService").unwrap(),
@@ -928,7 +928,7 @@ mod tests {
         };
         // This declaration is invalid because the offer target doesn't exist
         let decl = ComponentDecl {
-            offers: vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
+            offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                 source: OfferServiceSource::Child("childA".to_string()),
                 source_path: CapabilityPath::try_from("/svc/childBOffer").unwrap(),
                 target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
@@ -951,7 +951,7 @@ mod tests {
         };
         // This declaration is invalid because the offer target doesn't exist
         let decl = ComponentDecl {
-            offers: vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
+            offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                 source: OfferServiceSource::Child("childB".to_string()),
                 source_path: CapabilityPath::try_from("/svc/childBOffer").unwrap(),
                 target_path: CapabilityPath::try_from("/svc/serviceSibling").unwrap(),
