@@ -37,6 +37,50 @@ import scipy.stats
 # confidence intervals, which would avoid that assumption.
 
 
+# Dataset types:
+#
+# There are three types of dataset containing raw perf test results:
+#
+#  * Process dataset: JSON data from a single *.fuchsiaperf.json file,
+#    which is usually from a single process launch.  This may contain
+#    results from multiple test cases.
+#
+#  * Boot dataset: Data from a single boot of Fuchsia.  This may contain
+#    multiple process datasets.
+#
+#  * Multi-boot dataset: Data from multiple boots of a single build of
+#    Fuchsia.  This may contain multiple boot datasets.
+#
+# Note that we use the term "dataset" rather than "results" because the
+# former makes it easier to disambiguate using singular vs. plural.  For
+# example, "boot_results" is ambiguous as to whether it represents a single
+# boot or whether it is a list where each entry is a "boot result"
+# representing a single boot.  In contrast, "boot_dataset" (always a single
+# instance) vs. "boot_datasets" (always a list or iterable) avoids that
+# ambiguity.
+#
+# The fuchsia_perfcompare.py infra recipe represents those datasets on the
+# filesystem as follows:
+#
+#  * Process dataset: a single .fuchsiaperf.json file.
+#
+#  * Boot dataset: a directory containing files with names of the following
+#    forms:
+#
+#      <test-executable-name>_process<number>.fuchsiaperf.json - process dataset
+#      <test-executable-name>_process<number>.catapult_json - ignored here
+#      summary.json - ignored here
+#
+#    The code below can read a boot dataset from tar files as well as from
+#    directories.  Accepting tar files is a convenience for when doing
+#    local testing of the statistics (including for validate_perfcompare).
+#    The Swarming system used for the bots produces "out.tar" files as
+#    results.
+#
+#  * Multi-boot dataset: a directory containing a "by_boot" subdirectory,
+#    which contains boot dataset directories.
+
+
 # ALPHA is a parameter for calculating confidence intervals.  It is
 # the probability that the true value for the statistic we're
 # estimating (here, the mean running time) lies outside the confidence
@@ -121,39 +165,44 @@ def IsResultsFilename(name):
     return name.endswith('.json') and name != 'summary.json'
 
 
-# Read the raw perf test results from a directory or a tar file that
-# contains results from a single boot of Fuchsia.  Returns a sequence
-# (iterator) of JSON trees.
-#
-# Accepting tar files here is a convenience for when doing local testing of
-# the statistics.  The Swarming system used for the bots produces "out.tar"
-# files as results.
-#
-# The directory (or tar file) is expected to contain files with names
-# of the following forms:
-#
-#   <name-of-test-executable>_process<number>.json - results that are read here
-#   <name-of-test-executable>_process<number>.catapult_json - ignored here
-#   summary.json - ignored here
-#
-# Each *.json file (except for summary.json) contains results from a
-# separate launch of a performance test process.
+class SingleBootDataset(object):
+
+    def __init__(self, filename):
+        self._filename = filename
+
+    def GetProcessDatasets(self):
+        # Note that sorting the filename listing (from os.listdir() or from
+        # tarfile) is not essential, but it helps to make any later processing
+        # more deterministic.
+        if os.path.isfile(self._filename):
+            # Read from tar file.
+            with tarfile.open(self._filename) as tar:
+                for member in sorted(tar.getmembers(),
+                                     key=lambda member: member.name):
+                    if IsResultsFilename(member.name):
+                        yield json.load(tar.extractfile(member))
+        else:
+            # Read from directory.
+            for name in sorted(os.listdir(self._filename)):
+                if IsResultsFilename(name):
+                    yield ReadJsonFile(os.path.join(self._filename, name))
+
+
+class MultiBootDataset(object):
+
+    def __init__(self, dir_path):
+        self._dir_path = dir_path
+
+    def GetBootDatasets(self):
+        by_boot_dir = os.path.join(self._dir_path, 'by_boot')
+        assert os.path.exists(by_boot_dir), by_boot_dir
+        for name in sorted(os.listdir(by_boot_dir)):
+            yield SingleBootDataset(os.path.join(by_boot_dir, name))
+
+
+# TODO(fxb/35079): Inline this function into its call sites.
 def RawResultsFromDir(filename):
-    # Note that sorting the filename listing (from os.listdir() or from
-    # tarfile) is not essential, but it helps to make any later processing
-    # more deterministic.
-    if os.path.isfile(filename):
-        # Read from tar file.
-        with tarfile.open(filename) as tar:
-            for member in sorted(tar.getmembers(),
-                                 key=lambda member: member.name):
-                if IsResultsFilename(member.name):
-                    yield json.load(tar.extractfile(member))
-    else:
-        # Read from directory.
-        for name in sorted(os.listdir(filename)):
-            if IsResultsFilename(name):
-                yield ReadJsonFile(os.path.join(filename, name))
+    return SingleBootDataset(filename).GetProcessDatasets()
 
 
 # Takes a list of values that are collected from consecutive runs of a
@@ -189,20 +238,17 @@ def FormatUnit(unit_set):
     return UNIT_ABBREVIATIONS.get(unit, unit)
 
 
-# Takes a list of filenames of perf test results, each representing the
-# results from one boot of Fuchsia, and each in the format accepted by
-# RawResultsFromDir().
-#
+# Takes a sequence of boot datasets and produces summary statistics.
 # Returns a dict mapping test names to Stats objects.
-def ResultsFromDirs(filenames):
+def StatsFromBootDatasets(boot_datasets):
     # Mapping from test names to lists of values.
     results_map = {}
     # Mapping from test names to sets of strings (for units of measurement).
     units_map = {}
-    for boot_results_path in filenames:
+    for boot_dataset in boot_datasets:
         results_for_boot = {}
-        for process_run_results in RawResultsFromDir(boot_results_path):
-            for test_case in process_run_results:
+        for process_dataset in boot_dataset.GetProcessDatasets():
+            for test_case in process_dataset:
                 new_value = MeanExcludingWarmup(test_case['values'])
                 name = FormatTestName(test_case)
                 results_for_boot.setdefault(name, []).append(new_value)
@@ -213,18 +259,15 @@ def ResultsFromDirs(filenames):
             for name, values in results_map.iteritems()}
 
 
-# This takes a directory representing perf test results from multiple boots
-# of Fuchsia.  It contains a "by_boot" subdir, which contains directories
-# (or tar files) of the format read by RawResultsFromDir().
-#
-# This returns a dict mapping test names to Stats objects.
+# TODO(fxb/35079): Inline this function into its call sites.
+def ResultsFromDirs(filenames):
+    return StatsFromBootDatasets([SingleBootDataset(filename)
+                                  for filename in filenames])
+
+
+# TODO(fxb/35079): Inline this function into its call sites.
 def ResultsFromDir(filename):
-    assert os.path.exists(filename)
-    by_boot_dir = os.path.join(filename, 'by_boot')
-    assert os.path.exists(by_boot_dir), by_boot_dir
-    filenames = [os.path.join(by_boot_dir, name)
-                 for name in sorted(os.listdir(by_boot_dir))]
-    return ResultsFromDirs(filenames)
+    return StatsFromBootDatasets(MultiBootDataset(filename).GetBootDatasets())
 
 
 def FormatFactor(val_before, val_after):
