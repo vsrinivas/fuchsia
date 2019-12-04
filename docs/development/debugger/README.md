@@ -2,9 +2,8 @@
 
 ## Overview
 
-The debugger is for C/C++ code running on Fuchsia compiled in-tree for either
-CPU (ARM64 or x64). Rust works but is less feature-complete. The state of
-languages including Rust can be seen [here](#other-languages).
+The debugger is for C, C++, and Rust code running on Fuchsia for either 64-bit
+ARM or 64-bit x86 architectures.
 
 This is the very detailed setup guide. Please see:
 
@@ -245,8 +244,8 @@ affected by the build search path. Clang users should use the
 #### Can't find symbols
 
 The `sym-stat` command will tell you status for symbols. With no running
-process, it will give stats on the different symbol locations you have
-specified. If your symbols aren't found, make sure these stats match your
+process, it will give information on the different symbol locations you have
+specified. If your symbols aren't found, make sure this matches your
 expectations:
 
 ```
@@ -259,7 +258,7 @@ Symbol index status
         0  my_dir/my_file
 ```
 
-If you see "0" in the "Indexed" column of the "Symbol index stats" that means
+If you see "0" in the "Indexed" column of the "Symbol index status" that means
 that the debugger could not find where your symbols are. Try the `-s` flag (see
 "Running out-of-tree" above) to specify where your symbols are.
 
@@ -269,7 +268,7 @@ if your hierarchy includes a given build ID, go to ".build-id" inside it, then
 to the folder with the first to characters of the build ID to see if there is a
 matching file.
 
-When you have a running program, sym-stat will additionally print symbol
+When you have a running program, `sym-stat` will additionally print symbol
 information for each binary loaded into the process. If you're not getting
 symbols, find the entry for the binary or shared library in this list. If it
 says:
@@ -336,10 +335,10 @@ specified line so the debugger used the next line. It can happen even in
 unoptimized builds, and is most common for variable declarations.
 
 ```
-[zxdb] b file.cc:23
+[zxdb] b file.cc:138
 Breakpoint 1 (Software) @ file.cc:138
-   138   int my_value = 0;
- ◉ 139   DoSomething(&my_value);
+   138   int my_value = 0;          <- Breakpoint was requested here.
+ ◉ 139   DoSomething(&my_value);    <- But ended up here.
    140   if (my_value > 0) {
 ```
 
@@ -422,9 +421,7 @@ fx run-test debug_agent_tests
 
 ## Other Languages
 
-Rust mostly works but there [are issues](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5462).
-Go currently is currently not supported.
-
-Please contact brettw@ if you’re interested in helping! Even if you don't know
-how to write debugger code, just defining the proper behavior for Rust or Go
-would be helpful (the team has no experience with these languages).
+C, C++, and Rust are supported. Go is not supported but may work to some degree
+if you compile with DWARF symbols (please file bugs if you try). Dart and
+JavaScript will not work because they're interpreted languages that do not
+generate compiled code with DWARF symbols.

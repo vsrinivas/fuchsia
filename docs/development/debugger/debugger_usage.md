@@ -463,6 +463,13 @@ unlike GDB, “clear” takes a breakpoint context before the verb and there are
 never any arguments after it. Support for GDB-like “clear <location>” is
 issue [5452](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5452).
 
+Breakpoints can also be enabled or disabled:
+
+```
+[zxdb] disable
+[zxdb] bp 4 enable
+```
+
 ### Programatic breakpoints
 
 You can insert a hardcoded breakpoint in your code if you want to catch some
@@ -557,6 +564,16 @@ And to select a given frame as the default:
 Frames are numbered with “0” being the top of the stack. Increasing numbers go
 backwards in time.
 
+You can use the `up` and `down` commands to navigate the frame list:
+
+```
+[zxdb] up
+  1 fxl::CommandLineFromIterators<const char *const *>() • command_line.h:204
+
+[zxdb] down
+  0 fxl::CommandLineFromIteratorsFindFirstPositionalArg<const char *const *>() • command_line.h:185
+```
+
 For more context, you can use the `backtrace` command. This is identical
 to `frame` but gives more detailed address information as well as function
 parameters. This command can be abbreviated `bt`:
@@ -648,8 +665,7 @@ argc = 1
 argv = (const char* const*) 0x59999ec02dc0
 ```
 
-You can also set variables to integer and boolean values (as long as those
-variables are in memory and not registers):
+You can also set variables:
 
 ```
 [zxdb] print done_flag = true
@@ -657,13 +673,6 @@ true
 [zddb] print i = 56
 56
 ```
-
-Things that don’t currently work are:
-
-  * Math ([5458](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5458))
-  * Function calls ([5457](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5457))
-  * Pretty-printing (especially for STL) ([5459](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5459))
-  * Various Rust-isms (please file feature requests!).
 
 ### Controlling execution (stepping, etc.)
 
@@ -708,8 +717,7 @@ current file:
 [zxdb] jump 0x87534123  // Address
 ```
 
-There different things you can do with context. For example, to run until
-execution gets back to a given stack frame:
+To run until execution gets back to a given stack frame:
 
 ```
 [zxdb] frame 2 until
@@ -735,7 +743,13 @@ to switch back to source-code mode, type `list`.
 
 ### Low-level memory
 
+  * `aspace`: Show mapped memory regions.
+
+  * `mem-analyze`: Dumps memory, trying to interpret pointers.
+
   * `mem-read` / `x`: Dumps memory
 
   * `stack`: Provides a low-level analysis of the stack. This is a handy
     command for low-level debugging.
+
+  * `sym-near`: Figure out which symbol corresponds to an address.
