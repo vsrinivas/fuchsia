@@ -112,12 +112,6 @@ struct ReadResult {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static ReadResult WithErr(int32_t&& val) {
-    ReadResult result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static ReadResult WithErr(int32_t* val) {
     ReadResult result;
     result.set_err(val);
@@ -128,26 +122,10 @@ struct ReadResult {
   int32_t& mutable_err();
 
   // Error encountered while reading data.
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
-  // Error encountered while reading data.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // Error encountered while reading data.
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   // Error encountered while reading data.
@@ -162,12 +140,6 @@ struct ReadResult {
 
   bool is_eof() const { return ordinal_ == Ordinal::kEof; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static ReadResult WithEof(bool&& val) {
-    ReadResult result;
-    result.set_eof(std::move(val));
-    return result;
-  }
   static ReadResult WithEof(bool* val) {
     ReadResult result;
     result.set_eof(val);
@@ -178,26 +150,10 @@ struct ReadResult {
   bool& mutable_eof();
 
   // End of file reached.
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, bool>::value && std::is_copy_assignable<T>::value>
-  set_eof(const T& v) {
-    mutable_eof() = v;
-  }
-
-  // End of file reached.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, bool>::value && std::is_copy_assignable<T>::value>
   set_eof(const T* v) {
     mutable_eof() = *v;
-  }
-
-  // End of file reached.
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, bool>::value && std::is_move_assignable<T>::value>
-  set_eof(T&& v) {
-    mutable_eof() = std::move(v);
   }
 
   // End of file reached.
@@ -212,12 +168,6 @@ struct ReadResult {
 
   bool is_info() const { return ordinal_ == Ordinal::kInfo; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static ReadResult WithInfo(::llcpp::fuchsia::paver::ReadInfo&& val) {
-    ReadResult result;
-    result.set_info(std::move(val));
-    return result;
-  }
   static ReadResult WithInfo(::llcpp::fuchsia::paver::ReadInfo* val) {
     ReadResult result;
     result.set_info(val);
@@ -228,26 +178,10 @@ struct ReadResult {
   ::llcpp::fuchsia::paver::ReadInfo& mutable_info();
 
   // Information about location of successfully read data within pre-registered VMO.
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::ReadInfo>::value && std::is_copy_assignable<T>::value>
-  set_info(const T& v) {
-    mutable_info() = v;
-  }
-
-  // Information about location of successfully read data within pre-registered VMO.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::ReadInfo>::value && std::is_copy_assignable<T>::value>
   set_info(const T* v) {
     mutable_info() = *v;
-  }
-
-  // Information about location of successfully read data within pre-registered VMO.
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::ReadInfo>::value && std::is_move_assignable<T>::value>
-  set_info(T&& v) {
-    mutable_info() = std::move(v);
   }
 
   // Information about location of successfully read data within pre-registered VMO.
@@ -632,12 +566,6 @@ struct Paver_WipeVolume_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Paver_WipeVolume_Result WithResponse(::llcpp::fuchsia::paver::Paver_WipeVolume_Response&& val) {
-    Paver_WipeVolume_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Paver_WipeVolume_Result WithResponse(::llcpp::fuchsia::paver::Paver_WipeVolume_Response* val) {
     Paver_WipeVolume_Result result;
     result.set_response(val);
@@ -646,24 +574,10 @@ struct Paver_WipeVolume_Result {
 
   ::llcpp::fuchsia::paver::Paver_WipeVolume_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_WipeVolume_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_WipeVolume_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_WipeVolume_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -676,12 +590,6 @@ struct Paver_WipeVolume_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Paver_WipeVolume_Result WithErr(int32_t&& val) {
-    Paver_WipeVolume_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Paver_WipeVolume_Result WithErr(int32_t* val) {
     Paver_WipeVolume_Result result;
     result.set_err(val);
@@ -690,24 +598,10 @@ struct Paver_WipeVolume_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -797,12 +691,6 @@ struct Paver_QueryConfigurationStatus_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Paver_QueryConfigurationStatus_Result WithResponse(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response&& val) {
-    Paver_QueryConfigurationStatus_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Paver_QueryConfigurationStatus_Result WithResponse(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response* val) {
     Paver_QueryConfigurationStatus_Result result;
     result.set_response(val);
@@ -811,24 +699,10 @@ struct Paver_QueryConfigurationStatus_Result {
 
   ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -841,12 +715,6 @@ struct Paver_QueryConfigurationStatus_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Paver_QueryConfigurationStatus_Result WithErr(int32_t&& val) {
-    Paver_QueryConfigurationStatus_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Paver_QueryConfigurationStatus_Result WithErr(int32_t* val) {
     Paver_QueryConfigurationStatus_Result result;
     result.set_err(val);
@@ -855,24 +723,10 @@ struct Paver_QueryConfigurationStatus_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -962,12 +816,6 @@ struct Paver_QueryActiveConfiguration_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Paver_QueryActiveConfiguration_Result WithResponse(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response&& val) {
-    Paver_QueryActiveConfiguration_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Paver_QueryActiveConfiguration_Result WithResponse(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response* val) {
     Paver_QueryActiveConfiguration_Result result;
     result.set_response(val);
@@ -976,24 +824,10 @@ struct Paver_QueryActiveConfiguration_Result {
 
   ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -1006,12 +840,6 @@ struct Paver_QueryActiveConfiguration_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Paver_QueryActiveConfiguration_Result WithErr(int32_t&& val) {
-    Paver_QueryActiveConfiguration_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Paver_QueryActiveConfiguration_Result WithErr(int32_t* val) {
     Paver_QueryActiveConfiguration_Result result;
     result.set_err(val);
@@ -1020,24 +848,10 @@ struct Paver_QueryActiveConfiguration_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -1127,12 +941,6 @@ struct Paver_ReadAsset_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Paver_ReadAsset_Result WithResponse(::llcpp::fuchsia::paver::Paver_ReadAsset_Response&& val) {
-    Paver_ReadAsset_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Paver_ReadAsset_Result WithResponse(::llcpp::fuchsia::paver::Paver_ReadAsset_Response* val) {
     Paver_ReadAsset_Result result;
     result.set_response(val);
@@ -1141,24 +949,10 @@ struct Paver_ReadAsset_Result {
 
   ::llcpp::fuchsia::paver::Paver_ReadAsset_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_ReadAsset_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_ReadAsset_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_ReadAsset_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -1171,12 +965,6 @@ struct Paver_ReadAsset_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Paver_ReadAsset_Result WithErr(int32_t&& val) {
-    Paver_ReadAsset_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Paver_ReadAsset_Result WithErr(int32_t* val) {
     Paver_ReadAsset_Result result;
     result.set_err(val);
@@ -1185,24 +973,10 @@ struct Paver_ReadAsset_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
