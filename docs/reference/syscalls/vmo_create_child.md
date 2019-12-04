@@ -32,14 +32,14 @@ size.
 child type:
 
 - **ZX_VMO_CHILD_COPY_ON_WRITE** - Create a copy-on-write clone. The cloned vmo will
-behave the same way the parent does, except that any write operation on the clone
-will bring in a copy of the page at the offset the write occurred. The new page in
-the cloned vmo is now a copy and may diverge from the parent. Any reads from
-ranges outside of the parent vmo's size will contain zeros, and writes will
-allocate new zero filled pages. A vmo which has pinned regions cannot be cloned. See
-the NOTES section below for details on VMO syscall interactions with clones. This flag
-may not be used for vmos created with [`zx_vmo_create_physical()`] or descendants of
-such a vmo.
+behave the same way the parent does, except that any write operation on the child will
+bring in a copy of the parent's page at the offset the write occurred. The new page in
+the child vmo is now a copy and may diverge from the parent. Any reads from ranges
+outside of the parent vmo's size will contain zeros, and writes will allocate new zero
+filled pages. Writes to the parent will not be reflected in the child. A vmo which has
+pinned regions cannot be cloned. See the NOTES section below for details on VMO
+syscall interactions with clones. This flag may not be used for vmos created with
+[`zx_vmo_create_physical()`] or descendants of such a vmo.
 
 - **ZX_VMO_CHILD_SLICE** - Create a slice that has direct read/write access into
 a section of the parent. All operations on the slice vmo behave as if they were
