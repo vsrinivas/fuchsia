@@ -419,7 +419,8 @@ void TestPositionModuloEarlyRolloverLinear(bool mute = false) {
 }
 
 // When setting the frac_src_pos to a value that is at the end (or within pos_filter_width) of the
-// source buffer, the sampler should not
+// source buffer, the sampler should not mix additional frames (neither dest_offset nor
+// frac_src_offset should be advanced).
 void TestLateSourceOffset(Resampler sampler_type) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100, sampler_type);
@@ -428,6 +429,7 @@ void TestLateSourceOffset(Resampler sampler_type) {
     float source[4] = {1.0f, 1.0f, 1.0f, 1.0f};
     int32_t frac_src_offset =
         (fbl::count_of(source) << kPtsFractionalBits) - mixer->pos_filter_width().raw_value();
+    const auto initial_frac_src_offset = frac_src_offset;
 
     float accum[4] = {0.0f};
     uint32_t dest_offset = 0;
@@ -435,11 +437,10 @@ void TestLateSourceOffset(Resampler sampler_type) {
     auto& info = mixer->bookkeeping();
     info.step_size = Mixer::FRAC_ONE;
 
-    mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-               fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false);
+    EXPECT_TRUE(mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
+                           fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false));
     EXPECT_EQ(dest_offset, 0u);
-    EXPECT_EQ(frac_src_offset, static_cast<int32_t>((fbl::count_of(source) << kPtsFractionalBits) -
-                                                    mixer->pos_filter_width().raw_value()));
+    EXPECT_EQ(frac_src_offset, initial_frac_src_offset);
     EXPECT_FLOAT_EQ(accum[0], 0.0f);
   }
 }
