@@ -4,13 +4,51 @@
 
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 
+# Template applies exactly the same tzdata settings for several sibling
+# packages.  The config name for target "foo" will be "icu_tzdata_for_foo".
+template("_default_icu_tzdata") {
+  icu_tzdata_config_data("icu_tzdata_for_" + target_name) {
+    forward_variables_from(invoker, "*")
+    for_pkg = target_name
+    data_version = "44"
+  }
+}
+
 icu_tzdata_config_data("icu_tzdata_for_flutter_runner_tests") {
   for_pkg = "flutter_runner_tests"
   data_version = "44"
 }
 
+# All the runners use exactly the same configs, so the data should dedupe
+# exactly in pkgfs.
+_default_icu_tzdata("dart_aot_product_runner") {
+}
+_default_icu_tzdata("dart_aot_runner") {
+}
+_default_icu_tzdata("dart_jit_product_runner") {
+}
+_default_icu_tzdata("dart_jit_runner") {
+}
+_default_icu_tzdata("flutter_aot_product_runner") {
+}
+_default_icu_tzdata("flutter_aot_runner") {
+}
+_default_icu_tzdata("flutter_jit_product_runner") {
+}
+_default_icu_tzdata("flutter_jit_runner") {
+}
+
 group("config") {
   public_deps = [
+    ":icu_tzdata_for_dart_aot_product_runner",
+    ":icu_tzdata_for_dart_aot_runner",
+    ":icu_tzdata_for_dart_aot_runner",
+    ":icu_tzdata_for_dart_jit_product_runner",
+    ":icu_tzdata_for_dart_jit_runner",
+    ":icu_tzdata_for_flutter_aot_product_runner",
+    ":icu_tzdata_for_flutter_aot_runner",
+    ":icu_tzdata_for_flutter_jit_product_runner",
+    ":icu_tzdata_for_flutter_jit_runner",
     ":icu_tzdata_for_flutter_runner_tests",
   ]
 }
