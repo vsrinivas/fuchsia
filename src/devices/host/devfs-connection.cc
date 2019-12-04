@@ -11,7 +11,7 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
-#include <fs/handler.h>
+#include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
 #include "devhost.h"
 #include "log.h"

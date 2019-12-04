@@ -30,7 +30,6 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
-#include <fs/client.h>
 #include <fvm/format.h>
 
 namespace {

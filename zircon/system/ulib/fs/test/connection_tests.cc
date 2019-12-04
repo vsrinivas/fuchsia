@@ -252,14 +252,13 @@ class CountOutstandingOpenVnode : public fs::Vnode {
 
   fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
 
-  zx_status_t GetNodeInfoForProtocol(__UNUSED fs::VnodeProtocol, __UNUSED fs::Rights,
+  zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final {
     *info = fs::VnodeRepresentation::File{};
     return ZX_OK;
   }
 
-  zx_status_t Open(__UNUSED ValidatedOptions options,
-                   __UNUSED fbl::RefPtr<Vnode>* out_redirect) final {
+  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final {
     num_open_.fetch_add(1);
     return ZX_OK;
   }

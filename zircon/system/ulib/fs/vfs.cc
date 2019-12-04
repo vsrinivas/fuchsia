@@ -18,6 +18,7 @@
 #include <fs/vnode.h>
 
 #ifdef __Fuchsia__
+
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
 #include <threads.h>
@@ -29,7 +30,11 @@
 #include <fs/internal/directory_connection.h>
 #include <fs/internal/file_connection.h>
 #include <fs/internal/node_connection.h>
+#include <fs/mount_channel.h>
 #include <fs/remote.h>
+
+namespace fio = ::llcpp::fuchsia::io;
+
 #endif
 
 namespace fs {
@@ -454,13 +459,15 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
 
   // Send an |fuchsia.io/OnOpen| event if requested.
   if (options->flags.describe) {
-    OnOpenMsg response;
-    memset(&response, 0, sizeof(response));
-    response.primary.s = ZX_OK;
-    zx_handle_t extra = ZX_HANDLE_INVALID;
-    internal::Describe(vnode, protocol, *options, &response, &extra);
-    uint32_t hcount = (extra != ZX_HANDLE_INVALID) ? 1 : 0;
-    channel.write(0, &response, sizeof(OnOpenMsg), &extra, hcount);
+    fit::result<VnodeRepresentation, zx_status_t> result =
+        internal::Describe(vnode, protocol, *options);
+    if (result.is_error()) {
+      fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), result.error(), nullptr);
+      return result.error();
+    }
+    ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo* info) {
+      fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), ZX_OK, info);
+    });
   }
 
   // If |node_reference| is specified, serve |fuchsia.io/Node| even for
@@ -477,16 +484,15 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
       // In memfs and bootfs, memory objects (vmo-files) appear to support |fuchsia.io/File.Read|.
       // Therefore choosing a file connection here is the closest approximation.
       case VnodeProtocol::kMemory:
-        return std::make_unique<internal::FileConnection>(this, std::move(vnode),
-                                                          std::move(channel), protocol, *options);
+        return std::make_unique<internal::FileConnection>(this, std::move(vnode), protocol,
+                                                          *options);
       case VnodeProtocol::kDirectory:
-        return std::make_unique<internal::DirectoryConnection>(this, std::move(vnode),
-                                                                std::move(channel), protocol,
-                                                                *options);
+        return std::make_unique<internal::DirectoryConnection>(this, std::move(vnode), protocol,
+                                                               *options);
       case VnodeProtocol::kConnector:
       case VnodeProtocol::kPipe:
-        return std::make_unique<internal::NodeConnection>(this, std::move(vnode),
-                                                          std::move(channel), protocol, *options);
+        return std::make_unique<internal::NodeConnection>(this, std::move(vnode), protocol,
+                                                          *options);
       case VnodeProtocol::kSocket:
         // The posix socket protocol is used by netstack and served through the
         // src/lib/component/go library.
@@ -498,7 +504,7 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
     __builtin_abort();
 #endif
   })();
-  zx_status_t status = connection->StartDispatching();
+  zx_status_t status = connection->StartDispatching(std::move(channel));
   if (status != ZX_OK) {
     return status;
   }

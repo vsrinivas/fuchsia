@@ -4,12 +4,15 @@
 
 #include <fs/pseudo_dir.h>
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <sys/stat.h>
 
 #include <utility>
 
 #include <fbl/auto_lock.h>
 #include <fs/vfs_types.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
@@ -27,7 +30,7 @@ zx_status_t PseudoDir::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_re
 zx_status_t PseudoDir::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
-  attr->inode = fuchsia_io_INO_UNKNOWN;
+  attr->inode = fio::INO_UNKNOWN;
   attr->link_count = 1;
   return ZX_OK;
 }
@@ -55,7 +58,7 @@ zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, siz
   fs::DirentFiller df(data, len);
   zx_status_t r = 0;
   if (cookie->n < kDotId) {
-    uint64_t ino = fuchsia_io_INO_UNKNOWN;
+    uint64_t ino = fio::INO_UNKNOWN;
     if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR), ino)) != ZX_OK) {
       *out_actual = df.BytesFilled();
       return r;

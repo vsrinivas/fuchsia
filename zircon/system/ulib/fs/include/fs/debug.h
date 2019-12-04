@@ -16,6 +16,10 @@
 #include <fs/trace.h>
 #include <fs/vfs_types.h>
 
+#ifdef __Fuchsia__
+#include <lib/fidl/llcpp/string_view.h>
+#endif  // __Fuchsia__
+
 // debug-only header defining utility functions for logging flags and paths.
 
 namespace fs {
@@ -155,6 +159,15 @@ template <size_t N>
 void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, Path path) {
   sb->Append(path.str, path.size);
 }
+
+#ifdef __Fuchsia__
+
+template <size_t N>
+void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fidl::StringView path) {
+  sb->Append(path.data(), path.size());
+}
+
+#endif  // __Fuchsia__
 
 template <size_t N>
 void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, uint32_t num) {

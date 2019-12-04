@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/vfs.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
 
 #include <atomic>
 #include <memory>
@@ -41,10 +42,10 @@ bool TestConnectionRights() {
       return ZX_OK;
     }
     fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
-    zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) override {
+    zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) override {
       zx::vmo vmo;
       ASSERT_EQ(zx::vmo::create(4096, 0u, &vmo), ZX_OK);
-      *out_vmo = vmo.release();
+      *out_vmo = std::move(vmo);
       *out_size = 0;
       return ZX_OK;
     }

@@ -13,6 +13,7 @@
 
 #include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
@@ -56,7 +57,7 @@ class Directory final : public fs::Vnode {
   zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name, uint32_t mode) final;
-  zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
   zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
   void Sync(SyncCallback closure) final;

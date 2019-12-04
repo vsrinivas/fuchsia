@@ -30,7 +30,6 @@
 
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/mutex.h>
-#include <fs/client.h>
 #include <fs/mount_channel.h>
 #endif  // __Fuchsia__
 
@@ -166,10 +165,13 @@ class Vfs {
   void SetReadonly(bool value) FS_TA_EXCLUDES(vfs_lock_);
 
 #ifdef __Fuchsia__
-  // Unmounts the underlying filesystem.
-  //
-  // The closure may be invoked before or after |Shutdown| returns.
   using ShutdownCallback = fbl::Function<void(zx_status_t status)>;
+
+  // Unmounts the underlying filesystem. The result of shutdown is delivered via
+  // calling |closure|.
+  //
+  // |Shutdown| may be synchronous or asynchronous.
+  // The closure may be invoked before or after |Shutdown| returns.
   virtual void Shutdown(ShutdownCallback closure) = 0;
 
   // Identifies if the filesystem is in the process of terminating.
@@ -237,7 +239,12 @@ class Vfs {
 
   // Unpins all remote filesystems in the current filesystem, and waits for the
   // response of each one with the provided deadline.
-  zx_status_t UninstallAll(zx_time_t deadline) FS_TA_EXCLUDES(vfs_lock_);
+  zx_status_t UninstallAll(zx::time deadline) FS_TA_EXCLUDES(vfs_lock_);
+
+  // Shuts down a remote filesystem, by sending a |fuchsia.io/DirectoryAdmin.Unmount|
+  // request to the filesystem serving |handle| and awaits a response.
+  // |deadline| is the deadline for waiting for response.
+  static zx_status_t UnmountHandle(zx::channel handle, zx::time deadline);
 #endif
 
  protected:

@@ -3,12 +3,16 @@
 // found in the LICENSE file.
 
 #include <fs/pseudo_file.h>
+
+#include <fuchsia/io/llcpp/fidl.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
 
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
@@ -36,7 +40,7 @@ zx_status_t PseudoFile::GetAttributes(VnodeAttributes* attr) {
     attr->mode |= V_IRUSR;
   if (write_handler_)
     attr->mode |= V_IWUSR;
-  attr->inode = fuchsia_io_INO_UNKNOWN;
+  attr->inode = fio::INO_UNKNOWN;
   attr->link_count = 1;
   return ZX_OK;
 }

@@ -71,6 +71,7 @@ zx_library("blobfs") {
     ]
     deps += [
       "$zx/system/fidl/fuchsia-blobfs:c",
+      "$zx/system/fidl/fuchsia-io:llcpp",
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",
       "$zx/system/ulib/async:async-default",

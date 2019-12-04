@@ -7,13 +7,9 @@
 
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
-#include <threads.h>
+#include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#ifdef __cplusplus
-
-#include <lib/zx/vmo.h>
 
 #include <atomic>
 
@@ -95,7 +91,7 @@ class VnodeFile final : public VnodeMemfs {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
-  zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
+  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
 
   // Ensure the underlying vmo is filled with zero from:
   // [start, round_up(end, PAGE_SIZE)).
@@ -126,7 +122,7 @@ class VnodeDir final : public VnodeMemfs {
   // Use the watcher container to implement a directory watcher
   void Notify(fbl::StringPiece name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
-  zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* out) final;
 
   // The vnode is acting as a mount point for a remote filesystem or device.
   bool IsRemote() const final;
@@ -153,7 +149,7 @@ class VnodeDir final : public VnodeMemfs {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
-  zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
+  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
 
   fs::RemoteContainer remoter_;
   fs::WatcherContainer watcher_;
@@ -172,7 +168,7 @@ class VnodeVmo final : public VnodeMemfs {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
-  zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
+  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
   zx_status_t MakeLocalClone(bool executable);
 
   zx_handle_t vmo_;
@@ -230,7 +226,5 @@ class Vfs : public fs::ManagedVfs {
 };
 
 }  // namespace memfs
-
-#endif  // ifdef __cplusplus
 
 #endif  // LIB_MEMFS_CPP_VNODE_H_

@@ -16,9 +16,12 @@
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
+#include <fs/mount_channel.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
@@ -102,12 +105,14 @@ zx_status_t Vfs::MountMkdir(fbl::RefPtr<Vnode> vn, fbl::StringPiece name, MountC
           return result;
         } else {
           if (result.vnode->IsRemote()) {
-            if (flags & fuchsia_io_MOUNT_CREATE_FLAG_REPLACE) {
+            if (flags & fio::MOUNT_CREATE_FLAG_REPLACE) {
               // There is an old remote handle on this vnode; shut it down and
               // replace it with our own.
               zx::channel old_remote;
               Vfs::UninstallRemoteLocked(vn, &old_remote);
-              vfs_unmount_handle(old_remote.release(), 0);
+              // Passing |zx::time::infinite_past()| results in a fire-and-forget call.
+              // TODO(fxb/42264): Add proper tracking of remote filesystem teardown.
+              Vfs::UnmountHandle(std::move(old_remote), zx::time::infinite_past());
             } else {
               return ZX_ERR_BAD_STATE;
             }
@@ -131,8 +136,9 @@ zx_status_t Vfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, zx::channel channel,
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx_status_t r = fuchsia_io_DirectoryOpen(h, options.ToIoV1Flags(), mode, path.data(),
-                                           path.length(), channel.release());
+  auto r = fio::Directory::Call::Open(zx::unowned_channel(h), options.ToIoV1Flags(), mode,
+                                      fidl::StringView(path), std::move(channel))
+               .status();
   if (r == ZX_ERR_PEER_CLOSED) {
     zx::channel c;
     UninstallRemoteLocked(std::move(vn), &c);
@@ -157,7 +163,7 @@ zx_status_t Vfs::UninstallRemoteLocked(fbl::RefPtr<Vnode> vn, zx::channel* h) {
 
 // Uninstall all remote filesystems. Acts like 'UninstallRemote' for all
 // known remotes.
-zx_status_t Vfs::UninstallAll(zx_time_t deadline) {
+zx_status_t Vfs::UninstallAll(zx::time deadline) {
   std::unique_ptr<MountNode> mount_point;
   for (;;) {
     {
@@ -165,7 +171,7 @@ zx_status_t Vfs::UninstallAll(zx_time_t deadline) {
       mount_point = remote_list_.pop_front();
     }
     if (mount_point) {
-      vfs_unmount_handle(mount_point->ReleaseRemote().release(), deadline);
+      Vfs::UnmountHandle(mount_point->ReleaseRemote(), deadline);
     } else {
       return ZX_OK;
     }

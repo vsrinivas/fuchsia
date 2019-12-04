@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/handler.h>
+#include "fidl-handler.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -12,6 +12,7 @@
 
 #ifdef __Fuchsia__
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>
@@ -208,7 +209,7 @@ class VnodeMinfs : public fs::Vnode,
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t SetAttributes(fs::VnodeAttributesUpdate a) final;
 #ifdef __Fuchsia__
-  zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
 #endif
 

@@ -31,7 +31,6 @@
 #include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
-#include <fs/handler.h>
 
 #include "devfs-connection.h"
 

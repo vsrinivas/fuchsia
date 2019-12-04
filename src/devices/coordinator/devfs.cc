@@ -24,7 +24,7 @@
 #include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
-#include <fs/handler.h>
+#include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
 #include "async-loop-owned-rpc-handler.h"
 #include "coordinator.h"

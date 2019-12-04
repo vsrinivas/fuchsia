@@ -5,17 +5,11 @@
 #pragma once
 
 #include <zircon/types.h>
-
-#ifdef __Fuchsia__
 #include <lib/zx/channel.h>
-#include <fs/client.h>
-#endif  // __Fuchsia__
 
 #include <utility>
 
 namespace fs {
-
-#ifdef __Fuchsia__
 
 // MountChannel functions exactly the same as a channel, except that it
 // intentionally destructs by sending a clean "shutdown" signal to the
@@ -31,18 +25,12 @@ class MountChannel {
   explicit MountChannel(zx::channel channel) : channel_(std::move(channel)) {}
   MountChannel(MountChannel&& other) : channel_(std::move(other.channel_)) {}
 
-  zx::channel TakeChannel() { return std::move(channel_); }
+  ~MountChannel();
 
-  ~MountChannel() {
-    if (channel_.is_valid()) {
-      vfs_unmount_handle(channel_.release(), 0);
-    }
-  }
+  zx::channel TakeChannel() { return std::move(channel_); }
 
  private:
   zx::channel channel_;
 };
-
-#endif  // __Fuchsia__
 
 }  // namespace fs

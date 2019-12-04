@@ -26,14 +26,15 @@
 #include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
-#include <fs/mount_channel.h>
 #include <fs/ref_counted.h>
 #include <fs/vfs_types.h>
 
 #ifdef __Fuchsia__
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/device/vfs.h>
+#include <fs/mount_channel.h>
 #endif  // __Fuchsia__
 
 namespace fs {
@@ -216,13 +217,15 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Change the size of the vnode.
   virtual zx_status_t Truncate(size_t len);
 
+#ifdef __Fuchsia__
   // Acquire a vmo from a vnode.
   //
   // At the moment, mmap can only map files from read-only filesystems,
   // since (without paging) there is no mechanism to update either
   // 1) The file by writing to the mapping, or
   // 2) The mapping by writing to the underlying file.
-  virtual zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size);
+  virtual zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size);
+#endif  // __Fuchsia__
 
   // Syncs the vnode with its underlying storage.
   //
@@ -275,7 +278,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
 #ifdef __Fuchsia__
   // Return information about the underlying filesystem, if desired.
-  virtual zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out);
+  virtual zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out);
 
   // Returns the name of the device backing the filesystem, if one exists.
   virtual zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len);
@@ -293,7 +296,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual zx::channel DetachRemote();
   virtual zx_handle_t GetRemote() const;
   virtual void SetRemote(zx::channel remote);
-#endif
+#endif  // __Fuchsia__
 
  protected:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);

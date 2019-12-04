@@ -108,7 +108,7 @@ zx_status_t VnodeVmo::GetAttributes(fs::VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t VnodeVmo::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) {
+zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
     zx_info_handle_basic_t handle_info;
     zx_status_t status = zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC, &handle_info,
@@ -139,7 +139,7 @@ zx_status_t VnodeVmo::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) 
     return status;
   }
 
-  *out_vmo = vmo;
+  *out_vmo = zx::vmo(vmo);
   *out_size = length_;
   return ZX_OK;
 }

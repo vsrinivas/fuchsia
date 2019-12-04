@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fs/watcher.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -10,6 +12,7 @@
 #include <memory>
 
 #ifdef __Fuchsia__
+#include <fuchsia/io/llcpp/fidl.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
@@ -23,7 +26,8 @@
 #include <fbl/alloc_checker.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <fs/watcher.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
@@ -32,7 +36,7 @@ WatcherContainer::~WatcherContainer() = default;
 
 WatcherContainer::VnodeWatcher::VnodeWatcher(zx::channel h, uint32_t mask)
     : h(std::move(h)),
-      mask(mask & ~(fuchsia_io_WATCH_MASK_EXISTING | fuchsia_io_WATCH_MASK_IDLE)) {}
+      mask(mask & ~(fio::WATCH_MASK_EXISTING | fio::WATCH_MASK_IDLE)) {}
 
 WatcherContainer::VnodeWatcher::~VnodeWatcher() {}
 
@@ -85,7 +89,7 @@ zx_status_t WatchBuffer::Send(const zx::channel& c) {
 
 zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint32_t options,
                                        zx::channel channel) {
-  if ((mask & fuchsia_io_WATCH_MASK_ALL) == 0) {
+  if ((mask & fio::WATCH_MASK_ALL) == 0) {
     // No events to watch
     return ZX_ERR_INVALID_ARGS;
   }
@@ -96,13 +100,13 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (mask & fuchsia_io_WATCH_MASK_EXISTING) {
+  if (mask & fio::WATCH_MASK_EXISTING) {
     vdircookie_t dircookie;
     memset(&dircookie, 0, sizeof(dircookie));
     char readdir_buf[FDIO_CHUNK_SIZE];
     WatchBuffer wb;
     {
-      // Send "fuchsia_io_WATCH_EVENT_EXISTING" for all entries in readdir
+      // Send "fio::WATCH_EVENT_EXISTING" for all entries in readdir.
       while (true) {
         size_t actual;
         zx_status_t status =
@@ -114,7 +118,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
         while (actual >= sizeof(vdirent_t)) {
           auto dirent = reinterpret_cast<vdirent_t*>(ptr);
           if (dirent->name[0]) {
-            wb.AddMsg(watcher->h, fuchsia_io_WATCH_EVENT_EXISTING,
+            wb.AddMsg(watcher->h, fio::WATCH_EVENT_EXISTING,
                       fbl::StringPiece(dirent->name, dirent->size));
           }
           size_t entry_len = dirent->size + sizeof(vdirent_t);
@@ -126,9 +130,9 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
       }
     }
 
-    // Send fuchsia_io_WATCH_EVENT_IDLE to signify that readdir has completed
-    if (mask & fuchsia_io_WATCH_MASK_IDLE) {
-      wb.AddMsg(watcher->h, fuchsia_io_WATCH_EVENT_IDLE, "");
+    // Send fio::WATCH_EVENT_IDLE to signify that readdir has completed.
+    if (mask & fio::WATCH_MASK_IDLE) {
+      wb.AddMsg(watcher->h, fio::WATCH_EVENT_IDLE, "");
     }
 
     wb.Send(watcher->h);
@@ -140,7 +144,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
 }
 
 void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
-  if (name.length() > fuchsia_io_MAX_FILENAME) {
+  if (name.length() > fio::MAX_FILENAME) {
     return;
   }
 

@@ -45,11 +45,12 @@ zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 
-zx_status_t VnodeDir::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
+zx_status_t VnodeDir::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
+  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
                 "Memfs name too long");
-  memset(info, 0, sizeof(*info));
-  strlcpy(reinterpret_cast<char*>(info->name), kFsName, fuchsia_io_MAX_FS_NAME_BUFFER);
+  *info = {};
+  strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
+          ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER);
   info->block_size = kMemfsBlksize;
   info->max_filename_size = kDnodeNameMax;
   info->fs_type = VFS_TYPE_MEMFS;
@@ -69,7 +70,7 @@ zx_status_t VnodeDir::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
   return ZX_OK;
 }
 
-zx_status_t VnodeDir::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) {
+zx_status_t VnodeDir::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   return ZX_ERR_ACCESS_DENIED;
 }
 

@@ -29,7 +29,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
-#include <fs/client.h>
+#include <fs/vfs.h>
 #include <pretty/hexdump.h>
 
 namespace {
@@ -55,7 +55,8 @@ void UnmountHandle(zx_handle_t root, bool wait_until_ready) {
   //
   // The unmount process is a little atypical, since we're just sending a signal over a handle,
   // rather than detaching the mounted filesystem from the "parent" filesystem.
-  vfs_unmount_handle(root, wait_until_ready ? ZX_TIME_INFINITE : 0);
+  fs::Vfs::UnmountHandle(zx::channel(root),
+                         wait_until_ready ? zx::time::infinite() : zx::time::infinite_past());
 }
 
 // Performs the actual work of mounting a volume.
@@ -404,7 +405,7 @@ zx_status_t fumount(int mount_fd) {
   if (status != ZX_OK) {
     return status;
   }
-  return vfs_unmount_handle(c.release(), ZX_TIME_INFINITE);
+  return fs::Vfs::UnmountHandle(std::move(c), zx::time::infinite());
 }
 
 __EXPORT

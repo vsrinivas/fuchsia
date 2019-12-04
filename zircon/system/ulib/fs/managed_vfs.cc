@@ -34,7 +34,7 @@ void ManagedVfs::Shutdown(ShutdownCallback handler) {
         shutdown_handler_ = std::move(closure);
         is_shutting_down_.store(true);
 
-        UninstallAll(ZX_TIME_INFINITE);
+        UninstallAll(zx::time::infinite());
 
         // Signal the teardown on channels in a way that doesn't potentially
         // pull them out from underneath async callbacks.

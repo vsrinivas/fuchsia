@@ -3,11 +3,15 @@
 // found in the LICENSE file.
 
 #include <fs/service.h>
+
+#include <fuchsia/io/llcpp/fidl.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
 
 #include <fs/vfs_types.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
@@ -21,7 +25,7 @@ zx_status_t Service::GetAttributes(VnodeAttributes* attr) {
   // TODO(ZX-1152): V_TYPE_FILE isn't right, we should use a type for services
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_FILE;
-  attr->inode = fuchsia_io_INO_UNKNOWN;
+  attr->inode = fio::INO_UNKNOWN;
   attr->link_count = 1;
   return ZX_OK;
 }

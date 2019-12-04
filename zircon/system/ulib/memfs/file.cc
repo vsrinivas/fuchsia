@@ -88,7 +88,7 @@ zx_status_t VnodeFile::Append(const void* data, size_t len, size_t* out_end, siz
   return status;
 }
 
-zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) {
+zx_status_t VnodeFile::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   zx_status_t status;
   if (!vmo_.is_valid()) {
     // First access to the file? Allocate it.
@@ -111,7 +111,7 @@ zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size)
     if ((status = result.replace(rights, &result)) != ZX_OK) {
       return status;
     }
-    *out_vmo = result.release();
+    *out_vmo = std::move(result);
     *out_size = length_;
     return ZX_OK;
   }
@@ -119,7 +119,7 @@ zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size)
   if ((status = vmo_.duplicate(rights, &result)) != ZX_OK) {
     return status;
   }
-  *out_vmo = result.release();
+  *out_vmo = std::move(result);
   *out_size = length_;
   return ZX_OK;
 }

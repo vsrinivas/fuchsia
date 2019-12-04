@@ -4,6 +4,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/chrealm/cpp/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
@@ -18,10 +19,6 @@
 #include <cstdio>
 #include <string>
 #include <vector>
-
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
 
 #include "gtest/gtest.h"
 #include "src/lib/files/file.h"

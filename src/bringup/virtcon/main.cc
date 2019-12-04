@@ -35,7 +35,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
-#include <fs/handler.h>
+#include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
 #include "keyboard.h"
 #include "vc.h"

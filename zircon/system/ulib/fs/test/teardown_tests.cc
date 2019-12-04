@@ -57,8 +57,8 @@ class FdCountVnode : public fs::Vnode {
 
 class AsyncTearDownVnode : public FdCountVnode {
  public:
-  AsyncTearDownVnode(sync_completion_t* completions)
-      : callback_(nullptr), completions_(completions) {}
+  AsyncTearDownVnode(sync_completion_t* completions, zx_status_t status_for_sync = ZX_OK)
+      : callback_(nullptr), completions_(completions), status_for_sync_(status_for_sync) {}
 
   ~AsyncTearDownVnode() {
     // C) Tear down the Vnode.
@@ -76,20 +76,23 @@ class AsyncTearDownVnode : public FdCountVnode {
 
   static int SyncThread(void* arg) {
     fs::Vnode::SyncCallback callback;
+    zx_status_t status_for_sync;
     {
       fbl::RefPtr<AsyncTearDownVnode> vn = fbl::RefPtr(reinterpret_cast<AsyncTearDownVnode*>(arg));
+      status_for_sync = vn->status_for_sync_;
       // A) Identify when the sync has started being processed.
       sync_completion_signal(&vn->completions_[0]);
       // B) Wait until the connection has been closed.
       sync_completion_wait(&vn->completions_[1], ZX_TIME_INFINITE);
       callback = std::move(vn->callback_);
     }
-    callback(ZX_OK);
+    callback(status_for_sync);
     return 0;
   }
 
   fs::Vnode::SyncCallback callback_;
   sync_completion_t* completions_;
+  zx_status_t status_for_sync_;
 };
 
 bool send_sync(const zx::channel& client) {
@@ -107,12 +110,12 @@ bool send_sync(const zx::channel& client) {
 //
 // This helps tests get ready to try handling a tricky teardown.
 bool sync_start(sync_completion_t* completions, async::Loop* loop,
-                std::unique_ptr<fs::ManagedVfs>* vfs) {
+                std::unique_ptr<fs::ManagedVfs>* vfs, zx_status_t status_for_sync = ZX_OK) {
   BEGIN_HELPER;
   *vfs = std::make_unique<fs::ManagedVfs>(loop->dispatcher());
   ASSERT_EQ(loop->StartThread(), ZX_OK);
 
-  auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions));
+  auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions, status_for_sync));
   zx::channel client;
   zx::channel server;
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
@@ -131,15 +134,14 @@ bool sync_start(sync_completion_t* completions, async::Loop* loop,
   END_HELPER;
 }
 
-// Test a case where the VFS object is shut down outside the dispatch loop.
-bool TestUnpostedTeardown() {
-  BEGIN_TEST;
+bool CommonTestUnpostedTeardown(zx_status_t status_for_sync) {
+  BEGIN_HELPER;
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
   std::unique_ptr<fs::ManagedVfs> vfs;
 
-  ASSERT_TRUE(sync_start(completions, &loop, &vfs));
+  ASSERT_TRUE(sync_start(completions, &loop, &vfs, status_for_sync));
 
   // B) Let sync complete.
   sync_completion_signal(&completions[1]);
@@ -156,19 +158,37 @@ bool TestUnpostedTeardown() {
   ASSERT_EQ(sync_completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
   vfs = nullptr;
 
+  END_HELPER;
+}
+
+// Test a case where the VFS object is shut down outside the dispatch loop.
+bool TestUnpostedTeardown() {
+  BEGIN_TEST;
+
+  ASSERT_TRUE(CommonTestUnpostedTeardown(ZX_OK));
+
   END_TEST;
 }
 
-// Test a case where the VFS object is shut down as a posted request to the
-// dispatch loop.
-bool TestPostedTeardown() {
+// Test a case where the VFS object is shut down outside the dispatch loop,
+// where the |Vnode::Sync| operation also failed causing the connection to
+// be closed.
+bool TestUnpostedTeardownSyncError() {
   BEGIN_TEST;
+
+  ASSERT_TRUE(CommonTestUnpostedTeardown(ZX_ERR_INVALID_ARGS));
+
+  END_TEST;
+}
+
+bool CommonTestPostedTeardown(zx_status_t status_for_sync) {
+  BEGIN_HELPER;
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
   std::unique_ptr<fs::ManagedVfs> vfs;
 
-  ASSERT_TRUE(sync_start(completions, &loop, &vfs));
+  ASSERT_TRUE(sync_start(completions, &loop, &vfs, status_for_sync));
 
   // B) Let sync complete.
   sync_completion_signal(&completions[1]);
@@ -189,6 +209,27 @@ bool TestPostedTeardown() {
       ZX_OK);
   ASSERT_EQ(sync_completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
   vfs = nullptr;
+
+  END_HELPER;
+}
+
+// Test a case where the VFS object is shut down as a posted request to the
+// dispatch loop.
+bool TestPostedTeardown() {
+  BEGIN_TEST;
+
+  ASSERT_TRUE(CommonTestPostedTeardown(ZX_OK));
+
+  END_TEST;
+}
+
+// Test a case where the VFS object is shut down as a posted request to the
+// dispatch loop, where the |Vnode::Sync| operation also failed causing the
+// connection to be closed.
+bool TestPostedTeardownSyncError() {
+  BEGIN_TEST;
+
+  ASSERT_TRUE(CommonTestPostedTeardown(ZX_ERR_INVALID_ARGS));
 
   END_TEST;
 }
@@ -359,7 +400,9 @@ bool TestSynchronousTeardown() {
 
 BEGIN_TEST_CASE(teardown_tests)
 RUN_TEST(TestUnpostedTeardown)
+RUN_TEST(TestUnpostedTeardownSyncError)
 RUN_TEST(TestPostedTeardown)
+RUN_TEST(TestPostedTeardownSyncError)
 RUN_TEST(TestTeardownDeleteThis)
 RUN_TEST(TestTeardownSlowAsyncCallback)
 RUN_TEST(TestTeardownSlowClone)

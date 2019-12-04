@@ -26,7 +26,7 @@ SynchronousVfs::~SynchronousVfs() {
 void SynchronousVfs::Shutdown(ShutdownCallback handler) {
   is_shutting_down_ = true;
 
-  UninstallAll(ZX_TIME_INFINITE);
+  UninstallAll(zx::time::infinite());
   while (!connections_.is_empty()) {
     connections_.front().SyncTeardown();
   }

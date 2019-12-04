@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 
 #ifdef __Fuchsia__
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
@@ -322,6 +323,11 @@ struct VnodeAttributes {
            storage_size == other.storage_size && link_count == other.link_count &&
            creation_time == other.creation_time && modification_time == other.modification_time;
   }
+
+#ifdef __Fuchsia__
+  // Converts from |VnodeAttributes| to fuchsia.io v1 |NodeAttributes|.
+  llcpp::fuchsia::io::NodeAttributes ToIoV1NodeAttributes() const;
+#endif  // __Fuchsia__
 };
 
 // A request to update pieces of the |VnodeAttributes|. The fuchsia.io protocol only
@@ -458,6 +464,13 @@ class VnodeRepresentation {
 
   Variants variants_ = {};
 };
+
+// Converts the vnode representation to a fuchsia.io v1 NodeInfo union, then synchronously
+// invoke the callback. This operation consumes the |representation|.
+// Using a callback works around LLCPP ownership limitations where an extensible union
+// cannot recursively own its variant payload.
+void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
+                           fit::callback<void(llcpp::fuchsia::io::NodeInfo*)> callback);
 
 #endif  // __Fuchsia__
 

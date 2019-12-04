@@ -710,7 +710,7 @@ zx_status_t Blob::GetReadableEvent(zx::event* out) {
   return ZX_OK;
 }
 
-zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out_size) {
+zx_status_t Blob::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size) {
   TRACE_DURATION("blobfs", "Blobfs::CloneVmo", "rights", rights);
   if (GetState() != kBlobStateReadable) {
     return ZX_ERR_BAD_STATE;
@@ -755,7 +755,7 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out
   if ((status = clone.replace(rights, &clone)) != ZX_OK) {
     return status;
   }
-  *out_vmo = clone.release();
+  *out_vmo = std::move(clone);
   *out_size = inode_.blob_size;
 
   if (clone_watcher_.object() == ZX_HANDLE_INVALID) {
@@ -927,11 +927,11 @@ zx_status_t Blob::Truncate(size_t len) {
 
 constexpr const char kFsName[] = "blobfs";
 
-zx_status_t Blob::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
+zx_status_t Blob::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
   static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
                 "Blobfs name too long");
 
-  memset(info, 0, sizeof(*info));
+  *info = {};
   info->block_size = kBlobfsBlockSize;
   info->max_filename_size = digest::kSha256HexLength;
   info->fs_type = VFS_TYPE_BLOBFS;
@@ -940,16 +940,16 @@ zx_status_t Blob::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
   info->used_bytes = blobfs_->Info().alloc_block_count * blobfs_->Info().block_size;
   info->total_nodes = blobfs_->Info().inode_count;
   info->used_nodes = blobfs_->Info().alloc_inode_count;
-  strlcpy(reinterpret_cast<char*>(info->name), kFsName, fuchsia_io_MAX_FS_NAME_BUFFER);
+  strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
+          ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER);
   return ZX_OK;
 }
 
 zx_status_t Blob::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
   return blobfs_->Device()->GetDevicePath(buffer_len, out_name, out_len);
 }
-#endif
 
-zx_status_t Blob::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) {
+zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", flags);
 
   if (flags & fuchsia_io_VMO_FLAG_WRITE) {
@@ -967,6 +967,8 @@ zx_status_t Blob::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) {
   rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
   return CloneVmo(rights, out_vmo, out_size);
 }
+
+#endif
 
 void Blob::Sync(SyncCallback closure) {
   auto event = blobfs_->Metrics().NewLatencyEvent(fs_metrics::Event::kSync);

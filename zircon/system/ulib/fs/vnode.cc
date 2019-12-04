@@ -11,6 +11,15 @@
 
 #include <fs/vfs_types.h>
 
+#ifdef __Fuchsia__
+
+#include <fuchsia/io/llcpp/fidl.h>
+#include <fs/mount_channel.h>
+
+namespace fio = ::llcpp::fuchsia::io;
+
+#endif  // __Fuchsia__
+
 namespace fs {
 
 Vnode::Vnode() = default;
@@ -155,15 +164,15 @@ zx_status_t Vnode::Link(fbl::StringPiece name, fbl::RefPtr<Vnode> target) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 void Vnode::Sync(SyncCallback closure) { closure(ZX_ERR_NOT_SUPPORTED); }
 
 #ifdef __Fuchsia__
 
-zx_status_t Vnode::QueryFilesystem(fuchsia_io_FilesystemInfo* out) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Vnode::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Vnode::QueryFilesystem(fio::FilesystemInfo* out) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t Vnode::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
   return ZX_ERR_NOT_SUPPORTED;

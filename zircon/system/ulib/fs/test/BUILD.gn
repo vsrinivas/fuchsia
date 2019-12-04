@@ -50,6 +50,7 @@ zx_test("fs-vnode") {
 zx_test("fs-connection") {
   sources = [
     "connection_tests.cc",
+    "fidl_transaction_tests.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:llcpp",

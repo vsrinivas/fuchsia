@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zircon-internal/debug.h>
@@ -23,57 +24,99 @@
 
 #include <fbl/string_buffer.h>
 #include <fs/debug.h>
-#include <fs/handler.h>
+#include <fs/internal/fidl_transaction.h>
 #include <fs/trace.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
 namespace internal {
 
-zx_status_t FileConnection::HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  zx_status_t status = fuchsia_io_File_try_dispatch(this, txn, msg, &kOps);
-  if (status != ZX_ERR_NOT_SUPPORTED) {
-    return status;
+void FileConnection::HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) {
+  bool handled = fio::File::TryDispatch(this, msg, txn);
+  if (handled) {
+    return;
   }
-  return vnode()->HandleFsSpecificMessage(msg, txn);
+  CTransactionShim shim(txn);
+  shim.PropagateError(vnode()->HandleFsSpecificMessage(msg, &shim));
 }
 
-zx_status_t FileConnection::Clone(uint32_t clone_flags, zx_handle_t object) {
-  return Connection::NodeClone(clone_flags, object);
+void FileConnection::Clone(uint32_t clone_flags, zx::channel object,
+                           CloneCompleter::Sync completer) {
+  Connection::NodeClone(clone_flags, std::move(object));
 }
 
-zx_status_t FileConnection::Close(fidl_txn_t* txn) { return Connection::NodeClose(txn); }
-
-zx_status_t FileConnection::Describe(fidl_txn_t* txn) { return Connection::NodeDescribe(txn); }
-
-zx_status_t FileConnection::Sync(fidl_txn_t* txn) { return Connection::NodeSync(txn); }
-
-zx_status_t FileConnection::GetAttr(fidl_txn_t* txn) { return Connection::NodeGetAttr(txn); }
-
-zx_status_t FileConnection::SetAttr(uint32_t flags, const fuchsia_io_NodeAttributes* attributes,
-                                    fidl_txn_t* txn) {
-  return Connection::NodeSetAttr(flags, attributes, txn);
+void FileConnection::Close(CloseCompleter::Sync completer) {
+  auto result = Connection::NodeClose();
+  if (result.is_error()) {
+    return completer.Reply(result.error());
+  }
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t FileConnection::NodeGetFlags(fidl_txn_t* txn) {
-  return Connection::NodeNodeGetFlags(txn);
+void FileConnection::Describe(DescribeCompleter::Sync completer) {
+  auto result = Connection::NodeDescribe();
+  if (result.is_error()) {
+    return completer.Close(result.error());
+  }
+  ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo* info) {
+    completer.Reply(std::move(*info));
+  });
 }
 
-zx_status_t FileConnection::NodeSetFlags(uint32_t flags, fidl_txn_t* txn) {
-  return Connection::NodeNodeSetFlags(flags, txn);
+void FileConnection::Sync(SyncCompleter::Sync completer) {
+  Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
+    completer.Reply(sync_status);
+  });
 }
 
-zx_status_t FileConnection::Read(uint64_t count, fidl_txn_t* txn) {
+void FileConnection::GetAttr(GetAttrCompleter::Sync completer) {
+  auto result = Connection::NodeGetAttr();
+  if (result.is_error()) {
+    return completer.Reply(result.error(), fio::NodeAttributes());
+  }
+  completer.Reply(ZX_OK, result.value().ToIoV1NodeAttributes());
+}
+
+void FileConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
+                             SetAttrCompleter::Sync completer) {
+  auto result = Connection::NodeSetAttr(flags, attributes);
+  if (result.is_error()) {
+    return completer.Reply(result.error());
+  }
+  completer.Reply(ZX_OK);
+}
+
+void FileConnection::NodeGetFlags(NodeGetFlagsCompleter::Sync completer) {
+  auto result = Connection::NodeNodeGetFlags();
+  if (result.is_error()) {
+    return completer.Reply(result.error(), 0);
+  }
+  completer.Reply(ZX_OK, result.value());
+}
+
+void FileConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync completer) {
+  auto result = Connection::NodeNodeSetFlags(flags);
+  if (result.is_error()) {
+    return completer.Reply(result.error());
+  }
+  completer.Reply(ZX_OK);
+}
+
+void FileConnection::Read(uint64_t count, ReadCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileRead] options: ", options());
 
   if (options().flags.node_reference) {
-    return fuchsia_io_FileRead_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
-  } else if (!options().rights.read) {
-    return fuchsia_io_FileRead_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
-  } else if (count > ZXFIDL_MAX_MSG_BYTES) {
-    return fuchsia_io_FileRead_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
+    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+  }
+  if (!options().rights.read) {
+    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+  }
+  if (count > fio::MAX_BUF) {
+    return completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
   }
   uint8_t data[count];
   size_t actual = 0;
@@ -82,18 +125,20 @@ zx_status_t FileConnection::Read(uint64_t count, fidl_txn_t* txn) {
     ZX_DEBUG_ASSERT(actual <= count);
     offset_ += actual;
   }
-  return fuchsia_io_FileRead_reply(txn, status, data, actual);
+  completer.Reply(status, fidl::VectorView(data, actual));
 }
 
-zx_status_t FileConnection::ReadAt(uint64_t count, uint64_t offset, fidl_txn_t* txn) {
+void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileReadAt] options: ", options());
 
   if (options().flags.node_reference) {
-    return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
-  } else if (!options().rights.read) {
-    return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
-  } else if (count > ZXFIDL_MAX_MSG_BYTES) {
-    return fuchsia_io_FileReadAt_reply(txn, ZX_ERR_INVALID_ARGS, nullptr, 0);
+    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+  }
+  if (!options().rights.read) {
+    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+  }
+  if (count > fio::MAX_BUF) {
+    return completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
   }
   uint8_t data[count];
   size_t actual = 0;
@@ -101,164 +146,167 @@ zx_status_t FileConnection::ReadAt(uint64_t count, uint64_t offset, fidl_txn_t* 
   if (status == ZX_OK) {
     ZX_DEBUG_ASSERT(actual <= count);
   }
-  return fuchsia_io_FileReadAt_reply(txn, status, data, actual);
+  completer.Reply(status, fidl::VectorView(data, actual));
 }
 
-zx_status_t FileConnection::Write(const uint8_t* data_data, size_t data_count, fidl_txn_t* txn) {
+void FileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileWrite] options: ", options());
 
   if (options().flags.node_reference) {
-    return fuchsia_io_FileWrite_reply(txn, ZX_ERR_BAD_HANDLE, 0);
+    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
   }
   if (!options().rights.write) {
-    return fuchsia_io_FileWrite_reply(txn, ZX_ERR_BAD_HANDLE, 0);
+    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
   }
-
   size_t actual = 0;
   zx_status_t status;
   if (options().flags.append) {
     size_t end;
-    status = vnode()->Append(data_data, data_count, &end, &actual);
+    status = vnode()->Append(data.data(), data.count(), &end, &actual);
     if (status == ZX_OK) {
       offset_ = end;
     }
   } else {
-    status = vnode()->Write(data_data, data_count, offset_, &actual);
+    status = vnode()->Write(data.data(), data.count(), offset_, &actual);
     if (status == ZX_OK) {
       offset_ += actual;
     }
   }
-  ZX_DEBUG_ASSERT(actual <= data_count);
-  return fuchsia_io_FileWrite_reply(txn, status, actual);
+  ZX_DEBUG_ASSERT(actual <= data.count());
+  completer.Reply(status, actual);
 }
 
-zx_status_t FileConnection::WriteAt(const uint8_t* data_data, size_t data_count, uint64_t offset,
-                                    fidl_txn_t* txn) {
+void FileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
+                             WriteAtCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileWriteAt] options: ", options());
 
   if (options().flags.node_reference) {
-    return fuchsia_io_FileWriteAt_reply(txn, ZX_ERR_BAD_HANDLE, 0);
+    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
   }
   if (!options().rights.write) {
-    return fuchsia_io_FileWriteAt_reply(txn, ZX_ERR_BAD_HANDLE, 0);
+    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
   }
   size_t actual = 0;
-  zx_status_t status = vnode()->Write(data_data, data_count, offset, &actual);
-  ZX_DEBUG_ASSERT(actual <= data_count);
-  return fuchsia_io_FileWriteAt_reply(txn, status, actual);
+  zx_status_t status = vnode()->Write(data.data(), data.count(), offset, &actual);
+  ZX_DEBUG_ASSERT(actual <= data.count());
+  completer.Reply(status, actual);
 }
 
-zx_status_t FileConnection::Seek(int64_t offset, fuchsia_io_SeekOrigin start, fidl_txn_t* txn) {
+void FileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin start,
+                          SeekCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 
-  static_assert(SEEK_SET == fuchsia_io_SeekOrigin_START, "");
-  static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_CURRENT, "");
-  static_assert(SEEK_END == fuchsia_io_SeekOrigin_END, "");
+  static_assert(SEEK_SET == static_cast<int>(fio::SeekOrigin::START), "");
+  static_assert(SEEK_CUR == static_cast<int>(fio::SeekOrigin::CURRENT), "");
+  static_assert(SEEK_END == static_cast<int>(fio::SeekOrigin::END), "");
 
   if (options().flags.node_reference) {
-    return fuchsia_io_FileSeek_reply(txn, ZX_ERR_BAD_HANDLE, offset_);
+    return completer.Reply(ZX_ERR_BAD_HANDLE, offset_);
   }
   fs::VnodeAttributes attr;
   zx_status_t r;
   if ((r = vnode()->GetAttributes(&attr)) < 0) {
-    return r;
+    return completer.Close(r);
   }
   size_t n;
   switch (start) {
-    case SEEK_SET:
+    case fio::SeekOrigin::START:
       if (offset < 0) {
-        return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, offset_);
+        return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
       }
       n = offset;
       break;
-    case SEEK_CUR:
+    case fio::SeekOrigin::CURRENT:
       n = offset_ + offset;
       if (offset < 0) {
         // if negative seek
         if (n > offset_) {
           // wrapped around. attempt to seek before start
-          return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, offset_);
+          return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
         }
       } else {
         // positive seek
         if (n < offset_) {
           // wrapped around. overflow
-          return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, offset_);
+          return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
         }
       }
       break;
-    case SEEK_END:
+    case fio::SeekOrigin::END:
       n = attr.content_size + offset;
       if (offset < 0) {
         // if negative seek
         if (n > attr.content_size) {
           // wrapped around. attempt to seek before start
-          return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, offset_);
+          return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
         }
       } else {
         // positive seek
         if (n < attr.content_size) {
           // wrapped around
-          return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, offset_);
+          return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
         }
       }
       break;
     default:
-      return fuchsia_io_FileSeek_reply(txn, ZX_ERR_INVALID_ARGS, offset_);
+      return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
   }
   offset_ = n;
-  return fuchsia_io_FileSeek_reply(txn, ZX_OK, offset_);
+  completer.Reply(ZX_OK, offset_);
 }
 
-zx_status_t FileConnection::Truncate(uint64_t length, fidl_txn_t* txn) {
+void FileConnection::Truncate(uint64_t length, TruncateCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileTruncate] options: ", options());
 
   if (options().flags.node_reference) {
-    return fuchsia_io_FileTruncate_reply(txn, ZX_ERR_BAD_HANDLE);
+    return completer.Reply(ZX_ERR_BAD_HANDLE);
   }
   if (!options().rights.write) {
-    return fuchsia_io_FileTruncate_reply(txn, ZX_ERR_BAD_HANDLE);
+    return completer.Reply(ZX_ERR_BAD_HANDLE);
   }
 
   zx_status_t status = vnode()->Truncate(length);
-  return fuchsia_io_FileTruncate_reply(txn, status);
+  return completer.Reply(status);
 }
 
-zx_status_t FileConnection::GetFlags(fidl_txn_t* txn) {
+void FileConnection::GetFlags(GetFlagsCompleter::Sync completer) {
   uint32_t flags = options().ToIoV1Flags() & (kStatusFlags | ZX_FS_RIGHTS);
-  return fuchsia_io_FileGetFlags_reply(txn, ZX_OK, flags);
+  return completer.Reply(ZX_OK, flags);
 }
 
-zx_status_t FileConnection::SetFlags(uint32_t flags, fidl_txn_t* txn) {
+void FileConnection::SetFlags(uint32_t flags, SetFlagsCompleter::Sync completer) {
   auto options = VnodeConnectionOptions::FromIoV1Flags(flags);
   set_append(options.flags.append);
-  return fuchsia_io_FileSetFlags_reply(txn, ZX_OK);
+  return completer.Reply(ZX_OK);
 }
 
-zx_status_t FileConnection::GetBuffer(uint32_t flags, fidl_txn_t* txn) {
+void FileConnection::GetBuffer(uint32_t flags, GetBufferCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileGetBuffer] our options: ", options(),
                         ", incoming flags: ", ZxFlags(flags));
 
   if (options().flags.node_reference) {
-    return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_BAD_HANDLE, nullptr);
+    return completer.Reply(ZX_ERR_BAD_HANDLE, nullptr);
   }
 
-  if ((flags & fuchsia_io_VMO_FLAG_PRIVATE) && (flags & fuchsia_io_VMO_FLAG_EXACT)) {
-    return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_INVALID_ARGS, nullptr);
-  } else if ((options().flags.append) && (flags & fuchsia_io_VMO_FLAG_WRITE)) {
-    return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!options().rights.write && (flags & fuchsia_io_VMO_FLAG_WRITE)) {
-    return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!options().rights.execute && (flags & fuchsia_io_VMO_FLAG_EXEC)) {
-    return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!options().rights.read) {
-    return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
+  if ((flags & fio::VMO_FLAG_PRIVATE) && (flags & fio::VMO_FLAG_EXACT)) {
+    return completer.Reply(ZX_ERR_INVALID_ARGS, nullptr);
+  }
+  if ((options().flags.append) && (flags & fio::VMO_FLAG_WRITE)) {
+    return completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
+  }
+  if (!options().rights.write && (flags & fio::VMO_FLAG_WRITE)) {
+    return completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
+  }
+  if (!options().rights.execute && (flags & fio::VMO_FLAG_EXEC)) {
+    return completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
+  }
+  if (!options().rights.read) {
+    return completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
   }
 
-  fuchsia_mem_Buffer buffer;
-  memset(&buffer, 0, sizeof(buffer));
+  ::llcpp::fuchsia::mem::Buffer buffer;
   zx_status_t status = vnode()->GetVmo(flags, &buffer.vmo, &buffer.size);
-  return fuchsia_io_FileGetBuffer_reply(txn, status, status == ZX_OK ? &buffer : nullptr);
+  completer.Reply(status, status == ZX_OK ? &buffer : nullptr);
 }
 
 }  // namespace internal

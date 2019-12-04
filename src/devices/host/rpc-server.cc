@@ -34,6 +34,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/auto_lock.h>
+#include <src/storage/deprecated-fs-fidl-handler/fidl-handler.h>
 
 #include "devfs-connection.h"
 #include "devhost.h"

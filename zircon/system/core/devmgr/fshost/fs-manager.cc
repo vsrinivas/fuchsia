@@ -130,7 +130,7 @@ zx_status_t FsManager::ServeRoot(zx::channel server) {
 void FsManager::WatchExit() {
   global_shutdown_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
                                       zx_status_t status, const zx_packet_signal_t* signal) {
-    root_vfs_->UninstallAll(ZX_TIME_INFINITE);
+    root_vfs_->UninstallAll(zx::time::infinite());
     event_.signal(0, FSHOST_SIGNAL_EXIT_DONE);
   });
 

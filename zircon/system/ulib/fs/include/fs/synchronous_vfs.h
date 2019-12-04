@@ -27,8 +27,7 @@ namespace fs {
 // single-threaded asynchronous dispatcher.
 //
 // Additionally, this class must only be used with Vnode implementations
-// that do not defer completion of operations; "deferred callback" closures
-// must be invoked before returning "ERR_DISPATCHER_ASYNC".
+// that do not defer completion of operations.
 //
 // It is safe to shutdown the dispatch loop before destroying the
 // SynchronousVfs object.

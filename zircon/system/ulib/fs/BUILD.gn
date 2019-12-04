@@ -7,13 +7,13 @@ zx_library("fs") {
   sdk_headers = [
     "fs/internal/connection.h",
     "fs/internal/directory_connection.h",
+    "fs/internal/fidl_transaction.h",
     "fs/internal/file_connection.h",
     "fs/internal/node_connection.h",
-    "fs/client.h",
-    "fs/handler.h",
     "fs/lazy_dir.h",
     "fs/locking.h",
     "fs/managed_vfs.h",
+    "fs/mount_channel.h",
     "fs/pseudo_dir.h",
     "fs/pseudo_file.h",
     "fs/queue.h",
@@ -57,12 +57,13 @@ zx_library("fs") {
   if (is_fuchsia) {
     sources += [
       "connection.cc",
-      "file_connection.cc",
       "directory_connection.cc",
-      "handler.cc",
+      "fidl_transaction.cc",
+      "file_connection.cc",
       "lazy_dir.cc",
       "managed_vfs.cc",
       "mount.cc",
+      "mount_channel.cc",
       "node_connection.cc",
       "pseudo_dir.cc",
       "pseudo_file.cc",
@@ -77,6 +78,7 @@ zx_library("fs") {
     ]
     public_deps += [
       "$zx/system/ulib/async:headers",
+      "$zx/system/ulib/fit:headers",
       "$zx/system/ulib/zx:headers",
 
       # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
@@ -86,8 +88,8 @@ zx_library("fs") {
       # <fs/trace.h> has #include <trace/event.h>.
       "$zx/system/ulib/trace:headers",
 
-      # <fs/internal/connection.h> has #include <lib/async/cpp/wait.h>.
-      "$zx/system/ulib/async:async-cpp",
+      # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.
+      "$zx/system/ulib/async:async-cpp.headers",
     ]
     deps += [
       "$zx/system/fidl/fuchsia-cobalt:c",
@@ -95,11 +97,11 @@ zx_library("fs") {
       "$zx/system/fidl/fuchsia-io:llcpp",
       "$zx/system/fidl/fuchsia-mem:c",
       "$zx/system/ulib/async",
-      "$zx/system/ulib/async:async-cpp",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl",
       "$zx/system/ulib/fidl-utils",
+      "$zx/system/ulib/fit",
       "$zx/system/ulib/fzl",
       "$zx/system/ulib/sync",
       "$zx/system/ulib/trace",
@@ -120,11 +122,12 @@ if (is_fuchsia) {
     sources = [
       "connection.cc",
       "directory_connection.cc",
+      "fidl_transaction.cc",
       "file_connection.cc",
-      "handler.cc",
       "lazy_dir.cc",
       "managed_vfs.cc",
       "mount.cc",
+      "mount_channel.cc",
       "node_connection.cc",
       "pseudo_dir.cc",
       "pseudo_file.cc",
@@ -157,6 +160,9 @@ if (is_fuchsia) {
 
       # <fs/trace.h> has #include <trace/event.h>.
       "$zx/system/ulib/trace:trace-driver.headers",
+
+      # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.
+      "$zx/system/ulib/async:async-cpp.headers",
     ]
     deps = [
       "$zx/system/fidl/fuchsia-cobalt:c",

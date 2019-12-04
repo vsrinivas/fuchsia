@@ -123,11 +123,11 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 
 constexpr const char kFsName[] = "blobfs";
 
-zx_status_t Directory::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
+zx_status_t Directory::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
   static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
                 "Blobfs name too long");
 
-  memset(info, 0, sizeof(*info));
+  *info = {};
   info->block_size = kBlobfsBlockSize;
   info->max_filename_size = digest::kSha256HexLength;
   info->fs_type = VFS_TYPE_BLOBFS;
@@ -136,14 +136,16 @@ zx_status_t Directory::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
   info->used_bytes = blobfs_->Info().alloc_block_count * blobfs_->Info().block_size;
   info->total_nodes = blobfs_->Info().inode_count;
   info->used_nodes = blobfs_->Info().alloc_inode_count;
-  strlcpy(reinterpret_cast<char*>(info->name), kFsName, fuchsia_io_MAX_FS_NAME_BUFFER);
+  strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
+          ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER);
   return ZX_OK;
 }
 
 zx_status_t Directory::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) {
   return blobfs_->Device()->GetDevicePath(buffer_len, out_name, out_len);
 }
-#endif
+
+#endif  // __Fuchsia__
 
 zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
   TRACE_DURATION("blobfs", "Directory::Unlink", "name", name, "must_be_dir", must_be_dir);

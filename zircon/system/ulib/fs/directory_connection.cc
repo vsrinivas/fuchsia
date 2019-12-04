@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zircon-internal/debug.h>
@@ -23,10 +24,13 @@
 
 #include <fbl/string_buffer.h>
 #include <fs/debug.h>
-#include <fs/handler.h>
+#include <fs/internal/fidl_transaction.h>
+#include <fs/mount_channel.h>
 #include <fs/trace.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 
@@ -36,13 +40,13 @@ namespace {
 void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, zx::channel channel, fbl::StringPiece path,
             VnodeConnectionOptions options, Rights parent_rights, uint32_t mode) {
   bool describe = options.flags.describe;
-  vfs->Open(std::move(parent), path, options, parent_rights, mode).visit([&](auto&& result) {
+  vfs->Open(parent, path, options, parent_rights, mode).visit([&](auto&& result) {
     using ResultT = std::decay_t<decltype(result)>;
     using OpenResult = fs::Vfs::OpenResult;
     if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
       FS_TRACE_DEBUG("vfs: open failure: %d\n", result);
       if (describe) {
-        internal::WriteDescribeError(std::move(channel), result);
+        fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), result, nullptr);
       }
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
       FS_TRACE_DEBUG("vfs: handoff to remote\n");
@@ -64,56 +68,91 @@ void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, zx::channel channel, fbl
 
 namespace internal {
 
-zx_status_t DirectoryConnection::HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  zx_status_t status = fuchsia_io_DirectoryAdmin_try_dispatch(this, txn, msg, &kOps);
-  if (status != ZX_ERR_NOT_SUPPORTED) {
-    return status;
+void DirectoryConnection::HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) {
+  bool handled = fio::DirectoryAdmin::TryDispatch(this, msg, txn);
+  if (handled) {
+    return;
   }
-  return vnode()->HandleFsSpecificMessage(msg, txn);
+  CTransactionShim shim(txn);
+  shim.PropagateError(vnode()->HandleFsSpecificMessage(msg, &shim));
 }
 
-zx_status_t DirectoryConnection::Clone(uint32_t clone_flags, zx_handle_t object) {
-  return Connection::NodeClone(clone_flags, object);
+void DirectoryConnection::Clone(uint32_t clone_flags, zx::channel object,
+                                CloneCompleter::Sync completer) {
+  Connection::NodeClone(clone_flags, std::move(object));
 }
 
-zx_status_t DirectoryConnection::Close(fidl_txn_t* txn) { return Connection::NodeClose(txn); }
-
-zx_status_t DirectoryConnection::Describe(fidl_txn_t* txn) { return Connection::NodeDescribe(txn); }
-
-zx_status_t DirectoryConnection::Sync(fidl_txn_t* txn) { return Connection::NodeSync(txn); }
-
-zx_status_t DirectoryConnection::GetAttr(fidl_txn_t* txn) { return Connection::NodeGetAttr(txn); }
-
-zx_status_t DirectoryConnection::SetAttr(uint32_t flags,
-                                         const fuchsia_io_NodeAttributes* attributes,
-                                         fidl_txn_t* txn) {
-  return Connection::NodeSetAttr(flags, attributes, txn);
+void DirectoryConnection::Close(CloseCompleter::Sync completer) {
+  auto result = Connection::NodeClose();
+  if (result.is_error()) {
+    return completer.Reply(result.error());
+  }
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t DirectoryConnection::NodeGetFlags(fidl_txn_t* txn) {
-  return Connection::NodeNodeGetFlags(txn);
+void DirectoryConnection::Describe(DescribeCompleter::Sync completer) {
+  auto result = Connection::NodeDescribe();
+  if (result.is_error()) {
+    return completer.Close(result.error());
+  }
+  ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo* info) {
+    completer.Reply(std::move(*info));
+  });
 }
 
-zx_status_t DirectoryConnection::NodeSetFlags(uint32_t flags, fidl_txn_t* txn) {
-  return Connection::NodeNodeSetFlags(flags, txn);
+void DirectoryConnection::Sync(SyncCompleter::Sync completer) {
+  Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
+    completer.Reply(sync_status);
+  });
 }
 
-zx_status_t DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, const char* path_data,
-                                      size_t path_size, zx_handle_t object) {
-  zx::channel channel(object);
+void DirectoryConnection::GetAttr(GetAttrCompleter::Sync completer) {
+  auto result = Connection::NodeGetAttr();
+  if (result.is_error()) {
+    return completer.Reply(result.error(), fio::NodeAttributes());
+  }
+  completer.Reply(ZX_OK, result.value().ToIoV1NodeAttributes());
+}
+
+void DirectoryConnection::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes,
+                                  SetAttrCompleter::Sync completer) {
+  auto result = Connection::NodeSetAttr(flags, attributes);
+  if (result.is_error()) {
+    return completer.Reply(result.error());
+  }
+  completer.Reply(ZX_OK);
+}
+
+void DirectoryConnection::NodeGetFlags(NodeGetFlagsCompleter::Sync completer) {
+  auto result = Connection::NodeNodeGetFlags();
+  if (result.is_error()) {
+    return completer.Reply(result.error(), 0);
+  }
+  completer.Reply(ZX_OK, result.value());
+}
+
+void DirectoryConnection::NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync completer) {
+  auto result = Connection::NodeNodeSetFlags(flags);
+  if (result.is_error()) {
+    return completer.Reply(result.error());
+  }
+  completer.Reply(ZX_OK);
+}
+
+void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringView path,
+                               zx::channel channel, OpenCompleter::Sync completer) {
   auto open_options = VnodeConnectionOptions::FromIoV1Flags(open_flags);
   auto write_error = [describe = open_options.flags.describe](zx::channel channel,
                                                               zx_status_t error) {
     if (describe) {
-      WriteDescribeError(std::move(channel), error);
+      fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), error, nullptr);
     }
-    return ZX_OK;
   };
 
   if (!PrevalidateFlags(open_flags)) {
     FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] prevalidate failed",
                           ", incoming flags: ", ZxFlags(open_flags),
-                          ", path: ", Path(path_data, path_size));
+                          ", path: ", path);
     if (open_options.flags.describe) {
       return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
     }
@@ -121,7 +160,7 @@ zx_status_t DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, const 
 
   FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] our options: ", options(),
                         ", incoming options: ", open_options,
-                        ", path: ", Path(path_data, path_size));
+                        ", path: ", path);
   if (options().flags.node_reference) {
     return write_error(std::move(channel), ZX_ERR_BAD_HANDLE);
   }
@@ -131,7 +170,7 @@ zx_status_t DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, const 
   if (!open_options.flags.node_reference && !open_options.rights.any()) {
     return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
   }
-  if ((path_size < 1) || (path_size > PATH_MAX)) {
+  if (path.empty() || (path.size() > PATH_MAX)) {
     return write_error(std::move(channel), ZX_ERR_BAD_PATH);
   }
 
@@ -141,185 +180,184 @@ zx_status_t DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, const 
     FS_PRETTY_TRACE_DEBUG("Rights violation during DirectoryOpen");
     return write_error(std::move(channel), status);
   }
-  OpenAt(vfs(), vnode(), std::move(channel), fbl::StringPiece(path_data, path_size), open_options,
-         options().rights, mode);
-  return ZX_OK;
+  OpenAt(vfs(), vnode(), std::move(channel), fbl::StringPiece(path.data(), path.size()),
+         open_options, options().rights, mode);
 }
 
-zx_status_t DirectoryConnection::Unlink(const char* path_data, size_t path_size, fidl_txn_t* txn) {
+void DirectoryConnection::Unlink(fidl::StringView path, UnlinkCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(),
-                        ", path: ", Path(path_data, path_size));
+                        ", path: ", path);
 
   if (options().flags.node_reference) {
-    return fuchsia_io_DirectoryUnlink_reply(txn, ZX_ERR_BAD_HANDLE);
+    return completer.Reply(ZX_ERR_BAD_HANDLE);
   }
   if (!options().rights.write) {
-    return fuchsia_io_DirectoryUnlink_reply(txn, ZX_ERR_BAD_HANDLE);
+    return completer.Reply(ZX_ERR_BAD_HANDLE);
   }
-  zx_status_t status = vfs()->Unlink(vnode(), fbl::StringPiece(path_data, path_size));
-  return fuchsia_io_DirectoryUnlink_reply(txn, status);
+  zx_status_t status = vfs()->Unlink(vnode(), fbl::StringPiece(path.data(), path.size()));
+  completer.Reply(status);
 }
 
-zx_status_t DirectoryConnection::ReadDirents(uint64_t max_out, fidl_txn_t* txn) {
+void DirectoryConnection::ReadDirents(uint64_t max_out, ReadDirentsCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryReadDirents] our options: ", options());
 
   if (options().flags.node_reference) {
-    return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
+    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
   }
-  if (max_out > ZXFIDL_MAX_MSG_BYTES) {
-    return fuchsia_io_DirectoryReadDirents_reply(txn, ZX_ERR_BAD_HANDLE, nullptr, 0);
+  if (max_out > fio::MAX_BUF) {
+    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
   }
   uint8_t data[max_out];
   size_t actual = 0;
   zx_status_t status = vfs()->Readdir(vnode().get(), &dircookie_, data, max_out, &actual);
-  return fuchsia_io_DirectoryReadDirents_reply(txn, status, data, actual);
+  completer.Reply(status, fidl::VectorView(data, actual));
 }
 
-zx_status_t DirectoryConnection::Rewind(fidl_txn_t* txn) {
+void DirectoryConnection::Rewind(RewindCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryRewind] our options: ", options());
 
   if (options().flags.node_reference) {
-    return fuchsia_io_DirectoryRewind_reply(txn, ZX_ERR_BAD_HANDLE);
+    return completer.Reply(ZX_ERR_BAD_HANDLE);
   }
   dircookie_.Reset();
-  return fuchsia_io_DirectoryRewind_reply(txn, ZX_OK);
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t DirectoryConnection::GetToken(fidl_txn_t* txn) {
+void DirectoryConnection::GetToken(GetTokenCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryGetToken] our options: ", options());
 
   if (!options().rights.write) {
-    return fuchsia_io_DirectoryGetToken_reply(txn, ZX_ERR_BAD_HANDLE, ZX_HANDLE_INVALID);
+    return completer.Reply(ZX_ERR_BAD_HANDLE, zx::handle());
   }
   zx::event returned_token;
   zx_status_t status = vfs()->VnodeToToken(vnode(), &token(), &returned_token);
-  return fuchsia_io_DirectoryGetToken_reply(txn, status, returned_token.release());
+  completer.Reply(status, std::move(returned_token));
 }
 
-zx_status_t DirectoryConnection::Rename(const char* src_data, size_t src_size,
-                                        zx_handle_t dst_parent_token, const char* dst_data,
-                                        size_t dst_size, fidl_txn_t* txn) {
+void DirectoryConnection::Rename(fidl::StringView src, zx::handle dst_parent_token,
+                                 fidl::StringView dst, RenameCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(),
-                        ", src: ", Path(src_data, src_size), ", dst: ", Path(dst_data, dst_size));
+                        ", src: ", src, ", dst: ", dst);
 
-  zx::event token(dst_parent_token);
-  fbl::StringPiece oldStr(src_data, src_size);
-  fbl::StringPiece newStr(dst_data, dst_size);
+  // |fuchsia.io/Directory.Rename| only specified the token to be a generic handle; casting it here.
+  zx::event token(dst_parent_token.release());
 
-  if (src_size < 1 || dst_size < 1) {
-    return fuchsia_io_DirectoryRename_reply(txn, ZX_ERR_INVALID_ARGS);
+  if (src.empty() || dst.empty()) {
+    return completer.Reply(ZX_ERR_INVALID_ARGS);
   }
   if (options().flags.node_reference) {
-    return fuchsia_io_DirectoryRename_reply(txn, ZX_ERR_BAD_HANDLE);
+    return completer.Reply(ZX_ERR_BAD_HANDLE);
   }
   if (!options().rights.write) {
-    return fuchsia_io_DirectoryRename_reply(txn, ZX_ERR_BAD_HANDLE);
+    return completer.Reply(ZX_ERR_BAD_HANDLE);
   }
   zx_status_t status =
-      vfs()->Rename(std::move(token), vnode(), std::move(oldStr), std::move(newStr));
-  return fuchsia_io_DirectoryRename_reply(txn, status);
+      vfs()->Rename(std::move(token), vnode(), fbl::StringPiece(src.data(), src.size()),
+                    fbl::StringPiece(dst.data(), dst.size()));
+  completer.Reply(status);
 }
 
-zx_status_t DirectoryConnection::Link(const char* src_data, size_t src_size,
-                                      zx_handle_t dst_parent_token, const char* dst_data,
-                                      size_t dst_size, fidl_txn_t* txn) {
+void DirectoryConnection::Link(fidl::StringView src, zx::handle dst_parent_token,
+                               fidl::StringView dst, LinkCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryLink] our options: ", options(),
-                        ", src: ", Path(src_data, src_size), ", dst: ", Path(dst_data, dst_size));
+                        ", src: ", src, ", dst: ", dst);
 
-  zx::event token(dst_parent_token);
-  fbl::StringPiece oldStr(src_data, src_size);
-  fbl::StringPiece newStr(dst_data, dst_size);
+  // |fuchsia.io/Directory.Rename| only specified the token to be a generic handle; casting it here.
+  zx::event token(dst_parent_token.release());
 
-  if (src_size < 1 || dst_size < 1) {
-    return fuchsia_io_DirectoryLink_reply(txn, ZX_ERR_INVALID_ARGS);
+  if (src.empty() || dst.empty()) {
+    return completer.Reply(ZX_ERR_INVALID_ARGS);
   }
   if (options().flags.node_reference) {
-    return fuchsia_io_DirectoryLink_reply(txn, ZX_ERR_BAD_HANDLE);
+    return completer.Reply(ZX_ERR_BAD_HANDLE);
   }
   if (!options().rights.write) {
-    return fuchsia_io_DirectoryLink_reply(txn, ZX_ERR_BAD_HANDLE);
+    return completer.Reply(ZX_ERR_BAD_HANDLE);
   }
-  zx_status_t status = vfs()->Link(std::move(token), vnode(), std::move(oldStr), std::move(newStr));
-  return fuchsia_io_DirectoryLink_reply(txn, status);
+  zx_status_t status =
+      vfs()->Link(std::move(token), vnode(), fbl::StringPiece(src.data(), src.size()),
+                  fbl::StringPiece(dst.data(), dst.size()));
+  completer.Reply(status);
 }
 
-zx_status_t DirectoryConnection::Watch(uint32_t mask, uint32_t watch_options, zx_handle_t handle,
-                                       fidl_txn_t* txn) {
+void DirectoryConnection::Watch(uint32_t mask, uint32_t watch_options, zx::channel watcher,
+                                WatchCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryWatch] our options: ", options());
 
   if (options().flags.node_reference) {
-    return fuchsia_io_DirectoryWatch_reply(txn, ZX_ERR_BAD_HANDLE);
+    return completer.Reply(ZX_ERR_BAD_HANDLE);
   }
-  zx::channel watcher(handle);
   zx_status_t status = vnode()->WatchDir(vfs(), mask, watch_options, std::move(watcher));
-  return fuchsia_io_DirectoryWatch_reply(txn, status);
+  completer.Reply(status);
 }
 
-zx_status_t DirectoryConnection::Mount(zx_handle_t remote, fidl_txn_t* txn) {
+void DirectoryConnection::Mount(zx::channel remote, MountCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMount] our options: ", options());
 
   if (!options().rights.admin) {
-    vfs_unmount_handle(remote, 0);
-    return fuchsia_io_DirectoryAdminMount_reply(txn, ZX_ERR_ACCESS_DENIED);
+    Vfs::UnmountHandle(std::move(remote), zx::time::infinite_past());
+    return completer.Reply(ZX_ERR_ACCESS_DENIED);
   }
-  MountChannel c = MountChannel(remote);
+  MountChannel c = MountChannel(std::move(remote));
   zx_status_t status = vfs()->InstallRemote(vnode(), std::move(c));
-  return fuchsia_io_DirectoryAdminMount_reply(txn, status);
+  completer.Reply(status);
 }
 
-zx_status_t DirectoryConnection::MountAndCreate(zx_handle_t remote, const char* name,
-                                                size_t name_size, uint32_t flags, fidl_txn_t* txn) {
+void DirectoryConnection::MountAndCreate(zx::channel remote, fidl::StringView name, uint32_t flags,
+                                         MountAndCreateCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMountAndCreate] our options: ", options());
 
   if (!options().rights.admin) {
-    vfs_unmount_handle(remote, 0);
-    return fuchsia_io_DirectoryAdminMount_reply(txn, ZX_ERR_ACCESS_DENIED);
+    Vfs::UnmountHandle(std::move(remote), zx::time::infinite_past());
+    return completer.Reply(ZX_ERR_ACCESS_DENIED);
   }
-  fbl::StringPiece str(name, name_size);
-  zx_status_t status = vfs()->MountMkdir(vnode(), std::move(str), MountChannel(remote), flags);
-  return fuchsia_io_DirectoryAdminMount_reply(txn, status);
+  zx_status_t status = vfs()->MountMkdir(vnode(), fbl::StringPiece(name.data(), name.size()),
+                                         MountChannel(std::move(remote)), flags);
+  completer.Reply(status);
 }
 
-zx_status_t DirectoryConnection::Unmount(fidl_txn_t* txn) {
+void DirectoryConnection::Unmount(UnmountCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminUnmount] our options: ", options());
 
   if (!options().rights.admin) {
-    return fuchsia_io_DirectoryAdminUnmount_reply(txn, ZX_ERR_ACCESS_DENIED);
+    return completer.Reply(ZX_ERR_ACCESS_DENIED);
   }
-  return Connection::UnmountAndShutdown(txn);
+  Connection::UnmountAndShutdown(
+      [completer = completer.ToAsync()](zx_status_t unmount_status) mutable {
+        completer.Reply(unmount_status);
+      });
 }
 
-zx_status_t DirectoryConnection::UnmountNode(fidl_txn_t* txn) {
+void DirectoryConnection::UnmountNode(UnmountNodeCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminUnmountNode] our options: ", options());
 
   if (!options().rights.admin) {
-    return fuchsia_io_DirectoryAdminUnmountNode_reply(txn, ZX_ERR_ACCESS_DENIED, ZX_HANDLE_INVALID);
+    return completer.Reply(ZX_ERR_ACCESS_DENIED, zx::channel());
   }
   zx::channel c;
   zx_status_t status = vfs()->UninstallRemote(vnode(), &c);
-  return fuchsia_io_DirectoryAdminUnmountNode_reply(txn, status, c.release());
+  completer.Reply(status, std::move(c));
 }
 
-zx_status_t DirectoryConnection::QueryFilesystem(fidl_txn_t* txn) {
+void DirectoryConnection::QueryFilesystem(QueryFilesystemCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminQueryFilesystem] our options: ", options());
 
-  fuchsia_io_FilesystemInfo info;
+  fio::FilesystemInfo info;
   zx_status_t status = vnode()->QueryFilesystem(&info);
-  return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, status,
-                                                        status == ZX_OK ? &info : nullptr);
+  completer.Reply(status, status == ZX_OK ? &info : nullptr);
 }
 
-zx_status_t DirectoryConnection::GetDevicePath(fidl_txn_t* txn) {
+void DirectoryConnection::GetDevicePath(GetDevicePathCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminGetDevicePath] our options: ", options());
 
   if (!options().rights.admin) {
-    return fuchsia_io_DirectoryAdminGetDevicePath_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr, 0);
+    return completer.Reply(ZX_ERR_ACCESS_DENIED, fidl::StringView());
   }
 
-  char name[fuchsia_io_MAX_PATH];
+  char name[fio::MAX_PATH];
   size_t actual = 0;
   zx_status_t status = vnode()->GetDevicePath(sizeof(name), name, &actual);
-  return fuchsia_io_DirectoryAdminGetDevicePath_reply(txn, status, name, actual);
+  completer.Reply(status, fidl::StringView(name, actual));
 }
 
 }  // namespace internal

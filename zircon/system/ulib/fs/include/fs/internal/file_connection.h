@@ -10,6 +10,7 @@
 #endif
 
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
 
 #include <fs/internal/connection.h>
@@ -21,69 +22,47 @@ namespace fs {
 
 namespace internal {
 
-class FileConnection final : public Connection {
+class FileConnection final : public Connection, public llcpp::fuchsia::io::File::Interface {
  public:
   // Refer to documentation for |Connection::Connection|.
-  FileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                 VnodeProtocol protocol, VnodeConnectionOptions options)
-      : Connection(vfs, std::move(vnode), std::move(channel), protocol, options) {}
+  FileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
+                 VnodeConnectionOptions options)
+      : Connection(vfs, std::move(vnode), protocol, options) {}
 
   ~FileConnection() final = default;
 
  private:
-  zx_status_t HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) final;
+  void HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) final;
 
   //
   // |fuchsia.io/Node| operations.
   //
 
-  zx_status_t Clone(uint32_t flags, zx_handle_t object);
-  zx_status_t Close(fidl_txn_t* txn);
-  zx_status_t Describe(fidl_txn_t* txn);
-  zx_status_t Sync(fidl_txn_t* txn);
-  zx_status_t GetAttr(fidl_txn_t* txn);
-  zx_status_t SetAttr(uint32_t flags, const fuchsia_io_NodeAttributes* attributes,
-                      fidl_txn_t* txn);
-  zx_status_t NodeGetFlags(fidl_txn_t* txn);
-  zx_status_t NodeSetFlags(uint32_t flags, fidl_txn_t* txn);
+  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync completer) final;
+  void Close(CloseCompleter::Sync completer) final;
+  void Describe(DescribeCompleter::Sync completer) final;
+  void Sync(SyncCompleter::Sync completer) final;
+  void GetAttr(GetAttrCompleter::Sync completer) final;
+  void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attributes,
+               SetAttrCompleter::Sync completer) final;
+  void NodeGetFlags(NodeGetFlagsCompleter::Sync completer) final;
+  void NodeSetFlags(uint32_t flags, NodeSetFlagsCompleter::Sync completer) final;
 
   //
   // |fuchsia.io/File| operations.
   //
 
-  zx_status_t Read(uint64_t count, fidl_txn_t* txn);
-  zx_status_t ReadAt(uint64_t count, uint64_t offset, fidl_txn_t* txn);
-  zx_status_t Write(const uint8_t* data_data, size_t data_count, fidl_txn_t* txn);
-  zx_status_t WriteAt(const uint8_t* data_data, size_t data_count, uint64_t offset,
-                      fidl_txn_t* txn);
-  zx_status_t Seek(int64_t offset, fuchsia_io_SeekOrigin start, fidl_txn_t* txn);
-  zx_status_t Truncate(uint64_t length, fidl_txn_t* txn);
-  zx_status_t GetFlags(fidl_txn_t* txn);
-  zx_status_t SetFlags(uint32_t flags, fidl_txn_t* txn);
-  zx_status_t GetBuffer(uint32_t flags, fidl_txn_t* txn);
-
-  constexpr static fuchsia_io_File_ops_t kOps = ([] {
-    using Binder = fidl::Binder<FileConnection>;
-    return fuchsia_io_File_ops_t{
-        .Clone = Binder::BindMember<&FileConnection::Clone>,
-        .Close = Binder::BindMember<&FileConnection::Close>,
-        .Describe = Binder::BindMember<&FileConnection::Describe>,
-        .Sync = Binder::BindMember<&FileConnection::Sync>,
-        .GetAttr = Binder::BindMember<&FileConnection::GetAttr>,
-        .SetAttr = Binder::BindMember<&FileConnection::SetAttr>,
-        .NodeGetFlags = Binder::BindMember<&FileConnection::NodeGetFlags>,
-        .NodeSetFlags = Binder::BindMember<&FileConnection::NodeSetFlags>,
-        .Read = Binder::BindMember<&FileConnection::Read>,
-        .ReadAt = Binder::BindMember<&FileConnection::ReadAt>,
-        .Write = Binder::BindMember<&FileConnection::Write>,
-        .WriteAt = Binder::BindMember<&FileConnection::WriteAt>,
-        .Seek = Binder::BindMember<&FileConnection::Seek>,
-        .Truncate = Binder::BindMember<&FileConnection::Truncate>,
-        .GetFlags = Binder::BindMember<&FileConnection::GetFlags>,
-        .SetFlags = Binder::BindMember<&FileConnection::SetFlags>,
-        .GetBuffer = Binder::BindMember<&FileConnection::GetBuffer>,
-    };
-  })();
+  void Read(uint64_t count, ReadCompleter::Sync completer) final;
+  void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) final;
+  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) final;
+  void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
+               WriteAtCompleter::Sync completer) final;
+  void Seek(int64_t offset, llcpp::fuchsia::io::SeekOrigin start,
+            SeekCompleter::Sync completer) final;
+  void Truncate(uint64_t length, TruncateCompleter::Sync completer) final;
+  void GetFlags(GetFlagsCompleter::Sync completer) final;
+  void SetFlags(uint32_t flags, SetFlagsCompleter::Sync completer) final;
+  void GetBuffer(uint32_t flags, GetBufferCompleter::Sync completer) final;
 
   // Current seek offset.
   size_t offset_ = 0;

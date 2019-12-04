@@ -44,6 +44,7 @@ source_set("common") {
   ]
 
   public_deps = [
+    "//src/storage/deprecated-fs-fidl-handler",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",

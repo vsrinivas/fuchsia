@@ -1070,11 +1070,11 @@ void VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
 
 constexpr const char kFsName[] = "minfs";
 
-zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
+zx_status_t VnodeMinfs::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
+  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
                 "Minfs name too long");
   Transaction transaction(fs_);
-  memset(info, 0, sizeof(*info));
+  *info = {};
   info->block_size = kMinfsBlockSize;
   info->max_filename_size = kMinfsMaxNameSize;
   info->fs_type = VFS_TYPE_MINFS;
@@ -1090,7 +1090,8 @@ zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
     info->free_shared_pool_bytes = fvm_info.slice_size * free_slices;
   }
 
-  strlcpy(reinterpret_cast<char*>(info->name), kFsName, fuchsia_io_MAX_FS_NAME_BUFFER);
+  strlcpy(reinterpret_cast<char*>(info->name.data()), kFsName,
+          ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER);
   return ZX_OK;
 }
 

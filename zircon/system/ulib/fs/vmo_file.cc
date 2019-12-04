@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <limits.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -14,6 +14,8 @@
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vmo_file.h>
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace fs {
 namespace {
@@ -55,7 +57,7 @@ zx_status_t VmoFile::GetAttributes(VnodeAttributes* attr) {
   if (writable_) {
     attr->mode |= V_IWUSR;
   }
-  attr->inode = fuchsia_io_INO_UNKNOWN;
+  attr->inode = fio::INO_UNKNOWN;
   attr->content_size = length_;
   attr->storage_size = fbl::round_up(attr->content_size, kVmoFileBlksize);
   attr->link_count = 1;

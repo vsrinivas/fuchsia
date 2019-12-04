@@ -301,9 +301,12 @@ struct SelectResponseType {
 // wraps it in an EncodeResult for the response type.
 // If |RequestType| is |AnyZeroArgMessage|, the caller may explicitly specify an expected response
 // type by overriding the template parameter |ResponseType|.
+// The call will block until |deadline|, which defaults to forever. If a |deadline| is specified,
+// the call will error with |ZX_ERR_TIMED_OUT| when the deadline has passed without a reply.
 template <typename RequestType, typename ResponseType = typename RequestType::ResponseType>
 EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<RequestType> request,
-                                BytePart response_buffer) {
+                                BytePart response_buffer,
+                                zx::time deadline = zx::time::infinite()) {
   static_assert(IsFidlMessage<RequestType>::value, "FIDL transactional message type required");
   static_assert(IsFidlMessage<ResponseType>::value, "FIDL transactional message type required");
   // If |RequestType| has a defined |ResponseType|, ensure it matches the template parameter.
@@ -343,7 +346,8 @@ EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<Request
   }
 
   result.message.Initialize(
-      [&response_buffer, &request, &chan, &result](BytePart* out_bytes, HandlePart* handles) {
+      [&response_buffer, &request, &chan, &result, deadline](BytePart* out_bytes,
+                                                             HandlePart* handles) {
         *out_bytes = std::move(response_buffer);
         uint32_t actual_num_bytes = 0u;
         uint32_t actual_num_handles = 0u;
@@ -371,7 +375,7 @@ EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<Request
                                          .rd_num_handles = handles->capacity()};
 
           result.status =
-              chan->call(0u, zx::time::infinite(), &args, &actual_num_bytes, &actual_num_handles);
+              chan->call(0u, deadline, &args, &actual_num_bytes, &actual_num_handles);
           request.ReleaseBytesAndHandles();
           if (result.status != ZX_OK) {
             return;
@@ -410,7 +414,7 @@ EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<Request
                                          .rd_num_handles = handles->capacity()};
 
           result.status =
-              chan->call(0u, zx::time::infinite(), &args, &actual_num_bytes, &actual_num_handles);
+              chan->call(0u, deadline, &args, &actual_num_bytes, &actual_num_handles);
           request.ReleaseBytesAndHandles();
           if (result.status != ZX_OK) {
             return;
@@ -428,11 +432,14 @@ EncodeResult<ResponseType> Call(zx::unowned_channel chan, EncodedMessage<Request
 // wraps it in an EncodeResult for the response type.
 // If |RequestType| is |AnyZeroArgMessage|, the caller may explicitly specify an expected response
 // type by overriding the template parameter |ResponseType|.
+// The call will block until |deadline|, which defaults to forever. If a |deadline| is specified,
+// the call will error with |ZX_ERR_TIMED_OUT| when the deadline has passed without a reply.
 template <typename RequestType, typename ResponseType = typename RequestType::ResponseType>
 EncodeResult<ResponseType> Call(zx::channel& chan, EncodedMessage<RequestType> request,
-                                BytePart response_buffer) {
+                                BytePart response_buffer,
+                                zx::time deadline = zx::time::infinite()) {
   return Call<RequestType, ResponseType>(zx::unowned_channel(chan), std::move(request),
-                                         std::move(response_buffer));
+                                         std::move(response_buffer), deadline);
 }
 
 // Calculates the maximum possible message size for a FIDL type,

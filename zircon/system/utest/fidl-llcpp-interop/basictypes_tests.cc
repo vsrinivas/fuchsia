@@ -116,13 +116,8 @@ void TearDownAsyncCServerHelper(async_loop_t* loop) { async_loop_destroy(loop); 
 
 }  // namespace
 
-TEST(BasicTypesTest, RawChannelCallStruct) {
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
-
-  async_loop_t* loop = nullptr;
-  ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
-
+template <typename T>
+void WithEncodedMessage(T callback) {
   // manually call the server using generated message definitions
   FIDL_ALIGNDECL uint8_t storage[512] = {};
   fidl::BytePart bytes(&storage[0], sizeof(storage));
@@ -159,13 +154,47 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   auto encode_result = fidl::Encode(std::move(request));
   ASSERT_OK(encode_result.status);
 
-  FIDL_ALIGNDECL uint8_t response_storage[512];
-  fidl::BytePart response_bytes(&response_storage[0], sizeof(response_storage));
-  auto response = fidl::Call(client, std::move(encode_result.message), std::move(response_bytes));
+  callback(std::move(encode_result));
+}
 
-  ASSERT_OK(response.status);
-  auto decode_result = fidl::Decode(std::move(response.message));
-  ASSERT_EQ(decode_result.message.message()->field, 123);
+TEST(BasicTypesTest, RawChannelCallStruct) {
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+
+  async_loop_t* loop = nullptr;
+  ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
+
+  WithEncodedMessage(
+      [&](fidl::EncodeResult<basictypes::TestInterface::ConsumeSimpleStructRequest> encode_result) {
+        FIDL_ALIGNDECL uint8_t response_storage[512];
+        fidl::BytePart response_bytes(&response_storage[0], sizeof(response_storage));
+        auto response =
+            fidl::Call(client, std::move(encode_result.message), std::move(response_bytes));
+
+        ASSERT_OK(response.status);
+        auto decode_result = fidl::Decode(std::move(response.message));
+        ASSERT_EQ(decode_result.message.message()->field, 123);
+      });
+
+  TearDownAsyncCServerHelper(loop);
+}
+
+TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+
+  async_loop_t* loop = nullptr;
+  ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
+
+  WithEncodedMessage(
+      [&](fidl::EncodeResult<basictypes::TestInterface::ConsumeSimpleStructRequest> encode_result) {
+        FIDL_ALIGNDECL uint8_t response_storage[512];
+        fidl::BytePart response_bytes(&response_storage[0], sizeof(response_storage));
+        auto response = fidl::Call(client, std::move(encode_result.message),
+                                   std::move(response_bytes), zx::time::infinite_past());
+
+        ASSERT_EQ(ZX_ERR_TIMED_OUT, response.status);
+      });
 
   TearDownAsyncCServerHelper(loop);
 }

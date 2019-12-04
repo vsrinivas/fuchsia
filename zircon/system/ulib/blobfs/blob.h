@@ -12,6 +12,7 @@
 #endif
 
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/promise.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -151,9 +152,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Truncate(size_t len) final;
-  zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
-  zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
+  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
   void Sync(SyncCallback closure) final;
 
   ////////////////
@@ -179,7 +180,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   //
   // Monitors the current VMO, keeping a reference to the Vnode
   // alive while the |out| VMO (and any clones it may have) are open.
-  zx_status_t CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out_size);
+  zx_status_t CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size);
   void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                       const zx_packet_signal_t* signal);
 

@@ -6,6 +6,7 @@
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fit/function.h>
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -128,6 +129,75 @@ VnodeConnectionOptions VnodeConnectionOptions::FilterForNewConnection(
   result.flags.node_reference = options.flags.node_reference;
   result.rights = options.rights;
   return result;
+}
+
+fio::NodeAttributes VnodeAttributes::ToIoV1NodeAttributes() const {
+  return fio::NodeAttributes{
+      .mode = mode,
+      .id = inode,
+      .content_size = content_size,
+      .storage_size = storage_size,
+      .link_count = link_count,
+      .creation_time = creation_time,
+      .modification_time = modification_time
+  };
+}
+
+void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
+                           fit::callback<void(fio::NodeInfo*)> callback) {
+  representation.visit([&](auto&& repr) {
+    using T = std::decay_t<decltype(repr)>;
+    fio::NodeInfo info;
+    if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Connector>) {
+      fio::Service service;
+      info.set_service(std::move(service));
+      callback(&info);
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
+      fio::FileObject file = {
+          .event = std::move(repr.observer)
+      };
+      info.set_file(std::move(file));
+      callback(&info);
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
+      fio::DirectoryObject directory;
+      info.set_directory(std::move(directory));
+      callback(&info);
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Pipe>) {
+      fio::Pipe pipe = {
+          .socket = std::move(repr.socket)
+      };
+      info.set_pipe(std::move(pipe));
+      callback(&info);
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Memory>) {
+      fio::Vmofile vmofile = {
+          .vmo = std::move(repr.vmo),
+          .offset = repr.offset,
+          .length = repr.length
+      };
+      info.set_vmofile(std::move(vmofile));
+      callback(&info);
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
+      fio::Device device = {
+          .event = std::move(repr.event)
+      };
+      info.set_device(std::move(device));
+      callback(&info);
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
+      fio::Tty tty = {
+          .event = std::move(repr.event)
+      };
+      info.set_tty(std::move(tty));
+      callback(&info);
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Socket>) {
+      fio::Socket socket = {
+          .socket = std::move(repr.socket)
+      };
+      info.set_socket(std::move(socket));
+      callback(&info);
+    } else {
+      ZX_PANIC("Representation variant is not initialized");
+    }
+  });
 }
 
 }  // namespace fs

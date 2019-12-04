@@ -45,6 +45,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/storage/deprecated-fs-fidl-handler",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

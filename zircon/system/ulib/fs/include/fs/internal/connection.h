@@ -10,7 +10,10 @@
 #endif
 
 #include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/result.h>
+#include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/event.h>
 #include <stdint.h>
 #include <zircon/fidl.h>
@@ -26,19 +29,14 @@ namespace fs {
 
 constexpr zx_signals_t kLocalTeardownSignal = ZX_USER_SIGNAL_1;
 
-// A one-way message which may be emitted by the server without an
-// accompanying request. Optionally used as a part of the Open handshake.
-struct OnOpenMsg {
-  fuchsia_io_NodeOnOpenEvent primary;
-  fuchsia_io_NodeInfo extra;
-};
-
 namespace internal {
 
-void Describe(const fbl::RefPtr<Vnode>& vn, VnodeProtocol protocol, VnodeConnectionOptions options,
-              OnOpenMsg* response, zx_handle_t* handle);
+class FidlTransaction;
+class Binding;
 
-void WriteDescribeError(zx::channel channel, zx_status_t status);
+fit::result<VnodeRepresentation, zx_status_t> Describe(const fbl::RefPtr<Vnode>& vnode,
+                                                       VnodeProtocol protocol,
+                                                       VnodeConnectionOptions options);
 
 // Perform basic flags sanitization.
 // Returns false if the flags combination is invalid.
@@ -69,14 +67,13 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   //
   // |vfs| is the VFS which is responsible for dispatching operations to the vnode.
   // |vnode| is the vnode which will handle I/O requests.
-  // |channel| is the channel on which the FIDL protocol will be served.
   // |protocol| is the (potentially negotiated) vnode protocol that will be used to
   //            interact with the vnode over this connection.
   // |options| are client-specified options for this connection, converted from the
   //           flags and rights passed during the |fuchsia.io/Directory.Open| or
   //           |fuchsia.io/Node.Clone| FIDL call.
-  Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-             VnodeProtocol protocol, VnodeConnectionOptions options);
+  Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
+             VnodeConnectionOptions options);
 
   // Closes the connection.
   //
@@ -92,17 +89,26 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // closed asynchronously.
   void AsyncTeardown();
 
-  // Explicitly tear down and close the connection synchronously.
+  // Explicitly teardown and close the connection synchronously,
+  // unregistering it from the VFS object.
   void SyncTeardown();
 
   // Begins waiting for messages on the channel.
+  // |channel| is the channel on which the FIDL protocol will be served.
   //
-  // Must be called at most once in the lifetime of the connection.
-  zx_status_t StartDispatching();
+  // Cannot be called more than once in the lifetime of the connection.
+  zx_status_t StartDispatching(zx::channel channel);
+
+  // Drains one FIDL message from the channel and handles it.
+  // This should only be called when new messages arrive on the channel.
+  // In practice, this implies it should be used by a |Binding|.
+  // Returns if the handling succeeded. In event of failure, the caller should
+  // synchronously teardown the connection.
+  bool OnMessage();
 
  protected:
-  // Callback to dispatch incoming FIDL messages.
-  virtual zx_status_t HandleMessage(fidl_msg_t* msg, fidl_txn_t* txn) = 0;
+  // Callback to dispatch incoming FIDL messages to subclasses.
+  virtual void HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) = 0;
 
   VnodeProtocol protocol() const { return protocol_; }
 
@@ -117,37 +123,53 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   zx::event& token() { return token_; }
 
   // Flags which can be modified by SetFlags.
-  constexpr static uint32_t kSettableStatusFlags = fuchsia_io_OPEN_FLAG_APPEND;
+  constexpr static uint32_t kSettableStatusFlags = llcpp::fuchsia::io::OPEN_FLAG_APPEND;
 
   // All flags which indicate state of the connection (excluding rights).
   constexpr static uint32_t kStatusFlags =
-      kSettableStatusFlags | fuchsia_io_OPEN_FLAG_NODE_REFERENCE;
+      kSettableStatusFlags | llcpp::fuchsia::io::OPEN_FLAG_NODE_REFERENCE;
 
-  // Closes the connection and unregisters it from the VFS object.
-  void Terminate(bool call_close);
+  // |Result| is a result type used as the return value of the shared Node methods.
+  // The |zx_status_t| indicates application error i.e. in case of error, it should be
+  // returned via the FIDL method return value. The connection is never closed except
+  // from |NodeClose|.
+  // Note that |fit::result| has an extra |pending| state apart from |ok| and |error|;
+  // the pending state shall never be returned from any of these |Node_*| methods.
+  //
+  // If the operation is asynchronous, the corresponding function should take in a
+  // callback and return |void|.
+  template <typename T = void>
+  using Result = fit::result<T, zx_status_t>;
 
-  // Implements |fuchsia.io/DirectoryAdmin.Unmount|.
-  zx_status_t UnmountAndShutdown(fidl_txn_t* txn);
+  inline Result<> FromStatus(zx_status_t status) {
+    if (status == ZX_OK) {
+      return fit::ok();
+    } else {
+      return fit::error(status);
+    }
+  }
 
   // Node operations. Note that these provide the shared implementation
   // of |fuchsia.io/Node| methods, used by all connection subclasses.
+  //
+  // To simplify ownership handling, prefer using the |Vnode_*| types in return
+  // values, while using the generated FIDL types in method arguments. This is
+  // because return values must recursively own any child objects and handles to
+  // avoid a dangling reference.
 
-  zx_status_t NodeClone(uint32_t flags, zx_handle_t object);
-  zx_status_t NodeClose(fidl_txn_t* txn);
-  zx_status_t NodeDescribe(fidl_txn_t* txn);
-  zx_status_t NodeSync(fidl_txn_t* txn);
-  zx_status_t NodeGetAttr(fidl_txn_t* txn);
-  zx_status_t NodeSetAttr(uint32_t flags, const fuchsia_io_NodeAttributes* attributes,
-                          fidl_txn_t* txn);
-  zx_status_t NodeNodeGetFlags(fidl_txn_t* txn);
-  zx_status_t NodeNodeSetFlags(uint32_t flags, fidl_txn_t* txn);
+  void NodeClone(uint32_t flags, zx::channel channel);
+  Result<> NodeClose();
+  Result<VnodeRepresentation> NodeDescribe();
+  void NodeSync(fbl::Function<void(zx_status_t)> callback);
+  Result<VnodeAttributes> NodeGetAttr();
+  Result<> NodeSetAttr(uint32_t flags, const llcpp::fuchsia::io::NodeAttributes& attributes);
+  Result<uint32_t> NodeNodeGetFlags();
+  Result<> NodeNodeSetFlags(uint32_t flags);
+
+  // Implements |fuchsia.io/DirectoryAdmin.Unmount|.
+  void UnmountAndShutdown(fbl::Function<void(zx_status_t)> callback);
 
  private:
-  // Callback for when new signals arrive on the channel, which could be:
-  // readable, peer closed, async teardown request, etc.
-  void HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                     const zx_packet_signal_t* signal);
-
   // The contract of the Vnode API is that there should be a balancing |Close| call
   // for every |Open| call made on a vnode.
   // Calls |Close| on the underlying vnode explicitly if necessary.
@@ -155,18 +177,14 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
 
   bool vnode_is_open_;
 
-  bool is_open() const { return wait_.object() != ZX_HANDLE_INVALID; }
-  void set_closed() { wait_.set_object(ZX_HANDLE_INVALID); }
-
+  // The Vfs instance which owns this connection. Connections must not outlive
+  // the Vfs, hence this borrowing is safe.
   fs::Vfs* const vfs_;
+
   fbl::RefPtr<fs::Vnode> vnode_;
 
-  // Channel on which the connection is being served.
-  zx::channel channel_;
-
-  // Asynchronous wait for incoming messages.
-  // The object field is |ZX_HANDLE_INVALID| when not actively waiting.
-  async::WaitMethod<Connection, &Connection::HandleSignals> wait_;
+  // State related to FIDL message dispatching. See |Binding|.
+  std::shared_ptr<Binding> binding_;
 
   // The operational protocol that is used to interact with the vnode over this connection.
   // It provides finer grained information than the FIDL protocol, e.g. both a regular file
@@ -185,6 +203,63 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // operations (see: link, rename). Defaults to ZX_HANDLE_INVALID.
   // Validated on the server-side using cookies.
   zx::event token_ = {};
+};
+
+// |Binding| contains state related to FIDL message dispatching.
+// After starting FIDL message dispatching, each |Connection| maintains
+// one corresponding binding instance in |binding_|. When processing an
+// in-flight request, the binding is borrowed via a |std::weak_ptr| by the
+// in-flight transaction, and no more message dispatching will happen until
+// the transaction goes out of scope, when binding is again exclusively owned
+// by the connection.
+//
+// This object contains an |async::WaitMethod| struct to wait for signals.
+class Binding final {
+ public:
+  Binding(Connection* connection, async_dispatcher_t* dispatcher, zx::channel channel);
+  ~Binding();
+
+  Binding(const Binding&) = delete;
+  Binding& operator=(const Binding&) = delete;
+  Binding(Binding&&) = delete;
+  Binding& operator=(Binding&&) = delete;
+
+  // Begins waiting for messages on the channel.
+  zx_status_t StartDispatching();
+
+  // Stops waiting for messages on the channel.
+  void CancelDispatching();
+
+  // Keeps the |channel_| alive but stops ever waiting for further messages on it.
+  // After calling this method, in-progress waits are cancelled, and
+  // |StartDispatching| will become a no-op.
+  // Useful for halting message dispatch but keeping the ability to respond on the
+  // channel, as part of filesystem shutdown.
+  void DetachFromConnection();
+
+  void AsyncTeardown();
+
+  zx::channel& channel() { return channel_; }
+
+ private:
+  // Callback for when new signals arrive on the channel, which could be:
+  // readable, peer closed, async teardown request, etc.
+  void HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                     const zx_packet_signal_t* signal);
+
+  async::WaitMethod<Binding, &Binding::HandleSignals> wait_;
+
+  // The connection which owns this binding.
+  // If the connection object is about to be destroyed but intentionally
+  // want the binding to live on, it must invalidate this reference
+  // by calling |DetachFromConnection| on the binding.
+  Connection* connection_;
+
+  // The dispatcher for reading messages and handling FIDL requests.
+  async_dispatcher_t* dispatcher_;
+
+  // Channel on which the connection is being served.
+  zx::channel channel_;
 };
 
 }  // namespace internal
