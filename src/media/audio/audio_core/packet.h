@@ -51,8 +51,6 @@ class Packet : public fbl::RefCounted<Packet> {
     auto start = reinterpret_cast<uint8_t*>(vmo_ref_->start());
     return (start + packet_.payload_offset);
   }
-  uint32_t flags() const { return packet_.flags; }
-  uint32_t payload_buffer_id() const { return packet_.payload_buffer_id; }
 
  private:
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;

@@ -79,9 +79,12 @@ TEST_F(PacketQueueTest, LockUnlockPacket) {
 
   // Enqueue some packets.
   ASSERT_TRUE(packet_queue->empty());
-  packet_queue->PushPacket(CreatePacket(0));
-  packet_queue->PushPacket(CreatePacket(1));
-  packet_queue->PushPacket(CreatePacket(2));
+  auto packet0 = CreatePacket(0);
+  auto packet1 = CreatePacket(1);
+  auto packet2 = CreatePacket(2);
+  packet_queue->PushPacket(packet0);
+  packet_queue->PushPacket(packet1);
+  packet_queue->PushPacket(packet2);
   ASSERT_FALSE(packet_queue->empty());
   ASSERT_EQ(0u, released_packet_count());
 
@@ -92,9 +95,10 @@ TEST_F(PacketQueueTest, LockUnlockPacket) {
   auto packet = packet_queue->LockPacket(&was_flushed);
   ASSERT_TRUE(was_flushed);
   ASSERT_NE(nullptr, packet);
-  ASSERT_EQ(0u, packet->payload_buffer_id());
+  ASSERT_EQ(packet0.get(), packet.get());
   ASSERT_FALSE(packet_queue->empty());
   ASSERT_EQ(0u, released_packet_count());
+  packet0 = nullptr;
   packet = nullptr;
   packet_queue->UnlockPacket(true);
   RunLoopUntilIdle();
@@ -105,7 +109,8 @@ TEST_F(PacketQueueTest, LockUnlockPacket) {
   packet = packet_queue->LockPacket(&was_flushed);
   ASSERT_FALSE(was_flushed);
   ASSERT_NE(nullptr, packet);
-  ASSERT_EQ(1u, packet->payload_buffer_id());
+  ASSERT_EQ(packet1.get(), packet.get());
+  packet1 = nullptr;
   packet = nullptr;
   packet_queue->UnlockPacket(true);
   RunLoopUntilIdle();
@@ -116,7 +121,8 @@ TEST_F(PacketQueueTest, LockUnlockPacket) {
   packet = packet_queue->LockPacket(&was_flushed);
   ASSERT_FALSE(was_flushed);
   ASSERT_NE(nullptr, packet);
-  ASSERT_EQ(2u, packet->payload_buffer_id());
+  ASSERT_EQ(packet2.get(), packet.get());
+  packet2 = nullptr;
   packet = nullptr;
   packet_queue->UnlockPacket(true);
   RunLoopUntilIdle();

@@ -175,7 +175,7 @@ TEST_F(AudioRendererImplTest, AllocatePacketQueueForLinks) {
       auto pkt = stream->LockPacket(&was_flushed);
       EXPECT_TRUE(was_flushed);
       ASSERT_TRUE(pkt);
-      EXPECT_EQ(0u, pkt->payload_buffer_id());
+      EXPECT_NE(nullptr, pkt->payload());
       stream->UnlockPacket(true);
     }
     {  // No more packets
