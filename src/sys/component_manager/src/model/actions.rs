@@ -197,9 +197,7 @@ async fn do_delete_child(
 
         child_realm.hooks.dispatch(&event).await?;
 
-        let nf =
-            Realm::register_action(child_realm.clone(), model.clone(), Action::Destroy).await?;
-        nf.await?;
+        Realm::register_action(child_realm.clone(), model.clone(), Action::Destroy).await.await?;
 
         {
             let mut state = realm.lock_state().await;
@@ -216,15 +214,14 @@ async fn do_delete_child(
 
 async fn do_destroy(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
     // For destruction to behave correctly, the component has to be shut down first.
-    let nf = Realm::register_action(realm.clone(), model.clone(), Action::Shutdown).await?;
-    nf.await?;
+    Realm::register_action(realm.clone(), model.clone(), Action::Shutdown).await.await?;
 
     let nfs = if let Some(state) = realm.lock_state().await.as_ref() {
         let mut nfs = vec![];
         for (m, _) in state.all_child_realms().iter() {
             let realm = realm.clone();
-            let nf = Realm::register_action(realm, model.clone(), Action::DeleteChild(m.clone()))
-                .await?;
+            let nf =
+                Realm::register_action(realm, model.clone(), Action::DeleteChild(m.clone())).await;
             nfs.push(nf);
         }
         nfs
@@ -2563,8 +2560,7 @@ pub mod tests {
         realm: Arc<Realm>,
         action: Action,
     ) -> Result<(), ModelError> {
-        let nf = Realm::register_action(realm, model, action).await?;
-        nf.await
+        Realm::register_action(realm, model, action).await.await
     }
 
     async fn is_executing(realm: &Realm) -> bool {

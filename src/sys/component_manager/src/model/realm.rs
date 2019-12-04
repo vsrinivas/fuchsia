@@ -208,13 +208,13 @@ impl Realm {
         realm: Arc<Realm>,
         model: Arc<Model>,
         action: Action,
-    ) -> Result<Notification, ModelError> {
+    ) -> Notification {
         let mut actions = realm.actions.lock().await;
         let (nf, needs_handle) = actions.register(action.clone());
         if needs_handle {
             action.handle(model, realm.clone());
         }
-        Ok(nf)
+        nf
     }
 
     /// Finish an action on a realm.
@@ -284,18 +284,20 @@ impl Realm {
 
             state.mark_child_realm_deleting(&partial_moniker);
             let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
+            // Dropping the notification is fine. As long as the action is
+            // registered the action will run.
             let _ = Self::register_action(
                 realm.clone(),
                 model,
                 Action::DeleteChild(child_moniker.clone()),
             )
-            .await?;
+            .await;
             Ok(())
         } else {
-            return Err(ModelError::instance_not_found_in_realm(
+            Err(ModelError::instance_not_found_in_realm(
                 realm.abs_moniker.clone(),
                 partial_moniker.clone(),
-            ));
+            ))
         }
     }
 
@@ -407,7 +409,7 @@ impl Realm {
                     state.mark_child_realm_deleting(&partial_moniker);
                     let nf =
                         Self::register_action(realm.clone(), model.clone(), Action::DeleteChild(m))
-                            .await?;
+                            .await;
                     futures.push(nf);
                 }
             }

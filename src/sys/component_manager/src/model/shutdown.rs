@@ -48,9 +48,7 @@ fn find_storage_provider(storage_decls: &Vec<StorageDecl>, name: &str) -> Option
 }
 
 async fn shutdown_component(child: ShutdownInfo) -> Result<ChildMoniker, ModelError> {
-    let shutdown_action =
-        Realm::register_action(child.realm, child.model, Action::Shutdown).await?;
-    shutdown_action.await?;
+    Realm::register_action(child.realm, child.model, Action::Shutdown).await.await?;
     Ok(child.moniker.clone())
 }
 

@@ -122,7 +122,6 @@ impl SystemControllerCapabilityProvider {
                         model::Action::Shutdown,
                     )
                     .await
-                    .context("failed to register shutdown action on root realm")?
                     .await
                     .context("got error waiting for shutdown action to complete")?;
 
