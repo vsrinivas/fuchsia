@@ -40,6 +40,17 @@ func makeBlob(dir, content string) (string, error) {
 	return merkleroot, ioutil.WriteFile(path, []byte(content), 0644)
 }
 
+func tempPkgFs() source.PkgfsDir {
+	pkgfspath, err := ioutil.TempDir("", "amber-test-pkgfs")
+	panicerr(err)
+	pkgfs := source.PkgfsDir{pkgfspath}
+	os.MkdirAll(pkgfs.PkgInstallDir(), 0700)
+	os.MkdirAll(pkgfs.BlobInstallDir(), 0700)
+	os.MkdirAll(pkgfs.PkgNeedsDir(), 0700)
+	os.MkdirAll(pkgfs.VersionsDir(), 0700)
+	return pkgfs
+}
+
 func TestOpenRepository(t *testing.T) {
 	store, err := ioutil.TempDir("", "amber-test-store")
 	panicerr(err)
@@ -89,6 +100,12 @@ func TestOpenRepository(t *testing.T) {
 	// // so that the httptest server can close:
 	// defer http.DefaultTransport.(*http.Transport).CloseIdleConnections()
 
+	pkgfs := tempPkgFs()
+	defer os.RemoveAll(pkgfs.RootDir)
+	pkgsDir := pkgfs.PkgInstallDir()
+	blobsDir := pkgfs.BlobInstallDir()
+	pkgNeedsDir := pkgfs.PkgNeedsDir()
+
 	keyConfig := &pkg.RepositoryKeyConfig{}
 	keyConfig.SetEd25519Key(([]byte)(rootKey.Value.Public))
 
@@ -105,7 +122,7 @@ func TestOpenRepository(t *testing.T) {
 		// TODO(raggi): fix keyconfig
 		RootKeys:        []pkg.RepositoryKeyConfig{*keyConfig},
 		RootKeysPresent: true,
-	})
+	}, pkgfs)
 	panicerr(err)
 
 	err = r.Update()
@@ -120,6 +137,28 @@ func TestOpenRepository(t *testing.T) {
 	}
 	if length != int64(pkgBlobLength) {
 		t.Errorf("merkleFor length: got %d, want %d", length, pkgBlobLength)
+	}
+
+	os.MkdirAll(filepath.Join(pkgNeedsDir, pkgBlob), 0755)
+	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
+	panicerr(os.MkdirAll(filepath.Join(pkgfs.VersionsDir(), merkle), 0700))
+
+	result, _, err := r.GetUpdateComplete("foo", nil, nil)
+	panicerr(err)
+	if result != pkgBlob {
+		t.Errorf("GetUpdateComplete: got %q, want %q", result, pkgBlob)
+	}
+
+	c, err := ioutil.ReadFile(pkgsDir + "/" + pkgBlob)
+	panicerr(err)
+	if got := string(c); got != pkgContent {
+		t.Errorf("getpkg: got %q, want %q", got, pkgContent)
+	}
+
+	c, err = ioutil.ReadFile(blobsDir + "/" + root1)
+	panicerr(err)
+	if got, want := string(c), "first blob"; got != want {
+		t.Errorf("getblob: got %q, want %q", got, want)
 	}
 }
 
@@ -181,6 +220,12 @@ func TestOpenRepositoryWithEncryption(t *testing.T) {
 	// // so that the httptest server can close:
 	// defer http.DefaultTransport.(*http.Transport).CloseIdleConnections()
 
+	pkgfs := tempPkgFs()
+	defer os.RemoveAll(pkgfs.RootDir)
+	pkgsDir := pkgfs.PkgInstallDir()
+	blobsDir := pkgfs.BlobInstallDir()
+	pkgNeedsDir := pkgfs.PkgNeedsDir()
+
 	keyConfig := &pkg.RepositoryKeyConfig{}
 	keyConfig.SetEd25519Key(([]byte)(rootKey.Value.Public))
 
@@ -202,7 +247,7 @@ func TestOpenRepositoryWithEncryption(t *testing.T) {
 		// TODO(raggi): fix keyconfig
 		RootKeys:        []pkg.RepositoryKeyConfig{*keyConfig},
 		RootKeysPresent: true,
-	})
+	}, pkgfs)
 	panicerr(err)
 
 	err = r.Update()
@@ -217,5 +262,27 @@ func TestOpenRepositoryWithEncryption(t *testing.T) {
 	}
 	if length != int64(pkgBlobLength) {
 		t.Errorf("merkleFor length: got %d, want %d", length, pkgBlobLength)
+	}
+
+	os.MkdirAll(filepath.Join(pkgNeedsDir, pkgBlob), 0755)
+	panicerr(ioutil.WriteFile(filepath.Join(pkgNeedsDir, pkgBlob, root1), []byte{}, 0644))
+	panicerr(os.MkdirAll(filepath.Join(pkgfs.VersionsDir(), merkle), 0700))
+
+	result, _, err := r.GetUpdateComplete("foo", nil, nil)
+	panicerr(err)
+	if result != pkgBlob {
+		t.Errorf("GetUpdateComplete: got %q, want %q", result, pkgBlob)
+	}
+
+	c, err := ioutil.ReadFile(pkgsDir + "/" + pkgBlob)
+	panicerr(err)
+	if got := string(c); got != pkgContent {
+		t.Errorf("getpkg: got %q, want %q", got, pkgContent)
+	}
+
+	c, err = ioutil.ReadFile(blobsDir + "/" + root1)
+	panicerr(err)
+	if got, want := string(c), "first blob"; got != want {
+		t.Errorf("getblob: got %q, want %q", got, want)
 	}
 }

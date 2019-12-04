@@ -15,6 +15,7 @@ import (
 	"amber/control_server"
 	"amber/daemon"
 	"amber/metrics"
+	"amber/source"
 
 	"fidl/fuchsia/amber"
 
@@ -50,7 +51,7 @@ func Main() {
 	flag.Parse()
 
 	var ctlSvc amber.ControlService
-	d, err := daemon.NewDaemon()
+	d, err := daemon.NewDaemon(source.PkgfsDir{"/pkgfs"})
 	if err != nil {
 		log.Fatalf("failed to start daemon: %s", err)
 	}

@@ -18,6 +18,7 @@ go_library("metrics_lib") {
   name = "metrics"
   source_dir = "metrics"
   deps = [
+    "//src/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//zircon/system/fidl/fuchsia-cobalt($go_toolchain)",
     "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
@@ -29,6 +30,7 @@ go_library("lib") {
   deps = [
     "//garnet/go/src/merkle",
     "//garnet/go/src/sse",
+    "//src/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.amber($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",
@@ -85,7 +87,6 @@ package("amber") {
       name = "grand_unified_binary"
       dest = "amber"
     },
-
     # TODO(raggi): remove the underscore version of the command name once all
     # docs and scripts have been updated.
     # See https://fuchsia-review.googlesource.com/c/fuchsia/+/255274.
@@ -129,6 +130,10 @@ test_targets = [
   {
     name = "amber_daemon_test"
     gopkg = "amber/daemon"
+  },
+  {
+    name = "amber_install_test"
+    gopkg = "amber/install"
   },
   {
     name = "amber_source_test"
