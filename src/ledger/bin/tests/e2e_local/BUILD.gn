@@ -15,7 +15,6 @@ executable("e2e_local") {
   ]
 
   deps = [
-    "//peridot/lib/base64url:base64url",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/lib/fidl/cpp",

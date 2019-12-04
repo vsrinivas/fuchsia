@@ -129,7 +129,6 @@ source_set("lib") {
   deps = [
     ":constants",
     ":serialization_version",
-    "//peridot/lib/base64url:base64url",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/clocks/impl",
     "//src/ledger/bin/cloud_sync/impl",

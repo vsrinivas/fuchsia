@@ -136,7 +136,6 @@ source_set("lib") {
     ":commit_storage",
     ":file_index",
     ":object_identifier_lib",
-    "//peridot/lib/base64url",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/cobalt",
     "//src/ledger/bin/encryption/impl",

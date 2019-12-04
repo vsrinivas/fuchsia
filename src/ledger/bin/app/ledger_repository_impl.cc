@@ -10,7 +10,6 @@
 
 #include <trace/event.h>
 
-#include "peridot/lib/base64url/base64url.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/db_view_factory.h"
 #include "src/ledger/bin/app/page_utils.h"

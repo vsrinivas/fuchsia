@@ -13,7 +13,6 @@
 #include <set>
 #include <string>
 
-#include "peridot/lib/base64url/base64url.h"
 #include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
