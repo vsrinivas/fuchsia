@@ -68,11 +68,7 @@ Stream::Buffer MixStage::Mix(zx::time now, const FrameSpan& mix_frames) {
   size_t bytes_to_zero =
       sizeof(cur_mix_job_.buf[0]) * cur_mix_job_.buf_frames * mix_format_.channels();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
-  if (!mix_frames.muted) {
-    ForEachSource(TaskType::Mix, now);
-  } else {
-    ForEachSource(TaskType::Trim, now);
-  }
+  ForEachSource(TaskType::Mix, now);
   return Stream::Buffer(FractionalFrames<int64_t>(mix_frames.start),
                         FractionalFrames<uint32_t>(mix_frames.length), cur_mix_job_.buf, true);
 }

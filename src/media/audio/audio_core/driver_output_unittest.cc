@@ -234,5 +234,71 @@ TEST_F(DriverOutputTest, MixAtExpectedInterval) {
   RunLoopUntilIdle();
 }
 
+TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
+  // Setup our driver to advertise support for a single format.
+  constexpr uint8_t kSupportedChannels = 2;
+  constexpr uint32_t kSupportedSampleRate = 48000;
+  constexpr audio_sample_format_t kSupportedSampleFormat = AUDIO_SAMPLE_FORMAT_16BIT;
+  // 5ms at our chosen sample rate.
+  constexpr uint32_t kFifoDepth = 240;
+  driver_->set_fifo_depth(kFifoDepth);
+  ConfigureDriverForSampleFormat(kSupportedChannels, kSupportedSampleRate, kSupportedSampleFormat,
+                                 ASF_RANGE_FLAG_FPS_48000_FAMILY);
+
+  threading_model().FidlDomain().ScheduleTask(output_->Startup());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(driver_->is_running());
+
+  // Mute the output.
+  fuchsia::media::AudioGainInfo gain_info;
+  gain_info.flags = fuchsia::media::AudioGainInfoFlag_Mute;
+  output_->SetGainInfo(gain_info, fuchsia::media::SetAudioGainFlag_MuteValid);
+  RunLoopUntilIdle();
+
+  // Create an add a renderer. We enqueue some audio in this renderer, however we'll expect the
+  // ring to only contain silence since the output is muted.
+  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher());
+  AudioObject::LinkObjects(renderer, output_);
+  bool packet1_released = false;
+  bool packet2_released = false;
+  renderer->EnqueueAudioPacket(1.0, kExpectedMixInterval,
+                               [&packet1_released] { packet1_released = true; });
+  renderer->EnqueueAudioPacket(-1.0, kExpectedMixInterval,
+                               [&packet2_released] { packet2_released = true; });
+
+  // Fill the ring buffer with some bytes so we can detect if we've written to the buffer.
+  memset(ring_buffer_mapper_.start(), 0xff, kRingBufferSizeBytes);
+
+  const uint32_t kMixWindowFrames = 480;
+  const uint32_t kSilentFrame = 0;
+  const uint32_t kInitialFrame = UINT32_MAX;
+  size_t first_silent_frame =
+      (kSupportedSampleRate * output_->min_lead_time().to_nsecs()) / 1'000'000'000;
+  size_t num_silent_frames = kMixWindowFrames * 2;
+
+  // Run loop to consume all the frames from the renderer.
+  RunLoopFor(kExpectedMixInterval);
+  RunLoopFor(kExpectedMixInterval);
+  EXPECT_THAT(RingBufferSlice<uint32_t>(0, first_silent_frame), Each(Eq(kInitialFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_silent_frame, num_silent_frames),
+              Each(Eq(kSilentFrame)));
+  EXPECT_THAT(RingBufferSlice<uint32_t>(first_silent_frame + num_silent_frames, -1),
+              Each(Eq(kInitialFrame)));
+
+  // We expect to have mixed these packets, but we want to hold onto them until the corresponding
+  // frames would have been played back.
+  EXPECT_FALSE(packet1_released || packet2_released);
+
+  // Run the loop for |min_lead_time| to verify we release our packets. We add
+  // |kExpectedMixInterval| - |zx::nsec(1)| to ensure we run the next |Process()| after this lead
+  // time has elapsed.
+  RunLoopFor((output_->min_lead_time() + kExpectedMixInterval - zx::nsec(1)));
+  EXPECT_TRUE(packet1_released);
+  EXPECT_TRUE(packet2_released);
+
+  threading_model().FidlDomain().ScheduleTask(output_->Shutdown());
+  RunLoopUntilIdle();
+}
+
 }  // namespace
 }  // namespace media::audio

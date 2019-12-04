@@ -113,59 +113,5 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
   ASSERT_TRUE(packet2_released);
 }
 
-TEST_F(AudioOutputTest, ProcessReleasesPacketsIfOutputIsMuted) {
-  auto renderer = testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher());
-  audio_output_->SetupMixTask(renderer->format()->stream_type(), zx::msec(1).to_msecs());
-  AudioObject::LinkObjects(renderer, audio_output_);
-
-  // StartMixJob always returns nullopt (no work) and schedules another mix 1ms in the future.
-  audio_output_->set_start_mix_delegate(
-      [audio_output = audio_output_.get()](zx::time now) -> std::optional<MixStage::FrameSpan> {
-        audio_output->SetNextSchedTime(now + zx::msec(1));
-        static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
-        return {MixStage::FrameSpan{
-            .start = (now - zx::time(0)).to_msecs(),
-            .length = zx::msec(1).to_msecs(),
-            .muted = true,
-            .reference_clock_to_frame = kOneFramePerMs,
-            .reference_clock_to_destination_frame_generation = 1,
-        }};
-      });
-
-  // Enqueue 2 packets:
-  //   * packet 1 from 0ms -> 5ms.
-  //   * packet 2 from 5ms -> 10ms.
-  bool packet1_released = false;
-  bool packet2_released = false;
-  renderer->EnqueueAudioPacket(1.0, zx::msec(5), [&packet1_released] {
-    FX_LOGS(ERROR) << "Release packet 1";
-    packet1_released = true;
-  });
-  renderer->EnqueueAudioPacket(1.0, zx::msec(5), [&packet2_released] {
-    FX_LOGS(ERROR) << "Release packet 2";
-    packet2_released = true;
-  });
-
-  // Process kicks off the periodic mix task.
-  audio_output_->Process();
-
-  // After 4ms we should still be retaining packet1.
-  RunLoopFor(zx::msec(4));
-  ASSERT_FALSE(packet1_released);
-
-  // 5ms; all the audio from packet1 is consumed and it should be released. We should still have
-  // packet2, however.
-  RunLoopFor(zx::msec(1));
-  ASSERT_TRUE(packet1_released && !packet2_released);
-
-  // After 9ms we should still be retaining packet2.
-  RunLoopFor(zx::msec(4));
-  ASSERT_FALSE(packet2_released);
-
-  // Finally after 10ms we will have released packet2.
-  RunLoopFor(zx::msec(1));
-  ASSERT_TRUE(packet2_released);
-}
-
 }  // namespace
 }  // namespace media::audio

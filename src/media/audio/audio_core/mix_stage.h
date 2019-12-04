@@ -24,8 +24,6 @@ class MixStage {
     int64_t start;
     size_t length;
 
-    bool muted;
-
     // A mapping between reference clock to frame number. If the same
     // |reference_clock_to_destination_frame_generation| is returned between consecutive calls to
     // |StartMixJob|, then the |reference_clock_to_frame| function is guaranteed to be the same.

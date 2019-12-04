@@ -118,7 +118,6 @@ TEST_F(MixStageTest, MixUniformFormats) {
   MixStage::FrameSpan output_frames;
   output_frames.start = 0;
   output_frames.length = output_timeline_function.rate().Scale(zx::msec(2).to_nsecs());
-  output_frames.muted = false;
   output_frames.reference_clock_to_frame = output_timeline_function;
   output_frames.reference_clock_to_destination_frame_generation = 1;
 
