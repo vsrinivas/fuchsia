@@ -291,6 +291,16 @@ ELF PLT breakpoints for system calls
   This will apply the breakpoint to every library's PLT entry for
   "zx_debug_write".
 
+Breakpoints on overloaded functions
+
+  If a named function has multiple overloads, the debugger will set a breakpoint
+  on all of them. Specifying an individual overload by name is not supported
+  (bug 41928).
+
+  To refer to an individual overload, either refer to the location by file:line
+  or by address. To get the addresses of each overload, use the command
+  "sym-info FunctionName".
+
 Other breakpoint commands
 
   "breakpoint" / "bp": List or select breakpoints.

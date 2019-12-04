@@ -156,7 +156,7 @@ void DumpFunctionInfo(const ProcessSymbols* process_symbols, const Function* fun
   if (ranges.empty()) {
     out->Append("  No code ranges.\n");
   } else {
-    out->Append("  Code:\n");
+    out->Append("  Code ranges [begin, end-non-inclusive):\n");
     for (const auto& range : ranges)
       out->Append("    " + range.ToString() + "\n");
   }
@@ -539,6 +539,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
   }
 
   FindNameOptions find_opts(FindNameOptions::kAllKinds);
+  find_opts.max_results = std::numeric_limits<size_t>::max();
 
   std::vector<FoundName> found_items;
   FindName(find_context, find_opts, identifier, &found_items);
