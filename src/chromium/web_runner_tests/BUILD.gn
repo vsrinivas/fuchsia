@@ -131,3 +131,13 @@ test_package("web_runner_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":web_runner_tests",
+    "//src/chromium:web_engine",
+    "//src/chromium:web_runner",
+  ]
+}
