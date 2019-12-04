@@ -24,6 +24,7 @@
 
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/developer/feedback/feedback_agent/tests/stub_board.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_product.h"
@@ -54,6 +55,7 @@ using fuchsia::feedback::Attachment;
 using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
+using fuchsia::hwinfo::BoardInfo;
 using fuchsia::hwinfo::ProductInfo;
 using fuchsia::intl::LocaleId;
 using fuchsia::intl::RegulatoryDomain;
@@ -69,6 +71,8 @@ const std::set<std::string> kDefaultAnnotations = {
     kAnnotationDeviceBoardName,
     kAnnotationDeviceUptime,
     kAnnotationDeviceUTCTime,
+    kAnnotationHardwareBoardName,
+    kAnnotationHardwareBoardRevision,
     kAnnotationHardwareProductSKU,
     kAnnotationHardwareProductLanguage,
     kAnnotationHardwareProductRegulatoryDomain,
@@ -84,6 +88,10 @@ const std::set<std::string> kDefaultAttachments = {
     // kAttachmentInspect,
     kAttachmentLogKernel,
     kAttachmentLogSystem,
+};
+const std::map<std::string, std::string> kBoardInfoValues = {
+    {kAnnotationHardwareBoardName, "board-name"},
+    {kAnnotationHardwareBoardRevision, "revision"},
 };
 const std::map<std::string, std::string> kProductInfoValues = {
     {kAnnotationHardwareProductSKU, "sku"},
@@ -162,6 +170,15 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
   return true;
 }
 
+BoardInfo CreateBoardInfo() {
+  BoardInfo info;
+
+  info.set_name(kBoardInfoValues.at(kAnnotationHardwareBoardName));
+  info.set_revision(kBoardInfoValues.at(kAnnotationHardwareBoardRevision));
+
+  return info;
+}
+
 ProductInfo CreateProductInfo() {
   ProductInfo info;
 
@@ -234,6 +251,13 @@ class DataProviderTest : public UnitTestFixture {
     }
   }
 
+  void SetUpBoardProvider(std::unique_ptr<StubBoard> board_provider) {
+    board_provider_ = std::move(board_provider);
+    if (board_provider_) {
+      InjectServiceProvider(board_provider_.get());
+    }
+  }
+
   void SetUpProductProvider(std::unique_ptr<StubProduct> product_provider) {
     product_provider_ = std::move(product_provider);
     if (product_provider_) {
@@ -279,6 +303,7 @@ class DataProviderTest : public UnitTestFixture {
   std::unique_ptr<StubChannelProvider> channel_provider_;
   std::unique_ptr<StubScenic> scenic_;
   std::unique_ptr<StubLogger> logger_;
+  std::unique_ptr<StubBoard> board_provider_;
   std::unique_ptr<StubProduct> product_provider_;
 };
 
@@ -512,6 +537,12 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
     },
     "%s": {
       "type": "string"
+    },
+    "%s": {
+      "type": "string"
+    },
+    "%s": {
+      "type": "string"
     }
   },
   "additionalProperties": false
@@ -519,6 +550,7 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
                 kAnnotationBuildBoard, kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
                 kAnnotationBuildProduct, kAnnotationBuildVersion, kAnnotationChannel,
                 kAnnotationDeviceBoardName, kAnnotationDeviceUptime, kAnnotationDeviceUTCTime,
+                kAnnotationHardwareBoardName, kAnnotationHardwareBoardRevision,
                 kAnnotationHardwareProductLanguage, kAnnotationHardwareProductLocaleList,
                 kAnnotationHardwareProductManufacturer, kAnnotationHardwareProductModel,
                 kAnnotationHardwareProductName, kAnnotationHardwareProductRegulatoryDomain,
@@ -566,6 +598,28 @@ TEST_F(DataProviderTest, GetData_Channel) {
   ASSERT_TRUE(data.has_annotations());
   EXPECT_THAT(data.annotations(),
               testing::Contains(MatchesAnnotation(kAnnotationChannel, "my-channel")));
+}
+
+TEST_F(DataProviderTest, GetData_BoardInfo) {
+  SetUpBoardProvider(std::make_unique<StubBoard>(CreateBoardInfo()));
+
+  std::set<std::string> keys;
+  for (const auto& [key, _] : kBoardInfoValues) {
+    keys.insert(key);
+  }
+
+  fit::result<Data, zx_status_t> result = GetData();
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  ASSERT_TRUE(data.has_annotations());
+  EXPECT_THAT(data.annotations(),
+              testing::IsSupersetOf({
+                  MatchesAnnotation(kAnnotationHardwareBoardName,
+                                    kBoardInfoValues.at(kAnnotationHardwareBoardName)),
+                  MatchesAnnotation(kAnnotationHardwareBoardRevision,
+                                    kBoardInfoValues.at(kAnnotationHardwareBoardRevision)),
+              }));
 }
 
 TEST_F(DataProviderTest, GetData_ProductInfo) {
@@ -698,6 +752,7 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
 
   SetUpScenic(std::make_unique<StubScenicNeverReturns>());
   SetUpChannelProvider(std::make_unique<StubChannelProviderNeverReturns>());
+  SetUpBoardProvider(std::make_unique<StubBoard>(CreateBoardInfo()));
   SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo()));
 
   // In the following tests we list the current time of a stopwatch that starts at 0 seconds and

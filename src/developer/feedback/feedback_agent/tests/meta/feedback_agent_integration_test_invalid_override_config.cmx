@@ -7,6 +7,7 @@
                     "--config=/config/data/fuchsia.factory.MiscFactoryStoreProvider.config"
                 ],
                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake_feedback_agent_invalid_override_config#meta/feedback_agent.cmx",
+               "fuchsia.hwinfo.Board": "fuchsia-pkg://fuchsia.com/fake_hwinfo#meta/hwinfo.cmx",
                "fuchsia.hwinfo.Product": "fuchsia-pkg://fuchsia.com/fake_hwinfo#meta/hwinfo.cmx"
             },
             "system-services": [

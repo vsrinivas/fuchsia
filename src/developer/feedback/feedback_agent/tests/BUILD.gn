@@ -32,6 +32,9 @@ group("tests") {
 test_package("feedback_agent_tests") {
   tests = [
     {
+      name = "board_info_provider_unittest"
+    },
+    {
       name = "channel_provider_unittest"
     },
     {
@@ -132,6 +135,7 @@ test_package("feedback_agent_tests") {
   ]
 
   deps = [
+    ":board_info_provider_unittest",
     ":channel_provider_unittest",
     ":config_unittest",
     ":data_provider_unittest",
@@ -197,6 +201,7 @@ executable("data_provider_unittest") {
   ]
 
   deps = [
+    ":stub_board",
     ":stub_channel_provider",
     ":stub_logger",
     ":stub_product",
@@ -357,6 +362,27 @@ executable("kernel_log_ptr_integration_test") {
   ]
 }
 
+executable("board_info_provider_unittest") {
+  testonly = true
+
+  sources = [
+    "board_info_provider_unittest.cc",
+  ]
+
+  deps = [
+    ":stub_board",
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/feedback_agent/annotations:board_info_provider",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("product_info_provider_unittest") {
   testonly = true
 
@@ -483,6 +509,18 @@ source_set("stub_logger") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-logger",
+  ]
+}
+
+source_set("stub_board") {
+  sources = [
+    "stub_board.cc",
+    "stub_board.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 

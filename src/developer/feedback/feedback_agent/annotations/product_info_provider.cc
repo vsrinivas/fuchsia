@@ -13,6 +13,7 @@
 #include <optional>
 
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/developer/feedback/utils/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -29,7 +30,20 @@ ProductInfoProvider::ProductInfoProvider(const std::set<std::string>& annotation
     : annotations_to_get_(annotations_to_get),
       dispatcher_(dispatcher),
       services_(services),
-      timeout_(timeout) {}
+      timeout_(timeout) {
+  const auto supported_annotations = GetSupportedAnnotations();
+  std::vector<std::string> not_supported;
+  for (const auto& annotation : annotations_to_get_) {
+    if (supported_annotations.find(annotation) == supported_annotations.end()) {
+      FX_LOGS(WARNING) << "annotation " << annotation << " not supported by BoardInfoProvider";
+      not_supported.push_back(annotation);
+    }
+  }
+
+  for (auto annotation : not_supported) {
+    annotations_to_get_.erase(annotation);
+  }
+}
 
 std::set<std::string> ProductInfoProvider::GetSupportedAnnotations() {
   return {
@@ -46,10 +60,13 @@ std::set<std::string> ProductInfoProvider::GetSupportedAnnotations() {
 fit::promise<std::vector<Annotation>> ProductInfoProvider::GetAnnotations() {
   std::vector<fit::promise<Annotation>> annotations;
   auto product_info_ptr = std::make_unique<internal::ProductInfoPtr>(dispatcher_, services_);
+  auto product_info = product_info_ptr->GetProductInfo(timeout_);
 
-  return product_info_ptr->GetProductInfo(timeout_).and_then(
-      [annotations_to_get = annotations_to_get_, product_info_ptr = std::move(product_info_ptr)](
-          const std::map<std::string, std::string>& product_info) {
+  return ExtendArgsLifetimeBeyondPromise(std::move(product_info),
+                                         /*args=*/std::move(product_info_ptr))
+      .and_then([annotations_to_get = annotations_to_get_,
+                 product_info_ptr = std::move(product_info_ptr)](
+                    const std::map<std::string, std::string>& product_info) {
         std::vector<Annotation> annotations;
 
         for (const auto& key : annotations_to_get) {

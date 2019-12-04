@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/feedback_agent/annotations/annotation_provider_factory.h"
 
+#include "src/developer/feedback/feedback_agent/annotations/board_info_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/board_name_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/build_info_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/channel_provider.h"
@@ -20,7 +21,8 @@ enum class AnnotationType {
   BoardName = 0,
   BuildInfo,
   Channel,
-  ProductInfo,
+  HardwareBoardInfo,
+  HardwareProductInfo,
   Time,
 };
 
@@ -32,7 +34,9 @@ std::set<std::string> GetSupportedAnnotations(const AnnotationType type) {
       return BuildInfoProvider::GetSupportedAnnotations();
     case AnnotationType::Channel:
       return ChannelProvider::GetSupportedAnnotations();
-    case AnnotationType::ProductInfo:
+    case AnnotationType::HardwareBoardInfo:
+      return BoardInfoProvider::GetSupportedAnnotations();
+    case AnnotationType::HardwareProductInfo:
       return ProductInfoProvider::GetSupportedAnnotations();
     case AnnotationType::Time:
       return TimeProvider::GetSupportedAnnotations();
@@ -61,7 +65,9 @@ std::unique_ptr<AnnotationProvider> GetProvider(const AnnotationType type,
       return std::make_unique<BuildInfoProvider>(annotations);
     case AnnotationType::Channel:
       return std::make_unique<ChannelProvider>(dispatcher, services, timeout);
-    case AnnotationType::ProductInfo:
+    case AnnotationType::HardwareBoardInfo:
+      return std::make_unique<BoardInfoProvider>(annotations, dispatcher, services, timeout);
+    case AnnotationType::HardwareProductInfo:
       return std::make_unique<ProductInfoProvider>(annotations, dispatcher, services, timeout);
     case AnnotationType::Time:
       return std::make_unique<TimeProvider>(annotations,
@@ -95,8 +101,10 @@ std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
                             &providers);
   AddIfAnnotationsIntersect(AnnotationType::Channel, allowlist, dispatcher, services, timeout,
                             &providers);
-  AddIfAnnotationsIntersect(AnnotationType::ProductInfo, allowlist, dispatcher, services, timeout,
-                            &providers);
+  AddIfAnnotationsIntersect(AnnotationType::HardwareBoardInfo, allowlist, dispatcher, services,
+                            timeout, &providers);
+  AddIfAnnotationsIntersect(AnnotationType::HardwareProductInfo, allowlist, dispatcher, services,
+                            timeout, &providers);
   AddIfAnnotationsIntersect(AnnotationType::Time, allowlist, dispatcher, services, timeout,
                             &providers);
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_PRODUCT_INFO_PROVIDER_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_PRODUCT_INFO_PROVIDER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_BOARD_INFO_PROVIDER_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_BOARD_INFO_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
@@ -23,13 +23,12 @@
 
 namespace feedback {
 
-// Get the requested parts of fuchsia.hwinfo.ProductInfo as annotations.
-class ProductInfoProvider : public AnnotationProvider {
+// Get the requested parts of fuchsia.hwinfo.BoardInfo as annotations.
+class BoardInfoProvider : public AnnotationProvider {
  public:
-  // fuchsia.hwinfo.Product is expected to be in |services|.
-  ProductInfoProvider(const std::set<std::string>& annotations_to_get,
-                      async_dispatcher_t* dispatcher,
-                      std::shared_ptr<sys::ServiceDirectory> services, zx::duration timeout);
+  // fuchsia.hwinfo.Board is expected to be in |services|.
+  BoardInfoProvider(const std::set<std::string>& annotations_to_get, async_dispatcher_t* dispatcher,
+                    std::shared_ptr<sys::ServiceDirectory> services, zx::duration timeout);
 
   static std::set<std::string> GetSupportedAnnotations();
   fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
@@ -43,33 +42,33 @@ class ProductInfoProvider : public AnnotationProvider {
 
 namespace internal {
 
-// Wraps around fuchsia::hwinfo::ProductPtr to handle establishing the connection, losing
+// Wraps around fuchsia::hwinfo::BoardPtr to handle establishing the connection, losing
 // the connection, waiting for the callback, enforcing a timeout, etc.
 //
-// Product info will ever only make one call to fuchsia::hwinfo::Product::GetInfo.
-class ProductInfoPtr {
+// Will ever only make one call to fuchsia::hwinfo::Board::GetInfo.
+class BoardInfoPtr {
  public:
-  ProductInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
+  BoardInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  fit::promise<std::map<std::string, std::string>> GetProductInfo(zx::duration timeout);
+  fit::promise<std::map<std::string, std::string>> GetBoardInfo(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  // Enforces the one-shot nature of GetProductInfo().
-  bool has_called_get_product_info_ = false;
+  // Enforces the one-shot nature of GetBoardInfo().
+  bool has_called_get_board_info_ = false;
 
-  fuchsia::hwinfo::ProductPtr product_ptr_;
+  fuchsia::hwinfo::BoardPtr board_ptr_;
   fit::bridge<std::map<std::string, std::string>> done_;
 
   // We wrap the delayed task we post on the async loop to timeout in a CancelableClosure so we can
   // cancel it if we are done another way.
   fxl::CancelableClosure done_after_timeout_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ProductInfoPtr);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BoardInfoPtr);
 };
 
 }  // namespace internal
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_PRODUCT_INFO_PROVIDER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_BOARD_INFO_PROVIDER_H_

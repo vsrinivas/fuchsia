@@ -61,6 +61,8 @@ TEST_F(FeedbackAgentIntegrationTest, InvalidOverrideConfig_SmokeTest) {
                                       MatchesKey(kAnnotationDeviceBoardName),
                                       MatchesKey(kAnnotationDeviceUptime),
                                       MatchesKey(kAnnotationDeviceUTCTime),
+                                      MatchesKey(kAnnotationHardwareBoardName),
+                                      MatchesKey(kAnnotationHardwareBoardRevision),
                                       MatchesKey(kAnnotationHardwareProductSKU),
                                       MatchesKey(kAnnotationHardwareProductLanguage),
                                       MatchesKey(kAnnotationHardwareProductRegulatoryDomain),

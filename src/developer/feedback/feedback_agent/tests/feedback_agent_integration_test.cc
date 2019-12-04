@@ -51,6 +51,8 @@ using fuchsia::feedback::DataProviderPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
+using fuchsia::hwinfo::BoardInfo;
+using fuchsia::hwinfo::BoardPtr;
 using fuchsia::hwinfo::ProductInfo;
 using fuchsia::hwinfo::ProductPtr;
 using inspect::testing::PropertyList;
@@ -145,6 +147,17 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
     RunLoopUntil([&ready] { return ready; });
   }
 
+  // Makes sure the component serving fuchsia.hwinfo.BoardInfo is up and running as the
+  // GetInfo() request could time out on machines where the component is too slow to start.
+  void WaitForBoardProvider() {
+    fuchsia::hwinfo::BoardPtr board_provider;
+    environment_services_->Connect(board_provider.NewRequest());
+
+    bool ready = false;
+    board_provider->GetInfo([&](BoardInfo board_info) { ready = true; });
+    RunLoopUntil([&ready] { return ready; });
+  }
+
   // Makes sure the component serving fuchsia.hwinfo.ProductInfo is up and running as the
   // GetInfo() request could time out on machines where the component is too slow to start.
   void WaitForProductProvider() {
@@ -170,6 +183,8 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
     launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx";
     services->AddServiceWithLaunchInfo(std::move(launch_info), "fuchsia.feedback.DataProvider");
     // We inherit the other injected services from the parent environment.
+    services->AllowParentService("fuchsia.hwinfo.Board");
+    services->AllowParentService("fuchsia.hwinfo.Product");
     services->AllowParentService("fuchsia.boot.ReadOnlyLog");
     services->AllowParentService("fuchsia.logger.Log");
     services->AllowParentService("fuchsia.update.channel.Provider");
@@ -321,6 +336,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   WaitForLogger();
   WaitForChannelProvider();
   WaitForInspect();
+  WaitForBoardProvider();
   WaitForProductProvider();
 
   DataProviderSyncPtr data_provider;
@@ -348,6 +364,8 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                                       MatchesKey(kAnnotationDeviceBoardName),
                                       MatchesKey(kAnnotationDeviceUptime),
                                       MatchesKey(kAnnotationDeviceUTCTime),
+                                      MatchesKey(kAnnotationHardwareBoardName),
+                                      MatchesKey(kAnnotationHardwareBoardRevision),
                                       MatchesKey(kAnnotationHardwareProductSKU),
                                       MatchesKey(kAnnotationHardwareProductLanguage),
                                       MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
@@ -373,8 +391,6 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
 
 TEST_F(FeedbackAgentIntegrationTest, OneDataProviderPerRequest) {
   auto env = CreateDataProviderEnvironment();
-
-  WaitForProductProvider();
 
   DataProviderPtr data_provider_1;
   env->ConnectToService(data_provider_1.NewRequest());

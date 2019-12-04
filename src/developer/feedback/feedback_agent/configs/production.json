@@ -9,6 +9,8 @@
         "device.board-name",
         "device.uptime",
         "device.utc-time",
+        "hardware.board.name",
+        "hardware.board.revision",
         "hardware.product.language",
         "hardware.product.locale-list",
         "hardware.product.manufacturer",

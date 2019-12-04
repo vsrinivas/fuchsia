@@ -22,6 +22,7 @@ source_set("annotation_providers") {
   ]
 
   deps = [
+    ":board_info_provider",
     ":channel_provider",
     ":product_info_provider",
     "//sdk/fidl/fuchsia.feedback",
@@ -68,6 +69,33 @@ source_set("channel_provider") {
 }
 
 # Exposed separately for unit test purposes.
+source_set("board_info_provider") {
+  public = [
+    "board_info_provider.h",
+  ]
+
+  sources = [
+    "annotation_provider.h",
+    "board_info_provider.cc",
+    "board_info_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.hwinfo",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/utils:promise",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+# Exposed separately for unit test purposes.
 source_set("product_info_provider") {
   public = [
     "product_info_provider.h",
@@ -88,6 +116,7 @@ source_set("product_info_provider") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/utils:promise",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",
