@@ -26,21 +26,24 @@ const ENV_NAME: &str = "settings_service_intl_test_environment";
 
 async fn create_test_intl_env(storage_factory: Box<InMemoryStorageFactory>) -> IntlProxy {
     let service_gen = |service_name: &str, channel: zx::Channel| {
-        if service_name != fidl_fuchsia_timezone::TimezoneMarker::NAME {
+        if service_name != fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME {
             return Err(format_err!("unsupported!"));
         }
 
         let mut timezone_stream =
-            ServerEnd::<fidl_fuchsia_timezone::TimezoneMarker>::new(channel).into_stream()?;
+            ServerEnd::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>::new(channel)
+                .into_stream()?;
 
         fasync::spawn(async move {
             while let Some(req) = timezone_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
-                    fidl_fuchsia_timezone::TimezoneRequest::GetTimezoneId { responder } => {
+                    fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
+                        responder,
+                    } => {
                         responder.send("PDT").unwrap();
                     }
-                    fidl_fuchsia_timezone::TimezoneRequest::SetTimezone {
+                    fidl_fuchsia_deprecatedtimezone::TimezoneRequest::SetTimezone {
                         timezone_id: _,
                         responder,
                     } => {

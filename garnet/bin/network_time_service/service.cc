@@ -15,7 +15,6 @@ namespace network_time_service {
 TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
                                  const char server_config_path[], const char rtc_device_path[])
     : context_(std::move(context)), time_server_(server_config_path, rtc_device_path) {
-  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   context_->outgoing()->AddPublicService(deprecated_bindings_.GetHandler(this));
 }
 

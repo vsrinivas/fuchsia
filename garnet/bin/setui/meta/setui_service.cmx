@@ -13,6 +13,7 @@
         ],
         "services": [
             "fuchsia.accessibility.SettingsManager",
+            "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.device.manager.Administrator",
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.logger.LogSink",
