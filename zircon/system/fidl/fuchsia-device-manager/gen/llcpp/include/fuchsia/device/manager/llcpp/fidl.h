@@ -1316,12 +1316,6 @@ struct Coordinator_AddDevice_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_AddDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response&& val) {
-    Coordinator_AddDevice_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_AddDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response* val) {
     Coordinator_AddDevice_Result result;
     result.set_response(val);
@@ -1330,24 +1324,10 @@ struct Coordinator_AddDevice_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -1360,12 +1340,6 @@ struct Coordinator_AddDevice_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_AddDevice_Result WithErr(int32_t&& val) {
-    Coordinator_AddDevice_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_AddDevice_Result WithErr(int32_t* val) {
     Coordinator_AddDevice_Result result;
     result.set_err(val);
@@ -1374,24 +1348,10 @@ struct Coordinator_AddDevice_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -1481,12 +1441,6 @@ struct Coordinator_AddDeviceInvisible_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_AddDeviceInvisible_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response&& val) {
-    Coordinator_AddDeviceInvisible_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_AddDeviceInvisible_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response* val) {
     Coordinator_AddDeviceInvisible_Result result;
     result.set_response(val);
@@ -1495,24 +1449,10 @@ struct Coordinator_AddDeviceInvisible_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -1525,12 +1465,6 @@ struct Coordinator_AddDeviceInvisible_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_AddDeviceInvisible_Result WithErr(int32_t&& val) {
-    Coordinator_AddDeviceInvisible_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_AddDeviceInvisible_Result WithErr(int32_t* val) {
     Coordinator_AddDeviceInvisible_Result result;
     result.set_err(val);
@@ -1539,24 +1473,10 @@ struct Coordinator_AddDeviceInvisible_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -1666,12 +1586,6 @@ struct DeviceController_Unbind_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static DeviceController_Unbind_Result WithResponse(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response&& val) {
-    DeviceController_Unbind_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static DeviceController_Unbind_Result WithResponse(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response* val) {
     DeviceController_Unbind_Result result;
     result.set_response(val);
@@ -1680,24 +1594,10 @@ struct DeviceController_Unbind_Result {
 
   ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -1710,12 +1610,6 @@ struct DeviceController_Unbind_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static DeviceController_Unbind_Result WithErr(int32_t&& val) {
-    DeviceController_Unbind_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static DeviceController_Unbind_Result WithErr(int32_t* val) {
     DeviceController_Unbind_Result result;
     result.set_err(val);
@@ -1724,24 +1618,10 @@ struct DeviceController_Unbind_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -1831,12 +1711,6 @@ struct DeviceController_CompleteRemoval_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static DeviceController_CompleteRemoval_Result WithResponse(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response&& val) {
-    DeviceController_CompleteRemoval_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static DeviceController_CompleteRemoval_Result WithResponse(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response* val) {
     DeviceController_CompleteRemoval_Result result;
     result.set_response(val);
@@ -1845,24 +1719,10 @@ struct DeviceController_CompleteRemoval_Result {
 
   ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -1875,12 +1735,6 @@ struct DeviceController_CompleteRemoval_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static DeviceController_CompleteRemoval_Result WithErr(int32_t&& val) {
-    DeviceController_CompleteRemoval_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static DeviceController_CompleteRemoval_Result WithErr(int32_t* val) {
     DeviceController_CompleteRemoval_Result result;
     result.set_err(val);
@@ -1889,24 +1743,10 @@ struct DeviceController_CompleteRemoval_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -2011,12 +1851,6 @@ struct Coordinator_RunCompatibilityTests_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_RunCompatibilityTests_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response&& val) {
-    Coordinator_RunCompatibilityTests_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_RunCompatibilityTests_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response* val) {
     Coordinator_RunCompatibilityTests_Result result;
     result.set_response(val);
@@ -2025,24 +1859,10 @@ struct Coordinator_RunCompatibilityTests_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -2055,12 +1875,6 @@ struct Coordinator_RunCompatibilityTests_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_RunCompatibilityTests_Result WithErr(int32_t&& val) {
-    Coordinator_RunCompatibilityTests_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_RunCompatibilityTests_Result WithErr(int32_t* val) {
     Coordinator_RunCompatibilityTests_Result result;
     result.set_err(val);
@@ -2069,24 +1883,10 @@ struct Coordinator_RunCompatibilityTests_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -2176,12 +1976,6 @@ struct Coordinator_PublishMetadata_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_PublishMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response&& val) {
-    Coordinator_PublishMetadata_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_PublishMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response* val) {
     Coordinator_PublishMetadata_Result result;
     result.set_response(val);
@@ -2190,24 +1984,10 @@ struct Coordinator_PublishMetadata_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -2220,12 +2000,6 @@ struct Coordinator_PublishMetadata_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_PublishMetadata_Result WithErr(int32_t&& val) {
-    Coordinator_PublishMetadata_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_PublishMetadata_Result WithErr(int32_t* val) {
     Coordinator_PublishMetadata_Result result;
     result.set_err(val);
@@ -2234,24 +2008,10 @@ struct Coordinator_PublishMetadata_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -2341,12 +2101,6 @@ struct Coordinator_MakeVisible_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_MakeVisible_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response&& val) {
-    Coordinator_MakeVisible_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_MakeVisible_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response* val) {
     Coordinator_MakeVisible_Result result;
     result.set_response(val);
@@ -2355,24 +2109,10 @@ struct Coordinator_MakeVisible_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -2385,12 +2125,6 @@ struct Coordinator_MakeVisible_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_MakeVisible_Result WithErr(int32_t&& val) {
-    Coordinator_MakeVisible_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_MakeVisible_Result WithErr(int32_t* val) {
     Coordinator_MakeVisible_Result result;
     result.set_err(val);
@@ -2399,24 +2133,10 @@ struct Coordinator_MakeVisible_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -2508,12 +2228,6 @@ struct Coordinator_LoadFirmware_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_LoadFirmware_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response&& val) {
-    Coordinator_LoadFirmware_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_LoadFirmware_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response* val) {
     Coordinator_LoadFirmware_Result result;
     result.set_response(val);
@@ -2522,24 +2236,10 @@ struct Coordinator_LoadFirmware_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -2552,12 +2252,6 @@ struct Coordinator_LoadFirmware_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_LoadFirmware_Result WithErr(int32_t&& val) {
-    Coordinator_LoadFirmware_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_LoadFirmware_Result WithErr(int32_t* val) {
     Coordinator_LoadFirmware_Result result;
     result.set_err(val);
@@ -2566,24 +2260,10 @@ struct Coordinator_LoadFirmware_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -2673,12 +2353,6 @@ struct Coordinator_GetTopologicalPath_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_GetTopologicalPath_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response&& val) {
-    Coordinator_GetTopologicalPath_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_GetTopologicalPath_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response* val) {
     Coordinator_GetTopologicalPath_Result result;
     result.set_response(val);
@@ -2687,24 +2361,10 @@ struct Coordinator_GetTopologicalPath_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -2717,12 +2377,6 @@ struct Coordinator_GetTopologicalPath_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_GetTopologicalPath_Result WithErr(int32_t&& val) {
-    Coordinator_GetTopologicalPath_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_GetTopologicalPath_Result WithErr(int32_t* val) {
     Coordinator_GetTopologicalPath_Result result;
     result.set_err(val);
@@ -2731,24 +2385,10 @@ struct Coordinator_GetTopologicalPath_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -2838,12 +2478,6 @@ struct Coordinator_GetMetadata_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_GetMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response&& val) {
-    Coordinator_GetMetadata_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_GetMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response* val) {
     Coordinator_GetMetadata_Result result;
     result.set_response(val);
@@ -2852,24 +2486,10 @@ struct Coordinator_GetMetadata_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -2882,12 +2502,6 @@ struct Coordinator_GetMetadata_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_GetMetadata_Result WithErr(int32_t&& val) {
-    Coordinator_GetMetadata_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_GetMetadata_Result WithErr(int32_t* val) {
     Coordinator_GetMetadata_Result result;
     result.set_err(val);
@@ -2896,24 +2510,10 @@ struct Coordinator_GetMetadata_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -3003,12 +2603,6 @@ struct Coordinator_GetMetadataSize_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_GetMetadataSize_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response&& val) {
-    Coordinator_GetMetadataSize_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_GetMetadataSize_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response* val) {
     Coordinator_GetMetadataSize_Result result;
     result.set_response(val);
@@ -3017,24 +2611,10 @@ struct Coordinator_GetMetadataSize_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -3047,12 +2627,6 @@ struct Coordinator_GetMetadataSize_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_GetMetadataSize_Result WithErr(int32_t&& val) {
-    Coordinator_GetMetadataSize_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_GetMetadataSize_Result WithErr(int32_t* val) {
     Coordinator_GetMetadataSize_Result result;
     result.set_err(val);
@@ -3061,24 +2635,10 @@ struct Coordinator_GetMetadataSize_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -3168,12 +2728,6 @@ struct Coordinator_DirectoryWatch_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_DirectoryWatch_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response&& val) {
-    Coordinator_DirectoryWatch_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_DirectoryWatch_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response* val) {
     Coordinator_DirectoryWatch_Result result;
     result.set_response(val);
@@ -3182,24 +2736,10 @@ struct Coordinator_DirectoryWatch_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -3212,12 +2752,6 @@ struct Coordinator_DirectoryWatch_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_DirectoryWatch_Result WithErr(int32_t&& val) {
-    Coordinator_DirectoryWatch_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_DirectoryWatch_Result WithErr(int32_t* val) {
     Coordinator_DirectoryWatch_Result result;
     result.set_err(val);
@@ -3226,24 +2760,10 @@ struct Coordinator_DirectoryWatch_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -3333,12 +2853,6 @@ struct Coordinator_BindDevice_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_BindDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response&& val) {
-    Coordinator_BindDevice_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_BindDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response* val) {
     Coordinator_BindDevice_Result result;
     result.set_response(val);
@@ -3347,24 +2861,10 @@ struct Coordinator_BindDevice_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -3377,12 +2877,6 @@ struct Coordinator_BindDevice_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_BindDevice_Result WithErr(int32_t&& val) {
-    Coordinator_BindDevice_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_BindDevice_Result WithErr(int32_t* val) {
     Coordinator_BindDevice_Result result;
     result.set_err(val);
@@ -3391,24 +2885,10 @@ struct Coordinator_BindDevice_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -3498,12 +2978,6 @@ struct Coordinator_AddMetadata_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_AddMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response&& val) {
-    Coordinator_AddMetadata_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_AddMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response* val) {
     Coordinator_AddMetadata_Result result;
     result.set_response(val);
@@ -3512,24 +2986,10 @@ struct Coordinator_AddMetadata_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -3542,12 +3002,6 @@ struct Coordinator_AddMetadata_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_AddMetadata_Result WithErr(int32_t&& val) {
-    Coordinator_AddMetadata_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_AddMetadata_Result WithErr(int32_t* val) {
     Coordinator_AddMetadata_Result result;
     result.set_err(val);
@@ -3556,24 +3010,10 @@ struct Coordinator_AddMetadata_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -3663,12 +3103,6 @@ struct Coordinator_AddCompositeDevice_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_AddCompositeDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response&& val) {
-    Coordinator_AddCompositeDevice_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Coordinator_AddCompositeDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response* val) {
     Coordinator_AddCompositeDevice_Result result;
     result.set_response(val);
@@ -3677,24 +3111,10 @@ struct Coordinator_AddCompositeDevice_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -3707,12 +3127,6 @@ struct Coordinator_AddCompositeDevice_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Coordinator_AddCompositeDevice_Result WithErr(int32_t&& val) {
-    Coordinator_AddCompositeDevice_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Coordinator_AddCompositeDevice_Result WithErr(int32_t* val) {
     Coordinator_AddCompositeDevice_Result result;
     result.set_err(val);
@@ -3721,24 +3135,10 @@ struct Coordinator_AddCompositeDevice_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>

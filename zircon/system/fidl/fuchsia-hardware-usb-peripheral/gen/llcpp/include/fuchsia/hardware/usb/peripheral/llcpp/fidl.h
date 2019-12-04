@@ -313,12 +313,6 @@ struct Device_SetConfiguration_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Device_SetConfiguration_Result WithResponse(::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response&& val) {
-    Device_SetConfiguration_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static Device_SetConfiguration_Result WithResponse(::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response* val) {
     Device_SetConfiguration_Result result;
     result.set_response(val);
@@ -327,24 +321,10 @@ struct Device_SetConfiguration_Result {
 
   ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -357,12 +337,6 @@ struct Device_SetConfiguration_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Device_SetConfiguration_Result WithErr(int32_t&& val) {
-    Device_SetConfiguration_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static Device_SetConfiguration_Result WithErr(int32_t* val) {
     Device_SetConfiguration_Result result;
     result.set_err(val);
@@ -371,24 +345,10 @@ struct Device_SetConfiguration_Result {
 
   int32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>

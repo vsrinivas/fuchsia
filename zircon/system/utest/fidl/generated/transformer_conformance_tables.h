@@ -1131,9 +1131,10 @@ static const ::fidl::FidlStructField Fields37conformance_ReverseOrdinalUnionStru
     ::fidl::FidlStructField(&conformance_ReverseOrdinalUnionTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_ReverseOrdinalUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t conformance_ReverseOrdinalUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields37conformance_ReverseOrdinalUnionStruct, 1u, 16u, "conformance/ReverseOrdinalUnionStruct",
-    conformance_ReverseOrdinalUnionStructAltTypePointerTable()));
+const fidl_type_t conformance_ReverseOrdinalUnionStructTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields37conformance_ReverseOrdinalUnionStruct, 1u, 16u, 0u, true,
+                            "conformance/ReverseOrdinalUnionStruct",
+                            conformance_ReverseOrdinalUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields31conformance_ReverseOrdinalTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table, 1u),
@@ -1147,7 +1148,7 @@ static const ::fidl::FidlStructField Fields39conformance_StructOfReverseOrdinalT
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StructOfReverseOrdinalTableAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_StructOfReverseOrdinalTableTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields39conformance_StructOfReverseOrdinalTable, 1u, 16u,
+    ::fidl::FidlCodedStruct(Fields39conformance_StructOfReverseOrdinalTable, 1u, 16u, 72u, false,
                             "conformance/StructOfReverseOrdinalTable",
                             conformance_StructOfReverseOrdinalTableAltTypePointerTable()));
 
@@ -2692,7 +2693,7 @@ static const ::fidl::FidlStructField Fields40v1_conformance_ReverseOrdinalUnionS
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_ReverseOrdinalUnionStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_ReverseOrdinalUnionStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields40v1_conformance_ReverseOrdinalUnionStruct, 1u, 24u,
+    ::fidl::FidlCodedStruct(Fields40v1_conformance_ReverseOrdinalUnionStruct, 1u, 24u, 8u, true,
                             "conformance/ReverseOrdinalUnionStruct",
                             v1_conformance_ReverseOrdinalUnionStructAltTypePointerTable()));
 
@@ -2708,7 +2709,7 @@ static const ::fidl::FidlStructField Fields42v1_conformance_StructOfReverseOrdin
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StructOfReverseOrdinalTableAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StructOfReverseOrdinalTableTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields42v1_conformance_StructOfReverseOrdinalTable, 1u, 16u,
+    ::fidl::FidlCodedStruct(Fields42v1_conformance_StructOfReverseOrdinalTable, 1u, 16u, 72u, false,
                             "conformance/StructOfReverseOrdinalTable",
                             v1_conformance_StructOfReverseOrdinalTableAltTypePointerTable()));
 

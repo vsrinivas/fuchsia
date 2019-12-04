@@ -129,12 +129,6 @@ struct Union {
 
   bool is_Field() const { return ordinal_ == Ordinal::kField; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static Union WithField(int32_t&& val) {
-    Union result;
-    result.set_Field(std::move(val));
-    return result;
-  }
   static Union WithField(int32_t* val) {
     Union result;
     result.set_Field(val);
@@ -149,30 +143,10 @@ struct Union {
   // union member comment #1
   //
   // union member comment #3
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_Field(const T& v) {
-    mutable_Field() = v;
-  }
-
-  // union member comment #1
-  //
-  // union member comment #3
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_Field(const T* v) {
     mutable_Field() = *v;
-  }
-
-  // union member comment #1
-  //
-  // union member comment #3
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_Field(T&& v) {
-    mutable_Field() = std::move(v);
   }
 
   // union member comment #1

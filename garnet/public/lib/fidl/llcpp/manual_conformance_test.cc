@@ -42,7 +42,8 @@ TEST(InlineXUnionInStruct, Success) {
   {
     llcpp_misc::InlineXUnionInStruct input;
     llcpp_misc::SimpleUnion simple_union;
-    simple_union.set_i64(0xdeadbeef);
+    int64_t i64 = 0xdeadbeef;
+    simple_union.set_i64(&i64);
     input.before = fidl::StringView(before);
     input.xu.set_su(&simple_union);
     input.after = fidl::StringView(after);
