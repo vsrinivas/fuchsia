@@ -56,8 +56,15 @@ pub fn write_beacon_frame<B: Appendable>(
     // 9. Traffic indication map (TIM)
     // Write a placeholder TIM element, which the firmware will fill in. We only support hardware
     // with hardware offload beaconing for now (e.g. ath10k).
+    //
+    // While this isn't a real TIM element, we still put a single byte in it as that is the minimum
+    // legal TIM element value (IEEE Std 802.11-2016, 9.4.2.6: In the event that all bits other than
+    // bit 0 in the traffic indication virtual bitmap are 0, the Partial Virtual Bitmap field is
+    // encoded as a single octet equal to 0, the Bitmap Offset subfield is 0, and the Length field
+    // is 4.)
     let tim_ele_offset = buf.bytes_written();
-    buf.append_value(&ie::Header { id: Id::TIM, body_len: 0 })?;
+    buf.append_value(&ie::Header { id: Id::TIM, body_len: 1 })?;
+    buf.append_bytes(&[0][..])?;
 
     // 17. Extended Supported Rates and BSS Membership Selectors
     rates_writer.write_ext_supported_rates(buf);
@@ -106,7 +113,7 @@ mod tests {
                 0, 5, 1, 2, 3, 4, 5, // SSID
                 1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Supported rates
                 3, 1, 2, // DSSS parameter set
-                5, 0, // TIM
+                5, 1, 0, // TIM
                 50, 2, 9, 10, // Extended rates
                 48, 2, 77, 88, // RSNE
             ][..],
@@ -147,7 +154,7 @@ mod tests {
                 0, 5, 1, 2, 3, 4, 5, // SSID
                 1, 6, 1, 2, 3, 4, 5, 6, // Supported rates
                 3, 1, 2, // DSSS parameter set
-                5, 0, // TIM
+                5, 1, 0, // TIM
                 48, 2, 77, 88, // RSNE
             ][..],
             &buf[..]

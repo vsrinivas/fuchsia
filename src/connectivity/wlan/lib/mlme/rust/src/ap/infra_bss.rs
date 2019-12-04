@@ -388,7 +388,7 @@ mod tests {
             0, 5, 1, 2, 3, 4, 5, // SSID
             1, 1, 0b11111000, // Basic rates
             3, 1, 1, // DSSS parameter set
-            5, 0, // TIM
+            5, 1, 0, // TIM
         ];
 
         assert_eq!(
