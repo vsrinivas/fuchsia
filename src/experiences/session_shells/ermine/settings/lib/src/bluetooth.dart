@@ -16,7 +16,7 @@ import 'package:quickui/quickui.dart';
 class Bluetooth extends UiSpec {
   // Localized strings.
   static String get _title => Strings.bluetooth;
-  static String get _disconnect => Strings.disconnect;
+  static String get _disconnect => Strings.disconnect.toUpperCase();
 
   BluetoothModel model;
 

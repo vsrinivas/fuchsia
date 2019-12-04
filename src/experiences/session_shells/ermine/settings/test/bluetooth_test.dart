@@ -13,7 +13,7 @@ import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
 void main() {
-  String _disconnect = Strings.disconnect;
+  String _disconnect = Strings.disconnect.toUpperCase();
 
   test('Default Bluetooth Spec', () async {
     final control = MockControl();
