@@ -22,7 +22,6 @@ source_set("convert") {
     "//third_party/abseil-cpp",
     "//third_party/flatbuffers",
     "//third_party/leveldb",
-    "//third_party/rapidjson",
     "//zircon/public/lib/zx",
   ]
 }

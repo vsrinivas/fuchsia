@@ -75,7 +75,6 @@ source_set("lib") {
     "//third_party/abseil-cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
     "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/task-utils",

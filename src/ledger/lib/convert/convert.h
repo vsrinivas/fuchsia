@@ -12,7 +12,6 @@
 
 #include <flatbuffers/flatbuffers.h>
 #include <leveldb/db.h>
-#include <rapidjson/document.h>
 
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -44,10 +43,6 @@ class ExtendedStringView : public absl::string_view {
       : absl::string_view(string) {}
   constexpr ExtendedStringView(absl::string_view string_view)  // NOLINT
       : absl::string_view(string_view) {}
-  ExtendedStringView(const rapidjson::Value& value)  // NOLINT
-      : absl::string_view(value.GetString(), value.GetStringLength()) {
-    FXL_DCHECK(value.IsString());
-  }
   template <size_t N>
   constexpr ExtendedStringView(const char (&str)[N])  // NOLINT
       : absl::string_view(str) {}
