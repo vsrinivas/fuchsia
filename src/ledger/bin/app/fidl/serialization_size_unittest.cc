@@ -4,6 +4,7 @@
 
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 
+#include <inttypes.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
