@@ -195,7 +195,11 @@ class SimFirmware {
   // Handlers for events from hardware
   void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                 const common::MacAddr& bssid);
+
   void RxAssocResp(const common::MacAddr& src, const common::MacAddr& dst, uint16_t status);
+
+  void RxProbeResp(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
+                   const common::MacAddr& bssid);
 
   // Allocate a buffer for an event (brcmf_event)
   std::unique_ptr<std::vector<uint8_t>> CreateEventBuffer(size_t requested_size,
@@ -223,6 +227,7 @@ class SimFirmware {
 
   // Internal firmware state variables
   std::array<uint8_t, ETH_ALEN> mac_addr_;
+  common::MacAddr pfn_mac_addr_;
   ScanState scan_state_;
   AssocState assoc_state_;
   bool default_passive_scan_ = true;

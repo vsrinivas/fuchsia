@@ -22,12 +22,12 @@ struct ApInfo {
   size_t beacons_seen_count_ = 0;
 };
 
-class ScanTest : public SimTest {
+class PassiveScanTest : public SimTest {
  public:
   static constexpr zx::duration kBeaconInterval = zx::msec(100);
   static constexpr uint32_t kDwellTimeMs = 120;
 
-  ScanTest() = default;
+  PassiveScanTest() = default;
   void Init();
   void StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
                    const wlan_channel_t& chan, zx::duration beacon_interval = kBeaconInterval);
@@ -64,35 +64,35 @@ class ScanTest : public SimTest {
 };
 
 // Since we're acting as wlanif, we need handlers for any protocol calls we may receive
-wlanif_impl_ifc_protocol_ops_t ScanTest::sme_ops_ = {
+wlanif_impl_ifc_protocol_ops_t PassiveScanTest::sme_ops_ = {
     .on_scan_result =
         [](void* cookie, const wlanif_scan_result_t* result) {
-          static_cast<ScanTest*>(cookie)->OnScanResult(result);
+          static_cast<PassiveScanTest*>(cookie)->OnScanResult(result);
         },
     .on_scan_end =
         [](void* cookie, const wlanif_scan_end_t* end) {
-          static_cast<ScanTest*>(cookie)->OnScanEnd(end);
+          static_cast<PassiveScanTest*>(cookie)->OnScanEnd(end);
         },
 };
 
-void ScanTest::Init() {
+void PassiveScanTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
   ASSERT_EQ(CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT, sme_protocol_, &client_ifc_), ZX_OK);
 }
 
 // Create a new AP with the specified parameters, and tell it to start beaconing
-void ScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
-                           const wlan_channel_t& chan, zx::duration beacon_interval) {
+void PassiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
+                                  const wlan_channel_t& chan, zx::duration beacon_interval) {
   auto ap_info = std::make_unique<ApInfo>(env_.get(), bssid, ssid, chan);
   ap_info->ap_.EnableBeacon(beacon_interval);
   aps_.push_back(std::move(ap_info));
 }
 
 // Should never be called
-void ScanTest::Rx(void* pkt) { GTEST_FAIL(); }
+void PassiveScanTest::Rx(void* pkt) { GTEST_FAIL(); }
 
 // Called when simulation time has run out. Takes down all fake APs and the simulated DUT.
-void ScanTest::EndSimulation() {
+void PassiveScanTest::EndSimulation() {
   for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
     (*ap_info)->ap_.DisableBeacon();
   }
@@ -101,7 +101,7 @@ void ScanTest::EndSimulation() {
 }
 
 // Tell the DUT to run a scan
-void ScanTest::StartScan() {
+void PassiveScanTest::StartScan() {
   wlanif_scan_req_t req = {
       .txn_id = ++scan_txn_id_,
       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
@@ -116,14 +116,14 @@ void ScanTest::StartScan() {
   scan_state_ = RUNNING;
 }
 
-void ScanTest::ReceiveNotification(void* payload) {
+void PassiveScanTest::ReceiveNotification(void* payload) {
   auto fn = static_cast<std::function<void()>*>(payload);
   (*fn)();
   delete fn;
 }
 
 // Keep track of which AP we received the scan result for, using the BSSID as a unique identifier.
-void ScanTest::OnScanResult(const wlanif_scan_result_t* result) {
+void PassiveScanTest::OnScanResult(const wlanif_scan_result_t* result) {
   int matches_seen = 0;
 
   ASSERT_NE(result, nullptr);
@@ -153,7 +153,7 @@ void ScanTest::OnScanResult(const wlanif_scan_result_t* result) {
   EXPECT_EQ(matches_seen, 1);
 }
 
-void ScanTest::OnScanEnd(const wlanif_scan_end_t* end) {
+void PassiveScanTest::OnScanEnd(const wlanif_scan_end_t* end) {
   scan_state_ = COMPLETE;
 
   for (auto ap_info = aps_.begin(); ap_info != aps_.end(); ap_info++) {
@@ -172,7 +172,7 @@ constexpr wlan_channel_t kDefaultChannel = {
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
-TEST_F(ScanTest, BasicFunctionality) {
+TEST_F(PassiveScanTest, BasicFunctionality) {
   constexpr zx::duration kScanStartTime = zx::sec(1);
   constexpr zx::duration kDefaultTestDuration = zx::sec(100);
 
@@ -184,12 +184,12 @@ TEST_F(ScanTest, BasicFunctionality) {
 
   // Request a future scan
   auto scan_handler = new std::function<void()>;
-  *scan_handler = std::bind(&ScanTest::StartScan, this);
+  *scan_handler = std::bind(&PassiveScanTest::StartScan, this);
   env_->ScheduleNotification(this, kScanStartTime, scan_handler);
 
   // Request a future notification so we can shut down the test
   auto end_handler = new std::function<void()>;
-  *end_handler = std::bind(&ScanTest::EndSimulation, this);
+  *end_handler = std::bind(&PassiveScanTest::EndSimulation, this);
   env_->ScheduleNotification(this, kDefaultTestDuration, end_handler);
 
   env_->Run();

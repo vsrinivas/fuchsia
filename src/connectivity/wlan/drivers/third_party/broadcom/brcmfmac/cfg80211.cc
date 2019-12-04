@@ -18,6 +18,7 @@
 
 #include "cfg80211.h"
 
+#include <stdlib.h>
 #include <threads.h>
 #include <zircon/status.h>
 
@@ -686,6 +687,23 @@ done:
   return err;
 }
 
+static zx_status_t brcmf_dev_escan_set_randmac(struct brcmf_if* ifp) {
+  struct brcmf_pno_macaddr_le pfn_mac = {};
+  zx_status_t err = ZX_OK;
+  int32_t fw_err = 0;
+
+  pfn_mac.version = BRCMF_PFN_MACADDR_CFG_VER;
+  pfn_mac.flags = BRCMF_PFN_USE_FULL_MACADDR;
+
+  brcmf_gen_random_mac_addr(pfn_mac.mac);
+
+  err = brcmf_fil_iovar_data_set(ifp, "pfn_macaddr", &pfn_mac, sizeof(pfn_mac), &fw_err);
+  if (err)
+    BRCMF_ERR("set escan randmac failed, err=%d, fw_err=%d\n", err, fw_err);
+
+  return err;
+}
+
 static void brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
                              struct brcmf_scan_params_le* params_le,
                              const wlanif_scan_req_t* request) {
@@ -795,6 +813,11 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
   params->version = BRCMF_ESCAN_REQ_VERSION;
   params->action = WL_ESCAN_ACTION_START;
   params->sync_id = 0x1234;
+
+  if (params->params_le.scan_type == BRCMF_SCANTYPE_ACTIVE &&
+      !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+    brcmf_dev_escan_set_randmac(ifp);
+  }
 
   err = brcmf_fil_iovar_data_set(ifp, "escan", params, params_size, &fw_err);
   if (err != ZX_OK) {

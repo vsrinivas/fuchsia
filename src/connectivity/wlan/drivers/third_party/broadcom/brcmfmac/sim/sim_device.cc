@@ -18,7 +18,6 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -67,9 +66,7 @@ zx_status_t SimDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_t* s
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-brcmf_simdev* SimDevice::GetSim() {
-  return (brcmf_bus_.get())->bus_priv.sim;
-}
+brcmf_simdev* SimDevice::GetSim() { return (brcmf_bus_.get())->bus_priv.sim; }
 
 SimDevice::~SimDevice() {
   DisableDispatcher();

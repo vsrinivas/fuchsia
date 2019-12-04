@@ -116,11 +116,28 @@ executable("scan_dwell_time_test") {
   ]
 }
 
-executable("scan_test") {
-  output_name = "scan_test"
+executable("passive_scan_test") {
+  output_name = "passive_scan_test"
   testonly = true
   sources = [
-    "scan_test.cc",
+    "passive_scan_test.cc",
+  ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+  public_configs = [ "//build/config:Wno-reorder-init-list" ]
+}
+
+executable("active_scan_test") {
+  output_name = "active_scan_test"
+  testonly = true
+  sources = [
+    "active_scan_test.cc",
   ]
   deps = [
     ":sim_test",
@@ -152,12 +169,13 @@ executable("set_cc_test") {
 unittest_package("brcmfmac_sim_test") {
   package_name = "brcmfmac_sim_test"
   deps = [
+    ":active_scan_test",
     ":assoc_test",
     ":dynamic_if_test",
     ":firmware_config_test",
     ":lifecycle_test",
+    ":passive_scan_test",
     ":scan_dwell_time_test",
-    ":scan_test",
     ":set_cc_test",
   ]
   tests = [
@@ -182,7 +200,11 @@ unittest_package("brcmfmac_sim_test") {
       environments = basic_envs
     },
     {
-      name = "scan_test"
+      name = "passive_scan_test"
+      environments = basic_envs
+    },
+    {
+      name = "active_scan_test"
       environments = basic_envs
     },
     {

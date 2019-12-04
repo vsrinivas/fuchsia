@@ -46,6 +46,15 @@ void SimHardware::RxAssocResp(const wlan_channel_t& channel, const common::MacAd
   }
 }
 
+void SimHardware::RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
+                              const common::MacAddr& dst, const wlan_ssid_t& ssid) {
+  // Pass information from probe response to firmware if they are on the channel we are tuned to.
+  if (rx_enabled_ && (channel_.primary == channel.primary) && (channel_.cbw == channel.cbw) &&
+      (channel_.secondary80 == channel.secondary80)) {
+    event_handlers_.rx_probe_resp_handler(channel, ssid, src);
+  }
+}
+
 // For now, all sim-env notifications are simple callbacks. If we need something more flexible
 // in the future, we could always wrap the callback into a struct with a void* for associated data.
 void SimHardware::ReceiveNotification(void* payload) {
@@ -84,6 +93,10 @@ void SimHardware::CancelCallback(uint64_t id) { env_->CancelNotification(this, i
 
 void SimHardware::TxAssocReq(const common::MacAddr& src, const common::MacAddr& bssid) {
   env_->TxAssocReq(this, channel_, src, bssid);
+}
+
+void SimHardware::TxProbeRequest(common::MacAddr& scan_mac) {
+  env_->TxProbeReq(this, channel_, scan_mac);
 }
 
 }  // namespace wlan::brcmfmac

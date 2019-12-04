@@ -130,7 +130,7 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
   return ZX_OK;
 }
 
-static void brcmf_gen_random_mac_addr(uint8_t* mac_addr) {
+void brcmf_gen_random_mac_addr(uint8_t* mac_addr) {
   int err = getentropy(mac_addr, ETH_ALEN);
   ZX_ASSERT(!err);
 
