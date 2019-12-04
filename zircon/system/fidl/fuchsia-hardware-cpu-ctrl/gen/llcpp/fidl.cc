@@ -95,7 +95,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreId
 
 }  // namespace
 template <>
-Device::ResultOf::GetPerformanceStateInfo_Impl<Device::GetPerformanceStateInfoResponse>::GetPerformanceStateInfo_Impl(zx::unowned_channel _client_end, uint32_t state) {
+Device::ResultOf::GetPerformanceStateInfo_Impl<Device::GetPerformanceStateInfoResponse>::GetPerformanceStateInfo_Impl(::zx::unowned_channel _client_end, uint32_t state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPerformanceStateInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -110,15 +110,15 @@ Device::ResultOf::GetPerformanceStateInfo_Impl<Device::GetPerformanceStateInfoRe
 }
 
 Device::ResultOf::GetPerformanceStateInfo Device::SyncClient::GetPerformanceStateInfo(uint32_t state) {
-  return ResultOf::GetPerformanceStateInfo(zx::unowned_channel(this->channel_), std::move(state));
+    return ResultOf::GetPerformanceStateInfo(::zx::unowned_channel(this->channel_), std::move(state));
 }
 
-Device::ResultOf::GetPerformanceStateInfo Device::Call::GetPerformanceStateInfo(zx::unowned_channel _client_end, uint32_t state) {
+Device::ResultOf::GetPerformanceStateInfo Device::Call::GetPerformanceStateInfo(::zx::unowned_channel _client_end, uint32_t state) {
   return ResultOf::GetPerformanceStateInfo(std::move(_client_end), std::move(state));
 }
 
 template <>
-Device::UnownedResultOf::GetPerformanceStateInfo_Impl<Device::GetPerformanceStateInfoResponse>::GetPerformanceStateInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t state, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetPerformanceStateInfo_Impl<Device::GetPerformanceStateInfoResponse>::GetPerformanceStateInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t state, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetPerformanceStateInfoRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetPerformanceStateInfoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -133,14 +133,14 @@ Device::UnownedResultOf::GetPerformanceStateInfo_Impl<Device::GetPerformanceStat
 }
 
 Device::UnownedResultOf::GetPerformanceStateInfo Device::SyncClient::GetPerformanceStateInfo(::fidl::BytePart _request_buffer, uint32_t state, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetPerformanceStateInfo(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(state), std::move(_response_buffer));
+  return UnownedResultOf::GetPerformanceStateInfo(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(state), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetPerformanceStateInfo Device::Call::GetPerformanceStateInfo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t state, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetPerformanceStateInfo Device::Call::GetPerformanceStateInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetPerformanceStateInfo(std::move(_client_end), std::move(_request_buffer), std::move(state), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetPerformanceStateInfoResponse> Device::InPlace::GetPerformanceStateInfo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetPerformanceStateInfoRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetPerformanceStateInfoResponse> Device::InPlace::GetPerformanceStateInfo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetPerformanceStateInfoRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::GetPerformanceStateInfoRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -157,7 +157,7 @@ Device::UnownedResultOf::GetPerformanceStateInfo Device::Call::GetPerformanceSta
 }
 
 template <>
-Device::ResultOf::GetNumLogicalCores_Impl<Device::GetNumLogicalCoresResponse>::GetNumLogicalCores_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetNumLogicalCores_Impl<Device::GetNumLogicalCoresResponse>::GetNumLogicalCores_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNumLogicalCoresRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -170,15 +170,15 @@ Device::ResultOf::GetNumLogicalCores_Impl<Device::GetNumLogicalCoresResponse>::G
 }
 
 Device::ResultOf::GetNumLogicalCores Device::SyncClient::GetNumLogicalCores() {
-  return ResultOf::GetNumLogicalCores(zx::unowned_channel(this->channel_));
+    return ResultOf::GetNumLogicalCores(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetNumLogicalCores Device::Call::GetNumLogicalCores(zx::unowned_channel _client_end) {
+Device::ResultOf::GetNumLogicalCores Device::Call::GetNumLogicalCores(::zx::unowned_channel _client_end) {
   return ResultOf::GetNumLogicalCores(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetNumLogicalCores_Impl<Device::GetNumLogicalCoresResponse>::GetNumLogicalCores_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetNumLogicalCores_Impl<Device::GetNumLogicalCoresResponse>::GetNumLogicalCores_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetNumLogicalCoresRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetNumLogicalCoresRequest::PrimarySize);
@@ -189,14 +189,14 @@ Device::UnownedResultOf::GetNumLogicalCores_Impl<Device::GetNumLogicalCoresRespo
 }
 
 Device::UnownedResultOf::GetNumLogicalCores Device::SyncClient::GetNumLogicalCores(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetNumLogicalCores(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetNumLogicalCores(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetNumLogicalCores Device::Call::GetNumLogicalCores(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetNumLogicalCores Device::Call::GetNumLogicalCores(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetNumLogicalCores(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetNumLogicalCoresResponse> Device::InPlace::GetNumLogicalCores(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetNumLogicalCoresResponse> Device::InPlace::GetNumLogicalCores(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetNumLogicalCoresRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -218,7 +218,7 @@ Device::UnownedResultOf::GetNumLogicalCores Device::Call::GetNumLogicalCores(zx:
 }
 
 template <>
-Device::ResultOf::GetLogicalCoreId_Impl<Device::GetLogicalCoreIdResponse>::GetLogicalCoreId_Impl(zx::unowned_channel _client_end, uint64_t index) {
+Device::ResultOf::GetLogicalCoreId_Impl<Device::GetLogicalCoreIdResponse>::GetLogicalCoreId_Impl(::zx::unowned_channel _client_end, uint64_t index) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetLogicalCoreIdRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -233,15 +233,15 @@ Device::ResultOf::GetLogicalCoreId_Impl<Device::GetLogicalCoreIdResponse>::GetLo
 }
 
 Device::ResultOf::GetLogicalCoreId Device::SyncClient::GetLogicalCoreId(uint64_t index) {
-  return ResultOf::GetLogicalCoreId(zx::unowned_channel(this->channel_), std::move(index));
+    return ResultOf::GetLogicalCoreId(::zx::unowned_channel(this->channel_), std::move(index));
 }
 
-Device::ResultOf::GetLogicalCoreId Device::Call::GetLogicalCoreId(zx::unowned_channel _client_end, uint64_t index) {
+Device::ResultOf::GetLogicalCoreId Device::Call::GetLogicalCoreId(::zx::unowned_channel _client_end, uint64_t index) {
   return ResultOf::GetLogicalCoreId(std::move(_client_end), std::move(index));
 }
 
 template <>
-Device::UnownedResultOf::GetLogicalCoreId_Impl<Device::GetLogicalCoreIdResponse>::GetLogicalCoreId_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t index, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetLogicalCoreId_Impl<Device::GetLogicalCoreIdResponse>::GetLogicalCoreId_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t index, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetLogicalCoreIdRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetLogicalCoreIdResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -256,14 +256,14 @@ Device::UnownedResultOf::GetLogicalCoreId_Impl<Device::GetLogicalCoreIdResponse>
 }
 
 Device::UnownedResultOf::GetLogicalCoreId Device::SyncClient::GetLogicalCoreId(::fidl::BytePart _request_buffer, uint64_t index, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetLogicalCoreId(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
+  return UnownedResultOf::GetLogicalCoreId(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetLogicalCoreId Device::Call::GetLogicalCoreId(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t index, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetLogicalCoreId Device::Call::GetLogicalCoreId(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetLogicalCoreId(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetLogicalCoreIdResponse> Device::InPlace::GetLogicalCoreId(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetLogicalCoreIdRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetLogicalCoreIdResponse> Device::InPlace::GetLogicalCoreId(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetLogicalCoreIdRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::GetLogicalCoreIdRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

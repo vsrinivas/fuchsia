@@ -339,7 +339,7 @@ class Device final {
     class GetPerformanceStateInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetPerformanceStateInfo_Impl(zx::unowned_channel _client_end, uint32_t state);
+      GetPerformanceStateInfo_Impl(::zx::unowned_channel _client_end, uint32_t state);
       ~GetPerformanceStateInfo_Impl() = default;
       GetPerformanceStateInfo_Impl(GetPerformanceStateInfo_Impl&& other) = default;
       GetPerformanceStateInfo_Impl& operator=(GetPerformanceStateInfo_Impl&& other) = default;
@@ -355,7 +355,7 @@ class Device final {
     class GetNumLogicalCores_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetNumLogicalCores_Impl(zx::unowned_channel _client_end);
+      GetNumLogicalCores_Impl(::zx::unowned_channel _client_end);
       ~GetNumLogicalCores_Impl() = default;
       GetNumLogicalCores_Impl(GetNumLogicalCores_Impl&& other) = default;
       GetNumLogicalCores_Impl& operator=(GetNumLogicalCores_Impl&& other) = default;
@@ -371,7 +371,7 @@ class Device final {
     class GetLogicalCoreId_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetLogicalCoreId_Impl(zx::unowned_channel _client_end, uint64_t index);
+      GetLogicalCoreId_Impl(::zx::unowned_channel _client_end, uint64_t index);
       ~GetLogicalCoreId_Impl() = default;
       GetLogicalCoreId_Impl(GetLogicalCoreId_Impl&& other) = default;
       GetLogicalCoreId_Impl& operator=(GetLogicalCoreId_Impl&& other) = default;
@@ -399,7 +399,7 @@ class Device final {
     class GetPerformanceStateInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetPerformanceStateInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t state, ::fidl::BytePart _response_buffer);
+      GetPerformanceStateInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t state, ::fidl::BytePart _response_buffer);
       ~GetPerformanceStateInfo_Impl() = default;
       GetPerformanceStateInfo_Impl(GetPerformanceStateInfo_Impl&& other) = default;
       GetPerformanceStateInfo_Impl& operator=(GetPerformanceStateInfo_Impl&& other) = default;
@@ -415,7 +415,7 @@ class Device final {
     class GetNumLogicalCores_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetNumLogicalCores_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetNumLogicalCores_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetNumLogicalCores_Impl() = default;
       GetNumLogicalCores_Impl(GetNumLogicalCores_Impl&& other) = default;
       GetNumLogicalCores_Impl& operator=(GetNumLogicalCores_Impl&& other) = default;
@@ -431,7 +431,7 @@ class Device final {
     class GetLogicalCoreId_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetLogicalCoreId_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t index, ::fidl::BytePart _response_buffer);
+      GetLogicalCoreId_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t index, ::fidl::BytePart _response_buffer);
       ~GetLogicalCoreId_Impl() = default;
       GetLogicalCoreId_Impl(GetLogicalCoreId_Impl&& other) = default;
       GetLogicalCoreId_Impl& operator=(GetLogicalCoreId_Impl&& other) = default;
@@ -505,34 +505,34 @@ class Device final {
     // Returns information about a given performance state for this performance
     // domain.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetPerformanceStateInfo GetPerformanceStateInfo(zx::unowned_channel _client_end, uint32_t state);
+    static ResultOf::GetPerformanceStateInfo GetPerformanceStateInfo(::zx::unowned_channel _client_end, uint32_t state);
 
     // Returns information about a given performance state for this performance
     // domain.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetPerformanceStateInfo GetPerformanceStateInfo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetPerformanceStateInfo GetPerformanceStateInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t state, ::fidl::BytePart _response_buffer);
 
     // Returns the number of logical cores contained within this performance
     // domain.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetNumLogicalCores GetNumLogicalCores(zx::unowned_channel _client_end);
+    static ResultOf::GetNumLogicalCores GetNumLogicalCores(::zx::unowned_channel _client_end);
 
     // Returns the number of logical cores contained within this performance
     // domain.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetNumLogicalCores GetNumLogicalCores(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetNumLogicalCores GetNumLogicalCores(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Returns a global system-wide core ID for the nth core in this
     // performance domain. `index` must be a value in the range [0, n) where
     // n is the value returned by GetNumLogicalCores().
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetLogicalCoreId GetLogicalCoreId(zx::unowned_channel _client_end, uint64_t index);
+    static ResultOf::GetLogicalCoreId GetLogicalCoreId(::zx::unowned_channel _client_end, uint64_t index);
 
     // Returns a global system-wide core ID for the nth core in this
     // performance domain. `index` must be a value in the range [0, n) where
     // n is the value returned by GetNumLogicalCores().
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetLogicalCoreId GetLogicalCoreId(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t index, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetLogicalCoreId GetLogicalCoreId(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t index, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -544,16 +544,16 @@ class Device final {
 
     // Returns information about a given performance state for this performance
     // domain.
-    static ::fidl::DecodeResult<GetPerformanceStateInfoResponse> GetPerformanceStateInfo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetPerformanceStateInfoRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetPerformanceStateInfoResponse> GetPerformanceStateInfo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetPerformanceStateInfoRequest> params, ::fidl::BytePart response_buffer);
 
     // Returns the number of logical cores contained within this performance
     // domain.
-    static ::fidl::DecodeResult<GetNumLogicalCoresResponse> GetNumLogicalCores(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetNumLogicalCoresResponse> GetNumLogicalCores(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns a global system-wide core ID for the nth core in this
     // performance domain. `index` must be a value in the range [0, n) where
     // n is the value returned by GetNumLogicalCores().
-    static ::fidl::DecodeResult<GetLogicalCoreIdResponse> GetLogicalCoreId(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetLogicalCoreIdRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetLogicalCoreIdResponse> GetLogicalCoreId(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetLogicalCoreIdRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
