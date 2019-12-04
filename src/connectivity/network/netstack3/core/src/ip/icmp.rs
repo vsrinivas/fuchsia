@@ -15,7 +15,7 @@ use crate::context::{CounterContext, InstantContext, StateContext};
 use crate::data_structures::token_bucket::TokenBucket;
 use crate::device::ndp::NdpPacketHandler;
 use crate::device::{DeviceId, FrameDestination};
-use crate::error::{ExistsError, NoRouteError, ConnectError};
+use crate::error::{ExistsError, NoRouteError, SocketError};
 use crate::ip::forwarding::ForwardingTable;
 use crate::ip::{
     mld::MldHandler,
@@ -1857,7 +1857,7 @@ pub fn new_icmpv4_connection<D: EventDispatcher>(
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
-) -> Result<IcmpConnId<Ipv4>, ConnectError> {
+) -> Result<IcmpConnId<Ipv4>, SocketError> {
     new_icmpv4_connection_inner(ctx, local_addr, remote_addr, icmp_id)
 }
 
@@ -1869,7 +1869,7 @@ fn new_icmpv4_connection_inner<C: Icmpv4SocketContext>(
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
-) -> Result<IcmpConnId<Ipv4>, ConnectError> {
+) -> Result<IcmpConnId<Ipv4>, SocketError> {
     let ip =
         ctx.new_ip_socket(local_addr, remote_addr, IpProto::Icmp, None, UnroutableBehavior::Close)?;
     Ok(new_icmp_connection_inner(&mut ctx.get_state_mut().conns, remote_addr, icmp_id, ip)?)
@@ -1888,7 +1888,7 @@ pub fn new_icmpv6_connection<D: EventDispatcher>(
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
-) -> Result<IcmpConnId<Ipv6>, ConnectError> {
+) -> Result<IcmpConnId<Ipv6>, SocketError> {
     new_icmpv6_connection_inner(ctx, local_addr, remote_addr, icmp_id)
 }
 
@@ -1900,7 +1900,7 @@ fn new_icmpv6_connection_inner<C: Icmpv6SocketContext>(
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
-) -> Result<IcmpConnId<Ipv6>, ConnectError> {
+) -> Result<IcmpConnId<Ipv6>, SocketError> {
     let ip = ctx.new_ip_socket(
         local_addr,
         remote_addr,

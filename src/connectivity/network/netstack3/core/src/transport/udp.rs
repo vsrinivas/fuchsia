@@ -19,7 +19,7 @@ use zerocopy::ByteSlice;
 use crate::algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId};
 use crate::context::{RngContext, RngContextExt, StateContext};
 use crate::data_structures::IdMapCollectionKey;
-use crate::error::{ConnectError, LocalAddressError, NetstackError, RemoteAddressError};
+use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 use crate::ip::{
     BufferTransportIpContext, IpPacketFromArgs, IpProto, IpVersionMarker, TransportIpContext,
 };
@@ -702,21 +702,21 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
     local_port: Option<NonZeroU16>,
     remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
-) -> Result<UdpConnId<A::Version>, ConnectError> {
+) -> Result<UdpConnId<A::Version>, SocketError> {
     let default_local = ctx
         .local_address_for_remote(remote_addr)
-        .ok_or(ConnectError::Remote(RemoteAddressError::NoRoute))?;
+        .ok_or(SocketError::Remote(RemoteAddressError::NoRoute))?;
 
     let local_addr = local_addr.unwrap_or(default_local);
 
     if !ctx.is_local_addr(local_addr.get()) {
-        return Err(ConnectError::Local(LocalAddressError::CannotBindToAddress));
+        return Err(SocketError::Local(LocalAddressError::CannotBindToAddress));
     }
     let local_port = if let Some(local_port) = local_port {
         local_port
     } else {
         try_alloc_local_port(ctx, &ProtocolFlowId::new(local_addr, remote_addr, remote_port))
-            .ok_or(ConnectError::Local(LocalAddressError::FailedToAllocateLocalPort))?
+            .ok_or(SocketError::Local(LocalAddressError::FailedToAllocateLocalPort))?
     };
 
     let c = Conn { local_addr, local_port, remote_addr, remote_port };
@@ -725,7 +725,7 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
     if state.conn_state.conns.get_id_by_addr(&c).is_some()
         || state.conn_state.listeners.get_by_addr(&listener).is_some()
     {
-        return Err(ConnectError::ConnectionInUse);
+        return Err(SocketError::Local(LocalAddressError::AddressInUse));
     }
     Ok(UdpConnId::new(state.conn_state.conns.insert(c.clone(), c)))
 }
@@ -784,33 +784,31 @@ pub fn listen_udp<A: IpAddress, C: UdpContext<A::Version>>(
     ctx: &mut C,
     addr: Option<SpecifiedAddr<A>>,
     port: Option<NonZeroU16>,
-) -> UdpListenerId<A::Version> {
+) -> Result<UdpListenerId<A::Version>, SocketError> {
     let port = if let Some(port) = port {
         if !ctx.get_state().conn_state.is_listen_port_available(addr, port) {
-            // TODO(brunodalbo) return error
-            panic!("UDP listen port already in use")
+            return Err(SocketError::Local(LocalAddressError::AddressInUse));
         }
         port
     } else {
         let used_ports =
             ctx.get_state_mut().conn_state.collect_used_local_ports(addr.as_ref().into_iter());
-        // TODO(brunodalbo) return error
-        try_alloc_listen_port(ctx, &used_ports).expect("UDP failed to alloc local port")
+        try_alloc_listen_port(ctx, &used_ports)
+            .ok_or(SocketError::Local(LocalAddressError::FailedToAllocateLocalPort))?
     };
     match addr {
         None => {
             let state = ctx.get_state_mut();
-            UdpListenerId::new_wildcard(state.conn_state.wildcard_listeners.insert(vec![port]))
+            Ok(UdpListenerId::new_wildcard(state.conn_state.wildcard_listeners.insert(vec![port])))
         }
         Some(addr) => {
             if !ctx.is_local_addr(addr.get()) {
-                // TODO(brunodalbo) return error
-                panic!("UDP can't bind to address");
+                return Err(SocketError::Local(LocalAddressError::CannotBindToAddress));
             }
             let state = ctx.get_state_mut();
-            UdpListenerId::new_specified(
+            Ok(UdpListenerId::new_specified(
                 state.conn_state.listeners.insert(vec![Listener { addr, port }]),
-            )
+            ))
         }
     }
 }
@@ -1063,7 +1061,8 @@ mod tests {
         let local_ip = local_addr::<I>();
         let remote_ip = remote_addr::<I>();
         // Create a listener on local port 100, bound to the local IP:
-        let listener = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), NonZeroU16::new(100));
+        let listener = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), NonZeroU16::new(100))
+            .expect("listen_udp failed");
         assert_eq!(listener.listener_type, ListenerType::Specified);
 
         // Inject a packet and check that the context receives it:
@@ -1229,7 +1228,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(conn_err, ConnectError::Remote(RemoteAddressError::NoRoute));
+        assert_eq!(conn_err, SocketError::Remote(RemoteAddressError::NoRoute));
     }
 
     /// Tests that UDP connections fail with an appropriate error when local address is non-local.
@@ -1238,7 +1237,7 @@ mod tests {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
 
-        // use remote address to trigger ConnectError::CannotBindToAddress.
+        // use remote address to trigger SocketError::CannotBindToAddress.
         let local_ip = remote_addr::<I>();
         let remote_ip = remote_addr::<I>();
         // create a UDP connection with a specified local port and local ip:
@@ -1251,7 +1250,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(conn_err, ConnectError::Local(LocalAddressError::CannotBindToAddress));
+        assert_eq!(conn_err, SocketError::Local(LocalAddressError::CannotBindToAddress));
     }
 
     /// Tests that UDP connections fail with an appropriate error when local ports are exhausted.
@@ -1260,16 +1259,15 @@ mod tests {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
 
+        let local_ip = local_addr::<I>();
         // exhaust local ports to trigger FailedToAllocateLocalPort error.
         for port_num in UdpConnectionState::<I>::EPHEMERAL_RANGE {
-            let local_ip1 = local_addr::<I>();
             ctx.get_state_mut().conn_state.listeners.insert(vec![Listener {
-                addr: local_ip1,
+                addr: local_ip,
                 port: NonZeroU16::new(port_num).unwrap(),
             }]);
         }
 
-        let local_ip = local_addr::<I>();
         let remote_ip = remote_addr::<I>();
         let conn_err = connect_udp::<I::Addr, _>(
             &mut ctx,
@@ -1280,7 +1278,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(conn_err, ConnectError::Local(LocalAddressError::FailedToAllocateLocalPort));
+        assert_eq!(conn_err, SocketError::Local(LocalAddressError::FailedToAllocateLocalPort));
     }
 
     /// Tests that UDP connections fail with an appropriate error when the connection is in use.
@@ -1289,7 +1287,7 @@ mod tests {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
 
-        // use remote address to trigger ConnectError::CannotBindToAddress.
+        // use remote address to trigger SocketError::CannotBindToAddress.
         let local_ip = local_addr::<I>();
         let remote_ip = remote_addr::<I>();
 
@@ -1315,7 +1313,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(conn_err, ConnectError::ConnectionInUse);
+        assert_eq!(conn_err, SocketError::Local(LocalAddressError::AddressInUse));
     }
 
     #[ip_test]
@@ -1387,7 +1385,7 @@ mod tests {
 
         assert_eq!(
             send_error,
-            NetstackError::Connect(ConnectError::Local(LocalAddressError::CannotBindToAddress))
+            NetstackError::Connect(SocketError::Local(LocalAddressError::CannotBindToAddress))
         );
     }
 
@@ -1489,9 +1487,12 @@ mod tests {
             remote_port_a,
         )
         .expect("connect_udp failed");
-        let list1 = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(local_port_a));
-        let list2 = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(local_port_b));
-        let wildcard_list = listen_udp::<I::Addr, _>(&mut ctx, None, Some(local_port_c));
+        let list1 = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(local_port_a))
+            .expect("listen_udp failed");
+        let list2 = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(local_port_b))
+            .expect("listen_udp failed");
+        let wildcard_list = listen_udp::<I::Addr, _>(&mut ctx, None, Some(local_port_c))
+            .expect("listen_udp failed");
 
         // now inject UDP packets that each of the created connections should
         // receive:
@@ -1585,7 +1586,8 @@ mod tests {
         let remote_ip_b = get_other_ip_address::<I::Addr>(72);
         let listener_port = NonZeroU16::new(100).unwrap();
         let remote_port = NonZeroU16::new(200).unwrap();
-        let listener = listen_udp::<I::Addr, _>(&mut ctx, None, Some(listener_port));
+        let listener = listen_udp::<I::Addr, _>(&mut ctx, None, Some(listener_port))
+            .expect("listen_udp failed");
         assert_eq!(listener.listener_type, ListenerType::Wildcard);
 
         let body = [1, 2, 3, 4, 5];
@@ -1724,11 +1726,11 @@ mod tests {
 
         // create some listeners and connections:
         // wildcard listeners:
-        listen_udp::<I::Addr, _>(&mut ctx, None, Some(pa));
-        listen_udp::<I::Addr, _>(&mut ctx, None, Some(pb));
+        listen_udp::<I::Addr, _>(&mut ctx, None, Some(pa)).expect("listen_udp failed");
+        listen_udp::<I::Addr, _>(&mut ctx, None, Some(pb)).expect("listen_udp failed");
         // specified address listeners:
-        listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(pc));
-        listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip_2), Some(pd));
+        listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(pc)).expect("listen_udp failed");
+        listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip_2), Some(pd)).expect("listen_udp failed");
         // connections:
         connect_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(pe), remote_ip, remote_port)
             .expect("connect_udp failed");
@@ -1768,8 +1770,10 @@ mod tests {
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_addr::<I>();
 
-        let wildcard_list = listen_udp::<I::Addr, _>(&mut ctx, None, None);
-        let specified_list = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), None);
+        let wildcard_list =
+            listen_udp::<I::Addr, _>(&mut ctx, None, None).expect("listen_udp failed");
+        let specified_list =
+            listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), None).expect("listen_udp failed");
 
         let wildcard_port = ctx
             .get_state()
@@ -1830,14 +1834,16 @@ mod tests {
         let local_port = NonZeroU16::new(100).unwrap();
 
         // test removing a specified listener:
-        let list = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(local_port));
+        let list = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), Some(local_port))
+            .expect("listen_udp failed");
         let info = remove_udp_listener(&mut ctx, list);
         assert_eq!(info.local_addr.unwrap(), local_ip);
         assert_eq!(info.local_port, local_port);
         assert!(ctx.get_state().conn_state.listeners.get_by_listener(list.id).is_none());
 
         // test removing a wildcard listener:
-        let list = listen_udp::<I::Addr, _>(&mut ctx, None, Some(local_port));
+        let list =
+            listen_udp::<I::Addr, _>(&mut ctx, None, Some(local_port)).expect("listen_udp failed");
         let info = remove_udp_listener(&mut ctx, list);
         assert!(info.local_addr.is_none());
         assert_eq!(info.local_port, local_port);
@@ -1871,15 +1877,34 @@ mod tests {
         let local_ip = local_addr::<I>();
 
         // check getting info on specified listener:
-        let list = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), NonZeroU16::new(100));
+        let list = listen_udp::<I::Addr, _>(&mut ctx, Some(local_ip), NonZeroU16::new(100))
+            .expect("listen_udp failed");
         let info = get_udp_listener_info(&ctx, list);
         assert_eq!(info.local_addr.unwrap(), local_ip);
         assert_eq!(info.local_port.get(), 100);
 
         // check getting info on wildcard listener:
-        let list = listen_udp::<I::Addr, _>(&mut ctx, None, NonZeroU16::new(200));
+        let list = listen_udp::<I::Addr, _>(&mut ctx, None, NonZeroU16::new(200))
+            .expect("listen_udp failed");
         let info = get_udp_listener_info(&ctx, list);
         assert!(info.local_addr.is_none());
         assert_eq!(info.local_port.get(), 200);
+    }
+
+    #[ip_test]
+    fn test_listen_udp_forwards_errors<I: Ip>() {
+        let mut ctx = DummyContext::<I>::default();
+        let remote_ip = remote_addr::<I>();
+
+        // check listening to a non-local ip fails.
+        let listen_err = listen_udp::<I::Addr, _>(&mut ctx, Some(remote_ip), NonZeroU16::new(100))
+            .expect_err("listen_udp unexpectedly succeeded");
+        assert_eq!(listen_err, SocketError::Local(LocalAddressError::CannotBindToAddress));
+
+        let _ = listen_udp::<I::Addr, _>(&mut ctx, None, NonZeroU16::new(200))
+            .expect("listen_udp failed");
+        let listen_err = listen_udp::<I::Addr, _>(&mut ctx, None, NonZeroU16::new(200))
+            .expect_err("listen_udp unexpectedly succeeded");
+        assert_eq!(listen_err, SocketError::Local(LocalAddressError::AddressInUse));
     }
 }

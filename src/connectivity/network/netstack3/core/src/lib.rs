@@ -47,7 +47,7 @@ pub use crate::device::{
     get_ip_addr_subnets, initialize_device, receive_frame, remove_device, DeviceId,
     DeviceLayerEventDispatcher,
 };
-pub use crate::error::{ConnectError, LocalAddressError, NetstackError, RemoteAddressError};
+pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 pub use crate::ip::{
     icmp, EntryDest, EntryDestEither, EntryEither, IpLayerEventDispatcher, Ipv4StateBuilder,
     Ipv6StateBuilder,

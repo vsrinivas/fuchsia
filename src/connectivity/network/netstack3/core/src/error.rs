@@ -41,7 +41,7 @@ pub enum NetstackError {
 
     /// Errors related to connections.
     #[fail(display = "{}", _0)]
-    Connect(#[cause] ConnectError),
+    Connect(#[cause] SocketError),
 
     /// Error when there is no route to an address.
     #[fail(display = "No route to address")]
@@ -167,9 +167,9 @@ impl From<ExistsError> for NetstackError {
     }
 }
 
-impl From<ExistsError> for ConnectError {
-    fn from(_: ExistsError) -> ConnectError {
-        ConnectError::ConnectionInUse
+impl From<ExistsError> for SocketError {
+    fn from(_: ExistsError) -> SocketError {
+        SocketError::Local(LocalAddressError::AddressInUse)
     }
 }
 
@@ -198,12 +198,15 @@ pub enum LocalAddressError {
     /// Specified local address does not match any expected address.
     #[fail(display = "specified local address does not match any expected address")]
     AddressMismatch,
+
+    /// The requested address/socket pair is in use.
+    #[fail(display = "Address in use")]
+    AddressInUse,
 }
 
-// TODO(joshlf): Rename this to something like SocketError once we support a
-// more general model of sockets in which UDP and ICMP connections are special
-// cases of UDP and ICMP sockets. We can then introduce a more specialized
-// ListenerError which does not contain the NoRoute variant.
+// TODO(joshlf): Once we support a more general model of sockets in which UDP and ICMP
+// connections are special cases of UDP and ICMP sockets, we can introduce a more
+// specialized ListenerError which does not contain the NoRoute variant.
 
 /// An error encountered when attempting to create a UDP, TCP, or ICMP connection.
 #[derive(Fail, Debug, PartialEq)]
@@ -215,7 +218,7 @@ pub enum RemoteAddressError {
 
 /// Error type for connection errors.
 #[derive(Fail, Debug, PartialEq)]
-pub enum ConnectError {
+pub enum SocketError {
     #[fail(display = "{}", _0)]
     /// Errors related to the local address.
     Local(#[cause] LocalAddressError),
@@ -223,10 +226,6 @@ pub enum ConnectError {
     #[fail(display = "{}", _0)]
     /// Errors related to the remote address.
     Remote(#[cause] RemoteAddressError),
-
-    /// The requested socket conflicts with an existing socket.
-    #[fail(display = "Connection in use")]
-    ConnectionInUse,
 }
 
 /// Error when no route exists to a remote address.
@@ -239,8 +238,8 @@ impl From<NoRouteError> for NetstackError {
     }
 }
 
-impl From<NoRouteError> for ConnectError {
-    fn from(_: NoRouteError) -> ConnectError {
-        ConnectError::Remote(RemoteAddressError::NoRoute)
+impl From<NoRouteError> for SocketError {
+    fn from(_: NoRouteError) -> SocketError {
+        SocketError::Remote(RemoteAddressError::NoRoute)
     }
 }

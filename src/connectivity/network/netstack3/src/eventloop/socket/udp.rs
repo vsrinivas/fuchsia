@@ -19,8 +19,8 @@ use log::{debug, error, trace};
 use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
     connect_udp, get_udp_conn_info, listen_udp, remove_udp_conn, remove_udp_listener, send_udp,
-    send_udp_conn, send_udp_listener, ConnectError, IdMapCollection, LocalAddressError,
-    RemoteAddressError, UdpConnId, UdpEventDispatcher, UdpListenerId,
+    send_udp_conn, send_udp_listener, IdMapCollection, LocalAddressError, RemoteAddressError,
+    SocketError, UdpConnId, UdpEventDispatcher, UdpListenerId,
 };
 use packet::{serialize::Buf, BufferView};
 use zerocopy::{AsBytes, LayoutVerified};
@@ -474,7 +474,7 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
         // for `connect`.
         let conn_id =
             connect_udp(&mut event_loop.ctx, local_addr, local_port, remote_addr, remote_port)
-                .map_err(ConnectError::into_errno)?;
+                .map_err(SocketError::into_errno)?;
 
         self.info.state = SocketState::BoundConnect { conn_id };
         I::get_collection_mut(&mut event_loop.ctx.dispatcher_mut().udp_sockets)
@@ -503,7 +503,8 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
         let local_addr = sockaddr.get_specified_addr();
         let local_port = sockaddr.get_specified_port();
 
-        let listener_id = listen_udp(&mut event_loop.ctx, local_addr, local_port);
+        let listener_id = listen_udp(&mut event_loop.ctx, local_addr, local_port)
+            .map_err(SocketError::into_errno)?;
         self.info.state = SocketState::BoundListen { listener_id };
         I::get_collection_mut(&mut event_loop.ctx.dispatcher_mut().udp_sockets)
             .listeners
@@ -716,19 +717,19 @@ trait IntoErrno {
     fn into_errno(self) -> libc::c_int;
 }
 
-impl IntoErrno for ConnectError {
-    /// Converts Fuchsia `ConnectError` errors into the most equivalent POSIX error.
+impl IntoErrno for SocketError {
+    /// Converts Fuchsia `SocketError` errors into the most equivalent POSIX error.
     fn into_errno(self) -> libc::c_int {
         match self {
-            ConnectError::Remote(e) => match e {
+            SocketError::Remote(e) => match e {
                 RemoteAddressError::NoRoute => libc::ENETUNREACH,
             },
-            ConnectError::Local(e) => match e {
+            SocketError::Local(e) => match e {
                 LocalAddressError::CannotBindToAddress
                 | LocalAddressError::FailedToAllocateLocalPort => libc::EADDRNOTAVAIL,
                 LocalAddressError::AddressMismatch => libc::EINVAL,
+                LocalAddressError::AddressInUse => libc::EADDRINUSE,
             },
-            ConnectError::ConnectionInUse => libc::EADDRINUSE,
         }
     }
 }

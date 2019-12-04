@@ -118,7 +118,7 @@ use util::{ContextFidlCompatible, ConversionContext, CoreCompatible, FidlCompati
 
 use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 
-use netstack3_core::error::{NoRouteError, ConnectError};
+use netstack3_core::error::{NoRouteError, SocketError};
 use netstack3_core::icmp::{
     self as core_icmp, BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt,
 };
@@ -912,7 +912,7 @@ trait IpExt: Ip + self::icmp::echo::IpExt + IcmpIpExt {
         local_addr: Option<SpecifiedAddr<Self::Addr>>,
         remote_addr: SpecifiedAddr<Self::Addr>,
         icmp_id: u16,
-    ) -> Result<IcmpConnId<Self>, ConnectError>;
+    ) -> Result<IcmpConnId<Self>, SocketError>;
 }
 
 impl IpExt for Ipv4 {
@@ -927,7 +927,7 @@ impl IpExt for Ipv4 {
         local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
         remote_addr: SpecifiedAddr<Ipv4Addr>,
         icmp_id: u16,
-    ) -> Result<IcmpConnId<Ipv4>, ConnectError> {
+    ) -> Result<IcmpConnId<Ipv4>, SocketError> {
         core_icmp::new_icmpv4_connection(ctx, local_addr, remote_addr, icmp_id)
     }
 }
@@ -944,7 +944,7 @@ impl IpExt for Ipv6 {
         local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
         remote_addr: SpecifiedAddr<Ipv6Addr>,
         icmp_id: u16,
-    ) -> Result<IcmpConnId<Ipv6>, ConnectError> {
+    ) -> Result<IcmpConnId<Ipv6>, SocketError> {
         core_icmp::new_icmpv6_connection(ctx, local_addr, remote_addr, icmp_id)
     }
 }
