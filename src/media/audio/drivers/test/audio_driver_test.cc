@@ -1075,7 +1075,7 @@ void AudioDriverTest::ExpectPositionNotifyCount(uint32_t count) {
       (zx::sec(1) * ring_buffer_frames_) / (frame_rate_ * notifications_per_ring_);
   auto expected_min_time = ns_per_notification.get() * (count - 1);
   auto expected_time = ns_per_notification.get() * count;
-  auto expected_max_time = ns_per_notification.get() * (count + 1);
+  auto expected_max_time = ns_per_notification.get() * (count + 2);
 
   AUD_VLOG(TRACE) << "Timestamp delta from min/ideal/max: " << std::setw(10)
                   << (expected_min_time - timestamp_duration) << " : " << std::setw(10)
