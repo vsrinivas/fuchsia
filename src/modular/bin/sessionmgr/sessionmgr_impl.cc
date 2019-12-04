@@ -341,29 +341,6 @@ void SessionmgrImpl::InitializeIntlPropertyProvider() {
 void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
                                        fuchsia::modular::AppConfig story_shell_config,
                                        bool use_session_shell_for_story_shell_factory) {
-  // NOTE: There is an awkward service exchange here between
-  // AgentRunner, StoryProviderImpl, FocusHandler, VisibleStoriesHandler.
-  //
-  // AgentRunner needs a UserIntelligenceProvider. Initializing the
-  // UserIntelligenceProvider requires a ComponentContext.
-  // ComponentContext requires an AgentRunner, which creates a circular
-  // dependency.
-  //
-  // Because of FIDL late bindings, we can get around this by creating a new
-  // InterfaceRequest here (|intelligence_provider_request|), making the
-  // InterfacePtr a valid proxy to be passed to AgentRunner and
-  // StoryProviderImpl, even though it won't be bound to a real implementation
-  // (provided by Maxwell) until later. It works, but it's not a good pattern.
-
-  fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider;
-  auto story_provider_request = story_provider.NewRequest();
-
-  fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider_maxwell;
-  auto focus_provider_request_maxwell = focus_provider_maxwell.NewRequest();
-
-  fidl::InterfaceHandle<fuchsia::modular::PuppetMaster> puppet_master;
-  auto puppet_master_request = puppet_master.NewRequest();
-
   user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
       [this](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
         if (terminating_) {
@@ -467,7 +444,6 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
       static_cast<fuchsia::modular::ModuleResolver*>(local_module_resolver_.get()),
       entity_provider_runner_.get(), module_facet_reader_.get(), presentation_provider_impl_.get(),
       (config_.enable_story_shell_preload()), &inspect_root_node_));
-  story_provider_impl_->Connect(std::move(story_provider_request));
 
   AtEnd(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
@@ -495,7 +471,6 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
       entity_provider_runner_.get(), std::move(module_focuser));
   puppet_master_impl_ =
       std::make_unique<PuppetMasterImpl>(session_storage_.get(), story_command_executor_.get());
-  puppet_master_impl_->Connect(std::move(puppet_master_request));
 
   session_ctl_ = std::make_unique<SessionCtl>(sessionmgr_context_->outgoing()->debug_dir(),
                                               kSessionCtlDir, puppet_master_impl_.get());
@@ -506,7 +481,6 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
 
   focus_handler_ = std::make_unique<FocusHandler>(LoadDeviceID(session_id_), ledger_client_.get(),
                                                   fuchsia::ledger::PageId());
-  focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_story_provider));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_puppet_master));
   AtEnd(Reset(&focus_handler_));
