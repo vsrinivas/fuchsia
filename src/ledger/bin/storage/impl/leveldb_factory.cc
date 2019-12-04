@@ -312,7 +312,8 @@ LevelDbFactory::IOLevelDbFactory::GetOrCreateDbAtPathOnIOThread(
     status = CreateDbThroughStagingPathOnIOThread(std::move(db_path), &leveldb);
   } else {
     FXL_DCHECK(files::IsDirectoryAt(db_path.root_fd(), db_path.path()));
-    leveldb = std::make_unique<LevelDb>(environment_->dispatcher(), std::move(db_path));
+    leveldb = std::make_unique<LevelDb>(environment_->file_system(), environment_->dispatcher(),
+                                        std::move(db_path));
     status = leveldb->Init();
   }
   if (status != Status::OK) {
@@ -328,7 +329,8 @@ Status LevelDbFactory::IOLevelDbFactory::CreateDbThroughStagingPathOnIOThread(
   ledger::DetachedPath tmp_destination =
       staging_path_.SubPath(convert::ToHex(absl::string_view(name, kRandomBytesCount)));
   // Create a LevelDb instance in a temporary path.
-  auto result = std::make_unique<LevelDb>(environment_->dispatcher(), tmp_destination);
+  auto result = std::make_unique<LevelDb>(environment_->file_system(), environment_->dispatcher(),
+                                          tmp_destination);
   RETURN_ON_ERROR(result->Init());
   // If the parent directory doesn't exist, renameat will fail.
   // Note that |cached_db_path_| will also be created throught the staging path

@@ -12,7 +12,7 @@
 #include <memory>
 
 #include "src/ledger/bin/environment/environment.h"
-#include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/lib/fxl/memory/weak_ptr.h"

@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/ledger/*" ]
+
+source_set("platform") {
+  sources = [
+    "detached_path.cc",
+    "detached_path.h",
+    "platform.h",
+  ]
+
+  public_deps = [
+    "//third_party/abseil-cpp",
+    "//third_party/leveldb",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+# Fuchsia implementation of platform.
+source_set("implementation") {
+  sources = [
+    "fuchsia_platform.cc",
+    "fuchsia_platform.h",
+  ]
+
+  public_deps = [
+    ":platform",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "detached_path_unittest.cc",
+    "platform_unittest.cc",
+  ]
+
+  deps = [
+    ":platform",
+    "//peridot/lib/scoped_tmpfs",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+# Unittests for the Fuchsia implementation of platform.
+source_set("implementation_unittests") {
+  testonly = true
+
+  sources = [
+    "fuchsia_platform_unittest.cc",
+    "platform_unittest.cc",
+  ]
+
+  deps = [
+    ":implementation",
+    "//peridot/lib/scoped_tmpfs",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}

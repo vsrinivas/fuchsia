@@ -9,7 +9,7 @@
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
-#include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"

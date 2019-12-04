@@ -11,7 +11,7 @@
 #include <string>
 
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/platform/detached_path.h"
 
 namespace cloud_sync {
 

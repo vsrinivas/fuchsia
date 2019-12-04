@@ -44,8 +44,9 @@ using ::testing::Not;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
-std::unique_ptr<LevelDb> GetLevelDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path) {
-  auto db = std::make_unique<LevelDb>(dispatcher, std::move(db_path));
+std::unique_ptr<LevelDb> GetLevelDb(ledger::FileSystem* file_system, async_dispatcher_t* dispatcher,
+                                    ledger::DetachedPath db_path) {
+  auto db = std::make_unique<LevelDb>(file_system, dispatcher, std::move(db_path));
   EXPECT_EQ(db->Init(), Status::OK);
   return db;
 }
@@ -60,13 +61,16 @@ class PageDbTest : public ledger::TestWithEnvironment {
         }),
         encryption_service_(dispatcher()),
         base_path(tmpfs_.root_fd()),
-        page_storage_(&environment_, &encryption_service_,
-                      GetLevelDb(dispatcher(), base_path.SubPath("storage")), "page_id",
-                      CommitPruningPolicy::NEVER),
-        page_db_(&environment_, page_storage_.GetObjectIdentifierFactory(),
-                 GetLevelDb(dispatcher(), base_path.SubPath("page_db"))) {}
+        page_storage_(
+            &environment_, &encryption_service_,
+            GetLevelDb(environment_.file_system(), dispatcher(), base_path.SubPath("storage")),
+            "page_id", CommitPruningPolicy::NEVER),
+        page_db_(
+            &environment_, page_storage_.GetObjectIdentifierFactory(),
+            GetLevelDb(environment_.file_system(), dispatcher(), base_path.SubPath("page_db"))) {}
   PageDbTest(const PageDbTest&) = delete;
   PageDbTest& operator=(const PageDbTest&) = delete;
+
   ~PageDbTest() override = default;
 
   // Test:

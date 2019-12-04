@@ -143,6 +143,7 @@ source_set("lib") {
     "//src/ledger/bin/encryption/public",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/filesystem",
+    "//src/ledger/bin/platform",
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:lock",
@@ -156,6 +157,7 @@ source_set("lib") {
   public_deps = [
     ":data_serialization",
     ":object_identifier_lib",
+    "//src/ledger/bin/platform",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/coroutine",
     "//src/ledger/third_party/bup",
@@ -255,6 +257,7 @@ fuzzer("leveldb_fuzzer") {
   deps = [
     ":lib",
     "//peridot/lib/scoped_tmpfs",
+    "//src/ledger/bin/platform:implementation",
     "//src/ledger/bin/testing:lib",
     "//zircon/public/lib/async-testing",
   ]

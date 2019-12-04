@@ -11,7 +11,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
-#include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"

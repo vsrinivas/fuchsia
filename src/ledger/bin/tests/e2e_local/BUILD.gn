@@ -22,6 +22,7 @@ executable("e2e_local") {
     "//src/ledger/bin/app:serialization_version",
     "//src/ledger/bin/fidl",
     "//src/ledger/bin/filesystem",
+    "//src/ledger/bin/platform",
     "//src/ledger/bin/public",
     "//src/ledger/bin/testing:get_ledger",
     "//src/ledger/bin/testing:lib",

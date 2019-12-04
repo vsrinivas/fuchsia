@@ -14,6 +14,8 @@
 #include <fuzzer/FuzzedDataProvider.h>
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/environment/test_loop_notification.h"
+#include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -29,10 +31,11 @@
 namespace {
 
 // Initialize a Db instance backed by temporary file system.
-std::unique_ptr<storage::Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs,
-                                   async_dispatcher_t* dispatcher) {
+std::unique_ptr<storage::Db> GetDb(ledger::Environment* environment,
+                                   scoped_tmpfs::ScopedTmpFS* tmpfs) {
   ledger::DetachedPath db_path(tmpfs->root_fd(), "db");
-  auto db = std::make_unique<storage::LevelDb>(dispatcher, db_path);
+  auto db = std::make_unique<storage::LevelDb>(environment->file_system(),
+                                               environment->dispatcher(), db_path);
   auto status = db->Init();
   if (status != storage::Status::OK) {
     return nullptr;
@@ -111,13 +114,23 @@ void DoQueryHasKey(async::TestLoop* test_loop, coroutine::CoroutineService* coro
 }  // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t remaining_size) {
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
   async::TestLoop test_loop;
+  sys::testing::ComponentContextProvider component_context_provider;
+  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  auto io_loop = test_loop.StartNewLoop();
+  ledger::Environment environment =
+      ledger::EnvironmentBuilder()
+          .SetStartupContext(component_context_provider.context())
+          .SetPlatform(ledger::MakePlatform())
+          .SetAsync(test_loop.dispatcher())
+          .SetIOAsync(io_loop->dispatcher())
+          .SetNotificationFactory(ledger::TestLoopNotification::NewFactory(&test_loop))
+          .Build();
   coroutine::CoroutineServiceImpl coroutine_service;
   FuzzedDataProvider data_provider(data, remaining_size);
 
   std::unique_ptr<storage::Db::Batch> batch;
-  auto db = GetDb(&tmpfs_, test_loop.dispatcher());
+  auto db = GetDb(&environment, &tmpfs_);
 
   FXL_VLOG(1) << "Let's try to break LevelDb!";
   // Start the batch.

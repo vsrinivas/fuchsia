@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_FILESYSTEM_GET_DIRECTORY_CONTENT_SIZE_H_
 #define SRC_LEDGER_BIN_FILESYSTEM_GET_DIRECTORY_CONTENT_SIZE_H_
 
-#include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/platform/detached_path.h"
 
 namespace ledger {
 

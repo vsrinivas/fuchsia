@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_FILESYSTEM_DETACHED_PATH_H_
-#define SRC_LEDGER_BIN_FILESYSTEM_DETACHED_PATH_H_
+#ifndef SRC_LEDGER_BIN_PLATFORM_DETACHED_PATH_H_
+#define SRC_LEDGER_BIN_PLATFORM_DETACHED_PATH_H_
 
 #include <fcntl.h>
 
@@ -44,10 +44,6 @@ class DetachedPath {
   // the current path.
   DetachedPath SubPath(std::initializer_list<absl::string_view> components) const;
 
-  // Opens a UniqueFD at the current path. If the operation fails, the returned
-  // UniqueFd will be invalid.
-  fbl::unique_fd OpenFD(DetachedPath* detatched_path) const;
-
  private:
   int root_fd_;
   std::string path_;
@@ -55,4 +51,4 @@ class DetachedPath {
 
 }  // namespace ledger
 
-#endif  // SRC_LEDGER_BIN_FILESYSTEM_DETACHED_PATH_H_
+#endif  // SRC_LEDGER_BIN_PLATFORM_DETACHED_PATH_H_

@@ -34,7 +34,7 @@ source_set("public") {
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/clocks/public",
     "//src/ledger/bin/encryption/primitives",
-    "//src/ledger/bin/filesystem",
+    "//src/ledger/bin/platform",
     "//src/ledger/bin/public",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/coroutine",

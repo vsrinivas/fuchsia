@@ -16,9 +16,9 @@ class FakeDbTestFactory : public DbTestFactory {
  public:
   FakeDbTestFactory() = default;
 
-  std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* /*tmpfs*/,
-                            async_dispatcher_t* dispatcher) override {
-    return std::make_unique<FakeDb>(dispatcher);
+  std::unique_ptr<Db> GetDb(ledger::Environment* environment,
+                            scoped_tmpfs::ScopedTmpFS* /*tmpfs*/) override {
+    return std::make_unique<FakeDb>(environment->dispatcher());
   }
 };
 

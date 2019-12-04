@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/storage/public/db_unittest.h"
 
 namespace storage {
@@ -16,10 +16,11 @@ class LevelDbTestFactory : public DbTestFactory {
  public:
   LevelDbTestFactory() = default;
 
-  std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs,
-                            async_dispatcher_t* dispatcher) override {
+  std::unique_ptr<Db> GetDb(ledger::Environment* environment,
+                            scoped_tmpfs::ScopedTmpFS* tmpfs) override {
     ledger::DetachedPath db_path(tmpfs->root_fd(), "db");
-    auto db = std::make_unique<LevelDb>(dispatcher, db_path);
+    auto db =
+        std::make_unique<LevelDb>(environment->file_system(), environment->dispatcher(), db_path);
     Status status = db->Init();
     if (status != Status::OK)
       return nullptr;

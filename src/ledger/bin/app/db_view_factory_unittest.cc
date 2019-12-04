@@ -149,10 +149,10 @@ class DbViewTestFactory : public storage::DbTestFactory {
  public:
   DbViewTestFactory() = default;
 
-  std::unique_ptr<storage::Db> GetDb(scoped_tmpfs::ScopedTmpFS* /*tmpfs*/,
-                                     async_dispatcher_t* dispatcher) override {
+  std::unique_ptr<storage::Db> GetDb(ledger::Environment* environment,
+                                     scoped_tmpfs::ScopedTmpFS* /*tmpfs*/) override {
     if (!dbview_factory_) {
-      auto base_db = std::make_unique<storage::fake::FakeDb>(dispatcher);
+      auto base_db = std::make_unique<storage::fake::FakeDb>(environment->dispatcher());
       dbview_factory_ = std::make_unique<ledger::DbViewFactory>(std::move(base_db));
     }
     return dbview_factory_->CreateDbView(ledger::RepositoryRowPrefix::PAGE_USAGE_DB);

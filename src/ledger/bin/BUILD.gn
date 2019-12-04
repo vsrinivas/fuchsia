@@ -41,6 +41,8 @@ test("ledger_unittests") {
     "//src/ledger/bin/inspect:unittests",
     "//src/ledger/bin/p2p_provider/impl:unittests",
     "//src/ledger/bin/p2p_sync/impl:unittests",
+    "//src/ledger/bin/platform:implementation_unittests",
+    "//src/ledger/bin/platform:unittests",
     "//src/ledger/bin/public:unittests",
     "//src/ledger/bin/storage/fake:unittests",
     "//src/ledger/bin/storage/impl:unittests",

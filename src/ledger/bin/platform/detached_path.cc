@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/platform/detached_path.h"
 
 #include <utility>
 
@@ -37,14 +37,6 @@ DetachedPath DetachedPath::SubPath(std::initializer_list<absl::string_view> comp
     end_path.append(component.data(), component.size());
   }
   return DetachedPath(root_fd_, std::move(end_path));
-}
-
-fbl::unique_fd DetachedPath::OpenFD(DetachedPath* detatched_path) const {
-  fbl::unique_fd fd(openat(root_fd_, path_.c_str(), O_RDONLY | O_DIRECTORY));
-  if (fd.is_valid()) {
-    *detatched_path = ledger::DetachedPath(fd.get());
-  }
-  return fd;
 }
 
 }  // namespace ledger

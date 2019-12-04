@@ -340,8 +340,9 @@ class FakeSyncDelegate : public DelayingFakeSyncDelegate {
 // Shim for LevelDB that allows to selectively fail some calls.
 class ControlledLevelDb : public Db {
  public:
-  explicit ControlledLevelDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path)
-      : leveldb_(dispatcher, db_path) {}
+  explicit ControlledLevelDb(ledger::FileSystem* file_system, async_dispatcher_t* dispatcher,
+                             ledger::DetachedPath db_path)
+      : leveldb_(file_system, dispatcher, db_path) {}
 
   class ControlledBatch : public Batch {
    public:
@@ -468,8 +469,8 @@ class PageStorageTest : public StorageTest {
     }
     tmpfs_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
     PageId id = RandomString(environment_.random(), 10);
-    auto db =
-        std::make_unique<ControlledLevelDb>(dispatcher(), ledger::DetachedPath(tmpfs_->root_fd()));
+    auto db = std::make_unique<ControlledLevelDb>(environment_.file_system(), dispatcher(),
+                                                  ledger::DetachedPath(tmpfs_->root_fd()));
     leveldb_ = db.get();
     ASSERT_EQ(db->Init(), Status::OK);
     storage_ = std::make_unique<PageStorageImpl>(&environment_, &encryption_service_, std::move(db),

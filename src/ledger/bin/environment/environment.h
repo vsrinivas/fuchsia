@@ -14,6 +14,7 @@
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/environment/notification.h"
+#include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/backoff/backoff.h"
@@ -26,8 +27,9 @@ class Environment {
  public:
   using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
   using NotificationFactory = fit::function<std::unique_ptr<Notification>()>;
-  Environment(bool disable_statistics, async_dispatcher_t* dispatcher,
-              async_dispatcher_t* io_dispatcher, sys::ComponentContext* component_context,
+  Environment(std::unique_ptr<Platform> platform, bool disable_statistics,
+              async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
+              sys::ComponentContext* component_context,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory, NotificationFactory notification_factory,
               std::unique_ptr<timekeeper::Clock> clock, std::unique_ptr<rng::Random> random,
@@ -63,7 +65,11 @@ class Environment {
     return diff_compatibility_policy_;
   }
 
+  FileSystem* file_system() const { return platform_->file_system(); }
+
  private:
+  std::unique_ptr<Platform> platform_;
+
   bool disable_statistics_;
 
   async_dispatcher_t* dispatcher_;
@@ -95,6 +101,7 @@ class EnvironmentBuilder {
   EnvironmentBuilder& operator=(const EnvironmentBuilder& other) = delete;
   EnvironmentBuilder& operator=(EnvironmentBuilder&& other) = delete;
 
+  EnvironmentBuilder& SetPlatform(std::unique_ptr<Platform> platform);
   EnvironmentBuilder& SetDisableStatistics(bool disable_statistics);
   EnvironmentBuilder& SetAsync(async_dispatcher_t* dispatcher);
   EnvironmentBuilder& SetIOAsync(async_dispatcher_t* io_dispatcher);
@@ -112,6 +119,7 @@ class EnvironmentBuilder {
   Environment Build();
 
  private:
+  std::unique_ptr<Platform> platform_;
   bool disable_statistics_ = true;
   async_dispatcher_t* dispatcher_ = nullptr;
   async_dispatcher_t* io_dispatcher_ = nullptr;

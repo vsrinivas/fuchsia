@@ -14,8 +14,8 @@
 
 namespace ledger {
 
-Environment::Environment(bool disable_statistics, async_dispatcher_t* dispatcher,
-                         async_dispatcher_t* io_dispatcher,
+Environment::Environment(std::unique_ptr<Platform> platform, bool disable_statistics,
+                         async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
                          sys::ComponentContext* component_context,
                          std::unique_ptr<coroutine::CoroutineService> coroutine_service,
                          BackoffFactory backoff_factory, NotificationFactory notification_factory,
@@ -23,7 +23,8 @@ Environment::Environment(bool disable_statistics, async_dispatcher_t* dispatcher
                          std::unique_ptr<rng::Random> random,
                          storage::GarbageCollectionPolicy gc_policy,
                          storage::DiffCompatibilityPolicy diff_compatibility_policy)
-    : disable_statistics_(disable_statistics),
+    : platform_(std::move(platform)),
+      disable_statistics_(disable_statistics),
       dispatcher_(dispatcher),
       io_dispatcher_(io_dispatcher),
       component_context_(component_context),
@@ -58,6 +59,11 @@ std::unique_ptr<Notification> Environment::MakeNotification() { return notificat
 EnvironmentBuilder::EnvironmentBuilder() = default;
 
 EnvironmentBuilder::~EnvironmentBuilder() = default;
+
+EnvironmentBuilder& EnvironmentBuilder::SetPlatform(std::unique_ptr<Platform> platform) {
+  platform_ = std::move(platform);
+  return *this;
+}
 
 EnvironmentBuilder& EnvironmentBuilder::SetDisableStatistics(bool disable_statistics) {
   disable_statistics_ = disable_statistics;
@@ -120,6 +126,9 @@ EnvironmentBuilder& EnvironmentBuilder::SetDiffCompatibilityPolicy(
 }
 
 Environment EnvironmentBuilder::Build() {
+  if (!platform_) {
+    platform_ = MakePlatform();
+  }
   if (!coroutine_service_) {
     coroutine_service_ = std::make_unique<coroutine::CoroutineServiceImpl>();
   }
@@ -137,8 +146,8 @@ Environment EnvironmentBuilder::Build() {
   if (!notification_factory_) {
     notification_factory_ = [] { return std::make_unique<ThreadNotification>(); };
   }
-  return Environment(disable_statistics_, dispatcher_, io_dispatcher_, component_context_,
-                     std::move(coroutine_service_), std::move(backoff_factory_),
+  return Environment(std::move(platform_), disable_statistics_, dispatcher_, io_dispatcher_,
+                     component_context_, std::move(coroutine_service_), std::move(backoff_factory_),
                      std::move(notification_factory_), std::move(clock_), std::move(random_),
                      gc_policy_, diff_compatibility_policy_);
 }

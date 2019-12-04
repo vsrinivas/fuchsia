@@ -145,7 +145,7 @@ source_set("get_ledger") {
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/app:flags",
     "//src/ledger/bin/fidl/include",
-    "//src/ledger/bin/filesystem",
+    "//src/ledger/bin/platform",
     "//src/ledger/bin/public",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/vmo",

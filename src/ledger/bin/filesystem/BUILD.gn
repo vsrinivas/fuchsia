@@ -6,8 +6,6 @@ visibility = [ "//src/ledger/*" ]
 
 source_set("filesystem") {
   sources = [
-    "detached_path.cc",
-    "detached_path.h",
     "directory_reader.cc",
     "directory_reader.h",
     "get_directory_content_size.cc",
@@ -15,6 +13,7 @@ source_set("filesystem") {
   ]
 
   public_deps = [
+    "//src/ledger/bin/platform",
     "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/fit",
@@ -25,7 +24,6 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "detached_path_unittest.cc",
     "directory_reader_unittest.cc",
     "get_directory_content_size_unittest.cc",
   ]

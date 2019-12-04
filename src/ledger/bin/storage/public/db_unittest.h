@@ -24,8 +24,8 @@ namespace storage {
 class DbTestFactory {
  public:
   virtual ~DbTestFactory() = default;
-  virtual std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs,
-                                    async_dispatcher_t* dispatcher) = 0;
+  virtual std::unique_ptr<Db> GetDb(ledger::Environment* environment,
+                                    scoped_tmpfs::ScopedTmpFS* tmpfs) = 0;
 };
 
 // This class implements Value-Parameterized Abstract Tests for the Db interface.
@@ -36,8 +36,8 @@ class DbTestFactory {
 // class MyDbFactoryTest : public DbTestFactory {
 //  public:
 //   MyDbFactoryTest() = default;
-//   std::unique_ptr<Db> GetDb(scoped_tmpfs::ScopedTmpFS* tmpfs,
-//                             async_dispatcher_t* dispatcher) override { ... }
+//   std::unique_ptr<Db> GetDb(ledger::Environment* environment,
+//                             scoped_tmpfs::ScopedTmpFS* tmpfs) override { ... }
 // };
 // and instantiate the test suite with:
 //   INSTANTIATE_TEST_SUITE_P(DbImplTest, DbTest, ::testing::Values([] {
@@ -47,8 +47,7 @@ class DbTest
     : public ledger::TestWithEnvironment,
       public ::testing::WithParamInterface<std::function<std::unique_ptr<DbTestFactory>()>> {
  public:
-  DbTest()
-      : db_factory_(GetParam()()), db_(db_factory_->GetDb(&tmpfs_, environment_.dispatcher())) {}
+  DbTest() : db_factory_(GetParam()()), db_(db_factory_->GetDb(&environment_, &tmpfs_)) {}
 
  protected:
   void SetUp() override {

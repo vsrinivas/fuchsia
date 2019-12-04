@@ -11,7 +11,8 @@
 
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
-#include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/platform/detached_path.h"
+#include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/storage/public/db.h"
 
 namespace storage {
@@ -24,7 +25,8 @@ namespace storage {
 // so that the methods are effectively asynchronous.
 class LevelDb : public Db {
  public:
-  explicit LevelDb(async_dispatcher_t* dispatcher, ledger::DetachedPath db_path);
+  explicit LevelDb(ledger::FileSystem* file_system, async_dispatcher_t* dispatcher,
+                   ledger::DetachedPath db_path);
 
   LevelDb(const LevelDb&) = delete;
   LevelDb& operator=(const LevelDb&) = delete;
@@ -54,6 +56,7 @@ class LevelDb : public Db {
           iterator) override;
 
  private:
+  ledger::FileSystem* file_system_;
   async_dispatcher_t* const dispatcher_;
   const ledger::DetachedPath db_path_;
   std::unique_ptr<leveldb::Env> env_;

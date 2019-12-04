@@ -13,7 +13,7 @@
 #include "src/ledger/bin/clocks/public/device_id_manager.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
-#include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
