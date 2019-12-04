@@ -10,7 +10,10 @@ use {
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::{self as fasync, Time},
     futures::lock::Mutex,
-    std::sync::{Arc, Weak},
+    std::{
+        collections::HashMap,
+        sync::{Arc, Weak},
+    },
 };
 
 /// Business logic and state for `WorkScheduler` with all pub methods protected by a single `Mutex`.
@@ -171,7 +174,16 @@ impl WorkSchedulerDelegate {
     pub(super) fn dispatch_work(&mut self) {
         let now = Time::now().into_nanos();
         let work_items = &mut self.work_items;
-        let mut to_dispatch = Vec::new();
+        let mut to_dispatch = HashMap::new();
+
+        // Establish work item groups (by `AbsoluteMoniker`). This avoids lifetime issues that arise
+        // when attempting to `to_dispatch.get_mut(item.dispatcher.abs_moniker())` where `item` does
+        // not live as long as `to_dispatch`.
+        for item in work_items.iter() {
+            if !to_dispatch.contains_key(&item.dispatcher) {
+                to_dispatch.insert(item.dispatcher.clone(), vec![]);
+            }
+        }
 
         work_items.retain(|item| {
             // Retain future work items.
@@ -179,17 +191,17 @@ impl WorkSchedulerDelegate {
                 return true;
             }
 
-            to_dispatch.push(item.clone());
+            to_dispatch.get_mut(&item.dispatcher).unwrap().push(item.clone());
 
             // Only dispatched/past items to retain: periodic items that will recur.
             item.period.is_some()
         });
 
         // Dispatch work items that are due.
+        // TODO(fxb/42310): It may be advantageous to spawn a separate task for each dispatcher.
         fasync::spawn(async move {
-            for item in to_dispatch.into_iter() {
-                let dispatcher = item.dispatcher.clone();
-                let _ = dispatcher.dispatch(item).await;
+            for (dispatcher, items) in to_dispatch.into_iter() {
+                let _ = dispatcher.dispatch(items).await;
             }
         });
 
@@ -312,7 +324,7 @@ mod tests {
         fn abs_moniker(&self) -> &AbsoluteMoniker {
             &self
         }
-        fn dispatch(&self, _work_item: WorkItem) -> BoxFuture<Result<(), dspr::Error>> {
+        fn dispatch(&self, _work_items: Vec<WorkItem>) -> BoxFuture<Result<(), dspr::Error>> {
             Box::pin(async move { Err(dspr::Error::ComponentNotRunning) })
         }
     }

@@ -158,13 +158,60 @@ mod time_tests {
         super::WorkScheduler,
         crate::{
             model::{testing::mocks::FakeBinder, AbsoluteMoniker, Binder},
-            work_scheduler::work_item::WorkItem,
+            work_scheduler::{
+                dispatcher::{Dispatcher, Error},
+                work_item::WorkItem,
+            },
         },
         fidl_fuchsia_sys2 as fsys,
         fuchsia_async::{Executor, Time, WaitState},
-        futures::{executor::block_on, Future},
+        futures::{executor::block_on, future::BoxFuture, lock::Mutex, Future},
         std::sync::Arc,
     };
+
+    #[derive(Clone)]
+    struct DispatcherCount {
+        item_count: usize,
+        call_count: u32,
+    }
+
+    impl DispatcherCount {
+        fn new() -> Self {
+            Self { item_count: 0, call_count: 0 }
+        }
+    }
+
+    struct CountingDispatcher {
+        count: Mutex<DispatcherCount>,
+        abs_moniker: AbsoluteMoniker,
+    }
+
+    impl CountingDispatcher {
+        fn new(abs_moniker: &AbsoluteMoniker) -> Self {
+            Self { count: Mutex::new(DispatcherCount::new()), abs_moniker: abs_moniker.clone() }
+        }
+
+        async fn count(&self) -> DispatcherCount {
+            self.count.lock().await.clone()
+        }
+
+        async fn dispatch_async(&self, work_items: Vec<WorkItem>) -> Result<(), Error> {
+            let mut count = self.count.lock().await;
+            count.item_count = count.item_count + work_items.len();
+            count.call_count = count.call_count + 1;
+            Ok(())
+        }
+    }
+
+    impl Dispatcher for CountingDispatcher {
+        fn abs_moniker(&self) -> &AbsoluteMoniker {
+            &self.abs_moniker
+        }
+
+        fn dispatch(&self, work_items: Vec<WorkItem>) -> BoxFuture<Result<(), Error>> {
+            Box::pin(async move { self.dispatch_async(work_items).await })
+        }
+    }
 
     impl WorkScheduler {
         async fn schedule_work_item<'a>(
@@ -175,6 +222,16 @@ mod time_tests {
         ) -> Result<(), fsys::Error> {
             let mut delegate = self.delegate.lock().await;
             delegate.schedule_work(Arc::new(abs_moniker.clone()), work_id, work_request)
+        }
+
+        async fn schedule_counted_work_item<'a>(
+            &'a self,
+            dispatcher: Arc<CountingDispatcher>,
+            work_id: &'a str,
+            work_request: &'a fsys::WorkRequest,
+        ) -> Result<(), fsys::Error> {
+            let mut delegate = self.delegate.lock().await;
+            delegate.schedule_work(dispatcher, work_id, work_request)
         }
     }
 
@@ -571,6 +628,86 @@ mod time_tests {
             // WorkItem.next_deadline_monotonic = 119 = 9 + (22 * 5).
             vec![TestWorkUnit::new(9, &root, "AT_NINE_PERIODIC_FIVE", 119, Some(5))],
         );
+    }
+
+    #[test]
+    fn work_scheduler_time_grouped_dispatch() {
+        let mut t = TimeTest::new();
+        let work_scheduler = t.work_scheduler();
+        let root = AbsoluteMoniker::root();
+        let root_dispatcher = Arc::new(CountingDispatcher::new(&root));
+        let child = root.child("child:0".into());
+        let child_dispatcher = Arc::new(CountingDispatcher::new(&child));
+
+        // Set period and schedule four work items:
+        // - Three work items from two components to run in the first period, and
+        // - One work item to remain after first period.
+        t.run_and_sync(&mut Box::pin(async {
+            assert_eq!(Ok(()), work_scheduler.set_batch_period(3).await);
+            let root_0 =
+                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None };
+            assert_eq!(
+                Ok(()),
+                work_scheduler
+                    .schedule_counted_work_item(root_dispatcher.clone(), "ROOT_0", &root_0)
+                    .await
+            );
+            let root_1 =
+                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(1)), period: None };
+            assert_eq!(
+                Ok(()),
+                work_scheduler
+                    .schedule_counted_work_item(root_dispatcher.clone(), "ROOT_1", &root_1)
+                    .await
+            );
+            let child_2 =
+                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(2)), period: None };
+            assert_eq!(
+                Ok(()),
+                work_scheduler
+                    .schedule_counted_work_item(child_dispatcher.clone(), "CHILD_2", &child_2)
+                    .await
+            );
+            let child_5 =
+                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(5)), period: None };
+            assert_eq!(
+                Ok(()),
+                work_scheduler
+                    .schedule_counted_work_item(child_dispatcher.clone(), "CHILD_5", &child_5)
+                    .await
+            );
+        }));
+
+        // Confirm timer and work items.
+        t.assert_next_timer_at(3);
+        t.assert_work_items(
+            &work_scheduler,
+            vec![
+                TestWorkUnit::new(0, &root, "ROOT_0", 0, None),
+                TestWorkUnit::new(1, &root, "ROOT_1", 1, None),
+                TestWorkUnit::new(2, &child, "CHILD_2", 2, None),
+                TestWorkUnit::new(5, &child, "CHILD_5", 5, None),
+            ],
+        );
+
+        // Complete first period.
+        t.set_time_and_run_timers(3);
+
+        // Confirm timer set to next batch period, future item still queued, and one `dispatch()`
+        // call on each dispatcher.
+        t.assert_next_timer_at(6);
+        t.assert_work_items(
+            &work_scheduler,
+            vec![TestWorkUnit::new(5, &child, "CHILD_5", 5, None)],
+        );
+        t.run_and_sync(&mut Box::pin(async {
+            let root_count = root_dispatcher.count().await;
+            let child_count = child_dispatcher.count().await;
+            assert_eq!(1, root_count.call_count);
+            assert_eq!(2, root_count.item_count);
+            assert_eq!(1, child_count.call_count);
+            assert_eq!(1, child_count.item_count);
+        }));
     }
 }
 

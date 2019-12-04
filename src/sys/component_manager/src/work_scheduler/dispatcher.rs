@@ -14,6 +14,7 @@ use {
     fuchsia_zircon as zx,
     futures::future::BoxFuture,
     std::{
+        hash::{Hash, Hasher},
         io,
         sync::{Arc, Weak},
     },
@@ -43,11 +44,12 @@ pub enum Error {
 /// A facade for dispatcher data needed by different parts of `WorkSchedulerDelegate`. This is
 /// abstracted into a trait to facilitate unit testing when a real data is not needed.
 pub(super) trait Dispatcher: Send + Sync {
-    /// Realms are identified by their `AbsoluteMoniker`.
+    /// Realms are identified by their `AbsoluteMoniker`. Note that dispatchers with equal
+    /// `absolute_moniker()` values must behave identically.
     fn abs_moniker(&self) -> &AbsoluteMoniker;
 
     /// Initiate dispatch a series of `WorkItem`s in a new task.
-    fn dispatch(&self, work_items: WorkItem) -> BoxFuture<Result<(), Error>>;
+    fn dispatch(&self, work_items: Vec<WorkItem>) -> BoxFuture<Result<(), Error>>;
 }
 
 impl PartialEq for dyn Dispatcher {
@@ -56,6 +58,12 @@ impl PartialEq for dyn Dispatcher {
     }
 }
 impl Eq for dyn Dispatcher {}
+
+impl Hash for dyn Dispatcher {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.abs_moniker().hash(state);
+    }
+}
 
 // TODO(markdittmer): `Realm` can be replaced by an `AbsoluteMoniker` when `Model` (and
 // `Binder`) interface methods accept `AbsoluteMoniker` instead of `Realm`.
@@ -78,15 +86,15 @@ impl Dispatcher for RealDispatcher {
         &self.realm.abs_moniker
     }
 
-    fn dispatch(&self, work_item: WorkItem) -> BoxFuture<Result<(), Error>> {
-        Box::pin(async move { dispatch(&self.realm, &self.binder, work_item).await })
+    fn dispatch(&self, work_items: Vec<WorkItem>) -> BoxFuture<Result<(), Error>> {
+        Box::pin(async move { dispatch(&self.realm, &self.binder, work_items).await })
     }
 }
 
 async fn dispatch(
     realm: &Arc<Realm>,
     binder: &Weak<dyn Binder>,
-    work_item: WorkItem,
+    work_items: Vec<WorkItem>,
 ) -> Result<(), Error> {
     let (client_end, server_end) = zx::Channel::create().map_err(|err| Error::Internal(err))?;
 
@@ -102,9 +110,16 @@ async fn dispatch(
 
     let client_end = Channel::from_channel(client_end).map_err(|err| Error::IO(err))?;
     let worker = fsys::WorkerProxy::new(client_end);
-    worker
-        .do_work(&work_item.id)
-        .await
-        .map_err(|err| Error::FIDL(err))?
-        .map_err(|err| Error::API(err))
+
+    for work_item in work_items.into_iter() {
+        worker
+            .do_work(&work_item.id)
+            .await
+            // TODO(fxb/42310): It may be advantageous to accumulate errors and continue iterating
+            // over `work_items`.
+            .map_err(|err| Error::FIDL(err))?
+            .map_err(|err| Error::API(err))?;
+    }
+
+    Ok(())
 }
