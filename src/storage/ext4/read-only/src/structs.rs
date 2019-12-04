@@ -477,6 +477,12 @@ pub enum ParsingError {
     #[fail(display = "Entry Type {} unknown", _0)]
     BadEntryType(u8),
 
+    /// Feature Incompatible flags
+    #[fail(display = "Incompatible feature flags (feature_incompat): 0x{:X}", _0)]
+    BannedFeatureIncompat(u32),
+    #[fail(display = "Required feature flags (feature_incompat): 0x{:X}", _0)]
+    RequiredFeatureIncompat(u32),
+
     /// Message including what ext filesystem feature was found that we do not support
     #[fail(display = "{}", _0)]
     Incompatible(String),
@@ -524,6 +530,64 @@ impl EntryType {
         }
     }
 }
+
+/// Feature Incompatible flags.
+///
+/// Stored in SuperBlock::e2fs_features_incompat.
+///
+/// All flags listed by a given filesystem must be supported by us in order for us to attempt
+/// mounting it.
+///
+/// With our limited support at the time, there are also flags that we require to exist, like
+/// `EntryHasFileType`.
+#[derive(PartialEq)]
+#[repr(u32)]
+pub enum FeatureIncompat {
+    Compression = 0x1,
+    /// Currently required flag.
+    EntryHasFileType = 0x2,
+
+    // TODO(vfcc): We will permit journaling because our initial use will not have entries in the
+    // journal. Will need to add proper support in the future.
+    /// We do not support journaling, but assuming an empty journal, we can still read.
+    ///
+    /// Run `fsck` in Linux to repair the filesystem first before attempting to mount a journaled
+    /// ext4 image.
+    HasJournal = 0x4,
+    JournalSeparate = 0x8,
+    MetaBlockGroups = 0x10,
+    /// Required flag. Lack of this flag means the filesystem is not ext4, and we are not
+    /// backward compatible.
+    Extents = 0x40,
+    Is64Bit = 0x80,
+    MultiMountProtection = 0x100,
+
+    // TODO(vfcc): Should be relatively trivial to support.
+    /// No explicit support, we will permit the flag as it works for our needs.
+    FlexibleBlockGroups = 0x200,
+    ExtendedAttributeINodes = 0x400,
+    ExtendedDirectoryEntry = 0x1000,
+    /// We do not calculate checksums, so this is permitted but not actionable.
+    MetadataChecksum = 0x2000,
+    LargeDirectory = 0x4000,
+    SmallFilesInINode = 0x8000,
+    EncryptedINodes = 0x10000,
+}
+
+/// Required "feature incompatible" flags.
+pub const REQUIRED_FEATURE_INCOMPAT: u32 =
+    FeatureIncompat::Extents as u32 | FeatureIncompat::EntryHasFileType as u32;
+
+/// Banned "feature incompatible" flags.
+pub const BANNED_FEATURE_INCOMPAT: u32 = FeatureIncompat::Compression as u32 |
+    // TODO(vfcc): Possibly trivial to support.
+    FeatureIncompat::Is64Bit as u32 |
+    FeatureIncompat::MultiMountProtection as u32 |
+    FeatureIncompat::ExtendedAttributeINodes as u32 |
+    FeatureIncompat::ExtendedDirectoryEntry as u32 |
+    // TODO(vfcc): This should be relatively trivial to support.
+    FeatureIncompat::SmallFilesInINode as u32 |
+    FeatureIncompat::EncryptedINodes as u32;
 
 /// All functions to help parse data into respective structs.
 pub trait ParseToStruct: FromBytes + Unaligned + Sized {
@@ -577,6 +641,7 @@ impl SuperBlock {
         let data = SuperBlock::read_from_offset(reader, FIRST_BG_PADDING)?;
         let sb = SuperBlock::to_struct_arc(data, ParsingError::ParseSuperBlock(FIRST_BG_PADDING))?;
         if sb.e2fs_magic.get() == SB_MAGIC {
+            sb.feature_check()?;
             Ok(sb)
         } else {
             Err(ParsingError::InvalidSuperBlockMagic(sb.e2fs_magic.get()))
@@ -593,6 +658,20 @@ impl SuperBlock {
         2usize
             .checked_pow(self.e2fs_log_bsize.get() + 10)
             .ok_or(ParsingError::BlockSizeInvalid(self.e2fs_log_bsize.get()))
+    }
+
+    fn feature_check(&self) -> Result<(), ParsingError> {
+        let banned = self.e2fs_features_incompat.get() & BANNED_FEATURE_INCOMPAT;
+        if banned > 0 {
+            return Err(ParsingError::BannedFeatureIncompat(banned));
+        }
+        let required = self.e2fs_features_incompat.get() & REQUIRED_FEATURE_INCOMPAT;
+        if required != REQUIRED_FEATURE_INCOMPAT {
+            return Err(ParsingError::RequiredFeatureIncompat(
+                required ^ REQUIRED_FEATURE_INCOMPAT,
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -645,10 +724,112 @@ impl DirEntry2 {
 #[cfg(test)]
 mod test {
     use {
-        super::{ParseToStruct, ParsingError, SuperBlock, FIRST_BG_PADDING, SB_MAGIC},
+        super::{
+            FeatureIncompat, ParseToStruct, ParsingError, SuperBlock, FIRST_BG_PADDING, LEU16,
+            LEU32, LEU64, REQUIRED_FEATURE_INCOMPAT, SB_MAGIC,
+        },
         crate::readers::VecReader,
         std::{fs, sync::Arc},
     };
+
+    impl Default for SuperBlock {
+        fn default() -> SuperBlock {
+            SuperBlock {
+                e2fs_icount: LEU32::new(0),
+                e2fs_bcount: LEU32::new(0),
+                e2fs_rbcount: LEU32::new(0),
+                e2fs_fbcount: LEU32::new(0),
+                e2fs_ficount: LEU32::new(0),
+                e2fs_first_dblock: LEU32::new(0),
+                e2fs_log_bsize: LEU32::new(0),
+                e2fs_log_fsize: LEU32::new(0),
+                e2fs_bpg: LEU32::new(0),
+                e2fs_fpg: LEU32::new(0),
+                e2fs_ipg: LEU32::new(0),
+                e2fs_mtime: LEU32::new(0),
+                e2fs_wtime: LEU32::new(0),
+                e2fs_mnt_count: LEU16::new(0),
+                e2fs_max_mnt_count: LEU16::new(0),
+                e2fs_magic: LEU16::new(0),
+                e2fs_state: LEU16::new(0),
+                e2fs_beh: LEU16::new(0),
+                e2fs_minrev: LEU16::new(0),
+                e2fs_lastfsck: LEU32::new(0),
+                e2fs_fsckintv: LEU32::new(0),
+                e2fs_creator: LEU32::new(0),
+                e2fs_rev: LEU32::new(0),
+                e2fs_ruid: LEU16::new(0),
+                e2fs_rgid: LEU16::new(0),
+                e2fs_first_ino: LEU32::new(0),
+                e2fs_inode_size: LEU16::new(0),
+                e2fs_block_group_nr: LEU16::new(0),
+                e2fs_features_compat: LEU32::new(0),
+                e2fs_features_incompat: LEU32::new(0),
+                e2fs_features_rocompat: LEU32::new(0),
+                e2fs_uuid: [0; 16],
+                e2fs_vname: [0; 16],
+                e2fs_fsmnt: [0; 64],
+                e2fs_algo: LEU32::new(0),
+                e2fs_prealloc: 0,
+                e2fs_dir_prealloc: 0,
+                e2fs_reserved_ngdb: LEU16::new(0),
+                e3fs_journal_uuid: [0; 16],
+                e3fs_journal_inum: LEU32::new(0),
+                e3fs_journal_dev: LEU32::new(0),
+                e3fs_last_orphan: LEU32::new(0),
+                e3fs_hash_seed: [LEU32::new(0); 4],
+                e3fs_def_hash_version: 0,
+                e3fs_jnl_backup_type: 0,
+                e3fs_desc_size: LEU16::new(0),
+                e3fs_default_mount_opts: LEU32::new(0),
+                e3fs_first_meta_bg: LEU32::new(0),
+                e3fs_mkfs_time: LEU32::new(0),
+                e3fs_jnl_blks: [LEU32::new(0); 17],
+                e4fs_bcount_hi: LEU32::new(0),
+                e4fs_rbcount_hi: LEU32::new(0),
+                e4fs_fbcount_hi: LEU32::new(0),
+                e4fs_min_extra_isize: LEU16::new(0),
+                e4fs_want_extra_isize: LEU16::new(0),
+                e4fs_flags: LEU32::new(0),
+                e4fs_raid_stride: LEU16::new(0),
+                e4fs_mmpintv: LEU16::new(0),
+                e4fs_mmpblk: LEU64::new(0),
+                e4fs_raid_stripe_wid: LEU32::new(0),
+                e4fs_log_gpf: 0,
+                e4fs_chksum_type: 0,
+                e4fs_encrypt: 0,
+                e4fs_reserved_pad: 0,
+                e4fs_kbytes_written: LEU64::new(0),
+                e4fs_snapinum: LEU32::new(0),
+                e4fs_snapid: LEU32::new(0),
+                e4fs_snaprbcount: LEU64::new(0),
+                e4fs_snaplist: LEU32::new(0),
+                e4fs_errcount: LEU32::new(0),
+                e4fs_first_errtime: LEU32::new(0),
+                e4fs_first_errino: LEU32::new(0),
+                e4fs_first_errblk: LEU64::new(0),
+                e4fs_first_errfunc: [0; 32],
+                e4fs_first_errline: LEU32::new(0),
+                e4fs_last_errtime: LEU32::new(0),
+                e4fs_last_errino: LEU32::new(0),
+                e4fs_last_errline: LEU32::new(0),
+                e4fs_last_errblk: LEU64::new(0),
+                e4fs_last_errfunc: [0; 32],
+                e4fs_mount_opts: [0; 64],
+                e4fs_usrquota_inum: LEU32::new(0),
+                e4fs_grpquota_inum: LEU32::new(0),
+                e4fs_overhead_clusters: LEU32::new(0),
+                e4fs_backup_bgs: [LEU32::new(0); 2],
+                e4fs_encrypt_algos: [0; 4],
+                e4fs_encrypt_pw_salt: [0; 16],
+                e4fs_lpf_ino: LEU32::new(0),
+                e4fs_proj_quota_inum: LEU32::new(0),
+                e4fs_chksum_seed: LEU32::new(0),
+                e4fs_reserved: [LEU32::new(0); 98],
+                e4fs_sbchksum: LEU32::new(0),
+            }
+        }
+    }
 
     // NOTE: Impls for `INode` and `DirEntry2` depend on calculated data locations. Testing these
     // functions are being done in `parser.rs` where those locations are being calculated.
@@ -680,5 +861,57 @@ mod test {
         )
         .expect("Parsed Super Block");
         assert_eq!(sb.e2fs_magic.get(), SB_MAGIC);
+    }
+
+    /// Covers SuperBlock::feature_check
+    #[test]
+    fn incompatible_feature_flags() {
+        let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
+        let reader = Arc::new(VecReader::new(data));
+        let sb = SuperBlock::parse(reader).expect("Parsed Super Block");
+        assert_eq!(sb.e2fs_magic.get(), SB_MAGIC);
+        assert!(sb.feature_check().is_ok());
+
+        let mut sb = SuperBlock::default();
+        match sb.feature_check() {
+            Ok(_) => assert!(false, "Feature flags should be incorrect."),
+            Err(e) => assert_eq!(
+                format!("{}", e),
+                format!(
+                    "Required feature flags (feature_incompat): 0x{:X}",
+                    REQUIRED_FEATURE_INCOMPAT
+                )
+            ),
+        }
+
+        // Test that an exact match is not necessary.
+        sb.e2fs_features_incompat = LEU32::new(REQUIRED_FEATURE_INCOMPAT | 0xF00000);
+        assert!(sb.feature_check().is_ok());
+
+        // Test can report subset.
+        sb.e2fs_features_incompat = LEU32::new(FeatureIncompat::Extents as u32);
+        match sb.feature_check() {
+            Ok(_) => assert!(false, "Feature flags should be incorrect."),
+            Err(e) => assert_eq!(
+                format!("{}", e),
+                format!(
+                    "Required feature flags (feature_incompat): 0x{:X}",
+                    REQUIRED_FEATURE_INCOMPAT ^ FeatureIncompat::Extents as u32
+                )
+            ),
+        }
+
+        // Test banned flag.
+        sb.e2fs_features_incompat = LEU32::new(FeatureIncompat::Is64Bit as u32);
+        match sb.feature_check() {
+            Ok(_) => assert!(false, "Feature flags should be incorrect."),
+            Err(e) => assert_eq!(
+                format!("{}", e),
+                format!(
+                    "Incompatible feature flags (feature_incompat): 0x{:X}",
+                    FeatureIncompat::Is64Bit as u32
+                )
+            ),
+        }
     }
 }
