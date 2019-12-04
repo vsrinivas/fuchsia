@@ -38,6 +38,13 @@ uint32_t JobDispatcher::ChildCountLocked<ProcessDispatcher>() const {
   return process_count_;
 }
 
+// To come up with an order on our recursive locks we take advantage of the fact that our
+// max_height reduces from parent to child. As we acquire locks from parent->child we can build an
+// increasing counter by inverting the max_height. We add 1 to the counter just so the order value
+// of 0 is reserved for the default order when the lock is acquired without an order being
+// specified.
+uint32_t JobDispatcher::LockOrder() const { return kRootJobMaxHeight - max_height() + 1; }
+
 // Calls the provided |zx_status_t func(fbl::RefPtr<DISPATCHER_TYPE>)|
 // function on all live elements of |children|, which must be one of |jobs_|
 // or |procs_|. Stops iterating early if |func| returns a value other than
@@ -359,7 +366,12 @@ bool JobDispatcher::KillJobWithKillOnOOM() {
 }
 
 void JobDispatcher::CollectJobsWithOOMBit(OOMBitJobArray* into, int* count) {
-  Guard<fbl::Mutex> guard{get_lock()};
+  // As CollectJobsWithOOMBit will recurse we need to give a lock order to the guard.
+  Guard<fbl::Mutex> guard{&lock_, LockOrder()};
+  // We had to take the guard directly on lock_ above as the get_lock() virtual method erases the
+  // Nestasble type information. The AssertHeld here allows us to restore the clang capability
+  // analysis.
+  AssertHeld(*get_lock());
 
   if (kill_on_oom_) {
     if (*count >= static_cast<int>(into->size())) {
@@ -509,10 +521,8 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
   zx_status_t result = ZX_OK;
 
   {
-    // As EnumerateChildren will recurse we need to give a lock order to the guard. Since we know
-    // our max_height reduces from parent to child, we can build an increasing counter by inverting
-    // the max_height.
-    Guard<fbl::Mutex> guard{&lock_, kRootJobMaxHeight - max_height()};
+    // As EnumerateChildren will recurse we need to give a lock order to the guard.
+    Guard<fbl::Mutex> guard{&lock_, LockOrder()};
     // We had to take the guard directly on lock_ above as the get_lock() virtual method erases the
     // Nestasble type information. The AssertHeld here allows us to restore the clang capability
     // analysis.

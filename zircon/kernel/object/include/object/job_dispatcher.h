@@ -148,6 +148,8 @@ class JobDispatcher final
 
   void GetInfo(zx_info_job_t* info) const;
 
+  uint32_t LockOrder() const;
+
  private:
   enum class State { READY, KILLING, DEAD };
 
