@@ -264,7 +264,6 @@ class DataProviderTest : public UnitTestFixture {
     const auto& attachment_bundle = data.attachment_bundle();
     EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
     ASSERT_TRUE(Unpack(attachment_bundle.value, unpacked_attachments));
-    EXPECT_EQ(unpacked_attachments->size(), data.attachments().size());
   }
 
   uint64_t total_num_scenic_bindings() { return scenic_->total_num_bindings(); }
@@ -428,16 +427,9 @@ TEST_F(DataProviderTest, GetData_SmokeTest) {
 
   const Data& data = result.value();
 
-  // If there are annotations, there should be at least one attachment.
+  // If there are annotations, there should also be the attachment bundle.
   if (data.has_annotations()) {
-    ASSERT_TRUE(data.has_attachments());
-  }
-
-  // If there are attachments, there should be an attachment bundle with the same number of
-  // attachments once unpacked.
-  if (data.has_attachments()) {
-    std::vector<Attachment> unpacked_attachments;
-    UnpackAttachmentBundle(data, &unpacked_attachments);
+    ASSERT_TRUE(data.has_attachment_bundle());
   }
 }
 
@@ -448,11 +440,12 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
 
   const Data& data = result.value();
 
-  // There should be an "annotations.json" attachment.
-  ASSERT_TRUE(data.has_attachments());
+  // There should be an "annotations.json" attachment present in the attachment bundle.
+  std::vector<Attachment> unpacked_attachments;
+  UnpackAttachmentBundle(data, &unpacked_attachments);
   bool found_annotations_attachment = false;
   std::string annotations_json;
-  for (const auto& attachment : data.attachments()) {
+  for (const auto& attachment : unpacked_attachments) {
     if (attachment.key != kAttachmentAnnotations) {
       continue;
     }
@@ -536,12 +529,6 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
     EXPECT_TRUE(json.Accept(validator));
   }
   EXPECT_TRUE(found_annotations_attachment);
-
-  // That same "annotations.json" attachment should be present in the attachment bundle.
-  std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(data, &unpacked_attachments);
-  EXPECT_THAT(unpacked_attachments,
-              testing::Contains(MatchesAttachment(kAttachmentAnnotations, annotations_json)));
 }
 
 TEST_F(DataProviderTest, GetData_SysLog) {
@@ -559,12 +546,7 @@ TEST_F(DataProviderTest, GetData_SysLog) {
 
   const Data& data = result.value();
 
-  // There should be a "log.system.txt" attachment.
-  ASSERT_TRUE(data.has_attachments());
-  EXPECT_THAT(data.attachments(),
-              testing::Contains(MatchesAttachment(kAttachmentLogSystem, expected_syslog)));
-
-  // That same "log.system.txt" attachment should be present in the attachment bundle.
+  // There should be a "log.system.txt" attachment present in the attachment bundle.
   std::vector<Attachment> unpacked_attachments;
   UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments,
@@ -649,9 +631,6 @@ TEST_F(DataProviderTest, GetData_EmptyAttachmentAllowlist) {
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();
-  EXPECT_TRUE(data.has_attachments());
-  ASSERT_EQ(data.attachments().size(), 1u);
-  EXPECT_STREQ(data.attachments()[0].key.c_str(), kAttachmentAnnotations);
   std::vector<Attachment> unpacked_attachments;
   UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
@@ -665,7 +644,6 @@ TEST_F(DataProviderTest, GetData_EmptyAllowlists) {
 
   const Data& data = result.value();
   EXPECT_FALSE(data.has_annotations());
-  EXPECT_FALSE(data.has_attachments());
   EXPECT_FALSE(data.has_attachment_bundle());
 }
 
@@ -687,9 +665,6 @@ TEST_F(DataProviderTest, GetData_UnknownAllowlistedAttachment) {
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();
-  EXPECT_TRUE(data.has_attachments());
-  ASSERT_EQ(data.attachments().size(), 1u);
-  EXPECT_STREQ(data.attachments()[0].key.c_str(), kAttachmentAnnotations);
   std::vector<Attachment> unpacked_attachments;
   UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
@@ -889,7 +864,6 @@ class DataProviderTestWithEnv : public sys::testing::TestWithEnvironment {
     const auto& attachment_bundle = data.attachment_bundle();
     EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
     ASSERT_TRUE(Unpack(attachment_bundle.value, unpacked_attachments));
-    EXPECT_EQ(unpacked_attachments->size(), data.attachments().size());
   }
 
  private:
@@ -922,11 +896,12 @@ TEST_F(DataProviderTestWithEnv, GetData_Inspect) {
 
   const Data& data = result.value();
 
-  // There should be an "inspect.json" attachment.
-  ASSERT_TRUE(data.has_attachments());
+  // There should be an "inspect.json" attachment present in the attachment bundle.
+  std::vector<Attachment> unpacked_attachments;
+  UnpackAttachmentBundle(data, &unpacked_attachments);
   bool found_inspect_attachment = false;
   std::string inspect_json;
-  for (const auto& attachment : data.attachments()) {
+  for (const auto& attachment : unpacked_attachments) {
     if (attachment.key != kAttachmentInspect) {
       continue;
     }
@@ -937,9 +912,6 @@ TEST_F(DataProviderTestWithEnv, GetData_Inspect) {
   }
   EXPECT_TRUE(found_inspect_attachment);
 
-  // That same "inspect.json" attachment should be present in the attachment bundle.
-  std::vector<Attachment> unpacked_attachments;
-  UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments,
               testing::Contains(MatchesAttachment(kAttachmentInspect, inspect_json)));
 }

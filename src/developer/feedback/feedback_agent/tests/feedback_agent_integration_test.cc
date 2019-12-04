@@ -357,15 +357,6 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                                       MatchesKey(kAnnotationHardwareProductManufacturer),
                                   }));
 
-  ASSERT_TRUE(data.has_attachments());
-  EXPECT_THAT(data.attachments(), testing::UnorderedElementsAreArray({
-                                      MatchesKey(kAttachmentAnnotations),
-                                      MatchesKey(kAttachmentBuildSnapshot),
-                                      MatchesKey(kAttachmentInspect),
-                                      MatchesKey(kAttachmentLogKernel),
-                                      MatchesKey(kAttachmentLogSystem),
-                                  }));
-
   ASSERT_TRUE(data.has_attachment_bundle());
   const auto& attachment_bundle = data.attachment_bundle();
   EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);

@@ -35,14 +35,12 @@ table Data {
     /// A vector of key-value string pairs. Keys are guaranteed to be unique.
     1: vector<Annotation>:32 annotations;
 
-    /// A vector of key-value string-to-VMO pairs. Keys are guaranteed to be unique.
-    [Transitional = "deprecated in favor of attachment_bundle"]
-    2: vector<Attachment>:16 attachments;
-
     /// A bundle of Attachments objects stored as an Attachment itself, e.g., it
     /// could be a ZIP archive bundling a vector of Attachment objects.
-    [Transitional = "replacement for attachments"]
     3: Attachment attachment_bundle;
+
+    // Deprecated.
+    2: reserved;
 };
 
 /// The encoding used for the image.

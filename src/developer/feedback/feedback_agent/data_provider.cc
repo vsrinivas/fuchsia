@@ -139,16 +139,17 @@ void DataProvider::GetData(GetDataCallback callback) {
                             fit::result<std::vector<Attachment>>>& annotations_and_attachments) {
                 Data data;
 
-                auto& annotations = std::get<0>(annotations_and_attachments);
-                if (annotations.is_ok()) {
-                  data.set_annotations(annotations.take_value());
+                auto& annotations_or_error = std::get<0>(annotations_and_attachments);
+                if (annotations_or_error.is_ok()) {
+                  data.set_annotations(annotations_or_error.take_value());
                 } else {
                   FX_LOGS(WARNING) << "Failed to retrieve any annotations";
                 }
 
-                auto& attachments = std::get<1>(annotations_and_attachments);
-                if (attachments.is_ok()) {
-                  data.set_attachments(attachments.take_value());
+                auto& attachments_or_error = std::get<1>(annotations_and_attachments);
+                std::vector<Attachment> attachments;
+                if (attachments_or_error.is_ok()) {
+                  attachments = attachments_or_error.take_value();
                 } else {
                   FX_LOGS(WARNING) << "Failed to retrieve any attachments";
                 }
@@ -157,14 +158,14 @@ void DataProvider::GetData(GetDataCallback callback) {
                 // This is useful for clients that surface the annotations differentily in the UI
                 // but still want all the annotations to be easily downloadable in one file.
                 if (data.has_annotations()) {
-                  AddAnnotationsAsExtraAttachment(data.annotations(), data.mutable_attachments());
+                  AddAnnotationsAsExtraAttachment(data.annotations(), &attachments);
                 }
 
                 // We bundle the attachments into a single attachment.
                 // This is useful for most clients that want to pass around a single bundle.
-                if (data.has_attachments()) {
+                if (!attachments.empty()) {
                   Attachment bundle;
-                  if (BundleAttachments(data.attachments(), &bundle)) {
+                  if (BundleAttachments(attachments, &bundle)) {
                     data.set_attachment_bundle(std::move(bundle));
                   }
                 }
