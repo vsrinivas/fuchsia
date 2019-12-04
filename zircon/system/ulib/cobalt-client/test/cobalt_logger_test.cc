@@ -487,7 +487,7 @@ class LoggerFromIdServiceFixture : public zxtest::Test {
  public:
   void SetUp() final {
     // Initialize the service loop.
-    service_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    service_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
     checker_.project_id = kProjectId;
     checker_.return_status = Status::OK;

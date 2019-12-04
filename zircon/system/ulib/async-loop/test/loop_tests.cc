@@ -7,6 +7,7 @@
 #include <lib/async/cpp/paged_vmo.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/async/default.h>
 #include <lib/async/irq.h>
 #include <lib/async/receiver.h>
 #include <lib/async/task.h>
@@ -382,7 +383,7 @@ bool create_default_test() {
   BEGIN_TEST;
 
   {
-    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
     EXPECT_EQ(loop.dispatcher(), async_get_default_dispatcher(), "became default");
   }
   EXPECT_NULL(async_get_default_dispatcher(), "no longer default");
@@ -973,7 +974,7 @@ bool receiver_shutdown_test() {
 bool paged_vmo_shutdown_test() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "loop runnable");
 
   zx::pager pager;

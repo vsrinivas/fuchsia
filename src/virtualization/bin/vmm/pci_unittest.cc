@@ -4,6 +4,8 @@
 
 #include "src/virtualization/bin/vmm/pci.h"
 
+#include <lib/async/default.h>
+
 #include <hw/pci.h>
 
 #include "gtest/gtest.h"
