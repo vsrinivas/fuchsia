@@ -14,8 +14,7 @@ use {
     wlan_common::channel::{Cbw, Channel},
 };
 
-const PASSIVE_SCAN_MIN_CHANNEL_MS: u32 = 100;
-const PASSIVE_SCAN_MAX_CHANNEL_MS: u32 = 200;
+const PASSIVE_SCAN_CHANNEL_MS: u32 = 200;
 const ACTIVE_SCAN_PROBE_DELAY_MS: u32 = 5;
 const ACTIVE_SCAN_CHANNEL_MS: u32 = 50;
 
@@ -293,8 +292,8 @@ fn new_scan_request(
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
         channel_list: Some(get_channels_to_scan(&device_info, scan_type)),
-        min_channel_time: PASSIVE_SCAN_MIN_CHANNEL_MS,
-        max_channel_time: PASSIVE_SCAN_MAX_CHANNEL_MS,
+        min_channel_time: PASSIVE_SCAN_CHANNEL_MS,
+        max_channel_time: PASSIVE_SCAN_CHANNEL_MS,
         ssid_list: None,
     };
     match scan_type {
