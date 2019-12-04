@@ -9,6 +9,8 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <vector>
+
 #include <gtest/gtest.h>
 #include <src/lib/syslog/cpp/logger.h>
 
@@ -36,12 +38,29 @@ class BufferLeakTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  static fuchsia::camera2::StreamConstraints GetStreamConstraints() {
-    fuchsia::camera2::StreamConstraints constraints;
-    fuchsia::camera2::StreamProperties properties;
-    properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
-    constraints.set_properties(std::move(properties));
-    return constraints;
+  static std::vector<fuchsia::camera2::StreamConstraints> GetStreamConstraints() {
+    fuchsia::camera2::CameraStreamType types[] = {
+      fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+#if 0
+        fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+            fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+        fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+            fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
+        fuchsia::camera2::CameraStreamType::MONITORING,
+        fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
+            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+            fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+#endif
+    };
+    std::vector<fuchsia::camera2::StreamConstraints> constraints_ret;
+    for (auto type : types) {
+      fuchsia::camera2::StreamProperties properties;
+      properties.set_stream_type(type);
+      fuchsia::camera2::StreamConstraints constraints;
+      constraints.set_properties(std::move(properties));
+      constraints_ret.push_back(std::move(constraints));
+    }
+    return constraints_ret;
   }
 
   static fuchsia::sysmem::BufferCollectionConstraints GetCollectionConstraints() {
@@ -97,20 +116,17 @@ class BufferLeakTest : public gtest::TestLoopFixture {
     }
   }
 
-  std::unique_ptr<sys::ComponentContext> context_;
-  fuchsia::sysmem::AllocatorPtr allocator_;
-};
+  // Attempts to connect to the camera stream using the given constraints. Sets oom_out to true if
+  // sysmem reports oom during allocation. Returns the allocated buffers in buffers_out.
+  // Note that these are out params instead of return values due to the GTEST macros requiring
+  // methods to return void.
+  void TryConnect(fuchsia::camera2::StreamConstraints stream_constraints, bool* oom_out,
+                  fuchsia::sysmem::BufferCollectionInfo_2* buffers_out) {
+    ZX_ASSERT(oom_out);
+    ZX_ASSERT(buffers_out);
 
-TEST_F(BufferLeakTest, RepeatConnections) {
-  // Repeatedly connect to streams until the total memory allocated is at least twice the size of
-  // all physical memory.
-  uint64_t allocation_sum = 0;
-  uint64_t allocation_sum_target = zx_system_get_physmem() * 2;
-  for (uint32_t i = 0; allocation_sum < allocation_sum_target; ++i) {
-    uint32_t percent_complete = (allocation_sum * 100) / allocation_sum_target;
-    std::cout << "\rAllocated " << allocation_sum << " of " << allocation_sum_target << " bytes ("
-              << percent_complete << "%)";
-    std::cout.flush();
+    *oom_out = false;
+    *buffers_out = fuchsia::sysmem::BufferCollectionInfo_2{};
 
     fuchsia::camera2::ManagerPtr manager;
     ASSERT_EQ(context_->svc()->Connect(manager.NewRequest()), ZX_OK);
@@ -136,7 +152,7 @@ TEST_F(BufferLeakTest, RepeatConnections) {
     fuchsia::camera2::StreamPtr stream;
     fuchsia::sysmem::ImageFormat_2 format_ret;
     bool connect_returned = false;
-    manager->ConnectToStream(0, GetStreamConstraints(), std::move(manager_token),
+    manager->ConnectToStream(0, std::move(stream_constraints), std::move(manager_token),
                              stream.NewRequest(), [&](fuchsia::sysmem::ImageFormat_2 format) {
                                format_ret = std::move(format);
                                connect_returned = true;
@@ -146,18 +162,20 @@ TEST_F(BufferLeakTest, RepeatConnections) {
     bool wait_returned = false;
     collection->WaitForBuffersAllocated(
         [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
+          wait_returned = true;
           if (status == ZX_ERR_NO_MEMORY) {
-            ADD_FAILURE() << "SYSMEM OUT OF MEMORY at iteration " << i << " after allocating "
-                          << allocation_sum << " bytes";
+            *oom_out = true;
           } else {
             ASSERT_EQ(status, ZX_OK) << "Failed to allocate buffers";
           }
           buffers_ret = std::move(buffers);
-          wait_returned = true;
         });
 
     while (!wait_returned || !connect_returned) {
       RunLoopUntilIdle();
+    }
+    if (*oom_out) {
+      return;
     }
 
     collection->Close();
@@ -166,8 +184,6 @@ TEST_F(BufferLeakTest, RepeatConnections) {
 
     ASSERT_GE(buffers_ret.buffer_count, kCampingBufferCount);
     VerifyAccess(buffers_ret, format_ret);
-
-    allocation_sum += buffers_ret.buffer_count * buffers_ret.settings.buffer_settings.size_bytes;
 
     bool frame_received = false;
     stream.events().OnFrameAvailable = [&](fuchsia::camera2::FrameAvailableInfo info) {
@@ -183,6 +199,33 @@ TEST_F(BufferLeakTest, RepeatConnections) {
     stream = nullptr;
 
     RunLoopUntilIdle();
+
+    *buffers_out = std::move(buffers_ret);
+  }
+
+  std::unique_ptr<sys::ComponentContext> context_;
+  fuchsia::sysmem::AllocatorPtr allocator_;
+};
+
+TEST_F(BufferLeakTest, RepeatConnections) {
+  // Repeatedly connect to streams until the total memory allocated is at least twice the size of
+  // all physical memory.
+  uint64_t allocation_sum = 0;
+  uint64_t allocation_sum_target = zx_system_get_physmem() * 2;
+  for (uint32_t i = 0; allocation_sum < allocation_sum_target; ++i) {
+    for (auto& constraints : GetStreamConstraints()) {
+      uint32_t percent_complete = (allocation_sum * 100) / allocation_sum_target;
+      std::cout << "\rAllocated " << allocation_sum << " of " << allocation_sum_target << " bytes ("
+                << percent_complete << "%)";
+      std::cout.flush();
+      bool oom_ret = false;
+      fuchsia::sysmem::BufferCollectionInfo_2 buffers_ret{};
+      TryConnect(std::move(constraints), &oom_ret, &buffers_ret);
+      ASSERT_FALSE(HasFatalFailure());
+      ASSERT_FALSE(oom_ret) << "SYSMEM OUT OF MEMORY at iteration " << i << " after allocating "
+                            << allocation_sum << " bytes";
+      allocation_sum += buffers_ret.buffer_count * buffers_ret.settings.buffer_settings.size_bytes;
+    }
   }
   std::cout << std::endl;
 }
