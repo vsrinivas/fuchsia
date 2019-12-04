@@ -424,9 +424,8 @@ TEST_F(AudioLoopbackTest, SingleStream) { TestLoopback(1); }
 // ManyStreams
 //
 // Verifies loopback capture of 16 output streams.
-// TODO(fxb/42050): This test is flaky and occasionally times out, possibly due
-// to the support for the FIDL v1 wire-format transition. We should re-enable
-// this test after the FIDL v1 transition is complete.
-// TEST_F(AudioLoopbackTest, ManyStreams) { TestLoopback(16); }
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(AudioLoopbackTest, DISABLED_ManyStreams) { TestLoopback(16); }
 
 }  // namespace media::audio::test

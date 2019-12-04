@@ -102,7 +102,9 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
 };
 
 // Play a synthetic WAV file from beginning to end.
-TEST_F(MediaPlayerTests, PlayWav) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_PlayWav) {
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0x20c39d1e31991800},
                                         {1024, 4096, 0xeaf137125d313800},
                                         {2048, 4096, 0x6162095671991800},
@@ -178,7 +180,9 @@ TEST_F(MediaPlayerTests, DISABLED_PlayWavDelayEos) {
 // Play a synthetic WAV file from beginning to end, retaining packets. This
 // tests the ability of the player to handle the case in which the audio
 // renderer is holding on to packets for too long.
-TEST_F(MediaPlayerTests, PlayWavRetainPackets) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_PlayWavRetainPackets) {
   fake_audio_.renderer().SetRetainPackets(true);
 
   fuchsia::media::playback::SeekingReaderPtr fake_reader_ptr;
@@ -201,7 +205,9 @@ TEST_F(MediaPlayerTests, PlayWavRetainPackets) {
 }
 
 // Play an LPCM elementary stream using |ElementarySource|
-TEST_F(MediaPlayerTests, ElementarySource) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_ElementarySource) {
   fake_audio_.renderer().ExpectPackets({{0, 4096, 0xd2fbd957e3bf0000},
                                         {1024, 4096, 0xda25db3fa3bf0000},
                                         {2048, 4096, 0xe227e0f6e3bf0000},
@@ -259,7 +265,9 @@ TEST_F(MediaPlayerTests, ElementarySource) {
 }
 
 // Opens an SBC elementary stream using |ElementarySource|.
-TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_ElementarySourceWithSBC) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
   player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
 
@@ -296,7 +304,9 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
 }
 
 // Opens an AAC elementary stream using |ElementarySource|.
-TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_ElementarySourceWithAAC) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
   player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
 
@@ -333,7 +343,9 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
 }
 
 // Opens an AACLATM elementary stream using |ElementarySource|.
-TEST_F(MediaPlayerTests, ElementarySourceWithAACLATM) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_ElementarySourceWithAACLATM) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
   player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
 
@@ -370,7 +382,9 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAACLATM) {
 }
 
 // Tries to open a bogus elementary stream using |ElementarySource|.
-TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_ElementarySourceWithBogus) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
   player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
 
@@ -407,7 +421,9 @@ TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
 }
 
 // Play a real A/V file from beginning to end.
-TEST_F(MediaPlayerTests, PlayBear) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_PlayBear) {
   // TODO(dalesat): Use ExpectPackets for audio.
   // This doesn't currently work, because the decoder behaves differently on
   // different targets.
@@ -481,7 +497,9 @@ TEST_F(MediaPlayerTests, PlayBear) {
 // Play a real A/V file from beginning to end, retaining audio packets. This
 // tests the ability of the player to handle the case in which the audio
 // renderer is holding on to packets for too long.
-TEST_F(MediaPlayerTests, PlayBearRetainAudioPackets) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_PlayBearRetainAudioPackets) {
   CreateView();
   fake_audio_.renderer().SetRetainPackets(true);
 
@@ -495,7 +513,9 @@ TEST_F(MediaPlayerTests, PlayBearRetainAudioPackets) {
 }
 
 // Regression test for US-544.
-TEST_F(MediaPlayerTests, RegressionTestUS544) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_RegressionTestUS544) {
   CreateView();
   commands_.SetFile(kBearFilePath);
 
@@ -520,7 +540,9 @@ TEST_F(MediaPlayerTests, RegressionTestUS544) {
 
 // Regression test for QA-539.
 // Verifies that the player can play two files in a row.
-TEST_F(MediaPlayerTests, RegressionTestQA539) {
+// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
+// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+TEST_F(MediaPlayerTests, DISABLED_RegressionTestQA539) {
   CreateView();
   commands_.SetFile(kBearFilePath);
 
