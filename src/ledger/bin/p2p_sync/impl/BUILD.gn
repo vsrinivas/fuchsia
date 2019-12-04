@@ -40,7 +40,6 @@ source_set("impl") {
 
   deps = [
     ":message",
-    "//peridot/lib/ledger_client:constants",
     "//src/lib/callback",
   ]
 }

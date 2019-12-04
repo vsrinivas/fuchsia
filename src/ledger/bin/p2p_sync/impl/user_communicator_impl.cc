@@ -4,7 +4,6 @@
 
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 
-#include "peridot/lib/ledger_client/constants.h"
 #include "src/ledger/bin/p2p_sync/impl/encoding.h"
 #include "src/ledger/bin/p2p_sync/impl/flatbuffer_message_factory.h"
 #include "src/ledger/bin/p2p_sync/impl/ledger_communicator_impl.h"

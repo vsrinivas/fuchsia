@@ -32,7 +32,6 @@ executable_package("basemgr") {
     ":lib",
     ":wait_for_minfs",
     "//garnet/public/lib/json",
-    "//peridot/lib/ledger_client:constants",
     "//peridot/lib/ledger_client:page_client",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.devicesettings",
