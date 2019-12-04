@@ -10,6 +10,7 @@
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -22,12 +23,14 @@ namespace {
 constexpr absl::string_view kFileContent = "file content";
 
 TEST(DirectoryReaderTest, GetDirectoryEntries) {
+  std::unique_ptr<Platform> platform = MakePlatform();
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
-  ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), "foo"));
-  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), "bar", kFileContent.data(), kFileContent.size()));
-  ASSERT_TRUE(
-      files::WriteFileAt(tmpfs.root_fd(), "foo/baz", kFileContent.data(), kFileContent.size()));
+  ASSERT_TRUE(platform->file_system()->CreateDirectory(DetachedPath(tmpfs.root_fd(), "foo")));
+  ASSERT_TRUE(platform->file_system()->WriteFile(DetachedPath(tmpfs.root_fd(), "bar"),
+                                                 convert::ToString(kFileContent)));
+  ASSERT_TRUE(platform->file_system()->WriteFile(DetachedPath(tmpfs.root_fd(), "foo/baz"),
+                                                 convert::ToString(kFileContent)));
 
   std::set<std::string> expected_entries = {"foo", "bar"};
 

@@ -516,7 +516,8 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
   void SetUp() override {
     TestWithEnvironment::SetUp();
     auto encryption_service = std::make_unique<encryption::FakeEncryptionService>(dispatcher());
-    db_factory_ = std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
+    db_factory_ =
+        std::make_unique<storage::fake::FakeDbFactory>(environment_.file_system(), dispatcher());
     auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
         &environment_, encryption_service.get(), db_factory_.get(), DetachedPath(tmpfs_.root_fd()),
         storage::CommitPruningPolicy::NEVER, &device_id_manager_);

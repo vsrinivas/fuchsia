@@ -227,7 +227,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
 
   void SetUp() override {
     std::unique_ptr<storage::fake::FakeDbFactory> db_factory =
-        std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
+        std::make_unique<storage::fake::FakeDbFactory>(environment_.file_system(), dispatcher());
     ResetLedgerRepository(std::move(db_factory), [this](DbViewFactory* dbview_factory) {
       auto clock = std::make_unique<clocks::DeviceIdManagerImpl>(
           &environment_, dbview_factory->CreateDbView(RepositoryRowPrefix::CLOCKS));
@@ -705,7 +705,7 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionNewDeviceId) {
 
 TEST_F(LedgerRepositoryImplTest, PageDeletionNotDoneIfDeviceIdManagerFails) {
   std::unique_ptr<storage::fake::FakeDbFactory> db_factory =
-      std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
+      std::make_unique<storage::fake::FakeDbFactory>(environment_.file_system(), dispatcher());
   ResetLedgerRepository(std::move(db_factory), [](DbViewFactory* /*dbview_factory*/) {
     return std::make_unique<FailingDeviceIdManager>();
   });
@@ -752,7 +752,7 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionNotDoneIfDeviceIdManagerFails) {
 TEST_F(LedgerRepositoryImplTest, PageDeletionReopensPageManagerIfClosed) {
   coroutine::CoroutineHandler* handler = nullptr;
   std::unique_ptr<storage::fake::FakeDbFactory> db_factory =
-      std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
+      std::make_unique<storage::fake::FakeDbFactory>(environment_.file_system(), dispatcher());
   ResetLedgerRepository(std::move(db_factory), [&handler](DbViewFactory* /*dbview_factory*/) {
     return std::make_unique<YieldingDeviceIdManager>(&handler);
   });

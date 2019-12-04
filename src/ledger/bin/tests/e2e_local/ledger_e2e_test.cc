@@ -19,6 +19,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/ledger/bin/platform/detached_path.h"
+#include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
@@ -27,8 +28,6 @@
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
 #include "src/lib/fsl/io/fd.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -42,18 +41,19 @@ using ::testing::ElementsAre;
 // Recursively searches for a directory with name |target_dir| and returns
 // whether it was found. If found, |path_to_dir| is updated with the path from
 // the source path.
-bool FindPathToDir(const ledger::DetachedPath& root_path, absl::string_view target_dir,
-                   ledger::DetachedPath* path_to_dir) {
+bool FindPathToDir(ledger::FileSystem* file_system, const ledger::DetachedPath& root_path,
+                   absl::string_view target_dir, ledger::DetachedPath* path_to_dir) {
   bool dir_found = false;
   auto on_next_directory_entry = [&](absl::string_view entry) {
     ledger::DetachedPath current_path = root_path.SubPath(entry);
-    if (files::IsDirectoryAt(current_path.root_fd(), current_path.path())) {
+    if (file_system->IsDirectory(
+            ledger::DetachedPath(current_path.root_fd(), current_path.path()))) {
       if (entry == target_dir) {
         dir_found = true;
         *path_to_dir = std::move(current_path);
         return false;
       }
-      dir_found = FindPathToDir(current_path, target_dir, path_to_dir);
+      dir_found = FindPathToDir(file_system, current_path, target_dir, path_to_dir);
       // If the page path was found, stop the iteration by returning false.
       return !dir_found;
     }
@@ -86,6 +86,8 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
 
  protected:
   void Init(std::vector<std::string> additional_args) {
+    platform_ = ledger::MakePlatform();
+
     fidl::InterfaceHandle<fuchsia::io::Directory> child_directory;
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
@@ -127,6 +129,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
   fuchsia::sys::LauncherPtr launcher_;
 
  protected:
+  std::unique_ptr<ledger::Platform> platform_;
   ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
   fidl::SynchronousInterfacePtr<ledger_internal::LedgerController> controller_;
@@ -202,7 +205,8 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
     // <base64(page_id)>.
     std::string page_dir_name = absl::WebSafeBase64Escape(convert::ExtendedStringView(page_id.id));
     ledger::DetachedPath page_path;
-    ASSERT_TRUE(FindPathToDir(ledger::DetachedPath(tmpfs.root_fd()), page_dir_name, &page_path))
+    ASSERT_TRUE(FindPathToDir(platform_->file_system(), ledger::DetachedPath(tmpfs.root_fd()),
+                              page_dir_name, &page_path))
         << "Failed to find page's directory. Expected to find directory named "
            "`base64(page_id)`: "
         << page_dir_name;
@@ -218,8 +222,9 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
 
   // Make sure all directories have been deleted.
   for (const ledger::DetachedPath& path : page_paths) {
-    RunLoopUntil([&] { return !files::IsDirectoryAt(path.root_fd(), path.path()); });
-    EXPECT_FALSE(files::IsDirectoryAt(tmpfs.root_fd(), path.path()));
+    RunLoopUntil([&] { return !platform_->file_system()->IsDirectory(path); });
+    EXPECT_FALSE(
+        platform_->file_system()->IsDirectory(ledger::DetachedPath(tmpfs.root_fd(), path.path())));
   }
 
   ledger_.Unbind();
@@ -241,9 +246,12 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   scoped_tmpfs::ScopedTmpFS tmpfs;
   const std::string content_path = convert::ToString(ledger::kSerializationVersion);
   const std::string deletion_sentinel_path = content_path + "/sentinel";
-  ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), content_path));
-  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));
-  ASSERT_TRUE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
+  ASSERT_TRUE(platform_->file_system()->CreateDirectory(
+      ledger::DetachedPath(tmpfs.root_fd(), content_path)));
+  ASSERT_TRUE(platform_->file_system()->WriteFile(
+      ledger::DetachedPath(tmpfs.root_fd(), deletion_sentinel_path), ""));
+  ASSERT_TRUE(platform_->file_system()->IsFile(
+      ledger::DetachedPath(tmpfs.root_fd(), deletion_sentinel_path)));
 
   // Create a cloud provider configured to trigger the cloude erase recovery on
   // initial check.
@@ -287,10 +295,9 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
-  RunLoopUntil([&] {
-    return !files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path) && repo_disconnected;
-  });
-  EXPECT_FALSE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
+  ledger::DetachedPath path(tmpfs.root_fd(), deletion_sentinel_path);
+  RunLoopUntil([&] { return !platform_->file_system()->IsFile(path) && repo_disconnected; });
+  EXPECT_FALSE(platform_->file_system()->IsFile(path));
   EXPECT_TRUE(repo_disconnected);
 
   // Make sure all the contents are deleted. Only the staging directory should
@@ -320,11 +327,13 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
-  const std::string content_path = convert::ToString(ledger::kSerializationVersion);
-  const std::string deletion_sentinel_path = content_path + "/sentinel";
-  ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), content_path));
-  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));
-  ASSERT_TRUE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
+  const std::string content_path_str = convert::ToString(ledger::kSerializationVersion);
+  const std::string deletion_sentinel_path = content_path_str + "/sentinel";
+  ledger::DetachedPath deletion_path(tmpfs.root_fd(), deletion_sentinel_path);
+  ledger::DetachedPath content_path(tmpfs.root_fd(), content_path_str);
+  ASSERT_TRUE(platform_->file_system()->CreateDirectory(content_path));
+  ASSERT_TRUE(platform_->file_system()->WriteFile(deletion_path, ""));
+  ASSERT_TRUE(platform_->file_system()->IsFile(deletion_path));
 
   // Create a cloud provider configured to trigger the cloud erase recovery
   // while Ledger is connected.
@@ -345,10 +354,9 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
-  RunLoopUntil([&] {
-    return !files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path) && repo_disconnected;
-  });
-  EXPECT_FALSE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
+  RunLoopUntil(
+      [&] { return !platform_->file_system()->IsFile(deletion_path) && repo_disconnected; });
+  EXPECT_FALSE(platform_->file_system()->IsFile(deletion_path));
   EXPECT_TRUE(repo_disconnected);
 
   // Verify that the Ledger app didn't crash.

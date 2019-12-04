@@ -18,6 +18,7 @@
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/get_directory_content_size.h"
+#include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
@@ -76,6 +77,7 @@ class DeleteEntryBenchmark {
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
   std::unique_ptr<sys::ComponentContext> component_context_;
+  std::unique_ptr<Platform> platform_;
   const size_t entry_count_;
   const size_t transaction_size_;
   const size_t key_size_;
@@ -96,6 +98,7 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
       generator_(&random_),
       page_data_generator_(&random_),
       component_context_(std::move(component_context)),
+      platform_(MakePlatform()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),
@@ -155,7 +158,8 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
     ShutDown();
 
     uint64_t tmp_dir_size = 0;
-    FXL_CHECK(GetDirectoryContentSize(DetachedPath(tmp_dir_.path()), &tmp_dir_size));
+    FXL_CHECK(GetDirectoryContentSize(platform_->file_system(), DetachedPath(tmp_dir_.path()),
+                                      &tmp_dir_size));
     TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size",
                   TA_UINT64(tmp_dir_size));
     return;

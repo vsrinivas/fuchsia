@@ -8,6 +8,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/files/unique_fd.h"
 #include "util/env_fuchsia.h"
 
 namespace ledger {

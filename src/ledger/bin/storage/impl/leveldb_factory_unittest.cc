@@ -15,8 +15,6 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/path.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace storage {
@@ -63,8 +61,8 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
   void SetUp() override {
     ledger::TestWithEnvironment::SetUp();
 
-    ASSERT_TRUE(files::CreateDirectoryAt(cache_path_.root_fd(), cache_path_.path()));
-    ASSERT_TRUE(files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path()));
+    ASSERT_TRUE(environment_.file_system()->CreateDirectory(cache_path_));
+    ASSERT_TRUE(environment_.file_system()->CreateDirectory(db_path_));
 
     db_factory_->Init();
     RunLoopUntilIdle();
@@ -138,7 +136,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
   // existing cached instance and then, initialize the creation of a new one.
   for (int i = 0; i < N; ++i) {
     ledger::DetachedPath path = db_path_.SubPath(absl::StrCat(i));
-    EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
+    EXPECT_FALSE(environment_.file_system()->IsDirectory(path));
 
     db_factory_->GetOrCreateDb(path, DbFactory::OnDbNotFound::CREATE,
                                callback::Capture(callback::SetWhenCalled(&called), &status, &db));
@@ -147,7 +145,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
     EXPECT_EQ(status, Status::OK);
     EXPECT_NE(nullptr, db);
     // Check that the directory was created.
-    EXPECT_TRUE(files::IsDirectoryAt(path.root_fd(), path.path()));
+    EXPECT_TRUE(environment_.file_system()->IsDirectory(path));
   }
 }
 
@@ -163,7 +161,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbsConcurrently) {
   // directory.
   for (int i = 0; i < N; ++i) {
     ledger::DetachedPath path = db_path_.SubPath(absl::StrCat(i));
-    EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
+    EXPECT_FALSE(environment_.file_system()->IsDirectory(path));
 
     db_factory_->GetOrCreateDb(
         db_path_.SubPath(absl::StrCat(i)), DbFactory::OnDbNotFound::CREATE,
@@ -177,7 +175,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbsConcurrently) {
     EXPECT_EQ(statuses[i], Status::OK);
     EXPECT_NE(nullptr, dbs[i]);
     // Check that the directory was created.
-    EXPECT_TRUE(files::IsDirectoryAt(path.root_fd(), path.path()));
+    EXPECT_TRUE(environment_.file_system()->IsDirectory(path));
   }
 }
 
@@ -206,8 +204,8 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDbInCallback) {
   EXPECT_NE(nullptr, db2);
 
   // Check that the directories were created.
-  EXPECT_TRUE(files::IsDirectoryAt(path1.root_fd(), path1.path()));
-  EXPECT_TRUE(files::IsDirectoryAt(path2.root_fd(), path2.path()));
+  EXPECT_TRUE(environment_.file_system()->IsDirectory(path1));
+  EXPECT_TRUE(environment_.file_system()->IsDirectory(path2));
 }
 
 TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
@@ -223,7 +221,7 @@ TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
       std::make_unique<LevelDbFactoryWrapper>(&test_loop(), &environment_, cache_path);
 
   // The cached db directory should not be created, yet.
-  EXPECT_FALSE(files::IsDirectoryAt(cached_db_path.root_fd(), cached_db_path.path()));
+  EXPECT_FALSE(environment_.file_system()->IsDirectory(cached_db_path));
 
   // Initialize and wait for the cached instance to be created.
   (*db_factory)->Init();
@@ -232,7 +230,7 @@ TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
   // Close the factory. This will not affect the created cached instance, which
   // was created under |cached_db_path|.
   db_factory.reset();
-  EXPECT_TRUE(files::IsDirectoryAt(cached_db_path.root_fd(), cached_db_path.path()));
+  EXPECT_TRUE(environment_.file_system()->IsDirectory(cached_db_path));
 
   // Re-initialize the factory object. It should now use the previously created
   // instance.

@@ -26,7 +26,7 @@ namespace {
 
 class PageUsageDbTest : public TestWithEnvironment {
  public:
-  PageUsageDbTest() : db_factory_(dispatcher()) {}
+  PageUsageDbTest() : db_factory_(environment_.file_system(), dispatcher()) {}
   PageUsageDbTest(const PageUsageDbTest&) = delete;
   PageUsageDbTest& operator=(const PageUsageDbTest&) = delete;
   ~PageUsageDbTest() override = default;

@@ -51,7 +51,7 @@ class FakeDelegate : public PageEvictionManager::Delegate {
 
 class DiskCleanupManagerTest : public TestWithEnvironment {
  public:
-  DiskCleanupManagerTest() : db_factory_(environment_.dispatcher()) {}
+  DiskCleanupManagerTest() : db_factory_(environment_.file_system(), environment_.dispatcher()) {}
   DiskCleanupManagerTest(const DiskCleanupManagerTest&) = delete;
   DiskCleanupManagerTest& operator=(const DiskCleanupManagerTest&) = delete;
 

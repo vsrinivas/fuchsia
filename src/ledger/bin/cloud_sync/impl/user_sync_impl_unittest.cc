@@ -18,7 +18,6 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/backoff/testing/test_backoff.h"
-#include "src/lib/files/file.h"
 
 namespace cloud_sync {
 

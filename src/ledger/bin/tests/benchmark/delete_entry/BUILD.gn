@@ -20,6 +20,8 @@ executable("ledger_benchmark_delete_entry") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/filesystem",
+    "//src/ledger/bin/platform",
+    "//src/ledger/bin/platform:implementation",
     "//src/ledger/bin/testing:get_ledger",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/convert",

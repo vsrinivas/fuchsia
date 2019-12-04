@@ -18,8 +18,6 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
@@ -62,7 +60,7 @@ LedgerStorageImpl::LedgerStorageImpl(ledger::Environment* environment,
 LedgerStorageImpl::~LedgerStorageImpl() = default;
 
 Status LedgerStorageImpl::Init() {
-  if (!files::CreateDirectoryAt(storage_dir_.root_fd(), storage_dir_.path())) {
+  if (!environment_->file_system()->CreateDirectory(storage_dir_)) {
     FXL_LOG(ERROR) << "Failed to create the storage directory in " << storage_dir_.path();
     return Status::INTERNAL_ERROR;
   }
@@ -113,33 +111,35 @@ void LedgerStorageImpl::DeletePageStorage(PageIdView page_id,
     async::PostTask(dispatcher, [status, callback = std::move(callback)] { callback(status); });
   };
 
-  async::PostTask(
-      environment_->io_dispatcher(), [path = std::move(path), staging_dir = staging_dir_,
-                                      callback = std::move(final_callback)]() mutable {
-        if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
-          callback(Status::PAGE_NOT_FOUND);
-          return;
-        }
-        files::ScopedTempDirAt tmp_directory(staging_dir.root_fd(), staging_dir.path());
-        std::string destination = tmp_directory.path() + "/graveyard";
+  async::PostTask(environment_->io_dispatcher(),
+                  [file_system = environment_->file_system(), path = std::move(path),
+                   staging_dir = staging_dir_, callback = std::move(final_callback)]() mutable {
+                    if (!file_system->IsDirectory(path)) {
+                      callback(Status::PAGE_NOT_FOUND);
+                      return;
+                    }
+                    files::ScopedTempDirAt tmp_directory(staging_dir.root_fd(), staging_dir.path());
+                    std::string destination = tmp_directory.path() + "/graveyard";
 
-        // <storage_dir_>/<base64(page)> becomes
-        // <storage_dir_>/staging/<random_temporary_name>/graveyard/<base64(page)>
-        if (renameat(path.root_fd(), path.path().c_str(), tmp_directory.root_fd(),
-                     destination.c_str()) != 0) {
-          FXL_LOG(ERROR) << "Unable to move local page storage to " << destination
-                         << ". Error: " << strerror(errno);
-          callback(Status::IO_ERROR);
-          return;
-        }
+                    // <storage_dir_>/<base64(page)> becomes
+                    // <storage_dir_>/staging/<random_temporary_name>/graveyard/<base64(page)>
+                    if (renameat(path.root_fd(), path.path().c_str(), tmp_directory.root_fd(),
+                                 destination.c_str()) != 0) {
+                      FXL_LOG(ERROR) << "Unable to move local page storage to " << destination
+                                     << ". Error: " << strerror(errno);
+                      callback(Status::IO_ERROR);
+                      return;
+                    }
 
-        if (!files::DeletePathAt(tmp_directory.root_fd(), destination, true)) {
-          FXL_LOG(ERROR) << "Unable to delete local staging storage at: " << destination;
-          callback(Status::IO_ERROR);
-          return;
-        }
-        callback(Status::OK);
-      });
+                    if (!file_system->DeletePathRecursively(
+                            ledger::DetachedPath(tmp_directory.root_fd(), destination))) {
+                      FXL_LOG(ERROR)
+                          << "Unable to delete local staging storage at: " << destination;
+                      callback(Status::IO_ERROR);
+                      return;
+                    }
+                    callback(Status::OK);
+                  });
 }
 
 void LedgerStorageImpl::InitializePageStorage(

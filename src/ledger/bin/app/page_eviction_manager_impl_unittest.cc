@@ -58,7 +58,7 @@ class FakeDelegate : public PageEvictionManager::Delegate {
 
 class PageEvictionManagerTest : public TestWithEnvironment {
  public:
-  PageEvictionManagerTest() : db_factory_(environment_.dispatcher()) {}
+  PageEvictionManagerTest() : db_factory_(environment_.file_system(), environment_.dispatcher()) {}
   PageEvictionManagerTest(const PageEvictionManagerTest&) = delete;
   PageEvictionManagerTest& operator=(const PageEvictionManagerTest&) = delete;
 

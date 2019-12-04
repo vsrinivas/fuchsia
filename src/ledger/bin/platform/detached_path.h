@@ -9,7 +9,6 @@
 
 #include <string>
 
-#include "src/lib/files/unique_fd.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {

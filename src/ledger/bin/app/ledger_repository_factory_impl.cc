@@ -32,16 +32,13 @@
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
+#include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/eintr_wrapper.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
@@ -95,22 +92,22 @@ constexpr absl::string_view kLedgersPath = "ledgers";
 constexpr absl::string_view kStagingPath = "staging";
 constexpr absl::string_view kNamePath = "name";
 
-bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path, std::string* name) {
+bool GetRepositoryName(rng::Random* random, FileSystem* file_system,
+                       const DetachedPath& content_path, std::string* name) {
   DetachedPath name_path = content_path.SubPath(kNamePath);
 
-  if (files::ReadFileToStringAt(name_path.root_fd(), name_path.path(), name)) {
+  if (file_system->ReadFileToString(name_path, name)) {
     return true;
   }
 
-  if (!files::CreateDirectoryAt(content_path.root_fd(), content_path.path())) {
+  if (!file_system->CreateDirectory(content_path)) {
     return false;
   }
 
   std::string new_name;
   new_name.resize(16);
   random->Draw(&new_name);
-  if (!files::WriteFileAt(name_path.root_fd(), name_path.path(), new_name.c_str(),
-                          new_name.size())) {
+  if (!file_system->WriteFile(name_path, new_name)) {
     FXL_LOG(ERROR) << "Unable to write file at: " << name_path.path();
     return false;
   }
@@ -234,7 +231,9 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
   RepositoryInformation(const RepositoryInformation& other) = default;
   RepositoryInformation(RepositoryInformation&& other) = default;
 
-  bool Init(rng::Random* random) { return GetRepositoryName(random, content_path, &name); }
+  bool Init(rng::Random* random, FileSystem* file_system) {
+    return GetRepositoryName(random, file_system, content_path, &name);
+  }
 
  private:
   std::shared_ptr<fbl::unique_fd> root_fd_;
@@ -285,7 +284,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   TRACE_DURATION("ledger", "repository_factory_get_repository");
 
   RepositoryInformation repository_information(root_fd, std::move(user_id));
-  if (!repository_information.Init(environment_->random())) {
+  if (!repository_information.Init(environment_->random(), environment_->file_system())) {
     callback(Status::IO_ERROR);
     return;
   }
@@ -321,7 +320,7 @@ Status LedgerRepositoryFactoryImpl::SynchronousCreateLedgerRepository(
   db_factory->Init();
   auto db_path =
       repository_information.page_usage_db_path.SubPath(kRepositoryDbSerializationVersion);
-  if (!files::CreateDirectoryAt(db_path.root_fd(), db_path.path())) {
+  if (!environment_->file_system()->CreateDirectory(db_path)) {
     return Status::IO_ERROR;
   }
   std::unique_ptr<storage::Db> base_db;
@@ -461,7 +460,8 @@ void LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
                    << ". Error: " << strerror(errno);
     return;
   }
-  if (!files::DeletePathAt(tmp_directory.root_fd(), destination, true)) {
+  if (!environment_->file_system()->DeletePathRecursively(
+          DetachedPath(tmp_directory.root_fd(), destination))) {
     FXL_LOG(ERROR) << "Unable to delete repository staging storage at " << destination;
     return;
   }

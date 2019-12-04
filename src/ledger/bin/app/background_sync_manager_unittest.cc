@@ -91,7 +91,8 @@ class FakeDelegate : public BackgroundSyncManager::Delegate {
 
 class BackgroundSyncManagerTest : public TestWithEnvironment {
  public:
-  BackgroundSyncManagerTest() : db_factory_(environment_.dispatcher()) {}
+  BackgroundSyncManagerTest()
+      : db_factory_(environment_.file_system(), environment_.dispatcher()) {}
 
   // gtest::TestLoopFixture:
   void SetUp() override {

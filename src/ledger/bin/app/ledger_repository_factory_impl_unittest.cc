@@ -12,11 +12,11 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/inspect/inspect.h"
+#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -76,7 +76,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CreateDirectory(
     const std::string& name) {
-  if (!files::CreateDirectoryAt(tmpfs_.root_fd(), name)) {
+  if (!environment_.file_system()->CreateDirectory(ledger::DetachedPath(tmpfs_.root_fd(), name))) {
     return ::testing::AssertionFailure() << "Failed to create directory \"" << name << "\"!";
   }
   return ::testing::AssertionSuccess();

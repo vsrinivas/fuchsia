@@ -20,8 +20,6 @@
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -53,11 +51,12 @@ constexpr size_t kRandomBytesCount = 16;
 
 // Returns whether the parent directory of |path| exists. If it is not possible
 // to access the parent directory, returns whether the given |path| exists.
-bool ParentDirectoryExists(ledger::DetachedPath path) {
+bool ParentDirectoryExists(ledger::FileSystem* file_system, ledger::DetachedPath path) {
   size_t last_slash = path.path().find_last_of('/');
-  return files::IsDirectoryAt(path.root_fd(), last_slash == std::string::npos
-                                                  ? path.path()
-                                                  : path.path().substr(0, last_slash));
+  ledger::DetachedPath directory_path(path.root_fd(), last_slash == std::string::npos
+                                                          ? path.path()
+                                                          : path.path().substr(0, last_slash));
+  return file_system->IsDirectory(directory_path);
 }
 
 enum class CreateInStagingPath : bool {
@@ -231,7 +230,7 @@ void LevelDbFactory::IOLevelDbFactory::Init() {
     fit::bridge<std::unique_ptr<Db>, Status> bridge;
     cached_db_ = bridge.consumer.promise();
     CreateInStagingPath create_in_staging_path = static_cast<CreateInStagingPath>(
-        !files::IsDirectoryAt(cached_db_path_.root_fd(), cached_db_path_.path()));
+        !environment_->file_system()->IsDirectory(cached_db_path_));
     auto cache_db_result = PrepareCachedDbOnIOThread(create_in_staging_path);
     bridge.completer.complete_or_abandon(std::move(cache_db_result));
   }));
@@ -263,7 +262,7 @@ void LevelDbFactory::IOLevelDbFactory::SelfDestruct(
 fit::promise<> LevelDbFactory::IOLevelDbFactory::GetOrCreateDbOnIOThread(
     ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
     fit::completer<std::unique_ptr<Db>, Status> completer) {
-  if (files::IsDirectoryAt(db_path.root_fd(), db_path.path())) {
+  if (environment_->file_system()->IsDirectory(db_path)) {
     // If the path exists, there is a LevelDb instance already there. Open and
     // return it.
     auto result = GetOrCreateDbAtPathOnIOThread(std::move(db_path), CreateInStagingPath::NO);
@@ -311,7 +310,7 @@ LevelDbFactory::IOLevelDbFactory::GetOrCreateDbAtPathOnIOThread(
   if (create_in_staging_path == CreateInStagingPath::YES) {
     status = CreateDbThroughStagingPathOnIOThread(std::move(db_path), &leveldb);
   } else {
-    FXL_DCHECK(files::IsDirectoryAt(db_path.root_fd(), db_path.path()));
+    FXL_DCHECK(environment_->file_system()->IsDirectory(db_path));
     leveldb = std::make_unique<LevelDb>(environment_->file_system(), environment_->dispatcher(),
                                         std::move(db_path));
     status = leveldb->Init();
@@ -339,7 +338,7 @@ Status LevelDbFactory::IOLevelDbFactory::CreateDbThroughStagingPathOnIOThread(
   // - |staging_path_| and |cached_db_path_| share the same parent (the
   //   |cache_path| given on the constructor), and
   // - in LevelDb initialization, the directories up to the db path are created.
-  FXL_DCHECK(ParentDirectoryExists(db_path))
+  FXL_DCHECK(ParentDirectoryExists(environment_->file_system(), db_path))
       << "Parent directory does not exit for path: " << db_path.path();
   // Move it to the final destination.
   if (renameat(tmp_destination.root_fd(), tmp_destination.path().c_str(), db_path.root_fd(),
