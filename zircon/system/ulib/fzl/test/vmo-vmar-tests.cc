@@ -225,16 +225,37 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
           m.Unmap();
         }
 
-        for (const auto& t : kVmoTests) {
-          ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, 0));
+        // Skip the post-unmap test if these mappings were made underneath the
+        // root VMAR.  See Bug 41331 for a detailed writeup, but the essence of
+        // the problem here is that once the VMOs have been unmapped from the
+        // root VMAR, it is possible for the VMOs create and mapped for the
+        // death-test thread to be mapped at the same place where the
+        // VMO-under-test had already been mapped.
+        //
+        // When the test is executing against a sub-VMAR, this cannot happen as
+        // the sub-VMAR used for the test is still reserving the portion of the
+        // address space where the VMOs had been mapped.
+        //
+        // One other option here would be to create the death test thread first,
+        // then unmap the VMOs-under-test, but this would require an
+        // asynchronous interface to the death tests.  Currently, this is not an
+        // option, so we have to simply skip this portion of the test.
+        if (vmar_levels != 0) {
+          for (const auto& t : kVmoTests) {
+            ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, 0));
+          }
         }
       }
     }
 
-    // If this is the second pass, then we didn't manually call unmap, we
-    // just let the mappers go out of scope.  Make sure that everything
-    // auto-unmapped as it should.
-    if (pass) {
+    // If this is the second pass, then we didn't manually call unmap, we just
+    // let the mappers go out of scope.  Make sure that everything auto-unmapped
+    // as it should.
+    //
+    // Skip the post-unmap test if these mappings were made underneath the root
+    // VMAR.  See Bug 41331 for a detailed writeup, but the essence of.  See
+    // above for reasoning.
+    if (pass && (vmar_levels != 0)) {
       for (const auto& t : kVmoTests) {
         ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, 0));
       }
@@ -361,14 +382,11 @@ bool vmo_mapper_move_test() {
 }  // namespace
 
 BEGIN_TEST_CASE(vmo_mapper_vmar_manager_tests)
-// TODO(fxb/41331): reenable once flake is removed
-//RUN_NAMED_TEST("vmo_create_and_map_root", vmo_create_and_map_root_test)
+RUN_NAMED_TEST("vmo_create_and_map_root", vmo_create_and_map_root_test)
 RUN_NAMED_TEST("vmo_create_and_map_sub_vmar", vmo_create_and_map_sub_vmar_test)
 RUN_NAMED_TEST("vmo_create_and_map_sub_sub_vmar", vmo_create_and_map_sub_sub_vmar_test)
-// TODO(fxb/41331): reenable once flake is removed
-//RUN_NAMED_TEST("vmo_map_root", vmo_map_root_test)
+RUN_NAMED_TEST("vmo_map_root", vmo_map_root_test)
 RUN_NAMED_TEST("vmo_map_sub_vmar", vmo_map_sub_vmar_test)
 RUN_NAMED_TEST("vmo_map_sub_sub_vmar", vmo_map_sub_sub_vmar_test)
-// TODO(fxb/41331): reenable once flake is removed
-//RUN_NAMED_TEST("vmo_mapper_move_test", vmo_mapper_move_test)
+RUN_NAMED_TEST("vmo_mapper_move_test", vmo_mapper_move_test)
 END_TEST_CASE(vmo_mapper_vmar_manager_tests)
