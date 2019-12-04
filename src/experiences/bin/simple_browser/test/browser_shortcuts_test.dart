@@ -15,12 +15,11 @@ import 'package:test/test.dart';
 // ignore_for_file: implementation_imports
 import 'package:simple_browser/src/blocs/tabs_bloc.dart';
 import 'package:simple_browser/src/blocs/webpage_bloc.dart';
-import 'package:simple_browser/src/models/tabs_action.dart';
 import 'package:simple_browser/src/utils/browser_shortcuts.dart';
 
 void main() {
   MockRegistryProxy mockRegistryProxy;
-  TabsBloc<WebPageBloc> tabsBloc;
+  MockTabsBloc<WebPageBloc> mockTabsBloc;
   const List<String> defaultKeys = [
     'newTab',
     'closeTab',
@@ -35,25 +34,18 @@ void main() {
 
   setUp(() {
     mockRegistryProxy = MockRegistryProxy();
-    tabsBloc = TabsBloc(
-      tabFactory: () => WebPageBloc(
-          popupHandler: (tab) =>
-              tabsBloc.request.add(AddTabAction<WebPageBloc>(tab: tab))),
-      disposeTab: (tab) {
-        tab.dispose();
-      },
-    );
+    mockTabsBloc = MockTabsBloc<WebPageBloc>();
   });
 
-  test('See if the default actions are set when there is no actions input', () {
+  test('''Should use the default action map
+    when there is no action input for BrowserShortcuts''', () {
     BrowserShortcuts bs = BrowserShortcuts(
-      tabsBloc: tabsBloc,
+      tabsBloc: mockTabsBloc, //tabsBloc,
       shortcutRegistry: mockRegistryProxy,
     );
 
-    expect(bs.actions.length, 7,
-        reason:
-            'Expected 7 shortcuts, but actually ${bs.actions.length} shortcuts.');
+    expect(bs.actions.length, 7, reason: '''Expected 7 shortcuts,
+        but actually ${bs.actions.length} shortcuts.''');
 
     for (String key in defaultKeys) {
       expect(bs.actions.containsKey(key), true,
@@ -61,21 +53,21 @@ void main() {
     }
   });
 
-  test('See if the input actions set into BrowserShortcuts', () {
+  test('Should use the input action map when it is given for BrowserShortcuts',
+      () {
     Map<String, VoidCallback> testActions = {
       'action1': () {},
       'action2': () {},
       'action3': () {},
     };
     BrowserShortcuts bs = BrowserShortcuts(
-      tabsBloc: tabsBloc,
+      tabsBloc: mockTabsBloc, //tabsBloc,
       shortcutRegistry: mockRegistryProxy,
       actions: testActions,
     );
 
-    expect(bs.actions.length, 3,
-        reason:
-            'Expected 3 shortcuts, but actually ${bs.actions.length} shortcuts.');
+    expect(bs.actions.length, 3, reason: '''Expected 3 shortcuts,
+            but actually ${bs.actions.length} shortcuts.''');
     testActions.forEach((key, value) {
       expect(bs.actions.containsKey(key), true,
           reason: 'Expected to have $key, but does not.');
@@ -88,3 +80,5 @@ void main() {
 }
 
 class MockRegistryProxy extends Mock implements ui_shortcut.RegistryProxy {}
+
+class MockTabsBloc<WebPageBloc> extends Mock implements TabsBloc<WebPageBloc> {}

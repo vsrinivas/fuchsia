@@ -26,8 +26,9 @@ void main() {
   tabsBloc = TabsBloc(
     tabFactory: () => WebPageBloc(
       context: _context,
-      popupHandler: (tab) =>
-          tabsBloc.request.add(AddTabAction<WebPageBloc>(tab: tab)),
+      popupHandler: (tab) => tabsBloc.request.add(
+        AddTabAction<WebPageBloc>(tab: tab),
+      ),
     ),
     disposeTab: (tab) {
       tab.dispose();

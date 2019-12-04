@@ -60,6 +60,7 @@ flutter_test("simple_browser_unittests") {
     "simple_browser_test.dart",
     "tabs_bloc_test.dart",
     "tld_checker_test.dart",
+    "webpage_bloc_test.dart",
   ]
 
   deps = [
