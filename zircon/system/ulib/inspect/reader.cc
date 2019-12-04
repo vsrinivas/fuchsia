@@ -171,7 +171,7 @@ fit::optional<std::string> Reader::GetAndValidateName(BlockIndex index) {
     return {};
   }
 
-  return std::string(block->payload.data, len);
+  return std::string(block->payload_ptr(), len);
 }
 
 void Reader::InnerScanBlocks() {
@@ -381,7 +381,7 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
       break;
     }
     size_t len = std::min(remaining_length, PayloadCapacity(GetOrder(extent)));
-    buf.insert(buf.end(), extent->payload.data, extent->payload.data + len);
+    buf.insert(buf.end(), extent->payload_ptr(), extent->payload_ptr() + len);
     remaining_length -= len;
     current_offset += len;
 

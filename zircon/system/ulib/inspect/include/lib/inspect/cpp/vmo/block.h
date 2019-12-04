@@ -90,6 +90,12 @@ struct Block final {
     double f64;
     char data[8];
   } payload;
+
+  // Get the payload as a const char*.
+  const char* payload_ptr() const { return static_cast<const char*>(payload.data); }
+
+  // Get the payload as a char*.
+  char* payload_ptr() { return static_cast<char*>(payload.data); }
 };
 
 static_assert(sizeof(Block) == 16, "Block header must be 16 bytes");
