@@ -5,29 +5,7 @@
 use super::util::*;
 
 fn start_provider_with_ephemeral_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
-    let mut launch_options = LaunchOptions::new();
-    launch_options.add_dir_to_namespace(
-        "/test_fonts".to_string(),
-        std::fs::File::open("/pkg/data/testdata/test_fonts")?,
-    )?;
-
-    let launcher = launcher().context("Failed to open launcher service")?;
-    let app = launch_with_options(
-        &launcher,
-        FONTS_CMX.to_string(),
-        Some(vec![
-            "--no-default-fonts".to_string(),
-            "--font-manifest".to_string(),
-            "/test_fonts/ephemeral_manifest.json".to_string(),
-        ]),
-        launch_options,
-    )
-    .context("Failed to launch fonts::Provider")?;
-    let font_provider = app
-        .connect_to_service::<fonts::ProviderMarker>()
-        .context("Failed to connect to fonts::Provider")?;
-
-    Ok((app, font_provider))
+    start_provider_with_manifest("ephemeral.font_manifest.json", false)
 }
 
 #[fasync::run_singlethreaded(test)]

@@ -57,8 +57,27 @@ async fn resolve(
 ) -> Result<(), Status> {
     PkgUrl::parse(&package_url).map_err(|_| Err(Status::INVALID_ARGS))?;
 
-    let mut root = pseudo_directory! {
-        "Ephemeral.ttf" => read_only(|| Ok(b"not actually a font".to_vec())),
+    // Serve fake directories with single font files, with the selection depending on the package
+    // URL. These correspond to the fake fonts declared in ../tests/*.font_manifest.json.
+    let mut root = match package_url.as_ref() {
+        // From ephemeral.font_manifest.json
+        "fuchsia-pkg://fuchsia.com/font-package-ephemeral-ttf" => pseudo_directory! {
+            "Ephemeral.ttf" => read_only(|| Ok(b"not actually a font".to_vec())),
+        },
+
+        // From aliases.font_manifest.json
+        "fuchsia-pkg://fuchsia.com/font-package-alphasans-regular-ttf" => pseudo_directory! {
+            "AlphaSans-Regular.ttf" => read_only(|| Ok(b"alpha".to_vec())),
+        },
+        "fuchsia-pkg://fuchsia.com/font-package-alphasans-condensed-ttf" => pseudo_directory! {
+            "AlphaSans-Condensed.ttf" => read_only(|| Ok(b"alpha".to_vec())),
+        },
+        "fuchsia-pkg://fuchsia.com/font-package-alphasanshebrew-regular-ttf" => pseudo_directory! {
+            "AlphaSansHebrew-Regular.ttf" => read_only(|| Ok(b"alpha".to_vec())),
+        },
+        _ => {
+            return Err(Status::NOT_FOUND);
+        }
     };
 
     let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DIRECTORY;

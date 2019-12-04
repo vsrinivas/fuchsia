@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::util::*;
+use {
+    super::util::*,
+    fidl_fuchsia_fonts::{Style2, Width},
+};
 
 #[fasync::run_singlethreaded(test)]
 async fn test_basic() -> Result<(), Error> {
@@ -48,6 +51,52 @@ async fn test_aliases() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_aliases_with_language_overrides() -> Result<(), Error> {
+    let (_app, font_provider) = start_provider_with_manifest("aliases.font_manifest.json", false)?;
+
+    let a = get_typeface_info(
+        &font_provider,
+        Some("Alpha Sans".to_string()),
+        None,
+        Some(vec!["he".to_string()]),
+        None,
+    )
+    .await
+    .context("Failed to load Alpha Sans, languages: he")?;
+
+    let b = get_typeface_info_basic(&font_provider, Some("Alpha Sans Hebrew".to_string()))
+        .await
+        .context("Failed to load Alpha Sans Hebrew")?;
+
+    assert_buf_eq!(a, b);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_aliases_with_style_overrides() -> Result<(), Error> {
+    let (_app, font_provider) = start_provider_with_manifest("aliases.font_manifest.json", false)?;
+
+    let a = get_typeface_info(
+        &font_provider,
+        Some("Alpha Sans".to_string()),
+        Some(Style2 { slant: None, weight: None, width: Some(Width::Condensed) }),
+        None,
+        None,
+    )
+    .await
+    .context("Failed to load Alpha Sans")?;
+
+    let b = get_typeface_info_basic(&font_provider, Some("Alpha Sans Condensed".to_string()))
+        .await
+        .context("Failed to load Alpha Sans Condensed")?;
+
+    assert_buf_eq!(a, b);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_font_collections() -> Result<(), Error> {
     let (_app, font_provider) = start_provider_with_test_fonts()?;
 
@@ -57,6 +106,7 @@ async fn test_font_collections() -> Result<(), Error> {
     let noto_sans_cjk_ja = get_typeface_info(
         &font_provider,
         Some("NotoSansCJK".to_string()),
+        None,
         Some(vec!["ja".to_string()]),
         None,
     )
@@ -65,6 +115,7 @@ async fn test_font_collections() -> Result<(), Error> {
     let noto_sans_cjk_sc = get_typeface_info(
         &font_provider,
         Some("NotoSansCJK".to_string()),
+        None,
         Some(vec!["zh-Hans".to_string()]),
         None,
     )
@@ -73,13 +124,12 @@ async fn test_font_collections() -> Result<(), Error> {
 
     assert_buf_eq!(noto_sans_cjk_ja, noto_sans_cjk_sc);
 
-    assert!(
-        noto_sans_cjk_ja.index != noto_sans_cjk_sc.index,
+    assert_ne!(
+        noto_sans_cjk_ja.index, noto_sans_cjk_sc.index,
         "noto_sans_cjk_ja.index != noto_sans_cjk_sc.index\n \
          noto_sans_cjk_ja.index: {:?}\n \
          noto_sans_cjk_sc.index: {:?}",
-        noto_sans_cjk_ja,
-        noto_sans_cjk_sc
+        noto_sans_cjk_ja, noto_sans_cjk_sc
     );
     Ok(())
 }
@@ -91,6 +141,7 @@ async fn test_fallback() -> Result<(), Error> {
     let noto_sans_cjk_ja = get_typeface_info(
         &font_provider,
         Some("NotoSansCJK".to_string()),
+        None,
         Some(vec!["ja".to_string()]),
         None,
     )
@@ -100,6 +151,7 @@ async fn test_fallback() -> Result<(), Error> {
     let noto_sans_cjk_ja_by_char = get_typeface_info(
         &font_provider,
         Some("Roboto".to_string()),
+        None,
         Some(vec!["ja".to_string()]),
         Some(vec!['な', 'ナ']),
     )
@@ -120,6 +172,7 @@ async fn test_fallback_group() -> Result<(), Error> {
     let noto_serif_cjk_ja = get_typeface_info(
         &font_provider,
         Some("Noto Serif CJK".to_string()),
+        None,
         Some(vec!["ja".to_string()]),
         None,
     )
@@ -129,6 +182,7 @@ async fn test_fallback_group() -> Result<(), Error> {
     let noto_serif_cjk_ja_by_char = get_typeface_info(
         &font_provider,
         Some("Roboto Slab".to_string()),
+        None,
         Some(vec!["ja".to_string()]),
         Some(vec!['な']),
     )

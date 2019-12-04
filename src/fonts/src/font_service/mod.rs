@@ -2,34 +2,41 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(missing_docs)]
+
 mod asset;
+mod builder;
 mod family;
 mod typeface;
 
 use {
     self::{
-        asset::Collection as AssetCollection,
-        family::{FamilyOrAlias, FontFamily},
-        typeface::{Collection as TypefaceCollection, Typeface, TypefaceInfoAndCharSet},
+        asset::AssetCollection,
+        family::{FamilyOrAlias, FontFamily, TypefaceQueryOverrides},
+        typeface::{Collection as TypefaceCollection, TypefaceInfoAndCharSet},
     },
-    fuchsia_syslog::*,
-    failure::{format_err, Error, ResultExt},
+    failure::{self, format_err, AsFail, Error, ResultExt},
     fidl::{
         self,
         encoding::{Decodable, OutOfLine},
         endpoints::ServerEnd,
     },
-    fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
-    fidl_fuchsia_fonts_ext::{FontFamilyInfoExt, RequestExt, TypefaceResponseExt},
-    font_info::FontInfoLoaderImpl,
+    fidl_fuchsia_fonts::{self as fonts, CacheMissPolicy},
+    fidl_fuchsia_fonts_experimental as fonts_exp,
+    fidl_fuchsia_fonts_ext::{
+        FontFamilyInfoExt, RequestExt, TypefaceRequestExt, TypefaceResponseExt,
+    },
+    fidl_fuchsia_intl::LocaleId,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
+    fuchsia_syslog::*,
     futures::prelude::*,
     itertools::Itertools,
-    manifest::FontsManifest,
-    std::{collections::BTreeMap, iter, path::Path, sync::Arc},
+    std::{collections::BTreeMap, iter, sync::Arc},
     unicase::UniCase,
 };
+
+pub use {asset::AssetId, builder::FontServiceBuilder};
 
 /// Get a field out of a `TypefaceRequest`'s `query` field as a reference, or returns early with a
 /// `failure::Error` if the query is missing.
@@ -44,164 +51,43 @@ pub enum ProviderRequestStream {
     Experimental(fonts_exp::ProviderRequestStream),
 }
 
+/// The result of a successful lookup of a font family by name. Combines a `FontFamily` and,
+/// if the `FontFamilyAlias` that the client requested turned out to include
+/// `TypefaceQueryOverrides` then also contains those overrides.
+struct FontFamilyMatch<'a> {
+    family: &'a FontFamily,
+    overrides: Option<Arc<TypefaceQueryOverrides>>,
+}
+
+/// Maintains state and handles request streams for the font server.
 pub struct FontService {
     assets: AssetCollection,
-    /// Maps the font family name from the manifest (`families.family`) to a FamilyOrAlias.
+    /// Maps the font family name from the manifest (`families[x].name`) to a FamilyOrAlias.
     families: BTreeMap<UniCase<String>, FamilyOrAlias>,
     fallback_collection: TypefaceCollection,
 }
 
 impl FontService {
-    pub fn new() -> FontService {
-        FontService {
-            assets: AssetCollection::new(),
-            families: BTreeMap::new(),
-            fallback_collection: TypefaceCollection::new(),
-        }
-    }
-
-    /// Verify that we have a reasonable font configuration and can start.
-    pub fn check_can_start(&self) -> Result<(), Error> {
-        if self.fallback_collection.is_empty() {
-            return Err(format_err!("Need at least one fallback font"));
-        }
-
-        Ok(())
-    }
-
-    pub async fn load_manifest(&mut self, manifest_path: &Path) -> Result<(), Error> {
-        fx_vlog!(1, "Loading manifest {:?}", manifest_path);
-        let manifest = FontsManifest::load_from_file(&manifest_path)?;
-        self.add_fonts_from_manifest(manifest).await.with_context(|_| {
-            format!("Failed to load fonts from {}", manifest_path.to_string_lossy())
-        })?;
-
-        Ok(())
-    }
-
-    async fn add_fonts_from_manifest(&mut self, mut manifest: FontsManifest) -> Result<(), Error> {
-        let font_info_loader = FontInfoLoaderImpl::new()?;
-
-        for mut family_manifest in manifest.families.drain(..) {
-            if family_manifest.fonts.is_empty() {
-                continue;
-            }
-
-            let family_name = UniCase::new(family_manifest.family.clone());
-
-            // Get the [`FamilyOrAlias`] from `families` associated with `family_name`.
-            //
-            // If the key `family_name` does not exist in `families`, insert it with a
-            // [`FamilyOrAlias`]`::Family` value.
-            //
-            // If a [`FamilyOrAlias`]`::Alias` with the same name already exists, [`Error`].
-            let family = match self.families.entry(family_name.clone()).or_insert_with(|| {
-                FamilyOrAlias::Family(FontFamily::new(
-                    family_manifest.family.clone(),
-                    family_manifest.generic_family,
-                ))
-            }) {
-                FamilyOrAlias::Family(f) => f,
-                FamilyOrAlias::Alias(other_family) => {
-                    // Different manifest files may declare fonts for the same family,
-                    // but font aliases cannot conflict with main family name.
-                    return Err(format_err!(
-                        "Conflicting font alias: {} is already declared as an alias for {}",
-                        family_name,
-                        other_family
-                    ));
+    /// Resolves a font family or alias either to itself (if it's a family), or to the canonical
+    /// family. If it's an alias and contains `TypefaceQueryOverrides`, then the resulting
+    /// `FontFamilyMatch` will contain those overrides.
+    fn resolve_alias<'a>(
+        &'a self,
+        family_or_alias: &'a FamilyOrAlias,
+    ) -> Option<FontFamilyMatch<'a>> {
+        match family_or_alias {
+            FamilyOrAlias::Family(family) => Some(FontFamilyMatch { family, overrides: None }),
+            FamilyOrAlias::Alias(name, overrides) => match self.families.get(name) {
+                Some(FamilyOrAlias::Family(family)) => {
+                    Some(FontFamilyMatch { family, overrides: overrides.clone() })
                 }
-            };
-
-            for mut font_manifest in family_manifest.fonts.drain(..) {
-                let asset_path = font_manifest.asset.as_path();
-                let asset_id =
-                    self.assets.add_or_get_asset_id(asset_path, font_manifest.package.as_ref());
-
-                // Read `code_points` from file if not provided by manifest.
-                if font_manifest.code_points.is_empty() {
-                    if !asset_path.exists() {
-                        return Err(format_err!(
-                            "Unable to load code point info for '{}'. Manifest entry has no \
-                             code_points field and the file does not exist.",
-                            asset_path.to_string_lossy(),
-                        ));
-                    }
-
-                    let buffer = self.assets.get_asset(asset_id).await.with_context(|_| {
-                        format!("Failed to load font from {}", asset_path.to_string_lossy())
-                    })?;
-
-                    let info = font_info_loader
-                        .load_font_info(buffer, font_manifest.index)
-                        .with_context(|_| {
-                            format!(
-                                "Failed to load font info from {}",
-                                asset_path.to_string_lossy()
-                            )
-                        })?;
-
-                    font_manifest.code_points = info.char_set;
-                }
-
-                let typeface = Arc::new(Typeface::new(
-                    asset_id,
-                    font_manifest,
-                    family_manifest.generic_family,
-                )?);
-                family.faces.add_typeface(typeface.clone());
-                if family_manifest.fallback {
-                    self.fallback_collection.add_typeface(typeface);
-                }
-            }
-
-            // Register family aliases.
-            for alias in family_manifest.aliases.unwrap_or(vec![]) {
-                let alias_unicase = UniCase::new(alias.clone());
-
-                match self.families.get(&alias_unicase) {
-                    None => {
-                        self.families
-                            .insert(alias_unicase, FamilyOrAlias::Alias(family_name.clone()));
-                    }
-                    Some(FamilyOrAlias::Family(_)) => {
-                        return Err(format_err!(
-                            "Can't add alias {} for {} because a family with that name already \
-                             exists.",
-                            alias,
-                            family_name
-                        ))
-                    }
-                    Some(FamilyOrAlias::Alias(other_family)) => {
-                        // If the alias exists then it must be for the same font family.
-                        if *other_family != family_name {
-                            return Err(format_err!(
-                                "Can't add alias {} for {} because it's already declared as alias \
-                                 for {}.",
-                                alias,
-                                family_name,
-                                other_family
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    fn resolve_alias<'a>(&'a self, name: &'a FamilyOrAlias) -> Option<&'a FontFamily> {
-        match name {
-            FamilyOrAlias::Family(f) => Some(f),
-            FamilyOrAlias::Alias(a) => match self.families.get(a) {
-                Some(FamilyOrAlias::Family(f)) => Some(f),
                 _ => None,
             },
         }
     }
 
     /// Get font family by name.
-    fn match_family(&self, family_name: &UniCase<String>) -> Option<&FontFamily> {
+    fn match_family(&self, family_name: &UniCase<String>) -> Option<FontFamilyMatch<'_>> {
         self.resolve_alias(self.families.get(family_name)?)
     }
 
@@ -212,34 +98,78 @@ impl FontService {
             .filter_map(move |(key, value)| {
                 // Note: This might not work for some non-Latin strings
                 if key.as_ref().to_lowercase().contains(&family_name.to_lowercase()) {
-                    return self.resolve_alias(value);
+                    return self.resolve_alias(value).map(|matched| matched.family);
                 }
                 None
             })
-            .unique_by(|family| &family.name)
+            .unique_by(|family| family.name.to_owned())
+    }
+
+    fn apply_query_overrides(
+        mut request: fonts::TypefaceRequest,
+        overrides: Arc<TypefaceQueryOverrides>,
+    ) -> fonts::TypefaceRequest {
+        match &mut request.query {
+            Some(query) => {
+                if overrides.has_style_overrides() {
+                    // If query has no style at all, use the values from TypefaceQueryOverrides
+                    match &mut query.style {
+                        None => query.style = Some(overrides.style.clone().into()),
+                        Some(style) => {
+                            style.slant = style.slant.or(overrides.style.slant);
+                            style.width = style.width.or(overrides.style.width);
+                            style.weight = style.weight.or(overrides.style.weight);
+                        }
+                    }
+                }
+
+                if overrides.has_language_overrides() {
+                    match &mut query.languages {
+                        None => {
+                            query.languages = Some(
+                                overrides
+                                    .languages
+                                    .iter()
+                                    .map(|lang| LocaleId { id: lang.to_owned() })
+                                    .collect_vec(),
+                            )
+                        }
+                        Some(_) => (),
+                    }
+                }
+            }
+            None => (),
+        }
+        request
     }
 
     async fn match_request(
         &self,
-        mut request: fonts::TypefaceRequest,
+        request: fonts::TypefaceRequest,
     ) -> Result<fonts::TypefaceResponse, Error> {
-        let matched_family: Option<&FontFamily> = query_field!(request, family)
+        let matched_family: Option<FontFamilyMatch<'_>> = query_field!(request, family)
             .and_then(|family| self.match_family(&UniCase::new(family.name.clone())));
-        let mut typeface = match matched_family {
-            Some(family) => family.faces.match_request(&request)?,
+
+        let mut request = match &matched_family {
+            Some(FontFamilyMatch { family: _, overrides: Some(overrides) }) => {
+                Self::apply_query_overrides(request, overrides.clone())
+            }
+            _ => request,
+        };
+
+        let mut typeface = match &matched_family {
+            Some(FontFamilyMatch { family, overrides: _ }) => {
+                family.faces.match_request(&request)?
+            }
             None => None,
         };
 
         // If an exact match wasn't found, but fallback families are allowed...
-        if typeface.is_none()
-            && request
-                .flags
-                .map_or(true, |flags| !flags.contains(fonts::TypefaceRequestFlags::ExactFamily))
-        {
+        if typeface.is_none() && !request.exact_family() {
             // If fallback_family is not specified by the client explicitly then copy it from
             // the matched font family.
             if query_field!(request, fallback_family).is_none() {
-                if let Some(family) = matched_family {
+                if let Some(FontFamilyMatch { family, overrides: _ }) = matched_family {
                     request
                         .query
                         .as_mut()
@@ -251,15 +181,15 @@ impl FontService {
         }
 
         let typeface_response = match typeface {
-            Some(font) => self
+            Some(typeface) => self
                 .assets
-                .get_asset(font.asset_id)
+                .get_asset(typeface.asset_id, request.cache_miss_policy())
                 .await
                 .and_then(|buffer| {
                     Ok(fonts::TypefaceResponse {
                         buffer: Some(buffer),
-                        buffer_id: Some(font.asset_id),
-                        font_index: Some(font.font_index),
+                        buffer_id: Some(typeface.asset_id.into()),
+                        font_index: Some(typeface.font_index),
                     })
                 })
                 .unwrap_or_else(|_| fonts::TypefaceResponse::new_empty()),
@@ -280,7 +210,7 @@ impl FontService {
         let family = self.match_family(&family_name);
         family.map_or_else(
             || fonts::FontFamilyInfo::new_empty(),
-            |family| fonts::FontFamilyInfo {
+            |FontFamilyMatch { family, overrides: _ }| fonts::FontFamilyInfo {
                 name: Some(fonts::FamilyName { name: family.name.clone() }),
                 styles: Some(family.faces.get_styles().collect()),
             },
@@ -289,13 +219,14 @@ impl FontService {
 
     async fn get_typeface_by_id(
         &self,
-        id: u32,
+        id: AssetId,
+        policy: CacheMissPolicy,
     ) -> Result<fonts::TypefaceResponse, fonts_exp::Error> {
-        match self.assets.get_asset(id).await {
+        match self.assets.get_asset(id, policy).await {
             Ok(buffer) => {
                 let response = fonts::TypefaceResponse {
                     buffer: Some(buffer),
-                    buffer_id: Some(id),
+                    buffer_id: Some(id.into()),
                     font_index: None,
                 };
                 Ok(response)
@@ -316,6 +247,7 @@ impl FontService {
     ) -> Result<fonts_exp::TypefaceInfoResponse, fonts_exp::Error> {
         let family = self
             .match_family(&UniCase::new(family_name.name.clone()))
+            .map(|matched| matched.family)
             .ok_or(fonts_exp::Error::NotFound)?;
         let faces = family.extract_faces().map_into().collect();
         let response = fonts_exp::TypefaceInfoResponse { results: Some(faces) };
@@ -337,14 +269,14 @@ impl FontService {
                     Box::new(self.match_families_substr(name.clone()))
                 } else {
                     match self.match_family(&UniCase::new(name.clone())) {
-                        Some(matched) => Box::new(iter::once(matched)),
+                        Some(matched) => Box::new(iter::once(matched.family)),
                         None => Box::new(iter::empty()),
                     }
                 }
             }
             None => Box::new(self.families.iter().filter_map(move |(_, value)| match value {
                 FamilyOrAlias::Family(family) => Some(family),
-                FamilyOrAlias::Alias(_) => None,
+                FamilyOrAlias::Alias(_, _) => None,
             })),
         }
     }
@@ -454,9 +386,9 @@ impl FontService {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| {
-                    fx_log_err!("Error while running ListTypefacesIterator: {:?}", e)
-                }),
+            .unwrap_or_else(|e: Error| {
+                fx_log_err!("Error while running ListTypefacesIterator: {:?}", e)
+            }),
         );
 
         Ok(())
@@ -504,7 +436,9 @@ impl FontService {
 
         match request {
             GetTypefaceById { id, responder } => {
-                let mut response = self.get_typeface_by_id(id).await;
+                let mut response = self
+                    .get_typeface_by_id(AssetId(id), CacheMissPolicy::BlockUntilDownloaded)
+                    .await;
                 Ok(responder.send(&mut response)?)
             }
             GetTypefacesByFamily { family, responder } => {

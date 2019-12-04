@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Utilities for conversion from Font Manifest v1 to v2.
+
 use {
     crate::{v2, Family as FamilyV1, Font as FontV1, FontsManifest as FontsManifestV1},
     failure::{format_err, Error},
@@ -16,6 +18,8 @@ impl TryFrom<FontsManifestV1> for v2::FontsManifest {
     type Error = Error;
 
     /// Converts a v1 [`manifest::FontsManifest`] to a v2 [`manifest::v2::Manifest`].
+    ///
+    /// This is purely an in-memory conversion, and does not load character sets for local files.
     fn try_from(old: FontsManifestV1) -> Result<v2::FontsManifest, Error> {
         let families: Result<Vec<v2::Family>, _> =
             old.families.iter().map(v2::Family::try_from).collect();

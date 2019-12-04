@@ -5,8 +5,9 @@
 use {
     fidl::encoding::Decodable,
     fidl_fuchsia_fonts::{
-        self as fonts, FallbackGroup, FamilyName, FontFamilyInfo, GenericFontFamily, Style2,
-        TypefaceQuery, TypefaceRequest, TypefaceRequestFlags, TypefaceResponse, Width,
+        self as fonts, CacheMissPolicy, FallbackGroup, FamilyName, FontFamilyInfo,
+        GenericFontFamily, Style2, TypefaceQuery, TypefaceRequest, TypefaceRequestFlags,
+        TypefaceResponse, Width,
     },
     fidl_fuchsia_intl as intl,
 };
@@ -73,6 +74,32 @@ impl RequestExt for fonts::Request {
             flags: Some(flags),
             cache_miss_policy: None,
         }
+    }
+}
+
+/// Extensions for [`TypefaceRequest`](fidl_fuchsia_fonts::TypefaceRequest).
+pub trait TypefaceRequestExt {
+    /// See [`fidl_fuchsia_fonts::TypefaceRequestFlags::ExactFamily`].
+    fn exact_family(&self) -> bool;
+
+    /// See [`fidl_fuchsia_fonts::TypefaceRequestFlags::ExactStyle`].
+    fn exact_style(&self) -> bool;
+
+    /// See ['fidl_fuchsia_fonts::CacheMissPolicy`].
+    fn cache_miss_policy(&self) -> CacheMissPolicy;
+}
+
+impl TypefaceRequestExt for TypefaceRequest {
+    fn exact_family(&self) -> bool {
+        self.flags.map_or(false, |flags| flags.contains(fonts::TypefaceRequestFlags::ExactFamily))
+    }
+
+    fn exact_style(&self) -> bool {
+        self.flags.map_or(false, |flags| flags.contains(fonts::TypefaceRequestFlags::ExactStyle))
+    }
+
+    fn cache_miss_policy(&self) -> CacheMissPolicy {
+        self.cache_miss_policy.unwrap_or(CacheMissPolicy::BlockUntilDownloaded)
     }
 }
 

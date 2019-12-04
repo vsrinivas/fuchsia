@@ -1,0 +1,90 @@
+{
+  "version": "2",
+  "$comment": "Fake fonts used for testing alias resolution. Served by mock_font_resolver.",
+  "families": [
+    {
+      "name": "Alpha Sans",
+      "aliases": [
+        {
+          "names": [
+            "Alpha Sans Condensed"
+          ],
+          "width": "condensed"
+        },
+        {
+          "names": [
+            "Alpha Sans Hebrew"
+          ],
+          "languages": [
+            "he",
+            "yi"
+          ]
+        }
+      ],
+      "generic_family": "sans-serif",
+      "fallback": true,
+      "assets": [
+        {
+          "file_name": "AlphaSans-Regular.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-regular-ttf",
+              "set": "base"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [],
+              "slant": "upright",
+              "weight": 400,
+              "width": "normal",
+              "code_points": "0+1,48+9,38,2+25"
+            }
+          ]
+        },
+        {
+          "file_name": "AlphaSans-Condensed.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasans-condensed-ttf",
+              "set": "base"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [],
+              "slant": "upright",
+              "weight": 400,
+              "width": "condensed",
+              "code_points": "0+1,48+9,38,2+25"
+            }
+          ]
+        },
+        {
+          "file_name": "AlphaSansHebrew-Regular.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-alphasanshebrew-regular-ttf",
+              "set": "base"
+            }
+          },
+          "typefaces": [
+            {
+              "index": 0,
+              "languages": [
+                "he",
+                "yi"
+              ],
+              "slant": "upright",
+              "weight": 400,
+              "width": "normal",
+              "code_points": "0+1,48+9,38,2+25"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

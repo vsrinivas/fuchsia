@@ -12,6 +12,7 @@ pub use {
     fuchsia_component::client::{launch, launch_with_options, launcher, App, LaunchOptions},
 };
 
+// TODO(kpozin): "Default" fonts will be empty when we begin building fonts per target product.
 pub fn start_provider_with_default_fonts() -> Result<(App, fonts_exp::ProviderProxy), Error> {
     let launcher = launcher().context("Failed to open launcher service")?;
     let app = launch(&launcher, FONTS_CMX.to_string(), None)
@@ -35,7 +36,7 @@ pub fn start_provider_with_test_fonts() -> Result<(App, fonts_exp::ProviderProxy
     let app = launch_with_options(
         &launcher,
         FONTS_CMX.to_string(),
-        Some(vec!["--font-manifest".to_string(), "/test_fonts/manifest.json".to_string()]),
+        Some(vec!["--font-manifest".to_string(), "/test_fonts/test_manifest_v1.json".to_string()]),
         launch_options,
     )
     .context("Failed to launch fonts::Provider")?;
@@ -61,7 +62,7 @@ pub fn start_provider_with_all_fonts() -> Result<(App, fonts_exp::ProviderProxy)
         Some(vec![
             "--no-default-fonts".to_string(),
             "--font-manifest".to_string(),
-            "/test_fonts/all_fonts_manifest.json".to_string(),
+            "/test_fonts/all_fonts_manifest_v1.json".to_string(),
         ]),
         launch_options,
     )

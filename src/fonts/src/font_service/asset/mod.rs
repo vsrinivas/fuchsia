@@ -2,8 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(missing_docs)]
+
 mod asset;
 mod cache;
 mod collection;
 
-pub use collection::Collection;
+pub use {
+    asset::AssetId,
+    collection::{AssetCollection, AssetCollectionBuilder, AssetCollectionError},
+};

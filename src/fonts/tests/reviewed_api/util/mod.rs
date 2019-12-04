@@ -27,6 +27,7 @@ macro_rules! assert_buf_eq {
     };
 }
 
+// TODO(kpozin): "Default" fonts will be empty when we begin building fonts per target product.
 pub fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
     let launcher = launcher().context("Failed to open launcher service")?;
     let app = launch(&launcher, FONTS_CMX.to_string(), None)
@@ -39,7 +40,10 @@ pub fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy)
     Ok((app, font_provider))
 }
 
-pub fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
+pub fn start_provider_with_manifest(
+    manifest_file_name: impl AsRef<str>,
+    include_default_fonts: bool,
+) -> Result<(App, fonts::ProviderProxy), Error> {
     let mut launch_options = LaunchOptions::new();
     launch_options.add_dir_to_namespace(
         "/test_fonts".to_string(),
@@ -47,19 +51,26 @@ pub fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), E
     )?;
 
     let launcher = launcher().context("Failed to open launcher service")?;
-    let app = launch_with_options(
-        &launcher,
-        FONTS_CMX.to_string(),
-        Some(vec!["--font-manifest".to_string(), "/test_fonts/manifest.json".to_string()]),
-        launch_options,
-    )
-    .context("Failed to launch fonts::Provider")?;
+    let mut args = vec![];
+    if !include_default_fonts {
+        args.push("--no-default-fonts".to_string());
+    }
+    args.append(&mut vec![
+        "--font-manifest".to_string(),
+        format!("/test_fonts/{}", manifest_file_name.as_ref()),
+    ]);
 
+    let app = launch_with_options(&launcher, FONTS_CMX.to_string(), Some(args), launch_options)
+        .context("Failed to launch fonts::Provider")?;
     let font_provider = app
         .connect_to_service::<fonts::ProviderMarker>()
         .context("Failed to connect to fonts::Provider")?;
 
     Ok((app, font_provider))
+}
+
+pub fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
+    start_provider_with_manifest("test_manifest_v1.json", true)
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -73,6 +84,7 @@ pub struct TypefaceInfo {
 pub async fn get_typeface_info(
     font_provider: &fonts::ProviderProxy,
     name: Option<String>,
+    style: Option<fonts::Style2>,
     languages: Option<Vec<String>>,
     code_points: Option<Vec<char>>,
 ) -> Result<TypefaceInfo, Error> {
@@ -80,11 +92,7 @@ pub async fn get_typeface_info(
         .get_typeface(fonts::TypefaceRequest {
             query: Some(fonts::TypefaceQuery {
                 family: name.as_ref().map(|name| fonts::FamilyName { name: name.to_string() }),
-                style: Some(fonts::Style2 {
-                    weight: Some(fonts::WEIGHT_NORMAL),
-                    width: Some(fonts::Width::SemiExpanded),
-                    slant: Some(fonts::Slant::Upright),
-                }),
+                style,
                 code_points: code_points
                     .map(|code_points| code_points.into_iter().map(|ch| ch as u32).collect()),
                 languages: languages.map(|languages| {
@@ -118,5 +126,5 @@ pub async fn get_typeface_info_basic(
     font_provider: &fonts::ProviderProxy,
     name: Option<String>,
 ) -> Result<TypefaceInfo, Error> {
-    get_typeface_info(font_provider, name, None, None).await
+    get_typeface_info(font_provider, name, None, None, None).await
 }

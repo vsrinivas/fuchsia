@@ -3,46 +3,56 @@
 // found in the LICENSE file.
 
 use {
+    crate::font_service::AssetId,
     char_set::CharSet,
     failure::{format_err, Error},
     fidl_fuchsia_fonts::{FamilyName, GenericFontFamily, Slant, Style2, TypefaceRequest, Width},
     fidl_fuchsia_fonts_experimental::TypefaceInfo,
     fidl_fuchsia_intl::LocaleId,
-    manifest::Font,
+    manifest::v2,
     std::collections::BTreeSet,
 };
 
-#[derive(Debug)]
+/// In-memory representation of a single typeface's metadata, slightly denormalized.
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Typeface {
-    pub asset_id: u32,
+    /// Which asset to find the typeface in
+    pub asset_id: AssetId,
+    /// Index of the typeface within the asset (for multi-typeface font formats, such as TTC)
     pub font_index: u32,
+    /// Style property: slant
     pub slant: Slant,
+    /// Style property: weight
     pub weight: u16,
+    /// Style property: width
     pub width: Width,
+    /// List of BCP-47 language IDs explicitly supported by the typeface
     pub languages: BTreeSet<String>,
+    /// Collection of code points contained by the typeface
     pub char_set: CharSet,
+    /// A generic font family to which the typeface's family belongs.
     pub generic_family: Option<GenericFontFamily>,
 }
 
 impl Typeface {
     /// Create a new `Typeface`, copying all fields except `asset_id` and `generic_family` from
-    /// `manifest_font`.
+    /// `manifest_typeface`.
     pub fn new(
-        asset_id: u32,
-        manifest_font: Font,
+        asset_id: AssetId,
+        manifest_typeface: v2::Typeface,
         generic_family: Option<GenericFontFamily>,
     ) -> Result<Typeface, Error> {
-        if manifest_font.code_points.is_empty() {
+        if manifest_typeface.code_points.is_empty() {
             return Err(format_err!("Can't create Typeface from Font with empty CharSet."));
         }
         Ok(Typeface {
             asset_id,
-            font_index: manifest_font.index,
-            weight: manifest_font.weight,
-            width: manifest_font.width,
-            slant: manifest_font.slant,
-            languages: manifest_font.languages.iter().map(|x| x.to_string()).collect(),
-            char_set: manifest_font.code_points,
+            font_index: manifest_typeface.index,
+            weight: manifest_typeface.style.weight,
+            width: manifest_typeface.style.width,
+            slant: manifest_typeface.style.slant,
+            languages: manifest_typeface.languages.into_iter().collect(),
+            char_set: manifest_typeface.code_points,
             generic_family,
         })
     }
@@ -102,7 +112,7 @@ impl<'a> TypefaceAndLangScore<'a> {
 }
 
 pub struct TypefaceInfoAndCharSet {
-    pub asset_id: u32,
+    pub asset_id: AssetId,
     pub font_index: u32,
     pub family: FamilyName,
     pub style: Style2,
@@ -137,7 +147,7 @@ impl TypefaceInfoAndCharSet {
 impl From<TypefaceInfoAndCharSet> for TypefaceInfo {
     fn from(info: TypefaceInfoAndCharSet) -> TypefaceInfo {
         TypefaceInfo {
-            asset_id: Some(info.asset_id),
+            asset_id: Some(info.asset_id.into()),
             font_index: Some(info.font_index),
             family: Some(info.family),
             style: Some(info.style),
@@ -152,22 +162,17 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_fonts::{Slant, Width, WEIGHT_NORMAL},
-        std::path::PathBuf,
     };
 
     #[test]
     fn test_typeface_new_empty_char_set_is_error() {
-        let font = Font {
-            asset: PathBuf::default(),
+        let manifest_typeface = v2::Typeface {
             index: 0,
-            slant: Slant::Upright,
-            weight: WEIGHT_NORMAL,
-            width: Width::Normal,
+            style: v2::Style { slant: Slant::Upright, weight: WEIGHT_NORMAL, width: Width::Normal },
             languages: vec![],
-            package: None,
             code_points: CharSet::new(vec![]),
         };
 
-        assert!(Typeface::new(0, font, None).is_err())
+        assert!(Typeface::new(AssetId(0), manifest_typeface, None).is_err())
     }
 }

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Version 2 of the Font Manifest schema.
+
 use {
     crate::serde_ext::*,
     char_set::CharSet,
@@ -32,6 +34,7 @@ pub struct FontsManifest {
 /// Represents a font family, its metadata, and its font files.
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct Family {
+    /// Canonical name of the font family.
     pub name: String,
     /// Alternate names for the font family.
     // During de/serialization, omitted `aliases` are treated as an empty array and vice-versa.
@@ -191,6 +194,7 @@ impl FontFamilyAliasSet {
         !self.languages.is_empty()
     }
 
+    /// Helper for deserializing a vector of `UniCase` strings.
     fn deserialize_names<'de, D>(deserializer: D) -> Result<Vec<UniCase<String>>, D::Error>
     where
         D: Deserializer<'de>,
@@ -199,6 +203,7 @@ impl FontFamilyAliasSet {
         Ok(Self::preprocess_names(names))
     }
 
+    /// Helper for serializing a vector of `UniCase` strings.
     fn serialize_names<S>(names: &Vec<UniCase<String>>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -236,8 +241,8 @@ impl Asset {
     }
 }
 
-/// Describes the location of a font asset.
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
+/// Describes the location of a font asset (excluding its file name).
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum AssetLocation {
     /// Indicates that the file is accessible through a file path in the font server's namespace
     /// (e.g. at `/config/data/fonts/`).
@@ -250,7 +255,7 @@ pub enum AssetLocation {
 }
 
 /// Describes the location of a local file asset. Used in conjunction with [`Asset::file_name`].
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct LocalFileLocator {
     /// Package-relative path to the file, excluding the file name
     pub directory: PathBuf,
@@ -258,7 +263,7 @@ pub struct LocalFileLocator {
 
 /// Describes the location of a font asset that's part of a Fuchsia package. Used in conjunction
 /// with [`Asset::file_name`].
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct PackageLocator {
     /// URL of just the package (not including the file name)
     pub url: PkgUrl,
@@ -320,6 +325,7 @@ mod code_points_serde {
 
 /// Describes a typeface's style properties. Equivalent to [`fidl_fuchsia_fonts::Style2`], but all
 /// fields are required.
+#[allow(missing_docs)]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 pub struct Style {
     #[serde(default = "Style::default_slant", with = "SlantDef")]

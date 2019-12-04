@@ -2,16 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Main entry point for the font service.
+
+#![warn(missing_docs)]
+
 mod font_service;
 
 use {
-    self::font_service::{FontService, ProviderRequestStream},
+    self::font_service::{FontServiceBuilder, ProviderRequestStream},
     failure::Error,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_syslog::{self as syslog, *},
     getopts,
     std::path::PathBuf,
-    fuchsia_syslog::{self as syslog, *},
 };
 
 const FONT_MANIFEST_PATH: &str = "/pkg/data/manifest.json";
@@ -35,15 +39,15 @@ async fn main() -> Result<(), Error> {
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
 
-    let mut service = FontService::new();
+    let mut service_builder = FontServiceBuilder::new();
 
     if !options.opt_present("n") {
         let font_manifest_path = PathBuf::from(FONT_MANIFEST_PATH);
-        service.load_manifest(&font_manifest_path).await?;
+        service_builder.add_manifest_from_file(&font_manifest_path);
 
         let font_manifest_path = PathBuf::from(VENDOR_FONT_MANIFEST_PATH);
         if font_manifest_path.exists() {
-            service.load_manifest(&font_manifest_path).await?;
+            service_builder.add_manifest_from_file(&font_manifest_path);
         }
     } else {
         fx_vlog!(1, "no-default-fonts set, not loading fonts from default location");
@@ -51,10 +55,10 @@ async fn main() -> Result<(), Error> {
 
     for m in options.opt_strs("m") {
         let path_buf = PathBuf::from(m.as_str());
-        service.load_manifest(&path_buf).await?;
+        service_builder.add_manifest_from_file(&path_buf);
     }
 
-    service.check_can_start()?;
+    let service = service_builder.build().await?;
 
     fx_vlog!(1, "Adding FIDL services");
     let mut fs = ServiceFs::new();

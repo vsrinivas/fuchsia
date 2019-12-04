@@ -17,6 +17,7 @@ rustc_library("manifest") {
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//src/fonts/char_set",
     "//src/fonts/offset_string",
+    "//src/lib/error/clonable_error",
     "//src/lib/intl/unicode_utils/char_collection",
     "//src/sys/lib/fuchsia_url",
     "//third_party/rust_crates:failure",
@@ -30,7 +31,10 @@ rustc_library("manifest") {
     "//third_party/rust_crates:unicase",
   ]
 
-  test_deps = [ "//third_party/rust_crates:pretty_assertions" ]
+  test_deps = [
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:pretty_assertions",
+  ]
 }
 
 test_package("manifest_tests") {

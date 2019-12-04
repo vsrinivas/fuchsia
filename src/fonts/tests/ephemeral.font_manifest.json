@@ -1,0 +1,26 @@
+{
+  "version": "2",
+  "$comment": "Fake font used for testing ephemeral font loading. Served by mock_font_resolver.",
+  "families": [
+    {
+      "name": "Ephemeral",
+      "fallback": true,
+      "assets": [
+        {
+          "file_name": "Ephemeral.ttf",
+          "location": {
+            "package": {
+              "url": "fuchsia-pkg://fuchsia.com/font-package-ephemeral-ttf",
+              "set": "universe"
+            }
+          },
+          "typefaces": [
+            {
+              "code_points": "0+1,48+9,38,2+25"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

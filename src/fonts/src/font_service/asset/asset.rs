@@ -8,9 +8,18 @@ use {
     fuchsia_zircon::{self as zx, HandleBased},
 };
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct AssetId(pub u32);
+
+impl From<AssetId> for u32 {
+    fn from(id: AssetId) -> u32 {
+        id.0
+    }
+}
+
 #[derive(Debug)]
 pub struct Asset {
-    pub id: u32,
+    pub id: AssetId,
     pub buffer: mem::Buffer,
 }
 

@@ -133,7 +133,7 @@ fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), Error
     let app = launch_with_options(
         &launcher,
         FONTS_CMX.to_string(),
-        Some(vec!["--font-manifest".to_string(), "/test_fonts/manifest.json".to_string()]),
+        Some(vec!["--font-manifest".to_string(), "/test_fonts/test_manifest_v1.json".to_string()]),
         launch_options,
     )
     .context("Failed to launch fonts::Provider")?;

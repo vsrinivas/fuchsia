@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {super::asset::Asset, std::collections::VecDeque};
+use {
+    super::asset::{Asset, AssetId},
+    std::collections::VecDeque,
+};
 
 /// An LRU cache for `Buffer`s, bounded by the total size of cached VMOs.
 ///
@@ -12,6 +15,7 @@ pub struct Cache {
     capacity: u64,
     /// Bytes available to be used.
     available: u64,
+    /// Assets ordered by recency of last use.
     cache: VecDeque<Asset>,
 }
 
@@ -23,7 +27,7 @@ impl Cache {
     /// Get the index of the [`Asset`] with ID `id`, if it is cached.
     ///
     /// Runs in `O(self.len)` time, which should be fast enough if the cache is small.
-    fn index_of(&self, id: u32) -> Option<usize> {
+    fn index_of(&self, id: AssetId) -> Option<usize> {
         // Iterate from most- to least-recently used (back to front).
         for (index, asset) in self.cache.iter().enumerate().rev() {
             if asset.id == id {
@@ -53,7 +57,7 @@ impl Cache {
 
     /// Get a clone of the cached [`Asset`] with ID `id`.
     /// Returns [`None`] if cloning fails or the requested [`Asset`] is not cached.
-    pub fn get(&mut self, id: u32) -> Option<Asset> {
+    pub fn get(&mut self, id: AssetId) -> Option<Asset> {
         self.index_of(id)
             .and_then(move |index| self.move_to_back(index))
             .and_then(|cached| cached.try_clone().ok())
@@ -102,7 +106,7 @@ mod tests {
     fn mock_asset(id: u32, vmo_size: u64, buf_size: u64) -> Asset {
         assert!(vmo_size > buf_size);
         Asset {
-            id,
+            id: AssetId(id),
             buffer: mem::Buffer { vmo: zx::Vmo::create(vmo_size).unwrap(), size: buf_size },
         }
     }
@@ -110,14 +114,14 @@ mod tests {
     #[test]
     fn test_index_of_hit() {
         let cache = mock_cache();
-        assert_eq!(cache.index_of(1), Some(0));
-        assert_eq!(cache.index_of(2), Some(1));
+        assert_eq!(cache.index_of(AssetId(1)), Some(0));
+        assert_eq!(cache.index_of(AssetId(2)), Some(1));
     }
 
     #[test]
     fn test_index_of_miss() {
         let cache = mock_cache();
-        assert!(cache.index_of(0).is_none());
+        assert!(cache.index_of(AssetId(0)).is_none());
     }
 
     #[test]
@@ -138,14 +142,14 @@ mod tests {
     #[test]
     fn test_get_hit() {
         let mut cache = mock_cache();
-        let cached = cache.get(1).unwrap();
+        let cached = cache.get(AssetId(1)).unwrap();
         assert_eq!(cache.cache.back().unwrap().id, cached.id);
     }
 
     #[test]
     fn test_get_miss() {
         let mut cache = mock_cache();
-        let should_be_none = cache.get(3);
+        let should_be_none = cache.get(AssetId(3));
         assert!(should_be_none.is_none());
     }
 
@@ -173,7 +177,7 @@ mod tests {
         let unused_before = cache.available;
         let to_push = mock_asset(3, 1024, 1000);
         let cached = cache.push(to_push);
-        assert_eq!(cached.id, 3);
+        assert_eq!(cached.id, AssetId(3));
         assert_eq!(cached.id, cache.cache.back().unwrap().id);
         assert_eq!(cache.available, unused_before - 1000);
     }
@@ -184,7 +188,7 @@ mod tests {
         let to_push = mock_asset(3, 2048, 2000);
         let should_be_popped_id = cache.cache.front().unwrap().id;
         let cached = cache.push(to_push);
-        assert_eq!(cached.id, 3);
+        assert_eq!(cached.id, AssetId(3));
         assert_eq!(cached.id, cache.cache.back().unwrap().id);
         assert_eq!(cache.available, 0);
         assert!(cache.index_of(should_be_popped_id).is_none());

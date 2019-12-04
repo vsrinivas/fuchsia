@@ -44,6 +44,7 @@ rustc_binary("font_server") {
     "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/lib/error/clonable_error",
     "//src/sys/lib/fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
@@ -56,6 +57,11 @@ rustc_binary("font_server") {
     "//third_party/rust_crates:unicase",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+
+  test_deps = [
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:pretty_assertions",
   ]
 
   non_rust_deps = [ "//third_party/freetype2" ]
@@ -121,6 +127,7 @@ rustc_test("font_provider_test") {
     "//src/sys/lib/fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:itertools",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
   source_root = "tests/lib.rs"
@@ -159,23 +166,23 @@ test_package("font_provider_tests") {
 
   resources = [
     {
-      path = rebase_path("tests/test_manifest.json")
-      dest = "testdata/test_fonts/manifest.json"
+      path = rebase_path("tests/test_manifest_v1.json")
+      dest = "testdata/test_fonts/test_manifest_v1.json"
     },
     {
-      path = rebase_path("tests/all_fonts_manifest.json")
-      dest = "testdata/test_fonts/all_fonts_manifest.json"
+      path = rebase_path("tests/all_fonts_manifest_v1.json")
+      dest = "testdata/test_fonts/all_fonts_manifest_v1.json"
     },
     {
-      path = rebase_path("tests/ephemeral_manifest.json")
-      dest = "testdata/test_fonts/ephemeral_manifest.json"
+      path = rebase_path("tests/ephemeral.font_manifest.json")
+      dest = "testdata/test_fonts/ephemeral.font_manifest.json"
+    },
+    {
+      path = rebase_path("tests/aliases.font_manifest.json")
+      dest = "testdata/test_fonts/aliases.font_manifest.json"
     },
   ]
 
-  # TODO(sergeyu): Noto CJK fonts are not included in the default fonts package
-  # due to their size. Currently they are used only for tests. Once PKG-47 is
-  # implemented it will be possible to customize set of fonts on higher levels,
-  # which will allow to include these fonts in the default font package.
   fonts = [
     "material/MaterialIcons-Regular.ttf",
     "noto-cjk/NotoSansCJK-Regular.ttc",

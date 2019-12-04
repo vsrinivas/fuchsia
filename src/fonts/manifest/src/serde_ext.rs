@@ -5,6 +5,8 @@
 //! Contains local mirrors and Serde annotations for FIDL types.
 //! See https://serde.rs/remote-derive.html.
 
+#![allow(missing_docs)]
+
 use {
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Style2 as FidlStyle, Width},
     serde_derive::{Deserialize, Serialize},
@@ -29,7 +31,7 @@ use {
 /// ```
 /// mod local_crate {
 ///     use remote_crate::Magic8BallResponse;
-///     use serde_derive::{Deserialize, Serialize}
+///     use serde_derive::{Deserialize, Serialize};
 ///
 ///     #[derive(Deserialize, Serialize)]
 ///     #[serde(with = "Magic8BallResponse")]
@@ -60,7 +62,7 @@ use {
 /// - `local_type_str`: The same as `local_type`, but wrapped in quotes.
 macro_rules! derive_opt {
     ($module:ident, $remote_type:ty, $local_type:ty, $local_type_str:expr) => {
-        #[allow(non_snake_case, dead_code)]
+        #[allow(non_snake_case, dead_code, missing_docs)]
         pub mod $module {
             use {
                 super::*,
@@ -68,7 +70,7 @@ macro_rules! derive_opt {
                 serde_derive::{Deserialize, Serialize},
             };
 
-            /// Implementation of Serde's serialize
+            #[doc = "Implementation of Serde's serialize"]
             pub fn serialize<S>(
                 value: &Option<$remote_type>,
                 serializer: S,
@@ -81,7 +83,7 @@ macro_rules! derive_opt {
                 value.as_ref().map(Wrapper).serialize(serializer)
             }
 
-            /// Implementation of Serde's deserialize
+            #[doc = "Implementation of Serde's deserialize"]
             pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<$remote_type>, D::Error>
             where
                 D: Deserializer<'de>,
@@ -104,6 +106,7 @@ macro_rules! derive_opt {
 /// `Ord` is derived for use with the manifest generator's `TryMergeGroups` trait. The ordering is
 /// by necessity arbitrary, comparing each field in sequence, recursively comparing enum values and
 /// numbers.
+#[allow(missing_docs)]
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct StyleOptions {
     #[serde(default, with = "OptSlant", skip_serializing_if = "Option::is_none")]
@@ -120,9 +123,20 @@ impl From<FidlStyle> for StyleOptions {
     }
 }
 
+impl From<StyleOptions> for FidlStyle {
+    fn from(style_options: StyleOptions) -> Self {
+        FidlStyle {
+            slant: style_options.slant,
+            weight: style_options.weight,
+            width: style_options.width,
+        }
+    }
+}
+
 /// Local mirror of [`fidl_fuchsia_fonts::GenericFontFamily`], for use in JSON serialization.
 ///
 /// Serialized values are in _kebab-case_, e.g. `"sans-serif"`.
+#[allow(missing_docs)]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(remote = "GenericFontFamily", rename_all = "kebab-case")]
 pub enum GenericFontFamilyDef {
@@ -142,6 +156,7 @@ derive_opt!(OptGenericFontFamily, GenericFontFamily, GenericFontFamilyDef, "Gene
 /// Local mirror of [`fidl_fuchsia_fonts::Slant`], for use in JSON serialization.
 ///
 /// Serialized values are _lowercase_, e.g. `"italic"`.
+#[allow(missing_docs)]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(remote = "Slant", rename_all = "lowercase")]
 pub enum SlantDef {
@@ -155,6 +170,7 @@ derive_opt!(OptSlant, Slant, SlantDef, "SlantDef");
 /// Local mirror of [`fidl_fuchsia_fonts::Width`], for use in JSON serialization.
 ///
 /// Serialized values are in _kebab-case_, e.g. `"semi-condensed"`.
+#[allow(missing_docs)]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(remote = "Width", rename_all = "kebab-case")]
 pub enum WidthDef {

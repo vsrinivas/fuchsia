@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_fonts_ext::TypefaceRequestExt;
 use {
     super::{
         matcher::select_best_match,
@@ -9,7 +10,7 @@ use {
     },
     char_set::CharSet,
     failure::{format_err, Error},
-    fidl_fuchsia_fonts::{Style2, TypefaceQuery, TypefaceRequest, TypefaceRequestFlags},
+    fidl_fuchsia_fonts::{Style2, TypefaceQuery, TypefaceRequest},
     std::sync::Arc,
 };
 
@@ -17,7 +18,7 @@ fn unwrap_query<'a>(query: &'a Option<TypefaceQuery>) -> Result<&'a TypefaceQuer
     query.as_ref().ok_or(format_err!("Missing query"))
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Collection {
     /// Some typefaces may be in more than one collection. In particular, fallback typefaces are
     /// added to the family collection and also to the fallback collection.
@@ -35,24 +36,22 @@ impl Collection {
     ) -> Result<Option<&'a Typeface>, Error> {
         let query = unwrap_query(&request.query)?;
 
-        if let Some(flags) = request.flags {
-            if is_style_defined(query) && flags.contains(TypefaceRequestFlags::ExactStyle) {
-                return Ok(self
-                    .faces
-                    .iter()
-                    .find(|typeface| {
-                        does_style_match(&query, typeface)
-                            && (query.languages.as_ref().map_or(true, |value| {
-                                value.is_empty()
-                                    || value
-                                        .iter()
-                                        .find(|lang| typeface.languages.contains(&*lang.id))
-                                        .is_some()
-                            }))
-                            && do_code_points_match(&typeface.char_set, &query.code_points)
-                    })
-                    .map(|f| f as &Typeface));
-            }
+        if request.exact_style() && is_style_defined(query) {
+            return Ok(self
+                .faces
+                .iter()
+                .find(|typeface| {
+                    does_style_match(&query, typeface)
+                        && (query.languages.as_ref().map_or(true, |value| {
+                            value.is_empty()
+                                || value
+                                    .iter()
+                                    .find(|lang| typeface.languages.contains(&*lang.id))
+                                    .is_some()
+                        }))
+                        && do_code_points_match(&typeface.char_set, &query.code_points)
+                })
+                .map(|f| f as &Typeface));
         }
 
         fn is_style_defined(query: &TypefaceQuery) -> bool {
@@ -126,19 +125,21 @@ impl Collection {
 mod tests {
     use {
         super::*,
+        crate::font_service::AssetId,
         fidl_fuchsia_fonts::{
-            GenericFontFamily, Slant, Width, WEIGHT_BOLD, WEIGHT_EXTRA_BOLD, WEIGHT_EXTRA_LIGHT,
-            WEIGHT_LIGHT, WEIGHT_MEDIUM, WEIGHT_NORMAL, WEIGHT_SEMI_BOLD, WEIGHT_THIN,
+            GenericFontFamily, Slant, TypefaceRequestFlags, Width, WEIGHT_BOLD, WEIGHT_EXTRA_BOLD,
+            WEIGHT_EXTRA_LIGHT, WEIGHT_LIGHT, WEIGHT_MEDIUM, WEIGHT_NORMAL, WEIGHT_SEMI_BOLD,
+            WEIGHT_THIN,
         },
         fidl_fuchsia_intl::LocaleId,
-        manifest,
+        manifest::{self, v2},
     };
 
     fn make_fake_typeface_collection(mut faces: Vec<Typeface>) -> Collection {
         let mut result = Collection::new();
         for (i, mut typeface) in faces.drain(..).enumerate() {
             // Assign fake asset_id to each font
-            typeface.asset_id = i as u32;
+            typeface.asset_id = AssetId(i as u32);
             result.add_typeface(Arc::new(typeface));
         }
 
@@ -156,16 +157,12 @@ mod tests {
         // Prevent error if char_set is empty
         let char_set = if char_set.is_empty() { &[0] } else { char_set };
         Typeface::new(
-            0,
-            manifest::Font {
-                asset: std::path::PathBuf::new(),
+            AssetId(0),
+            v2::Typeface {
                 index: 0,
-                slant,
-                weight,
-                width,
+                style: v2::Style { slant, weight, width },
                 languages: languages.iter().map(|s| s.to_string()).collect(),
                 code_points: CharSet::new(char_set.to_vec()),
-                package: None,
             },
             generic_family,
         )
@@ -385,7 +382,7 @@ mod tests {
             request_style_exact(&collection, Width::Condensed, Slant::Italic, WEIGHT_THIN)?
                 .ok_or_else(|| format_err!("Exact style not found"))?
                 .asset_id,
-            1
+            AssetId(1)
         );
 
         assert!(request_style_exact(
@@ -434,21 +431,21 @@ mod tests {
         ]);
 
         // Exact matches.
-        assert_eq!(request_lang(&collection, &["a"])?.asset_id, 0);
-        assert_eq!(request_lang(&collection, &["b-C"])?.asset_id, 1);
-        assert_eq!(request_lang(&collection, &["b-E"])?.asset_id, 2);
+        assert_eq!(request_lang(&collection, &["a"])?.asset_id, AssetId(0));
+        assert_eq!(request_lang(&collection, &["b-C"])?.asset_id, AssetId(1));
+        assert_eq!(request_lang(&collection, &["b-E"])?.asset_id, AssetId(2));
 
         // Verify that request language order is respected.
-        assert_eq!(request_lang(&collection, &["b-C", "a"])?.asset_id, 1);
+        assert_eq!(request_lang(&collection, &["b-C", "a"])?.asset_id, AssetId(1));
 
         // Partial match: the first matching font is returned first.
-        assert_eq!(request_lang(&collection, &["b"])?.asset_id, 1);
+        assert_eq!(request_lang(&collection, &["b"])?.asset_id, AssetId(1));
 
         // Exact match overrides preceding partial match.
-        assert_eq!(request_lang(&collection, &["b", "a"])?.asset_id, 0);
+        assert_eq!(request_lang(&collection, &["b", "a"])?.asset_id, AssetId(0));
 
         // Partial match should match a whole BCP47 segment.
-        assert_eq!(request_lang(&collection, &["foo"])?.asset_id, 4);
+        assert_eq!(request_lang(&collection, &["foo"])?.asset_id, AssetId(4));
 
         Ok(())
     }
@@ -488,12 +485,24 @@ mod tests {
             make_fake_typeface_with_fallback_family(GenericFontFamily::Monospace),
         ]);
 
-        assert_eq!(request_fallback_family(&collection, GenericFontFamily::Serif)?.asset_id, 0);
-        assert_eq!(request_fallback_family(&collection, GenericFontFamily::SansSerif)?.asset_id, 1);
-        assert_eq!(request_fallback_family(&collection, GenericFontFamily::Monospace)?.asset_id, 2);
+        assert_eq!(
+            request_fallback_family(&collection, GenericFontFamily::Serif)?.asset_id,
+            AssetId(0)
+        );
+        assert_eq!(
+            request_fallback_family(&collection, GenericFontFamily::SansSerif)?.asset_id,
+            AssetId(1)
+        );
+        assert_eq!(
+            request_fallback_family(&collection, GenericFontFamily::Monospace)?.asset_id,
+            AssetId(2)
+        );
 
         // First font is returned when there is no exact match.
-        assert_eq!(request_fallback_family(&collection, GenericFontFamily::Cursive)?.asset_id, 0);
+        assert_eq!(
+            request_fallback_family(&collection, GenericFontFamily::Cursive)?.asset_id,
+            AssetId(0)
+        );
 
         Ok(())
     }
