@@ -4,7 +4,7 @@
 
 use {
     ethernet,
-    failure::{bail, format_err, Error, ResultExt},
+    failure::{bail, format_err, Error},
     fidl_fuchsia_netemul_network::{
         EndpointManagerMarker, FakeEndpointEvent, FakeEndpointMarker, NetworkContextMarker,
         NetworkManagerMarker,
@@ -26,12 +26,15 @@ struct Opt {
     #[structopt(long = "server")]
     is_server: bool,
     #[structopt(long)]
+    network_name: Option<String>,
+    #[structopt(long)]
     endpoint_name: Option<String>,
+    #[structopt(long)]
+    server_name: Option<String>,
 }
 
 const DEFAULT_METRIC: u32 = 100;
 const BUS_NAME: &'static str = "netstack-itm-bus";
-const SRV_NAME: &'static str = "echo_server";
 
 fn open_bus(cli_name: &str) -> Result<BusProxy, Error> {
     let syncm = client::connect_to_service::<SyncManagerMarker>()?;
@@ -40,7 +43,11 @@ fn open_bus(cli_name: &str) -> Result<BusProxy, Error> {
     Ok(bus)
 }
 
-async fn run_mock_guest() -> Result<(), Error> {
+async fn run_mock_guest(
+    network_name: String,
+    ep_name: String,
+    server_name: String,
+) -> Result<(), Error> {
     // Create an ethertap client and an associated ethernet device.
     let ctx = client::connect_to_service::<NetworkContextMarker>()?;
     let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
@@ -48,8 +55,8 @@ async fn run_mock_guest() -> Result<(), Error> {
     let (netm, netm_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
     ctx.get_network_manager(netm_server_end)?;
 
-    let ep = epm.get_endpoint("mock-ep").await?.unwrap().into_proxy()?;
-    let net = netm.get_network("mock_guest").await?.unwrap().into_proxy()?;
+    let ep = epm.get_endpoint(&ep_name).await?.unwrap().into_proxy()?;
+    let net = netm.get_network(&network_name).await?.unwrap().into_proxy()?;
     let (fake_ep, fake_ep_server_end) = fidl::endpoints::create_proxy::<FakeEndpointMarker>()?;
     net.create_fake_endpoint(fake_ep_server_end)?;
 
@@ -64,13 +71,14 @@ async fn run_mock_guest() -> Result<(), Error> {
         metric: DEFAULT_METRIC,
     };
 
-    let _nicid = netstack.add_ethernet_device("/mock_device", &mut cfg, eth_device).await?;
+    let _nicid =
+        netstack.add_ethernet_device(&format!("/{}", ep_name), &mut cfg, eth_device).await?;
 
     // Send a message to the server and expect it to be echoed back.
     let echo_string = String::from("hello");
 
-    let bus = open_bus("mock_guest")?;
-    bus.wait_for_clients(&mut vec!(SRV_NAME).drain(..), 0).await?;
+    let bus = open_bus(&ep_name)?;
+    bus.wait_for_clients(&mut vec![server_name.as_str()].drain(..), 0).await?;
 
     fake_ep.write(&mut echo_string.clone().into_bytes().drain(0..))?;
 
@@ -129,7 +137,7 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     let mut sent_response = false;
 
     // get on bus to unlock mock_guest part of test
-    let _bus = open_bus(SRV_NAME)?;
+    let _bus = open_bus(&ep_name)?;
 
     while let Some(event) = eth_events.try_next().await? {
         match event {
@@ -163,9 +171,20 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     Ok(())
 }
 
-async fn do_run(opt: Opt) -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    let opt = Opt::from_args();
+
     if opt.is_mock_guest {
-        run_mock_guest().await?;
+        if opt.network_name == None || opt.endpoint_name == None || opt.server_name == None {
+            bail!("Must provide network_name, endpoint_name, and server_name for mock guests");
+        }
+        run_mock_guest(
+            opt.network_name.unwrap(),
+            opt.endpoint_name.unwrap(),
+            opt.server_name.unwrap(),
+        )
+        .await?;
     } else if opt.is_server {
         match opt.endpoint_name {
             Some(endpoint_name) => {
@@ -177,12 +196,4 @@ async fn do_run(opt: Opt) -> Result<(), Error> {
         }
     }
     Ok(())
-}
-
-fn main() -> Result<(), Error> {
-    let opt = Opt::from_args();
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    executor.run_singlethreaded(do_run(opt))?;
-
-    return Ok(());
 }

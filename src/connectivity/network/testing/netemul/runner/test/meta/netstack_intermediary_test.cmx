@@ -18,7 +18,10 @@
                         "test": [
                             {
                                 "arguments": [
-                                    "--mock_guest"
+                                    "--mock_guest",
+                                    "--network_name=mock_guest",
+                                    "--endpoint_name=mock-ep",
+                                    "--server_name=server-ep"
                                 ]
                             }
                         ]

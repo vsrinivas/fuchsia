@@ -28,7 +28,12 @@
 // Netemul virtual network under test.
 class NetstackIntermediary : public fuchsia::netstack::Netstack {
  public:
-  NetstackIntermediary(std::string network_name);
+  using MacAddr = std::array<uint8_t, 6>;
+  using NetworkMap = std::map<MacAddr, std::string>;
+  using NetworkBinding = std::pair<std::unique_ptr<netemul::EthernetClient>,
+                                   fidl::InterfacePtr<fuchsia::netemul::network::FakeEndpoint>>;
+
+  NetstackIntermediary(std::string network_name, NetworkMap mac_network_mapping);
 
   // The following methods are required by the Machina guest's VirtioNet.
   void AddEthernetDevice(std::string topological_path,
@@ -73,17 +78,18 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
   }
 
  protected:
-  NetstackIntermediary(std::string network_name, std::unique_ptr<sys::ComponentContext> context);
+  NetstackIntermediary(std::string network_name, NetworkMap mac_network_mapping,
+                       std::unique_ptr<sys::ComponentContext> context);
 
  private:
   fit::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>> GetNetwork(
       std::string network_name);
-  fit::promise<zx_status_t> SetupEthClient(
-      fidl::InterfaceHandle<fuchsia::netemul::network::Network> net);
+  fit::promise<> SetupEthClient(const std::unique_ptr<netemul::EthernetClient>& eth_client);
 
   std::string network_name_;
-  std::unique_ptr<netemul::EthernetClient> eth_client_;
-  fidl::InterfacePtr<fuchsia::netemul::network::FakeEndpoint> fake_ep_;
+
+  std::vector<NetworkBinding> guest_client_endpoints_;
+  NetworkMap mac_network_mapping_;
 
   std::unique_ptr<sys::ComponentContext> context_;
   async::Executor executor_;

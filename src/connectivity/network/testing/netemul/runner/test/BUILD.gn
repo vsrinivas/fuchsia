@@ -40,6 +40,7 @@ group("netemul_empty_binaries") {
   write_file("$root_out_dir/easy_netstack_cfg_test", "")
   write_file("$root_out_dir/inheritance_test", "")
   write_file("$root_out_dir/dynamic_devices_test", "")
+  write_file("$root_out_dir/netstack_intermediary_multi_interface_test", "")
   write_file("$root_out_dir/netstack_intermediary_test", "")
   write_file("$root_out_dir/guest_test", "")
   write_file("$root_out_dir/grpc_client_stress_test", "")
@@ -168,6 +169,10 @@ test_package("netemul_sandbox_test") {
     {
       name = "mock_device_settings_bin_test"
       dest = "mock_device_settings"
+    },
+    {
+      name = "netstack_intermediary_multi_interface_test"
+      environments = [ qemu_env ]
     },
     {
       name = "netstack_intermediary_test"

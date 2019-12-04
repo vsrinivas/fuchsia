@@ -1,0 +1,110 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "capture": true,
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/netstack_intermediary.cmx",
+            "environment": {
+                "children": [
+                    {
+                        "name": "client",
+                        "services": {
+                            "fuchsia.netstack.Netstack": {
+                                "arguments": [
+                                    "--interface=70:00:0a:0b:0c:0d=net-1",
+                                    "--interface=70:00:01:02:03:04=net-2"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_intermediary.cmx"
+                            }
+                        },
+                        "test": [
+                            {
+                                "arguments": [
+                                    "--mock_guest",
+                                    "--network_name=mock-guest-1",
+                                    "--endpoint_name=client-ep-1",
+                                    "--server_name=server-ep-1"
+                                ]
+                            },
+                            {
+                                "arguments": [
+                                    "--mock_guest",
+                                    "--network_name=mock-guest-2",
+                                    "--endpoint_name=client-ep-2",
+                                    "--server_name=server-ep-2"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "devices": [
+                            "server-ep-1"
+                        ],
+                        "name": "server-1",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "--server",
+                                    "--endpoint_name=server-ep-1"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "devices": [
+                            "server-ep-2"
+                        ],
+                        "name": "server-2",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "--server",
+                                    "--endpoint_name=server-ep-2"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "server-ep-1"
+                        }
+                    ],
+                    "name": "net-1"
+                },
+                {
+                    "endpoints": [
+                        {
+                            "name": "server-ep-2"
+                        }
+                    ],
+                    "name": "net-2"
+                },
+                {
+                    "endpoints": [
+                        {
+                            "mac": "70:00:0a:0b:0c:0d",
+                            "name": "client-ep-1"
+                        }
+                    ],
+                    "name": "mock-guest-1"
+                },
+                {
+                    "endpoints": [
+                        {
+                            "mac": "70:00:01:02:03:04",
+                            "name": "client-ep-2"
+                        }
+                    ],
+                    "name": "mock-guest-2"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/netstack_intermediary_test"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}
