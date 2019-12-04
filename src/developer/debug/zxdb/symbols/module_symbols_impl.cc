@@ -18,9 +18,11 @@
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
+#include "src/developer/debug/zxdb/common/largest_less_or_equal.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
+#include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/find_line.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
@@ -122,11 +124,16 @@ Err ModuleSymbolsImpl::Load(bool create_index) {
 
   if (auto debug = elflib::ElfLib::Create(name_)) {
     if (debug->ProbeHasProgramBits()) {
+      // Found in ".debug" file.
       plt_locations_ = debug->GetPLTOffsets();
+      if (auto syms = debug->GetAllSymbols())
+        FillElfSymbols(*syms);
     } else if (auto elf = elflib::ElfLib::Create(binary_name_)) {
-      if (elf->SetDebugData(std::move(debug))) {
+      // Found in binary file.
+      if (elf->SetDebugData(std::move(debug)))
         plt_locations_ = elf->GetPLTOffsets();
-      }
+      if (auto syms = elf->GetAllSymbols())
+        FillElfSymbols(*syms);
     }
   }
 
@@ -268,6 +275,16 @@ LazySymbol ModuleSymbolsImpl::IndexDieRefToSymbol(const IndexNode::DieRef& die_r
   return symbol_factory_->MakeLazy(die_ref.offset());
 }
 
+bool ModuleSymbolsImpl::HasBinary() const {
+  if (!binary_name_.empty())
+    return true;
+
+  if (auto debug = elflib::ElfLib::Create(name_))
+    return debug->ProbeHasProgramBits();
+
+  return false;
+}
+
 llvm::DWARFUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(uint64_t relative_address) const {
   return compile_units_.getUnitForOffset(
       context_->getDebugAranges()->findAddress(relative_address));
@@ -355,6 +372,28 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
       continue;
     }
   }
+
+  // Fall back on ELF symbols if nothing was found. Many ELF symbols will duplicate the DWARF
+  // ones so we don't want to do this if there was a DWARF match.
+  if (result.empty()) {
+    // Currently we only support ELF lookup by mangled name. The reason is that the unmangled
+    // name for function names has a () and won't match our Identifier class. Currently ELF name
+    // lookup is not really used (the DWARF symbols should have normal things people need) so this
+    // is not a high priority.
+    //
+    // TODO(bug 41928) make Identifier support function parameters.
+    std::string symbol_to_find_str = symbol_to_find.GetFullNameNoQual();
+    auto found_elf = std::lower_bound(
+        elf_symbols_by_name_.begin(), elf_symbols_by_name_.end(), symbol_to_find_str,
+        [](const ElfSymbolRecord& r, const std::string& s) { return r.linkage_name < s; });
+    if (found_elf != elf_symbols_by_name_.end() && found_elf->linkage_name == symbol_to_find_str) {
+      result.emplace_back(symbol_context.RelativeToAbsolute(found_elf->relative_address),
+                          FileLine(), 0, symbol_context,
+                          fxl::MakeRefCounted<ElfSymbol>(
+                              const_cast<ModuleSymbolsImpl*>(this)->GetWeakPtr(), *found_elf));
+    }
+  }
+
   return result;
 }
 
@@ -370,16 +409,30 @@ std::vector<Location> ModuleSymbolsImpl::ResolveAddressInputLocation(
   return result;
 }
 
-// This function is similar to llvm::DWARFContext::getLineInfoForAddress.
 Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_context,
                                                uint64_t absolute_address,
                                                const ResolveOptions& options,
                                                const Function* optional_func) const {
+  if (auto dwarf_loc =
+          DwarfLocationForAddress(symbol_context, absolute_address, options, optional_func))
+    return std::move(*dwarf_loc);
+  if (auto elf_loc = ElfLocationForAddress(symbol_context, absolute_address, options))
+    return std::move(*elf_loc);
+
+  // Not symbolizable, return an "address" with no symbol information. Mark it symbolized to record
+  // that we tried and failed.
+  return Location(Location::State::kSymbolized, absolute_address);
+}
+
+// This function is similar to llvm::DWARFContext::getLineInfoForAddress.
+std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
+    const SymbolContext& symbol_context, uint64_t absolute_address, const ResolveOptions& options,
+    const Function* optional_func) const {
   // TODO(DX-695) handle addresses that aren't code like global variables.
   uint64_t relative_address = symbol_context.AbsoluteToRelative(absolute_address);
   llvm::DWARFUnit* unit = CompileUnitForRelativeAddress(relative_address);
-  if (!unit)  // No symbol
-    return Location(Location::State::kSymbolized, absolute_address);
+  if (!unit)  // No DWARF symbol.
+    return std::nullopt;
 
   // Get the innermost subroutine or inlined function for the address. This may be empty, but still
   // lookup the line info below in case its present. This computes both a LazySymbol which we
@@ -445,6 +498,32 @@ Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_conte
 
   // No line information.
   return Location(absolute_address, FileLine(), 0, symbol_context, std::move(lazy_function));
+}
+
+std::optional<Location> ModuleSymbolsImpl::ElfLocationForAddress(
+    const SymbolContext& symbol_context, uint64_t absolute_address,
+    const ResolveOptions& options) const {
+  if (elf_symbols_by_address_.empty())
+    return std::nullopt;
+
+  // TODO(bug 42243) make sure the address is inside the library. Otherwise this will match
+  // random addresses for the largest ELF symbol.
+  uint64_t relative_addr = symbol_context.AbsoluteToRelative(absolute_address);
+  auto found = LargestLessOrEqual(
+      elf_symbols_by_address_.begin(), elf_symbols_by_address_.end(), relative_addr,
+      [this](size_t left_i, uint64_t addr) {
+        return elf_symbols_by_name_[left_i].relative_address < addr;
+      },
+      [this](size_t left_i, uint64_t addr) {
+        return elf_symbols_by_name_[left_i].relative_address == addr;
+      });
+  if (found == elf_symbols_by_address_.end())
+    return std::nullopt;
+
+  const ElfSymbolRecord& record = elf_symbols_by_name_[*found];
+  return Location(
+      absolute_address, FileLine(), 0, symbol_context,
+      fxl::MakeRefCounted<ElfSymbol>(const_cast<ModuleSymbolsImpl*>(this)->GetWeakPtr(), record));
 }
 
 Location ModuleSymbolsImpl::LocationForVariable(const SymbolContext& symbol_context,
@@ -528,16 +607,37 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& sym
   }
 }
 
-bool ModuleSymbolsImpl::HasBinary() const {
-  if (!binary_name_.empty()) {
-    return true;
+void ModuleSymbolsImpl::FillElfSymbols(
+    const std::map<std::string, llvm::ELF::Elf64_Sym>& elf_syms) {
+  FXL_DCHECK(elf_symbols_by_name_.empty());
+  FXL_DCHECK(elf_symbols_by_address_.empty());
+
+  // The |st_value| is the relative virtual address we want to index. Potentially we might want to
+  // save more flags and expose them in the ElfSymbol class.
+  elf_symbols_by_name_.reserve(elf_syms.size());
+  elf_symbols_by_address_.resize(elf_syms.size());
+  for (const auto& [name, sym] : elf_syms) {
+    // The symbol type is the low 4 bits. The higher bits encode the visibility which we don't
+    // care about. We only need to index objects and code.
+    int symbol_type = sym.st_info & 0xf;
+    if (symbol_type != elflib::STT_OBJECT && symbol_type != elflib::STT_FUNC &&
+        symbol_type != elflib::STT_TLS)
+      continue;
+
+    if (sym.st_value == 0)
+      continue;  // No address for this symbol. Probably imported.
+
+    size_t index = elf_symbols_by_name_.size();
+    elf_symbols_by_address_[index] = index;
+    elf_symbols_by_name_.emplace_back(sym.st_value, name);
   }
 
-  if (auto debug = elflib::ElfLib::Create(name_)) {
-    return debug->ProbeHasProgramBits();
-  }
-
-  return false;
+  std::sort(elf_symbols_by_address_.begin(), elf_symbols_by_address_.end(),
+            [this](size_t left_i, size_t right_i) {
+              const ElfSymbolRecord& left = elf_symbols_by_name_[left_i];
+              const ElfSymbolRecord& right = elf_symbols_by_name_[right_i];
+              return left.relative_address < right.relative_address;
+            });
 }
 
 }  // namespace zxdb

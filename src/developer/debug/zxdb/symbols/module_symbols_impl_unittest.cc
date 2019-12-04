@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
+#include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
@@ -417,6 +418,50 @@ TEST(ModuleSymbols, SkipPrologue) {
             skip_addrs[0].address());
   EXPECT_EQ(TestSymbolModule::kMyFunctionName,
             skip_addrs[0].symbol().Get()->AsFunction()->GetFullName());
+}
+
+TEST(ModuleSymbols, ElfSymbols) {
+  auto module_symbols = fxl::MakeRefCounted<ModuleSymbolsImpl>(
+      TestSymbolModule::GetCheckedInTestFileName(),
+      TestSymbolModule::GetStrippedCheckedInTestFileName(), "");
+  Err err = module_symbols->Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  // Give it a non-relative context to make sure that things are relative-ized going in and out.
+  SymbolContext symbol_context(0x1000000);
+
+  // Virtual tables have ELF symbols but not DWARF symbols, so to test that we read the ELF symbols
+  // properly, look one up.
+  const char kVirtualDerivedVtableName[] = "_ZTT14VirtualDerived";
+  const char kVirtualDerivedVtableUnmangledName[] = "VTT for VirtualDerived";
+  Identifier vtable_identifier((IdentifierComponent(kVirtualDerivedVtableName)));
+  std::vector<Location> result = module_symbols->ResolveInputLocation(
+      symbol_context, InputLocation(vtable_identifier), ResolveOptions());
+  ASSERT_EQ(1u, result.size());
+
+  // It should have found the ELF symbol.
+  ASSERT_TRUE(result[0].symbol());
+  auto elf_symbol = result[0].symbol().Get()->AsElfSymbol();
+  ASSERT_TRUE(elf_symbol);
+  EXPECT_EQ(kVirtualDerivedVtableName, elf_symbol->linkage_name());
+  EXPECT_EQ(kVirtualDerivedVtableUnmangledName, elf_symbol->GetFullName());
+
+  // The returned address should match the symbol info except for relative/absolute.
+  uint64_t absolute_addr = result[0].address();
+  EXPECT_EQ(absolute_addr, symbol_context.RelativeToAbsolute(elf_symbol->relative_address()));
+
+  // Looking up by that address should give back the name.
+  result = module_symbols->ResolveInputLocation(symbol_context, InputLocation(absolute_addr),
+                                                ResolveOptions());
+  ASSERT_EQ(1u, result.size());
+
+  // Symbols, names, and addresses should match as above.
+  ASSERT_TRUE(result[0].symbol());
+  elf_symbol = result[0].symbol().Get()->AsElfSymbol();
+  ASSERT_TRUE(elf_symbol);
+  EXPECT_EQ(kVirtualDerivedVtableName, elf_symbol->linkage_name());
+  EXPECT_EQ(kVirtualDerivedVtableUnmangledName, elf_symbol->GetFullName());
+  EXPECT_EQ(result[0].address(), symbol_context.RelativeToAbsolute(elf_symbol->relative_address()));
 }
 
 }  // namespace zxdb

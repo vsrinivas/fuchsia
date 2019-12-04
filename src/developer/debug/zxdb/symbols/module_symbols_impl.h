@@ -5,9 +5,11 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MODULE_SYMBOLS_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MODULE_SYMBOLS_IMPL_H_
 
+#include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 #include "gtest/gtest_prod.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/elf_symbol_record.h"
 #include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
@@ -88,8 +90,18 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   // Symbolizes the given address if possible. The function can be specified if it's already known
   // (some code paths have to compute that before calling). Otherwise, the address will be looked up
   // and the function computed if necessary.
+  //
+  // The DWARF and ELF versions can fail to match a symbol for that category. The general version
+  // will try both and will return a raw address if nothing matches.
   Location LocationForAddress(const SymbolContext& symbol_context, uint64_t absolute_address,
                               const ResolveOptions& options, const Function* optional_func) const;
+  std::optional<Location> DwarfLocationForAddress(const SymbolContext& symbol_context,
+                                                  uint64_t absolute_address,
+                                                  const ResolveOptions& options,
+                                                  const Function* optional_func) const;
+  std::optional<Location> ElfLocationForAddress(const SymbolContext& symbol_context,
+                                                uint64_t absolute_address,
+                                                const ResolveOptions& options) const;
 
   // Converts the given global or static variable to a Location. This doesn't work for local
   // variables which are dynamic and based on the current CPU state and stack.
@@ -110,6 +122,8 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                                        const ResolveOptions& options,
                                        std::vector<Location>* output) const;
 
+  void FillElfSymbols(const std::map<std::string, llvm::ELF::Elf64_Sym>& elf_syms);
+
   const std::string name_;
   const std::string binary_name_;
   const std::string build_id_;
@@ -125,6 +139,14 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   Index index_;
 
   std::map<std::string, uint64_t> plt_locations_;
+
+  // Sorted list of ELF symbols by mangled name. See also elf_symbols_by_address vector.
+  std::vector<ElfSymbolRecord> elf_symbols_by_name_;
+
+  // List of all ELF symbols sorted by address. There is nothing ensuring the addresses are unique
+  // so code should take care to allow for multiple matches. These indices refer to items inside the
+  // elf_symbols_by_name vector.
+  std::vector<size_t> elf_symbols_by_address_;
 
   fxl::RefPtr<DwarfSymbolFactory> symbol_factory_;
 

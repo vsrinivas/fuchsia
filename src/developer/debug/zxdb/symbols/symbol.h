@@ -26,6 +26,7 @@ class CodeBlock;
 class Collection;
 class CompileUnit;
 class DataMember;
+class ElfSymbol;
 class Enumeration;
 class Function;
 class FunctionType;
@@ -128,7 +129,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // Returns the module symbols associated with this symbol object. It can be null if the module
   // has been unloaded and there are still dangling references to symbols, and it can also be null
   // in some test situations.
-  fxl::WeakPtr<ModuleSymbols> GetModuleSymbols() const;
+  virtual fxl::WeakPtr<ModuleSymbols> GetModuleSymbols() const;
 
   // Returns the symbol context for this symbol in the given process. This requires the process so
   // it can look up what the module load address is for this symbol's module (the same module can be
@@ -154,6 +155,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   virtual const Collection* AsCollection() const;
   virtual const CompileUnit* AsCompileUnit() const;
   virtual const DataMember* AsDataMember() const;
+  virtual const ElfSymbol* AsElfSymbol() const;
   virtual const Enumeration* AsEnumeration() const;
   virtual const Function* AsFunction() const;
   virtual const FunctionType* AsFunctionType() const;
@@ -186,6 +188,9 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   }
   DataMember* AsDataMember() {
     return const_cast<DataMember*>(const_cast<const Symbol*>(this)->AsDataMember());
+  }
+  ElfSymbol* AsElfSymbol() {
+    return const_cast<ElfSymbol*>(const_cast<const Symbol*>(this)->AsElfSymbol());
   }
   Enumeration* AsEnumeration() {
     return const_cast<Enumeration*>(const_cast<const Symbol*>(this)->AsEnumeration());
