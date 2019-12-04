@@ -17,7 +17,7 @@ use {
     std::sync::{Arc, Mutex},
     wlan_common::{
         ie::{intersect, rsn::rsne, SupportedRate},
-        mac::{Aid, MacAddr},
+        mac::{Aid, CapabilityInfo, MacAddr},
     },
     wlan_rsn::{
         self,
@@ -116,6 +116,7 @@ struct AssociationError {
 /// Contains information from a successful association.
 struct Association {
     aid: Aid,
+    capabilities: CapabilityInfo,
     rates: Vec<u8>,
     rsna_link_state: Option<RsnaLinkState>,
 }
@@ -135,6 +136,8 @@ impl Authenticated {
         r_sta: &mut RemoteClient,
         ctx: &mut Context,
         aid_map: &mut aid::Map,
+        ap_capabilities: CapabilityInfo,
+        client_capablities: u16,
         ap_rates: &[SupportedRate],
         client_rates: &[u8],
         rsn_cfg: &Option<RsnCfg>,
@@ -172,39 +175,53 @@ impl Authenticated {
             reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
         })?;
 
-        let rates =
+        let (capabilities, rates) =
             if ctx.device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac) {
+                let capabilities = CapabilityInfo(client_capablities & ap_capabilities.raw());
+
                 // The IEEE 802.11 standard doesn't really specify what happens if the client rates
                 // mismatch the AP rates at this point: the client should have already determined
                 // the appropriate rates via the beacon or probe response frames. However, just to
                 // be safe, we intersect these rates here.
-                intersect::intersect_rates(intersect::ApRates(ap_rates), client_rates.into())
-                    .map_err(|error| AssociationError {
-                        error: format_err!(
-                            "could not intersect rates ({:?} + {:?}): {:?}",
-                            ap_rates,
-                            client_rates,
-                            error
-                        ),
-                        result_code: match error {
-                            intersect::IntersectRatesError::BasicRatesMismatch => {
-                                fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch
-                            }
-                            intersect::IntersectRatesError::NoApRatesSupported => {
-                                fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
-                            }
-                        },
-                        reason_code: fidl_mlme::ReasonCode::ReasonInvalidElement,
-                    })?
-                    .as_bytes()
-                    .to_vec()
+                let rates =
+                    intersect::intersect_rates(intersect::ApRates(ap_rates), client_rates.into())
+                        .map_err(|error| AssociationError {
+                            error: format_err!(
+                                "could not intersect rates ({:?} + {:?}): {:?}",
+                                ap_rates,
+                                client_rates,
+                                error
+                            ),
+                            result_code: match error {
+                                intersect::IntersectRatesError::BasicRatesMismatch => {
+                                    fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch
+                                }
+                                intersect::IntersectRatesError::NoApRatesSupported => {
+                                    fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
+                                }
+                            },
+                            reason_code: fidl_mlme::ReasonCode::ReasonInvalidElement,
+                        })?
+                        .as_bytes()
+                        .to_vec();
+
+                (capabilities, rates)
             } else {
                 // If we are using a FullMAC driver, don't do the intersection and just pass the
                 // client rates back: they won't be used meaningfully anyway.
-                client_rates.to_vec()
+                (CapabilityInfo(client_capablities), client_rates.to_vec())
             };
 
-        Ok(Association { aid, rates, rsna_link_state })
+        Ok(Association {
+            capabilities: capabilities
+                // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
+                // transmitted Beacon, Probe Response, (Re)Association Response frames if data
+                // confidentiality is required for all Data frames exchanged within the BSS.
+                .with_privacy(rsna_link_state.is_some()),
+            aid,
+            rates,
+            rsna_link_state,
+        })
     }
 
     /// Handles incoming association timeout events.
@@ -553,6 +570,8 @@ impl States {
         r_sta: &mut RemoteClient,
         ctx: &mut Context,
         aid_map: &mut aid::Map,
+        ap_capabilities: CapabilityInfo,
+        client_capablities: u16,
         ap_rates: &[SupportedRate],
         client_rates: &[u8],
         rsn_cfg: &Option<RsnCfg>,
@@ -564,16 +583,19 @@ impl States {
                     r_sta,
                     ctx,
                     aid_map,
+                    ap_capabilities,
+                    client_capablities,
                     ap_rates,
                     client_rates,
                     rsn_cfg,
                     s_rsne,
                 ) {
-                    Ok(Association { aid, rates, mut rsna_link_state }) => {
+                    Ok(Association { aid, capabilities, rates, mut rsna_link_state }) => {
                         r_sta.send_associate_resp(
                             ctx,
                             fidl_mlme::AssociateResultCodes::Success,
                             aid,
+                            capabilities,
                             rates,
                         );
 
@@ -596,7 +618,7 @@ impl States {
                     }
                     Err(AssociationError { error, result_code, reason_code }) => {
                         error!("client {:02X?} MLME-ASSOCIATE.indication: {}", r_sta.addr, error);
-                        r_sta.send_associate_resp(ctx, result_code, 0, vec![]);
+                        r_sta.send_associate_resp(ctx, result_code, 0, CapabilityInfo(0), vec![]);
                         r_sta.send_deauthenticate_req(ctx, reason_code);
                         state.transition_to(Authenticating).into()
                     }
@@ -607,6 +629,7 @@ impl States {
                     ctx,
                     fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
                     0,
+                    CapabilityInfo(0),
                     vec![],
                 );
                 self
@@ -865,6 +888,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
             &[0b11111000][..],
             &None,
@@ -881,11 +906,13 @@ mod tests {
             peer_sta_address,
             association_id,
             result_code,
+            cap,
             rates,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(association_id, 0);
             assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified);
+            assert_eq!(cap, 0);
             assert_eq!(rates, vec![]);
         });
     }
@@ -969,6 +996,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
             &[0b11111000][..],
             &None,
@@ -987,11 +1016,64 @@ mod tests {
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address,
             result_code,
+            cap,
             rates,
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).raw());
+            assert_eq!(rates, vec![0b11111000]);
+        });
+    }
+
+    #[test]
+    fn authenticated_goes_to_associated_no_rsn_differing_cap() {
+        let mut r_sta = make_remote_client();
+        let (mut ctx, mut mlme_stream, _) = make_env();
+
+        let state: States =
+            State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
+
+        let mut aid_map = aid::Map::default();
+        let state = state.handle_assoc_ind(
+            &mut r_sta,
+            &mut ctx,
+            &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true).with_spectrum_mgmt(true),
+            CapabilityInfo(0)
+                .with_short_preamble(true)
+                .with_spectrum_mgmt(true)
+                .with_radio_measurement(true)
+                .raw(),
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
+            &None,
+            None,
+        );
+
+        let (_, Associated { rsna_link_state, aid }) = match state {
+            States::Associated(state) => state.release_data(),
+            _ => panic!("unexpected_state"),
+        };
+
+        assert_variant!(rsna_link_state, None);
+        assert_eq!(aid, 1);
+
+        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
+        assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
+            peer_sta_address,
+            result_code,
+            cap,
+            rates,
+            ..
+        }) => {
+            assert_eq!(peer_sta_address, CLIENT_ADDR);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(
+                cap,
+                CapabilityInfo(0).with_short_preamble(true).with_spectrum_mgmt(true).raw(),
+            );
             assert_eq!(rates, vec![0b11111000]);
         });
     }
@@ -1009,6 +1091,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000), SupportedRate(0b01111001)][..],
             &[0b11111000, 0b01111010][..],
             &None,
@@ -1017,9 +1101,11 @@ mod tests {
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
+            cap,
             rates,
             ..
         }) => {
+            assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).raw());
             assert_eq!(rates, vec![0b11111000]);
         });
     }
@@ -1039,6 +1125,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[][..],
             &[0b11111000, 0b01111010][..],
             &None,
@@ -1047,9 +1135,11 @@ mod tests {
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
+            cap,
             rates,
             ..
         }) => {
+            assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).raw());
             assert_eq!(rates, vec![0b11111000, 0b01111010]);
         });
     }
@@ -1067,6 +1157,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111001)][..],
             &[0b11111000][..],
             &None,
@@ -1107,6 +1199,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b01111000)][..],
             &[][..],
             &None,
@@ -1151,6 +1245,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
             &[0b11111000][..],
             &None,
@@ -1200,6 +1296,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
             &[0b11111000][..],
             &None,
@@ -1252,6 +1350,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
             &[0b11111000][..],
             &Some(rsn_cfg),
@@ -1302,6 +1402,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
             &[0b11111000][..],
             &Some(rsn_cfg),
@@ -1320,11 +1422,74 @@ mod tests {
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address,
             result_code,
+            cap,
             rates,
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).with_privacy(true).raw());
+            assert_eq!(rates, vec![0b11111000]);
+        });
+
+        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
+        assert_variant!(mlme_event, MlmeRequest::Eapol(fidl_mlme::EapolRequest { .. }));
+    }
+
+    #[test]
+    fn authenticated_goes_to_associated_rsn_different_cap() {
+        let mut r_sta = make_remote_client();
+        let (mut ctx, mut mlme_stream, _) = make_env();
+
+        let state: States =
+            State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
+
+        let rsn_cfg = create_rsn_cfg(b"coolnet", b"password").unwrap().unwrap();
+
+        let mut s_rsne_vec = Vec::with_capacity(rsn_cfg.rsne.len());
+        rsn_cfg.rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
+
+        let mut aid_map = aid::Map::default();
+        let state = state.handle_assoc_ind(
+            &mut r_sta,
+            &mut ctx,
+            &mut aid_map,
+            CapabilityInfo(0)
+                .with_short_preamble(true)
+                .with_spectrum_mgmt(true)
+                .with_radio_measurement(true),
+            CapabilityInfo(0).with_short_preamble(true).with_spectrum_mgmt(true).raw(),
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
+            &Some(rsn_cfg),
+            Some(s_rsne_vec),
+        );
+
+        let (_, Associated { rsna_link_state, aid }) = match state {
+            States::Associated(state) => state.release_data(),
+            _ => panic!("unexpected_state"),
+        };
+
+        assert_eq!(aid, 1);
+        assert_variant!(rsna_link_state, Some(_));
+
+        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
+        assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
+            peer_sta_address,
+            result_code,
+            cap,
+            rates,
+            ..
+        }) => {
+            assert_eq!(peer_sta_address, CLIENT_ADDR);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(
+                cap,
+                CapabilityInfo(0)
+                    .with_short_preamble(true)
+                    .with_spectrum_mgmt(true)
+                    .with_privacy(true)
+                    .raw());
             assert_eq!(rates, vec![0b11111000]);
         });
 

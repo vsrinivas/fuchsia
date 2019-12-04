@@ -547,7 +547,7 @@ mod tests {
             beacon_period: 5,
             dtim_period: 1,
             channel: 2,
-            cap: 0,
+            cap: CapabilityInfo(0).raw(),
             rates: vec![0b11111000],
             country: fidl_mlme::Country { alpha2: *b"xx", suffix: fidl_mlme::COUNTRY_ENVIRON_ALL },
             mesh_id: vec![],
@@ -605,7 +605,7 @@ mod tests {
             beacon_period: 5,
             dtim_period: 1,
             channel: 2,
-            cap: 0,
+            cap: CapabilityInfo(0).raw(),
             rates: vec![],
             country: fidl_mlme::Country { alpha2: *b"xx", suffix: fidl_mlme::COUNTRY_ENVIRON_ALL },
             mesh_id: vec![],
@@ -972,6 +972,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
+                cap: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
         })
@@ -1078,6 +1079,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
+                cap: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3],
             },
         })

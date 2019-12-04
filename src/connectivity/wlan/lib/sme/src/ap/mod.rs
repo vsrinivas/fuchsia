@@ -16,7 +16,6 @@ use rsn::*;
 
 use {
     crate::{
-        clone_utils::clone_band_cap,
         phy_selection::{derive_phy_cbw_for_ap, get_device_band_info},
         responder::Responder,
         sink::MlmeSink,
@@ -31,7 +30,7 @@ use {
     wlan_common::{
         channel::{Channel, Phy},
         ie::{rsn::rsne::Rsne, SupportedRate},
-        RadioConfig,
+        mac, RadioConfig,
     },
     wlan_rsn::{self, psk},
 };
@@ -63,7 +62,8 @@ enum State {
         ctx: Context,
         ssid: Ssid,
         rsn_cfg: Option<RsnCfg>,
-        band_cap: fidl_mlme::BandCapabilities,
+        capabilities: mac::CapabilityInfo,
+        rates: Vec<SupportedRate>,
         responder: Responder<StartResult>,
         start_timeout: EventId,
     },
@@ -81,6 +81,7 @@ pub struct RsnCfg {
 struct InfraBss {
     ssid: Ssid,
     rsn_cfg: Option<RsnCfg>,
+    capabilities: mac::CapabilityInfo,
     rates: Vec<SupportedRate>,
     clients: HashMap<MacAddr, RemoteClient>,
     aid_map: aid::Map,
@@ -156,15 +157,29 @@ impl ApSme {
                         responder.respond(StartResult::InternalError);
                         return State::Idle { ctx };
                     },
-                    Some(band_cap) => clone_band_cap(band_cap)
+                    Some(band_cap) => band_cap
                 };
+
+                let capabilities = mac::CapabilityInfo(band_cap.cap)
+                    // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
+                    // subfield to 0 within transmitted Beacon or Probe Response frames.
+                    .with_ess(true)
+                    .with_ibss(false)
+                    // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
+                    // transmitted Beacon, Probe Response, (Re)Association Response frames if data
+                    // confidentiality is required for all Data frames exchanged within the BSS.
+                    .with_privacy(rsn_cfg.is_some());
 
                 let req = create_start_request(
                     &op,
                     &config.ssid,
                     rsn_cfg.as_ref(),
-                    &band_cap,
+                    capabilities,
+                    &band_cap.rates,
                 );
+
+                let rates = band_cap.rates.iter().map(|r| SupportedRate(*r)).collect();
+
                 ctx.mlme_sink.send(MlmeRequest::Start(req));
                 let event = Event::Sme { event: SmeEvent::StartTimeout };
                 let start_timeout = ctx.timer.schedule(event);
@@ -173,7 +188,8 @@ impl ApSme {
                     ctx,
                     ssid: config.ssid,
                     rsn_cfg,
-                    band_cap,
+                    capabilities,
+                    rates,
                     responder,
                     start_timeout,
                 }
@@ -250,17 +266,31 @@ impl super::Station for ApSme {
                 warn!("received MlmeEvent while ApSme is idle {:?}", event);
                 state
             }
-            State::Starting { ctx, ssid, rsn_cfg, band_cap, responder, start_timeout } => {
-                match event {
-                    MlmeEvent::StartConf { resp } => {
-                        handle_start_conf(resp, ctx, ssid, rsn_cfg, band_cap, responder)
-                    }
-                    _ => {
-                        warn!("received MlmeEvent while ApSme is starting {:?}", event);
-                        State::Starting { ctx, ssid, rsn_cfg, band_cap, responder, start_timeout }
+            State::Starting {
+                ctx,
+                ssid,
+                rsn_cfg,
+                capabilities,
+                rates,
+                responder,
+                start_timeout,
+            } => match event {
+                MlmeEvent::StartConf { resp } => {
+                    handle_start_conf(resp, ctx, ssid, rsn_cfg, capabilities, rates, responder)
+                }
+                _ => {
+                    warn!("received MlmeEvent while ApSme is starting {:?}", event);
+                    State::Starting {
+                        ctx,
+                        ssid,
+                        rsn_cfg,
+                        capabilities,
+                        rates,
+                        responder,
+                        start_timeout,
                     }
                 }
-            }
+            },
             State::Started { ref mut bss } => {
                 match event {
                     MlmeEvent::AuthenticateInd { ind } => bss.handle_auth_ind(ind),
@@ -294,26 +324,41 @@ impl super::Station for ApSme {
     fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
         self.state = self.state.take().map(|mut state| match state {
             State::Idle { .. } => state,
-            State::Starting { start_timeout, ctx, responder, band_cap, ssid, rsn_cfg } => {
-                match timed_event.event {
-                    Event::Sme { event } => match event {
-                        SmeEvent::StartTimeout if start_timeout == timed_event.id => {
-                            warn!("Timed out waiting for MLME to start");
-                            responder.respond(StartResult::TimedOut);
-                            State::Idle { ctx }
-                        }
-                        _ => State::Starting {
-                            start_timeout,
-                            ctx,
-                            responder,
-                            band_cap,
-                            ssid,
-                            rsn_cfg,
-                        },
+            State::Starting {
+                start_timeout,
+                ctx,
+                responder,
+                capabilities,
+                rates,
+                ssid,
+                rsn_cfg,
+            } => match timed_event.event {
+                Event::Sme { event } => match event {
+                    SmeEvent::StartTimeout if start_timeout == timed_event.id => {
+                        warn!("Timed out waiting for MLME to start");
+                        responder.respond(StartResult::TimedOut);
+                        State::Idle { ctx }
+                    }
+                    _ => State::Starting {
+                        start_timeout,
+                        ctx,
+                        responder,
+                        capabilities,
+                        rates,
+                        ssid,
+                        rsn_cfg,
                     },
-                    _ => State::Starting { start_timeout, ctx, responder, band_cap, ssid, rsn_cfg },
-                }
-            }
+                },
+                _ => State::Starting {
+                    start_timeout,
+                    ctx,
+                    responder,
+                    capabilities,
+                    rates,
+                    ssid,
+                    rsn_cfg,
+                },
+            },
             State::Started { ref mut bss } => {
                 bss.handle_timeout(timed_event);
                 state
@@ -342,7 +387,8 @@ fn handle_start_conf(
     ctx: Context,
     ssid: Ssid,
     rsn_cfg: Option<RsnCfg>,
-    band_cap: fidl_mlme::BandCapabilities,
+    capabilities: mac::CapabilityInfo,
+    rates: Vec<SupportedRate>,
     responder: Responder<StartResult>,
 ) -> State {
     match conf.result_code {
@@ -354,7 +400,8 @@ fn handle_start_conf(
                     rsn_cfg,
                     clients: HashMap::new(),
                     aid_map: aid::Map::default(),
-                    rates: band_cap.rates.iter().map(|r| SupportedRate(*r)).collect(),
+                    capabilities,
+                    rates,
                     ctx,
                 },
             }
@@ -446,6 +493,8 @@ impl InfraBss {
         client.handle_assoc_ind(
             &mut self.ctx,
             &mut self.aid_map,
+            self.capabilities,
+            ind.cap,
             &self.rates,
             &ind.rates,
             &self.rsn_cfg,
@@ -530,7 +579,8 @@ fn create_start_request(
     op: &OpRadioConfig,
     ssid: &Ssid,
     ap_rsn: Option<&RsnCfg>,
-    band_cap: &fidl_mlme::BandCapabilities,
+    capabilities: mac::CapabilityInfo,
+    rates: &[u8],
 ) -> fidl_mlme::StartRequest {
     let rsne_bytes = ap_rsn.as_ref().map(|RsnCfg { rsne, .. }| {
         let mut buf = Vec::with_capacity(rsne.len());
@@ -548,8 +598,8 @@ fn create_start_request(
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: op.chan.primary,
-        cap: band_cap.cap,
-        rates: band_cap.rates.clone(),
+        cap: capabilities.raw(),
+        rates: rates.to_vec(),
         country: fidl_mlme::Country {
             // TODO(WLAN-870): Get config from wlancfg
             alpha2: ['U' as u8, 'S' as u8],
@@ -647,7 +697,10 @@ mod tests {
 
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Start(start_req))) => {
             assert_eq!(start_req.ssid, SSID.to_vec());
-            assert_eq!(start_req.cap, 0b00000000_00100000);
+            assert_eq!(
+                start_req.cap,
+                mac::CapabilityInfo(0).with_short_preamble(true).with_ess(true).raw(),
+            );
             assert_eq!(start_req.bss_type, fidl_mlme::BssTypes::Infrastructure);
             assert_ne!(start_req.beacon_period, 0);
             assert_ne!(start_req.dtim_period, 0);
@@ -749,7 +802,12 @@ mod tests {
         client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
 
         sme.on_mlme_event(client.create_assoc_ind(None));
-        client.verify_assoc_resp(&mut mlme_stream, 1, fidl_mlme::AssociateResultCodes::Success);
+        client.verify_assoc_resp(
+            &mut mlme_stream,
+            1,
+            fidl_mlme::AssociateResultCodes::Success,
+            false,
+        );
     }
 
     #[test]
@@ -759,7 +817,12 @@ mod tests {
         client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
 
         sme.on_mlme_event(client.create_assoc_ind(Some(RSNE.to_vec())));
-        client.verify_assoc_resp(&mut mlme_stream, 1, fidl_mlme::AssociateResultCodes::Success);
+        client.verify_assoc_resp(
+            &mut mlme_stream,
+            1,
+            fidl_mlme::AssociateResultCodes::Success,
+            true,
+        );
         client.verify_eapol_req(&mut mlme_stream);
     }
 
@@ -770,9 +833,8 @@ mod tests {
         client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
 
         sme.on_mlme_event(client.create_assoc_ind(None));
-        client.verify_assoc_resp(
+        client.verify_refused_assoc_resp(
             &mut mlme_stream,
-            0,
             fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
         );
     }
@@ -787,7 +849,12 @@ mod tests {
         assert_variant!(time_stream.try_next(), Ok(Some(_)));
 
         sme.on_mlme_event(client.create_assoc_ind(Some(RSNE.to_vec())));
-        client.verify_assoc_resp(&mut mlme_stream, 1, fidl_mlme::AssociateResultCodes::Success);
+        client.verify_assoc_resp(
+            &mut mlme_stream,
+            1,
+            fidl_mlme::AssociateResultCodes::Success,
+            true,
+        );
 
         // Drain the RSNA negotiation timeout message.
         assert_variant!(time_stream.try_next(), Ok(Some(_)));
@@ -820,7 +887,12 @@ mod tests {
         client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
 
         sme.on_mlme_event(client.create_assoc_ind(None));
-        client.verify_assoc_resp(&mut mlme_stream, 1, fidl_mlme::AssociateResultCodes::Success);
+        client.verify_assoc_resp(
+            &mut mlme_stream,
+            1,
+            fidl_mlme::AssociateResultCodes::Success,
+            false,
+        );
     }
 
     #[test]
@@ -836,11 +908,21 @@ mod tests {
         client2.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
 
         sme.on_mlme_event(client1.create_assoc_ind(Some(RSNE.to_vec())));
-        client1.verify_assoc_resp(&mut mlme_stream, 1, fidl_mlme::AssociateResultCodes::Success);
+        client1.verify_assoc_resp(
+            &mut mlme_stream,
+            1,
+            fidl_mlme::AssociateResultCodes::Success,
+            true,
+        );
         client1.verify_eapol_req(&mut mlme_stream);
 
         sme.on_mlme_event(client2.create_assoc_ind(Some(RSNE.to_vec())));
-        client2.verify_assoc_resp(&mut mlme_stream, 2, fidl_mlme::AssociateResultCodes::Success);
+        client2.verify_assoc_resp(
+            &mut mlme_stream,
+            2,
+            fidl_mlme::AssociateResultCodes::Success,
+            true,
+        );
         client2.verify_eapol_req(&mut mlme_stream);
     }
 
@@ -998,6 +1080,7 @@ mod tests {
                     listen_interval: 100,
                     ssid: Some(SSID.to_vec()),
                     rsne,
+                    cap: mac::CapabilityInfo(0).with_short_preamble(true).raw(),
                     rates: vec![
                         0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c,
                     ],
@@ -1022,12 +1105,31 @@ mod tests {
             mlme_stream: &mut MlmeStream,
             aid: Aid,
             result_code: fidl_mlme::AssociateResultCodes,
+            privacy: bool,
         ) {
             let msg = mlme_stream.try_next();
             assert_variant!(msg, Ok(Some(MlmeRequest::AssocResponse(assoc_resp))) => {
                 assert_eq!(assoc_resp.peer_sta_address, self.addr);
                 assert_eq!(assoc_resp.association_id, aid);
                 assert_eq!(assoc_resp.result_code, result_code);
+                assert_eq!(
+                    assoc_resp.cap,
+                    mac::CapabilityInfo(0).with_short_preamble(true).with_privacy(privacy).raw(),
+                );
+            });
+        }
+
+        fn verify_refused_assoc_resp(
+            &self,
+            mlme_stream: &mut MlmeStream,
+            result_code: fidl_mlme::AssociateResultCodes,
+        ) {
+            let msg = mlme_stream.try_next();
+            assert_variant!(msg, Ok(Some(MlmeRequest::AssocResponse(assoc_resp))) => {
+                assert_eq!(assoc_resp.peer_sta_address, self.addr);
+                assert_eq!(assoc_resp.association_id, 0);
+                assert_eq!(assoc_resp.result_code, result_code);
+                assert_eq!(assoc_resp.cap, 0);
             });
         }
 

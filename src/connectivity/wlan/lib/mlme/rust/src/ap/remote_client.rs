@@ -370,7 +370,7 @@ impl RemoteClient {
                     qos: false,
                     rates_cnt: rates.len() as u16,
                     rates: rates_arr,
-                    cap_info: 0,
+                    cap_info: capabilities.raw(),
 
                     // TODO(40917): Correctly support all of this.
                     has_ht_cap: false,
@@ -509,12 +509,13 @@ impl RemoteClient {
     fn handle_assoc_req_frame(
         &self,
         ctx: &mut Context,
+        capabilities: mac::CapabilityInfo,
         listen_interval: u16,
         ssid: Option<Vec<u8>>,
         rates: Vec<u8>,
         rsne: Option<Vec<u8>>,
     ) -> Result<(), ClientRejection> {
-        ctx.send_mlme_assoc_ind(self.addr.clone(), listen_interval, ssid, rates, rsne)
+        ctx.send_mlme_assoc_ind(self.addr.clone(), listen_interval, ssid, capabilities, rates, rsne)
             .map_err(ClientRejection::SmeSendError)
     }
 
@@ -662,6 +663,7 @@ impl RemoteClient {
     pub fn handle_mgmt_frame<B: ByteSlice>(
         &mut self,
         ctx: &mut Context,
+        capabilities: mac::CapabilityInfo,
         ssid: Option<Vec<u8>>,
         mgmt_hdr: mac::MgmtHdr,
         body: B,
@@ -710,7 +712,14 @@ impl RemoteClient {
                     }
                 }
 
-                self.handle_assoc_req_frame(ctx, assoc_req_hdr.listen_interval, ssid, rates, rsne)
+                self.handle_assoc_req_frame(
+                    ctx,
+                    capabilities,
+                    assoc_req_hdr.listen_interval,
+                    ssid,
+                    rates,
+                    rsne,
+                )
             }
             mac::MgmtBody::Deauthentication { deauth_hdr, .. } => {
                 self.handle_deauth_frame(ctx, deauth_hdr.reason_code)
@@ -1251,6 +1260,7 @@ mod tests {
         r_sta
             .handle_assoc_req_frame(
                 &mut ctx,
+                CapabilityInfo(0).with_short_preamble(true),
                 1,
                 Some(b"coolnet".to_vec()),
                 vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -1267,6 +1277,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
                 ssid: Some(b"coolnet".to_vec()),
+                cap: CapabilityInfo(0).with_short_preamble(true).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: None,
             },
@@ -1742,6 +1753,7 @@ mod tests {
         r_sta
             .handle_mgmt_frame(
                 &mut ctx,
+                mac::CapabilityInfo(0),
                 None,
                 mac::MgmtHdr {
                     frame_ctrl: mac::FrameControl(0b00000000_10110000), // Auth frame
@@ -1771,6 +1783,7 @@ mod tests {
         r_sta
             .handle_mgmt_frame(
                 &mut ctx,
+                mac::CapabilityInfo(0),
                 Some(b"coolnet".to_vec()),
                 mac::MgmtHdr {
                     frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
@@ -1800,6 +1813,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 10,
                 ssid: Some(b"coolnet".to_vec()),
+                cap: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: Some(vec![48, 2, 77, 88]),
             },
@@ -1818,6 +1832,7 @@ mod tests {
             r_sta
                 .handle_mgmt_frame(
                     &mut ctx,
+                    mac::CapabilityInfo(0),
                     None,
                     mac::MgmtHdr {
                         frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
@@ -1879,6 +1894,7 @@ mod tests {
             r_sta
                 .handle_mgmt_frame(
                     &mut ctx,
+                    mac::CapabilityInfo(0),
                     None,
                     mac::MgmtHdr {
                         frame_ctrl: mac::FrameControl(0b00000000_00010000), // Assoc resp frame
@@ -1913,6 +1929,7 @@ mod tests {
         r_sta
             .handle_mgmt_frame(
                 &mut ctx,
+                mac::CapabilityInfo(0),
                 None,
                 mac::MgmtHdr {
                     frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame

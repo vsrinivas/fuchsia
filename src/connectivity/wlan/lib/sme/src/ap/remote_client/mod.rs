@@ -17,7 +17,10 @@ use {
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::error,
-    wlan_common::{ie::SupportedRate, mac::Aid},
+    wlan_common::{
+        ie::SupportedRate,
+        mac::{Aid, CapabilityInfo},
+    },
     wlan_rsn::key::exchange::Key,
 };
 
@@ -58,6 +61,8 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         aid_map: &mut aid::Map,
+        ap_capabilities: CapabilityInfo,
+        client_capabilities: u16,
         ap_rates: &[SupportedRate],
         client_rates: &[u8],
         rsn_cfg: &Option<RsnCfg>,
@@ -68,6 +73,8 @@ impl RemoteClient {
             self,
             ctx,
             aid_map,
+            ap_capabilities,
+            client_capabilities,
             ap_rates,
             client_rates,
             rsn_cfg,
@@ -120,12 +127,14 @@ impl RemoteClient {
         ctx: &mut Context,
         result_code: fidl_mlme::AssociateResultCodes,
         aid: Aid,
+        capabilities: CapabilityInfo,
         rates: Vec<u8>,
     ) {
         ctx.mlme_sink.send(MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address: self.addr.clone(),
             result_code,
             association_id: aid,
+            cap: capabilities.0,
             rates,
         }))
     }
@@ -244,6 +253,8 @@ mod tests {
         r_sta.handle_assoc_ind(
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
             &[0b11111000][..],
             &None,
@@ -261,6 +272,8 @@ mod tests {
         r_sta.handle_assoc_ind(
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
             &[0b11111000][..],
             &None,
@@ -279,6 +292,8 @@ mod tests {
         r_sta.handle_assoc_ind(
             &mut ctx,
             &mut aid_map,
+            CapabilityInfo(0).with_short_preamble(true),
+            CapabilityInfo(0).with_short_preamble(true).raw(),
             &[SupportedRate(0b11111000)][..],
             &[0b11111000][..],
             &None,
@@ -335,6 +350,7 @@ mod tests {
             &mut ctx,
             fidl_mlme::AssociateResultCodes::RefusedApOutOfMemory,
             1,
+            CapabilityInfo(0).with_short_preamble(true),
             vec![1, 2, 3],
         );
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
@@ -342,11 +358,13 @@ mod tests {
             peer_sta_address,
             result_code,
             association_id,
+            cap,
             rates,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedApOutOfMemory);
             assert_eq!(association_id, 1);
+            assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).raw());
             assert_eq!(rates, vec![1, 2, 3]);
         });
     }

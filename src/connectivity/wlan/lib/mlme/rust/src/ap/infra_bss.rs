@@ -160,18 +160,13 @@ impl InfraBss {
         resp: fidl_mlme::AssociateResponse,
     ) -> Result<(), Error> {
         let client = get_client_mut(&mut self.clients, resp.peer_sta_address)?;
+
         client
             .handle_mlme_assoc_resp(
                 ctx,
                 self.rsne.is_some(),
                 self.channel,
-                // We don't set the ESS bit here: IEEE Std 802.11-2016, 9.4.1.4 only specifies it
-                // for Beacon and Probe Response frames, and NOT Association Response frames.
-                self.capabilities
-                    // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
-                    // transmitted Beacon, Probe Response, (Re)Association Response frames if data
-                    // confidentiality is required for all Data frames exchanged within the BSS.
-                    .with_privacy(self.rsne.is_some()),
+                CapabilityInfo(resp.cap),
                 resp.result_code,
                 resp.association_id,
                 &resp.rates,
@@ -221,15 +216,7 @@ impl InfraBss {
             ctx.bssid,
             0,
             self.beacon_interval,
-            self.capabilities
-                // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
-                // subfield to 0 within transmitted Beacon or Probe Response frames.
-                .with_ess(true)
-                .with_ibss(false)
-                // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
-                // transmitted Beacon, Probe Response, (Re)Association Response frames if data
-                // confidentiality is required for all Data frames exchanged within the BSS.
-                .with_privacy(self.rsne.is_some()),
+            self.capabilities,
             &self.ssid,
             &self.rates,
             self.channel,
@@ -265,7 +252,13 @@ impl InfraBss {
             None => new_client.get_or_insert(RemoteClient::new(client_addr)),
         };
 
-        if let Err(e) = client.handle_mgmt_frame(ctx, Some(self.ssid.clone()), mgmt_hdr, body) {
+        if let Err(e) = client.handle_mgmt_frame(
+            ctx,
+            self.capabilities,
+            Some(self.ssid.clone()),
+            mgmt_hdr,
+            body,
+        ) {
             return Err(Rejection::Client(client_addr, e));
         }
 
@@ -381,12 +374,7 @@ mod tests {
     const CLIENT_ADDR2: MacAddr = [3u8; 6];
 
     fn make_context(device: Device, scheduler: Scheduler) -> Context {
-        Context::new(
-            device,
-            FakeBufferProvider::new(),
-            Timer::<TimedEvent>::new(scheduler),
-            BSSID,
-        )
+        Context::new(device, FakeBufferProvider::new(), Timer::<TimedEvent>::new(scheduler), BSSID)
     }
 
     fn make_eth_frame(
@@ -410,7 +398,7 @@ mod tests {
             &mut ctx,
             vec![1, 2, 3, 4, 5],
             TimeUnit::DEFAULT_BEACON_INTERVAL,
-            CapabilityInfo(0),
+            CapabilityInfo(0).with_ess(true),
             vec![0b11111000],
             1,
             None,
@@ -611,6 +599,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
+                cap: 0,
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
         )
@@ -648,7 +637,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
-            CapabilityInfo(0b00000000_00001000),
+            CapabilityInfo(0).with_short_preamble(true).with_ess(true),
             vec![0b11111000],
             1,
             None,
@@ -663,6 +652,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
+                cap: CapabilityInfo(0).with_short_preamble(true).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
         )
@@ -679,7 +669,7 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
                 // Association response header:
-                0b00001000, 0b00000000, // Capabilities
+                0b00100000, 0b00000000, // Capabilities
                 0, 0, // status code
                 1, 0, // AID
                 // IEs
@@ -758,6 +748,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
+                cap: 0,
                 rates: vec![1, 2, 3],
             },
         )
@@ -925,6 +916,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 10,
                 ssid: Some(b"coolnet".to_vec()),
+                cap: 0,
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: Some(vec![48, 2, 77, 88]),
             },

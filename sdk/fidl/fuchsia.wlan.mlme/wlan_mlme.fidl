@@ -376,7 +376,7 @@ struct AssociateConfirm {
 
 struct AssociateIndication {
     array<uint8>:6 peer_sta_address;
-    // CapabilityInformation
+    CapabilityInfo cap;
     uint16 listen_interval;
     bytes? ssid;
     bytes:RATES_MAX_LEN rates;
@@ -391,7 +391,12 @@ struct AssociateIndication {
 struct AssociateResponse {
     array<uint8>:6 peer_sta_address;
     AssociateResultCodes result_code;
+
     uint16 association_id;
+
+    // This is not part of the MLME SAP, but we need this to set the association context state in
+    // the MLME.
+    CapabilityInfo cap;
 
     // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
     // them up.

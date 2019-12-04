@@ -96,6 +96,7 @@ impl Context {
         peer_sta_address: MacAddr,
         listen_interval: u16,
         ssid: Option<Vec<u8>>,
+        capabilities: mac::CapabilityInfo,
         rates: Vec<u8>,
         rsne: Option<Vec<u8>>,
     ) -> Result<(), Error> {
@@ -104,6 +105,7 @@ impl Context {
                 peer_sta_address,
                 listen_interval,
                 ssid,
+                cap: capabilities.raw(),
                 rates,
                 rsne,
                 // TODO(37891): Send everything else (e.g. HT capabilities).
@@ -407,7 +409,7 @@ mod test {
             device::FakeDevice,
             timer::{FakeScheduler, Scheduler},
         },
-        wlan_common::assert_variant,
+        wlan_common::{assert_variant, mac},
     };
 
     const CLIENT_ADDR: MacAddr = [1u8; 6];
@@ -461,8 +463,15 @@ mod test {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_mlme_assoc_ind(CLIENT_ADDR, 1, Some(b"coolnet".to_vec()), vec![1, 2, 3], None)
-            .expect("expected OK");
+        ctx.send_mlme_assoc_ind(
+            CLIENT_ADDR,
+            1,
+            Some(b"coolnet".to_vec()),
+            mac::CapabilityInfo(0),
+            vec![1, 2, 3],
+            None,
+        )
+        .expect("expected OK");
         let msg = fake_device
             .next_mlme_msg::<fidl_mlme::AssociateIndication>()
             .expect("expected MLME message");
@@ -472,6 +481,7 @@ mod test {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
                 ssid: Some(b"coolnet".to_vec()),
+                cap: mac::CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3],
                 rsne: None,
             },
