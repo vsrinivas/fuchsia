@@ -159,7 +159,7 @@ impl RoutingTest {
     /// Construct a new `RoutingTest` from the given builder.
     async fn from_builder(mut builder: RoutingTestBuilder) -> Self {
         // Ensure that kernel logging has been set up
-        let _ = klog::KernelLogger::init();
+        klog::KernelLogger::init();
 
         let mut resolver = ResolverRegistry::new();
         let runner = Arc::new(MockRunner::new());

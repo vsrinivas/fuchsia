@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    failure::ResultExt,
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
     std::fmt,
-    std::panic,
+    std::{panic, sync::Once},
 };
 
 const MAX_LOG_LEVEL: log::Level = log::Level::Info;
@@ -37,12 +37,15 @@ impl KernelLogger {
     /// Also registers a panic hook that prints the panic payload to the logger before running the
     /// default panic hook.
     ///
-    /// Returns an error if this or something else already called [log::set_logger()].
-    pub fn init() -> Result<(), Error> {
-        log::set_logger(&*LOGGER).context("Failed to set KernelLogger as global logger")?;
-        log::set_max_level(MAX_LOG_LEVEL.to_level_filter());
-        Self::install_panic_hook();
-        Ok(())
+    /// This function is idempotent, and will not re-initialize the global logger on subsequent
+    /// calls.
+    pub fn init() {
+        static INIT: Once = Once::new();
+        INIT.call_once(|| {
+            log::set_logger(&*LOGGER).expect("Failed to set KernelLogger as global logger");
+            log::set_max_level(MAX_LOG_LEVEL.to_level_filter());
+            Self::install_panic_hook();
+        });
     }
 
     /// Register a panic hook that prints the panic payload to the logger before running the
@@ -96,22 +99,7 @@ impl log::Log for KernelLogger {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        fuchsia_zircon::AsHandleRef,
-        log::*,
-        rand::Rng,
-        std::{panic, sync::Once},
-    };
-
-    // KernelLogger::init/log::set_logger will fail if called more than once and there's no way to
-    // reset.
-    fn init_logger_once() {
-        static INIT: Once = Once::new();
-        INIT.call_once(|| {
-            KernelLogger::init().unwrap();
-        });
-    }
+    use {super::*, fuchsia_zircon::AsHandleRef, log::*, rand::Rng, std::panic};
 
     // expect_message_in_debuglog will read the last 10000 messages in zircon's debuglog, looking
     // for a message that equals `sent_msg`. If found, the function returns. If the first 10,000
@@ -152,7 +140,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let logged_value: u64 = rng.gen();
 
-        init_logger_once();
+        KernelLogger::init();
         info!("log_test {}", logged_value);
 
         expect_message_in_debuglog(format!("[component_manager] INFO: log_test {}", logged_value));
@@ -163,7 +151,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let logged_value: u64 = rng.gen();
 
-        init_logger_once();
+        KernelLogger::init();
         warn!("log_test {}", logged_value);
 
         expect_message_in_debuglog(format!("[component_manager] WARN: log_test {}", logged_value));
@@ -174,7 +162,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let logged_value: u64 = rng.gen();
 
-        init_logger_once();
+        KernelLogger::init();
         error!("log_test {}", logged_value);
 
         expect_message_in_debuglog(format!("[component_manager] ERROR: log_test {}", logged_value));
@@ -200,7 +188,7 @@ mod tests {
             ));
         }));
 
-        init_logger_once();
+        KernelLogger::init();
         panic!("panic_test {}", logged_value);
     }
 }

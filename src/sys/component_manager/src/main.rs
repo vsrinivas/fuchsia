@@ -28,7 +28,7 @@ fn main() -> Result<(), Error> {
         println!("Panic in component_manager, aborting process.");
         process::abort();
     }));
-    klog::KernelLogger::init().expect("Failed to initialize logger");
+    klog::KernelLogger::init();
     let args = match startup::Arguments::from_args() {
         Ok(args) => args,
         Err(err) => {
