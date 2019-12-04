@@ -192,30 +192,30 @@ bool AudioRendererImpl::ValidateConfig() {
   }
 
   // Compute the number of fractional frames per PTS tick.
-  uint32_t fps = format()->stream_type().frames_per_second;
-  uint32_t frac_fps = fps << kPtsFractionalBits;
+  FractionalFrames<uint32_t> frac_fps(format()->stream_type().frames_per_second);
   frac_frames_per_pts_tick_ =
-      TimelineRate::Product(pts_ticks_per_second_.Inverse(), TimelineRate(frac_fps, 1));
+      TimelineRate::Product(pts_ticks_per_second_.Inverse(), TimelineRate(frac_fps.raw_value(), 1));
 
   // Compute the PTS continuity threshold expressed in fractional input frames.
   if (!pts_continuity_threshold_set_) {
     // The user has not explicitly set a continuity threshold. Default to 1/2
     // of a PTS tick expressed in fractional input frames, rounded up.
-    pts_continuity_threshold_frac_frame_ = (frac_frames_per_pts_tick_.Scale(1) + 1) >> 1;
-  } else {
     pts_continuity_threshold_frac_frame_ =
-        static_cast<double>(frac_fps) * pts_continuity_threshold_;
+        FractionalFrames<int64_t>::FromRaw((frac_frames_per_pts_tick_.Scale(1) + 1) >> 1);
+  } else {
+    pts_continuity_threshold_frac_frame_ = FractionalFrames<int64_t>::FromRaw(
+        static_cast<double>(frac_fps.raw_value()) * pts_continuity_threshold_);
   }
 
   AUD_VLOG_OBJ(TRACE, this) << " threshold_set_: " << pts_continuity_threshold_set_
                             << ", thres_frac_frame_: " << std::hex
-                            << pts_continuity_threshold_frac_frame_;
+                            << pts_continuity_threshold_frac_frame_.raw_value();
 
   // Compute the number of fractional frames per reference clock tick.
   //
   // TODO(mpuryear): handle the case where the reference clock nominal rate is
   // something other than CLOCK_MONOTONIC
-  frac_frames_per_ref_tick_ = TimelineRate(frac_fps, 1000000000u);
+  frac_frames_per_ref_tick_ = TimelineRate(frac_fps.raw_value(), 1000000000u);
 
   // TODO(mpuryear): Precompute anything else needed here. Adding links to other
   // outputs (and selecting resampling filters) might belong here as well.
@@ -235,7 +235,7 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
   // We should not be calling this, if transformation is already valid.
   FX_DCHECK(!pts_to_frac_frames_valid_);
   pts_to_frac_frames_ =
-      TimelineFunction(next_frac_frame_pts_, first_pts, frac_frames_per_pts_tick_);
+      TimelineFunction(next_frac_frame_pts_.raw_value(), first_pts, frac_frames_per_pts_tick_);
   pts_to_frac_frames_valid_ = true;
 
   AUD_VLOG_OBJ(TRACE, this) << " (" << first_pts
@@ -245,7 +245,8 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
                             << ", rdelta:" << pts_to_frac_frames_.reference_delta();
 }
 
-void AudioRendererImpl::UnderflowOccurred(int64_t frac_source_start, int64_t frac_source_mix_point,
+void AudioRendererImpl::UnderflowOccurred(FractionalFrames<int64_t> frac_source_start,
+                                          FractionalFrames<int64_t> frac_source_mix_point,
                                           zx::duration underflow_duration) {
   TRACE_INSTANT("audio", "AudioRendererImpl::UnderflowOccurred", TRACE_SCOPE_PROCESS);
   uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
@@ -257,34 +258,37 @@ void AudioRendererImpl::UnderflowOccurred(int64_t frac_source_start, int64_t fra
         (underflow_count % kRenderUnderflowErrorInterval == 0)) {
       FX_LOGS(ERROR) << "RENDER UNDERFLOW #" << underflow_count + 1 << " (1/"
                      << kRenderUnderflowErrorInterval << "): source-start 0x" << std::hex
-                     << frac_source_start << " missed mix-point 0x" << frac_source_mix_point
-                     << " by " << std::setprecision(4) << underflow_msec << " ms";
+                     << frac_source_start.raw_value() << " missed mix-point 0x"
+                     << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
+                     << underflow_msec << " ms";
 
     } else if ((kRenderUnderflowInfoInterval > 0) &&
                (underflow_count % kRenderUnderflowInfoInterval == 0)) {
       FX_LOGS(INFO) << "RENDER UNDERFLOW #" << underflow_count + 1 << " (1/"
                     << kRenderUnderflowErrorInterval << "): source-start 0x" << std::hex
-                    << frac_source_start << " missed mix-point 0x" << frac_source_mix_point
-                    << " by " << std::setprecision(4) << underflow_msec << " ms";
+                    << frac_source_start.raw_value() << " missed mix-point 0x"
+                    << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
+                    << underflow_msec << " ms";
 
     } else if ((kRenderUnderflowTraceInterval > 0) &&
                (underflow_count % kRenderUnderflowTraceInterval == 0)) {
       FX_VLOGS(TRACE) << "RENDER UNDERFLOW #" << underflow_count + 1 << " (1/"
                       << kRenderUnderflowErrorInterval << "): source-start 0x" << std::hex
-                      << frac_source_start << " missed mix-point 0x" << frac_source_mix_point
-                      << " by " << std::setprecision(4) << underflow_msec << " ms";
+                      << frac_source_start.raw_value() << " missed mix-point 0x"
+                      << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
+                      << underflow_msec << " ms";
     }
   }
 }
 
-void AudioRendererImpl::PartialUnderflowOccurred(int64_t frac_source_offset,
+void AudioRendererImpl::PartialUnderflowOccurred(FractionalFrames<int64_t> frac_source_offset,
                                                  int64_t dest_mix_offset) {
   TRACE_INSTANT("audio", "AudioRendererImpl::PartialUnderflowOccurred", TRACE_SCOPE_PROCESS);
 
   // Shifts by less than four source frames do not necessarily indicate underflow. A shift of this
   // duration can be caused by the round-to-nearest-dest-frame step, when our rate-conversion ratio
   // is sufficiently large (it can be as large as 4:1).
-  if (frac_source_offset >= (Mixer::FRAC_ONE << 2)) {
+  if (frac_source_offset >= 4) {
     auto partial_underflow_count = std::atomic_fetch_add<uint16_t>(&partial_underflow_count_, 1u);
     if constexpr (kLogRenderUnderflow) {
       if ((kRenderUnderflowErrorInterval > 0) &&
@@ -292,22 +296,22 @@ void AudioRendererImpl::PartialUnderflowOccurred(int64_t frac_source_offset,
         FX_LOGS(WARNING) << "RENDER SHIFT #" << partial_underflow_count + 1 << " (1/"
                          << kRenderUnderflowErrorInterval << "): shifted by "
                          << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-                         << abs(frac_source_offset) << " source subframes and " << std::dec
-                         << dest_mix_offset << " mix (output) frames";
+                         << abs(frac_source_offset.raw_value()) << " source subframes and "
+                         << std::dec << dest_mix_offset << " mix (output) frames";
       } else if ((kRenderUnderflowInfoInterval > 0) &&
                  (partial_underflow_count % kRenderUnderflowInfoInterval == 0)) {
         FX_LOGS(INFO) << "RENDER SHIFT #" << partial_underflow_count + 1 << " (1/"
                       << kRenderUnderflowInfoInterval << "): shifted by "
                       << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-                      << abs(frac_source_offset) << " source subframes and " << std::dec
+                      << abs(frac_source_offset.raw_value()) << " source subframes and " << std::dec
                       << dest_mix_offset << " mix (output) frames";
       } else if ((kRenderUnderflowTraceInterval > 0) &&
                  (partial_underflow_count % kRenderUnderflowTraceInterval == 0)) {
         FX_VLOGS(TRACE) << "RENDER SHIFT #" << partial_underflow_count + 1 << " (1/"
                         << kRenderUnderflowTraceInterval << "): shifted by "
                         << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-                        << abs(frac_source_offset) << " source subframes and " << std::dec
-                        << dest_mix_offset << " mix (output) frames";
+                        << abs(frac_source_offset.raw_value()) << " source subframes and "
+                        << std::dec << dest_mix_offset << " mix (output) frames";
       }
     }
   } else {
@@ -538,7 +542,6 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   }
 
   // Make sure that we don't exceed the maximum permissible frames-per-packet.
-  static constexpr uint32_t kMaxFrames = std::numeric_limits<uint32_t>::max() >> kPtsFractionalBits;
   uint32_t frame_count = packet.payload_size / frame_size;
   if (frame_count > kMaxFrames) {
     FX_LOGS(ERROR) << "Audio frame count (" << frame_count << ") exceeds maximum allowed ("
@@ -549,7 +552,6 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   // Make sure that the packet offset/size exists entirely within the payload buffer.
   FX_DCHECK(payload_buffer != nullptr);
   uint64_t start = packet.payload_offset;
-  uint32_t frame_offset = packet.payload_offset / frame_size;
   uint64_t end = start + packet.payload_size;
   uint64_t pb_size = payload_buffer->size();
   if ((start >= pb_size) || (end > pb_size)) {
@@ -569,24 +571,28 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Now compute the starting PTS expressed in fractional input frames. If no explicit PTS was
   // provided, interpolate using the next expected PTS.
-  int64_t start_pts;
-  int64_t packet_ffpts;
+  FractionalFrames<int64_t> start_pts;
+  FractionalFrames<int64_t> packet_ffpts{0};
   if (packet.pts == fuchsia::media::NO_TIMESTAMP) {
-    packet_ffpts = fuchsia::media::NO_TIMESTAMP;
     start_pts = next_frac_frame_pts_;
   } else {
     // Looks like we have an explicit PTS on this packet. Boost it into the fractional input frame
     // domain, then apply our continuity threshold rules.
-    packet_ffpts = pts_to_frac_frames_.Apply(packet.pts);
-    int64_t delta = std::abs(packet_ffpts - next_frac_frame_pts_);
+    packet_ffpts = FractionalFrames<int64_t>::FromRaw(pts_to_frac_frames_.Apply(packet.pts));
+    FractionalFrames<int64_t> delta = packet_ffpts - next_frac_frame_pts_;
+    delta = delta.Absolute();
     start_pts =
         (delta < pts_continuity_threshold_frac_frame_) ? next_frac_frame_pts_ : packet_ffpts;
   }
-  AUD_VLOG_OBJ(SPEW, this) << " [pkt " << std::hex << std::setw(8) << packet_ffpts << ", now "
-                           << std::setw(8) << next_frac_frame_pts_ << "] => " << std::setw(8)
-                           << start_pts << " - " << std::setw(8)
-                           << start_pts + pts_to_frac_frames_.Apply(frame_count) << ", offset "
-                           << std::setw(7) << pts_to_frac_frames_.Apply(frame_offset);
+
+  uint32_t frame_offset = packet.payload_offset / frame_size;
+  AUD_VLOG_OBJ(SPEW, this) << " [pkt " << std::hex << std::setw(8) << packet_ffpts.raw_value()
+                           << ", now " << std::setw(8) << next_frac_frame_pts_.raw_value()
+                           << "] => " << std::setw(8) << start_pts.raw_value() << " - "
+                           << std::setw(8)
+                           << start_pts.raw_value() + pts_to_frac_frames_.Apply(frame_count)
+                           << ", offset " << std::setw(7)
+                           << pts_to_frac_frames_.Apply(frame_offset);
 
   // Regardless of timing, capture this data to file.
   auto packet_buff = reinterpret_cast<uint8_t*>(payload_buffer->start()) + packet.payload_offset;
@@ -595,21 +601,20 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Snap the starting pts to an input frame boundary.
   //
-  // TODO(13374): Don't do this. If a user wants to write an explicit timestamp on an input
-  // packet which schedules the packet to start at a fractional position on the input time line, we
-  // should probably permit this. We need to make sure that the mixer cores are ready to handle this
-  // case before proceeding, however.
-  constexpr auto mask = ~((static_cast<int64_t>(1) << kPtsFractionalBits) - 1);
-  start_pts &= mask;
+  // TODO(13374): Don't do this. If a user wants to write an explicit timestamp on a source packet
+  // which schedules the packet to start at a fractional position on the source time line, we should
+  // probably permit this. We need to make sure that the mixer cores are ready to handle this case
+  // before proceeding, however.
+  start_pts = FractionalFrames<int64_t>(start_pts.Floor());
 
   // Create the packet.
   auto packet_ref =
       fbl::MakeRefCounted<Packet>(payload_buffer, dispatcher_, std::move(callback), packet,
-                                  frame_count << kPtsFractionalBits, start_pts);
+                                  FractionalFrames<uint32_t>(frame_count), start_pts);
 
   // The end pts is the value we will use for the next packet's start PTS, if the user does not
   // provide an explicit PTS.
-  next_frac_frame_pts_ = packet_ref->end_pts();
+  next_frac_frame_pts_ = packet_ref->end();
 
   // Distribute our packet to all our dest links
   for (auto& [_, packet_queue] : packet_queues_) {
@@ -661,7 +666,8 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
   auto ref_time_for_reset =
       zx::clock::get_monotonic() + min_lead_time_ + kPaddingForUnspecifiedRefTime;
-  next_frac_frame_pts_ = reference_clock_to_fractional_frames_->Apply(ref_time_for_reset.get());
+  next_frac_frame_pts_ = FractionalFrames<int64_t>::FromRaw(
+      reference_clock_to_fractional_frames_->Apply(ref_time_for_reset.get()));
   ComputePtsToFracFrames(0);
 
   // TODO(mpuryear): Validate Pause => DiscardAll => Play(..., NO_TIMESTAMP) -- specifically that we
@@ -714,7 +720,7 @@ void AudioRendererImpl::Play(int64_t _reference_time, int64_t media_time, PlayCa
   // Note: users specify the units for media time by calling SetPtsUnits(), or nanoseconds if this
   // is never called. Internally we use fractional input frames, on the timeline defined when
   // transitioning to operational mode.
-  int64_t frac_frame_media_time;
+  FractionalFrames<int64_t> frac_frame_media_time;
 
   if (media_time == fuchsia::media::NO_TIMESTAMP) {
     // Are we resuming from pause?
@@ -722,7 +728,7 @@ void AudioRendererImpl::Play(int64_t _reference_time, int64_t media_time, PlayCa
       frac_frame_media_time = pause_time_frac_frames_;
     } else {
       // TODO(mpuryear): peek the first PTS of the pending queue.
-      frac_frame_media_time = 0;
+      frac_frame_media_time = FractionalFrames<int64_t>(0);
     }
 
     // If we do not know the pts_to_frac_frames relationship yet, compute one.
@@ -731,22 +737,23 @@ void AudioRendererImpl::Play(int64_t _reference_time, int64_t media_time, PlayCa
       ComputePtsToFracFrames(0);
     }
 
-    media_time = pts_to_frac_frames_.ApplyInverse(frac_frame_media_time);
+    media_time = pts_to_frac_frames_.ApplyInverse(frac_frame_media_time.raw_value());
   } else {
     // If we do not know the pts_to_frac_frames relationship yet, compute one.
     if (!pts_to_frac_frames_valid_) {
       ComputePtsToFracFrames(media_time);
       frac_frame_media_time = next_frac_frame_pts_;
     } else {
-      frac_frame_media_time = pts_to_frac_frames_.Apply(media_time);
+      frac_frame_media_time =
+          FractionalFrames<int64_t>::FromRaw(pts_to_frac_frames_.Apply(media_time));
     }
   }
 
   // Update our transformation.
   //
   // TODO(mpuryear): if we need to trigger a remix for our outputs, do it here.
-  reference_clock_to_fractional_frames_->Update(
-      TimelineFunction(frac_frame_media_time, reference_time.get(), frac_frames_per_ref_tick_));
+  reference_clock_to_fractional_frames_->Update(TimelineFunction(
+      frac_frame_media_time.raw_value(), reference_time.get(), frac_frames_per_ref_tick_));
 
   AUD_VLOG_OBJ(TRACE, this)
       << " Actual (ref: "
@@ -790,11 +797,12 @@ void AudioRendererImpl::Pause(PauseCallback callback) {
 
   // TODO(mpuryear): query the actual reference clock, don't assume CLOCK_MONO
   ref_clock_now = zx::clock::get_monotonic().get();
-  pause_time_frac_frames_ = reference_clock_to_fractional_frames_->Apply(ref_clock_now);
+  pause_time_frac_frames_ = FractionalFrames<int64_t>::FromRaw(
+      reference_clock_to_fractional_frames_->Apply(ref_clock_now));
   pause_time_frac_frames_valid_ = true;
 
   reference_clock_to_fractional_frames_->Update(
-      TimelineFunction(pause_time_frac_frames_, ref_clock_now, {0, 1}));
+      TimelineFunction(pause_time_frac_frames_.raw_value(), ref_clock_now, {0, 1}));
 
   // If we do not know the pts_to_frac_frames relationship yet, compute one.
   if (!pts_to_frac_frames_valid_) {
@@ -803,13 +811,13 @@ void AudioRendererImpl::Pause(PauseCallback callback) {
   }
 
   // If the user requested a callback, figure out the media time that we paused at and report back.
-  int64_t paused_media_time = pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_);
-
-  AUD_VLOG_OBJ(TRACE, this) << ". Actual (ref: " << ref_clock_now
-                            << ", media: " << paused_media_time << ")";
+  AUD_VLOG_OBJ(TRACE, this) << ". Actual (ref: " << ref_clock_now << ", media: "
+                            << pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_.raw_value())
+                            << ")";
 
   if (callback != nullptr) {
-    int64_t paused_media_time = pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_);
+    int64_t paused_media_time =
+        pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_.raw_value());
     callback(ref_clock_now, paused_media_time);
   }
 

@@ -61,9 +61,11 @@ class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<
   bool format_valid() const { return format() != nullptr; }
 
   // Hooks to add logging or metrics for [Partial]Underflow events.
-  virtual void UnderflowOccurred(int64_t source_start, int64_t mix_point,
+  virtual void UnderflowOccurred(FractionalFrames<int64_t> frac_source_start,
+                                 FractionalFrames<int64_t> frac_source_mix_point,
                                  zx::duration underflow_duration) {}
-  virtual void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) {}
+  virtual void PartialUnderflowOccurred(FractionalFrames<int64_t> frac_source_offset,
+                                        int64_t dest_mix_offset) {}
 
   Type type() const { return type_; }
   bool is_output() const { return type() == Type::Output; }

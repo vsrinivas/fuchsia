@@ -113,7 +113,7 @@ class AudioOutput : public AudioDevice {
   MixJob cur_mix_job_;
 
   // State used by the trim task.
-  int64_t trim_threshold_;
+  FractionalFrames<int64_t> trim_threshold_;
 };
 
 }  // namespace media::audio

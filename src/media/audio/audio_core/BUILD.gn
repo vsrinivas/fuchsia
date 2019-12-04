@@ -146,6 +146,7 @@ source_set("audio_core_lib") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/syslog/cpp",
     "//third_party/rapidjson",
+    "//zircon/public/lib/ffl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
     "//zircon/system/fidl/fuchsia-cobalt",

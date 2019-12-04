@@ -424,10 +424,10 @@ void TestLateSourceOffset(Resampler sampler_type) {
   auto mixer =
       SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100, sampler_type);
 
-  if (mixer->pos_filter_width() > 0) {
+  if (mixer->pos_filter_width().raw_value() > 0) {
     float source[4] = {1.0f, 1.0f, 1.0f, 1.0f};
     int32_t frac_src_offset =
-        (fbl::count_of(source) << kPtsFractionalBits) - mixer->pos_filter_width();
+        (fbl::count_of(source) << kPtsFractionalBits) - mixer->pos_filter_width().raw_value();
 
     float accum[4] = {0.0f};
     uint32_t dest_offset = 0;
@@ -439,7 +439,7 @@ void TestLateSourceOffset(Resampler sampler_type) {
                fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false);
     EXPECT_EQ(dest_offset, 0u);
     EXPECT_EQ(frac_src_offset, static_cast<int32_t>((fbl::count_of(source) << kPtsFractionalBits) -
-                                                    mixer->pos_filter_width()));
+                                                    mixer->pos_filter_width().raw_value()));
     EXPECT_FLOAT_EQ(accum[0], 0.0f);
   }
 }
@@ -655,13 +655,13 @@ TEST(Resampling, FilterWidth_Point) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
                            Resampler::SampleAndHold);
 
-  EXPECT_EQ(mixer->pos_filter_width(), 0u);
-  EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), 0u);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), Mixer::FRAC_ONE - 1);
 
   mixer->Reset();
 
-  EXPECT_EQ(mixer->pos_filter_width(), 0u);
-  EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), 0u);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), Mixer::FRAC_ONE - 1);
 }
 
 // Verify LinearSampler filter widths.
@@ -669,13 +669,13 @@ TEST(Resampling, FilterWidth_Linear) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 48000,
                            Resampler::LinearInterpolation);
 
-  EXPECT_EQ(mixer->pos_filter_width(), Mixer::FRAC_ONE - 1);
-  EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), Mixer::FRAC_ONE - 1);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), Mixer::FRAC_ONE - 1);
 
   mixer->Reset();
 
-  EXPECT_EQ(mixer->pos_filter_width(), Mixer::FRAC_ONE - 1);
-  EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), Mixer::FRAC_ONE - 1);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), Mixer::FRAC_ONE - 1);
 }
 
 TEST(Resampling, Point_LateSourcePosition) { TestLateSourceOffset(Resampler::SampleAndHold); }

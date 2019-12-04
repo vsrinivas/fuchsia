@@ -640,9 +640,9 @@ void AudioCapturerImpl::RecomputeMinFenceTime() {
 }
 
 struct RbRegion {
-  uint32_t srb_pos;   // start ring buffer pos
-  uint32_t len;       // region length in frames
-  int64_t sfrac_pts;  // start fractional frame pts
+  uint32_t srb_pos;                     // start ring buffer pos
+  uint32_t len;                         // region length in frames
+  FractionalFrames<int64_t> sfrac_pts;  // start fractional frame pts
 };
 
 // Utility functions to debug clocking in MixToIntermediate.
@@ -652,8 +652,8 @@ void DumpRbRegions(const RbRegion* regions) {
   for (auto i = 0; i < 2; ++i) {
     if (regions[i].len) {
       AUD_VLOG(SPEW) << "[" << i << "] srb_pos 0x" << std::hex << regions[i].srb_pos << ", len 0x"
-                     << regions[i].len << ", sfrac_pts 0x" << regions[i].sfrac_pts << " ("
-                     << std::dec << (regions[i].sfrac_pts >> kPtsFractionalBits) << " frames)";
+                     << regions[i].len << ", sfrac_pts 0x" << regions[i].sfrac_pts.raw_value()
+                     << " (" << std::dec << regions[i].sfrac_pts.Floor() << " frames)";
     } else {
       AUD_VLOG(SPEW) << "[" << i << "] len 0x0";
     }
@@ -943,7 +943,8 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   BeginShutdown();
 }
 
-void AudioCapturerImpl::OverflowOccurred(int64_t frac_source_start, int64_t frac_source_mix_point,
+void AudioCapturerImpl::OverflowOccurred(FractionalFrames<int64_t> frac_source_start,
+                                         FractionalFrames<int64_t> frac_source_mix_point,
                                          zx::duration overflow_duration) {
   TRACE_INSTANT("audio", "AudioCapturerImpl::OverflowOccurred", TRACE_SCOPE_PROCESS);
   uint16_t overflow_count = std::atomic_fetch_add<uint16_t>(&overflow_count_, 1u);
@@ -953,8 +954,9 @@ void AudioCapturerImpl::OverflowOccurred(int64_t frac_source_start, int64_t frac
 
     std::ostringstream stream;
     stream << "CAPTURE OVERFLOW #" << overflow_count + 1 << " (1/" << kCaptureOverflowErrorInterval
-           << "): source-start " << frac_source_start << " missed mix-point "
-           << frac_source_mix_point << " by " << std::setprecision(4) << overflow_msec << " ms";
+           << "): source-start " << frac_source_start.raw_value() << " missed mix-point "
+           << frac_source_mix_point.raw_value() << " by " << std::setprecision(4) << overflow_msec
+           << " ms";
 
     if ((kCaptureOverflowErrorInterval > 0) &&
         (overflow_count % kCaptureOverflowErrorInterval == 0)) {
@@ -970,22 +972,23 @@ void AudioCapturerImpl::OverflowOccurred(int64_t frac_source_start, int64_t frac
   }
 }
 
-void AudioCapturerImpl::PartialOverflowOccurred(int64_t frac_source_offset,
+void AudioCapturerImpl::PartialOverflowOccurred(FractionalFrames<int64_t> frac_source_offset,
                                                 int64_t dest_mix_offset) {
   TRACE_INSTANT("audio", "AudioCapturerImpl::PartialOverflowOccurred", TRACE_SCOPE_PROCESS);
 
   // Slips by less than four source frames do not necessarily indicate overflow. A slip of this
   // duration can be caused by the round-to-nearest-dest-frame step, when our rate-conversion
   // ratio is sufficiently large (it can be as large as 4:1).
-  if (abs(frac_source_offset) >= (Mixer::FRAC_ONE << 2)) {
+  if (frac_source_offset.Absolute() >= 4) {
     uint16_t partial_overflow_count = std::atomic_fetch_add<uint16_t>(&partial_overflow_count_, 1u);
     if constexpr (kLogCaptureOverflow) {
       std::ostringstream stream;
       stream << "CAPTURE SLIP #" << partial_overflow_count + 1 << " (1/"
              << kCaptureOverflowErrorInterval << "): shifting by "
-             << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex << abs(frac_source_offset)
-             << " source subframes (" << std::dec << (frac_source_offset >> kPtsFractionalBits)
-             << " frames) and " << dest_mix_offset << " mix (capture) frames";
+             << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
+             << frac_source_offset.Absolute().raw_value() << " source subframes (" << std::dec
+             << frac_source_offset.Floor() << " frames) and " << dest_mix_offset
+             << " mix (capture) frames";
 
       if ((kCaptureOverflowErrorInterval > 0) &&
           (partial_overflow_count % kCaptureOverflowErrorInterval == 0)) {
@@ -1099,7 +1102,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     auto now = zx::clock::get_monotonic().get();
 
     int64_t end_fence_frames =
-        (info.clock_mono_to_frac_source_frames.Apply(now)) >> kPtsFractionalBits;
+        FractionalFrames<int64_t>::FromRaw(info.clock_mono_to_frac_source_frames.Apply(now))
+            .Floor();
     // If, because of significant FIFO depth or external delay, the calculated end_fence_frames
     // value is in the past, MOD it up into our ring buffer range.
     while (end_fence_frames < 0) {
@@ -1125,18 +1129,18 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // One region
       regions[0].srb_pos = start_frames_mod;
       regions[0].len = end_frames_mod - start_frames_mod;
-      regions[0].sfrac_pts = start_fence_frames << kPtsFractionalBits;
+      regions[0].sfrac_pts = FractionalFrames<int64_t>(start_fence_frames);
 
       regions[1].len = 0;
     } else {
       // Two regions
       regions[0].srb_pos = start_frames_mod;
       regions[0].len = rb_frames - start_frames_mod;
-      regions[0].sfrac_pts = start_fence_frames << kPtsFractionalBits;
+      regions[0].sfrac_pts = FractionalFrames<int64_t>(start_fence_frames);
 
       regions[1].srb_pos = 0;
       regions[1].len = end_frames_mod;
-      regions[1].sfrac_pts = regions[0].sfrac_pts + (regions[0].len << kPtsFractionalBits);
+      regions[1].sfrac_pts = regions[0].sfrac_pts + regions[0].len;
     }
 
     if constexpr (VERBOSE_TIMING_DEBUG) {
@@ -1156,29 +1160,35 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // Determine the first and last sampling points of this job, in fractional source frames.
       FX_DCHECK(frames_left > 0);
       const auto& trans = info.dest_frames_to_frac_source_frames;
-      int64_t job_start = trans.Apply(frame_count_ + mix_frames - frames_left);
-      int64_t job_end = job_start + trans.rate().Scale(frames_left - 1);
+      auto job_start =
+          FractionalFrames<int64_t>::FromRaw(trans.Apply(frame_count_ + mix_frames - frames_left));
+      FractionalFrames<int64_t> job_end =
+          job_start + FractionalFrames<int64_t>::FromRaw(trans.rate().Scale(frames_left - 1));
 
       // Determine the PTS of the final frame of audio in our source region.
-      int64_t region_last_frame_pts = (region.sfrac_pts + ((region.len - 1) << kPtsFractionalBits));
-      int64_t rb_last_frame_pts = (end_fence_frames - 1) << kPtsFractionalBits;
+      FractionalFrames<int64_t> region_last_frame_pts = region.sfrac_pts + (region.len - 1);
+      FractionalFrames<int64_t> rb_last_frame_pts = FractionalFrames<int64_t>(end_fence_frames - 1);
       FX_DCHECK(rb_last_frame_pts >= region.sfrac_pts);
 
       if constexpr (VERBOSE_TIMING_DEBUG) {
-        auto job_start_cm = info.clock_mono_to_frac_source_frames.Inverse().Apply(job_start);
-        auto job_end_cm = info.clock_mono_to_frac_source_frames.Inverse().Apply(job_end);
+        auto job_start_cm =
+            info.clock_mono_to_frac_source_frames.Inverse().Apply(job_start.raw_value());
+        auto job_end_cm =
+            info.clock_mono_to_frac_source_frames.Inverse().Apply(job_end.raw_value());
         auto region_start_cm =
-            info.clock_mono_to_frac_source_frames.Inverse().Apply(region.sfrac_pts);
+            info.clock_mono_to_frac_source_frames.Inverse().Apply(region.sfrac_pts.raw_value());
         auto region_end_cm =
-            info.clock_mono_to_frac_source_frames.Inverse().Apply(rb_last_frame_pts);
+            info.clock_mono_to_frac_source_frames.Inverse().Apply(rb_last_frame_pts.raw_value());
 
         AUD_VLOG_OBJ(SPEW, this) << "Will mix " << job_start_cm << "-" << job_end_cm << " ("
-                                 << std::hex << job_start << "-" << job_end << ")";
-        AUD_VLOG_OBJ(SPEW, this) << "Region   " << region_start_cm << "-" << region_end_cm << " ("
-                                 << std::hex << region.sfrac_pts << "-" << region_last_frame_pts
+                                 << std::hex << job_start.raw_value() << "-" << job_end.raw_value()
                                  << ")";
+        AUD_VLOG_OBJ(SPEW, this) << "Region   " << region_start_cm << "-" << region_end_cm << " ("
+                                 << std::hex << region.sfrac_pts.raw_value() << "-"
+                                 << region_last_frame_pts.raw_value() << ")";
         AUD_VLOG_OBJ(SPEW, this) << "Buffer   " << region_start_cm << "-" << region_end_cm << " ("
-                                 << std::hex << region.sfrac_pts << "-" << rb_last_frame_pts << ")";
+                                 << std::hex << region.sfrac_pts.raw_value() << "-"
+                                 << rb_last_frame_pts.raw_value() << ")";
       }
 
       // If this source region's final frame occurs before our filter's negative edge (centered at
@@ -1188,14 +1198,14 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
         if (rb_last_frame_pts < (job_start - mixer.neg_filter_width())) {
           auto clock_mono_late =
               zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
-                  job_start - rb_last_frame_pts));
+                  FractionalFrames<int64_t>(job_start - rb_last_frame_pts).raw_value()));
           OverflowOccurred(rb_last_frame_pts, job_start, clock_mono_late);
         }
         // Move on to the next region
         continue;
       }
       // Otherwise, if this job_start is beyond this region, skip it (regardless of width)
-      if (region.sfrac_pts + (region.len << kPtsFractionalBits) < job_start) {
+      if (region.sfrac_pts + region.len < job_start) {
         continue;
       }
 
@@ -1209,38 +1219,38 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // Looks like this source region intersects our mix job (when including its filter). Compute
       // where in the intermediate buffer the first produced frame will be placed, as well as where,
       // relative to start of source region, the first sampling point will be.
-      int64_t source_offset_64 = job_start - region.sfrac_pts;
+      FractionalFrames<int64_t> source_offset_64 = job_start - region.sfrac_pts;
       int64_t dest_offset_64 = 0;
-      int64_t first_sample_pos_window_edge = job_start + mixer.pos_filter_width();
+      FractionalFrames<int64_t> first_sample_pos_window_edge = job_start + mixer.pos_filter_width();
 
       const TimelineRate& dest_to_src = info.dest_frames_to_frac_source_frames.rate();
       // If source region's first frame is after filter's positive edge, skip some output frames.
       if (region.sfrac_pts > first_sample_pos_window_edge) {
-        int64_t src_to_skip = region.sfrac_pts - first_sample_pos_window_edge;
+        FractionalFrames<int64_t> src_to_skip = region.sfrac_pts - first_sample_pos_window_edge;
 
         // In scaling our (fractional) source_offset to (integral) dest_offset, we want to "round
         // up" to the next integer dest frame, but the 'scale' operation truncates any fractional
         // result. ALL source_offset values have SOME fractional component except for the X.0 case.
         // So to "round up" while scaling, we subtract the smallest fractional value first, then
         // scale-truncate, then add one to the final result.
-        dest_offset_64 = dest_to_src.Inverse().Scale(src_to_skip - 1) + 1;
-        source_offset_64 += dest_to_src.Scale(dest_offset_64);
+        dest_offset_64 = dest_to_src.Inverse().Scale(src_to_skip.raw_value() - 1) + 1;
+        source_offset_64 += FractionalFrames<int64_t>::FromRaw(dest_to_src.Scale(dest_offset_64));
 
         PartialOverflowOccurred(source_offset_64, dest_offset_64);
       }
 
       FX_DCHECK(dest_offset_64 >= 0);
       FX_DCHECK(dest_offset_64 < static_cast<int64_t>(mix_frames));
-      FX_DCHECK(source_offset_64 <= std::numeric_limits<int32_t>::max());
-      FX_DCHECK(source_offset_64 >= std::numeric_limits<int32_t>::min());
+      FX_DCHECK(source_offset_64 <= FractionalFrames<int32_t>::Max());
+      FX_DCHECK(source_offset_64 >= FractionalFrames<int32_t>::Min());
 
-      uint32_t region_frac_frame_len = region.len << kPtsFractionalBits;
+      auto region_frac_frame_len = FractionalFrames<uint32_t>(region.len);
       auto dest_offset = static_cast<uint32_t>(dest_offset_64);
-      auto frac_source_offset = static_cast<int32_t>(source_offset_64);
+      auto frac_source_offset = FractionalFrames<int32_t>(source_offset_64);
 
-      FX_DCHECK(frac_source_offset < static_cast<int32_t>(region_frac_frame_len))
-          << std::hex << frac_source_offset << " must be less than "
-          << static_cast<int32_t>(region_frac_frame_len);
+      FX_DCHECK(frac_source_offset < FractionalFrames<int32_t>(region_frac_frame_len))
+          << std::hex << frac_source_offset.raw_value() << " must be less than "
+          << FractionalFrames<int32_t>(region_frac_frame_len).raw_value();
       const uint8_t* region_source = rb->virt() + (region.srb_pos * rb->frame_size());
 
       // Invalidate the region of the cache we are about to read, on architectures requiring it.
@@ -1251,8 +1261,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       //
       // Also, at some point double-check that mixer filter width is accounted for properly here.
       FX_DCHECK(dest_offset <= frames_left);
-      uint64_t cache_target_frac_frames = dest_to_src.Scale(frames_left - dest_offset);
-      uint32_t cache_target_frames = ((cache_target_frac_frames - 1) >> kPtsFractionalBits) + 1;
+      auto cache_target_frac_frames =
+          FractionalFrames<int64_t>::FromRaw(dest_to_src.Scale(frames_left - dest_offset));
+      uint32_t cache_target_frames = cache_target_frac_frames.Ceiling();
       cache_target_frames = std::min(cache_target_frames, region.len);
       zx_cache_flush(region_source, cache_target_frames * rb->frame_size(),
                      ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
@@ -1284,8 +1295,15 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // measurable and attributable to this jitter, we will defer this work.
       //
       // Update: src_pos_modulo is added to Mix(), but for now we omit it here.
-      bool consumed_source = mixer.Mix(buf, frames_left, &dest_offset, region_source,
-                                       region_frac_frame_len, &frac_source_offset, accumulate);
+
+      bool consumed_source;
+      {
+        int32_t raw_source_offset = frac_source_offset.raw_value();
+        consumed_source =
+            mixer.Mix(buf, frames_left, &dest_offset, region_source,
+                      region_frac_frame_len.raw_value(), &raw_source_offset, accumulate);
+        frac_source_offset = FractionalFrames<int32_t>::FromRaw(raw_source_offset);
+      }
       FX_DCHECK(dest_offset <= frames_left);
 
       if (!consumed_source) {
@@ -1325,7 +1343,7 @@ void AudioCapturerImpl::UpdateTransformation(Mixer::Bookkeeping* info,
   FX_DCHECK(rb_snap.ring_buffer->frame_size() != 0);
   FX_DCHECK(rb_snap.clock_mono_to_ring_pos_bytes.invertible());
 
-  TimelineRate src_bytes_to_frac_frames(1u << kPtsFractionalBits,
+  TimelineRate src_bytes_to_frac_frames(FractionalFrames<int32_t>(1).raw_value(),
                                         rb_snap.ring_buffer->frame_size());
 
   // This represents ring-buffer frac frames since DMA engine was started
@@ -1336,9 +1354,10 @@ void AudioCapturerImpl::UpdateTransformation(Mixer::Bookkeeping* info,
       TimelineFunction::Compose(clock_mono_to_ring_pos_frac_frames, dest_frames_to_clock_mono_);
 
   // Our frac source frame sampling point should lag the ring buffer DMA position by this offset.
-  auto offset = static_cast<int64_t>(rb_snap.position_to_end_fence_frames) << kPtsFractionalBits;
-  info->clock_mono_to_frac_source_frames = TimelineFunction::Compose(
-      TimelineFunction(-offset, 0, TimelineRate(1u, 1u)), clock_mono_to_ring_pos_frac_frames);
+  auto offset = FractionalFrames<int64_t>(rb_snap.position_to_end_fence_frames);
+  info->clock_mono_to_frac_source_frames =
+      TimelineFunction::Compose(TimelineFunction(-offset.raw_value(), 0, TimelineRate(1u, 1u)),
+                                clock_mono_to_ring_pos_frac_frames);
 
   int64_t tmp_step_size = info->dest_frames_to_frac_source_frames.rate().Scale(1);
   FX_DCHECK(tmp_step_size >= 0);

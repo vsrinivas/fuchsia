@@ -5,7 +5,7 @@
 #include "src/media/audio/audio_core/format.h"
 
 #include "src/lib/syslog/cpp/logger.h"
-#include "src/media/audio/audio_core/mixer/constants.h"
+#include "src/media/audio/audio_core/mixer/frames.h"
 
 namespace media::audio {
 
@@ -16,7 +16,7 @@ Format::Format(fuchsia::media::AudioStreamType stream_type) : stream_type_(strea
   frames_per_ns_ = TimelineRate(stream_type_.frames_per_second, ZX_SEC(1));
 
   // Figure out the rate we need to scale by in order to produce our fixed point timestamps.
-  frame_to_media_ratio_ = TimelineRate(1 << kPtsFractionalBits, 1);
+  frame_to_media_ratio_ = TimelineRate(FractionalFrames<int32_t>(1).raw_value(), 1);
 
   // Figure out the total number of bytes in a packed frame.
   switch (stream_type_.sample_format) {

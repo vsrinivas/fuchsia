@@ -213,7 +213,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans, uint32_t num_outpu
   }
 
   info.gain.SetDestGain(Gain::kUnityGainDb);
-  auto width = mixer->pos_filter_width();
+  auto width = mixer->pos_filter_width().raw_value();
 
   zx::duration first, worst, best, total_elapsed{0};
 

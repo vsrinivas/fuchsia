@@ -12,6 +12,7 @@
 #include <fbl/ref_ptr.h>
 #include <trace/event.h>
 
+#include "src/media/audio/audio_core/mixer/frames.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
@@ -23,8 +24,8 @@ namespace media::audio {
 class Packet : public fbl::RefCounted<Packet> {
  public:
   Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, async_dispatcher_t* callback_dispatcher,
-         fit::closure callback, fuchsia::media::StreamPacket packet, uint32_t frac_frame_len,
-         int64_t start_pts);
+         fit::closure callback, fuchsia::media::StreamPacket packet,
+         FractionalFrames<uint32_t> frac_frame_len, FractionalFrames<int64_t> start_frame);
 
   ~Packet();
 
@@ -38,17 +39,13 @@ class Packet : public fbl::RefCounted<Packet> {
   // missing timestamps, appropriate timestamps will be synthesized at this
   // point in the pipeline.
   //
-  // Note, the start pts is the time at which the first frame of audio in the
-  // packet should be presented.  The end_pts is the time at which the frame
-  // after the final frame in the packet would be presented.
-  //
-  // TODO(johngro): Reconsider this.  It may be best to keep things expressed
-  // simply in media time instead of converting to fractional units of renderer
-  // frames.  If/when outputs move away from a single fixed step size for output
-  // sampling, it will probably be best to just convert this back to media time.
-  int64_t start_pts() const { return start_pts_; }
-  int64_t end_pts() const { return end_pts_; }
-  uint32_t frac_frame_len() const { return frac_frame_len_; }
+  // Note, the |start| is the time (expressed in fractional frames, on the
+  // source's timeline) at which the first frame of audio in the packet should
+  // be presented.  The |end| is the time at which the frame after the final
+  // frame in the packet would be presented.
+  FractionalFrames<int64_t> start() const { return start_; }
+  FractionalFrames<int64_t> end() const { return start_ + length_; }
+  FractionalFrames<uint32_t> length() const { return length_; }
 
   void* payload() {
     auto start = reinterpret_cast<uint8_t*>(vmo_ref_->start());
@@ -62,9 +59,8 @@ class Packet : public fbl::RefCounted<Packet> {
   fit::closure callback_;
   fuchsia::media::StreamPacket packet_;
 
-  uint32_t frac_frame_len_;
-  int64_t start_pts_;
-  int64_t end_pts_;
+  FractionalFrames<uint32_t> length_;
+  FractionalFrames<int64_t> start_;
 
   async_dispatcher_t* dispatcher_;
   trace_async_id_t nonce_ = TRACE_NONCE();

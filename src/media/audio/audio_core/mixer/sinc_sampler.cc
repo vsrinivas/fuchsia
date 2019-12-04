@@ -39,8 +39,8 @@ class SincSamplerImpl : public SincSampler {
         working_data_(DestChanCount, kDataCacheLength),
         filter_(source_rate_, dest_rate_,
                 SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate)) {
-    num_prev_frames_needed_ = RightIdx(neg_filter_width());
-    total_frames_needed_ = num_prev_frames_needed_ + RightIdx(pos_filter_width());
+    num_prev_frames_needed_ = RightIdx(neg_filter_width().raw_value());
+    total_frames_needed_ = num_prev_frames_needed_ + RightIdx(pos_filter_width().raw_value());
 
     FX_DCHECK(kDataCacheLength > total_frames_needed_)
         << "source rate " << source_frame_rate << ", dest rate " << dest_frame_rate;
@@ -129,7 +129,8 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
   const uint32_t src_frames = frac_src_frames >> kPtsFractionalBits;
   uint32_t next_cache_idx_to_fill = 0;
-  int32_t next_src_idx_to_copy = RightIdx(frac_src_off - static_cast<int32_t>(neg_filter_width()));
+  int32_t next_src_idx_to_copy =
+      RightIdx(frac_src_off - static_cast<int32_t>(neg_filter_width().raw_value()));
   int32_t src_offset = frac_src_off >> kPtsFractionalBits;
 
   // Do we need previously-cached values?
@@ -162,7 +163,8 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     }
 
     while (position_.FrameCanBeMixed()) {
-      auto src_offset_to_cache = RightIdx(frac_src_off - neg_filter_width()) << kPtsFractionalBits;
+      auto src_offset_to_cache = RightIdx(frac_src_off - neg_filter_width().raw_value())
+                                 << kPtsFractionalBits;
       const auto frames_needed = std::min<uint32_t>(src_frames - next_src_idx_to_copy,
                                                     kDataCacheLength - next_cache_idx_to_fill);
 
@@ -174,13 +176,13 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       uint32_t frac_cache_offset = frac_src_off - src_offset_to_cache;
       uint32_t interp_frac = frac_cache_offset & Mixer::FRAC_MASK;
       uint32_t cache_center_idx = LeftIdx(frac_cache_offset);
-      FX_CHECK(RightIdx(frac_cache_offset - neg_filter_width()) >= 0)
-          << RightIdx(static_cast<int32_t>(cache_center_idx - neg_filter_width()))
+      FX_CHECK(RightIdx(frac_cache_offset - neg_filter_width().raw_value()) >= 0)
+          << RightIdx(static_cast<int32_t>(cache_center_idx - neg_filter_width().raw_value()))
           << " should be >= 0";
 
       constexpr uint32_t kDataCacheFracLength = kDataCacheLength << kPtsFractionalBits;
       while (position_.FrameCanBeMixed() &&
-             (frac_cache_offset + pos_filter_width() < kDataCacheFracLength)) {
+             (frac_cache_offset + pos_filter_width().raw_value() < kDataCacheFracLength)) {
         auto dest_frame = position_.CurrentDestFrame();
         if constexpr (ScaleType == ScalerType::RAMPING) {
           amplitude_scale = info->scale_arr[position_.dest_offset() - dest_ramp_start];
@@ -200,7 +202,7 @@ inline bool SincSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
       }
 
       // idx of the earliest cached frame we must retain == the amount by which we can left-shift
-      auto num_frames_to_shift = RightIdx(frac_cache_offset - neg_filter_width());
+      auto num_frames_to_shift = RightIdx(frac_cache_offset - neg_filter_width().raw_value());
       working_data_.ShiftBy(num_frames_to_shift);
 
       cache_center_idx -= num_frames_to_shift;

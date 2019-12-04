@@ -301,36 +301,40 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
 
   // Calculate this job's first and last sampling points, in source sub-frames. Use timestamps for
   // the first and last dest frames we need, translated into the source (frac_frame) timeline.
-  int64_t frac_source_for_first_mix_job_frame = info.dest_frames_to_frac_source_frames(
-      cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced);
+  FractionalFrames<int64_t> frac_source_for_first_mix_job_frame =
+      FractionalFrames<int64_t>::FromRaw(info.dest_frames_to_frac_source_frames(
+          cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced));
 
   // This represents (in the frac_frame source timeline) the time of the LAST dest frame we need.
   // Without the "-1", this would be the first destination frame of the NEXT job.
-  int64_t frac_source_for_final_mix_job_frame =
+  FractionalFrames<int64_t> frac_source_for_final_mix_job_frame =
       frac_source_for_first_mix_job_frame +
-      info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left - 1);
+      FractionalFrames<int64_t>::FromRaw(
+          info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left - 1));
 
   // If packet has no frames, there's no need to mix it; it may be skipped.
-  if (packet->end_pts() == packet->start_pts()) {
+  if (packet->end() == packet->start()) {
     AUD_VLOG_OBJ(TRACE, source.get()) << " skipping an empty packet!";
     return true;
   }
 
-  FX_DCHECK((packet->end_pts() - packet->start_pts()) >= Mixer::FRAC_ONE);
+  FX_DCHECK(packet->end() >= packet->start() + 1);
 
   // The above two calculated values characterize our demand. Now reason about our supply. Calculate
   // the actual first and final frame times in the source packet.
-  int64_t frac_source_for_first_packet_frame = packet->start_pts();
-  int64_t frac_source_for_final_packet_frame = packet->end_pts() - Mixer::FRAC_ONE;
+  FractionalFrames<int64_t> frac_source_for_first_packet_frame = packet->start();
+  FractionalFrames<int64_t> frac_source_for_final_packet_frame = packet->end() - 1;
 
   // If this source packet's final audio frame occurs before our filter's negative edge, centered at
   // our first sampling point, then this packet is entirely in the past and may be skipped.
   // Returning true means we're done with the packet (it can be completed) and we would like another
   if (frac_source_for_final_packet_frame <
       (frac_source_for_first_mix_job_frame - mixer->neg_filter_width())) {
+    FractionalFrames<int64_t> source_frac_frames_late = frac_source_for_first_mix_job_frame -
+                                                        mixer->neg_filter_width() -
+                                                        frac_source_for_first_packet_frame;
     auto clock_mono_late = zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
-        frac_source_for_first_mix_job_frame - mixer->neg_filter_width() -
-        frac_source_for_first_packet_frame));
+        source_frac_frames_late.raw_value()));
 
     source->UnderflowOccurred(frac_source_for_first_packet_frame,
                               frac_source_for_first_mix_job_frame, clock_mono_late);
@@ -350,10 +354,10 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
   // If neither of the above, then evidently this source packet intersects our mixer's filter.
   // Compute the offset into the dest buffer where our first generated sample should land, and the
   // offset into the source packet where we should start sampling.
-  int64_t frac_source_offset_64 =
-      frac_source_for_first_mix_job_frame - frac_source_for_first_packet_frame;
   int64_t dest_offset_64 = 0;
-  int64_t frac_source_pos_edge_first_mix_frame =
+  FractionalFrames<int64_t> frac_source_offset_64 =
+      frac_source_for_first_mix_job_frame - frac_source_for_first_packet_frame;
+  FractionalFrames<int64_t> frac_source_pos_edge_first_mix_frame =
       frac_source_for_first_mix_job_frame + mixer->pos_filter_width();
 
   // If the packet's first frame comes after the filter window's positive edge,
@@ -369,12 +373,12 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
     // computed dest frame), then add an additional 'round-up' frame (to account for initial
     // subtract). Because we entered this IF in the first place, we have at least some fractional
     // src delta, thus dest_offset_64 is guaranteed to become greater than zero.
-    dest_offset_64 = dest_to_src.Inverse().Scale(frac_source_for_first_packet_frame -
-                                                 frac_source_pos_edge_first_mix_frame - 1) +
-                     1;
+    FractionalFrames<int64_t> first_source_mix_point =
+        frac_source_for_first_packet_frame - frac_source_pos_edge_first_mix_frame;
+    dest_offset_64 = dest_to_src.Inverse().Scale(first_source_mix_point.raw_value() - 1) + 1;
     FX_DCHECK(dest_offset_64 > 0);
 
-    frac_source_offset_64 += dest_to_src.Scale(dest_offset_64);
+    frac_source_offset_64 += FractionalFrames<int64_t>::FromRaw(dest_to_src.Scale(dest_offset_64));
 
     source->PartialUnderflowOccurred(frac_source_offset_64, dest_offset_64);
   }
@@ -385,15 +389,14 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
 
   FX_DCHECK(frac_source_offset_64 <= std::numeric_limits<int32_t>::max());
   FX_DCHECK(frac_source_offset_64 >= std::numeric_limits<int32_t>::min());
-  auto frac_source_offset = static_cast<int32_t>(frac_source_offset_64);
+  auto frac_source_offset = FractionalFrames<int32_t>(frac_source_offset_64);
 
   // Looks like we are ready to go. Mix.
-  FX_DCHECK(packet->frac_frame_len() <= static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+  FX_DCHECK(packet->length() <= FractionalFrames<uint32_t>(FractionalFrames<int32_t>::Max()));
 
-  FX_DCHECK(frac_source_offset + mixer->pos_filter_width() >= 0);
+  FX_DCHECK(frac_source_offset + mixer->pos_filter_width() >= FractionalFrames<uint32_t>(0));
   bool consumed_source = false;
-  if (frac_source_offset + static_cast<int32_t>(mixer->pos_filter_width()) <
-      static_cast<int32_t>(packet->frac_frame_len())) {
+  if (frac_source_offset + mixer->pos_filter_width() < packet->length()) {
     // When calling Mix(), we communicate the resampling rate with three parameters. We augment
     // step_size with rate_modulo and denominator arguments that capture the remaining rate
     // component that cannot be expressed by a 19.13 fixed-point step_size. Note: step_size and
@@ -424,14 +427,18 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
           cur_mix_job_.local_to_output->rate());
     }
 
-    consumed_source =
-        mixer->Mix(buf, dest_frames_left, &dest_offset, packet->payload(), packet->frac_frame_len(),
-                   &frac_source_offset, cur_mix_job_.accumulate);
+    {
+      int32_t raw_source_offset = frac_source_offset.raw_value();
+      consumed_source =
+          mixer->Mix(buf, dest_frames_left, &dest_offset, packet->payload(),
+                     packet->length().raw_value(), &raw_source_offset, cur_mix_job_.accumulate);
+      frac_source_offset = FractionalFrames<int32_t>::FromRaw(raw_source_offset);
+    }
     FX_DCHECK(dest_offset <= dest_frames_left);
     AUD_VLOG_OBJ(SPEW, this) << " consumed from " << std::hex << std::setw(8)
-                             << prev_frac_source_offset << " to " << std::setw(8)
-                             << frac_source_offset << ", of " << std::setw(8)
-                             << packet->frac_frame_len();
+                             << prev_frac_source_offset.raw_value() << " to " << std::setw(8)
+                             << frac_source_offset.raw_value() << ", of " << std::setw(8)
+                             << packet->length().raw_value();
 
     // If src is ramping, advance by delta of dest_offset
     if (ramping) {
@@ -446,7 +453,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
   }
 
   if (consumed_source) {
-    FX_DCHECK(frac_source_offset + mixer->pos_filter_width() >= packet->frac_frame_len());
+    FX_DCHECK(frac_source_offset + mixer->pos_filter_width() >= packet->length());
   }
 
   cur_mix_job_.frames_produced += dest_offset;
@@ -468,7 +475,8 @@ void AudioOutput::SetupTrim(Mixer* mixer) {
   // If a forward transformation fails it must be because of overflow, which should be impossible
   // unless user defined a playback rate where the ratio of media-ticks-to-local-ticks is greater
   // than one.
-  trim_threshold_ = mixer->bookkeeping().clock_mono_to_frac_source_frames(local_now_ticks);
+  trim_threshold_ = FractionalFrames<int64_t>::FromRaw(
+      mixer->bookkeeping().clock_mono_to_frac_source_frames(local_now_ticks));
 }
 
 bool AudioOutput::ProcessTrim(const fbl::RefPtr<Packet>& pkt_ref) {
@@ -476,7 +484,7 @@ bool AudioOutput::ProcessTrim(const fbl::RefPtr<Packet>& pkt_ref) {
   FX_DCHECK(pkt_ref);
 
   // If the presentation end of this packet is in the future, stop trimming.
-  if (pkt_ref->end_pts() > trim_threshold_) {
+  if (pkt_ref->end() > trim_threshold_) {
     return false;
   }
 

@@ -340,9 +340,10 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t num_src_frames, double* le
                      << dest_offset << ", frac_src_frames " << std::hex << frac_src_frames
                      << ", frac_src_offset " << frac_src_offset;
       ASSERT_GE(frac_src_offset, 0);
-      EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width(), frac_src_frames)
+      EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width().raw_value(),
+                frac_src_frames)
           << "src_off " << std::hex << frac_src_offset << ", pos_width "
-          << mixer->pos_filter_width() << ", src_frames " << frac_src_frames;
+          << mixer->pos_filter_width().raw_value() << ", src_frames " << frac_src_frames;
 
       // Wrap around in the source buffer -- making the offset slightly negative. We can do
       // this, within the positive filter width of this sampler.
@@ -1385,9 +1386,10 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
                      << dest_offset << ", frac_src_frames " << std::hex << frac_src_frames
                      << ", frac_src_offset " << frac_src_offset;
     ASSERT_GE(frac_src_offset, 0);
-    EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width(), frac_src_frames)
-        << "src_off " << std::hex << frac_src_offset << ", pos_width " << mixer->pos_filter_width()
-        << ", src_frames " << frac_src_frames;
+    EXPECT_GE(static_cast<uint32_t>(frac_src_offset) + mixer->pos_filter_width().raw_value(),
+              frac_src_frames)
+        << "src_off " << std::hex << frac_src_offset << ", pos_width "
+        << mixer->pos_filter_width().raw_value() << ", src_frames " << frac_src_frames;
 
     // Wrap around in the source buffer -- making the offset slightly negative. We can do
     // this, within the positive filter width of this sampler.

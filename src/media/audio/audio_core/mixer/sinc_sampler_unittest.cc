@@ -57,8 +57,8 @@ TEST(SincSamplerTest, Construction) {
 TEST(SincSamplerTest, SamplingPosition_Basic) {
   auto mixer = SelectSincSampler(1, 48000, fuchsia::media::AudioSampleFormat::FLOAT, 1, 48000);
 
-  EXPECT_EQ(mixer->pos_filter_width(), kSincFilterSideLength - 1u);
-  EXPECT_EQ(mixer->neg_filter_width(), kSincFilterSideLength - 1u);
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), kSincFilterSideLength - 1u);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), kSincFilterSideLength - 1u);
 
   bool should_not_accum = false;
   bool source_is_consumed;
@@ -76,7 +76,7 @@ TEST(SincSamplerTest, SamplingPosition_Basic) {
   source_is_consumed = mixer->Mix(dest, dest_frames, &dest_offset, source, frac_src_frames,
                                   &frac_src_offset, should_not_accum);
   EXPECT_TRUE(source_is_consumed);
-  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width() >= frac_src_frames);
+  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width().raw_value() >= frac_src_frames);
   EXPECT_EQ(dest_offset, static_cast<uint32_t>(frac_src_offset) >> kPtsFractionalBits);
 }
 
@@ -109,7 +109,7 @@ TEST(SincSamplerTest, SamplingValues_DC_Unity) {
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), frac_src_frames,
                                   &frac_src_offset, should_not_accum);
   EXPECT_TRUE(source_is_consumed) << std::hex << frac_src_offset;
-  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width() >= frac_src_frames);
+  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width().raw_value() >= frac_src_frames);
   EXPECT_EQ(static_cast<uint32_t>(frac_src_offset) >> kPtsFractionalBits, dest_offset);
   auto first_half_dest = dest_offset;
 
@@ -118,7 +118,7 @@ TEST(SincSamplerTest, SamplingValues_DC_Unity) {
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), frac_src_frames,
                                   &frac_src_offset, should_not_accum);
   EXPECT_TRUE(source_is_consumed) << std::hex << frac_src_offset;
-  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width() >= frac_src_frames);
+  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width().raw_value() >= frac_src_frames);
 
   // The "seam" between buffers should be invisible
   for (auto idx = first_half_dest - 2; idx < first_half_dest + 2; ++idx) {
@@ -158,7 +158,7 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), frac_src_frames,
                                   &frac_src_offset, should_not_accum);
   EXPECT_TRUE(source_is_consumed) << std::hex << frac_src_offset;
-  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width() >= frac_src_frames);
+  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width().raw_value() >= frac_src_frames);
   auto first_half_dest = dest_offset;
 
   // Now mix the rest
@@ -166,7 +166,7 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), frac_src_frames,
                                   &frac_src_offset, should_not_accum);
   EXPECT_TRUE(source_is_consumed) << std::hex << frac_src_offset;
-  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width() >= frac_src_frames);
+  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width().raw_value() >= frac_src_frames);
 
   // The "seam" between buffers should be invisible
   for (auto idx = first_half_dest - 2; idx < first_half_dest + 2; ++idx) {
@@ -206,7 +206,7 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
   source_is_consumed = mixer->Mix(dest.get(), kDestLen / 2, &dest_offset, source.get(),
                                   frac_src_frames, &frac_src_offset, should_not_accum);
   EXPECT_TRUE(source_is_consumed) << std::hex << frac_src_offset;
-  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width() >= frac_src_frames);
+  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width().raw_value() >= frac_src_frames);
   EXPECT_EQ(static_cast<uint64_t>(frac_src_offset) >> (kPtsFractionalBits - 2), dest_offset);
   auto first_half_dest = dest_offset;
 
@@ -215,7 +215,7 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), frac_src_frames,
                                   &frac_src_offset, should_not_accum);
   EXPECT_TRUE(source_is_consumed) << std::hex << frac_src_offset;
-  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width() >= frac_src_frames);
+  EXPECT_TRUE(frac_src_offset + mixer->pos_filter_width().raw_value() >= frac_src_frames);
 
   // The two samples before and after the "seam" between buffers should be invisible
   for (auto idx = first_half_dest - 2; idx < first_half_dest + 2; ++idx) {

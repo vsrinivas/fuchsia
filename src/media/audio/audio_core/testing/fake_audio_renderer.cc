@@ -66,8 +66,9 @@ void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) 
   }
 
   auto packet_ref = fbl::MakeRefCounted<Packet>(
-      vmo_ref_, dispatcher_, [] {}, packet, frame_count << kPtsFractionalBits, next_pts_);
-  next_pts_ = packet_ref->end_pts();
+      vmo_ref_, dispatcher_, [] {}, packet, FractionalFrames<uint32_t>(frame_count),
+      FractionalFrames<int64_t>::FromRaw(next_pts_));
+  next_pts_ = packet_ref->end().raw_value();
   for (auto& [_, packet_queue] : packet_queues_) {
     packet_queue->PushPacket(packet_ref);
   }

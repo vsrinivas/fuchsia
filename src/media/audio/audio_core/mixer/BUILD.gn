@@ -16,6 +16,7 @@ source_set("mixer") {
     "channel_strip.h",
     "filter.cc",
     "filter.h",
+    "frames.h",
     "gain.cc",
     "gain.h",
     "linear_sampler.cc",
@@ -40,6 +41,7 @@ source_set("mixer") {
     "//sdk/fidl/fuchsia.media",
     "//src/media/audio/lib/logging",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/ffl",
   ]
 
   deps = [

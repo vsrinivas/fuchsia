@@ -138,9 +138,11 @@ class AudioRendererImpl : public AudioObject,
 
   // |media::audio::AudioObject|
   void OnLinkAdded() override;
-  void UnderflowOccurred(int64_t source_start, int64_t mix_point,
+  void UnderflowOccurred(FractionalFrames<int64_t> frac_source_start,
+                         FractionalFrames<int64_t> frac_source_mix_point,
                          zx::duration underflow_duration) final;
-  void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) final;
+  void PartialUnderflowOccurred(FractionalFrames<int64_t> frac_source_offset,
+                                int64_t dest_mix_offset) final;
   const fbl::RefPtr<Format>& format() const final { return format_; }
   zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link) override;
   void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) override;
@@ -164,17 +166,17 @@ class AudioRendererImpl : public AudioObject,
   bool config_validated_ = false;
 
   // PTS interpolation state.
-  int64_t next_frac_frame_pts_ = 0;
+  FractionalFrames<int64_t> next_frac_frame_pts_{0};
   TimelineRate pts_ticks_per_second_;
   TimelineRate frac_frames_per_pts_tick_;
   TimelineFunction pts_to_frac_frames_;
   bool pts_to_frac_frames_valid_ = false;
   float pts_continuity_threshold_ = 0.0f;
   bool pts_continuity_threshold_set_ = false;
-  int64_t pts_continuity_threshold_frac_frame_ = 0;
+  FractionalFrames<int64_t> pts_continuity_threshold_frac_frame_{0};
 
   // Play/Pause state
-  int64_t pause_time_frac_frames_;
+  FractionalFrames<int64_t> pause_time_frac_frames_;
   bool pause_time_frac_frames_valid_ = false;
   TimelineRate frac_frames_per_ref_tick_;
 

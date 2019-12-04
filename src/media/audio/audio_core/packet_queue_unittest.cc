@@ -36,7 +36,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
     packet.payload_size = PAGE_SIZE;
     return fbl::MakeRefCounted<Packet>(
         std::move(vmo_mapper), dispatcher(), [this] { ++released_packet_count_; },
-        std::move(packet), 0, 0);
+        std::move(packet), FractionalFrames<uint32_t>(0), FractionalFrames<int64_t>(0));
   }
 
   size_t released_packet_count() const { return released_packet_count_; }

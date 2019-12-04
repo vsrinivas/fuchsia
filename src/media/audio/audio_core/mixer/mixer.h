@@ -11,6 +11,7 @@
 
 #include "lib/media/cpp/timeline_function.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
+#include "src/media/audio/audio_core/mixer/frames.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 
 namespace media::audio {
@@ -216,8 +217,8 @@ class Mixer {
   // Conversely, input frame X contributes to the output samples S where
   //  (S >= X - P)  and  (S <= X + N)
   //
-  inline uint32_t pos_filter_width() const { return pos_filter_width_; }
-  inline uint32_t neg_filter_width() const { return neg_filter_width_; }
+  inline FractionalFrames<uint32_t> pos_filter_width() const { return pos_filter_width_; }
+  inline FractionalFrames<uint32_t> neg_filter_width() const { return neg_filter_width_; }
 
   Bookkeeping& bookkeeping() { return bookkeeping_; }
   const Bookkeeping& bookkeeping() const { return bookkeeping_; }
@@ -226,8 +227,8 @@ class Mixer {
   Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width);
 
  private:
-  uint32_t pos_filter_width_;
-  uint32_t neg_filter_width_;
+  FractionalFrames<uint32_t> pos_filter_width_;
+  FractionalFrames<uint32_t> neg_filter_width_;
   Bookkeeping bookkeeping_;
 };
 

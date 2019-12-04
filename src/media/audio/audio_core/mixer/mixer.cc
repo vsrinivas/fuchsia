@@ -19,7 +19,8 @@ constexpr uint32_t Mixer::FRAC_MASK;
 constexpr uint32_t Mixer::Bookkeeping::kScaleArrLen;
 
 Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
-    : pos_filter_width_(pos_filter_width), neg_filter_width_(neg_filter_width) {}
+    : pos_filter_width_(FractionalFrames<uint32_t>::FromRaw(pos_filter_width)),
+      neg_filter_width_(FractionalFrames<uint32_t>::FromRaw(neg_filter_width)) {}
 
 //
 // Select an appropriate instance of a mixer based on the user-specified
