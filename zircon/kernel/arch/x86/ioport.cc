@@ -69,9 +69,15 @@ void x86_set_tss_io_bitmap(IoBitmap& io_bitmap) {
   x86_set_tss_io_bitmap(*io_bitmap.bitmap_);
 }
 
-IoBitmap& IoBitmap::GetCurrent() {
-  VmAspace* aspace = vmm_aspace_to_obj(get_current_thread()->aspace);
-  return aspace->arch_aspace().io_bitmap();
+IoBitmap* IoBitmap::GetCurrent() {
+  // Fetch current thread's address space. If we have no address space (e.g.,
+  // the idle thread), we also don't have an IO Bitmap.
+  struct vmm_aspace* aspace = get_current_thread()->aspace;
+  if (aspace == nullptr) {
+    return nullptr;
+  }
+
+  return &vmm_aspace_to_obj(aspace)->arch_aspace().io_bitmap();
 }
 
 IoBitmap::~IoBitmap() {}
@@ -84,17 +90,16 @@ struct ioport_update_context {
 void IoBitmap::UpdateTask(void* raw_context) {
   DEBUG_ASSERT(arch_ints_disabled());
   struct ioport_update_context* context = (struct ioport_update_context*)raw_context;
+  DEBUG_ASSERT(context->io_bitmap != nullptr);
 
-  IoBitmap& io_bitmap = GetCurrent();
-  if (&io_bitmap != context->io_bitmap) {
-    return;
-  }
-
-  {
-    AutoSpinLockNoIrqSave guard(&io_bitmap.lock_);
+  // If our CPU's active bitmap matches the one that has been updated,
+  // reprogram the hardware to match.
+  IoBitmap* io_bitmap = GetCurrent();
+  if (io_bitmap == context->io_bitmap) {
+    AutoSpinLockNoIrqSave guard(&io_bitmap->lock_);
     // This is overkill, but it's much simpler to reason about
     x86_reset_tss_io_bitmap();
-    x86_set_tss_io_bitmap(*io_bitmap.bitmap_);
+    x86_set_tss_io_bitmap(*io_bitmap->bitmap_);
   }
 }
 
@@ -148,8 +153,8 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
       break;
     }
 
-    IoBitmap& current = GetCurrent();
-    if (this == &current) {
+    IoBitmap* current = GetCurrent();
+    if (this == current) {
       // Set the io bitmap in the tss (the tss IO bitmap has reversed polarity)
       tss_t* tss = &x86_get_percpu()->default_tss;
       if (enable) {

@@ -15,8 +15,9 @@
 
 class IoBitmap {
  public:
-  // Return the IoBitmap associated with the current thread.
-  static IoBitmap& GetCurrent();
+  // Return the IoBitmap associated with the current thread, or nullptr if the
+  // thread has no associated IoBitmap (such as idle threads).
+  static IoBitmap* GetCurrent();
 
   ~IoBitmap();
 

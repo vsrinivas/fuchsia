@@ -261,7 +261,7 @@ zx_status_t sys_ioports_request(zx_handle_t hrsrc, uint16_t io_addr, uint32_t le
 
   LTRACEF("addr 0x%x len 0x%x\n", io_addr, len);
 
-  return IoBitmap::GetCurrent().SetIoBitmap(io_addr, len, 1);
+  return IoBitmap::GetCurrent()->SetIoBitmap(io_addr, len, /*enable=*/true);
 }
 
 // zx_status_t zx_ioports_release
@@ -273,7 +273,7 @@ zx_status_t sys_ioports_release(zx_handle_t hrsrc, uint16_t io_addr, uint32_t le
 
   LTRACEF("addr 0x%x len 0x%x\n", io_addr, len);
 
-  return IoBitmap::GetCurrent().SetIoBitmap(io_addr, len, /*enable=*/false);
+  return IoBitmap::GetCurrent()->SetIoBitmap(io_addr, len, /*enable=*/false);
 }
 
 #else
