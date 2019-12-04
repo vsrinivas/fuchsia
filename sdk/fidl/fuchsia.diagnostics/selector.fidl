@@ -3,59 +3,92 @@
 // found in the LICENSE file.
 library fuchsia.diagnostics;
 
-enum PatternMatcher {
-    WILDCARD = 0;
-    GLOB = 1;
-};
+//  The size bound of 100 is a reasonably low limit chosen based on observed
+//  strings used as identifiers.
+const uint16 MAXIMUM_STRING_SELECTOR_LENGTH = 100;
 
-/// The set of states that a selection node can exist in. A selection-node
-/// is a matcher of a container in a nested hierarchy, such as
-/// a match of nested components at a location in the component hierarchy
-/// or a match of nodes in an Inspect tree.
-///
-/// string_pattern: This is a provided string that defines a pattern to
-///   match against at the current location in a nested hierarchy. The
-///   parser treats wildcards (*) and backslashes (\) as special characters.
-///   If you wish to match against literal wildcards, it must be escaped.
-///   If you wish to match against literal backslashes, they must be escaped.
-///
-///   eg: <curr_node>/abc will match any node contained within curr_node
-///       with the exact name "abc".
-///   eg: <curr_node>/a\* will match any node contained within curr_node
-///       with the exact name "a*".
-///   eg: <curr_node>/a\\* will match any node contained within curr_node
-///       that starts with exactly "a\".
-///   eg: <curr_node>/a* will match any node contained within curr_node
-///       that starts with "a".
-///   eg: <curr_node>/a*b will match any node contained within curr_node
-///       that starts with a and ends with b.
-///   eg: <curr_node>/*b will match any node contained within curr_node
-///       that ends with b.
-///
-/// pattern_matcher: This is either a wild-card or a glob.
-///
-///   wildcard: will match all nodes at the current location in the
-///      component hierarchy. These PathSelectionNode types are a result of the
-///      only text provided in the selector-node spot being an escaped star.
-///
-///   glob: will match all nodes at or below the current location in the
-///      component hierarchy. These PathSelectionNode types are a result of
-///      the only text provided in the selector-node spot being two escaped stars.
-xunion PathSelectionNode {
-    string:1024 string_pattern;
-    PatternMatcher pattern_matcher;
+//  The size bound of 25 is a reasonably low limit chosen based on observed
+//  component hierarchy depths, and awareness of maximum zircon message sizes.
+const uint16 MAXIMUM_MONIKER_SEGMENTS = 25;
+
+//  The size bound of 100 is a reasonably low limit chosen based on observed Inspect
+//  hierarchy use cases.
+const uint16 MAXIMUM_DATA_HIERARCHY_DEPTH = 100;
+
+/// StringSelector is an xunion defining different ways to describe a pattern to match
+/// strings against.
+xunion StringSelector {
+    ///   This is a provided string that defines a pattern to
+    ///   match against. The parser treats asterisks (*), colons (:) and backslashes
+    ///   (\) as special characters.
+    ///
+    ///   If you wish to match against literal asterisks (*), they must be escaped.
+    ///   If you wish to match against literal backslashes (\), they must be escaped.
+    ///   If you wish to match against literal colons (:), they must be escaped.
+    ///
+    ///   eg: abc will match any string with the exact name "abc".
+    ///   eg: a\* will match any string with the exact name "a*".
+    ///   eg: a\\* will match any that starts with exactly "a\".
+    ///   eg: a* will match any string that starts with "a".
+    ///   eg: a*b will match any string that starts with a and ends with b.
+    ///   eg: a*b*c will match any string that starts with a and ends with c, with `b`
+    ///       in the middle.
+    string:MAXIMUM_STRING_SELECTOR_LENGTH string_pattern;
+
+    ///  This is a provided string that defines an exact string to match against. No
+    ///  characters are treated as special, or carry special syntax.
+    string:MAXIMUM_STRING_SELECTOR_LENGTH exact_match;
 };
 
 /// ComponentSelector encodes path to a component that is being selected for.
-/// The `component_moniker` specifies a pattern of component absolute monikers which
+/// The `component_moniker` specifies a pattern of component relative monikers which
 /// identify components being selected for.
 table ComponentSelector {
-    /// Vector encoding the absolute moniker of a component being selected for.
+    /// Vector encoding the a pattern for monikers of components being selected for.
+    /// These monikers are child-monikers relative to a "root" hierarchy that the archivist
+    /// is aware of.
     ///
-    /// There must be at least one path selection node provided, which
+    /// There must be at least one StringSelector provided, which
     /// specifies the component names that are matched by
-    /// the current selector. With only the component name
-    /// present, we treat the `component_moniker` as selecting for all monikers
-    /// that end in the specified name.
-    1: vector<PathSelectionNode>:1024 component_moniker;
+    /// the current selector.
+    /// TODO(4601): Investigate options for introduction of recursive wildcards.
+    ///
+    1: vector<StringSelector>:MAXIMUM_MONIKER_SEGMENTS moniker_segments;
+};
+
+/// TreeSelector represents a selection request on a nested structure where each
+/// nested node has properties that can be retrieved. The node_path specifies which
+/// nodes we search through, and the target_properties specify which properties to
+/// look for on the matched nodes.
+///
+/// Given that a Tree Selector has two sections, <object node selector>:<property selector>,
+/// in the absence of an optional property_selector, we return the subtree of all nodes specified
+/// by the object node selector.
+table TreeSelector {
+    /// A vector of StringSelectors which serve as a pattern matcher
+    ///   for paths through a hierarchy of named nodes.
+    ///
+    /// This field is required.
+    ///
+    1: vector<StringSelector>:MAXIMUM_DATA_HIERARCHY_DEPTH node_path;
+
+    /// A StringSelector which serves as a pattern matcher for
+    ///   string-named properties on a node in a data hierarchy.
+    ///
+    /// This field is optional. Without a property selector, the TreeSelector
+    /// will select the entire subtree of all nodes selected by the node_path.
+    2: StringSelector target_properties;
+};
+
+/// Structured selector containing all required information for pattern-matching onto
+/// string-named properties owned by nodes in a data hierarchy, where data hierarchies belong
+/// to specific components.
+struct Selector {
+    /// The selector defining a pattern of component monikers to match
+    /// against.
+    ComponentSelector component_selector;
+    /// The selector defining data hierarchy properties to match against
+    /// within the data hierarchies owned by components matched by
+    /// `component_selector`.
+    TreeSelector tree_selector;
 };

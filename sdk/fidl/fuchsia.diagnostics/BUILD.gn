@@ -6,6 +6,12 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.diagnostics") {
   sources = [
+    "format.fidl",
+    "reader.fidl",
     "selector.fidl",
+  ]
+
+  public_deps = [
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }

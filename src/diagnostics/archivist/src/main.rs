@@ -10,20 +10,17 @@ use {
     archivist_lib::{archive, configs, data_stats, diagnostics, inspect, logs},
     argh::FromArgs,
     failure::Error,
-    fidl_fuchsia_diagnostics_inspect::Selector,
     fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{future, FutureExt, StreamExt},
-    io_util, selectors,
+    io_util,
     std::{
         path::PathBuf,
         sync::{Arc, RwLock},
     },
 };
-
-static INSPECT_ALL_SELECTORS: &str = "/config/data/pipelines/all/";
 
 /// Monitor, collect, and store diagnostics from components.
 #[derive(Debug, Default, FromArgs)]
@@ -66,16 +63,9 @@ fn main() -> Result<(), Error> {
         );
     }
 
-    let all_selectors: Vec<Arc<Selector>> = match selectors::parse_selectors(INSPECT_ALL_SELECTORS)
-    {
-        Ok(selectors) => selectors.into_iter().map(|selector| Arc::new(selector)).collect(),
-        Err(parsing_error) => panic!("Parsing selectors failed: {}", parsing_error),
-    };
-
     // The repository that will serve as the data transfer between the archivist server
     // and all services needing access to inspect data.
-    let all_inspect_repository =
-        Arc::new(RwLock::new(inspect::InspectDataRepository::new(all_selectors)));
+    let all_inspect_repository = Arc::new(RwLock::new(inspect::InspectDataRepository::new(None)));
 
     if let Some(to_summarize) = &archivist_configuration.summarized_dirs {
         data_stats::add_stats_nodes(&mut fs, to_summarize)?;

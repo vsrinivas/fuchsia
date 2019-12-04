@@ -4,7 +4,7 @@
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_diagnostics_inspect::{
-        DisplaySettings, FormatSettings, ReaderMarker, ReaderSelector, TextSettings,
+        DisplaySettings, FormatSettings, ReaderMarker, TextSettings,
     },
     fuchsia_async as fasync,
     fuchsia_component::client::{launcher, AppBuilder},
@@ -80,8 +80,6 @@ async fn main() -> Result<(), Error> {
         .spawn(&launcher)?;
 
     let reader = archivist.connect_to_service::<ReaderMarker>()?;
-    let mut string_selector = ReaderSelector::StringSelector("**:**:*".into());
-    reader.add_selector(&mut string_selector).await?.expect("adding selector");
 
     let mut settings = FormatSettings::empty();
     settings.format = Some(DisplaySettings::Text(TextSettings { indent: 2 }));

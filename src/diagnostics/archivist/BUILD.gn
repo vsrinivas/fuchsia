@@ -141,7 +141,6 @@ group("with_default_config") {
     ":archivist_config",
     ":archivist_startup",
     ":observer_config",
-    "//src/diagnostics/config/pipelines/all:all_selectors",
   ]
 }
 

@@ -6,8 +6,9 @@
 #![allow(unused_variables)]
 
 use {
+    crate::selectors,
     failure::{format_err, Error},
-    fidl_fuchsia_diagnostics::{PathSelectionNode, PatternMatcher},
+    fidl_fuchsia_diagnostics::StringSelector,
     fidl_fuchsia_diagnostics_inspect::Selector,
     std::collections::HashSet,
     std::path::PathBuf,
@@ -21,14 +22,14 @@ use {
 struct SelectorAutomata<'a> {
     // The individual states that make up
     // the selector state-machine.
-    states: &'a Vec<PathSelectionNode>,
+    states: &'a Vec<StringSelector>,
     // The set of states that the automata is currently
     // validly at, based on its evaluatation of some input.
     state_indices: Option<HashSet<usize>>,
 }
 
 impl<'a> SelectorAutomata<'a> {
-    pub fn new(states: &'a Vec<PathSelectionNode>) -> Self {
+    pub fn new(states: &'a Vec<StringSelector>) -> Self {
         SelectorAutomata { states: states, state_indices: None }
     }
 
@@ -113,11 +114,11 @@ pub fn match_component_moniker_against_selectors<'a>(
         // TODO(4601): Run these DFA executions concurrently with async.
         .filter_map(|selector| {
             let component_selector = &selector.component_selector;
-            let component_moniker: &Vec<PathSelectionNode> =
-                match &component_selector.component_moniker {
-                    Some(path_vec) => &path_vec,
-                    None => panic!("This is an invalid component selector."),
-                };
+            let component_moniker: &Vec<StringSelector> = match &component_selector.moniker_segments
+            {
+                Some(path_vec) => &path_vec,
+                None => panic!("This is an invalid component selector."),
+            };
 
             if component_moniker.is_empty() {
                 panic!("This is an invalid component selector.")
@@ -137,18 +138,23 @@ pub fn match_component_moniker_against_selectors<'a>(
 
 // Checks to see whether a given tokenized value
 // in the hub path can be selected for by a given
-// PathSelectionNode.
+// StringSelector.
 fn evaluate_path_state_with_selector_node(
     path_state: &str,
-    selector_node: &PathSelectionNode,
+    selector_node: &StringSelector,
 ) -> bool {
     match selector_node {
         // TODO(4601): String patterns that contain wildcards must be pattern matched on.
         //             Can we convert these to regex to avoid another custom state machine?
-        PathSelectionNode::StringPattern(string_pattern) => string_pattern == path_state,
-        PathSelectionNode::PatternMatcher(enum_pattern) => match enum_pattern {
-            PatternMatcher::Wildcard | PatternMatcher::Glob => true,
-        },
+        StringSelector::StringPattern(string_pattern) => {
+            if string_pattern == selectors::WILDCARD_SYMBOL {
+                return true;
+            } else {
+                // TODO(4601): Support wildcarded string_literals.
+                return string_pattern == path_state;
+            }
+        }
+        StringSelector::ExactMatch(exact_match) => exact_match == path_state,
         _ => false,
     }
 }
@@ -158,19 +164,16 @@ fn evaluate_path_state_with_selector_node(
 fn evaluate_single_generation(
     path_value: &String,
     state_indices: &HashSet<usize>,
-    states: &Vec<PathSelectionNode>,
+    states: &Vec<StringSelector>,
 ) -> HashSet<usize> {
     let mut next_generation_state_indices: HashSet<usize> = HashSet::new();
     for state_index in state_indices {
         let state_node = &states[*state_index as usize];
         if evaluate_path_state_with_selector_node(&path_value, state_node) {
-            match state_node {
-                PathSelectionNode::PatternMatcher(PatternMatcher::Glob) => {
-                    // Globs are special because this state can repeat.
-                    next_generation_state_indices.insert(*state_index);
-                }
-                _ => {}
-            }
+            // NOTE: If we reintroduce globs, at this point, glob states must
+            // be re-added to the next_generation_state_indices since globs
+            // can repeat.
+
             // Always provide the next state in the automata if the current
             // state was a match, assuming it's not the exit state that was
             // arrived at early.
@@ -191,61 +194,40 @@ mod tests {
 
     #[test]
     fn canonical_automata_simulator_test() {
-        let test_vector: Vec<(Vec<String>, Vec<PathSelectionNode>, bool)> = vec![
+        let test_vector: Vec<(Vec<String>, Vec<StringSelector>, bool)> = vec![
             (
                 vec!["a".to_string(), "b".to_string(), "c".to_string()],
                 vec![
-                    PathSelectionNode::StringPattern("a".to_string()),
-                    PathSelectionNode::StringPattern("b".to_string()),
-                    PathSelectionNode::StringPattern("c".to_string()),
+                    StringSelector::StringPattern("a".to_string()),
+                    StringSelector::StringPattern("b".to_string()),
+                    StringSelector::StringPattern("c".to_string()),
                 ],
                 true,
             ),
             (
                 vec!["a".to_string(), "b".to_string(), "c".to_string()],
                 vec![
-                    PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
-                    PathSelectionNode::StringPattern("b".to_string()),
-                    PathSelectionNode::StringPattern("c".to_string()),
-                ],
-                true,
-            ),
-            (
-                vec!["a".to_string(), "b".to_string(), "c".to_string()],
-                vec![PathSelectionNode::PatternMatcher(PatternMatcher::Glob)],
-                true,
-            ),
-            (
-                vec!["a".to_string(), "b".to_string(), "c".to_string()],
-                vec![
-                    PathSelectionNode::StringPattern("a".to_string()),
-                    PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
-                    PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
+                    StringSelector::StringPattern("*".to_string()),
+                    StringSelector::StringPattern("b".to_string()),
+                    StringSelector::StringPattern("c".to_string()),
                 ],
                 true,
             ),
             (
                 vec!["a".to_string(), "b".to_string(), "c".to_string()],
                 vec![
-                    PathSelectionNode::StringPattern("b".to_string()),
-                    PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
-                    PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
-                ],
-                false,
-            ),
-            (
-                vec!["a".to_string(), "b".to_string(), "c".to_string()],
-                vec![
-                    PathSelectionNode::StringPattern("a".to_string()),
-                    PathSelectionNode::PatternMatcher(PatternMatcher::Glob),
+                    StringSelector::StringPattern("a".to_string()),
+                    StringSelector::StringPattern("*".to_string()),
+                    StringSelector::StringPattern("*".to_string()),
                 ],
                 true,
             ),
             (
                 vec!["a".to_string(), "b".to_string(), "c".to_string()],
                 vec![
-                    PathSelectionNode::StringPattern("b".to_string()),
-                    PathSelectionNode::PatternMatcher(PatternMatcher::Glob),
+                    StringSelector::StringPattern("b".to_string()),
+                    StringSelector::StringPattern("*".to_string()),
+                    StringSelector::StringPattern("*".to_string()),
                 ],
                 false,
             ),
@@ -254,9 +236,9 @@ mod tests {
             (
                 vec!["a".to_string(), "bob".to_string(), "c".to_string()],
                 vec![
-                    PathSelectionNode::StringPattern("a".to_string()),
-                    PathSelectionNode::StringPattern("b*".to_string()),
-                    PathSelectionNode::StringPattern("c".to_string()),
+                    StringSelector::StringPattern("a".to_string()),
+                    StringSelector::StringPattern("b*".to_string()),
+                    StringSelector::StringPattern("c".to_string()),
                 ],
                 false,
             ),

@@ -5,9 +5,10 @@
 #![allow(dead_code)]
 use {
     failure::{format_err, Error},
-    fidl_fuchsia_diagnostics::{ComponentSelector, PathSelectionNode, PatternMatcher},
-    fidl_fuchsia_diagnostics_inspect::{PropertySelector, Selector, TreeSelector},
-    regex::Regex,
+    fidl_fuchsia_diagnostics::{ComponentSelector, StringSelector},
+    fidl_fuchsia_diagnostics_inspect::{Selector, TreeSelector},
+    lazy_static::lazy_static,
+    regex::{Regex, RegexSet},
     std::fs,
     std::io::{BufRead, BufReader},
     std::path::{Path, PathBuf},
@@ -24,7 +25,7 @@ static PATH_NODE_DELIMITER: char = '/';
 static ESCAPE_CHARACTER: char = '\\';
 
 // Pattern used to encode wildcard.
-static WILDCARD_SYMBOL: &str = "*";
+pub static WILDCARD_SYMBOL: &str = "*";
 
 // Pattern used to encode globs.
 static GLOB_SYMBOL: &str = "**";
@@ -36,47 +37,58 @@ static GLOB_REGEX_EQUIVALENT: &str = ".+";
 // only extends to a single moniker "node".
 static WILDCARD_REGEX_EQUIVALENT: &str = r#"(\\/|[^/])+"#;
 
-/// Parse a string into a FIDL PathSelectionNode structure.
-fn convert_string_to_path_selection_node(
-    string_to_convert: &String,
-) -> Result<PathSelectionNode, Error> {
-    match string_to_convert {
-        wildcard if wildcard == WILDCARD_SYMBOL => {
-            Ok(PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard))
+/// Validates a string pattern used in either a PropertySelector or a
+/// PathSelectorNode.
+/// string patterns:
+///    1) Require that the string not be empty.
+///    2) Require that the string not contain any
+///       glob symbols.
+///    3) Require that any escape characters have a matching character they
+///       are escaping.
+///    4) Require that there are no unescaped selector delimiters, `:`,
+///       or unescaped path delimiters, `/`.
+fn validate_string_pattern(string_pattern: &String) -> Result<(), Error> {
+    lazy_static! {
+        static ref STRING_PATTERN_VALIDATOR: RegexSet = RegexSet::new(&[
+            // No glob expressions allowed.
+            r#"([^\\]\*\*|^\*\*)"#,
+            // No unescaped selector delimiters allowed.
+            r#"([^\\]:|^:)"#,
+            // No unescaped path delimiters allowed.
+            r#"([^\\]/|^/)"#,
+        ]).unwrap();
+    }
+    if string_pattern.is_empty() {
+        return Err(format_err!("String patterns cannot be empty."));
+    }
+
+    let validator_matches = STRING_PATTERN_VALIDATOR.matches(string_pattern);
+    if !validator_matches.matched_any() {
+        return Ok(());
+    } else {
+        let mut error_string =
+            format!("String pattern {} failed verification: ", string_pattern).to_string();
+        if validator_matches.matched(0) {
+            error_string.push_str("\n A string pattern cannot contain unescaped glob patterns.");
         }
-        glob if glob == GLOB_SYMBOL => Ok(PathSelectionNode::PatternMatcher(PatternMatcher::Glob)),
-        _ => {
-            if string_to_convert.contains(GLOB_SYMBOL) {
-                Err(format_err!("String literals can't contain globs."))
-            } else {
-                Ok(PathSelectionNode::StringPattern(string_to_convert.to_string()))
-            }
+        if validator_matches.matched(1) {
+            error_string
+                .push_str("\n A string pattern cannot contain unescaped selector delimiters, `:`.");
         }
+        if validator_matches.matched(2) {
+            error_string
+                .push_str("\n A string pattern cannot contain unescaped path delimiters, `/`.");
+        }
+        return Err(format_err!("{}", error_string));
     }
 }
 
-/// Parse a string into a FIDL PropertySelector structure.
-///
-/// Glob strings will throw Errorsince globs are not
-/// permitted for property selection.
-fn convert_string_to_property_selector(
-    string_to_convert: &String,
-) -> Result<PropertySelector, Error> {
-    if string_to_convert.is_empty() {
-        return Err(format_err!("Tree Selectors must have non-empty property selectors.",));
-    }
+/// Parse a string into a FIDL StringSelector structure.
+fn convert_string_to_string_selector(string_to_convert: &String) -> Result<StringSelector, Error> {
+    validate_string_pattern(string_to_convert)?;
 
-    match string_to_convert {
-        wildcard if wildcard == WILDCARD_SYMBOL => Ok(PropertySelector::Wildcard(true)),
-        glob if glob == GLOB_SYMBOL => Err(format_err!("Property selectors don't support globs.")),
-        _ => {
-            if string_to_convert.contains(GLOB_SYMBOL) {
-                Err(format_err!("String literals can't contain globs."))
-            } else {
-                Ok(PropertySelector::StringPattern(string_to_convert.to_string()))
-            }
-        }
-    }
+    // TODO(4601): Expose the ability to parse selectors from string into "exact_match" mode.
+    Ok(StringSelector::StringPattern(string_to_convert.to_string()))
 }
 
 /// Increments the CharIndices iterator and updates the token builder
@@ -150,14 +162,14 @@ pub fn parse_component_selector(
     // Convert every token of the component hierarchy into a PathSelectionNode.
     let path_node_vector = tokenized_component_selector
         .iter()
-        .map(|node_string| convert_string_to_path_selection_node(node_string))
-        .collect::<Result<Vec<PathSelectionNode>, Error>>()?;
+        .map(|node_string| convert_string_to_string_selector(node_string))
+        .collect::<Result<Vec<StringSelector>, Error>>()?;
 
     match path_node_vector.as_slice() {
         [] => {
             return Err(format_err!("ComponentSelector must have atleast one path node.",));
         }
-        _ => component_selector.component_moniker = Some(path_node_vector),
+        _ => component_selector.moniker_segments = Some(path_node_vector),
     }
 
     return Ok(component_selector);
@@ -177,13 +189,13 @@ pub fn parse_tree_selector(
         tree_selector.node_path = Some(
             tokenize_string(unparsed_node_path, PATH_NODE_DELIMITER)?
                 .iter()
-                .map(|node_string| convert_string_to_path_selection_node(node_string))
-                .collect::<Result<Vec<PathSelectionNode>, Error>>()?,
+                .map(|node_string| convert_string_to_string_selector(node_string))
+                .collect::<Result<Vec<StringSelector>, Error>>()?,
         );
     }
 
     tree_selector.target_properties =
-        Some(convert_string_to_property_selector(unparsed_property_selector)?);
+        Some(convert_string_to_string_selector(unparsed_property_selector)?);
 
     return Ok(tree_selector);
 }
@@ -238,20 +250,21 @@ pub fn parse_selectors(selector_path: impl Into<PathBuf>) -> Result<Vec<Selector
     Ok(selector_vec)
 }
 
-pub fn convert_path_selector_to_regex(selector: &Vec<PathSelectionNode>) -> Result<Regex, Error> {
+pub fn convert_path_selector_to_regex(selector: &Vec<StringSelector>) -> Result<Regex, Error> {
     let mut regex_string = "^".to_string();
     for path_selector in selector {
         match path_selector {
-            PathSelectionNode::StringPattern(string_pattern) => {
-                // TODO(4601): Support regex conversion of wildcarded string literals.
-                // TODO(4601): Support converting escaped char patterns into a form
-                //             matched by regex.
-                regex_string.push_str(&string_pattern)
+            StringSelector::StringPattern(string_pattern) => {
+                if string_pattern == WILDCARD_SYMBOL {
+                    regex_string.push_str(WILDCARD_REGEX_EQUIVALENT);
+                } else {
+                    // TODO(4601): Support regex conversion of wildcarded string literals.
+                    // TODO(4601): Support converting escaped char patterns into a form
+                    //             matched by regex.
+                    regex_string.push_str(&string_pattern)
+                }
             }
-            PathSelectionNode::PatternMatcher(enum_pattern) => match enum_pattern {
-                PatternMatcher::Wildcard => regex_string.push_str(WILDCARD_REGEX_EQUIVALENT),
-                PatternMatcher::Glob => regex_string.push_str(GLOB_REGEX_EQUIVALENT),
-            },
+            StringSelector::ExactMatch(string_pattern) => regex_string.push_str(&string_pattern),
             _ => unreachable!("no expected alternative variants of the path selection node."),
         }
         regex_string.push_str("/");
@@ -261,18 +274,25 @@ pub fn convert_path_selector_to_regex(selector: &Vec<PathSelectionNode>) -> Resu
     Ok(Regex::new(&regex_string)?)
 }
 
-pub fn convert_property_selector_to_regex(selector: &PropertySelector) -> Result<Regex, Error> {
+pub fn convert_property_selector_to_regex(selector: &StringSelector) -> Result<Regex, Error> {
     let mut regex_string = "^".to_string();
 
     match selector {
-        PropertySelector::StringPattern(string_pattern) => {
-            // TODO(4601): Support regex conversion of wildcarded string literals.
+        StringSelector::StringPattern(string_pattern) => {
+            if string_pattern == WILDCARD_SYMBOL {
+                // NOTE: With property selectors, the wildcard is equivalent to a glob, since it
+                // unconditionally matches all entries, and there's no concept of recursion on
+                // property selection.
+                regex_string.push_str(GLOB_REGEX_EQUIVALENT);
+            } else {
+                // TODO(4601): Support regex conversion of wildcarded string literals.
+                regex_string.push_str(&string_pattern);
+            }
+        }
+
+        StringSelector::ExactMatch(string_pattern) => {
             regex_string.push_str(&string_pattern);
         }
-        // NOTE: With property selectors, the wildcard is equivalent to a glob, since it
-        //       unconditionally matches all entries, and there's no concept of recursion on
-        //       property selection.
-        PropertySelector::Wildcard(_) => regex_string.push_str(GLOB_REGEX_EQUIVALENT),
         _ => unreachable!("no expected alternative variants of the property selection node."),
     };
 
@@ -290,49 +310,43 @@ mod tests {
 
     #[test]
     fn canonical_component_selector_test() {
-        let test_vector: Vec<(String, PathSelectionNode, PathSelectionNode, PathSelectionNode)> = vec![
+        let test_vector: Vec<(String, StringSelector, StringSelector, StringSelector)> = vec![
             (
                 "a/b/c".to_string(),
-                PathSelectionNode::StringPattern("a".to_string()),
-                PathSelectionNode::StringPattern("b".to_string()),
-                PathSelectionNode::StringPattern("c".to_string()),
+                StringSelector::StringPattern("a".to_string()),
+                StringSelector::StringPattern("b".to_string()),
+                StringSelector::StringPattern("c".to_string()),
             ),
             (
                 "a/*/c".to_string(),
-                PathSelectionNode::StringPattern("a".to_string()),
-                PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
-                PathSelectionNode::StringPattern("c".to_string()),
-            ),
-            (
-                "a/**/c".to_string(),
-                PathSelectionNode::StringPattern("a".to_string()),
-                PathSelectionNode::PatternMatcher(PatternMatcher::Glob),
-                PathSelectionNode::StringPattern("c".to_string()),
+                StringSelector::StringPattern("a".to_string()),
+                StringSelector::StringPattern("*".to_string()),
+                StringSelector::StringPattern("c".to_string()),
             ),
             (
                 "a/b*/c".to_string(),
-                PathSelectionNode::StringPattern("a".to_string()),
-                PathSelectionNode::StringPattern("b*".to_string()),
-                PathSelectionNode::StringPattern("c".to_string()),
+                StringSelector::StringPattern("a".to_string()),
+                StringSelector::StringPattern("b*".to_string()),
+                StringSelector::StringPattern("c".to_string()),
             ),
             (
                 r#"a/b\*/c"#.to_string(),
-                PathSelectionNode::StringPattern("a".to_string()),
-                PathSelectionNode::StringPattern(r#"b\*"#.to_string()),
-                PathSelectionNode::StringPattern("c".to_string()),
+                StringSelector::StringPattern("a".to_string()),
+                StringSelector::StringPattern(r#"b\*"#.to_string()),
+                StringSelector::StringPattern("c".to_string()),
             ),
             (
                 r#"a/\*/c"#.to_string(),
-                PathSelectionNode::StringPattern("a".to_string()),
-                PathSelectionNode::StringPattern(r#"\*"#.to_string()),
-                PathSelectionNode::StringPattern("c".to_string()),
+                StringSelector::StringPattern("a".to_string()),
+                StringSelector::StringPattern(r#"\*"#.to_string()),
+                StringSelector::StringPattern("c".to_string()),
             ),
         ];
 
         for (test_string, first_path_node, second_path_node, target_component) in test_vector {
             let component_selector = parse_component_selector(&test_string).unwrap();
 
-            match component_selector.component_moniker.as_ref().unwrap().as_slice() {
+            match component_selector.moniker_segments.as_ref().unwrap().as_slice() {
                 [first, second, third] => {
                     assert_eq!(*first, first_path_node);
                     assert_eq!(*second, second_path_node);
@@ -348,8 +362,8 @@ mod tests {
         let component_selector_string = "c";
         let component_selector =
             parse_component_selector(&component_selector_string.to_string()).unwrap();
-        let mut path_vec = component_selector.component_moniker.unwrap();
-        assert_eq!(path_vec.pop(), Some(PathSelectionNode::StringPattern("c".to_string())));
+        let mut path_vec = component_selector.moniker_segments.unwrap();
+        assert_eq!(path_vec.pop(), Some(StringSelector::StringPattern("c".to_string())));
 
         assert!(path_vec.is_empty());
     }
@@ -359,8 +373,8 @@ mod tests {
         let component_selector_string = " ";
         let component_selector =
             parse_component_selector(&component_selector_string.to_string()).unwrap();
-        let mut path_vec = component_selector.component_moniker.unwrap();
-        assert_eq!(path_vec.pop(), Some(PathSelectionNode::StringPattern(" ".to_string())));
+        let mut path_vec = component_selector.moniker_segments.unwrap();
+        assert_eq!(path_vec.pop(), Some(StringSelector::StringPattern(" ".to_string())));
 
         assert!(path_vec.is_empty());
     }
@@ -372,6 +386,7 @@ mod tests {
             "a\\".to_string(),
             r#"a/b***/c"#.to_string(),
             r#"a/***/c"#.to_string(),
+            r#"a/**/c"#.to_string(),
         ];
         for test_string in test_vector {
             let component_selector_result = parse_component_selector(&test_string);
@@ -384,37 +399,30 @@ mod tests {
         let test_vector: Vec<(
             String,
             String,
-            PathSelectionNode,
-            PathSelectionNode,
-            Option<PropertySelector>,
+            StringSelector,
+            StringSelector,
+            Option<StringSelector>,
         )> = vec![
             (
                 "a/b".to_string(),
                 "c".to_string(),
-                PathSelectionNode::StringPattern("a".to_string()),
-                PathSelectionNode::StringPattern("b".to_string()),
-                Some(PropertySelector::StringPattern("c".to_string())),
+                StringSelector::StringPattern("a".to_string()),
+                StringSelector::StringPattern("b".to_string()),
+                Some(StringSelector::StringPattern("c".to_string())),
             ),
             (
                 "a/*".to_string(),
                 "c".to_string(),
-                PathSelectionNode::StringPattern("a".to_string()),
-                PathSelectionNode::PatternMatcher(PatternMatcher::Wildcard),
-                Some(PropertySelector::StringPattern("c".to_string())),
+                StringSelector::StringPattern("a".to_string()),
+                StringSelector::StringPattern("*".to_string()),
+                Some(StringSelector::StringPattern("c".to_string())),
             ),
             (
                 "a/b".to_string(),
                 "*".to_string(),
-                PathSelectionNode::StringPattern("a".to_string()),
-                PathSelectionNode::StringPattern("b".to_string()),
-                Some(PropertySelector::Wildcard(true)),
-            ),
-            (
-                "a/**".to_string(),
-                "c".to_string(),
-                PathSelectionNode::StringPattern("a".to_string()),
-                PathSelectionNode::PatternMatcher(PatternMatcher::Glob),
-                Some(PropertySelector::StringPattern("c".to_string())),
+                StringSelector::StringPattern("a".to_string()),
+                StringSelector::StringPattern("b".to_string()),
+                Some(StringSelector::StringPattern("*".to_string())),
             ),
         ];
 
@@ -452,6 +460,8 @@ mod tests {
             (r#"a/b**"#.to_string(), "c".to_string()),
             // Property selector string literals cant have globs.
             (r#"a/b"#.to_string(), "c**".to_string()),
+            // Node path cant have globs.
+            ("a/**".to_string(), "c".to_string()),
         ];
         for (test_nodepath, test_targetproperty) in test_vector {
             let tree_selector_result = parse_tree_selector(&test_nodepath, &test_targetproperty);
@@ -465,7 +475,7 @@ mod tests {
         assert_eq!(tree_selector_result.node_path, None);
         assert_eq!(
             tree_selector_result.target_properties,
-            Some(PropertySelector::StringPattern("c".to_string()))
+            Some(StringSelector::StringPattern("c".to_string()))
         );
     }
 
@@ -478,7 +488,7 @@ mod tests {
             .expect("writing test file");
         File::create(tempdir.path().join("b.txt"))
             .expect("create file")
-            .write_all(b"**:**:*")
+            .write_all(b"a*/b:c/d/*:*")
             .expect("writing test file");
 
         assert!(parse_selectors(tempdir.path()).is_ok());
@@ -524,10 +534,10 @@ mod tests {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the node-path of the selector, and validating against that.
         let test_cases = vec![
-            (r#"**:a/*/c:*"#, r#"a/b/c/"#),
-            (r#"**:a/**/c:*"#, r#"a/b/g/e/d/c/"#),
-            (r#"**:**:*"#, r#"a/b/\/c/d/e\*/f/"#),
-            (r#"**:a/**/d/*/**:*"#, r#"a/b/\/c/d/e\*/f/"#),
+            (r#"echo.cmx:a/*/c:*"#, r#"a/b/c/"#),
+            (r#"echo.cmx:a/*/*/*/*/c:*"#, r#"a/b/g/e/d/c/"#),
+            (r#"echo.cmx:*/*/*/*/*/*/*:*"#, r#"a/b/\/c/d/e\*/f/"#),
+            (r#"echo.cmx:a/*/*/d/*/*:*"#, r#"a/b/\/c/d/e\*/f/"#),
         ];
         for (selector, string_to_match) in test_cases {
             let parsed_selector = parse_selector(selector).unwrap();
@@ -544,11 +554,11 @@ mod tests {
         // the node-path of the tree selector, and valdating against that.
         let test_cases = vec![
             // TODO(4601): This test case should pass when we support wildcarded string literals.
-            (r#"**:a/b*/c:*"#, r#"a/bob/c/"#),
+            (r#"echo.cmx:a/b*/c:*"#, r#"a/bob/c/"#),
             // Failing because it's missing a required "d" directory node in the string.
-            (r#"**:a/**/d/*/**:*"#, r#"a/b/\/c/e\*/f/"#),
+            (r#"echo.cmx:a/*/d/*/f:*"#, r#"a/b/c/e/f/"#),
             // Failing because the match string doesnt end at the c node.
-            (r#"**:a/**/c:*"#, r#"a/b/g/e/d/c/f/"#),
+            (r#"echo.cmx:a/*/*/*/*/*/c:*"#, r#"a/b/g/e/d/c/f/"#),
         ];
         for (selector, string_to_match) in test_cases {
             let parsed_selector = parse_selector(selector).unwrap();
@@ -563,14 +573,16 @@ mod tests {
     fn canonical_property_regex_transpilation_test() {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the property of the selector, and validating against that.
-        let test_cases =
-            vec![(r#"**:a:*"#, r#"a"#), (r#"**:a:bob"#, r#"bob"#), (r#"**:a:\\\*"#, r#"\*"#)];
+        let test_cases = vec![
+            (r#"echo.cmx:a:*"#, r#"a"#),
+            (r#"echo.cmx:a:bob"#, r#"bob"#),
+            (r#"echo.cmx:a:\\\*"#, r#"\*"#),
+        ];
         for (selector, string_to_match) in test_cases {
             let parsed_selector = parse_selector(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector;
             let property_selector = tree_selector.target_properties.unwrap();
             let selector_regex = convert_property_selector_to_regex(&property_selector).unwrap();
-            eprintln!("{}", selector_regex.as_str());
             assert!(selector_regex.is_match(string_to_match));
         }
     }
@@ -581,14 +593,14 @@ mod tests {
         // the node-path of the tree selector, and valdating against that.
         let test_cases = vec![
             // TODO(4601): This test case should pass when we support wildcarded string literals.
-            (r#"**:a:b*"#, r#"bob"#),
+            (r#"echo.cmx:a:b*"#, r#"bob"#),
             // TODO(4601): This test case should pass when we support translating string literals
             //             with escapes. Right now, the matching selector must be
             //             r#"**:a:\\\*"#
-            (r#"**:a:\*"#, r#"\*"#),
-            (r#"**:a:c"#, r#"d"#),
-            (r#"**:a:bob"#, r#"thebob"#),
-            (r#"**:a:c"#, r#"cdog"#),
+            (r#"echo.cmx:a:\*"#, r#"\*"#),
+            (r#"echo.cmx:a:c"#, r#"d"#),
+            (r#"echo.cmx:a:bob"#, r#"thebob"#),
+            (r#"echo.cmx:a:c"#, r#"cdog"#),
         ];
         for (selector, string_to_match) in test_cases {
             let parsed_selector = parse_selector(selector).unwrap();

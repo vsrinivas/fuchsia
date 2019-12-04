@@ -31,7 +31,7 @@ use {
     std::sync::{Arc, Mutex, RwLock},
 };
 
-type InspectDataTrie = trie::Trie<char, (PathBuf, DirectoryProxy, RegexSet, Vec<Regex>)>;
+type InspectDataTrie = trie::Trie<char, (PathBuf, DirectoryProxy, Option<InspectHierarchyMatcher>)>;
 
 enum ReadSnapshot {
     Single(Snapshot),
@@ -198,16 +198,8 @@ impl DataCollector for InspectDataCollector {
     }
 }
 
-/// InspectDataContainer is the container that holds
-/// all information needed to interact with the inspect
-/// hierarchies under a component's out directory.
-pub struct InspectDataContainer {
-    /// Path to the out directory that this
-    /// data packet is configured for.
-    component_out_dir_path: PathBuf,
-    /// DirectoryProxy for the out directory that this
-    /// data packet is configured for.
-    component_out_proxy: DirectoryProxy,
+#[derive(Clone)]
+pub struct InspectHierarchyMatcher {
     /// RegexSet encoding all the node path selectors for
     /// inspect hierarchies under this component's out directory.
     component_node_selector: RegexSet,
@@ -221,23 +213,35 @@ pub struct InspectDataContainer {
     node_property_selectors: Vec<Regex>,
 }
 
+/// InspectDataContainer is the container that holds
+/// all information needed to interact with the inspect
+/// hierarchies under a component's out directory.
+pub struct InspectDataContainer {
+    /// Path to the out directory that this
+    /// data packet is configured for.
+    component_out_dir_path: PathBuf,
+    /// DirectoryProxy for the out directory that this
+    /// data packet is configured for.
+    component_out_proxy: DirectoryProxy,
+    /// Optional hierarchy matcher. If unset, the reader is running
+    /// in all-access mode, meaning no matching or filtering is required.
+    inspect_hierarchy_matcher_option: Option<InspectHierarchyMatcher>,
+}
+
 /// InspectDataRepository manages storage of all state needed in order
 /// for the inspect reader to retrieve inspect data when a read is requested.
 pub struct InspectDataRepository {
     // TODO(lukenicholson): Wrap directory proxies in a trie of
     // component names to make filtering by selectors work.
     data_directories: InspectDataTrie,
-    static_selectors: Vec<Arc<Selector>>,
+    /// Optional static selectors. For the all_access reader, there
+    /// are no provided selectors. For all other pipelines, a non-empty
+    /// vector is required.
+    static_selectors: Option<Vec<Arc<Selector>>>,
 }
 
 impl InspectDataRepository {
-    pub fn new(static_selectors: Vec<Arc<Selector>>) -> Self {
-        if static_selectors.is_empty() {
-            panic!(
-                "We require all inspect repositories to be explicit about the data they select."
-            );
-        }
-
+    pub fn new(static_selectors: Option<Vec<Arc<Selector>>>) -> Self {
         InspectDataRepository {
             data_directories: InspectDataTrie::new(),
             static_selectors: static_selectors,
@@ -251,12 +255,15 @@ impl InspectDataRepository {
         component_hierachy_path: PathBuf,
         directory_proxy: DirectoryProxy,
     ) -> Result<(), Error> {
-        let matched_selectors = selectors::match_component_moniker_against_selectors(
-            &absolute_moniker,
-            &self.static_selectors,
-        );
+        let matched_selectors = match &self.static_selectors {
+            Some(selectors) => Some(selectors::match_component_moniker_against_selectors(
+                &absolute_moniker,
+                &selectors,
+            )?),
+            None => None,
+        };
         match matched_selectors {
-            Ok(selectors) => {
+            Some(selectors) => {
                 if !selectors.is_empty() {
                     let node_path_regexes = selectors
                         .iter()
@@ -288,14 +295,23 @@ impl InspectDataRepository {
                         (
                             component_hierachy_path,
                             directory_proxy,
-                            node_path_regex_set,
-                            property_regexes,
+                            Some(InspectHierarchyMatcher {
+                                component_node_selector: node_path_regex_set,
+                                node_property_selectors: property_regexes,
+                            }),
                         ),
                     );
                 }
                 Ok(())
             }
-            Err(e) => Err(format_err!("Absoute moniker matching encountered error: {}.", e)),
+            None => {
+                self.data_directories.insert(
+                    component_name.chars().collect(),
+                    (component_hierachy_path, directory_proxy, None),
+                );
+
+                Ok(())
+            }
         }
     }
 
@@ -305,18 +321,15 @@ impl InspectDataRepository {
         return self
             .data_directories
             .iter()
-            .filter_map(
-                |(_, (component_path, dir_proxy, node_path_regex_set, property_regex_vec))| {
-                    io_util::clone_directory(&dir_proxy, CLONE_FLAG_SAME_RIGHTS).ok().map(
-                        |directory| InspectDataContainer {
-                            component_out_dir_path: component_path.clone(),
-                            component_out_proxy: directory,
-                            component_node_selector: node_path_regex_set.clone(),
-                            node_property_selectors: property_regex_vec.clone(),
-                        },
-                    )
-                },
-            )
+            .filter_map(|(_, (component_path, dir_proxy, inspect_hierarchy_matcher))| {
+                io_util::clone_directory(&dir_proxy, CLONE_FLAG_SAME_RIGHTS).ok().map(|directory| {
+                    InspectDataContainer {
+                        component_out_dir_path: component_path.clone(),
+                        component_out_proxy: directory,
+                        inspect_hierarchy_matcher_option: inspect_hierarchy_matcher.clone(),
+                    }
+                })
+            })
             .collect();
     }
 }
@@ -483,8 +496,7 @@ impl ReaderServer {
                                     return Ok((
                                         inspect_data_packet.component_out_dir_path,
                                         snapshots,
-                                        inspect_data_packet.component_node_selector,
-                                        inspect_data_packet.node_property_selectors,
+                                        inspect_data_packet.inspect_hierarchy_matcher_option,
                                     ));
                                 }
                                 None => {
@@ -508,12 +520,12 @@ impl ReaderServer {
         let hierarchy_datas =
             pumped_data_tuple_results.drain(0..).fold(Vec::new(), |mut acc, pumped_data_tuple| {
                 match pumped_data_tuple {
-                    Ok((path, snapshots, selector_set, property_selectors)) => {
+                    Ok((path, snapshots, Some(inspect_hierarchy_matcher))) => {
                         snapshots.into_iter().for_each(|snapshot| {
                             match ReaderServer::filter_inspect_snapshot(
                                 snapshot,
-                                &selector_set,
-                                &property_selectors,
+                                &inspect_hierarchy_matcher.component_node_selector,
+                                &inspect_hierarchy_matcher.node_property_selectors,
                             ) {
                                 Ok(filtered_hierarchy) => {
                                     acc.push(HierarchyData {
@@ -530,6 +542,36 @@ impl ReaderServer {
                                 Err(_) => {}
                             }
                         });
+                        acc
+                    }
+
+                    Ok((path, snapshots, None)) => {
+                        snapshots.into_iter().for_each(|snapshot| {
+                            let root_node_result: Result<NodeHierarchy, Error> = match snapshot {
+                                ReadSnapshot::Single(snapshot) => {
+                                    match PartialNodeHierarchy::try_from(snapshot) {
+                                        Ok(partial) => Ok(partial.into()),
+                                        Err(e) => Err(e),
+                                    }
+                                }
+                                ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into(),
+                                ReadSnapshot::Finished(hierarchy) => Ok(hierarchy),
+                            };
+                            match root_node_result {
+                                Ok(node_hierarchy) => {
+                                    acc.push(HierarchyData {
+                                        hierarchy: node_hierarchy,
+                                        file_path: path
+                                            .to_str()
+                                            .expect("Can't have an invalid path here.")
+                                            .to_string(),
+                                        fields: vec![],
+                                    });
+                                }
+                                Err(_) => {}
+                            }
+                        });
+
                         acc
                     }
 
@@ -893,19 +935,19 @@ mod tests {
     }
 
     async fn verify_reader(filename: impl Into<String>, path: PathBuf, bindings_dir: &str) {
-        let child_1_1_selector =
-            selectors::parse_selector(r#"**:root/child_1/**:some-int"#).unwrap();
-        let child_2_selector = selectors::parse_selector(r#"**:root/child_2:*"#).unwrap();
-        let mut inspect_repo = InspectDataRepository::new(vec![
+        let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
+        let child_2_selector =
+            selectors::parse_selector(r#"test_bindings2:root/child_2:*"#).unwrap();
+        let mut inspect_repo = InspectDataRepository::new(Some(vec![
             Arc::new(child_1_1_selector),
             Arc::new(child_2_selector),
-        ]);
+        ]));
 
         let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();
 
         // The absolute moniker here is made up since the selector is a glob
         // selector, so any path would match.
-        let absolute_moniker = vec!["a".to_string(), "b".to_string()];
+        let absolute_moniker = vec!["test_bindings2".to_string()];
 
         inspect_repo.add(filename.into(), absolute_moniker, path, out_dir_proxy).unwrap();
 

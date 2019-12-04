@@ -6,38 +6,6 @@ library fuchsia.diagnostics.inspect;
 
 using fuchsia.diagnostics;
 
-// The set of states that an Inspect property selector can exist in.
-//
-// string_pattern: This is a provided string that defines a pattern to
-//   match against at the current location in a nested hierarchy. The
-//   parser treats wildcards (*) and backslashes (\) as special characters.
-//   If you wish to match against literal "*" characters, they must be escaped.
-//   If you wish to match against literal "\" characters, they must be escaped.
-//
-//   eg: <curr_node>/abc will match any properties contained within curr_node
-//       with the exact name "abc".
-//   eg: <curr_node>/a\* will match any properties contained within curr_node
-//       with the exact name "a*".
-//   eg: <curr_node>/a\\* will match any properties contained within curr_node
-//       that starts with exactly "a\".
-//   eg: <curr_node>/a* will match any properties contained within curr_node
-//       that starts with "a".
-//   eg: <curr_node>/a*b will match any properties contained within curr_node
-//       that starts with a and ends with b.
-//   eg: <curr_node>/*b will match any properties contained within curr_node
-//       that ends with b.
-//
-// wildcard: Should only ever be true, and when set matches all properties at
-//   a specific node.
-//
-// NOTE: There is no glob option for PropertySelectors. This is intentional.
-//       Glob property selection behavior stems from a glob in the node-path selector
-//       and a wildcard in the property selector.
-xunion PropertySelector {
-    string:1024 string_pattern;
-    bool wildcard;
-};
-
 /// TreeSelector represents a selection request on a nested structure where each
 /// nested node has properties that can be retrieved. The node_path specifies which
 /// nodes we search through, and the target_properties specify which properties to
@@ -47,12 +15,12 @@ table TreeSelector {
     // inspect tree to the node(s) that we will query for property data.
     // If absent, we assume we are querying only the properties which are direct
     // children of "root".
-    1: vector<fuchsia.diagnostics.PathSelectionNode>:1024 node_path;
+    1: vector<fuchsia.diagnostics.StringSelector>:1024 node_path;
 
-    // This is the property selector that we will use to find relevent properties
+    // This is the property selector that we will use to find relevant properties
     // in the node(s) specified by inspect_node_path.
     // This field is required.
-    2: PropertySelector target_properties;
+    2: fuchsia.diagnostics.StringSelector target_properties;
 };
 
 /// Structured selector containing all required information for the
