@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 
 #include <iostream>
 

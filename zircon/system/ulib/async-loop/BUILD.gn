@@ -15,6 +15,7 @@ zx_library("async-loop") {
   ]
   deps = [
     "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/zircon",
   ]
 }
@@ -29,6 +30,7 @@ zx_library("async-loop-cpp") {
   deps = [
     ":async-loop",
     "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/zircon",
   ]
   public_deps = [

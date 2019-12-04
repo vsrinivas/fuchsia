@@ -19,7 +19,8 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async_set_default_dispatcher(loop.dispatcher());
 
   FXL_LOG(INFO) << "Starting netemul runner";
 

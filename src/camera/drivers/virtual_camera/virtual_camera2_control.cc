@@ -4,8 +4,6 @@
 
 #include "virtual_camera2_control.h"
 
-#include <lib/async/default.h>
-
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {

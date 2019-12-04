@@ -5,7 +5,6 @@
 #include "src/developer/feedback/feedback_agent/feedback_agent.h"
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/processargs.h>

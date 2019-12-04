@@ -6,6 +6,7 @@
 #define LIB_ASYNC_LOOP_CPP_LOOP_H_
 
 #include <lib/async-loop/loop.h>
+#include <lib/async/default.h>
 #include <lib/zx/time.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -27,9 +28,7 @@ class Loop {
   //
   // |config| provides configuration for the message loop.  Must not be null.
   //
-  // See also |kAsyncLoopConfigNeverAttachToThread|,
-  // |kAsyncLoopConfigAttachToCurrentThread|, and
-  // |kAsyncLoopConfigNoAttachToCurrentThread|.
+  // See also |kAsyncLoopConfigAttachToThread| and |kAsyncLoopConfigNoAttachToThread|.
   explicit Loop(const async_loop_config_t* config);
 
   Loop(const Loop&) = delete;

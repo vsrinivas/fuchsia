@@ -9,7 +9,6 @@
 // clang-format on
 
 #include <glm/gtc/type_ptr.hpp>
-#include <lib/async/default.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include "src/lib/fxl/logging.h"
 

@@ -7,6 +7,7 @@
 #endif
 #include <assert.h>
 #include <lib/async-loop/loop.h>
+#include <lib/async/default.h>
 #include <lib/async/irq.h>
 #include <lib/async/paged_vmo.h>
 #include <lib/async/receiver.h>
@@ -68,6 +69,18 @@ typedef struct thread_record {
   thrd_t thread;
 } thread_record_t;
 
+const async_loop_config_t kAsyncLoopConfigAttachToThread = {
+    .make_default_for_current_thread = true,
+    .default_accessors = {
+        .getter = async_get_default_dispatcher,
+        .setter = async_set_default_dispatcher,
+    }};
+const async_loop_config_t kAsyncLoopConfigNoAttachToThread = {
+    .make_default_for_current_thread = false,
+    .default_accessors = {
+        .getter = async_get_default_dispatcher,
+        .setter = async_set_default_dispatcher,
+    }};
 const async_loop_config_t kAsyncLoopConfigNeverAttachToThread = {
     .make_default_for_current_thread = false,
     .default_accessors = {.getter = NULL, .setter = NULL}};
@@ -159,6 +172,10 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** 
 
   loop->dispatcher.ops = (const async_ops_t*)&async_loop_ops;
   loop->config = *config;
+  if (config->make_default_for_current_thread && config->default_accessors.setter == NULL) {
+    loop->config.default_accessors.getter = async_get_default_dispatcher;
+    loop->config.default_accessors.setter = async_set_default_dispatcher;
+  }
   mtx_init(&loop->lock, mtx_plain);
   list_initialize(&loop->wait_list);
   list_initialize(&loop->irq_list);
