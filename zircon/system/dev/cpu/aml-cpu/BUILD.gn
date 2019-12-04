@@ -8,6 +8,7 @@ zx_driver("aml-cpu") {
   ]
   deps = [
     "$zx/system/dev/lib/amlogic",
+    "$zx/system/fidl/fuchsia-hardware-cpu-ctrl:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

@@ -10,6 +10,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/fidl.h>
 
 namespace amlogic_cpu {
 
@@ -18,13 +19,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* device) {
 
   auto cpu_device = std::make_unique<AmlCpu>(device);
 
-  status = cpu_device->DdkAdd(
-    "cpu",
-    DEVICE_ADD_NON_BINDABLE,
-    nullptr,
-    0,
-    ZX_PROTOCOL_CPU_CTRL
-  );
+  status = cpu_device->DdkAdd("cpu", DEVICE_ADD_NON_BINDABLE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: Failed to add cpu device, st = %d\n", status);
     return status;
@@ -36,15 +31,29 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* device) {
   return ZX_OK;
 }
 
-
 zx_status_t AmlCpu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return ZX_ERR_NOT_SUPPORTED;
+  DdkTransaction transaction(txn);
+  fuchsia_cpuctrl::Device::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
-void AmlCpu::DdkRelease() {
-  delete this;
+void AmlCpu::DdkRelease() { delete this; }
+
+void AmlCpu::GetPerformanceStateInfo(uint32_t state,
+                                     GetPerformanceStateInfoCompleter::Sync completer) {
+  // Placeholder.
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
+void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync completer) {
+  // Placeholder.
+  completer.Reply(0);
+}
+
+void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync completer) {
+  // Placeholder.
+  completer.Reply(0);
+}
 
 }  // namespace amlogic_cpu
 
@@ -54,7 +63,6 @@ static constexpr zx_driver_ops_t aml_cpu_driver_ops = []() {
   result.bind = amlogic_cpu::AmlCpu::Create;
   return result;
 }();
-
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(aml_cpu, aml_cpu_driver_ops, "zircon", "0.1", 4)
