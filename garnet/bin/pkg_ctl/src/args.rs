@@ -156,6 +156,7 @@ pub struct RuleReplaceJsonCommand {
     note = "Experiments may be added or removed over time and should not be considered stable.",
     note = "Known experiments:",
     note = "  lightbulb      no-op experiment",
+    note = "  download-blob  pkg-resolver drives package installation and blob downloading",
     note = "  rust-tuf       use rust-tuf to resolve package merkle roots"
 )]
 /// Manage runtime experiment states.
@@ -211,6 +212,7 @@ pub struct GcCommand {}
 fn parse_experiment_id(experiment: &str) -> Result<Experiment, String> {
     match experiment {
         "lightbulb" => Ok(Experiment::Lightbulb),
+        "download-blob" => Ok(Experiment::DownloadBlob),
         "rust-tuf" => Ok(Experiment::RustTuf),
         experiment => Err(Error::ExperimentId(experiment.to_owned()).to_string()),
     }
