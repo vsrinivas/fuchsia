@@ -4,9 +4,7 @@
 
 mod connection;
 mod device;
-
-use self::connection::{fidl::FidlConnection, Connection};
-use self::device::Device;
+mod message;
 
 /// A CTAP device backed by a connection over FIDL to a HID device.
-pub type HidCtapDevice = Device<FidlConnection>;
+pub type HidCtapDevice = device::Device<connection::FidlConnection>;

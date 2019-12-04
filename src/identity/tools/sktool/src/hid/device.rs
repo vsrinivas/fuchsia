@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{Connection, FidlConnection};
+use crate::hid::connection::{Connection, FidlConnection};
 use crate::CtapDevice;
 use async_trait::async_trait;
 use bytes::Bytes;

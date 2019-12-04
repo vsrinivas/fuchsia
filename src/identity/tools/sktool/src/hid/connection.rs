@@ -7,6 +7,10 @@ use bytes::Bytes;
 use failure::Error;
 use std::fmt::Debug;
 
+#[cfg(test)]
+pub use self::fake::FakeConnection;
+pub use self::fidl::FidlConnection;
+
 /// A basic connection to a HID device.
 #[async_trait]
 pub trait Connection: Sized + Debug {
