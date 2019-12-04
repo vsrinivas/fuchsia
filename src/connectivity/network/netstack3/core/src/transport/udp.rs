@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use std::num::{NonZeroU16, NonZeroUsize};
 use std::ops::RangeInclusive;
 
+use failure::Fail;
 use log::trace;
 use net_types::ip::{Ip, IpAddress};
 use net_types::{SpecifiedAddr, Witness};
@@ -18,7 +19,7 @@ use zerocopy::ByteSlice;
 use crate::algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId};
 use crate::context::{RngContext, RngContextExt, StateContext};
 use crate::data_structures::IdMapCollectionKey;
-use crate::error::{ConnectError, NetstackError, Result};
+use crate::error::{ConnectError, LocalAddressError, NetstackError, RemoteAddressError};
 use crate::ip::{
     BufferTransportIpContext, IpPacketFromArgs, IpProto, IpVersionMarker, TransportIpContext,
 };
@@ -482,7 +483,7 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
     src_ip: A,
     dst_ip: SpecifiedAddr<A>,
     mut buffer: B,
-) -> std::result::Result<(), B> {
+) -> Result<(), B> {
     trace!("received UDP packet: {:x?}", buffer.as_mut());
     let packet = if let Ok(packet) =
         buffer.parse_with::<_, UdpPacket<_>>(UdpParseArgs::new(src_ip, dst_ip.get()))
@@ -569,14 +570,14 @@ pub fn send_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
     remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
     body: B,
-) -> Result<()> {
+) -> crate::error::Result<()> {
     // TODO(brunodalbo) this can be faster if we just perform the checks but
     // don't actually create a UDP connection.
     let tmp_conn = connect_udp(ctx, local_addr, local_port, remote_addr, remote_port)
         .map_err(|e| NetstackError::Connect(e))?;
 
     // Not using `?` here since we need to `remove_udp_conn` even in the case of failure.
-    let ret = send_udp_conn(ctx, tmp_conn, body);
+    let ret = send_udp_conn(ctx, tmp_conn, body).map_err(NetstackError::SendUdp);
     remove_udp_conn(ctx, tmp_conn);
 
     ret
@@ -587,7 +588,7 @@ pub fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx: &mut C,
     conn: UdpConnId<I>,
     body: B,
-) -> Result<()> {
+) -> Result<(), SendError> {
     let state = ctx.get_state();
     let Conn { local_addr, local_port, remote_addr, remote_port } = *state
         .conn_state
@@ -625,7 +626,7 @@ pub fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Vers
     remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
     body: B,
-) {
+) -> Result<(), SendError> {
     let local_addr = match local_addr {
         Some(a) => a,
         // TODO(brunodalbo) this may cause problems when we don't match the
@@ -635,36 +636,39 @@ pub fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Vers
         // should probably fail and `send_udp` must be used instead
         None => ctx
             .local_address_for_remote(remote_addr)
-            .expect("send_udp_listener: Can't route remote address"),
+            .ok_or(SendError::Remote(RemoteAddressError::NoRoute))?,
     };
     if !ctx.is_local_addr(local_addr.get()) {
-        // TODO(joshlf): Return error.
-        panic!("transport::udp::send_udp::listener: invalid local addr");
+        return Err(SendError::Local(LocalAddressError::CannotBindToAddress));
     }
 
     let state = ctx.get_state();
 
     let local_port = match listener.listener_type {
         ListenerType::Specified => {
-            state.conn_state.listeners.get_by_listener(listener.id).and_then(|addrs| {
-                // We found the listener. Make sure at least one of the addresses
-                // associated with it is the local_addr the caller passed.
-                addrs
-                    .iter()
-                    .find_map(|addr| if addr.addr == local_addr { Some(addr.port) } else { None })
-            })
+            let addrs = state
+                .conn_state
+                .listeners
+                .get_by_listener(listener.id)
+                .expect("specified listener not found");
+            // We found the listener. Make sure at least one of the addresses
+            // associated with it is the local_addr the caller passed.
+            addrs
+                .iter()
+                .find_map(|addr| if addr.addr == local_addr { Some(addr.port) } else { None })
+                .ok_or(SendError::Local(LocalAddressError::AddressMismatch))?
         }
         ListenerType::Wildcard => {
-            state.conn_state.wildcard_listeners.get_by_listener(listener.id).map(|ports| ports[0])
+            let ports = state
+                .conn_state
+                .wildcard_listeners
+                .get_by_listener(listener.id)
+                .expect("wildcard listener not found");
+            ports[0]
         }
-    }
-    .unwrap_or_else(|| {
-        // TODO(brunodalbo) return an error rather than panicking
-        panic!("Listener not found");
-    });
+    };
 
-    // TODO(rheacock): Handle an error result here.
-    let _ = ctx.send_frame(
+    ctx.send_frame(
         IpPacketFromArgs::new(local_addr, remote_addr, IpProto::Udp),
         body.encapsulate(UdpPacketBuilder::new(
             local_addr.into_addr(),
@@ -672,7 +676,9 @@ pub fn send_udp_listener<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Vers
             Some(local_port),
             remote_port,
         )),
-    );
+    )?;
+
+    Ok(())
 }
 
 /// Create a UDP connection.
@@ -696,19 +702,21 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
     local_port: Option<NonZeroU16>,
     remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
-) -> std::result::Result<UdpConnId<A::Version>, ConnectError> {
-    let default_local = ctx.local_address_for_remote(remote_addr).ok_or(ConnectError::NoRoute)?;
+) -> Result<UdpConnId<A::Version>, ConnectError> {
+    let default_local = ctx
+        .local_address_for_remote(remote_addr)
+        .ok_or(ConnectError::Remote(RemoteAddressError::NoRoute))?;
 
     let local_addr = local_addr.unwrap_or(default_local);
 
     if !ctx.is_local_addr(local_addr.get()) {
-        return Err(ConnectError::CannotBindToAddress);
+        return Err(ConnectError::Local(LocalAddressError::CannotBindToAddress));
     }
     let local_port = if let Some(local_port) = local_port {
         local_port
     } else {
         try_alloc_local_port(ctx, &ProtocolFlowId::new(local_addr, remote_addr, remote_port))
-            .ok_or(ConnectError::FailedToAllocateLocalPort)?
+            .ok_or(ConnectError::Local(LocalAddressError::FailedToAllocateLocalPort))?
     };
 
     let c = Conn { local_addr, local_port, remote_addr, remote_port };
@@ -882,6 +890,33 @@ pub fn get_udp_listener_info<I: Ip, C: UdpContext<I>>(
     }
 }
 
+/// Error type for send errors.
+#[derive(Fail, Debug, PartialEq)]
+pub enum SendError {
+    // TODO(maufflick): Flesh this type out when the underlying error information becomes
+    // available (and probably remove this "unknown" error).
+    /// Failed to send for an unknown reason.
+    #[fail(display = "send failed")]
+    Unknown,
+
+    #[fail(display = "{}", _0)]
+    /// Errors related to the local address.
+    Local(#[cause] LocalAddressError),
+
+    #[fail(display = "{}", _0)]
+    /// Errors related to the remote address.
+    Remote(#[cause] RemoteAddressError),
+}
+
+// This conversion from a non-error type into an error isn't ideal.
+// TODO(maufflick): This will be unnecessary/require changes when send_frame returns a proper error.
+impl<S: Serializer> From<S> for SendError {
+    fn from(_s: S) -> SendError {
+        // TODO(maufflick): Include useful information about the underlying error once propagated.
+        SendError::Unknown
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use net_types::ip::{Ipv4, Ipv6};
@@ -889,7 +924,6 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
-    use crate::error::SendFrameError;
     use crate::ip::IpProto;
     use crate::testutil::{get_other_ip_address, set_logger_for_test};
 
@@ -1060,7 +1094,8 @@ mod tests {
             remote_ip,
             NonZeroU16::new(200).unwrap(),
             Buf::new(body.to_owned(), ..),
-        );
+        )
+        .expect("send_udp_listener failed");
         // And send a packet that doesn't:
         send_udp_listener(
             &mut ctx,
@@ -1069,7 +1104,8 @@ mod tests {
             remote_ip,
             NonZeroU16::new(200).unwrap(),
             Buf::new(body.to_owned(), ..),
-        );
+        )
+        .expect("send_udp_listener failed");
         let frames = ctx.frames();
         assert_eq!(frames.len(), 2);
         let check_frame = |(meta, frame_body): &(IpPacketFromArgs<I::Addr>, Vec<u8>)| {
@@ -1193,7 +1229,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(conn_err, ConnectError::NoRoute);
+        assert_eq!(conn_err, ConnectError::Remote(RemoteAddressError::NoRoute));
     }
 
     /// Tests that UDP connections fail with an appropriate error when local address is non-local.
@@ -1215,7 +1251,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(conn_err, ConnectError::CannotBindToAddress);
+        assert_eq!(conn_err, ConnectError::Local(LocalAddressError::CannotBindToAddress));
     }
 
     /// Tests that UDP connections fail with an appropriate error when local ports are exhausted.
@@ -1244,7 +1280,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(conn_err, ConnectError::FailedToAllocateLocalPort);
+        assert_eq!(conn_err, ConnectError::Local(LocalAddressError::FailedToAllocateLocalPort));
     }
 
     /// Tests that UDP connections fail with an appropriate error when the connection is in use.
@@ -1349,7 +1385,10 @@ mod tests {
         )
         .expect_err("send_udp unexpectedly succeeded");
 
-        assert_eq!(send_error, NetstackError::Connect(ConnectError::CannotBindToAddress));
+        assert_eq!(
+            send_error,
+            NetstackError::Connect(ConnectError::Local(LocalAddressError::CannotBindToAddress))
+        );
     }
 
     /// Tests that `send_udp` cleans up after errors.
@@ -1382,7 +1421,7 @@ mod tests {
         )
         .expect_err("send_udp unexpectedly succeeded");
 
-        assert_eq!(send_error, NetstackError::SendFrame(SendFrameError::UnknownSendFrameError));
+        assert_eq!(send_error, NetstackError::SendUdp(SendError::Unknown));
 
         // UDP connection count should be zero before and after `send_udp` call (even in the case
         // of errors).
@@ -1415,7 +1454,7 @@ mod tests {
 
         // Now try to send something over this new connection:
         let send_err = send_udp_conn(&mut ctx, conn, Buf::new(vec![], ..)).unwrap_err();
-        assert_eq!(send_err, NetstackError::SendFrame(SendFrameError::UnknownSendFrameError));
+        assert_eq!(send_err, SendError::Unknown);
     }
 
     /// Tests that if we have multiple listeners and connections, demuxing the

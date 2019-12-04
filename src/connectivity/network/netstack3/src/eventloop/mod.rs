@@ -118,7 +118,7 @@ use util::{ContextFidlCompatible, ConversionContext, CoreCompatible, FidlCompati
 
 use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 
-use netstack3_core::error::{ConnectError, NoRouteError};
+use netstack3_core::error::{NoRouteError, ConnectError};
 use netstack3_core::icmp::{
     self as core_icmp, BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt,
 };

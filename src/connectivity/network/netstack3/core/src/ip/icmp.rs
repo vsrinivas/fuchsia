@@ -15,7 +15,7 @@ use crate::context::{CounterContext, InstantContext, StateContext};
 use crate::data_structures::token_bucket::TokenBucket;
 use crate::device::ndp::NdpPacketHandler;
 use crate::device::{DeviceId, FrameDestination};
-use crate::error::{ConnectError, ExistsError, NoRouteError};
+use crate::error::{ExistsError, NoRouteError, ConnectError};
 use crate::ip::forwarding::ForwardingTable;
 use crate::ip::{
     mld::MldHandler,

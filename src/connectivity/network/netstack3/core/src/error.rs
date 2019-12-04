@@ -7,7 +7,6 @@
 use failure::Fail;
 use net_types::ip::{Ip, IpAddress};
 use net_types::MulticastAddress;
-use packet::Serializer;
 
 use crate::device::AddressError;
 use crate::wire::icmp::IcmpIpTypes;
@@ -36,9 +35,9 @@ pub enum NetstackError {
     #[fail(display = "Item not found")]
     NotFound,
 
-    /// Errors related to sending frames.
+    /// Errors related to sending UDP frames/packets.
     #[fail(display = "{}", _0)]
-    SendFrame(#[cause] SendFrameError),
+    SendUdp(#[cause] crate::transport::udp::SendError),
 
     /// Errors related to connections.
     #[fail(display = "{}", _0)]
@@ -185,23 +184,20 @@ impl From<NotFoundError> for NetstackError {
     }
 }
 
-/// Error type for send frame errors.
+/// Error type for errors common to local addresses.
 #[derive(Fail, Debug, PartialEq)]
-pub enum SendFrameError {
-    // TODO(maufflick): Flesh this type out when the underlying error information becomes
-    // available (and probably remove this "unknown" error).
-    /// Frame failed to be sent for an unknown reason.
-    #[fail(display = "send_frame failed")]
-    UnknownSendFrameError,
-}
+pub enum LocalAddressError {
+    /// Cannot bind to address.
+    #[fail(display = "can't bind to address")]
+    CannotBindToAddress,
 
-// This conversion from a non-error type into an error isn't ideal.
-// TODO(maufflick): This will be unnecessary/require changes when send_frame returns a proper error.
-impl<S: Serializer> From<S> for NetstackError {
-    fn from(_s: S) -> NetstackError {
-        // TODO(maufflick): Include useful information about the underlying error once propagated.
-        NetstackError::SendFrame(SendFrameError::UnknownSendFrameError)
-    }
+    /// Failed to allocate local port.
+    #[fail(display = "failed to allocate local port")]
+    FailedToAllocateLocalPort,
+
+    /// Specified local address does not match any expected address.
+    #[fail(display = "specified local address does not match any expected address")]
+    AddressMismatch,
 }
 
 // TODO(joshlf): Rename this to something like SocketError once we support a
@@ -211,18 +207,22 @@ impl<S: Serializer> From<S> for NetstackError {
 
 /// An error encountered when attempting to create a UDP, TCP, or ICMP connection.
 #[derive(Fail, Debug, PartialEq)]
-pub enum ConnectError {
+pub enum RemoteAddressError {
     /// No route to host.
     #[fail(display = "no route to host")]
     NoRoute,
+}
 
-    /// Cannot bind to local address.
-    #[fail(display = "can't bind to address")]
-    CannotBindToAddress,
+/// Error type for connection errors.
+#[derive(Fail, Debug, PartialEq)]
+pub enum ConnectError {
+    #[fail(display = "{}", _0)]
+    /// Errors related to the local address.
+    Local(#[cause] LocalAddressError),
 
-    /// Failed to allocate local port.
-    #[fail(display = "failed to allocate local port")]
-    FailedToAllocateLocalPort,
+    #[fail(display = "{}", _0)]
+    /// Errors related to the remote address.
+    Remote(#[cause] RemoteAddressError),
 
     /// The requested socket conflicts with an existing socket.
     #[fail(display = "Connection in use")]
@@ -241,6 +241,6 @@ impl From<NoRouteError> for NetstackError {
 
 impl From<NoRouteError> for ConnectError {
     fn from(_: NoRouteError) -> ConnectError {
-        ConnectError::NoRoute
+        ConnectError::Remote(RemoteAddressError::NoRoute)
     }
 }

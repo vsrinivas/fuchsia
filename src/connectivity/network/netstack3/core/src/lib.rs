@@ -13,7 +13,6 @@
 // benchmarks, edit your Cargo.toml file to add a "benchmark" feature, and then
 // run with that feature enabled.
 #![cfg_attr(feature = "benchmark", feature(test))]
-
 // TODO Follow 2018 idioms
 #![allow(elided_lifetimes_in_paths)]
 
@@ -48,7 +47,7 @@ pub use crate::device::{
     get_ip_addr_subnets, initialize_device, receive_frame, remove_device, DeviceId,
     DeviceLayerEventDispatcher,
 };
-pub use crate::error::{ConnectError, NetstackError};
+pub use crate::error::{ConnectError, LocalAddressError, NetstackError, RemoteAddressError};
 pub use crate::ip::{
     icmp, EntryDest, EntryDestEither, EntryEither, IpLayerEventDispatcher, Ipv4StateBuilder,
     Ipv6StateBuilder,
