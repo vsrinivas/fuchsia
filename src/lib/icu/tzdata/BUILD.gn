@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
+
+icu_tzdata_config_data("icu_tzdata_for_flutter_runner_tests") {
+  for_pkg = "flutter_runner_tests"
+  data_version = "44"
+}
+
+group("config") {
+  public_deps = [
+    ":icu_tzdata_for_flutter_runner_tests",
+  ]
+}
