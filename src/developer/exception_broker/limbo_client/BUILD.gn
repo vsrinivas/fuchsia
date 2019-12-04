@@ -15,6 +15,9 @@ source_set("lib") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+  ]
+
+  public_deps = [
     "//zircon/system/fidl/fuchsia-exception",
   ]
 }

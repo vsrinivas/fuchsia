@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_LIMBO_CLIENT_H_
 #define SRC_DEVELOPER_EXCEPTION_BROKER_LIMBO_CLIENT_LIMBO_CLIENT_H_
 
+#include <fuchsia/exception/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
 namespace fuchsia {
@@ -18,8 +19,13 @@ class LimboClient {
 
   bool active() const { return active_; }
 
+  zx_status_t GetFilters(std::vector<std::string>* filters);
+  zx_status_t AppendFilters(const std::vector<std::string>& filters);
+
  private:
   std::shared_ptr<sys::ServiceDirectory> services_;
+
+  ProcessLimboSyncPtr connection_;
 
   bool active_ = false;
 };

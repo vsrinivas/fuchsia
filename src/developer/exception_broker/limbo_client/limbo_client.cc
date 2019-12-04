@@ -4,8 +4,6 @@
 
 #include "src/developer/exception_broker/limbo_client/limbo_client.h"
 
-#include <fuchsia/exception/cpp/fidl.h>
-
 #include "src/lib/fxl/logging.h"
 
 namespace fuchsia {
@@ -16,18 +14,35 @@ LimboClient::LimboClient(std::shared_ptr<sys::ServiceDirectory> services)
 
 zx_status_t LimboClient::Init() {
   FXL_DCHECK(services_);
-
-  ProcessLimboSyncPtr process_limbo;
-  if (zx_status_t status = services_->Connect(process_limbo.NewRequest()); status != ZX_OK)
+  if (zx_status_t status = services_->Connect(connection_.NewRequest()); status != ZX_OK)
     return status;
 
   // Check for active.
   bool active = false;
-  if (zx_status_t status = process_limbo->WatchActive(&active); status != ZX_OK)
+  if (zx_status_t status = connection_->WatchActive(&active); status != ZX_OK)
     return status;
 
   active_ = active;
 
+  return ZX_OK;
+}
+
+zx_status_t LimboClient::GetFilters(std::vector<std::string>* filters) {
+  if (!connection_)
+    return ZX_ERR_UNAVAILABLE;
+  return connection_->GetFilters(filters);
+}
+
+zx_status_t LimboClient::AppendFilters(const std::vector<std::string>& filters) {
+  if (!connection_)
+    return ZX_ERR_UNAVAILABLE;
+
+  ProcessLimbo_AppendFilters_Result result;
+  if (zx_status_t status = connection_->AppendFilters(filters, &result); status != ZX_OK)
+    return status;
+
+  if (result.err())
+    return result.err();
   return ZX_OK;
 }
 
