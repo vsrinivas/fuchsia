@@ -209,23 +209,17 @@ class PaperRenderer final : public Renderer {
     vk::Rect2D rect;
   };
 
-  // Stores all per-frame data in one place.
-  struct FrameData {
-    FrameData(const FramePtr& frame, std::shared_ptr<BatchGpuUploader> gpu_uploader,
-              const PaperScenePtr& scene, const ImagePtr& output_image,
-              std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
-              const std::vector<Camera>& cameras);
-    ~FrameData();
-    FramePtr frame;
+  // Stores all per-frame data in one place. See |FrameData| in |Renderer|
+  // for base-struct data.
+  struct PaperFrame : FrameData {
+    PaperFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUploader> gpu_uploader,
+               const PaperScenePtr& scene, const ImagePtr& output_image,
+               std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
+               const std::vector<Camera>& cameras);
+    ~PaperFrame() override;
     PaperScenePtr scene;
-    ImagePtr output_image;
-    TexturePtr depth_texture;
-    TexturePtr msaa_texture;
-
     size_t num_lights;
-
     std::vector<CameraData> cameras;
-
     std::vector<TextData> texts;
     std::vector<LineData> lines;
 
@@ -236,22 +230,13 @@ class PaperRenderer final : public Renderer {
     // these UniformBindings.
     std::vector<UniformBinding> scene_uniform_bindings;
 
-    std::shared_ptr<BatchGpuUploader> gpu_uploader;
-
     bool scene_finalized = false;
   };
-
-  // Called in BeginFrame() to obtain suitable render targets.
-  // NOTE: call only once per frame.
-  std::pair<TexturePtr, TexturePtr> ObtainDepthAndMsaaTextures(const FramePtr& frame,
-                                                               const ImageInfo& info);
 
   // Called during EndFrame().
   void BindSceneAndCameraUniforms(uint32_t camera_index);
   void GenerateCommandsForNoShadows(uint32_t camera_index);
   void GenerateCommandsForShadowVolumes(uint32_t camera_index);
-  static void InitRenderPassInfo(RenderPassInfo* render_pass_info, ImageViewAllocator* allocator,
-                                 const FrameData& frame_data, uint32_t camera_index);
 
   // Called to write text onto screen
   void GenerateDebugCommands(CommandBuffer* cmd_buf);
@@ -273,10 +258,7 @@ class PaperRenderer final : public Renderer {
   PaperShapeCache shape_cache_;
   PaperTransformStack transform_stack_;
 
-  std::vector<TexturePtr> depth_buffers_;
-  std::vector<TexturePtr> msaa_buffers_;
-
-  std::unique_ptr<FrameData> frame_data_;
+  std::unique_ptr<PaperFrame> frame_data_;
 
   ShaderProgramPtr ambient_light_program_;
   ShaderProgramPtr no_lighting_program_;

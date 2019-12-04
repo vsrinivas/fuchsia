@@ -38,6 +38,7 @@ PaperRendererPtr PaperRenderer::New(EscherWeakPtr escher, const PaperRendererCon
 PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfig& config)
     : Renderer(weak_escher),
       config_(config),
+
       draw_call_factory_(weak_escher, config),
       shape_cache_(std::move(weak_escher), config),
       // TODO(ES-151): (probably) move programs into PaperDrawCallFactory.
@@ -55,17 +56,14 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfi
 
 PaperRenderer::~PaperRenderer() { escher()->Cleanup(); }
 
-PaperRenderer::FrameData::FrameData(const FramePtr& frame_in,
-                                    std::shared_ptr<BatchGpuUploader> gpu_uploader_in,
-                                    const PaperScenePtr& scene_in, const ImagePtr& output_image_in,
-                                    std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
-                                    const std::vector<Camera>& cameras_in)
-    : frame(frame_in),
-      scene(scene_in),
-      output_image(output_image_in),
-      depth_texture(std::move(depth_and_msaa_textures.first)),
-      msaa_texture(std::move(depth_and_msaa_textures.second)),
-      gpu_uploader(std::move(gpu_uploader_in)) {
+PaperRenderer::PaperFrame::PaperFrame(const FramePtr& frame_in,
+                                      std::shared_ptr<BatchGpuUploader> gpu_uploader_in,
+                                      const PaperScenePtr& scene_in,
+                                      const ImagePtr& output_image_in,
+                                      std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
+                                      const std::vector<Camera>& cameras_in)
+    : FrameData(frame_in, gpu_uploader_in, output_image_in, depth_and_msaa_textures),
+      scene(scene_in) {
   // Scale the camera viewports to pixel coordinates in the output framebuffer.
   for (auto& cam : cameras_in) {
     vk::Rect2D rect = cam.viewport().vk_rect_2d(output_image->width(), output_image->height());
@@ -123,7 +121,7 @@ PaperRenderer::FrameData::FrameData(const FramePtr& frame_in,
   }
 }
 
-PaperRenderer::FrameData::~FrameData() = default;
+PaperRenderer::PaperFrame::~PaperFrame() = default;
 
 void PaperRenderer::SetConfig(const PaperRendererConfig& config) {
   FXL_DCHECK(!frame_data_) << "Illegal call to SetConfig() during a frame.";
@@ -174,9 +172,11 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUp
   FXL_DCHECK(!frame_data_) << "already in a frame.";
   FXL_DCHECK(frame && uploader && scene && !cameras.empty() && output_image);
 
-  frame_data_ =
-      std::make_unique<FrameData>(frame, std::move(uploader), scene, output_image,
-                                  ObtainDepthAndMsaaTextures(frame, output_image->info()), cameras);
+  frame_data_ = std::make_unique<PaperFrame>(
+      frame, std::move(uploader), scene, output_image,
+      ObtainDepthAndMsaaTextures(frame, output_image->info(), config_.msaa_sample_count,
+                                 config_.depth_stencil_format),
+      cameras);
 
   shape_cache_.BeginFrame(frame_data_->gpu_uploader.get(), frame->frame_number());
 
@@ -451,61 +451,6 @@ void PaperRenderer::DrawMesh(const MeshPtr& mesh, const PaperMaterialPtr& materi
   draw_call_factory_.DrawMesh(mesh, *material.get(), flags);
 }
 
-void PaperRenderer::InitRenderPassInfo(RenderPassInfo* rp, ImageViewAllocator* allocator,
-                                       const FrameData& frame_data, uint32_t camera_index) {
-  const ImagePtr& output_image = frame_data.output_image;
-  const TexturePtr& depth_texture = frame_data.depth_texture;
-  const TexturePtr& msaa_texture = frame_data.msaa_texture;
-
-  FXL_DCHECK(camera_index < frame_data.cameras.size());
-  rp->render_area = frame_data.cameras[camera_index].rect;
-
-  static constexpr uint32_t kRenderTargetAttachmentIndex = 0;
-  static constexpr uint32_t kResolveTargetAttachmentIndex = 1;
-  {
-    rp->color_attachments[kRenderTargetAttachmentIndex] = allocator->ObtainImageView(output_image);
-    rp->num_color_attachments = 1;
-    // Clear and store color attachment 0, the sole color attachment.
-    rp->clear_attachments = 1u << kRenderTargetAttachmentIndex;
-    rp->store_attachments = 1u << kRenderTargetAttachmentIndex;
-    // NOTE: we don't need to keep |depth_texture| alive explicitly because it
-    // will be kept alive by the render-pass.
-    rp->depth_stencil_attachment = depth_texture;
-    // Standard flags for a depth-testing render-pass that needs to first clear
-    // the depth image.
-    rp->op_flags = RenderPassInfo::kClearDepthStencilOp | RenderPassInfo::kOptimalColorLayoutOp |
-                   RenderPassInfo::kOptimalDepthStencilLayoutOp;
-    rp->clear_color[0].setFloat32({0.f, 0.f, 0.f, 0.f});
-
-    // If MSAA is enabled, we need to explicitly specify the sub-pass in order
-    // to specify the resolve attachment.  Otherwise we allow a default subclass
-    // to be created.
-    if (msaa_texture) {
-      FXL_DCHECK(rp->num_color_attachments == 1 && rp->clear_attachments == 1u);
-      // Move the output image to attachment #1, so that attachment #0 is always
-      // the attachment that we render into.
-      rp->color_attachments[kResolveTargetAttachmentIndex] =
-          std::move(rp->color_attachments[kRenderTargetAttachmentIndex]);
-      rp->color_attachments[kRenderTargetAttachmentIndex] = msaa_texture;
-      rp->num_color_attachments = 2;
-
-      // Now that the output image is attachment #1, that's the one we need to
-      // store.
-      rp->store_attachments = 1u << kResolveTargetAttachmentIndex;
-
-      rp->subpasses.push_back(RenderPassInfo::Subpass{
-          .color_attachments = {kRenderTargetAttachmentIndex},
-          .input_attachments = {},
-          .resolve_attachments = {kResolveTargetAttachmentIndex},
-          .num_color_attachments = 1,
-          .num_input_attachments = 0,
-          .num_resolve_attachments = 1,
-      });
-    }
-  }
-  FXL_DCHECK(rp->Validate());
-}
-
 // TODO(ES-154): in "no shadows" mode, should we:
 // - not use the other lights, and boost the ambient intensity?
 // - still use the lights, allowing a BRDF, distance-based-falloff etc.
@@ -518,8 +463,10 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
   CommandBuffer* cmd_buf = frame->cmds();
 
   RenderPassInfo render_pass_info;
+  FXL_DCHECK(camera_index < frame_data_->cameras.size());
+  auto render_area = frame_data_->cameras[camera_index].rect;
   InitRenderPassInfo(&render_pass_info, escher()->image_view_allocator(), *frame_data_.get(),
-                     camera_index);
+                     render_area);
 
   cmd_buf->BeginRenderPass(render_pass_info);
   frame->AddTimestamp("started no-shadows render pass");
@@ -566,8 +513,10 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   CommandBuffer* cmd_buf = frame->cmds();
 
   RenderPassInfo render_pass_info;
+  FXL_DCHECK(camera_index < frame_data_->cameras.size());
+  auto render_area = frame_data_->cameras[camera_index].rect;
   InitRenderPassInfo(&render_pass_info, escher()->image_view_allocator(), *frame_data_.get(),
-                     camera_index);
+                     render_area);
 
   cmd_buf->BeginRenderPass(render_pass_info);
   frame->AddTimestamp("started shadow_volume render pass");
@@ -781,60 +730,6 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
       vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite);
 
   frame->AddTimestamp("finished debug render pass");
-}
-
-std::pair<TexturePtr, TexturePtr> PaperRenderer::ObtainDepthAndMsaaTextures(const FramePtr& frame,
-                                                                            const ImageInfo& info) {
-  FXL_DCHECK(!depth_buffers_.empty());
-
-  // Support for other sample_counts should fairly easy to add, if necessary.
-  FXL_DCHECK(info.sample_count == 1);
-
-  auto index = frame->frame_number() % depth_buffers_.size();
-  TexturePtr& depth_texture = depth_buffers_[index];
-  TexturePtr& msaa_texture = msaa_buffers_[index];
-
-  const bool realloc_textures =
-      !depth_texture ||
-      (depth_texture->image()->use_protected_memory() != frame->use_protected_memory()) ||
-      info.width != depth_texture->width() || info.height != depth_texture->height() ||
-      config_.msaa_sample_count != depth_texture->image()->info().sample_count;
-
-  if (realloc_textures) {
-    // Need to generate a new depth buffer.
-    {
-      TRACE_DURATION("gfx", "PaperRenderer::ObtainDepthAndMsaaTextures (new depth)");
-      depth_texture = escher()->NewAttachmentTexture(
-          config_.depth_stencil_format, info.width, info.height, config_.msaa_sample_count,
-          vk::Filter::eLinear, vk::ImageUsageFlags(), /*is_transient_attachment=*/false,
-          /*is_input_attachment=*/false, /*use_unnormalized_coordinates=*/false,
-          frame->use_protected_memory() ? vk::MemoryPropertyFlagBits::eProtected
-                                        : vk::MemoryPropertyFlags());
-    }
-    // If the sample count is 1, there is no need for a MSAA buffer.
-    if (config_.msaa_sample_count == 1) {
-      msaa_texture = nullptr;
-    } else {
-      TRACE_DURATION("gfx", "PaperRenderer::ObtainDepthAndMsaaTextures (new msaa)");
-      // TODO(SCN-634): use lazy memory allocation and transient attachments
-      // when available.
-      msaa_texture = escher()->NewAttachmentTexture(
-          info.format, info.width, info.height, config_.msaa_sample_count, vk::Filter::eLinear,
-          vk::ImageUsageFlags(), /*is_transient_attachment=*/false,
-          /*is_input_attachment=*/false, /*use_unnormalized_coordinates=*/false,
-          frame->use_protected_memory() ? vk::MemoryPropertyFlagBits::eProtected
-                                        : vk::MemoryPropertyFlags()
-          // TODO(ES-73): , vk::ImageUsageFlagBits::eTransientAttachment
-      );
-
-      frame->cmds()->ImageBarrier(msaa_texture->image(), vk::ImageLayout::eUndefined,
-                                  vk::ImageLayout::eColorAttachmentOptimal,
-                                  vk::PipelineStageFlagBits::eAllGraphics, vk::AccessFlags(),
-                                  vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                                  vk::AccessFlagBits::eColorAttachmentWrite);
-    }
-  }
-  return {depth_texture, msaa_texture};
 }
 
 }  // namespace escher
