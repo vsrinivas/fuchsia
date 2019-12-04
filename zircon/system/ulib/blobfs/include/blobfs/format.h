@@ -68,17 +68,11 @@ constexpr uint64_t kBlobfsDefaultInodeCount = 32768;
 constexpr size_t kMinimumDataBlocks = 2;
 
 #ifdef __Fuchsia__
-// Use a heuristics-based approach based on physical RAM size to
-// determine the size of the writeback buffer in filesystem blocks.
-//
-// Currently, we set the writeback buffer size to 2% of physical
-// memory.
-//
-// Should be invoked with caution; the size of the system's total
-// memory may eventually change after boot.
+// Returns the size of the writeback buffer in filesystem blocks.
 inline size_t WriteBufferSize() {
-    return fbl::round_up((zx_system_get_physmem() * 2) / 100, kBlobfsBlockSize)
-            / kBlobfsBlockSize;
+  // Hardcoded to 10 MB; may be replaced by a more device-specific option
+  // in the future.
+  return 10 * (1 << 20) / kBlobfsBlockSize;
 }
 #endif
 

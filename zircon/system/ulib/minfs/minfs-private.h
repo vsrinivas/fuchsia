@@ -274,12 +274,9 @@ class Minfs :
 #ifdef __Fuchsia__
   // Returns the capacity of the writeback buffer, in blocks.
   size_t WritebackCapacity() const {
-    // Use a heuristics-based approach based on physical RAM size to
-    // determine the size of the writeback buffer.
-    //
-    // Currently, we set the writeback buffer size to 2% of physical
-    // memory.
-    return fbl::round_up((zx_system_get_physmem() * 2) / 100, kMinfsBlockSize) / kMinfsBlockSize;
+    // Hardcoded to 10 MB; may be replaced by a more device-specific option
+    // in the future.
+    return 10 * (1 << 20) / kMinfsBlockSize;
   }
 
   void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
