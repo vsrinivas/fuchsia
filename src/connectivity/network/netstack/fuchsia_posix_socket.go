@@ -488,7 +488,12 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 					case zx.ErrBadState:
 						// Writing has been disabled for this socket endpoint.
 						if err := ios.ep.Shutdown(tcpip.ShutdownRead); err != nil {
-							panic(err)
+							if !(connected && err == tcpip.ErrNotConnected) {
+								panic(err)
+							}
+							// The endpoint is already shutdown which means it
+							// was reset by the other side of the connection.
+							syslog.Infof("client shutdown a closed endpoint with %d bytes pending data; ep info: %v", len(v), ios.ep.Info())
 						}
 						return
 					case zx.ErrShouldWait:
