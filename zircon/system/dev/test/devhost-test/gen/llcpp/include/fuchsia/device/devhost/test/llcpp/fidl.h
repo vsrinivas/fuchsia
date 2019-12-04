@@ -75,6 +75,12 @@ struct TestDevice_AddChildDevice_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static TestDevice_AddChildDevice_Result WithResponse(::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Response&& val) {
+    TestDevice_AddChildDevice_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static TestDevice_AddChildDevice_Result WithResponse(::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Response* val) {
     TestDevice_AddChildDevice_Result result;
     result.set_response(val);
@@ -83,10 +89,24 @@ struct TestDevice_AddChildDevice_Result {
 
   ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -99,6 +119,12 @@ struct TestDevice_AddChildDevice_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static TestDevice_AddChildDevice_Result WithErr(int32_t&& val) {
+    TestDevice_AddChildDevice_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static TestDevice_AddChildDevice_Result WithErr(int32_t* val) {
     TestDevice_AddChildDevice_Result result;
     result.set_err(val);
@@ -107,10 +133,24 @@ struct TestDevice_AddChildDevice_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>

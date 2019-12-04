@@ -95,11 +95,6 @@ bool Echo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
     return true;
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-  zx_status_t status = fidl_validate_txn_header(hdr);
-  if (status != ZX_OK) {
-    txn->Close(status);
-    return true;
-  }
   switch (hdr->ordinal) {
     case kEcho_EchoString_Ordinal:
     case kEcho_EchoString_GenOrdinal:
@@ -178,10 +173,10 @@ void Echo::Interface::EchoStringCompleterBase::Reply(::fidl::DecodedMessage<Echo
 
 
 void Echo::SetTransactionHeaderFor::EchoStringRequest(const ::fidl::DecodedMessage<Echo::EchoStringRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kEcho_EchoString_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kEcho_EchoString_Ordinal);
 }
 void Echo::SetTransactionHeaderFor::EchoStringResponse(const ::fidl::DecodedMessage<Echo::EchoStringResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kEcho_EchoString_GenOrdinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kEcho_EchoString_Ordinal);
 }
 
 }  // namespace test

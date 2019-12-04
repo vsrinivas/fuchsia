@@ -82,6 +82,12 @@ struct Buttons_RegisterNotify_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Buttons_RegisterNotify_Result WithResponse(::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response&& val) {
+    Buttons_RegisterNotify_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static Buttons_RegisterNotify_Result WithResponse(::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response* val) {
     Buttons_RegisterNotify_Result result;
     result.set_response(val);
@@ -90,10 +96,24 @@ struct Buttons_RegisterNotify_Result {
 
   ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -106,6 +126,12 @@ struct Buttons_RegisterNotify_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Buttons_RegisterNotify_Result WithErr(int32_t&& val) {
+    Buttons_RegisterNotify_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static Buttons_RegisterNotify_Result WithErr(int32_t* val) {
     Buttons_RegisterNotify_Result result;
     result.set_err(val);
@@ -114,10 +140,24 @@ struct Buttons_RegisterNotify_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>

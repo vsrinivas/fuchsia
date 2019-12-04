@@ -109,6 +109,12 @@ struct Device_GetStateNormalized_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Device_GetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response&& val) {
+    Device_GetStateNormalized_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static Device_GetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response* val) {
     Device_GetStateNormalized_Result result;
     result.set_response(val);
@@ -117,10 +123,24 @@ struct Device_GetStateNormalized_Result {
 
   ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -133,6 +153,12 @@ struct Device_GetStateNormalized_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Device_GetStateNormalized_Result WithErr(int32_t&& val) {
+    Device_GetStateNormalized_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static Device_GetStateNormalized_Result WithErr(int32_t* val) {
     Device_GetStateNormalized_Result result;
     result.set_err(val);
@@ -141,10 +167,24 @@ struct Device_GetStateNormalized_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -234,6 +274,12 @@ struct Device_GetStateAbsolute_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Device_GetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response&& val) {
+    Device_GetStateAbsolute_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static Device_GetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response* val) {
     Device_GetStateAbsolute_Result result;
     result.set_response(val);
@@ -242,10 +288,24 @@ struct Device_GetStateAbsolute_Result {
 
   ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -258,6 +318,12 @@ struct Device_GetStateAbsolute_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Device_GetStateAbsolute_Result WithErr(int32_t&& val) {
+    Device_GetStateAbsolute_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static Device_GetStateAbsolute_Result WithErr(int32_t* val) {
     Device_GetStateAbsolute_Result result;
     result.set_err(val);
@@ -266,10 +332,24 @@ struct Device_GetStateAbsolute_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -359,6 +439,12 @@ struct Device_SetStateNormalized_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Device_SetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response&& val) {
+    Device_SetStateNormalized_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static Device_SetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response* val) {
     Device_SetStateNormalized_Result result;
     result.set_response(val);
@@ -367,10 +453,24 @@ struct Device_SetStateNormalized_Result {
 
   ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -383,6 +483,12 @@ struct Device_SetStateNormalized_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Device_SetStateNormalized_Result WithErr(int32_t&& val) {
+    Device_SetStateNormalized_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static Device_SetStateNormalized_Result WithErr(int32_t* val) {
     Device_SetStateNormalized_Result result;
     result.set_err(val);
@@ -391,10 +497,24 @@ struct Device_SetStateNormalized_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -484,6 +604,12 @@ struct Device_SetStateAbsolute_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Device_SetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response&& val) {
+    Device_SetStateAbsolute_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static Device_SetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response* val) {
     Device_SetStateAbsolute_Result result;
     result.set_response(val);
@@ -492,10 +618,24 @@ struct Device_SetStateAbsolute_Result {
 
   ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -508,6 +648,12 @@ struct Device_SetStateAbsolute_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Device_SetStateAbsolute_Result WithErr(int32_t&& val) {
+    Device_SetStateAbsolute_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static Device_SetStateAbsolute_Result WithErr(int32_t* val) {
     Device_SetStateAbsolute_Result result;
     result.set_err(val);
@@ -516,10 +662,24 @@ struct Device_SetStateAbsolute_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -609,6 +769,12 @@ struct Device_GetMaxAbsoluteBrightness_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Device_GetMaxAbsoluteBrightness_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response&& val) {
+    Device_GetMaxAbsoluteBrightness_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static Device_GetMaxAbsoluteBrightness_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response* val) {
     Device_GetMaxAbsoluteBrightness_Result result;
     result.set_response(val);
@@ -617,10 +783,24 @@ struct Device_GetMaxAbsoluteBrightness_Result {
 
   ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -633,6 +813,12 @@ struct Device_GetMaxAbsoluteBrightness_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Device_GetMaxAbsoluteBrightness_Result WithErr(int32_t&& val) {
+    Device_GetMaxAbsoluteBrightness_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static Device_GetMaxAbsoluteBrightness_Result WithErr(int32_t* val) {
     Device_GetMaxAbsoluteBrightness_Result result;
     result.set_err(val);
@@ -641,10 +827,24 @@ struct Device_GetMaxAbsoluteBrightness_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>
