@@ -9,7 +9,6 @@
 #include <lib/timekeeper/test_clock.h>
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
-#include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
@@ -44,13 +43,10 @@ using testing::UnorderedElementsAreArray;
 
 using UploadPolicy = Settings::UploadPolicy;
 
-constexpr uint64_t kMaxTotalReportsSizeInKb = 1024u;
-
 constexpr bool kUploadSuccessful = true;
 constexpr bool kUploadFailed = false;
 
 constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
-constexpr CrashpadDatabaseConfig kDatabaseConfig{/*max_size_in_kb=*/kMaxTotalReportsSizeInKb};
 
 constexpr char kAttachmentKey[] = "attachment.key";
 constexpr char kAttachmentValue[] = "attachment.value";
@@ -93,8 +89,7 @@ class QueueTest : public gtest::TestLoopFixture {
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     inspector_ = std::make_unique<inspect::Inspector>();
     inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
-    queue_ = Queue::TryCreate(dispatcher(), kDatabaseConfig, crash_server_.get(),
-                              inspect_manager_.get());
+    queue_ = Queue::TryCreate(dispatcher(), crash_server_.get(), inspect_manager_.get());
 
     ASSERT_TRUE(queue_);
 
@@ -466,7 +461,7 @@ TEST_F(QueueTest, Check_InspectTree) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches(kInspectReportsName)),
+          NodeMatches(NameMatches("reports")),
           ChildrenMatch(IsSupersetOf({
               AllOf(NodeMatches(NameMatches("program_1")),
                     ChildrenMatch(

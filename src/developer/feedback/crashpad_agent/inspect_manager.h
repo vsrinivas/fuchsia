@@ -8,6 +8,7 @@
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/timekeeper/clock.h>
 
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -29,6 +30,9 @@ class InspectManager {
 
   // Exposes the mutable settings of the crash reporter.
   void ExposeSettings(feedback::Settings* settings);
+
+  // Exposes the static properties of the crash report database.
+  void ExposeDatabase(uint64_t max_crashpad_database_size_in_kb);
 
   // Adds a new report under the given program.
   //
@@ -65,25 +69,23 @@ class InspectManager {
 
   // Inspect node containing the static configuration.
   struct Config {
-    // Inspect node containing the database configuration.
-    struct CrashpadDatabaseConfig {
-      inspect::StringProperty path;
-      inspect::UintProperty max_size_in_kb;
-    };
-
     // Inspect node containing the crash server configuration.
     struct CrashServerConfig {
       inspect::StringProperty upload_policy;
       inspect::StringProperty url;
     };
 
-    CrashpadDatabaseConfig crashpad_database;
     CrashServerConfig crash_server;
   };
 
   // Inspect node containing the mutable settings.
   struct Settings {
     inspect::StringProperty upload_policy;
+  };
+
+  // Inspect node containing the database properties.
+  struct Database {
+    inspect::UintProperty max_crashpad_database_size_in_kb;
   };
 
   // Inspect node for a single report.
@@ -110,6 +112,7 @@ class InspectManager {
   timekeeper::Clock* clock_;
   Config config_;
   Settings settings_;
+  Database database_;
   // Maps a local report ID to a |Report|.
   std::map<std::string, Report> reports_;
 

@@ -24,7 +24,6 @@ void CheckEmptyConfig(const Config& config) {
 TEST(ConfigTest, ParseConfig_ValidConfig_UploadDisabled) {
   Config config;
   ASSERT_EQ(ParseConfig("/pkg/data/valid_config_upload_disabled.json", &config), ZX_OK);
-  EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
   EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
   EXPECT_EQ(config.crash_server.url, nullptr);
 }
@@ -32,7 +31,6 @@ TEST(ConfigTest, ParseConfig_ValidConfig_UploadDisabled) {
 TEST(ConfigTest, ParseConfig_ValidConfig_UploadEnabled) {
   Config config;
   ASSERT_EQ(ParseConfig("/pkg/data/valid_config_upload_enabled.json", &config), ZX_OK);
-  EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
   EXPECT_EQ(config.crash_server.upload_policy, kEnabled);
   EXPECT_EQ(*config.crash_server.url, "http://localhost:1234");
 }
@@ -41,7 +39,6 @@ TEST(ConfigTest, ParseConfig_ValidConfig_UploadReadFromPrivacySettings) {
   Config config;
   ASSERT_EQ(ParseConfig("/pkg/data/valid_config_upload_read_from_privacy_settings.json", &config),
             ZX_OK);
-  EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
   EXPECT_EQ(config.crash_server.upload_policy, kReadFromPrivacySettings);
   EXPECT_EQ(*config.crash_server.url, "http://localhost:1234");
 }
@@ -50,7 +47,6 @@ TEST(ConfigTest, ParseConfig_ValidConfig_UploadDisabledServerUrlIgnored) {
   Config config;
   ASSERT_EQ(ParseConfig("/pkg/data/valid_config_upload_disabled_spurious_server.json", &config),
             ZX_OK);
-  EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
   EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
   // Even though a URL is set in the config file, we check that it is not set in the struct.
   EXPECT_EQ(config.crash_server.url, nullptr);

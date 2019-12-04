@@ -7,11 +7,11 @@
 
 #include <fuchsia/mem/cpp/fidl.h>
 
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <unordered_map>
 
-#include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
 #include "src/developer/feedback/crashpad_agent/upload_report.h"
 #include "src/lib/fxl/macros.h"
@@ -20,11 +20,14 @@
 
 namespace feedback {
 
+extern const uint64_t kCrashpadDatabaseMaxSizeInKb;
+
 // Wrapper around the Crashpad database that also stores annotations.
 class Database {
  public:
-  static std::unique_ptr<Database> TryCreate(CrashpadDatabaseConfig config,
-                                             InspectManager* inspect_manager);
+  static std::unique_ptr<Database> TryCreate(
+      InspectManager* inspect_manager,
+      uint64_t max_crashpad_database_size_in_kb = kCrashpadDatabaseMaxSizeInKb);
 
   // Make a new report in |database_|.
   //
@@ -58,6 +61,8 @@ class Database {
   // Return the number of reports that are removed from |database_|.
   size_t GarbageCollect();
 
+  uint64_t MaxCrashpadDatabaseSizeInKb() { return max_crashpad_database_size_in_kb_; }
+
   ~Database() = default;
 
  private:
@@ -74,14 +79,14 @@ class Database {
     bool has_minidump;
   };
 
-  Database(CrashpadDatabaseConfig config, std::unique_ptr<crashpad::CrashReportDatabase> database,
-           InspectManager* inspect_manager);
+  Database(std::unique_ptr<crashpad::CrashReportDatabase> database,
+           uint64_t max_crashpad_database_size_in_kb, InspectManager* inspect_manager);
 
   // Removes |local_report_id| from |additional_data_|.
   void CleanUp(const crashpad::UUID& local_report_id);
 
-  const CrashpadDatabaseConfig config_;
   std::unique_ptr<crashpad::CrashReportDatabase> database_;
+  const uint64_t max_crashpad_database_size_in_kb_;
   InspectManager* inspect_manager_;
   std::unordered_map<crashpad::UUID, AdditionalData, UUIDHasher> additional_data_;
 

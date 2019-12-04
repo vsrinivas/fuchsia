@@ -38,10 +38,10 @@ std::string CurrentTime(timekeeper::Clock* clock) {
 
 InspectManager::InspectManager(inspect::Node* root_node, timekeeper::Clock* clock)
     : node_manager_(root_node), clock_(clock) {
-  node_manager_.Get("/settings");
-  node_manager_.Get("/reports");
-  node_manager_.Get("/config/crashpad_database");
   node_manager_.Get("/config/crash_server");
+  node_manager_.Get("/database");
+  node_manager_.Get("/reports");
+  node_manager_.Get("/settings");
 }
 
 bool InspectManager::AddReport(const std::string& program_name,
@@ -124,14 +124,8 @@ bool InspectManager::MarkReportAsGarbageCollected(const std::string& local_repor
 }
 
 void InspectManager::ExposeConfig(const feedback::Config& config) {
-  auto* crashpad_database = &config_.crashpad_database;
   auto* crash_server = &config_.crash_server;
-
   inspect::Node& server = node_manager_.Get("/config/crash_server");
-
-  crashpad_database->max_size_in_kb =
-      node_manager_.Get("/config/crashpad_database")
-          .CreateUint(kCrashpadDatabaseMaxSizeInKbKey, config.crashpad_database.max_size_in_kb);
 
   crash_server->upload_policy =
       server.CreateString(kCrashServerUploadPolicyKey, ToString(config.crash_server.upload_policy));
@@ -160,6 +154,12 @@ void InspectManager::OnUploadPolicyChange(const feedback::Settings::UploadPolicy
   } else {
     settings_.upload_policy.Set(ToString(upload_policy));
   }
+}
+
+void InspectManager::ExposeDatabase(uint64_t max_crashpad_database_size_in_kb) {
+  database_.max_crashpad_database_size_in_kb =
+      node_manager_.Get("/database")
+          .CreateUint("max_crashpad_database_size_in_kb", max_crashpad_database_size_in_kb);
 }
 
 }  // namespace feedback

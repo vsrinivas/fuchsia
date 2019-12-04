@@ -7,17 +7,10 @@
 
 #include <zircon/types.h>
 
-#include <cstdint>
 #include <memory>
 #include <string>
 
 namespace feedback {
-
-struct CrashpadDatabaseConfig {
-  // Maximum size (in kilobytes) that the Crashpad database should grow to, excluding current
-  // reports being generated.
-  uint64_t max_size_in_kb;
-};
 
 struct CrashServerConfig {
   // Policy defining whether to upload pending and future crash reports to a remote crash server.
@@ -46,8 +39,6 @@ struct CrashServerConfig {
 //
 // It is intended to represent an immutable configuration, typically loaded from a file.
 struct Config {
-  CrashpadDatabaseConfig crashpad_database;
-
   CrashServerConfig crash_server;
 };
 

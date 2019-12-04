@@ -10,6 +10,7 @@
 #include <lib/timekeeper/test_clock.h>
 #include <lib/zx/time.h>
 
+#include <cstdint>
 #include <memory>
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
@@ -78,9 +79,10 @@ class InspectManagerTest : public testing::Test {
 
 TEST_F(InspectManagerTest, InitialInspectTree) {
   EXPECT_THAT(InspectTree(), ChildrenMatch(UnorderedElementsAreArray({
-                                 NodeMatches(NameMatches(kInspectConfigName)),
-                                 NodeMatches(NameMatches(kInspectSettingsName)),
-                                 NodeMatches(NameMatches(kInspectReportsName)),
+                                 NodeMatches(NameMatches("config")),
+                                 NodeMatches(NameMatches("database")),
+                                 NodeMatches(NameMatches("reports")),
+                                 NodeMatches(NameMatches("settings")),
                              })));
 }
 
@@ -90,7 +92,7 @@ TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(
-          AllOf(NodeMatches(NameMatches(kInspectReportsName)),
+          AllOf(NodeMatches(NameMatches("reports")),
                 ChildrenMatch(ElementsAre(AllOf(
                     NodeMatches(NameMatches("program_1")),
                     ChildrenMatch(ElementsAre(NodeMatches(AllOf(
@@ -102,7 +104,7 @@ TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches(kInspectReportsName)),
+          NodeMatches(NameMatches("reports")),
           ChildrenMatch(ElementsAre(AllOf(NodeMatches(NameMatches("program_1")),
                                           ChildrenMatch(UnorderedElementsAreArray({
                                               NodeMatches(AllOf(NameMatches("local_report_id_1"),
@@ -120,7 +122,7 @@ TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches(kInspectReportsName)),
+          NodeMatches(NameMatches("reports")),
           ChildrenMatch(UnorderedElementsAreArray({
               AllOf(NodeMatches(NameMatches("program_1")),
                     ChildrenMatch(UnorderedElementsAreArray({
@@ -154,7 +156,7 @@ TEST_F(InspectManagerTest, Fail_AddReport_DuplicateReport) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(
-          AllOf(NodeMatches(NameMatches(kInspectReportsName)),
+          AllOf(NodeMatches(NameMatches("reports")),
                 ChildrenMatch(ElementsAre(AllOf(
                     NodeMatches(NameMatches("program")),
                     ChildrenMatch(ElementsAre(NodeMatches(AllOf(
@@ -168,7 +170,7 @@ TEST_F(InspectManagerTest, Succeed_IncrementUploadAttempt) {
   EXPECT_TRUE(inspect_manager_->IncrementUploadAttempt("local_report_id"));
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches(kInspectReportsName)),
+                  NodeMatches(NameMatches("reports")),
                   ChildrenMatch(ElementsAre(AllOf(
                       NodeMatches(NameMatches("program")),
                       ChildrenMatch(ElementsAre(AllOf(NodeMatches(AllOf(
@@ -186,7 +188,7 @@ TEST_F(InspectManagerTest, Succeed_MarkReportAsUploaded) {
   EXPECT_TRUE(inspect_manager_->MarkReportAsUploaded("local_report_id", "server_report_id"));
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches(kInspectReportsName)),
+                  NodeMatches(NameMatches("reports")),
                   ChildrenMatch(ElementsAre(AllOf(
                       NodeMatches(NameMatches("program")),
                       ChildrenMatch(ElementsAre(AllOf(
@@ -209,7 +211,7 @@ TEST_F(InspectManagerTest, Succeed_MarkReportAsArchived) {
   EXPECT_TRUE(inspect_manager_->MarkReportAsArchived("local_report_id"));
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches(kInspectReportsName)),
+                  NodeMatches(NameMatches("reports")),
                   ChildrenMatch(ElementsAre(AllOf(
                       NodeMatches(NameMatches("program")),
                       ChildrenMatch(ElementsAre(AllOf(NodeMatches(AllOf(
@@ -226,7 +228,7 @@ TEST_F(InspectManagerTest, Succeed_MarkReportAsGarbageCollected) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches(kInspectReportsName)),
+          NodeMatches(NameMatches("reports")),
           ChildrenMatch(ElementsAre(AllOf(
               NodeMatches(NameMatches("program")),
               ChildrenMatch(ElementsAre(AllOf(NodeMatches(AllOf(
@@ -238,91 +240,64 @@ TEST_F(InspectManagerTest, Succeed_MarkReportAsGarbageCollected) {
 
 TEST_F(InspectManagerTest, Fail_IncrementUploadAttempt_UnknownReport) {
   EXPECT_FALSE(inspect_manager_->IncrementUploadAttempt("unknown_report"));
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(
-                  AllOf(NodeMatches(NameMatches(kInspectReportsName)), ChildrenMatch(IsEmpty())))));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("reports")),
+                                                          ChildrenMatch(IsEmpty())))));
 }
 
 TEST_F(InspectManagerTest, Fail_MarkReportAsUploaded_UnknownReport) {
   EXPECT_FALSE(inspect_manager_->MarkReportAsUploaded("unknown_report", "server_report_id"));
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(
-                  AllOf(NodeMatches(NameMatches(kInspectReportsName)), ChildrenMatch(IsEmpty())))));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("reports")),
+                                                          ChildrenMatch(IsEmpty())))));
 }
 
 TEST_F(InspectManagerTest, Fail_MarkReportAsArchived_UnknownReport) {
   EXPECT_FALSE(inspect_manager_->MarkReportAsArchived("unknown_report"));
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(
-                  AllOf(NodeMatches(NameMatches(kInspectReportsName)), ChildrenMatch(IsEmpty())))));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("reports")),
+                                                          ChildrenMatch(IsEmpty())))));
 }
 
 TEST_F(InspectManagerTest, Fail_MarkReportAsGarbageCollected_UnknownReport) {
   EXPECT_FALSE(inspect_manager_->MarkReportAsGarbageCollected("unknown_report"));
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(
-                  AllOf(NodeMatches(NameMatches(kInspectReportsName)), ChildrenMatch(IsEmpty())))));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("reports")),
+                                                          ChildrenMatch(IsEmpty())))));
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
-  inspect_manager_->ExposeConfig(Config{
-      /*crashpad_database=*/
-      {
-          /*max_size_in_kb=*/1234,
-      },
-      /*crash_server=*/
-      {
-          /*upload_policy=*/kConfigEnabled,
-          /*url=*/std::make_unique<std::string>("http://localhost:1234"),
-      }});
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches(kInspectConfigName)),
-          ChildrenMatch(UnorderedElementsAreArray({
-              NodeMatches(AllOf(NameMatches(kCrashpadDatabaseKey),
-                                PropertyList(UnorderedElementsAreArray({
-                                    UintIs(kCrashpadDatabaseMaxSizeInKbKey, 1234),
-                                })))),
-              NodeMatches(AllOf(NameMatches(kCrashServerKey),
-                                PropertyList(UnorderedElementsAreArray({
-                                    StringIs(kCrashServerUploadPolicyKey, ToString(kConfigEnabled)),
-                                    StringIs(kCrashServerUrlKey, "http://localhost:1234"),
-                                })))),
-          }))))));
+  inspect_manager_->ExposeConfig(
+      Config{/*crash_server=*/
+             {
+                 /*upload_policy=*/kConfigEnabled,
+                 /*url=*/std::make_unique<std::string>("http://localhost:1234"),
+             }});
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("config")),
+                        ChildrenMatch(ElementsAre(NodeMatches(AllOf(
+                            NameMatches(kCrashServerKey),
+                            PropertyList(UnorderedElementsAreArray({
+                                StringIs(kCrashServerUploadPolicyKey, ToString(kConfigEnabled)),
+                                StringIs(kCrashServerUrlKey, "http://localhost:1234"),
+                            }))))))))));
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
   inspect_manager_->ExposeConfig(Config{/*crashpad_database=*/
-                                        {
-                                            /*max_size_in_kb=*/1234,
-                                        },
                                         /*crash_server=*/
                                         {
                                             /*upload_policy=*/kConfigDisabled,
                                             /*url=*/nullptr,
                                         }});
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches(kInspectConfigName)),
-          ChildrenMatch(UnorderedElementsAreArray({
-              NodeMatches(AllOf(NameMatches(kCrashpadDatabaseKey),
-                                PropertyList(UnorderedElementsAreArray({
-                                    UintIs(kCrashpadDatabaseMaxSizeInKbKey, 1234),
-                                })))),
-              NodeMatches(AllOf(NameMatches(kCrashServerKey),
-                                PropertyList(ElementsAre(StringIs(kCrashServerUploadPolicyKey,
-                                                                  ToString(kConfigDisabled)))))),
-          }))))));
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("config")),
+                        ChildrenMatch(ElementsAre(NodeMatches(AllOf(
+                            NameMatches(kCrashServerKey),
+                            PropertyList(ElementsAre(StringIs(kCrashServerUploadPolicyKey,
+                                                              ToString(kConfigDisabled))))))))))));
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
-  inspect_manager_->ExposeConfig(Config{/*crashpad_database=*/
-                                        {
-                                            /*max_size_in_kb=*/1234,
-                                        },
-                                        /*crash_server=*/
+  inspect_manager_->ExposeConfig(Config{/*crash_server=*/
                                         {
                                             /*upload_policy=*/kConfigReadFromPrivacySettings,
                                             /*url=*/nullptr,
@@ -330,17 +305,11 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches(kInspectConfigName)),
-          ChildrenMatch(UnorderedElementsAreArray({
-              NodeMatches(AllOf(NameMatches(kCrashpadDatabaseKey),
-                                PropertyList(UnorderedElementsAreArray({
-                                    UintIs(kCrashpadDatabaseMaxSizeInKbKey, 1234),
-                                })))),
-              NodeMatches(AllOf(
-                  NameMatches(kCrashServerKey),
-                  PropertyList(ElementsAre(StringIs(kCrashServerUploadPolicyKey,
-                                                    ToString(kConfigReadFromPrivacySettings)))))),
-          }))))));
+          NodeMatches(NameMatches("config")),
+          ChildrenMatch(ElementsAre(NodeMatches(AllOf(
+              NameMatches(kCrashServerKey),
+              PropertyList(ElementsAre(StringIs(kCrashServerUploadPolicyKey,
+                                                ToString(kConfigReadFromPrivacySettings))))))))))));
 }
 
 TEST_F(InspectManagerTest, ExposeSettings_TrackUploadPolicyChanges) {
@@ -350,29 +319,39 @@ TEST_F(InspectManagerTest, ExposeSettings_TrackUploadPolicyChanges) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(NodeMatches(AllOf(
-          NameMatches(kInspectSettingsName),
+          NameMatches("settings"),
           PropertyList(ElementsAre(StringIs("upload_policy", ToString(kSettingsEnabled)))))))));
 
   settings.set_upload_policy(kSettingsDisabled);
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(NodeMatches(AllOf(
-          NameMatches(kInspectSettingsName),
+          NameMatches("settings"),
           PropertyList(ElementsAre(StringIs("upload_policy", ToString(kSettingsDisabled)))))))));
 
   settings.set_upload_policy(kSettingsLimbo);
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(NodeMatches(
-          AllOf(NameMatches(kInspectSettingsName),
+          AllOf(NameMatches("settings"),
                 PropertyList(ElementsAre(StringIs("upload_policy", ToString(kSettingsLimbo)))))))));
 
   settings.set_upload_policy(kSettingsEnabled);
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(NodeMatches(AllOf(
-          NameMatches(kInspectSettingsName),
+          NameMatches("settings"),
           PropertyList(ElementsAre(StringIs("upload_policy", ToString(kSettingsEnabled)))))))));
+}
+
+TEST_F(InspectManagerTest, ExposeDatabase) {
+  const uint64_t kCrashpadDatabaseMaxSizeInKb = 1234u;
+  inspect_manager_->ExposeDatabase(kCrashpadDatabaseMaxSizeInKb);
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(NodeMatches(
+                  AllOf(NameMatches("database"),
+                        PropertyList(ElementsAre(UintIs("max_crashpad_database_size_in_kb",
+                                                        kCrashpadDatabaseMaxSizeInKb))))))));
 }
 
 TEST_F(InspectManagerTest, Check_CanAccessMultipleReportsForTheSameProgram) {

@@ -4,8 +4,10 @@
 
 #include "src/developer/feedback/crashpad_agent/database.h"
 
+#include <cstdint>
 #include <memory>
 
+#include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/report_util.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/fxl/logging.h"
@@ -22,9 +24,10 @@ using CrashSkippedReason = crashpad::Metrics::CrashSkippedReason;
 using OperationStatus = crashpad::CrashReportDatabase::OperationStatus;
 
 constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
+constexpr uint64_t kCrashpadDatabaseMaxSizeInKb = 5120u;
 
-std::unique_ptr<Database> Database::TryCreate(CrashpadDatabaseConfig config,
-                                              InspectManager* inspect_manager) {
+std::unique_ptr<Database> Database::TryCreate(InspectManager* inspect_manager,
+                                              const uint64_t max_crashpad_database_size_in_kb) {
   if (!files::IsDirectory(kCrashpadDatabasePath)) {
     files::CreateDirectory(kCrashpadDatabasePath);
   }
@@ -37,15 +40,17 @@ std::unique_ptr<Database> Database::TryCreate(CrashpadDatabaseConfig config,
     return nullptr;
   }
 
-  return std::unique_ptr<Database>(
-      new Database(config, std::move(crashpad_database), inspect_manager));
+  return std::unique_ptr<Database>(new Database(std::move(crashpad_database),
+                                                max_crashpad_database_size_in_kb, inspect_manager));
 }
 
-Database::Database(CrashpadDatabaseConfig config,
-                   std::unique_ptr<crashpad::CrashReportDatabase> database,
-                   InspectManager* inspect_manager)
-    : config_(config), database_(std::move(database)), inspect_manager_(inspect_manager) {
+Database::Database(std::unique_ptr<crashpad::CrashReportDatabase> database,
+                   uint64_t max_crashpad_database_size_in_kb, InspectManager* inspect_manager)
+    : database_(std::move(database)),
+      max_crashpad_database_size_in_kb_(max_crashpad_database_size_in_kb),
+      inspect_manager_(inspect_manager) {
   FXL_DCHECK(database_);
+  inspect_manager_->ExposeDatabase(max_crashpad_database_size_in_kb_);
 }
 
 bool Database::MakeNewReport(const std::map<std::string, fuchsia::mem::Buffer>& attachments,
@@ -159,7 +164,7 @@ size_t Database::GarbageCollect() {
   // We need to create a new condition every time we prune as it internally maintains a cumulated
   // total size as it iterates over the reports in the database and we want to reset that cumulated
   // total size every time we prune.
-  crashpad::DatabaseSizePruneCondition pruning_condition(config_.max_size_in_kb);
+  crashpad::DatabaseSizePruneCondition pruning_condition(max_crashpad_database_size_in_kb_);
   const size_t num_pruned = crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
   if (num_pruned > 0) {
     FX_LOGS(INFO) << fxl::StringPrintf("Pruned %lu crash report(s) from Crashpad database",

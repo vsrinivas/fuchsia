@@ -10,7 +10,6 @@
 #include <map>
 #include <vector>
 
-#include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/database.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
@@ -23,9 +22,7 @@ namespace feedback {
 // Queues pending reports and processes them according to its internal State.
 class Queue {
  public:
-  static std::unique_ptr<Queue> TryCreate(async_dispatcher_t* dispatcher,
-                                          CrashpadDatabaseConfig database_config,
-                                          CrashServer* crash_server,
+  static std::unique_ptr<Queue> TryCreate(async_dispatcher_t* dispatcher, CrashServer* crash_server,
                                           InspectManager* inspect_manager);
 
   // Allow the queue's functionality to change based on the upload policy.

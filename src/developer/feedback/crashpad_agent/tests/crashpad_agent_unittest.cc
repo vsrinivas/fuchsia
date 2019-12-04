@@ -27,6 +27,7 @@
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
+#include "src/developer/feedback/crashpad_agent/database.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
@@ -62,12 +63,6 @@ using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::Not;
 using testing::UnorderedElementsAreArray;
-
-// We keep the local Crashpad database size under a certain value. As we want to check the produced
-// attachments in the database, we should set the size to be at least the total size for a single
-// report so that it does not get cleaned up before we are able to inspect its attachments. For now,
-// a single report should take up to 1MB.
-constexpr uint64_t kMaxTotalReportSizeInKb = 1024u;
 
 constexpr bool kUploadSuccessful = true;
 constexpr bool kUploadFailed = false;
@@ -134,11 +129,7 @@ class CrashpadAgentTest : public UnitTestFixture {
   // Sets up the underlying agent using a default config.
   void SetUpAgentDefaultConfig(const std::vector<bool>& upload_attempt_results = {}) {
     SetUpAgent(
-        Config{/*crashpad_database=*/
-               {
-                   /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
-               },
-               /*crash_server=*/
+        Config{/*crash_server=*/
                {
                    /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                    /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
@@ -572,11 +563,7 @@ TEST_F(CrashpadAgentTest, Upload_OnUserAlreadyOptedInDataSharing) {
   SetUpPrivacySettings(std::make_unique<FakePrivacySettings>());
   SetPrivacySettings(kUserOptInDataSharing);
   SetUpAgent(
-      Config{/*crashpad_database=*/
-             {
-                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
-             },
-             /*crash_server=*/
+      Config{/*crash_server=*/
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
@@ -594,11 +581,7 @@ TEST_F(CrashpadAgentTest, Archive_OnUserAlreadyOptedOutDataSharing) {
   SetUpPrivacySettings(std::make_unique<FakePrivacySettings>());
   SetPrivacySettings(kUserOptOutDataSharing);
   SetUpAgent(
-      Config{/*crashpad_database=*/
-             {
-                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
-             },
-             /*crash_server=*/
+      Config{/*crash_server=*/
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
@@ -613,11 +596,7 @@ TEST_F(CrashpadAgentTest, Archive_OnUserAlreadyOptedOutDataSharing) {
 TEST_F(CrashpadAgentTest, Upload_OnceUserOptInDataSharing) {
   SetUpPrivacySettings(std::make_unique<FakePrivacySettings>());
   SetUpAgent(
-      Config{/*crashpad_database=*/
-             {
-                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
-             },
-             /*crash_server=*/
+      Config{/*crash_server=*/
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
@@ -659,11 +638,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnConcurrentReports) {
 
 TEST_F(CrashpadAgentTest, Succeed_OnFailedUpload) {
   SetUpAgent(
-      Config{/*crashpad_database=*/
-             {
-                 /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
-             },
-             /*crash_server=*/
+      Config{/*crash_server=*/
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
                  /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
@@ -675,11 +650,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnFailedUpload) {
 
 TEST_F(CrashpadAgentTest, Succeed_OnDisabledUpload) {
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-  SetUpAgent(Config{/*crashpad_database=*/
-                    {
-                        /*max_size_in_kb=*/kMaxTotalReportSizeInKb,
-                    },
-                    /*crash_server=*/
+  SetUpAgent(Config{/*crash_server=*/
                     {
                         /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
                         /*url=*/nullptr,
@@ -762,25 +733,21 @@ TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(NameMatches(kInspectConfigName)),
-                ChildrenMatch(UnorderedElementsAreArray({
-                    NodeMatches(
-                        AllOf(NameMatches(kCrashpadDatabaseKey),
-                              PropertyList(UnorderedElementsAreArray({
-                                  UintIs(kCrashpadDatabaseMaxSizeInKbKey, kMaxTotalReportSizeInKb),
-                              })))),
-                    NodeMatches(
-                        AllOf(NameMatches(kCrashServerKey),
-                              PropertyList(UnorderedElementsAreArray({
-                                  StringIs(kCrashServerUploadPolicyKey,
-                                           ToString(CrashServerConfig::UploadPolicy::ENABLED)),
-                                  StringIs(kCrashServerUrlKey, kStubCrashServerUrl),
-                              })))),
-                }))),
-          NodeMatches(AllOf(NameMatches(kInspectSettingsName),
+          AllOf(NodeMatches(NameMatches("config")),
+                ChildrenMatch(ElementsAre(NodeMatches(
+                    AllOf(NameMatches(kCrashServerKey),
+                          PropertyList(UnorderedElementsAreArray({
+                              StringIs(kCrashServerUploadPolicyKey,
+                                       ToString(CrashServerConfig::UploadPolicy::ENABLED)),
+                              StringIs(kCrashServerUrlKey, kStubCrashServerUrl),
+                          }))))))),
+          NodeMatches(AllOf(NameMatches("database"),
+                            PropertyList(ElementsAre(UintIs("max_crashpad_database_size_in_kb",
+                                                            kCrashpadDatabaseMaxSizeInKb))))),
+          NodeMatches(AllOf(NameMatches("settings"),
                             PropertyList(ElementsAre(StringIs(
                                 "upload_policy", ToString(Settings::UploadPolicy::ENABLED)))))),
-          NodeMatches(NameMatches(kInspectReportsName)))));
+          NodeMatches(NameMatches("reports")))));
 }
 
 TEST_F(CrashpadAgentTest, Check_InspectTreeAfterSuccessfulUpload) {
@@ -790,7 +757,7 @@ TEST_F(CrashpadAgentTest, Check_InspectTreeAfterSuccessfulUpload) {
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches(kInspectReportsName)),
+          NodeMatches(NameMatches("reports")),
           ChildrenMatch(ElementsAre(AllOf(
               NodeMatches(NameMatches(kProgramName)),
               ChildrenMatch(ElementsAre(AllOf(

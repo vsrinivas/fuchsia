@@ -7,13 +7,6 @@
 
 namespace feedback {
 
-constexpr char kInspectConfigName[] = "config";
-constexpr char kInspectSettingsName[] = "settings";
-constexpr char kInspectReportsName[] = "reports";
-
-constexpr char kCrashpadDatabaseKey[] = "crashpad_database";
-constexpr char kCrashpadDatabasePathKey[] = "path";
-constexpr char kCrashpadDatabaseMaxSizeInKbKey[] = "max_size_in_kb";
 constexpr char kCrashServerKey[] = "crash_server";
 constexpr char kCrashServerUploadPolicyKey[] = "upload_policy";
 constexpr char kCrashServerUrlKey[] = "url";

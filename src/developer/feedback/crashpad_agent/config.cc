@@ -20,18 +20,6 @@ namespace {
 const char kSchema[] = R"({
   "type": "object",
   "properties": {
-    "crashpad_database": {
-      "type": "object",
-      "properties": {
-        "max_size_in_kb": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "max_size_in_kb"
-      ],
-      "additionalProperties": false
-    },
     "crash_server": {
       "type": "object",
       "properties": {
@@ -54,7 +42,6 @@ const char kSchema[] = R"({
     }
   },
   "required": [
-    "crashpad_database",
     "crash_server"
   ],
   "additionalProperties": false
@@ -81,13 +68,6 @@ bool CheckAgainstSchema(rapidjson::Document& doc) {
     return false;
   }
   return true;
-}
-
-template <typename JsonObject>
-CrashpadDatabaseConfig ParseCrashpadDatabaseConfig(const JsonObject& obj) {
-  CrashpadDatabaseConfig config;
-  config.max_size_in_kb = obj[kCrashpadDatabaseMaxSizeInKbKey].GetUint();
-  return config;
 }
 
 template <typename JsonObject>
@@ -151,8 +131,6 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
 
   // It is safe to directly access the fields for which the keys are marked as required as we have
   // checked the config against the schema.
-  local_config.crashpad_database =
-      ParseCrashpadDatabaseConfig(doc[kCrashpadDatabaseKey].GetObject());
   if (!ParseCrashServerConfig(doc[kCrashServerKey].GetObject(), &local_config.crash_server)) {
     return ZX_ERR_INTERNAL;
   }

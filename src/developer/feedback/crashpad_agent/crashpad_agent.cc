@@ -89,8 +89,7 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services, Config config,
     std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager) {
-  auto queue =
-      Queue::TryCreate(dispatcher, config.crashpad_database, crash_server.get(), inspect_manager);
+  auto queue = Queue::TryCreate(dispatcher, crash_server.get(), inspect_manager);
   if (!queue) {
     FX_LOGS(FATAL) << "Failed to set up crash analyzer";
     return nullptr;

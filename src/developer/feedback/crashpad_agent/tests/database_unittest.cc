@@ -95,8 +95,7 @@ class DatabaseTest : public ::testing::Test {
 
  protected:
   void SetUpDatabase(const uint64_t max_size_in_kb) {
-    auto new_database =
-        Database::TryCreate(CrashpadDatabaseConfig{max_size_in_kb}, inspect_manager_.get());
+    auto new_database = Database::TryCreate(inspect_manager_.get(), max_size_in_kb);
     FXL_CHECK(new_database) << "Error creating database";
     database_ = std::move(new_database);
     attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);

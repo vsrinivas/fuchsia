@@ -1,7 +1,4 @@
 {
-    "crashpad_database" : {
-        "max_size_in_kb": 1024
-    },
     "crash_server" : {
         "upload_policy": "disabled"
     }

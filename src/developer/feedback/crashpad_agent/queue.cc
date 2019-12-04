@@ -19,11 +19,9 @@ using crashpad::FileReader;
 using crashpad::UUID;
 using UploadPolicy = feedback::Settings::UploadPolicy;
 
-std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher,
-                                        CrashpadDatabaseConfig database_config,
-                                        CrashServer* crash_server,
+std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher, CrashServer* crash_server,
                                         InspectManager* inspect_manager) {
-  auto database = Database::TryCreate(database_config, inspect_manager);
+  auto database = Database::TryCreate(inspect_manager);
   if (!database) {
     return nullptr;
   }
