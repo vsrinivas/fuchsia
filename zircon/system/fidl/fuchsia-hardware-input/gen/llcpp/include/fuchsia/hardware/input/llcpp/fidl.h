@@ -446,7 +446,7 @@ class Device final {
     class GetBootProtocol_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetBootProtocol_Impl(zx::unowned_channel _client_end);
+      GetBootProtocol_Impl(::zx::unowned_channel _client_end);
       ~GetBootProtocol_Impl() = default;
       GetBootProtocol_Impl(GetBootProtocol_Impl&& other) = default;
       GetBootProtocol_Impl& operator=(GetBootProtocol_Impl&& other) = default;
@@ -462,7 +462,7 @@ class Device final {
     class GetDeviceIds_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDeviceIds_Impl(zx::unowned_channel _client_end);
+      GetDeviceIds_Impl(::zx::unowned_channel _client_end);
       ~GetDeviceIds_Impl() = default;
       GetDeviceIds_Impl(GetDeviceIds_Impl&& other) = default;
       GetDeviceIds_Impl& operator=(GetDeviceIds_Impl&& other) = default;
@@ -478,7 +478,7 @@ class Device final {
     class GetReportDescSize_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetReportDescSize_Impl(zx::unowned_channel _client_end);
+      GetReportDescSize_Impl(::zx::unowned_channel _client_end);
       ~GetReportDescSize_Impl() = default;
       GetReportDescSize_Impl(GetReportDescSize_Impl&& other) = default;
       GetReportDescSize_Impl& operator=(GetReportDescSize_Impl&& other) = default;
@@ -494,7 +494,7 @@ class Device final {
     class GetReportDesc_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetReportDesc_Impl(zx::unowned_channel _client_end);
+      GetReportDesc_Impl(::zx::unowned_channel _client_end);
       ~GetReportDesc_Impl() = default;
       GetReportDesc_Impl(GetReportDesc_Impl&& other) = default;
       GetReportDesc_Impl& operator=(GetReportDesc_Impl&& other) = default;
@@ -510,7 +510,7 @@ class Device final {
     class GetNumReports_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetNumReports_Impl(zx::unowned_channel _client_end);
+      GetNumReports_Impl(::zx::unowned_channel _client_end);
       ~GetNumReports_Impl() = default;
       GetNumReports_Impl(GetNumReports_Impl&& other) = default;
       GetNumReports_Impl& operator=(GetNumReports_Impl&& other) = default;
@@ -526,7 +526,7 @@ class Device final {
     class GetReportIds_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetReportIds_Impl(zx::unowned_channel _client_end);
+      GetReportIds_Impl(::zx::unowned_channel _client_end);
       ~GetReportIds_Impl() = default;
       GetReportIds_Impl(GetReportIds_Impl&& other) = default;
       GetReportIds_Impl& operator=(GetReportIds_Impl&& other) = default;
@@ -542,7 +542,7 @@ class Device final {
     class GetReportSize_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetReportSize_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
+      GetReportSize_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
       ~GetReportSize_Impl() = default;
       GetReportSize_Impl(GetReportSize_Impl&& other) = default;
       GetReportSize_Impl& operator=(GetReportSize_Impl&& other) = default;
@@ -558,7 +558,7 @@ class Device final {
     class GetMaxInputReportSize_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetMaxInputReportSize_Impl(zx::unowned_channel _client_end);
+      GetMaxInputReportSize_Impl(::zx::unowned_channel _client_end);
       ~GetMaxInputReportSize_Impl() = default;
       GetMaxInputReportSize_Impl(GetMaxInputReportSize_Impl&& other) = default;
       GetMaxInputReportSize_Impl& operator=(GetMaxInputReportSize_Impl&& other) = default;
@@ -574,7 +574,7 @@ class Device final {
     class GetReports_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetReports_Impl(zx::unowned_channel _client_end);
+      GetReports_Impl(::zx::unowned_channel _client_end);
       ~GetReports_Impl() = default;
       GetReports_Impl(GetReports_Impl&& other) = default;
       GetReports_Impl& operator=(GetReports_Impl&& other) = default;
@@ -590,7 +590,7 @@ class Device final {
     class GetReportsEvent_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetReportsEvent_Impl(zx::unowned_channel _client_end);
+      GetReportsEvent_Impl(::zx::unowned_channel _client_end);
       ~GetReportsEvent_Impl() = default;
       GetReportsEvent_Impl(GetReportsEvent_Impl&& other) = default;
       GetReportsEvent_Impl& operator=(GetReportsEvent_Impl&& other) = default;
@@ -606,7 +606,7 @@ class Device final {
     class GetReport_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetReport_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
+      GetReport_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
       ~GetReport_Impl() = default;
       GetReport_Impl(GetReport_Impl&& other) = default;
       GetReport_Impl& operator=(GetReport_Impl&& other) = default;
@@ -622,7 +622,7 @@ class Device final {
     class SetReport_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetReport_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
+      SetReport_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
       ~SetReport_Impl() = default;
       SetReport_Impl(SetReport_Impl&& other) = default;
       SetReport_Impl& operator=(SetReport_Impl&& other) = default;
@@ -637,7 +637,7 @@ class Device final {
     class SetTraceId_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetTraceId_Impl(zx::unowned_channel _client_end, uint32_t id);
+      SetTraceId_Impl(::zx::unowned_channel _client_end, uint32_t id);
       ~SetTraceId_Impl() = default;
       SetTraceId_Impl(SetTraceId_Impl&& other) = default;
       SetTraceId_Impl& operator=(SetTraceId_Impl&& other) = default;
@@ -671,7 +671,7 @@ class Device final {
     class GetBootProtocol_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetBootProtocol_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetBootProtocol_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetBootProtocol_Impl() = default;
       GetBootProtocol_Impl(GetBootProtocol_Impl&& other) = default;
       GetBootProtocol_Impl& operator=(GetBootProtocol_Impl&& other) = default;
@@ -687,7 +687,7 @@ class Device final {
     class GetDeviceIds_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDeviceIds_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetDeviceIds_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetDeviceIds_Impl() = default;
       GetDeviceIds_Impl(GetDeviceIds_Impl&& other) = default;
       GetDeviceIds_Impl& operator=(GetDeviceIds_Impl&& other) = default;
@@ -703,7 +703,7 @@ class Device final {
     class GetReportDescSize_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetReportDescSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetReportDescSize_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetReportDescSize_Impl() = default;
       GetReportDescSize_Impl(GetReportDescSize_Impl&& other) = default;
       GetReportDescSize_Impl& operator=(GetReportDescSize_Impl&& other) = default;
@@ -719,7 +719,7 @@ class Device final {
     class GetReportDesc_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetReportDesc_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetReportDesc_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetReportDesc_Impl() = default;
       GetReportDesc_Impl(GetReportDesc_Impl&& other) = default;
       GetReportDesc_Impl& operator=(GetReportDesc_Impl&& other) = default;
@@ -735,7 +735,7 @@ class Device final {
     class GetNumReports_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetNumReports_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetNumReports_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetNumReports_Impl() = default;
       GetNumReports_Impl(GetNumReports_Impl&& other) = default;
       GetNumReports_Impl& operator=(GetNumReports_Impl&& other) = default;
@@ -751,7 +751,7 @@ class Device final {
     class GetReportIds_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetReportIds_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetReportIds_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetReportIds_Impl() = default;
       GetReportIds_Impl(GetReportIds_Impl&& other) = default;
       GetReportIds_Impl& operator=(GetReportIds_Impl&& other) = default;
@@ -767,7 +767,7 @@ class Device final {
     class GetReportSize_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetReportSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
+      GetReportSize_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
       ~GetReportSize_Impl() = default;
       GetReportSize_Impl(GetReportSize_Impl&& other) = default;
       GetReportSize_Impl& operator=(GetReportSize_Impl&& other) = default;
@@ -783,7 +783,7 @@ class Device final {
     class GetMaxInputReportSize_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetMaxInputReportSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetMaxInputReportSize_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetMaxInputReportSize_Impl() = default;
       GetMaxInputReportSize_Impl(GetMaxInputReportSize_Impl&& other) = default;
       GetMaxInputReportSize_Impl& operator=(GetMaxInputReportSize_Impl&& other) = default;
@@ -799,7 +799,7 @@ class Device final {
     class GetReports_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetReports_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetReports_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetReports_Impl() = default;
       GetReports_Impl(GetReports_Impl&& other) = default;
       GetReports_Impl& operator=(GetReports_Impl&& other) = default;
@@ -815,7 +815,7 @@ class Device final {
     class GetReportsEvent_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetReportsEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetReportsEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetReportsEvent_Impl() = default;
       GetReportsEvent_Impl(GetReportsEvent_Impl&& other) = default;
       GetReportsEvent_Impl& operator=(GetReportsEvent_Impl&& other) = default;
@@ -831,7 +831,7 @@ class Device final {
     class GetReport_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetReport_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
+      GetReport_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
       ~GetReport_Impl() = default;
       GetReport_Impl(GetReport_Impl&& other) = default;
       GetReport_Impl& operator=(GetReport_Impl&& other) = default;
@@ -847,7 +847,7 @@ class Device final {
     class SetReport_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetReport_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
+      SetReport_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
       ~SetReport_Impl() = default;
       SetReport_Impl(SetReport_Impl&& other) = default;
       SetReport_Impl& operator=(SetReport_Impl&& other) = default;
@@ -862,7 +862,7 @@ class Device final {
     class SetTraceId_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetTraceId_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id);
+      SetTraceId_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id);
       ~SetTraceId_Impl() = default;
       SetTraceId_Impl(SetTraceId_Impl&& other) = default;
       SetTraceId_Impl& operator=(SetTraceId_Impl&& other) = default;
@@ -1031,69 +1031,69 @@ class Device final {
 
     // Get the HID boot interface protocol this device supports
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetBootProtocol GetBootProtocol(zx::unowned_channel _client_end);
+    static ResultOf::GetBootProtocol GetBootProtocol(::zx::unowned_channel _client_end);
 
     // Get the HID boot interface protocol this device supports
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetBootProtocol GetBootProtocol(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetBootProtocol GetBootProtocol(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get the Device's IDs. If this is a real HID device, the IDs will come from the device.
     // If it is a mock HID decice, the IDs will either be 0's or user defined.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDeviceIds GetDeviceIds(zx::unowned_channel _client_end);
+    static ResultOf::GetDeviceIds GetDeviceIds(::zx::unowned_channel _client_end);
 
     // Get the Device's IDs. If this is a real HID device, the IDs will come from the device.
     // If it is a mock HID decice, the IDs will either be 0's or user defined.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDeviceIds GetDeviceIds(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDeviceIds GetDeviceIds(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get the size of the report descriptor
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetReportDescSize GetReportDescSize(zx::unowned_channel _client_end);
+    static ResultOf::GetReportDescSize GetReportDescSize(::zx::unowned_channel _client_end);
 
     // Get the size of the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetReportDescSize GetReportDescSize(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetReportDescSize GetReportDescSize(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get the report descriptor
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetReportDesc GetReportDesc(zx::unowned_channel _client_end);
+    static ResultOf::GetReportDesc GetReportDesc(::zx::unowned_channel _client_end);
 
     // Get the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetReportDesc GetReportDesc(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetReportDesc GetReportDesc(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get the number of reports in the report descriptor
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetNumReports GetNumReports(zx::unowned_channel _client_end);
+    static ResultOf::GetNumReports GetNumReports(::zx::unowned_channel _client_end);
 
     // Get the number of reports in the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetNumReports GetNumReports(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetNumReports GetNumReports(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get the report ids that are used in the report descriptor
     // Allocates 304 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetReportIds GetReportIds(zx::unowned_channel _client_end);
+    static ResultOf::GetReportIds GetReportIds(::zx::unowned_channel _client_end);
 
     // Get the report ids that are used in the report descriptor
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetReportIds GetReportIds(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetReportIds GetReportIds(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get the size of a single report for the given (type, id) pair.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetReportSize GetReportSize(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
+    static ResultOf::GetReportSize GetReportSize(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
 
     // Get the size of a single report for the given (type, id) pair.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetReportSize GetReportSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetReportSize GetReportSize(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
 
     // Get the maximum size of a single input report.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetMaxInputReportSize GetMaxInputReportSize(zx::unowned_channel _client_end);
+    static ResultOf::GetMaxInputReportSize GetMaxInputReportSize(::zx::unowned_channel _client_end);
 
     // Get the maximum size of a single input report.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetMaxInputReportSize GetMaxInputReportSize(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetMaxInputReportSize GetMaxInputReportSize(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     // This is the interface that is supposed to be used for continuous polling.
@@ -1103,7 +1103,7 @@ class Device final {
     // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
     // wait on the event from |GetReportsEvent|.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetReports GetReports(zx::unowned_channel _client_end);
+    static ResultOf::GetReports GetReports(::zx::unowned_channel _client_end);
 
     // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     // This is the interface that is supposed to be used for continuous polling.
@@ -1113,43 +1113,43 @@ class Device final {
     // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
     // wait on the event from |GetReportsEvent|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetReports GetReports(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetReports GetReports(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Receive an event that will be signalled when there are reports in the
     // Device's report FIFO.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetReportsEvent GetReportsEvent(zx::unowned_channel _client_end);
+    static ResultOf::GetReportsEvent GetReportsEvent(::zx::unowned_channel _client_end);
 
     // Receive an event that will be signalled when there are reports in the
     // Device's report FIFO.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetReportsEvent GetReportsEvent(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetReportsEvent GetReportsEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get a single report of the given (type, id) pair.  This interface is not intended
     // to be used for continuous polling of the reports.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetReport GetReport(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
+    static ResultOf::GetReport GetReport(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id);
 
     // Get a single report of the given (type, id) pair.  This interface is not intended
     // to be used for continuous polling of the reports.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetReport GetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetReport GetReport(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::BytePart _response_buffer);
 
     // Set a single report of the given (type, id) pair.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::SetReport SetReport(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
+    static ResultOf::SetReport SetReport(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report);
 
     // Set a single report of the given (type, id) pair.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetReport SetReport(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetReport SetReport(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::input::ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report, ::fidl::BytePart _response_buffer);
 
     // Set the trace ID that is used for HID report flow events.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetTraceId SetTraceId(zx::unowned_channel _client_end, uint32_t id);
+    static ResultOf::SetTraceId SetTraceId(::zx::unowned_channel _client_end, uint32_t id);
 
     // Set the trace ID that is used for HID report flow events.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetTraceId SetTraceId(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id);
+    static UnownedResultOf::SetTraceId SetTraceId(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id);
 
   };
 
@@ -1160,29 +1160,29 @@ class Device final {
    public:
 
     // Get the HID boot interface protocol this device supports
-    static ::fidl::DecodeResult<GetBootProtocolResponse> GetBootProtocol(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetBootProtocolResponse> GetBootProtocol(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get the Device's IDs. If this is a real HID device, the IDs will come from the device.
     // If it is a mock HID decice, the IDs will either be 0's or user defined.
-    static ::fidl::DecodeResult<GetDeviceIdsResponse> GetDeviceIds(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDeviceIdsResponse> GetDeviceIds(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get the size of the report descriptor
-    static ::fidl::DecodeResult<GetReportDescSizeResponse> GetReportDescSize(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetReportDescSizeResponse> GetReportDescSize(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get the report descriptor
-    static ::fidl::DecodeResult<GetReportDescResponse> GetReportDesc(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetReportDescResponse> GetReportDesc(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get the number of reports in the report descriptor
-    static ::fidl::DecodeResult<GetNumReportsResponse> GetNumReports(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetNumReportsResponse> GetNumReports(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get the report ids that are used in the report descriptor
-    static ::fidl::DecodeResult<GetReportIdsResponse> GetReportIds(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetReportIdsResponse> GetReportIds(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get the size of a single report for the given (type, id) pair.
-    static ::fidl::DecodeResult<GetReportSizeResponse> GetReportSize(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetReportSizeRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetReportSizeResponse> GetReportSize(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetReportSizeRequest> params, ::fidl::BytePart response_buffer);
 
     // Get the maximum size of a single input report.
-    static ::fidl::DecodeResult<GetMaxInputReportSizeResponse> GetMaxInputReportSize(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetMaxInputReportSizeResponse> GetMaxInputReportSize(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     // This is the interface that is supposed to be used for continuous polling.
@@ -1191,21 +1191,21 @@ class Device final {
     // It is guaranteed that only whole reports will be sent.
     // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
     // wait on the event from |GetReportsEvent|.
-    static ::fidl::DecodeResult<GetReportsResponse> GetReports(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetReportsResponse> GetReports(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Receive an event that will be signalled when there are reports in the
     // Device's report FIFO.
-    static ::fidl::DecodeResult<GetReportsEventResponse> GetReportsEvent(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetReportsEventResponse> GetReportsEvent(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get a single report of the given (type, id) pair.  This interface is not intended
     // to be used for continuous polling of the reports.
-    static ::fidl::DecodeResult<GetReportResponse> GetReport(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetReportRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetReportResponse> GetReport(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetReportRequest> params, ::fidl::BytePart response_buffer);
 
     // Set a single report of the given (type, id) pair.
-    static ::fidl::DecodeResult<SetReportResponse> SetReport(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetReportRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetReportResponse> SetReport(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetReportRequest> params, ::fidl::BytePart response_buffer);
 
     // Set the trace ID that is used for HID report flow events.
-    static ::fidl::internal::StatusAndError SetTraceId(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTraceIdRequest> params);
+    static ::fidl::internal::StatusAndError SetTraceId(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTraceIdRequest> params);
 
   };
 

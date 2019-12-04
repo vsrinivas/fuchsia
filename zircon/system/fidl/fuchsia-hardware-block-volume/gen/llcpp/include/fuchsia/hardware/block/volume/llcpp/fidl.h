@@ -535,7 +535,7 @@ class Volume final {
     class GetInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetInfo_Impl(zx::unowned_channel _client_end);
+      GetInfo_Impl(::zx::unowned_channel _client_end);
       ~GetInfo_Impl() = default;
       GetInfo_Impl(GetInfo_Impl&& other) = default;
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
@@ -551,7 +551,7 @@ class Volume final {
     class GetStats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetStats_Impl(zx::unowned_channel _client_end, bool clear);
+      GetStats_Impl(::zx::unowned_channel _client_end, bool clear);
       ~GetStats_Impl() = default;
       GetStats_Impl(GetStats_Impl&& other) = default;
       GetStats_Impl& operator=(GetStats_Impl&& other) = default;
@@ -567,7 +567,7 @@ class Volume final {
     class GetFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetFifo_Impl(zx::unowned_channel _client_end);
+      GetFifo_Impl(::zx::unowned_channel _client_end);
       ~GetFifo_Impl() = default;
       GetFifo_Impl(GetFifo_Impl&& other) = default;
       GetFifo_Impl& operator=(GetFifo_Impl&& other) = default;
@@ -583,7 +583,7 @@ class Volume final {
     class AttachVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AttachVmo_Impl(zx::unowned_channel _client_end, ::zx::vmo vmo);
+      AttachVmo_Impl(::zx::unowned_channel _client_end, ::zx::vmo vmo);
       ~AttachVmo_Impl() = default;
       AttachVmo_Impl(AttachVmo_Impl&& other) = default;
       AttachVmo_Impl& operator=(AttachVmo_Impl&& other) = default;
@@ -599,7 +599,7 @@ class Volume final {
     class CloseFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CloseFifo_Impl(zx::unowned_channel _client_end);
+      CloseFifo_Impl(::zx::unowned_channel _client_end);
       ~CloseFifo_Impl() = default;
       CloseFifo_Impl(CloseFifo_Impl&& other) = default;
       CloseFifo_Impl& operator=(CloseFifo_Impl&& other) = default;
@@ -615,7 +615,7 @@ class Volume final {
     class RebindDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      RebindDevice_Impl(zx::unowned_channel _client_end);
+      RebindDevice_Impl(::zx::unowned_channel _client_end);
       ~RebindDevice_Impl() = default;
       RebindDevice_Impl(RebindDevice_Impl&& other) = default;
       RebindDevice_Impl& operator=(RebindDevice_Impl&& other) = default;
@@ -631,7 +631,7 @@ class Volume final {
     class GetTypeGuid_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetTypeGuid_Impl(zx::unowned_channel _client_end);
+      GetTypeGuid_Impl(::zx::unowned_channel _client_end);
       ~GetTypeGuid_Impl() = default;
       GetTypeGuid_Impl(GetTypeGuid_Impl&& other) = default;
       GetTypeGuid_Impl& operator=(GetTypeGuid_Impl&& other) = default;
@@ -647,7 +647,7 @@ class Volume final {
     class GetInstanceGuid_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetInstanceGuid_Impl(zx::unowned_channel _client_end);
+      GetInstanceGuid_Impl(::zx::unowned_channel _client_end);
       ~GetInstanceGuid_Impl() = default;
       GetInstanceGuid_Impl(GetInstanceGuid_Impl&& other) = default;
       GetInstanceGuid_Impl& operator=(GetInstanceGuid_Impl&& other) = default;
@@ -663,7 +663,7 @@ class Volume final {
     class GetName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetName_Impl(zx::unowned_channel _client_end);
+      GetName_Impl(::zx::unowned_channel _client_end);
       ~GetName_Impl() = default;
       GetName_Impl(GetName_Impl&& other) = default;
       GetName_Impl& operator=(GetName_Impl&& other) = default;
@@ -679,7 +679,7 @@ class Volume final {
     class Query_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Query_Impl(zx::unowned_channel _client_end);
+      Query_Impl(::zx::unowned_channel _client_end);
       ~Query_Impl() = default;
       Query_Impl(Query_Impl&& other) = default;
       Query_Impl& operator=(Query_Impl&& other) = default;
@@ -695,7 +695,7 @@ class Volume final {
     class QuerySlices_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      QuerySlices_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint64_t> start_slices);
+      QuerySlices_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<uint64_t> start_slices);
       ~QuerySlices_Impl() = default;
       QuerySlices_Impl(QuerySlices_Impl&& other) = default;
       QuerySlices_Impl& operator=(QuerySlices_Impl&& other) = default;
@@ -711,7 +711,7 @@ class Volume final {
     class Extend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Extend_Impl(zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count);
+      Extend_Impl(::zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count);
       ~Extend_Impl() = default;
       Extend_Impl(Extend_Impl&& other) = default;
       Extend_Impl& operator=(Extend_Impl&& other) = default;
@@ -727,7 +727,7 @@ class Volume final {
     class Shrink_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Shrink_Impl(zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count);
+      Shrink_Impl(::zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count);
       ~Shrink_Impl() = default;
       Shrink_Impl(Shrink_Impl&& other) = default;
       Shrink_Impl& operator=(Shrink_Impl&& other) = default;
@@ -743,7 +743,7 @@ class Volume final {
     class Destroy_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Destroy_Impl(zx::unowned_channel _client_end);
+      Destroy_Impl(::zx::unowned_channel _client_end);
       ~Destroy_Impl() = default;
       Destroy_Impl(Destroy_Impl&& other) = default;
       Destroy_Impl& operator=(Destroy_Impl&& other) = default;
@@ -782,7 +782,7 @@ class Volume final {
     class GetInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetInfo_Impl() = default;
       GetInfo_Impl(GetInfo_Impl&& other) = default;
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
@@ -798,7 +798,7 @@ class Volume final {
     class GetStats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetStats_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
+      GetStats_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
       ~GetStats_Impl() = default;
       GetStats_Impl(GetStats_Impl&& other) = default;
       GetStats_Impl& operator=(GetStats_Impl&& other) = default;
@@ -814,7 +814,7 @@ class Volume final {
     class GetFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetFifo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetFifo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetFifo_Impl() = default;
       GetFifo_Impl(GetFifo_Impl&& other) = default;
       GetFifo_Impl& operator=(GetFifo_Impl&& other) = default;
@@ -830,7 +830,7 @@ class Volume final {
     class AttachVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AttachVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
+      AttachVmo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
       ~AttachVmo_Impl() = default;
       AttachVmo_Impl(AttachVmo_Impl&& other) = default;
       AttachVmo_Impl& operator=(AttachVmo_Impl&& other) = default;
@@ -846,7 +846,7 @@ class Volume final {
     class CloseFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CloseFifo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      CloseFifo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~CloseFifo_Impl() = default;
       CloseFifo_Impl(CloseFifo_Impl&& other) = default;
       CloseFifo_Impl& operator=(CloseFifo_Impl&& other) = default;
@@ -862,7 +862,7 @@ class Volume final {
     class RebindDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      RebindDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      RebindDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~RebindDevice_Impl() = default;
       RebindDevice_Impl(RebindDevice_Impl&& other) = default;
       RebindDevice_Impl& operator=(RebindDevice_Impl&& other) = default;
@@ -878,7 +878,7 @@ class Volume final {
     class GetTypeGuid_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetTypeGuid_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetTypeGuid_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetTypeGuid_Impl() = default;
       GetTypeGuid_Impl(GetTypeGuid_Impl&& other) = default;
       GetTypeGuid_Impl& operator=(GetTypeGuid_Impl&& other) = default;
@@ -894,7 +894,7 @@ class Volume final {
     class GetInstanceGuid_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetInstanceGuid_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetInstanceGuid_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetInstanceGuid_Impl() = default;
       GetInstanceGuid_Impl(GetInstanceGuid_Impl&& other) = default;
       GetInstanceGuid_Impl& operator=(GetInstanceGuid_Impl&& other) = default;
@@ -910,7 +910,7 @@ class Volume final {
     class GetName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetName_Impl() = default;
       GetName_Impl(GetName_Impl&& other) = default;
       GetName_Impl& operator=(GetName_Impl&& other) = default;
@@ -926,7 +926,7 @@ class Volume final {
     class Query_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Query_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Query_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Query_Impl() = default;
       Query_Impl(Query_Impl&& other) = default;
       Query_Impl& operator=(Query_Impl&& other) = default;
@@ -942,7 +942,7 @@ class Volume final {
     class QuerySlices_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      QuerySlices_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint64_t> start_slices, ::fidl::BytePart _response_buffer);
+      QuerySlices_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint64_t> start_slices, ::fidl::BytePart _response_buffer);
       ~QuerySlices_Impl() = default;
       QuerySlices_Impl(QuerySlices_Impl&& other) = default;
       QuerySlices_Impl& operator=(QuerySlices_Impl&& other) = default;
@@ -958,7 +958,7 @@ class Volume final {
     class Extend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Extend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer);
+      Extend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer);
       ~Extend_Impl() = default;
       Extend_Impl(Extend_Impl&& other) = default;
       Extend_Impl& operator=(Extend_Impl&& other) = default;
@@ -974,7 +974,7 @@ class Volume final {
     class Shrink_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Shrink_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer);
+      Shrink_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer);
       ~Shrink_Impl() = default;
       Shrink_Impl(Shrink_Impl&& other) = default;
       Shrink_Impl& operator=(Shrink_Impl&& other) = default;
@@ -990,7 +990,7 @@ class Volume final {
     class Destroy_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Destroy_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Destroy_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Destroy_Impl() = default;
       Destroy_Impl(Destroy_Impl&& other) = default;
       Destroy_Impl& operator=(Destroy_Impl&& other) = default;
@@ -1125,88 +1125,88 @@ class Volume final {
    public:
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetInfo GetInfo(zx::unowned_channel _client_end);
+    static ResultOf::GetInfo GetInfo(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetInfo GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetInfo GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetStats GetStats(zx::unowned_channel _client_end, bool clear);
+    static ResultOf::GetStats GetStats(::zx::unowned_channel _client_end, bool clear);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetStats GetStats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetStats GetStats(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetFifo GetFifo(zx::unowned_channel _client_end);
+    static ResultOf::GetFifo GetFifo(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetFifo GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetFifo GetFifo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::AttachVmo AttachVmo(zx::unowned_channel _client_end, ::zx::vmo vmo);
+    static ResultOf::AttachVmo AttachVmo(::zx::unowned_channel _client_end, ::zx::vmo vmo);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AttachVmo AttachVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AttachVmo AttachVmo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CloseFifo CloseFifo(zx::unowned_channel _client_end);
+    static ResultOf::CloseFifo CloseFifo(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CloseFifo CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CloseFifo CloseFifo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::RebindDevice RebindDevice(zx::unowned_channel _client_end);
+    static ResultOf::RebindDevice RebindDevice(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RebindDevice RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::RebindDevice RebindDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetTypeGuid GetTypeGuid(zx::unowned_channel _client_end);
+    static ResultOf::GetTypeGuid GetTypeGuid(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetTypeGuid GetTypeGuid(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetTypeGuid GetTypeGuid(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetInstanceGuid GetInstanceGuid(zx::unowned_channel _client_end);
+    static ResultOf::GetInstanceGuid GetInstanceGuid(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetInstanceGuid GetInstanceGuid(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetInstanceGuid GetInstanceGuid(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetName GetName(zx::unowned_channel _client_end);
+    static ResultOf::GetName GetName(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetName GetName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetName GetName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Query Query(zx::unowned_channel _client_end);
+    static ResultOf::Query Query(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Query Query(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Query Query(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 448 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::QuerySlices QuerySlices(zx::unowned_channel _client_end, ::fidl::VectorView<uint64_t> start_slices);
+    static ResultOf::QuerySlices QuerySlices(::zx::unowned_channel _client_end, ::fidl::VectorView<uint64_t> start_slices);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::QuerySlices QuerySlices(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint64_t> start_slices, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::QuerySlices QuerySlices(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint64_t> start_slices, ::fidl::BytePart _response_buffer);
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Extend Extend(zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count);
+    static ResultOf::Extend Extend(::zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Extend Extend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Extend Extend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer);
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Shrink Shrink(zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count);
+    static ResultOf::Shrink Shrink(::zx::unowned_channel _client_end, uint64_t start_slice, uint64_t slice_count);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Shrink Shrink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Shrink Shrink(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t start_slice, uint64_t slice_count, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Destroy Destroy(zx::unowned_channel _client_end);
+    static ResultOf::Destroy Destroy(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Destroy Destroy(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Destroy Destroy(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1216,33 +1216,33 @@ class Volume final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetStatsResponse> GetStats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetStatsResponse> GetStats(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetFifoResponse> GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetFifoResponse> GetFifo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<AttachVmoResponse> AttachVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<AttachVmoResponse> AttachVmo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<CloseFifoResponse> CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CloseFifoResponse> CloseFifo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<RebindDeviceResponse> RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RebindDeviceResponse> RebindDevice(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetTypeGuidResponse> GetTypeGuid(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetTypeGuidResponse> GetTypeGuid(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetInstanceGuidResponse> GetInstanceGuid(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetInstanceGuidResponse> GetInstanceGuid(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetNameResponse> GetName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetNameResponse> GetName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<QueryResponse> Query(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<QueryResponse> Query(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<QuerySlicesResponse> QuerySlices(zx::unowned_channel _client_end, ::fidl::DecodedMessage<QuerySlicesRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<QuerySlicesResponse> QuerySlices(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<QuerySlicesRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ExtendResponse> Extend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ExtendRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ExtendResponse> Extend(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ExtendRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ShrinkResponse> Shrink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ShrinkRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ShrinkResponse> Shrink(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ShrinkRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<DestroyResponse> Destroy(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<DestroyResponse> Destroy(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1653,7 +1653,7 @@ class VolumeManager final {
     class AllocatePartition_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AllocatePartition_Impl(zx::unowned_channel _client_end, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags);
+      AllocatePartition_Impl(::zx::unowned_channel _client_end, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags);
       ~AllocatePartition_Impl() = default;
       AllocatePartition_Impl(AllocatePartition_Impl&& other) = default;
       AllocatePartition_Impl& operator=(AllocatePartition_Impl&& other) = default;
@@ -1669,7 +1669,7 @@ class VolumeManager final {
     class Query_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Query_Impl(zx::unowned_channel _client_end);
+      Query_Impl(::zx::unowned_channel _client_end);
       ~Query_Impl() = default;
       Query_Impl(Query_Impl&& other) = default;
       Query_Impl& operator=(Query_Impl&& other) = default;
@@ -1685,7 +1685,7 @@ class VolumeManager final {
     class GetInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetInfo_Impl(zx::unowned_channel _client_end);
+      GetInfo_Impl(::zx::unowned_channel _client_end);
       ~GetInfo_Impl() = default;
       GetInfo_Impl(GetInfo_Impl&& other) = default;
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
@@ -1701,7 +1701,7 @@ class VolumeManager final {
     class Activate_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Activate_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid);
+      Activate_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid);
       ~Activate_Impl() = default;
       Activate_Impl(Activate_Impl&& other) = default;
       Activate_Impl& operator=(Activate_Impl&& other) = default;
@@ -1730,7 +1730,7 @@ class VolumeManager final {
     class AllocatePartition_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AllocatePartition_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer);
+      AllocatePartition_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer);
       ~AllocatePartition_Impl() = default;
       AllocatePartition_Impl(AllocatePartition_Impl&& other) = default;
       AllocatePartition_Impl& operator=(AllocatePartition_Impl&& other) = default;
@@ -1746,7 +1746,7 @@ class VolumeManager final {
     class Query_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Query_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Query_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Query_Impl() = default;
       Query_Impl(Query_Impl&& other) = default;
       Query_Impl& operator=(Query_Impl&& other) = default;
@@ -1762,7 +1762,7 @@ class VolumeManager final {
     class GetInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetInfo_Impl() = default;
       GetInfo_Impl(GetInfo_Impl&& other) = default;
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
@@ -1778,7 +1778,7 @@ class VolumeManager final {
     class Activate_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Activate_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, ::fidl::BytePart _response_buffer);
+      Activate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, ::fidl::BytePart _response_buffer);
       ~Activate_Impl() = default;
       Activate_Impl(Activate_Impl&& other) = default;
       Activate_Impl& operator=(Activate_Impl&& other) = default;
@@ -1843,28 +1843,28 @@ class VolumeManager final {
    public:
 
     // Allocates 232 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::AllocatePartition AllocatePartition(zx::unowned_channel _client_end, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags);
+    static ResultOf::AllocatePartition AllocatePartition(::zx::unowned_channel _client_end, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AllocatePartition AllocatePartition(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AllocatePartition AllocatePartition(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t slice_count, ::llcpp::fuchsia::hardware::block::partition::GUID type, ::llcpp::fuchsia::hardware::block::partition::GUID instance, ::fidl::StringView name, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Query Query(zx::unowned_channel _client_end);
+    static ResultOf::Query Query(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Query Query(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Query Query(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetInfo GetInfo(zx::unowned_channel _client_end);
+    static ResultOf::GetInfo GetInfo(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetInfo GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetInfo GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Activate Activate(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid);
+    static ResultOf::Activate Activate(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Activate Activate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Activate Activate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::block::partition::GUID old_guid, ::llcpp::fuchsia::hardware::block::partition::GUID new_guid, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1874,13 +1874,13 @@ class VolumeManager final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<AllocatePartitionResponse> AllocatePartition(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocatePartitionRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<AllocatePartitionResponse> AllocatePartition(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocatePartitionRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<QueryResponse> Query(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<QueryResponse> Query(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ActivateResponse> Activate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ActivateRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ActivateResponse> Activate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ActivateRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

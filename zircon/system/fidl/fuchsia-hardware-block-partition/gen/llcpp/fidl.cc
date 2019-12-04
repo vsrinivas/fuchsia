@@ -78,7 +78,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_PartitionGetNam
 
 }  // namespace
 template <>
-Partition::ResultOf::GetInfo_Impl<Partition::GetInfoResponse>::GetInfo_Impl(zx::unowned_channel _client_end) {
+Partition::ResultOf::GetInfo_Impl<Partition::GetInfoResponse>::GetInfo_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -91,15 +91,15 @@ Partition::ResultOf::GetInfo_Impl<Partition::GetInfoResponse>::GetInfo_Impl(zx::
 }
 
 Partition::ResultOf::GetInfo Partition::SyncClient::GetInfo() {
-  return ResultOf::GetInfo(zx::unowned_channel(this->channel_));
+    return ResultOf::GetInfo(::zx::unowned_channel(this->channel_));
 }
 
-Partition::ResultOf::GetInfo Partition::Call::GetInfo(zx::unowned_channel _client_end) {
+Partition::ResultOf::GetInfo Partition::Call::GetInfo(::zx::unowned_channel _client_end) {
   return ResultOf::GetInfo(std::move(_client_end));
 }
 
 template <>
-Partition::UnownedResultOf::GetInfo_Impl<Partition::GetInfoResponse>::GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetInfo_Impl<Partition::GetInfoResponse>::GetInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetInfoRequest::PrimarySize);
@@ -110,14 +110,14 @@ Partition::UnownedResultOf::GetInfo_Impl<Partition::GetInfoResponse>::GetInfo_Im
 }
 
 Partition::UnownedResultOf::GetInfo Partition::SyncClient::GetInfo(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetInfo(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Partition::UnownedResultOf::GetInfo Partition::Call::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetInfo Partition::Call::GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetInfo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Partition::GetInfoResponse> Partition::InPlace::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::GetInfoResponse> Partition::InPlace::GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetInfoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -139,7 +139,7 @@ Partition::UnownedResultOf::GetInfo Partition::Call::GetInfo(zx::unowned_channel
 }
 
 template <>
-Partition::ResultOf::GetStats_Impl<Partition::GetStatsResponse>::GetStats_Impl(zx::unowned_channel _client_end, bool clear) {
+Partition::ResultOf::GetStats_Impl<Partition::GetStatsResponse>::GetStats_Impl(::zx::unowned_channel _client_end, bool clear) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStatsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -154,15 +154,15 @@ Partition::ResultOf::GetStats_Impl<Partition::GetStatsResponse>::GetStats_Impl(z
 }
 
 Partition::ResultOf::GetStats Partition::SyncClient::GetStats(bool clear) {
-  return ResultOf::GetStats(zx::unowned_channel(this->channel_), std::move(clear));
+    return ResultOf::GetStats(::zx::unowned_channel(this->channel_), std::move(clear));
 }
 
-Partition::ResultOf::GetStats Partition::Call::GetStats(zx::unowned_channel _client_end, bool clear) {
+Partition::ResultOf::GetStats Partition::Call::GetStats(::zx::unowned_channel _client_end, bool clear) {
   return ResultOf::GetStats(std::move(_client_end), std::move(clear));
 }
 
 template <>
-Partition::UnownedResultOf::GetStats_Impl<Partition::GetStatsResponse>::GetStats_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetStats_Impl<Partition::GetStatsResponse>::GetStats_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetStatsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetStatsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -177,14 +177,14 @@ Partition::UnownedResultOf::GetStats_Impl<Partition::GetStatsResponse>::GetStats
 }
 
 Partition::UnownedResultOf::GetStats Partition::SyncClient::GetStats(::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetStats(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(clear), std::move(_response_buffer));
+  return UnownedResultOf::GetStats(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(clear), std::move(_response_buffer));
 }
 
-Partition::UnownedResultOf::GetStats Partition::Call::GetStats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetStats Partition::Call::GetStats(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetStats(std::move(_client_end), std::move(_request_buffer), std::move(clear), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Partition::GetStatsResponse> Partition::InPlace::GetStats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::GetStatsResponse> Partition::InPlace::GetStats(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer) {
   Partition::SetTransactionHeaderFor::GetStatsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -201,7 +201,7 @@ Partition::UnownedResultOf::GetStats Partition::Call::GetStats(zx::unowned_chann
 }
 
 template <>
-Partition::ResultOf::GetFifo_Impl<Partition::GetFifoResponse>::GetFifo_Impl(zx::unowned_channel _client_end) {
+Partition::ResultOf::GetFifo_Impl<Partition::GetFifoResponse>::GetFifo_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFifoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -214,15 +214,15 @@ Partition::ResultOf::GetFifo_Impl<Partition::GetFifoResponse>::GetFifo_Impl(zx::
 }
 
 Partition::ResultOf::GetFifo Partition::SyncClient::GetFifo() {
-  return ResultOf::GetFifo(zx::unowned_channel(this->channel_));
+    return ResultOf::GetFifo(::zx::unowned_channel(this->channel_));
 }
 
-Partition::ResultOf::GetFifo Partition::Call::GetFifo(zx::unowned_channel _client_end) {
+Partition::ResultOf::GetFifo Partition::Call::GetFifo(::zx::unowned_channel _client_end) {
   return ResultOf::GetFifo(std::move(_client_end));
 }
 
 template <>
-Partition::UnownedResultOf::GetFifo_Impl<Partition::GetFifoResponse>::GetFifo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetFifo_Impl<Partition::GetFifoResponse>::GetFifo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFifoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetFifoRequest::PrimarySize);
@@ -233,14 +233,14 @@ Partition::UnownedResultOf::GetFifo_Impl<Partition::GetFifoResponse>::GetFifo_Im
 }
 
 Partition::UnownedResultOf::GetFifo Partition::SyncClient::GetFifo(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetFifo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetFifo(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Partition::UnownedResultOf::GetFifo Partition::Call::GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetFifo Partition::Call::GetFifo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetFifo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Partition::GetFifoResponse> Partition::InPlace::GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::GetFifoResponse> Partition::InPlace::GetFifo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetFifoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -262,7 +262,7 @@ Partition::UnownedResultOf::GetFifo Partition::Call::GetFifo(zx::unowned_channel
 }
 
 template <>
-Partition::ResultOf::AttachVmo_Impl<Partition::AttachVmoResponse>::AttachVmo_Impl(zx::unowned_channel _client_end, ::zx::vmo vmo) {
+Partition::ResultOf::AttachVmo_Impl<Partition::AttachVmoResponse>::AttachVmo_Impl(::zx::unowned_channel _client_end, ::zx::vmo vmo) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AttachVmoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -277,15 +277,15 @@ Partition::ResultOf::AttachVmo_Impl<Partition::AttachVmoResponse>::AttachVmo_Imp
 }
 
 Partition::ResultOf::AttachVmo Partition::SyncClient::AttachVmo(::zx::vmo vmo) {
-  return ResultOf::AttachVmo(zx::unowned_channel(this->channel_), std::move(vmo));
+    return ResultOf::AttachVmo(::zx::unowned_channel(this->channel_), std::move(vmo));
 }
 
-Partition::ResultOf::AttachVmo Partition::Call::AttachVmo(zx::unowned_channel _client_end, ::zx::vmo vmo) {
+Partition::ResultOf::AttachVmo Partition::Call::AttachVmo(::zx::unowned_channel _client_end, ::zx::vmo vmo) {
   return ResultOf::AttachVmo(std::move(_client_end), std::move(vmo));
 }
 
 template <>
-Partition::UnownedResultOf::AttachVmo_Impl<Partition::AttachVmoResponse>::AttachVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::AttachVmo_Impl<Partition::AttachVmoResponse>::AttachVmo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < AttachVmoRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<AttachVmoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -300,14 +300,14 @@ Partition::UnownedResultOf::AttachVmo_Impl<Partition::AttachVmoResponse>::Attach
 }
 
 Partition::UnownedResultOf::AttachVmo Partition::SyncClient::AttachVmo(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AttachVmo(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(vmo), std::move(_response_buffer));
+  return UnownedResultOf::AttachVmo(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(vmo), std::move(_response_buffer));
 }
 
-Partition::UnownedResultOf::AttachVmo Partition::Call::AttachVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::AttachVmo Partition::Call::AttachVmo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::AttachVmo(std::move(_client_end), std::move(_request_buffer), std::move(vmo), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Partition::AttachVmoResponse> Partition::InPlace::AttachVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::AttachVmoResponse> Partition::InPlace::AttachVmo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer) {
   Partition::SetTransactionHeaderFor::AttachVmoRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -324,7 +324,7 @@ Partition::UnownedResultOf::AttachVmo Partition::Call::AttachVmo(zx::unowned_cha
 }
 
 template <>
-Partition::ResultOf::CloseFifo_Impl<Partition::CloseFifoResponse>::CloseFifo_Impl(zx::unowned_channel _client_end) {
+Partition::ResultOf::CloseFifo_Impl<Partition::CloseFifoResponse>::CloseFifo_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseFifoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -337,15 +337,15 @@ Partition::ResultOf::CloseFifo_Impl<Partition::CloseFifoResponse>::CloseFifo_Imp
 }
 
 Partition::ResultOf::CloseFifo Partition::SyncClient::CloseFifo() {
-  return ResultOf::CloseFifo(zx::unowned_channel(this->channel_));
+    return ResultOf::CloseFifo(::zx::unowned_channel(this->channel_));
 }
 
-Partition::ResultOf::CloseFifo Partition::Call::CloseFifo(zx::unowned_channel _client_end) {
+Partition::ResultOf::CloseFifo Partition::Call::CloseFifo(::zx::unowned_channel _client_end) {
   return ResultOf::CloseFifo(std::move(_client_end));
 }
 
 template <>
-Partition::UnownedResultOf::CloseFifo_Impl<Partition::CloseFifoResponse>::CloseFifo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::CloseFifo_Impl<Partition::CloseFifoResponse>::CloseFifo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseFifoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, CloseFifoRequest::PrimarySize);
@@ -356,14 +356,14 @@ Partition::UnownedResultOf::CloseFifo_Impl<Partition::CloseFifoResponse>::CloseF
 }
 
 Partition::UnownedResultOf::CloseFifo Partition::SyncClient::CloseFifo(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CloseFifo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::CloseFifo(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Partition::UnownedResultOf::CloseFifo Partition::Call::CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::CloseFifo Partition::Call::CloseFifo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CloseFifo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Partition::CloseFifoResponse> Partition::InPlace::CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::CloseFifoResponse> Partition::InPlace::CloseFifo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(CloseFifoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -385,7 +385,7 @@ Partition::UnownedResultOf::CloseFifo Partition::Call::CloseFifo(zx::unowned_cha
 }
 
 template <>
-Partition::ResultOf::RebindDevice_Impl<Partition::RebindDeviceResponse>::RebindDevice_Impl(zx::unowned_channel _client_end) {
+Partition::ResultOf::RebindDevice_Impl<Partition::RebindDeviceResponse>::RebindDevice_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindDeviceRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -398,15 +398,15 @@ Partition::ResultOf::RebindDevice_Impl<Partition::RebindDeviceResponse>::RebindD
 }
 
 Partition::ResultOf::RebindDevice Partition::SyncClient::RebindDevice() {
-  return ResultOf::RebindDevice(zx::unowned_channel(this->channel_));
+    return ResultOf::RebindDevice(::zx::unowned_channel(this->channel_));
 }
 
-Partition::ResultOf::RebindDevice Partition::Call::RebindDevice(zx::unowned_channel _client_end) {
+Partition::ResultOf::RebindDevice Partition::Call::RebindDevice(::zx::unowned_channel _client_end) {
   return ResultOf::RebindDevice(std::move(_client_end));
 }
 
 template <>
-Partition::UnownedResultOf::RebindDevice_Impl<Partition::RebindDeviceResponse>::RebindDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::RebindDevice_Impl<Partition::RebindDeviceResponse>::RebindDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RebindDeviceRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, RebindDeviceRequest::PrimarySize);
@@ -417,14 +417,14 @@ Partition::UnownedResultOf::RebindDevice_Impl<Partition::RebindDeviceResponse>::
 }
 
 Partition::UnownedResultOf::RebindDevice Partition::SyncClient::RebindDevice(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RebindDevice(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::RebindDevice(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Partition::UnownedResultOf::RebindDevice Partition::Call::RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::RebindDevice Partition::Call::RebindDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::RebindDevice(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Partition::RebindDeviceResponse> Partition::InPlace::RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::RebindDeviceResponse> Partition::InPlace::RebindDevice(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(RebindDeviceRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -446,7 +446,7 @@ Partition::UnownedResultOf::RebindDevice Partition::Call::RebindDevice(zx::unown
 }
 
 template <>
-Partition::ResultOf::GetTypeGuid_Impl<Partition::GetTypeGuidResponse>::GetTypeGuid_Impl(zx::unowned_channel _client_end) {
+Partition::ResultOf::GetTypeGuid_Impl<Partition::GetTypeGuidResponse>::GetTypeGuid_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTypeGuidRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -459,15 +459,15 @@ Partition::ResultOf::GetTypeGuid_Impl<Partition::GetTypeGuidResponse>::GetTypeGu
 }
 
 Partition::ResultOf::GetTypeGuid Partition::SyncClient::GetTypeGuid() {
-  return ResultOf::GetTypeGuid(zx::unowned_channel(this->channel_));
+    return ResultOf::GetTypeGuid(::zx::unowned_channel(this->channel_));
 }
 
-Partition::ResultOf::GetTypeGuid Partition::Call::GetTypeGuid(zx::unowned_channel _client_end) {
+Partition::ResultOf::GetTypeGuid Partition::Call::GetTypeGuid(::zx::unowned_channel _client_end) {
   return ResultOf::GetTypeGuid(std::move(_client_end));
 }
 
 template <>
-Partition::UnownedResultOf::GetTypeGuid_Impl<Partition::GetTypeGuidResponse>::GetTypeGuid_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetTypeGuid_Impl<Partition::GetTypeGuidResponse>::GetTypeGuid_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetTypeGuidRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetTypeGuidRequest::PrimarySize);
@@ -478,14 +478,14 @@ Partition::UnownedResultOf::GetTypeGuid_Impl<Partition::GetTypeGuidResponse>::Ge
 }
 
 Partition::UnownedResultOf::GetTypeGuid Partition::SyncClient::GetTypeGuid(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetTypeGuid(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetTypeGuid(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Partition::UnownedResultOf::GetTypeGuid Partition::Call::GetTypeGuid(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetTypeGuid Partition::Call::GetTypeGuid(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetTypeGuid(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Partition::GetTypeGuidResponse> Partition::InPlace::GetTypeGuid(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::GetTypeGuidResponse> Partition::InPlace::GetTypeGuid(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetTypeGuidRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -507,7 +507,7 @@ Partition::UnownedResultOf::GetTypeGuid Partition::Call::GetTypeGuid(zx::unowned
 }
 
 template <>
-Partition::ResultOf::GetInstanceGuid_Impl<Partition::GetInstanceGuidResponse>::GetInstanceGuid_Impl(zx::unowned_channel _client_end) {
+Partition::ResultOf::GetInstanceGuid_Impl<Partition::GetInstanceGuidResponse>::GetInstanceGuid_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInstanceGuidRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -520,15 +520,15 @@ Partition::ResultOf::GetInstanceGuid_Impl<Partition::GetInstanceGuidResponse>::G
 }
 
 Partition::ResultOf::GetInstanceGuid Partition::SyncClient::GetInstanceGuid() {
-  return ResultOf::GetInstanceGuid(zx::unowned_channel(this->channel_));
+    return ResultOf::GetInstanceGuid(::zx::unowned_channel(this->channel_));
 }
 
-Partition::ResultOf::GetInstanceGuid Partition::Call::GetInstanceGuid(zx::unowned_channel _client_end) {
+Partition::ResultOf::GetInstanceGuid Partition::Call::GetInstanceGuid(::zx::unowned_channel _client_end) {
   return ResultOf::GetInstanceGuid(std::move(_client_end));
 }
 
 template <>
-Partition::UnownedResultOf::GetInstanceGuid_Impl<Partition::GetInstanceGuidResponse>::GetInstanceGuid_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetInstanceGuid_Impl<Partition::GetInstanceGuidResponse>::GetInstanceGuid_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInstanceGuidRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetInstanceGuidRequest::PrimarySize);
@@ -539,14 +539,14 @@ Partition::UnownedResultOf::GetInstanceGuid_Impl<Partition::GetInstanceGuidRespo
 }
 
 Partition::UnownedResultOf::GetInstanceGuid Partition::SyncClient::GetInstanceGuid(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetInstanceGuid(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetInstanceGuid(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Partition::UnownedResultOf::GetInstanceGuid Partition::Call::GetInstanceGuid(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetInstanceGuid Partition::Call::GetInstanceGuid(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetInstanceGuid(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Partition::GetInstanceGuidResponse> Partition::InPlace::GetInstanceGuid(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::GetInstanceGuidResponse> Partition::InPlace::GetInstanceGuid(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetInstanceGuidRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -568,7 +568,7 @@ Partition::UnownedResultOf::GetInstanceGuid Partition::Call::GetInstanceGuid(zx:
 }
 
 template <>
-Partition::ResultOf::GetName_Impl<Partition::GetNameResponse>::GetName_Impl(zx::unowned_channel _client_end) {
+Partition::ResultOf::GetName_Impl<Partition::GetNameResponse>::GetName_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -581,15 +581,15 @@ Partition::ResultOf::GetName_Impl<Partition::GetNameResponse>::GetName_Impl(zx::
 }
 
 Partition::ResultOf::GetName Partition::SyncClient::GetName() {
-  return ResultOf::GetName(zx::unowned_channel(this->channel_));
+    return ResultOf::GetName(::zx::unowned_channel(this->channel_));
 }
 
-Partition::ResultOf::GetName Partition::Call::GetName(zx::unowned_channel _client_end) {
+Partition::ResultOf::GetName Partition::Call::GetName(::zx::unowned_channel _client_end) {
   return ResultOf::GetName(std::move(_client_end));
 }
 
 template <>
-Partition::UnownedResultOf::GetName_Impl<Partition::GetNameResponse>::GetName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetName_Impl<Partition::GetNameResponse>::GetName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetNameRequest::PrimarySize);
@@ -600,14 +600,14 @@ Partition::UnownedResultOf::GetName_Impl<Partition::GetNameResponse>::GetName_Im
 }
 
 Partition::UnownedResultOf::GetName Partition::SyncClient::GetName(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetName(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetName(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Partition::UnownedResultOf::GetName Partition::Call::GetName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Partition::UnownedResultOf::GetName Partition::Call::GetName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetName(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Partition::GetNameResponse> Partition::InPlace::GetName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Partition::GetNameResponse> Partition::InPlace::GetName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetNameRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

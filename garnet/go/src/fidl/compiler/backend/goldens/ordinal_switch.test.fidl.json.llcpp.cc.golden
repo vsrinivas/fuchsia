@@ -41,7 +41,7 @@ extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrd
 
 }  // namespace
 
-SwitchingOrdinals::ResultOf::OrdinalFive_Impl::OrdinalFive_Impl(zx::unowned_channel _client_end) {
+SwitchingOrdinals::ResultOf::OrdinalFive_Impl::OrdinalFive_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OrdinalFiveRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -54,14 +54,14 @@ SwitchingOrdinals::ResultOf::OrdinalFive_Impl::OrdinalFive_Impl(zx::unowned_chan
 }
 
 SwitchingOrdinals::ResultOf::OrdinalFive SwitchingOrdinals::SyncClient::OrdinalFive() {
-  return ResultOf::OrdinalFive(zx::unowned_channel(this->channel_));
+    return ResultOf::OrdinalFive(::zx::unowned_channel(this->channel_));
 }
 
-SwitchingOrdinals::ResultOf::OrdinalFive SwitchingOrdinals::Call::OrdinalFive(zx::unowned_channel _client_end) {
+SwitchingOrdinals::ResultOf::OrdinalFive SwitchingOrdinals::Call::OrdinalFive(::zx::unowned_channel _client_end) {
   return ResultOf::OrdinalFive(std::move(_client_end));
 }
 
-::fidl::internal::StatusAndError SwitchingOrdinals::InPlace::OrdinalFive(zx::unowned_channel _client_end) {
+::fidl::internal::StatusAndError SwitchingOrdinals::InPlace::OrdinalFive(::zx::unowned_channel _client_end) {
   constexpr uint32_t _write_num_bytes = sizeof(OrdinalFiveRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -83,7 +83,7 @@ SwitchingOrdinals::ResultOf::OrdinalFive SwitchingOrdinals::Call::OrdinalFive(zx
 }
 
 
-SwitchingOrdinals::ResultOf::OnlyGeneratedOrdinal_Impl::OnlyGeneratedOrdinal_Impl(zx::unowned_channel _client_end) {
+SwitchingOrdinals::ResultOf::OnlyGeneratedOrdinal_Impl::OnlyGeneratedOrdinal_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnlyGeneratedOrdinalRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -96,14 +96,14 @@ SwitchingOrdinals::ResultOf::OnlyGeneratedOrdinal_Impl::OnlyGeneratedOrdinal_Imp
 }
 
 SwitchingOrdinals::ResultOf::OnlyGeneratedOrdinal SwitchingOrdinals::SyncClient::OnlyGeneratedOrdinal() {
-  return ResultOf::OnlyGeneratedOrdinal(zx::unowned_channel(this->channel_));
+    return ResultOf::OnlyGeneratedOrdinal(::zx::unowned_channel(this->channel_));
 }
 
-SwitchingOrdinals::ResultOf::OnlyGeneratedOrdinal SwitchingOrdinals::Call::OnlyGeneratedOrdinal(zx::unowned_channel _client_end) {
+SwitchingOrdinals::ResultOf::OnlyGeneratedOrdinal SwitchingOrdinals::Call::OnlyGeneratedOrdinal(::zx::unowned_channel _client_end) {
   return ResultOf::OnlyGeneratedOrdinal(std::move(_client_end));
 }
 
-::fidl::internal::StatusAndError SwitchingOrdinals::InPlace::OnlyGeneratedOrdinal(zx::unowned_channel _client_end) {
+::fidl::internal::StatusAndError SwitchingOrdinals::InPlace::OnlyGeneratedOrdinal(::zx::unowned_channel _client_end) {
   constexpr uint32_t _write_num_bytes = sizeof(OnlyGeneratedOrdinalRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -125,12 +125,12 @@ SwitchingOrdinals::ResultOf::OnlyGeneratedOrdinal SwitchingOrdinals::Call::OnlyG
 }
 
 zx_status_t SwitchingOrdinals::SyncClient::HandleEvents(SwitchingOrdinals::EventHandlers handlers) {
-  return SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+  return SwitchingOrdinals::Call::HandleEvents(::zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t SwitchingOrdinals::Call::HandleEvents(zx::unowned_channel client_end, SwitchingOrdinals::EventHandlers handlers) {
+zx_status_t SwitchingOrdinals::Call::HandleEvents(::zx::unowned_channel client_end, SwitchingOrdinals::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                            zx::time::infinite(),
+                                            ::zx::time::infinite(),
                                             nullptr);
   if (status != ZX_OK) {
     return status;
@@ -279,7 +279,7 @@ zx_status_t SwitchingOrdinals::SendEventOrdinalFifteenEvent(::zx::unowned_channe
               EventOrdinalFifteenResponse::PrimarySize,
               EventOrdinalFifteenResponse::PrimarySize)));
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(EventOrdinalFifteenResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<EventOrdinalFifteenResponse>(std::move(_response_bytes)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<EventOrdinalFifteenResponse>(std::move(_response_bytes)));
 }
 
 
@@ -293,7 +293,7 @@ zx_status_t SwitchingOrdinals::SendEventOnlyGeneratedOrdinalEvent(::zx::unowned_
               EventOnlyGeneratedOrdinalResponse::PrimarySize,
               EventOnlyGeneratedOrdinalResponse::PrimarySize)));
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(EventOnlyGeneratedOrdinalResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<EventOnlyGeneratedOrdinalResponse>(std::move(_response_bytes)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<EventOnlyGeneratedOrdinalResponse>(std::move(_response_bytes)));
 }
 
 

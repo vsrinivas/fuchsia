@@ -345,7 +345,7 @@ extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDeviceGetCurrentDe
 
 }  // namespace
 template <>
-TestDevice::ResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWithPowerArgsResponse>::AddDeviceWithPowerArgs_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible) {
+TestDevice::ResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWithPowerArgsResponse>::AddDeviceWithPowerArgs_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceWithPowerArgsRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -364,15 +364,15 @@ TestDevice::ResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWithPower
 }
 
 TestDevice::ResultOf::AddDeviceWithPowerArgs TestDevice::SyncClient::AddDeviceWithPowerArgs(::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible) {
-  return ResultOf::AddDeviceWithPowerArgs(zx::unowned_channel(this->channel_), std::move(info), std::move(perf_state_info), std::move(make_visible));
+    return ResultOf::AddDeviceWithPowerArgs(::zx::unowned_channel(this->channel_), std::move(info), std::move(perf_state_info), std::move(make_visible));
 }
 
-TestDevice::ResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible) {
+TestDevice::ResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceWithPowerArgs(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible) {
   return ResultOf::AddDeviceWithPowerArgs(std::move(_client_end), std::move(info), std::move(perf_state_info), std::move(make_visible));
 }
 
 template <>
-TestDevice::UnownedResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWithPowerArgsResponse>::AddDeviceWithPowerArgs_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWithPowerArgsResponse>::AddDeviceWithPowerArgs_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < AddDeviceWithPowerArgsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<AddDeviceWithPowerArgsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -392,14 +392,14 @@ TestDevice::UnownedResultOf::AddDeviceWithPowerArgs_Impl<TestDevice::AddDeviceWi
 }
 
 TestDevice::UnownedResultOf::AddDeviceWithPowerArgs TestDevice::SyncClient::AddDeviceWithPowerArgs(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddDeviceWithPowerArgs(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(info), std::move(perf_state_info), std::move(make_visible), std::move(_response_buffer));
+  return UnownedResultOf::AddDeviceWithPowerArgs(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(info), std::move(perf_state_info), std::move(make_visible), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceWithPowerArgs(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::AddDeviceWithPowerArgs(std::move(_client_end), std::move(_request_buffer), std::move(info), std::move(perf_state_info), std::move(make_visible), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::AddDeviceWithPowerArgsResponse> TestDevice::InPlace::AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceWithPowerArgsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::AddDeviceWithPowerArgsResponse> TestDevice::InPlace::AddDeviceWithPowerArgs(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceWithPowerArgsRequest> params, ::fidl::BytePart response_buffer) {
   TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -416,7 +416,7 @@ TestDevice::UnownedResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceW
 }
 
 template <>
-TestDevice::ResultOf::GetCurrentDevicePowerState_Impl<TestDevice::GetCurrentDevicePowerStateResponse>::GetCurrentDevicePowerState_Impl(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::GetCurrentDevicePowerState_Impl<TestDevice::GetCurrentDevicePowerStateResponse>::GetCurrentDevicePowerState_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDevicePowerStateRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -429,15 +429,15 @@ TestDevice::ResultOf::GetCurrentDevicePowerState_Impl<TestDevice::GetCurrentDevi
 }
 
 TestDevice::ResultOf::GetCurrentDevicePowerState TestDevice::SyncClient::GetCurrentDevicePowerState() {
-  return ResultOf::GetCurrentDevicePowerState(zx::unowned_channel(this->channel_));
+    return ResultOf::GetCurrentDevicePowerState(::zx::unowned_channel(this->channel_));
 }
 
-TestDevice::ResultOf::GetCurrentDevicePowerState TestDevice::Call::GetCurrentDevicePowerState(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::GetCurrentDevicePowerState TestDevice::Call::GetCurrentDevicePowerState(::zx::unowned_channel _client_end) {
   return ResultOf::GetCurrentDevicePowerState(std::move(_client_end));
 }
 
 template <>
-TestDevice::UnownedResultOf::GetCurrentDevicePowerState_Impl<TestDevice::GetCurrentDevicePowerStateResponse>::GetCurrentDevicePowerState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetCurrentDevicePowerState_Impl<TestDevice::GetCurrentDevicePowerStateResponse>::GetCurrentDevicePowerState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetCurrentDevicePowerStateRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetCurrentDevicePowerStateRequest::PrimarySize);
@@ -448,14 +448,14 @@ TestDevice::UnownedResultOf::GetCurrentDevicePowerState_Impl<TestDevice::GetCurr
 }
 
 TestDevice::UnownedResultOf::GetCurrentDevicePowerState TestDevice::SyncClient::GetCurrentDevicePowerState(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetCurrentDevicePowerState(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetCurrentDevicePowerState(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::GetCurrentDevicePowerState TestDevice::Call::GetCurrentDevicePowerState(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetCurrentDevicePowerState TestDevice::Call::GetCurrentDevicePowerState(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetCurrentDevicePowerState(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::GetCurrentDevicePowerStateResponse> TestDevice::InPlace::GetCurrentDevicePowerState(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::GetCurrentDevicePowerStateResponse> TestDevice::InPlace::GetCurrentDevicePowerState(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetCurrentDevicePowerStateRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -477,7 +477,7 @@ TestDevice::UnownedResultOf::GetCurrentDevicePowerState TestDevice::Call::GetCur
 }
 
 template <>
-TestDevice::ResultOf::GetCurrentSuspendReason_Impl<TestDevice::GetCurrentSuspendReasonResponse>::GetCurrentSuspendReason_Impl(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::GetCurrentSuspendReason_Impl<TestDevice::GetCurrentSuspendReasonResponse>::GetCurrentSuspendReason_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentSuspendReasonRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -490,15 +490,15 @@ TestDevice::ResultOf::GetCurrentSuspendReason_Impl<TestDevice::GetCurrentSuspend
 }
 
 TestDevice::ResultOf::GetCurrentSuspendReason TestDevice::SyncClient::GetCurrentSuspendReason() {
-  return ResultOf::GetCurrentSuspendReason(zx::unowned_channel(this->channel_));
+    return ResultOf::GetCurrentSuspendReason(::zx::unowned_channel(this->channel_));
 }
 
-TestDevice::ResultOf::GetCurrentSuspendReason TestDevice::Call::GetCurrentSuspendReason(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::GetCurrentSuspendReason TestDevice::Call::GetCurrentSuspendReason(::zx::unowned_channel _client_end) {
   return ResultOf::GetCurrentSuspendReason(std::move(_client_end));
 }
 
 template <>
-TestDevice::UnownedResultOf::GetCurrentSuspendReason_Impl<TestDevice::GetCurrentSuspendReasonResponse>::GetCurrentSuspendReason_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetCurrentSuspendReason_Impl<TestDevice::GetCurrentSuspendReasonResponse>::GetCurrentSuspendReason_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetCurrentSuspendReasonRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetCurrentSuspendReasonRequest::PrimarySize);
@@ -509,14 +509,14 @@ TestDevice::UnownedResultOf::GetCurrentSuspendReason_Impl<TestDevice::GetCurrent
 }
 
 TestDevice::UnownedResultOf::GetCurrentSuspendReason TestDevice::SyncClient::GetCurrentSuspendReason(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetCurrentSuspendReason(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetCurrentSuspendReason(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::GetCurrentSuspendReason TestDevice::Call::GetCurrentSuspendReason(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetCurrentSuspendReason TestDevice::Call::GetCurrentSuspendReason(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetCurrentSuspendReason(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::GetCurrentSuspendReasonResponse> TestDevice::InPlace::GetCurrentSuspendReason(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::GetCurrentSuspendReasonResponse> TestDevice::InPlace::GetCurrentSuspendReason(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetCurrentSuspendReasonRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -538,7 +538,7 @@ TestDevice::UnownedResultOf::GetCurrentSuspendReason TestDevice::Call::GetCurren
 }
 
 template <>
-TestDevice::ResultOf::GetCurrentDevicePerformanceState_Impl<TestDevice::GetCurrentDevicePerformanceStateResponse>::GetCurrentDevicePerformanceState_Impl(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::GetCurrentDevicePerformanceState_Impl<TestDevice::GetCurrentDevicePerformanceStateResponse>::GetCurrentDevicePerformanceState_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDevicePerformanceStateRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -551,15 +551,15 @@ TestDevice::ResultOf::GetCurrentDevicePerformanceState_Impl<TestDevice::GetCurre
 }
 
 TestDevice::ResultOf::GetCurrentDevicePerformanceState TestDevice::SyncClient::GetCurrentDevicePerformanceState() {
-  return ResultOf::GetCurrentDevicePerformanceState(zx::unowned_channel(this->channel_));
+    return ResultOf::GetCurrentDevicePerformanceState(::zx::unowned_channel(this->channel_));
 }
 
-TestDevice::ResultOf::GetCurrentDevicePerformanceState TestDevice::Call::GetCurrentDevicePerformanceState(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::GetCurrentDevicePerformanceState TestDevice::Call::GetCurrentDevicePerformanceState(::zx::unowned_channel _client_end) {
   return ResultOf::GetCurrentDevicePerformanceState(std::move(_client_end));
 }
 
 template <>
-TestDevice::UnownedResultOf::GetCurrentDevicePerformanceState_Impl<TestDevice::GetCurrentDevicePerformanceStateResponse>::GetCurrentDevicePerformanceState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetCurrentDevicePerformanceState_Impl<TestDevice::GetCurrentDevicePerformanceStateResponse>::GetCurrentDevicePerformanceState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetCurrentDevicePerformanceStateRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetCurrentDevicePerformanceStateRequest::PrimarySize);
@@ -570,14 +570,14 @@ TestDevice::UnownedResultOf::GetCurrentDevicePerformanceState_Impl<TestDevice::G
 }
 
 TestDevice::UnownedResultOf::GetCurrentDevicePerformanceState TestDevice::SyncClient::GetCurrentDevicePerformanceState(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetCurrentDevicePerformanceState(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetCurrentDevicePerformanceState(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::GetCurrentDevicePerformanceState TestDevice::Call::GetCurrentDevicePerformanceState(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetCurrentDevicePerformanceState TestDevice::Call::GetCurrentDevicePerformanceState(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetCurrentDevicePerformanceState(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::GetCurrentDevicePerformanceStateResponse> TestDevice::InPlace::GetCurrentDevicePerformanceState(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::GetCurrentDevicePerformanceStateResponse> TestDevice::InPlace::GetCurrentDevicePerformanceState(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetCurrentDevicePerformanceStateRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -599,7 +599,7 @@ TestDevice::UnownedResultOf::GetCurrentDevicePerformanceState TestDevice::Call::
 }
 
 template <>
-TestDevice::ResultOf::GetCurrentDeviceAutoSuspendConfig_Impl<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>::GetCurrentDeviceAutoSuspendConfig_Impl(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::GetCurrentDeviceAutoSuspendConfig_Impl<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>::GetCurrentDeviceAutoSuspendConfig_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDeviceAutoSuspendConfigRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -612,15 +612,15 @@ TestDevice::ResultOf::GetCurrentDeviceAutoSuspendConfig_Impl<TestDevice::GetCurr
 }
 
 TestDevice::ResultOf::GetCurrentDeviceAutoSuspendConfig TestDevice::SyncClient::GetCurrentDeviceAutoSuspendConfig() {
-  return ResultOf::GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel(this->channel_));
+    return ResultOf::GetCurrentDeviceAutoSuspendConfig(::zx::unowned_channel(this->channel_));
 }
 
-TestDevice::ResultOf::GetCurrentDeviceAutoSuspendConfig TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::GetCurrentDeviceAutoSuspendConfig TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(::zx::unowned_channel _client_end) {
   return ResultOf::GetCurrentDeviceAutoSuspendConfig(std::move(_client_end));
 }
 
 template <>
-TestDevice::UnownedResultOf::GetCurrentDeviceAutoSuspendConfig_Impl<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>::GetCurrentDeviceAutoSuspendConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetCurrentDeviceAutoSuspendConfig_Impl<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>::GetCurrentDeviceAutoSuspendConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetCurrentDeviceAutoSuspendConfigRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetCurrentDeviceAutoSuspendConfigRequest::PrimarySize);
@@ -631,14 +631,14 @@ TestDevice::UnownedResultOf::GetCurrentDeviceAutoSuspendConfig_Impl<TestDevice::
 }
 
 TestDevice::UnownedResultOf::GetCurrentDeviceAutoSuspendConfig TestDevice::SyncClient::GetCurrentDeviceAutoSuspendConfig(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetCurrentDeviceAutoSuspendConfig(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::GetCurrentDeviceAutoSuspendConfig TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetCurrentDeviceAutoSuspendConfig TestDevice::Call::GetCurrentDeviceAutoSuspendConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetCurrentDeviceAutoSuspendConfig(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse> TestDevice::InPlace::GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse> TestDevice::InPlace::GetCurrentDeviceAutoSuspendConfig(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetCurrentDeviceAutoSuspendConfigRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

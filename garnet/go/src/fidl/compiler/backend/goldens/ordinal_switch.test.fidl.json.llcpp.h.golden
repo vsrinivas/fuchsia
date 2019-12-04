@@ -68,7 +68,7 @@ class SwitchingOrdinals final {
     class OrdinalFive_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      OrdinalFive_Impl(zx::unowned_channel _client_end);
+      OrdinalFive_Impl(::zx::unowned_channel _client_end);
       ~OrdinalFive_Impl() = default;
       OrdinalFive_Impl(OrdinalFive_Impl&& other) = default;
       OrdinalFive_Impl& operator=(OrdinalFive_Impl&& other) = default;
@@ -79,7 +79,7 @@ class SwitchingOrdinals final {
     class OnlyGeneratedOrdinal_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      OnlyGeneratedOrdinal_Impl(zx::unowned_channel _client_end);
+      OnlyGeneratedOrdinal_Impl(::zx::unowned_channel _client_end);
       ~OnlyGeneratedOrdinal_Impl() = default;
       OnlyGeneratedOrdinal_Impl(OnlyGeneratedOrdinal_Impl&& other) = default;
       OnlyGeneratedOrdinal_Impl& operator=(OnlyGeneratedOrdinal_Impl&& other) = default;
@@ -101,7 +101,7 @@ class SwitchingOrdinals final {
     class OrdinalFive_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      OrdinalFive_Impl(zx::unowned_channel _client_end);
+      OrdinalFive_Impl(::zx::unowned_channel _client_end);
       ~OrdinalFive_Impl() = default;
       OrdinalFive_Impl(OrdinalFive_Impl&& other) = default;
       OrdinalFive_Impl& operator=(OrdinalFive_Impl&& other) = default;
@@ -112,7 +112,7 @@ class SwitchingOrdinals final {
     class OnlyGeneratedOrdinal_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      OnlyGeneratedOrdinal_Impl(zx::unowned_channel _client_end);
+      OnlyGeneratedOrdinal_Impl(::zx::unowned_channel _client_end);
       ~OnlyGeneratedOrdinal_Impl() = default;
       OnlyGeneratedOrdinal_Impl(OnlyGeneratedOrdinal_Impl&& other) = default;
       OnlyGeneratedOrdinal_Impl& operator=(OnlyGeneratedOrdinal_Impl&& other) = default;
@@ -160,18 +160,18 @@ class SwitchingOrdinals final {
    public:
 
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::OrdinalFive OrdinalFive(zx::unowned_channel _client_end);
+    static ResultOf::OrdinalFive OrdinalFive(::zx::unowned_channel _client_end);
 
 
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::OnlyGeneratedOrdinal OnlyGeneratedOrdinal(zx::unowned_channel _client_end);
+    static ResultOf::OnlyGeneratedOrdinal OnlyGeneratedOrdinal(::zx::unowned_channel _client_end);
 
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -180,9 +180,9 @@ class SwitchingOrdinals final {
     InPlace() = delete;
    public:
 
-    static ::fidl::internal::StatusAndError OrdinalFive(zx::unowned_channel _client_end);
+    static ::fidl::internal::StatusAndError OrdinalFive(::zx::unowned_channel _client_end);
 
-    static ::fidl::internal::StatusAndError OnlyGeneratedOrdinal(zx::unowned_channel _client_end);
+    static ::fidl::internal::StatusAndError OnlyGeneratedOrdinal(::zx::unowned_channel _client_end);
 
   };
 

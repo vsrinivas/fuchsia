@@ -21,7 +21,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_midi_DeviceGetInfoResponseTable
 
 }  // namespace
 template <>
-Device::ResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -34,15 +34,15 @@ Device::ResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(zx::unowne
 }
 
 Device::ResultOf::GetInfo Device::SyncClient::GetInfo() {
-  return ResultOf::GetInfo(zx::unowned_channel(this->channel_));
+    return ResultOf::GetInfo(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetInfo Device::Call::GetInfo(zx::unowned_channel _client_end) {
+Device::ResultOf::GetInfo Device::Call::GetInfo(::zx::unowned_channel _client_end) {
   return ResultOf::GetInfo(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetInfoRequest::PrimarySize);
@@ -53,14 +53,14 @@ Device::UnownedResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(zx:
 }
 
 Device::UnownedResultOf::GetInfo Device::SyncClient::GetInfo(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetInfo(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetInfo Device::Call::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetInfo Device::Call::GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetInfo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetInfoResponse> Device::InPlace::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetInfoResponse> Device::InPlace::GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetInfoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

@@ -44,7 +44,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_usb_virtual_bus_BusDisconnectRe
 
 }  // namespace
 template <>
-Bus::ResultOf::Enable_Impl<Bus::EnableResponse>::Enable_Impl(zx::unowned_channel _client_end) {
+Bus::ResultOf::Enable_Impl<Bus::EnableResponse>::Enable_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EnableRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -57,15 +57,15 @@ Bus::ResultOf::Enable_Impl<Bus::EnableResponse>::Enable_Impl(zx::unowned_channel
 }
 
 Bus::ResultOf::Enable Bus::SyncClient::Enable() {
-  return ResultOf::Enable(zx::unowned_channel(this->channel_));
+    return ResultOf::Enable(::zx::unowned_channel(this->channel_));
 }
 
-Bus::ResultOf::Enable Bus::Call::Enable(zx::unowned_channel _client_end) {
+Bus::ResultOf::Enable Bus::Call::Enable(::zx::unowned_channel _client_end) {
   return ResultOf::Enable(std::move(_client_end));
 }
 
 template <>
-Bus::UnownedResultOf::Enable_Impl<Bus::EnableResponse>::Enable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Bus::UnownedResultOf::Enable_Impl<Bus::EnableResponse>::Enable_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(EnableRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, EnableRequest::PrimarySize);
@@ -76,14 +76,14 @@ Bus::UnownedResultOf::Enable_Impl<Bus::EnableResponse>::Enable_Impl(zx::unowned_
 }
 
 Bus::UnownedResultOf::Enable Bus::SyncClient::Enable(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Enable(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Enable(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Bus::UnownedResultOf::Enable Bus::Call::Enable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Bus::UnownedResultOf::Enable Bus::Call::Enable(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Enable(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Bus::EnableResponse> Bus::InPlace::Enable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Bus::EnableResponse> Bus::InPlace::Enable(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(EnableRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -105,7 +105,7 @@ Bus::UnownedResultOf::Enable Bus::Call::Enable(zx::unowned_channel _client_end, 
 }
 
 template <>
-Bus::ResultOf::Disable_Impl<Bus::DisableResponse>::Disable_Impl(zx::unowned_channel _client_end) {
+Bus::ResultOf::Disable_Impl<Bus::DisableResponse>::Disable_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisableRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -118,15 +118,15 @@ Bus::ResultOf::Disable_Impl<Bus::DisableResponse>::Disable_Impl(zx::unowned_chan
 }
 
 Bus::ResultOf::Disable Bus::SyncClient::Disable() {
-  return ResultOf::Disable(zx::unowned_channel(this->channel_));
+    return ResultOf::Disable(::zx::unowned_channel(this->channel_));
 }
 
-Bus::ResultOf::Disable Bus::Call::Disable(zx::unowned_channel _client_end) {
+Bus::ResultOf::Disable Bus::Call::Disable(::zx::unowned_channel _client_end) {
   return ResultOf::Disable(std::move(_client_end));
 }
 
 template <>
-Bus::UnownedResultOf::Disable_Impl<Bus::DisableResponse>::Disable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Bus::UnownedResultOf::Disable_Impl<Bus::DisableResponse>::Disable_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisableRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, DisableRequest::PrimarySize);
@@ -137,14 +137,14 @@ Bus::UnownedResultOf::Disable_Impl<Bus::DisableResponse>::Disable_Impl(zx::unown
 }
 
 Bus::UnownedResultOf::Disable Bus::SyncClient::Disable(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Disable(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Disable(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Bus::UnownedResultOf::Disable Bus::Call::Disable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Bus::UnownedResultOf::Disable Bus::Call::Disable(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Disable(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Bus::DisableResponse> Bus::InPlace::Disable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Bus::DisableResponse> Bus::InPlace::Disable(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(DisableRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -166,7 +166,7 @@ Bus::UnownedResultOf::Disable Bus::Call::Disable(zx::unowned_channel _client_end
 }
 
 template <>
-Bus::ResultOf::Connect_Impl<Bus::ConnectResponse>::Connect_Impl(zx::unowned_channel _client_end) {
+Bus::ResultOf::Connect_Impl<Bus::ConnectResponse>::Connect_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -179,15 +179,15 @@ Bus::ResultOf::Connect_Impl<Bus::ConnectResponse>::Connect_Impl(zx::unowned_chan
 }
 
 Bus::ResultOf::Connect Bus::SyncClient::Connect() {
-  return ResultOf::Connect(zx::unowned_channel(this->channel_));
+    return ResultOf::Connect(::zx::unowned_channel(this->channel_));
 }
 
-Bus::ResultOf::Connect Bus::Call::Connect(zx::unowned_channel _client_end) {
+Bus::ResultOf::Connect Bus::Call::Connect(::zx::unowned_channel _client_end) {
   return ResultOf::Connect(std::move(_client_end));
 }
 
 template <>
-Bus::UnownedResultOf::Connect_Impl<Bus::ConnectResponse>::Connect_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Bus::UnownedResultOf::Connect_Impl<Bus::ConnectResponse>::Connect_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ConnectRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, ConnectRequest::PrimarySize);
@@ -198,14 +198,14 @@ Bus::UnownedResultOf::Connect_Impl<Bus::ConnectResponse>::Connect_Impl(zx::unown
 }
 
 Bus::UnownedResultOf::Connect Bus::SyncClient::Connect(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Connect(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Connect(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Bus::UnownedResultOf::Connect Bus::Call::Connect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Bus::UnownedResultOf::Connect Bus::Call::Connect(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Connect(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Bus::ConnectResponse> Bus::InPlace::Connect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Bus::ConnectResponse> Bus::InPlace::Connect(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(ConnectRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -227,7 +227,7 @@ Bus::UnownedResultOf::Connect Bus::Call::Connect(zx::unowned_channel _client_end
 }
 
 template <>
-Bus::ResultOf::Disconnect_Impl<Bus::DisconnectResponse>::Disconnect_Impl(zx::unowned_channel _client_end) {
+Bus::ResultOf::Disconnect_Impl<Bus::DisconnectResponse>::Disconnect_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DisconnectRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -240,15 +240,15 @@ Bus::ResultOf::Disconnect_Impl<Bus::DisconnectResponse>::Disconnect_Impl(zx::uno
 }
 
 Bus::ResultOf::Disconnect Bus::SyncClient::Disconnect() {
-  return ResultOf::Disconnect(zx::unowned_channel(this->channel_));
+    return ResultOf::Disconnect(::zx::unowned_channel(this->channel_));
 }
 
-Bus::ResultOf::Disconnect Bus::Call::Disconnect(zx::unowned_channel _client_end) {
+Bus::ResultOf::Disconnect Bus::Call::Disconnect(::zx::unowned_channel _client_end) {
   return ResultOf::Disconnect(std::move(_client_end));
 }
 
 template <>
-Bus::UnownedResultOf::Disconnect_Impl<Bus::DisconnectResponse>::Disconnect_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Bus::UnownedResultOf::Disconnect_Impl<Bus::DisconnectResponse>::Disconnect_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DisconnectRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, DisconnectRequest::PrimarySize);
@@ -259,14 +259,14 @@ Bus::UnownedResultOf::Disconnect_Impl<Bus::DisconnectResponse>::Disconnect_Impl(
 }
 
 Bus::UnownedResultOf::Disconnect Bus::SyncClient::Disconnect(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Disconnect(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Disconnect(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Bus::UnownedResultOf::Disconnect Bus::Call::Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Bus::UnownedResultOf::Disconnect Bus::Call::Disconnect(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Disconnect(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Bus::DisconnectResponse> Bus::InPlace::Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Bus::DisconnectResponse> Bus::InPlace::Disconnect(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(DisconnectRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

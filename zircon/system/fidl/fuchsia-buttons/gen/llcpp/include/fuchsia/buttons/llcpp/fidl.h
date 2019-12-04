@@ -290,7 +290,7 @@ class Buttons final {
     class GetState_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetState_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::buttons::ButtonType type);
+      GetState_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::buttons::ButtonType type);
       ~GetState_Impl() = default;
       GetState_Impl(GetState_Impl&& other) = default;
       GetState_Impl& operator=(GetState_Impl&& other) = default;
@@ -306,7 +306,7 @@ class Buttons final {
     class RegisterNotify_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      RegisterNotify_Impl(zx::unowned_channel _client_end, uint8_t types);
+      RegisterNotify_Impl(::zx::unowned_channel _client_end, uint8_t types);
       ~RegisterNotify_Impl() = default;
       RegisterNotify_Impl(RegisterNotify_Impl&& other) = default;
       RegisterNotify_Impl& operator=(RegisterNotify_Impl&& other) = default;
@@ -333,7 +333,7 @@ class Buttons final {
     class GetState_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::buttons::ButtonType type, ::fidl::BytePart _response_buffer);
+      GetState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::buttons::ButtonType type, ::fidl::BytePart _response_buffer);
       ~GetState_Impl() = default;
       GetState_Impl(GetState_Impl&& other) = default;
       GetState_Impl& operator=(GetState_Impl&& other) = default;
@@ -349,7 +349,7 @@ class Buttons final {
     class RegisterNotify_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      RegisterNotify_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t types, ::fidl::BytePart _response_buffer);
+      RegisterNotify_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t types, ::fidl::BytePart _response_buffer);
       ~RegisterNotify_Impl() = default;
       RegisterNotify_Impl(RegisterNotify_Impl&& other) = default;
       RegisterNotify_Impl& operator=(RegisterNotify_Impl&& other) = default;
@@ -428,13 +428,13 @@ class Buttons final {
     // |type| : Button type.
     // @Returns: |pressed| : True if button is pressed.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetState GetState(zx::unowned_channel _client_end, ::llcpp::fuchsia::buttons::ButtonType type);
+    static ResultOf::GetState GetState(::zx::unowned_channel _client_end, ::llcpp::fuchsia::buttons::ButtonType type);
 
     // Gets the state of the button requested.
     // |type| : Button type.
     // @Returns: |pressed| : True if button is pressed.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetState GetState(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::buttons::ButtonType type, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetState GetState(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::buttons::ButtonType type, ::fidl::BytePart _response_buffer);
 
     // Registers to receive notifications of a state change for some buttons.
     // |types| : Bitmask which indicates the interested buttons. 0 means not
@@ -444,7 +444,7 @@ class Buttons final {
     //           in subsequent calls are removed.
     // @Returns: |status| : ZX_OK if succeeds.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::RegisterNotify RegisterNotify(zx::unowned_channel _client_end, uint8_t types);
+    static ResultOf::RegisterNotify RegisterNotify(::zx::unowned_channel _client_end, uint8_t types);
 
     // Registers to receive notifications of a state change for some buttons.
     // |types| : Bitmask which indicates the interested buttons. 0 means not
@@ -454,13 +454,13 @@ class Buttons final {
     //           in subsequent calls are removed.
     // @Returns: |status| : ZX_OK if succeeds.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RegisterNotify RegisterNotify(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t types, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::RegisterNotify RegisterNotify(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t types, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -472,7 +472,7 @@ class Buttons final {
     // Gets the state of the button requested.
     // |type| : Button type.
     // @Returns: |pressed| : True if button is pressed.
-    static ::fidl::DecodeResult<GetStateResponse> GetState(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStateRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetStateResponse> GetState(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStateRequest> params, ::fidl::BytePart response_buffer);
 
     // Registers to receive notifications of a state change for some buttons.
     // |types| : Bitmask which indicates the interested buttons. 0 means not
@@ -481,7 +481,7 @@ class Buttons final {
     //           the state of the VOLUME_UP button changes. Types not listed
     //           in subsequent calls are removed.
     // @Returns: |status| : ZX_OK if succeeds.
-    static ::fidl::DecodeResult<RegisterNotifyResponse> RegisterNotify(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterNotifyRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RegisterNotifyResponse> RegisterNotify(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterNotifyRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

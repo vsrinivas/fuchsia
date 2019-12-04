@@ -222,7 +222,7 @@ extern "C" const fidl_type_t v1_fuchsia_tee_DeviceCloseSessionResponseTable;
 
 }  // namespace
 template <>
-Device::ResultOf::GetOsInfo_Impl<Device::GetOsInfoResponse>::GetOsInfo_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetOsInfo_Impl<Device::GetOsInfoResponse>::GetOsInfo_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetOsInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -235,15 +235,15 @@ Device::ResultOf::GetOsInfo_Impl<Device::GetOsInfoResponse>::GetOsInfo_Impl(zx::
 }
 
 Device::ResultOf::GetOsInfo Device::SyncClient::GetOsInfo() {
-  return ResultOf::GetOsInfo(zx::unowned_channel(this->channel_));
+    return ResultOf::GetOsInfo(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetOsInfo Device::Call::GetOsInfo(zx::unowned_channel _client_end) {
+Device::ResultOf::GetOsInfo Device::Call::GetOsInfo(::zx::unowned_channel _client_end) {
   return ResultOf::GetOsInfo(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetOsInfo_Impl<Device::GetOsInfoResponse>::GetOsInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetOsInfo_Impl<Device::GetOsInfoResponse>::GetOsInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetOsInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetOsInfoRequest::PrimarySize);
@@ -254,14 +254,14 @@ Device::UnownedResultOf::GetOsInfo_Impl<Device::GetOsInfoResponse>::GetOsInfo_Im
 }
 
 Device::UnownedResultOf::GetOsInfo Device::SyncClient::GetOsInfo(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetOsInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetOsInfo(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetOsInfo Device::Call::GetOsInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetOsInfo Device::Call::GetOsInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetOsInfo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetOsInfoResponse> Device::InPlace::GetOsInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetOsInfoResponse> Device::InPlace::GetOsInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetOsInfoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -283,7 +283,7 @@ Device::UnownedResultOf::GetOsInfo Device::Call::GetOsInfo(zx::unowned_channel _
 }
 
 template <>
-Device::ResultOf::OpenSession_Impl<Device::OpenSessionResponse>::OpenSession_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
+Device::ResultOf::OpenSession_Impl<Device::OpenSessionResponse>::OpenSession_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OpenSessionRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -301,15 +301,15 @@ Device::ResultOf::OpenSession_Impl<Device::OpenSessionResponse>::OpenSession_Imp
 }
 
 Device::ResultOf::OpenSession Device::SyncClient::OpenSession(::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
-  return ResultOf::OpenSession(zx::unowned_channel(this->channel_), std::move(trusted_app), std::move(parameter_set));
+    return ResultOf::OpenSession(::zx::unowned_channel(this->channel_), std::move(trusted_app), std::move(parameter_set));
 }
 
-Device::ResultOf::OpenSession Device::Call::OpenSession(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
+Device::ResultOf::OpenSession Device::Call::OpenSession(::zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
   return ResultOf::OpenSession(std::move(_client_end), std::move(trusted_app), std::move(parameter_set));
 }
 
 template <>
-Device::UnownedResultOf::OpenSession_Impl<Device::OpenSessionResponse>::OpenSession_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::OpenSession_Impl<Device::OpenSessionResponse>::OpenSession_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < OpenSessionRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<OpenSessionResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -328,14 +328,14 @@ Device::UnownedResultOf::OpenSession_Impl<Device::OpenSessionResponse>::OpenSess
 }
 
 Device::UnownedResultOf::OpenSession Device::SyncClient::OpenSession(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::OpenSession(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(trusted_app), std::move(parameter_set), std::move(_response_buffer));
+  return UnownedResultOf::OpenSession(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(trusted_app), std::move(parameter_set), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::OpenSession Device::Call::OpenSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::OpenSession Device::Call::OpenSession(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::OpenSession(std::move(_client_end), std::move(_request_buffer), std::move(trusted_app), std::move(parameter_set), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::OpenSessionResponse> Device::InPlace::OpenSession(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenSessionRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::OpenSessionResponse> Device::InPlace::OpenSession(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenSessionRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::OpenSessionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -352,7 +352,7 @@ Device::UnownedResultOf::OpenSession Device::Call::OpenSession(zx::unowned_chann
 }
 
 template <>
-Device::ResultOf::InvokeCommand_Impl<Device::InvokeCommandResponse>::InvokeCommand_Impl(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
+Device::ResultOf::InvokeCommand_Impl<Device::InvokeCommandResponse>::InvokeCommand_Impl(::zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InvokeCommandRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -371,15 +371,15 @@ Device::ResultOf::InvokeCommand_Impl<Device::InvokeCommandResponse>::InvokeComma
 }
 
 Device::ResultOf::InvokeCommand Device::SyncClient::InvokeCommand(uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
-  return ResultOf::InvokeCommand(zx::unowned_channel(this->channel_), std::move(session_id), std::move(command_id), std::move(parameter_set));
+    return ResultOf::InvokeCommand(::zx::unowned_channel(this->channel_), std::move(session_id), std::move(command_id), std::move(parameter_set));
 }
 
-Device::ResultOf::InvokeCommand Device::Call::InvokeCommand(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
+Device::ResultOf::InvokeCommand Device::Call::InvokeCommand(::zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set) {
   return ResultOf::InvokeCommand(std::move(_client_end), std::move(session_id), std::move(command_id), std::move(parameter_set));
 }
 
 template <>
-Device::UnownedResultOf::InvokeCommand_Impl<Device::InvokeCommandResponse>::InvokeCommand_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::InvokeCommand_Impl<Device::InvokeCommandResponse>::InvokeCommand_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < InvokeCommandRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<InvokeCommandResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -399,14 +399,14 @@ Device::UnownedResultOf::InvokeCommand_Impl<Device::InvokeCommandResponse>::Invo
 }
 
 Device::UnownedResultOf::InvokeCommand Device::SyncClient::InvokeCommand(::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::InvokeCommand(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(session_id), std::move(command_id), std::move(parameter_set), std::move(_response_buffer));
+  return UnownedResultOf::InvokeCommand(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(session_id), std::move(command_id), std::move(parameter_set), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::InvokeCommand Device::Call::InvokeCommand(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::InvokeCommand Device::Call::InvokeCommand(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::InvokeCommand(std::move(_client_end), std::move(_request_buffer), std::move(session_id), std::move(command_id), std::move(parameter_set), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::InvokeCommandResponse> Device::InPlace::InvokeCommand(zx::unowned_channel _client_end, ::fidl::DecodedMessage<InvokeCommandRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::InvokeCommandResponse> Device::InPlace::InvokeCommand(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<InvokeCommandRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::InvokeCommandRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -423,7 +423,7 @@ Device::UnownedResultOf::InvokeCommand Device::Call::InvokeCommand(zx::unowned_c
 }
 
 template <>
-Device::ResultOf::CloseSession_Impl<Device::CloseSessionResponse>::CloseSession_Impl(zx::unowned_channel _client_end, uint32_t session_id) {
+Device::ResultOf::CloseSession_Impl<Device::CloseSessionResponse>::CloseSession_Impl(::zx::unowned_channel _client_end, uint32_t session_id) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseSessionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -438,15 +438,15 @@ Device::ResultOf::CloseSession_Impl<Device::CloseSessionResponse>::CloseSession_
 }
 
 Device::ResultOf::CloseSession Device::SyncClient::CloseSession(uint32_t session_id) {
-  return ResultOf::CloseSession(zx::unowned_channel(this->channel_), std::move(session_id));
+    return ResultOf::CloseSession(::zx::unowned_channel(this->channel_), std::move(session_id));
 }
 
-Device::ResultOf::CloseSession Device::Call::CloseSession(zx::unowned_channel _client_end, uint32_t session_id) {
+Device::ResultOf::CloseSession Device::Call::CloseSession(::zx::unowned_channel _client_end, uint32_t session_id) {
   return ResultOf::CloseSession(std::move(_client_end), std::move(session_id));
 }
 
 template <>
-Device::UnownedResultOf::CloseSession_Impl<Device::CloseSessionResponse>::CloseSession_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::CloseSession_Impl<Device::CloseSessionResponse>::CloseSession_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CloseSessionRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CloseSessionResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -461,14 +461,14 @@ Device::UnownedResultOf::CloseSession_Impl<Device::CloseSessionResponse>::CloseS
 }
 
 Device::UnownedResultOf::CloseSession Device::SyncClient::CloseSession(::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CloseSession(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(session_id), std::move(_response_buffer));
+  return UnownedResultOf::CloseSession(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(session_id), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::CloseSession Device::Call::CloseSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::CloseSession Device::Call::CloseSession(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CloseSession(std::move(_client_end), std::move(_request_buffer), std::move(session_id), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::CloseSessionResponse> Device::InPlace::CloseSession(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseSessionRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::CloseSessionResponse> Device::InPlace::CloseSession(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseSessionRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::CloseSessionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

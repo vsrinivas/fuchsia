@@ -161,7 +161,7 @@ class Device final {
     class Transmit_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Transmit_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
+      Transmit_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
       ~Transmit_Impl() = default;
       Transmit_Impl(Transmit_Impl&& other) = default;
       Transmit_Impl& operator=(Transmit_Impl&& other) = default;
@@ -177,7 +177,7 @@ class Device final {
     class Receive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Receive_Impl(zx::unowned_channel _client_end, uint32_t size);
+      Receive_Impl(::zx::unowned_channel _client_end, uint32_t size);
       ~Receive_Impl() = default;
       Receive_Impl(Receive_Impl&& other) = default;
       Receive_Impl& operator=(Receive_Impl&& other) = default;
@@ -193,7 +193,7 @@ class Device final {
     class Exchange_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Exchange_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> txdata);
+      Exchange_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> txdata);
       ~Exchange_Impl() = default;
       Exchange_Impl(Exchange_Impl&& other) = default;
       Exchange_Impl& operator=(Exchange_Impl&& other) = default;
@@ -221,7 +221,7 @@ class Device final {
     class Transmit_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Transmit_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
+      Transmit_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
       ~Transmit_Impl() = default;
       Transmit_Impl(Transmit_Impl&& other) = default;
       Transmit_Impl& operator=(Transmit_Impl&& other) = default;
@@ -237,7 +237,7 @@ class Device final {
     class Receive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Receive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t size, ::fidl::BytePart _response_buffer);
+      Receive_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t size, ::fidl::BytePart _response_buffer);
       ~Receive_Impl() = default;
       Receive_Impl(Receive_Impl&& other) = default;
       Receive_Impl& operator=(Receive_Impl&& other) = default;
@@ -253,7 +253,7 @@ class Device final {
     class Exchange_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Exchange_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> txdata, ::fidl::BytePart _response_buffer);
+      Exchange_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> txdata, ::fidl::BytePart _response_buffer);
       ~Exchange_Impl() = default;
       Exchange_Impl(Exchange_Impl&& other) = default;
       Exchange_Impl& operator=(Exchange_Impl&& other) = default;
@@ -320,29 +320,29 @@ class Device final {
 
     // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::Transmit Transmit(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
+    static ResultOf::Transmit Transmit(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
 
     // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Transmit Transmit(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Transmit Transmit(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
 
     // Half-duplex receive data from a SPI device; always reads the full size requested.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Receive Receive(zx::unowned_channel _client_end, uint32_t size);
+    static ResultOf::Receive Receive(::zx::unowned_channel _client_end, uint32_t size);
 
     // Half-duplex receive data from a SPI device; always reads the full size requested.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Receive Receive(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t size, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Receive Receive(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t size, ::fidl::BytePart _response_buffer);
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     // buffer.
     // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::Exchange Exchange(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> txdata);
+    static ResultOf::Exchange Exchange(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> txdata);
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     // buffer.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Exchange Exchange(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> txdata, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Exchange Exchange(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> txdata, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -353,14 +353,14 @@ class Device final {
    public:
 
     // Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
-    static ::fidl::DecodeResult<TransmitResponse> Transmit(zx::unowned_channel _client_end, ::fidl::DecodedMessage<TransmitRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<TransmitResponse> Transmit(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<TransmitRequest> params, ::fidl::BytePart response_buffer);
 
     // Half-duplex receive data from a SPI device; always reads the full size requested.
-    static ::fidl::DecodeResult<ReceiveResponse> Receive(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReceiveRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReceiveResponse> Receive(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReceiveRequest> params, ::fidl::BytePart response_buffer);
 
     // Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     // buffer.
-    static ::fidl::DecodeResult<ExchangeResponse> Exchange(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ExchangeRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ExchangeResponse> Exchange(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ExchangeRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

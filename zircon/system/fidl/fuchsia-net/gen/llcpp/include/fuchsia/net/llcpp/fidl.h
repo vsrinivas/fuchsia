@@ -190,7 +190,7 @@ class Connectivity final {
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -819,7 +819,7 @@ class NameLookup final {
     class LookupIp_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options);
+      LookupIp_Impl(::zx::unowned_channel _client_end, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options);
       ~LookupIp_Impl() = default;
       LookupIp_Impl(LookupIp_Impl&& other) = default;
       LookupIp_Impl& operator=(LookupIp_Impl&& other) = default;
@@ -835,7 +835,7 @@ class NameLookup final {
     class LookupHostname_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LookupHostname_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr);
+      LookupHostname_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr);
       ~LookupHostname_Impl() = default;
       LookupHostname_Impl(LookupHostname_Impl&& other) = default;
       LookupHostname_Impl& operator=(LookupHostname_Impl&& other) = default;
@@ -862,7 +862,7 @@ class NameLookup final {
     class LookupIp_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer);
+      LookupIp_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer);
       ~LookupIp_Impl() = default;
       LookupIp_Impl(LookupIp_Impl&& other) = default;
       LookupIp_Impl& operator=(LookupIp_Impl&& other) = default;
@@ -878,7 +878,7 @@ class NameLookup final {
     class LookupHostname_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LookupHostname_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer);
+      LookupHostname_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer);
       ~LookupHostname_Impl() = default;
       LookupHostname_Impl(LookupHostname_Impl&& other) = default;
       LookupHostname_Impl& operator=(LookupHostname_Impl&& other) = default;
@@ -940,21 +940,21 @@ class NameLookup final {
     //
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Allocates 296 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::LookupIp LookupIp(zx::unowned_channel _client_end, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options);
+    static ResultOf::LookupIp LookupIp(::zx::unowned_channel _client_end, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options);
 
     // Look up a list of IP addresses by hostname.
     //
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LookupIp LookupIp(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LookupIp LookupIp(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer);
 
     // Look up a hostname by IP address.
     // Allocates 336 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LookupHostname LookupHostname(zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr);
+    static ResultOf::LookupHostname LookupHostname(::zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr);
 
     // Look up a hostname by IP address.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LookupHostname LookupHostname(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LookupHostname LookupHostname(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -967,10 +967,10 @@ class NameLookup final {
     // Look up a list of IP addresses by hostname.
     //
     // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
-    static ::fidl::DecodeResult<LookupIpResponse> LookupIp(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LookupIpResponse> LookupIp(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer);
 
     // Look up a hostname by IP address.
-    static ::fidl::DecodeResult<LookupHostnameResponse> LookupHostname(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LookupHostnameResponse> LookupHostname(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

@@ -707,7 +707,7 @@ class Handler final {
     class OnException_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      OnException_Impl(zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info);
+      OnException_Impl(::zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info);
       ~OnException_Impl() = default;
       OnException_Impl(OnException_Impl&& other) = default;
       OnException_Impl& operator=(OnException_Impl&& other) = default;
@@ -733,7 +733,7 @@ class Handler final {
     class OnException_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      OnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer);
+      OnException_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer);
       ~OnException_Impl() = default;
       OnException_Impl(OnException_Impl&& other) = default;
       OnException_Impl& operator=(OnException_Impl&& other) = default;
@@ -807,7 +807,7 @@ class Handler final {
     // `info` represents basic exception information as provided by the
     // exception channel.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::OnException OnException(zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info);
+    static ResultOf::OnException OnException(::zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info);
 
     // This exception mirrors closely the information provided by exception
     // channels. The design is to have clients of this API behave as closely as
@@ -820,7 +820,7 @@ class Handler final {
     // `info` represents basic exception information as provided by the
     // exception channel.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::OnException OnException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::OnException OnException(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -840,7 +840,7 @@ class Handler final {
     //
     // `info` represents basic exception information as provided by the
     // exception channel.
-    static ::fidl::DecodeResult<OnExceptionResponse> OnException(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnExceptionRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<OnExceptionResponse> OnException(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnExceptionRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1391,7 +1391,7 @@ class ProcessLimbo final {
     class WatchActive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      WatchActive_Impl(zx::unowned_channel _client_end);
+      WatchActive_Impl(::zx::unowned_channel _client_end);
       ~WatchActive_Impl() = default;
       WatchActive_Impl(WatchActive_Impl&& other) = default;
       WatchActive_Impl& operator=(WatchActive_Impl&& other) = default;
@@ -1407,7 +1407,7 @@ class ProcessLimbo final {
     class WatchProcessesWaitingOnException_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      WatchProcessesWaitingOnException_Impl(zx::unowned_channel _client_end);
+      WatchProcessesWaitingOnException_Impl(::zx::unowned_channel _client_end);
       ~WatchProcessesWaitingOnException_Impl() = default;
       WatchProcessesWaitingOnException_Impl(WatchProcessesWaitingOnException_Impl&& other) = default;
       WatchProcessesWaitingOnException_Impl& operator=(WatchProcessesWaitingOnException_Impl&& other) = default;
@@ -1423,7 +1423,7 @@ class ProcessLimbo final {
     class RetrieveException_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      RetrieveException_Impl(zx::unowned_channel _client_end, uint64_t process_koid);
+      RetrieveException_Impl(::zx::unowned_channel _client_end, uint64_t process_koid);
       ~RetrieveException_Impl() = default;
       RetrieveException_Impl(RetrieveException_Impl&& other) = default;
       RetrieveException_Impl& operator=(RetrieveException_Impl&& other) = default;
@@ -1439,7 +1439,7 @@ class ProcessLimbo final {
     class ReleaseProcess_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ReleaseProcess_Impl(zx::unowned_channel _client_end, uint64_t process_koid);
+      ReleaseProcess_Impl(::zx::unowned_channel _client_end, uint64_t process_koid);
       ~ReleaseProcess_Impl() = default;
       ReleaseProcess_Impl(ReleaseProcess_Impl&& other) = default;
       ReleaseProcess_Impl& operator=(ReleaseProcess_Impl&& other) = default;
@@ -1455,7 +1455,7 @@ class ProcessLimbo final {
     class AppendFilters_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AppendFilters_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
+      AppendFilters_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
       ~AppendFilters_Impl() = default;
       AppendFilters_Impl(AppendFilters_Impl&& other) = default;
       AppendFilters_Impl& operator=(AppendFilters_Impl&& other) = default;
@@ -1471,7 +1471,7 @@ class ProcessLimbo final {
     class RemoveFilters_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      RemoveFilters_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
+      RemoveFilters_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
       ~RemoveFilters_Impl() = default;
       RemoveFilters_Impl(RemoveFilters_Impl&& other) = default;
       RemoveFilters_Impl& operator=(RemoveFilters_Impl&& other) = default;
@@ -1487,7 +1487,7 @@ class ProcessLimbo final {
     class GetFilters_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetFilters_Impl(zx::unowned_channel _client_end);
+      GetFilters_Impl(::zx::unowned_channel _client_end);
       ~GetFilters_Impl() = default;
       GetFilters_Impl(GetFilters_Impl&& other) = default;
       GetFilters_Impl& operator=(GetFilters_Impl&& other) = default;
@@ -1519,7 +1519,7 @@ class ProcessLimbo final {
     class WatchActive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      WatchActive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      WatchActive_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~WatchActive_Impl() = default;
       WatchActive_Impl(WatchActive_Impl&& other) = default;
       WatchActive_Impl& operator=(WatchActive_Impl&& other) = default;
@@ -1535,7 +1535,7 @@ class ProcessLimbo final {
     class WatchProcessesWaitingOnException_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      WatchProcessesWaitingOnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      WatchProcessesWaitingOnException_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~WatchProcessesWaitingOnException_Impl() = default;
       WatchProcessesWaitingOnException_Impl(WatchProcessesWaitingOnException_Impl&& other) = default;
       WatchProcessesWaitingOnException_Impl& operator=(WatchProcessesWaitingOnException_Impl&& other) = default;
@@ -1551,7 +1551,7 @@ class ProcessLimbo final {
     class RetrieveException_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      RetrieveException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
+      RetrieveException_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
       ~RetrieveException_Impl() = default;
       RetrieveException_Impl(RetrieveException_Impl&& other) = default;
       RetrieveException_Impl& operator=(RetrieveException_Impl&& other) = default;
@@ -1567,7 +1567,7 @@ class ProcessLimbo final {
     class ReleaseProcess_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ReleaseProcess_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
+      ReleaseProcess_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
       ~ReleaseProcess_Impl() = default;
       ReleaseProcess_Impl(ReleaseProcess_Impl&& other) = default;
       ReleaseProcess_Impl& operator=(ReleaseProcess_Impl&& other) = default;
@@ -1583,7 +1583,7 @@ class ProcessLimbo final {
     class AppendFilters_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AppendFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
+      AppendFilters_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
       ~AppendFilters_Impl() = default;
       AppendFilters_Impl(AppendFilters_Impl&& other) = default;
       AppendFilters_Impl& operator=(AppendFilters_Impl&& other) = default;
@@ -1599,7 +1599,7 @@ class ProcessLimbo final {
     class RemoveFilters_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      RemoveFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
+      RemoveFilters_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
       ~RemoveFilters_Impl() = default;
       RemoveFilters_Impl(RemoveFilters_Impl&& other) = default;
       RemoveFilters_Impl& operator=(RemoveFilters_Impl&& other) = default;
@@ -1615,7 +1615,7 @@ class ProcessLimbo final {
     class GetFilters_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetFilters_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetFilters_Impl() = default;
       GetFilters_Impl(GetFilters_Impl&& other) = default;
       GetFilters_Impl& operator=(GetFilters_Impl&& other) = default;
@@ -1819,14 +1819,14 @@ class ProcessLimbo final {
     // any processes waiting on an exception). However, an inactive limbo is
     // guaranteed to not have any processes waiting in it.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::WatchActive WatchActive(zx::unowned_channel _client_end);
+    static ResultOf::WatchActive WatchActive(::zx::unowned_channel _client_end);
 
     // Watchs for changes determining whether the limbo is currently active,
     // using a Hanging Get pattern. An active limbo could be empty (not have
     // any processes waiting on an exception). However, an inactive limbo is
     // guaranteed to not have any processes waiting in it.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WatchActive WatchActive(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::WatchActive WatchActive(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Watch for processes that are waiting on exceptions, using a Hanging Get
     // Pattern.
@@ -1843,7 +1843,7 @@ class ProcessLimbo final {
     // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
     //       right, so no modification will be able to be done on them.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::WatchProcessesWaitingOnException WatchProcessesWaitingOnException(zx::unowned_channel _client_end);
+    static ResultOf::WatchProcessesWaitingOnException WatchProcessesWaitingOnException(::zx::unowned_channel _client_end);
 
     // Watch for processes that are waiting on exceptions, using a Hanging Get
     // Pattern.
@@ -1860,7 +1860,7 @@ class ProcessLimbo final {
     // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
     //       right, so no modification will be able to be done on them.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WatchProcessesWaitingOnException WatchProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::WatchProcessesWaitingOnException WatchProcessesWaitingOnException(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Removes the process from limbo and retrieves the exception handle and
     // associated metadata from an exception.
@@ -1871,7 +1871,7 @@ class ProcessLimbo final {
     // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::RetrieveException RetrieveException(zx::unowned_channel _client_end, uint64_t process_koid);
+    static ResultOf::RetrieveException RetrieveException(::zx::unowned_channel _client_end, uint64_t process_koid);
 
     // Removes the process from limbo and retrieves the exception handle and
     // associated metadata from an exception.
@@ -1882,19 +1882,19 @@ class ProcessLimbo final {
     // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RetrieveException RetrieveException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::RetrieveException RetrieveException(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
 
     // Removes the process from limbo, releasing the exception. This will make
     // it "bubble up" beyond the scope of of this limbo, making it
     // unretrievable in the future from here.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ReleaseProcess ReleaseProcess(zx::unowned_channel _client_end, uint64_t process_koid);
+    static ResultOf::ReleaseProcess ReleaseProcess(::zx::unowned_channel _client_end, uint64_t process_koid);
 
     // Removes the process from limbo, releasing the exception. This will make
     // it "bubble up" beyond the scope of of this limbo, making it
     // unretrievable in the future from here.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ReleaseProcess ReleaseProcess(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ReleaseProcess ReleaseProcess(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
 
     // Adds filters to the limbo. Filters determine what processes the limbo
     // will store when receiving an exception. Repeated filters will be
@@ -1919,7 +1919,7 @@ class ProcessLimbo final {
     //
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::AppendFilters AppendFilters(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
+    static ResultOf::AppendFilters AppendFilters(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
 
     // Adds filters to the limbo. Filters determine what processes the limbo
     // will store when receiving an exception. Repeated filters will be
@@ -1944,31 +1944,31 @@ class ProcessLimbo final {
     //
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AppendFilters AppendFilters(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AppendFilters AppendFilters(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
 
     // Removes filters to the limbo. Any filters that are not currently present
     // on the limbo will be ignored.
     //
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::RemoveFilters RemoveFilters(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
+    static ResultOf::RemoveFilters RemoveFilters(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
 
     // Removes filters to the limbo. Any filters that are not currently present
     // on the limbo will be ignored.
     //
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RemoveFilters RemoveFilters(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::RemoveFilters RemoveFilters(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
 
     // Returns filters that are currently active within the limbo. If the limbo
     // is inactive, it will return an empty vector.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetFilters GetFilters(zx::unowned_channel _client_end);
+    static ResultOf::GetFilters GetFilters(::zx::unowned_channel _client_end);
 
     // Returns filters that are currently active within the limbo. If the limbo
     // is inactive, it will return an empty vector.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetFilters GetFilters(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetFilters GetFilters(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1982,7 +1982,7 @@ class ProcessLimbo final {
     // using a Hanging Get pattern. An active limbo could be empty (not have
     // any processes waiting on an exception). However, an inactive limbo is
     // guaranteed to not have any processes waiting in it.
-    static ::fidl::DecodeResult<WatchActiveResponse> WatchActive(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WatchActiveResponse> WatchActive(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Watch for processes that are waiting on exceptions, using a Hanging Get
     // Pattern.
@@ -1998,7 +1998,7 @@ class ProcessLimbo final {
     //
     // NOTE: The |process| and |thread| handle will only have the ZX_RIGHT_READ
     //       right, so no modification will be able to be done on them.
-    static ::fidl::DecodeResult<WatchProcessesWaitingOnExceptionResponse> WatchProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WatchProcessesWaitingOnExceptionResponse> WatchProcessesWaitingOnException(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Removes the process from limbo and retrieves the exception handle and
     // associated metadata from an exception.
@@ -2008,12 +2008,12 @@ class ProcessLimbo final {
     //
     // Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
-    static ::fidl::DecodeResult<RetrieveExceptionResponse> RetrieveException(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RetrieveExceptionRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RetrieveExceptionResponse> RetrieveException(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RetrieveExceptionRequest> params, ::fidl::BytePart response_buffer);
 
     // Removes the process from limbo, releasing the exception. This will make
     // it "bubble up" beyond the scope of of this limbo, making it
     // unretrievable in the future from here.
-    static ::fidl::DecodeResult<ReleaseProcessResponse> ReleaseProcess(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseProcessRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReleaseProcessResponse> ReleaseProcess(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseProcessRequest> params, ::fidl::BytePart response_buffer);
 
     // Adds filters to the limbo. Filters determine what processes the limbo
     // will store when receiving an exception. Repeated filters will be
@@ -2037,17 +2037,17 @@ class ProcessLimbo final {
     // the limbo.
     //
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
-    static ::fidl::DecodeResult<AppendFiltersResponse> AppendFilters(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AppendFiltersRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<AppendFiltersResponse> AppendFilters(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AppendFiltersRequest> params, ::fidl::BytePart response_buffer);
 
     // Removes filters to the limbo. Any filters that are not currently present
     // on the limbo will be ignored.
     //
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
-    static ::fidl::DecodeResult<RemoveFiltersResponse> RemoveFilters(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RemoveFiltersRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RemoveFiltersResponse> RemoveFilters(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RemoveFiltersRequest> params, ::fidl::BytePart response_buffer);
 
     // Returns filters that are currently active within the limbo. If the limbo
     // is inactive, it will return an empty vector.
-    static ::fidl::DecodeResult<GetFiltersResponse> GetFilters(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetFiltersResponse> GetFilters(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

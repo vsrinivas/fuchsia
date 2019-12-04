@@ -254,7 +254,7 @@ extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ControllerStopResponseTable;
 
 }  // namespace
 template <>
-Controller::ResultOf::GetProperties_Impl<Controller::GetPropertiesResponse>::GetProperties_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetProperties_Impl<Controller::GetPropertiesResponse>::GetProperties_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPropertiesRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -267,15 +267,15 @@ Controller::ResultOf::GetProperties_Impl<Controller::GetPropertiesResponse>::Get
 }
 
 Controller::ResultOf::GetProperties Controller::SyncClient::GetProperties() {
-  return ResultOf::GetProperties(zx::unowned_channel(this->channel_));
+    return ResultOf::GetProperties(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetProperties Controller::Call::GetProperties(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetProperties Controller::Call::GetProperties(::zx::unowned_channel _client_end) {
   return ResultOf::GetProperties(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetProperties_Impl<Controller::GetPropertiesResponse>::GetProperties_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetProperties_Impl<Controller::GetPropertiesResponse>::GetProperties_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPropertiesRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetPropertiesRequest::PrimarySize);
@@ -286,14 +286,14 @@ Controller::UnownedResultOf::GetProperties_Impl<Controller::GetPropertiesRespons
 }
 
 Controller::UnownedResultOf::GetProperties Controller::SyncClient::GetProperties(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetProperties(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetProperties(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetProperties Controller::Call::GetProperties(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetProperties Controller::Call::GetProperties(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetProperties(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetPropertiesResponse> Controller::InPlace::GetProperties(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetPropertiesResponse> Controller::InPlace::GetProperties(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetPropertiesRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -315,7 +315,7 @@ Controller::UnownedResultOf::GetProperties Controller::Call::GetProperties(zx::u
 }
 
 template <>
-Controller::ResultOf::Initialize_Impl<Controller::InitializeResponse>::Initialize_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation) {
+Controller::ResultOf::Initialize_Impl<Controller::InitializeResponse>::Initialize_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitializeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -330,15 +330,15 @@ Controller::ResultOf::Initialize_Impl<Controller::InitializeResponse>::Initializ
 }
 
 Controller::ResultOf::Initialize Controller::SyncClient::Initialize(::llcpp::fuchsia::perfmon::cpu::Allocation allocation) {
-  return ResultOf::Initialize(zx::unowned_channel(this->channel_), std::move(allocation));
+    return ResultOf::Initialize(::zx::unowned_channel(this->channel_), std::move(allocation));
 }
 
-Controller::ResultOf::Initialize Controller::Call::Initialize(zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation) {
+Controller::ResultOf::Initialize Controller::Call::Initialize(::zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation) {
   return ResultOf::Initialize(std::move(_client_end), std::move(allocation));
 }
 
 template <>
-Controller::UnownedResultOf::Initialize_Impl<Controller::InitializeResponse>::Initialize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Initialize_Impl<Controller::InitializeResponse>::Initialize_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < InitializeRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<InitializeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -353,14 +353,14 @@ Controller::UnownedResultOf::Initialize_Impl<Controller::InitializeResponse>::In
 }
 
 Controller::UnownedResultOf::Initialize Controller::SyncClient::Initialize(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Initialize(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(allocation), std::move(_response_buffer));
+  return UnownedResultOf::Initialize(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(allocation), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::Initialize Controller::Call::Initialize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Initialize Controller::Call::Initialize(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Initialize(std::move(_client_end), std::move(_request_buffer), std::move(allocation), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::InitializeResponse> Controller::InPlace::Initialize(zx::unowned_channel _client_end, ::fidl::DecodedMessage<InitializeRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::InitializeResponse> Controller::InPlace::Initialize(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<InitializeRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::InitializeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -377,7 +377,7 @@ Controller::UnownedResultOf::Initialize Controller::Call::Initialize(zx::unowned
 }
 
 template <>
-Controller::ResultOf::Terminate_Impl<Controller::TerminateResponse>::Terminate_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::Terminate_Impl<Controller::TerminateResponse>::Terminate_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<TerminateRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -390,14 +390,14 @@ Controller::ResultOf::Terminate_Impl<Controller::TerminateResponse>::Terminate_I
 }
 
 Controller::ResultOf::Terminate Controller::SyncClient::Terminate() {
-  return ResultOf::Terminate(zx::unowned_channel(this->channel_));
+    return ResultOf::Terminate(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::Terminate Controller::Call::Terminate(zx::unowned_channel _client_end) {
+Controller::ResultOf::Terminate Controller::Call::Terminate(::zx::unowned_channel _client_end) {
   return ResultOf::Terminate(std::move(_client_end));
 }
 
-::fidl::DecodeResult<Controller::TerminateResponse> Controller::InPlace::Terminate(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::TerminateResponse> Controller::InPlace::Terminate(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(TerminateRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -419,7 +419,7 @@ Controller::ResultOf::Terminate Controller::Call::Terminate(zx::unowned_channel 
 }
 
 template <>
-Controller::ResultOf::GetAllocation_Impl<Controller::GetAllocationResponse>::GetAllocation_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetAllocation_Impl<Controller::GetAllocationResponse>::GetAllocation_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAllocationRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -432,15 +432,15 @@ Controller::ResultOf::GetAllocation_Impl<Controller::GetAllocationResponse>::Get
 }
 
 Controller::ResultOf::GetAllocation Controller::SyncClient::GetAllocation() {
-  return ResultOf::GetAllocation(zx::unowned_channel(this->channel_));
+    return ResultOf::GetAllocation(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetAllocation Controller::Call::GetAllocation(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetAllocation Controller::Call::GetAllocation(::zx::unowned_channel _client_end) {
   return ResultOf::GetAllocation(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetAllocation_Impl<Controller::GetAllocationResponse>::GetAllocation_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetAllocation_Impl<Controller::GetAllocationResponse>::GetAllocation_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetAllocationRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetAllocationRequest::PrimarySize);
@@ -451,14 +451,14 @@ Controller::UnownedResultOf::GetAllocation_Impl<Controller::GetAllocationRespons
 }
 
 Controller::UnownedResultOf::GetAllocation Controller::SyncClient::GetAllocation(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetAllocation(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetAllocation(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetAllocation Controller::Call::GetAllocation(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetAllocation Controller::Call::GetAllocation(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetAllocation(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetAllocationResponse> Controller::InPlace::GetAllocation(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetAllocationResponse> Controller::InPlace::GetAllocation(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetAllocationRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -480,7 +480,7 @@ Controller::UnownedResultOf::GetAllocation Controller::Call::GetAllocation(zx::u
 }
 
 template <>
-Controller::ResultOf::StageConfig_Impl<Controller::StageConfigResponse>::StageConfig_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Config config) {
+Controller::ResultOf::StageConfig_Impl<Controller::StageConfigResponse>::StageConfig_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Config config) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StageConfigRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -495,15 +495,15 @@ Controller::ResultOf::StageConfig_Impl<Controller::StageConfigResponse>::StageCo
 }
 
 Controller::ResultOf::StageConfig Controller::SyncClient::StageConfig(::llcpp::fuchsia::perfmon::cpu::Config config) {
-  return ResultOf::StageConfig(zx::unowned_channel(this->channel_), std::move(config));
+    return ResultOf::StageConfig(::zx::unowned_channel(this->channel_), std::move(config));
 }
 
-Controller::ResultOf::StageConfig Controller::Call::StageConfig(zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Config config) {
+Controller::ResultOf::StageConfig Controller::Call::StageConfig(::zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Config config) {
   return ResultOf::StageConfig(std::move(_client_end), std::move(config));
 }
 
 template <>
-Controller::UnownedResultOf::StageConfig_Impl<Controller::StageConfigResponse>::StageConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Config config, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::StageConfig_Impl<Controller::StageConfigResponse>::StageConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Config config, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < StageConfigRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<StageConfigResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -518,14 +518,14 @@ Controller::UnownedResultOf::StageConfig_Impl<Controller::StageConfigResponse>::
 }
 
 Controller::UnownedResultOf::StageConfig Controller::SyncClient::StageConfig(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Config config, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::StageConfig(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
+  return UnownedResultOf::StageConfig(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::StageConfig Controller::Call::StageConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Config config, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::StageConfig Controller::Call::StageConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Config config, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::StageConfig(std::move(_client_end), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::StageConfigResponse> Controller::InPlace::StageConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<StageConfigRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::StageConfigResponse> Controller::InPlace::StageConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StageConfigRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::StageConfigRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -542,7 +542,7 @@ Controller::UnownedResultOf::StageConfig Controller::Call::StageConfig(zx::unown
 }
 
 template <>
-Controller::ResultOf::GetConfig_Impl<Controller::GetConfigResponse>::GetConfig_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetConfig_Impl<Controller::GetConfigResponse>::GetConfig_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetConfigRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -555,15 +555,15 @@ Controller::ResultOf::GetConfig_Impl<Controller::GetConfigResponse>::GetConfig_I
 }
 
 Controller::ResultOf::GetConfig Controller::SyncClient::GetConfig() {
-  return ResultOf::GetConfig(zx::unowned_channel(this->channel_));
+    return ResultOf::GetConfig(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetConfig Controller::Call::GetConfig(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetConfig Controller::Call::GetConfig(::zx::unowned_channel _client_end) {
   return ResultOf::GetConfig(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetConfig_Impl<Controller::GetConfigResponse>::GetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetConfig_Impl<Controller::GetConfigResponse>::GetConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetConfigRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetConfigRequest::PrimarySize);
@@ -574,14 +574,14 @@ Controller::UnownedResultOf::GetConfig_Impl<Controller::GetConfigResponse>::GetC
 }
 
 Controller::UnownedResultOf::GetConfig Controller::SyncClient::GetConfig(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetConfig(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetConfig(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetConfig Controller::Call::GetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetConfig Controller::Call::GetConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetConfig(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetConfigResponse> Controller::InPlace::GetConfig(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetConfigResponse> Controller::InPlace::GetConfig(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetConfigRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -603,7 +603,7 @@ Controller::UnownedResultOf::GetConfig Controller::Call::GetConfig(zx::unowned_c
 }
 
 template <>
-Controller::ResultOf::GetBufferHandle_Impl<Controller::GetBufferHandleResponse>::GetBufferHandle_Impl(zx::unowned_channel _client_end, uint32_t descriptor) {
+Controller::ResultOf::GetBufferHandle_Impl<Controller::GetBufferHandleResponse>::GetBufferHandle_Impl(::zx::unowned_channel _client_end, uint32_t descriptor) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBufferHandleRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -618,15 +618,15 @@ Controller::ResultOf::GetBufferHandle_Impl<Controller::GetBufferHandleResponse>:
 }
 
 Controller::ResultOf::GetBufferHandle Controller::SyncClient::GetBufferHandle(uint32_t descriptor) {
-  return ResultOf::GetBufferHandle(zx::unowned_channel(this->channel_), std::move(descriptor));
+    return ResultOf::GetBufferHandle(::zx::unowned_channel(this->channel_), std::move(descriptor));
 }
 
-Controller::ResultOf::GetBufferHandle Controller::Call::GetBufferHandle(zx::unowned_channel _client_end, uint32_t descriptor) {
+Controller::ResultOf::GetBufferHandle Controller::Call::GetBufferHandle(::zx::unowned_channel _client_end, uint32_t descriptor) {
   return ResultOf::GetBufferHandle(std::move(_client_end), std::move(descriptor));
 }
 
 template <>
-Controller::UnownedResultOf::GetBufferHandle_Impl<Controller::GetBufferHandleResponse>::GetBufferHandle_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t descriptor, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetBufferHandle_Impl<Controller::GetBufferHandleResponse>::GetBufferHandle_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t descriptor, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetBufferHandleRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetBufferHandleResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -641,14 +641,14 @@ Controller::UnownedResultOf::GetBufferHandle_Impl<Controller::GetBufferHandleRes
 }
 
 Controller::UnownedResultOf::GetBufferHandle Controller::SyncClient::GetBufferHandle(::fidl::BytePart _request_buffer, uint32_t descriptor, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetBufferHandle(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(descriptor), std::move(_response_buffer));
+  return UnownedResultOf::GetBufferHandle(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(descriptor), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetBufferHandle Controller::Call::GetBufferHandle(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t descriptor, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetBufferHandle Controller::Call::GetBufferHandle(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t descriptor, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetBufferHandle(std::move(_client_end), std::move(_request_buffer), std::move(descriptor), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetBufferHandleResponse> Controller::InPlace::GetBufferHandle(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferHandleRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetBufferHandleResponse> Controller::InPlace::GetBufferHandle(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferHandleRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::GetBufferHandleRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -665,7 +665,7 @@ Controller::UnownedResultOf::GetBufferHandle Controller::Call::GetBufferHandle(z
 }
 
 template <>
-Controller::ResultOf::Start_Impl<Controller::StartResponse>::Start_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::Start_Impl<Controller::StartResponse>::Start_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -678,15 +678,15 @@ Controller::ResultOf::Start_Impl<Controller::StartResponse>::Start_Impl(zx::unow
 }
 
 Controller::ResultOf::Start Controller::SyncClient::Start() {
-  return ResultOf::Start(zx::unowned_channel(this->channel_));
+    return ResultOf::Start(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::Start Controller::Call::Start(zx::unowned_channel _client_end) {
+Controller::ResultOf::Start Controller::Call::Start(::zx::unowned_channel _client_end) {
   return ResultOf::Start(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::Start_Impl<Controller::StartResponse>::Start_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Start_Impl<Controller::StartResponse>::Start_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(StartRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, StartRequest::PrimarySize);
@@ -697,14 +697,14 @@ Controller::UnownedResultOf::Start_Impl<Controller::StartResponse>::Start_Impl(z
 }
 
 Controller::UnownedResultOf::Start Controller::SyncClient::Start(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Start(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Start(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::Start Controller::Call::Start(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Start Controller::Call::Start(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Start(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::StartResponse> Controller::InPlace::Start(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::StartResponse> Controller::InPlace::Start(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(StartRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -726,7 +726,7 @@ Controller::UnownedResultOf::Start Controller::Call::Start(zx::unowned_channel _
 }
 
 template <>
-Controller::ResultOf::Stop_Impl<Controller::StopResponse>::Stop_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::Stop_Impl<Controller::StopResponse>::Stop_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StopRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -739,14 +739,14 @@ Controller::ResultOf::Stop_Impl<Controller::StopResponse>::Stop_Impl(zx::unowned
 }
 
 Controller::ResultOf::Stop Controller::SyncClient::Stop() {
-  return ResultOf::Stop(zx::unowned_channel(this->channel_));
+    return ResultOf::Stop(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::Stop Controller::Call::Stop(zx::unowned_channel _client_end) {
+Controller::ResultOf::Stop Controller::Call::Stop(::zx::unowned_channel _client_end) {
   return ResultOf::Stop(std::move(_client_end));
 }
 
-::fidl::DecodeResult<Controller::StopResponse> Controller::InPlace::Stop(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::StopResponse> Controller::InPlace::Stop(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(StopRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

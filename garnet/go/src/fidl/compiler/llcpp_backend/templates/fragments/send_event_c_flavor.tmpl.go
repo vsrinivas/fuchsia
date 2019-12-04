@@ -34,10 +34,10 @@ zx_status_t {{ .LLProps.InterfaceName }}::{{ template "SendEventCFlavorMethodSig
   if (_linearize_result.status != ZX_OK) {
     return _linearize_result.status;
   }
-  return ::fidl::Write(zx::unowned_channel(_chan), std::move(_linearize_result.message));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_linearize_result.message));
   {{- else }}
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof({{ .Name }}Response));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<{{ .Name }}Response>(std::move(_response_bytes)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<{{ .Name }}Response>(std::move(_response_bytes)));
   {{- end }}
 }
 {{- end }}

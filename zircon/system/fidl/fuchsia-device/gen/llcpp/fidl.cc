@@ -79,7 +79,7 @@ extern "C" const fidl_type_t v1_fuchsia_device_NameProviderGetDeviceNameResponse
 
 }  // namespace
 template <>
-NameProvider::ResultOf::GetDeviceName_Impl<NameProvider::GetDeviceNameResponse>::GetDeviceName_Impl(zx::unowned_channel _client_end) {
+NameProvider::ResultOf::GetDeviceName_Impl<NameProvider::GetDeviceNameResponse>::GetDeviceName_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -92,15 +92,15 @@ NameProvider::ResultOf::GetDeviceName_Impl<NameProvider::GetDeviceNameResponse>:
 }
 
 NameProvider::ResultOf::GetDeviceName NameProvider::SyncClient::GetDeviceName() {
-  return ResultOf::GetDeviceName(zx::unowned_channel(this->channel_));
+    return ResultOf::GetDeviceName(::zx::unowned_channel(this->channel_));
 }
 
-NameProvider::ResultOf::GetDeviceName NameProvider::Call::GetDeviceName(zx::unowned_channel _client_end) {
+NameProvider::ResultOf::GetDeviceName NameProvider::Call::GetDeviceName(::zx::unowned_channel _client_end) {
   return ResultOf::GetDeviceName(std::move(_client_end));
 }
 
 template <>
-NameProvider::UnownedResultOf::GetDeviceName_Impl<NameProvider::GetDeviceNameResponse>::GetDeviceName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+NameProvider::UnownedResultOf::GetDeviceName_Impl<NameProvider::GetDeviceNameResponse>::GetDeviceName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDeviceNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetDeviceNameRequest::PrimarySize);
@@ -111,14 +111,14 @@ NameProvider::UnownedResultOf::GetDeviceName_Impl<NameProvider::GetDeviceNameRes
 }
 
 NameProvider::UnownedResultOf::GetDeviceName NameProvider::SyncClient::GetDeviceName(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetDeviceName(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetDeviceName(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-NameProvider::UnownedResultOf::GetDeviceName NameProvider::Call::GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+NameProvider::UnownedResultOf::GetDeviceName NameProvider::Call::GetDeviceName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDeviceName(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<NameProvider::GetDeviceNameResponse> NameProvider::InPlace::GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<NameProvider::GetDeviceNameResponse> NameProvider::InPlace::GetDeviceName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetDeviceNameRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -867,7 +867,7 @@ extern "C" const fidl_type_t v1_fuchsia_device_ControllerConfigureAutoSuspendRes
 
 }  // namespace
 template <>
-Controller::ResultOf::Bind_Impl<Controller::BindResponse>::Bind_Impl(zx::unowned_channel _client_end, ::fidl::StringView driver) {
+Controller::ResultOf::Bind_Impl<Controller::BindResponse>::Bind_Impl(::zx::unowned_channel _client_end, ::fidl::StringView driver) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -884,15 +884,15 @@ Controller::ResultOf::Bind_Impl<Controller::BindResponse>::Bind_Impl(zx::unowned
 }
 
 Controller::ResultOf::Bind Controller::SyncClient::Bind(::fidl::StringView driver) {
-  return ResultOf::Bind(zx::unowned_channel(this->channel_), std::move(driver));
+    return ResultOf::Bind(::zx::unowned_channel(this->channel_), std::move(driver));
 }
 
-Controller::ResultOf::Bind Controller::Call::Bind(zx::unowned_channel _client_end, ::fidl::StringView driver) {
+Controller::ResultOf::Bind Controller::Call::Bind(::zx::unowned_channel _client_end, ::fidl::StringView driver) {
   return ResultOf::Bind(std::move(_client_end), std::move(driver));
 }
 
 template <>
-Controller::UnownedResultOf::Bind_Impl<Controller::BindResponse>::Bind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Bind_Impl<Controller::BindResponse>::Bind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < BindRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<BindResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -910,14 +910,14 @@ Controller::UnownedResultOf::Bind_Impl<Controller::BindResponse>::Bind_Impl(zx::
 }
 
 Controller::UnownedResultOf::Bind Controller::SyncClient::Bind(::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Bind(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver), std::move(_response_buffer));
+  return UnownedResultOf::Bind(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::Bind Controller::Call::Bind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Bind Controller::Call::Bind(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Bind(std::move(_client_end), std::move(_request_buffer), std::move(driver), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::BindResponse> Controller::InPlace::Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::BindResponse> Controller::InPlace::Bind(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::BindRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -934,7 +934,7 @@ Controller::UnownedResultOf::Bind Controller::Call::Bind(zx::unowned_channel _cl
 }
 
 template <>
-Controller::ResultOf::Rebind_Impl<Controller::RebindResponse>::Rebind_Impl(zx::unowned_channel _client_end, ::fidl::StringView driver) {
+Controller::ResultOf::Rebind_Impl<Controller::RebindResponse>::Rebind_Impl(::zx::unowned_channel _client_end, ::fidl::StringView driver) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RebindRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -951,15 +951,15 @@ Controller::ResultOf::Rebind_Impl<Controller::RebindResponse>::Rebind_Impl(zx::u
 }
 
 Controller::ResultOf::Rebind Controller::SyncClient::Rebind(::fidl::StringView driver) {
-  return ResultOf::Rebind(zx::unowned_channel(this->channel_), std::move(driver));
+    return ResultOf::Rebind(::zx::unowned_channel(this->channel_), std::move(driver));
 }
 
-Controller::ResultOf::Rebind Controller::Call::Rebind(zx::unowned_channel _client_end, ::fidl::StringView driver) {
+Controller::ResultOf::Rebind Controller::Call::Rebind(::zx::unowned_channel _client_end, ::fidl::StringView driver) {
   return ResultOf::Rebind(std::move(_client_end), std::move(driver));
 }
 
 template <>
-Controller::UnownedResultOf::Rebind_Impl<Controller::RebindResponse>::Rebind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Rebind_Impl<Controller::RebindResponse>::Rebind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < RebindRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<RebindResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -977,14 +977,14 @@ Controller::UnownedResultOf::Rebind_Impl<Controller::RebindResponse>::Rebind_Imp
 }
 
 Controller::UnownedResultOf::Rebind Controller::SyncClient::Rebind(::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Rebind(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver), std::move(_response_buffer));
+  return UnownedResultOf::Rebind(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(driver), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::Rebind Controller::Call::Rebind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Rebind Controller::Call::Rebind(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Rebind(std::move(_client_end), std::move(_request_buffer), std::move(driver), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::RebindResponse> Controller::InPlace::Rebind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RebindRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::RebindResponse> Controller::InPlace::Rebind(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RebindRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::RebindRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1001,7 +1001,7 @@ Controller::UnownedResultOf::Rebind Controller::Call::Rebind(zx::unowned_channel
 }
 
 template <>
-Controller::ResultOf::ScheduleUnbind_Impl<Controller::ScheduleUnbindResponse>::ScheduleUnbind_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::ScheduleUnbind_Impl<Controller::ScheduleUnbindResponse>::ScheduleUnbind_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleUnbindRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1014,15 +1014,15 @@ Controller::ResultOf::ScheduleUnbind_Impl<Controller::ScheduleUnbindResponse>::S
 }
 
 Controller::ResultOf::ScheduleUnbind Controller::SyncClient::ScheduleUnbind() {
-  return ResultOf::ScheduleUnbind(zx::unowned_channel(this->channel_));
+    return ResultOf::ScheduleUnbind(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::ScheduleUnbind Controller::Call::ScheduleUnbind(zx::unowned_channel _client_end) {
+Controller::ResultOf::ScheduleUnbind Controller::Call::ScheduleUnbind(::zx::unowned_channel _client_end) {
   return ResultOf::ScheduleUnbind(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::ScheduleUnbind_Impl<Controller::ScheduleUnbindResponse>::ScheduleUnbind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ScheduleUnbind_Impl<Controller::ScheduleUnbindResponse>::ScheduleUnbind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ScheduleUnbindRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, ScheduleUnbindRequest::PrimarySize);
@@ -1033,14 +1033,14 @@ Controller::UnownedResultOf::ScheduleUnbind_Impl<Controller::ScheduleUnbindRespo
 }
 
 Controller::UnownedResultOf::ScheduleUnbind Controller::SyncClient::ScheduleUnbind(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ScheduleUnbind(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::ScheduleUnbind(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::ScheduleUnbind Controller::Call::ScheduleUnbind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ScheduleUnbind Controller::Call::ScheduleUnbind(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ScheduleUnbind(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::ScheduleUnbindResponse> Controller::InPlace::ScheduleUnbind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::ScheduleUnbindResponse> Controller::InPlace::ScheduleUnbind(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(ScheduleUnbindRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1062,7 +1062,7 @@ Controller::UnownedResultOf::ScheduleUnbind Controller::Call::ScheduleUnbind(zx:
 }
 
 template <>
-Controller::ResultOf::GetDriverName_Impl<Controller::GetDriverNameResponse>::GetDriverName_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetDriverName_Impl<Controller::GetDriverNameResponse>::GetDriverName_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1075,15 +1075,15 @@ Controller::ResultOf::GetDriverName_Impl<Controller::GetDriverNameResponse>::Get
 }
 
 Controller::ResultOf::GetDriverName Controller::SyncClient::GetDriverName() {
-  return ResultOf::GetDriverName(zx::unowned_channel(this->channel_));
+    return ResultOf::GetDriverName(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetDriverName Controller::Call::GetDriverName(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetDriverName Controller::Call::GetDriverName(::zx::unowned_channel _client_end) {
   return ResultOf::GetDriverName(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetDriverName_Impl<Controller::GetDriverNameResponse>::GetDriverName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetDriverName_Impl<Controller::GetDriverNameResponse>::GetDriverName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDriverNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetDriverNameRequest::PrimarySize);
@@ -1094,14 +1094,14 @@ Controller::UnownedResultOf::GetDriverName_Impl<Controller::GetDriverNameRespons
 }
 
 Controller::UnownedResultOf::GetDriverName Controller::SyncClient::GetDriverName(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetDriverName(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetDriverName(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetDriverName Controller::Call::GetDriverName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetDriverName Controller::Call::GetDriverName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDriverName(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetDriverNameResponse> Controller::InPlace::GetDriverName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetDriverNameResponse> Controller::InPlace::GetDriverName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetDriverNameRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1123,7 +1123,7 @@ Controller::UnownedResultOf::GetDriverName Controller::Call::GetDriverName(zx::u
 }
 
 template <>
-Controller::ResultOf::GetDeviceName_Impl<Controller::GetDeviceNameResponse>::GetDeviceName_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetDeviceName_Impl<Controller::GetDeviceNameResponse>::GetDeviceName_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1136,15 +1136,15 @@ Controller::ResultOf::GetDeviceName_Impl<Controller::GetDeviceNameResponse>::Get
 }
 
 Controller::ResultOf::GetDeviceName Controller::SyncClient::GetDeviceName() {
-  return ResultOf::GetDeviceName(zx::unowned_channel(this->channel_));
+    return ResultOf::GetDeviceName(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetDeviceName Controller::Call::GetDeviceName(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetDeviceName Controller::Call::GetDeviceName(::zx::unowned_channel _client_end) {
   return ResultOf::GetDeviceName(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetDeviceName_Impl<Controller::GetDeviceNameResponse>::GetDeviceName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetDeviceName_Impl<Controller::GetDeviceNameResponse>::GetDeviceName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDeviceNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetDeviceNameRequest::PrimarySize);
@@ -1155,14 +1155,14 @@ Controller::UnownedResultOf::GetDeviceName_Impl<Controller::GetDeviceNameRespons
 }
 
 Controller::UnownedResultOf::GetDeviceName Controller::SyncClient::GetDeviceName(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetDeviceName(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetDeviceName(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetDeviceName Controller::Call::GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetDeviceName Controller::Call::GetDeviceName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDeviceName(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetDeviceNameResponse> Controller::InPlace::GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetDeviceNameResponse> Controller::InPlace::GetDeviceName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetDeviceNameRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1184,7 +1184,7 @@ Controller::UnownedResultOf::GetDeviceName Controller::Call::GetDeviceName(zx::u
 }
 
 template <>
-Controller::ResultOf::GetTopologicalPath_Impl<Controller::GetTopologicalPathResponse>::GetTopologicalPath_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetTopologicalPath_Impl<Controller::GetTopologicalPathResponse>::GetTopologicalPath_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTopologicalPathRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1197,15 +1197,15 @@ Controller::ResultOf::GetTopologicalPath_Impl<Controller::GetTopologicalPathResp
 }
 
 Controller::ResultOf::GetTopologicalPath Controller::SyncClient::GetTopologicalPath() {
-  return ResultOf::GetTopologicalPath(zx::unowned_channel(this->channel_));
+    return ResultOf::GetTopologicalPath(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetTopologicalPath Controller::Call::GetTopologicalPath(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetTopologicalPath Controller::Call::GetTopologicalPath(::zx::unowned_channel _client_end) {
   return ResultOf::GetTopologicalPath(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetTopologicalPath_Impl<Controller::GetTopologicalPathResponse>::GetTopologicalPath_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetTopologicalPath_Impl<Controller::GetTopologicalPathResponse>::GetTopologicalPath_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetTopologicalPathRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetTopologicalPathRequest::PrimarySize);
@@ -1216,14 +1216,14 @@ Controller::UnownedResultOf::GetTopologicalPath_Impl<Controller::GetTopologicalP
 }
 
 Controller::UnownedResultOf::GetTopologicalPath Controller::SyncClient::GetTopologicalPath(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetTopologicalPath(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetTopologicalPath(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetTopologicalPath Controller::Call::GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetTopologicalPath Controller::Call::GetTopologicalPath(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetTopologicalPath(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetTopologicalPathResponse> Controller::InPlace::GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetTopologicalPathResponse> Controller::InPlace::GetTopologicalPath(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetTopologicalPathRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1245,7 +1245,7 @@ Controller::UnownedResultOf::GetTopologicalPath Controller::Call::GetTopological
 }
 
 template <>
-Controller::ResultOf::GetEventHandle_Impl<Controller::GetEventHandleResponse>::GetEventHandle_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetEventHandle_Impl<Controller::GetEventHandleResponse>::GetEventHandle_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetEventHandleRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1258,15 +1258,15 @@ Controller::ResultOf::GetEventHandle_Impl<Controller::GetEventHandleResponse>::G
 }
 
 Controller::ResultOf::GetEventHandle Controller::SyncClient::GetEventHandle() {
-  return ResultOf::GetEventHandle(zx::unowned_channel(this->channel_));
+    return ResultOf::GetEventHandle(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetEventHandle Controller::Call::GetEventHandle(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetEventHandle Controller::Call::GetEventHandle(::zx::unowned_channel _client_end) {
   return ResultOf::GetEventHandle(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetEventHandle_Impl<Controller::GetEventHandleResponse>::GetEventHandle_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetEventHandle_Impl<Controller::GetEventHandleResponse>::GetEventHandle_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetEventHandleRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetEventHandleRequest::PrimarySize);
@@ -1277,14 +1277,14 @@ Controller::UnownedResultOf::GetEventHandle_Impl<Controller::GetEventHandleRespo
 }
 
 Controller::UnownedResultOf::GetEventHandle Controller::SyncClient::GetEventHandle(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetEventHandle(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetEventHandle(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetEventHandle Controller::Call::GetEventHandle(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetEventHandle Controller::Call::GetEventHandle(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetEventHandle(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetEventHandleResponse> Controller::InPlace::GetEventHandle(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetEventHandleResponse> Controller::InPlace::GetEventHandle(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetEventHandleRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1306,7 +1306,7 @@ Controller::UnownedResultOf::GetEventHandle Controller::Call::GetEventHandle(zx:
 }
 
 template <>
-Controller::ResultOf::GetDriverLogFlags_Impl<Controller::GetDriverLogFlagsResponse>::GetDriverLogFlags_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetDriverLogFlags_Impl<Controller::GetDriverLogFlagsResponse>::GetDriverLogFlags_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDriverLogFlagsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1319,15 +1319,15 @@ Controller::ResultOf::GetDriverLogFlags_Impl<Controller::GetDriverLogFlagsRespon
 }
 
 Controller::ResultOf::GetDriverLogFlags Controller::SyncClient::GetDriverLogFlags() {
-  return ResultOf::GetDriverLogFlags(zx::unowned_channel(this->channel_));
+    return ResultOf::GetDriverLogFlags(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetDriverLogFlags Controller::Call::GetDriverLogFlags(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetDriverLogFlags Controller::Call::GetDriverLogFlags(::zx::unowned_channel _client_end) {
   return ResultOf::GetDriverLogFlags(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetDriverLogFlags_Impl<Controller::GetDriverLogFlagsResponse>::GetDriverLogFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetDriverLogFlags_Impl<Controller::GetDriverLogFlagsResponse>::GetDriverLogFlags_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDriverLogFlagsRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetDriverLogFlagsRequest::PrimarySize);
@@ -1338,14 +1338,14 @@ Controller::UnownedResultOf::GetDriverLogFlags_Impl<Controller::GetDriverLogFlag
 }
 
 Controller::UnownedResultOf::GetDriverLogFlags Controller::SyncClient::GetDriverLogFlags(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetDriverLogFlags(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetDriverLogFlags(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetDriverLogFlags Controller::Call::GetDriverLogFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetDriverLogFlags Controller::Call::GetDriverLogFlags(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDriverLogFlags(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetDriverLogFlagsResponse> Controller::InPlace::GetDriverLogFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetDriverLogFlagsResponse> Controller::InPlace::GetDriverLogFlags(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetDriverLogFlagsRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1367,7 +1367,7 @@ Controller::UnownedResultOf::GetDriverLogFlags Controller::Call::GetDriverLogFla
 }
 
 template <>
-Controller::ResultOf::SetDriverLogFlags_Impl<Controller::SetDriverLogFlagsResponse>::SetDriverLogFlags_Impl(zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags) {
+Controller::ResultOf::SetDriverLogFlags_Impl<Controller::SetDriverLogFlagsResponse>::SetDriverLogFlags_Impl(::zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDriverLogFlagsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1383,15 +1383,15 @@ Controller::ResultOf::SetDriverLogFlags_Impl<Controller::SetDriverLogFlagsRespon
 }
 
 Controller::ResultOf::SetDriverLogFlags Controller::SyncClient::SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags) {
-  return ResultOf::SetDriverLogFlags(zx::unowned_channel(this->channel_), std::move(clear_flags), std::move(set_flags));
+    return ResultOf::SetDriverLogFlags(::zx::unowned_channel(this->channel_), std::move(clear_flags), std::move(set_flags));
 }
 
-Controller::ResultOf::SetDriverLogFlags Controller::Call::SetDriverLogFlags(zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags) {
+Controller::ResultOf::SetDriverLogFlags Controller::Call::SetDriverLogFlags(::zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags) {
   return ResultOf::SetDriverLogFlags(std::move(_client_end), std::move(clear_flags), std::move(set_flags));
 }
 
 template <>
-Controller::UnownedResultOf::SetDriverLogFlags_Impl<Controller::SetDriverLogFlagsResponse>::SetDriverLogFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::SetDriverLogFlags_Impl<Controller::SetDriverLogFlagsResponse>::SetDriverLogFlags_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetDriverLogFlagsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetDriverLogFlagsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1407,14 +1407,14 @@ Controller::UnownedResultOf::SetDriverLogFlags_Impl<Controller::SetDriverLogFlag
 }
 
 Controller::UnownedResultOf::SetDriverLogFlags Controller::SyncClient::SetDriverLogFlags(::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetDriverLogFlags(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(clear_flags), std::move(set_flags), std::move(_response_buffer));
+  return UnownedResultOf::SetDriverLogFlags(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(clear_flags), std::move(set_flags), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::SetDriverLogFlags Controller::Call::SetDriverLogFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::SetDriverLogFlags Controller::Call::SetDriverLogFlags(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetDriverLogFlags(std::move(_client_end), std::move(_request_buffer), std::move(clear_flags), std::move(set_flags), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::SetDriverLogFlagsResponse> Controller::InPlace::SetDriverLogFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDriverLogFlagsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::SetDriverLogFlagsResponse> Controller::InPlace::SetDriverLogFlags(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDriverLogFlagsRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::SetDriverLogFlagsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1431,7 +1431,7 @@ Controller::UnownedResultOf::SetDriverLogFlags Controller::Call::SetDriverLogFla
 }
 
 template <>
-Controller::ResultOf::DebugSuspend_Impl<Controller::DebugSuspendResponse>::DebugSuspend_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::DebugSuspend_Impl<Controller::DebugSuspendResponse>::DebugSuspend_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugSuspendRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1444,15 +1444,15 @@ Controller::ResultOf::DebugSuspend_Impl<Controller::DebugSuspendResponse>::Debug
 }
 
 Controller::ResultOf::DebugSuspend Controller::SyncClient::DebugSuspend() {
-  return ResultOf::DebugSuspend(zx::unowned_channel(this->channel_));
+    return ResultOf::DebugSuspend(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::DebugSuspend Controller::Call::DebugSuspend(zx::unowned_channel _client_end) {
+Controller::ResultOf::DebugSuspend Controller::Call::DebugSuspend(::zx::unowned_channel _client_end) {
   return ResultOf::DebugSuspend(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::DebugSuspend_Impl<Controller::DebugSuspendResponse>::DebugSuspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::DebugSuspend_Impl<Controller::DebugSuspendResponse>::DebugSuspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DebugSuspendRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, DebugSuspendRequest::PrimarySize);
@@ -1463,14 +1463,14 @@ Controller::UnownedResultOf::DebugSuspend_Impl<Controller::DebugSuspendResponse>
 }
 
 Controller::UnownedResultOf::DebugSuspend Controller::SyncClient::DebugSuspend(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::DebugSuspend(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::DebugSuspend(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::DebugSuspend Controller::Call::DebugSuspend(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::DebugSuspend Controller::Call::DebugSuspend(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::DebugSuspend(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::DebugSuspendResponse> Controller::InPlace::DebugSuspend(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::DebugSuspendResponse> Controller::InPlace::DebugSuspend(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(DebugSuspendRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1492,7 +1492,7 @@ Controller::UnownedResultOf::DebugSuspend Controller::Call::DebugSuspend(zx::uno
 }
 
 template <>
-Controller::ResultOf::DebugResume_Impl<Controller::DebugResumeResponse>::DebugResume_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::DebugResume_Impl<Controller::DebugResumeResponse>::DebugResume_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugResumeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1505,15 +1505,15 @@ Controller::ResultOf::DebugResume_Impl<Controller::DebugResumeResponse>::DebugRe
 }
 
 Controller::ResultOf::DebugResume Controller::SyncClient::DebugResume() {
-  return ResultOf::DebugResume(zx::unowned_channel(this->channel_));
+    return ResultOf::DebugResume(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::DebugResume Controller::Call::DebugResume(zx::unowned_channel _client_end) {
+Controller::ResultOf::DebugResume Controller::Call::DebugResume(::zx::unowned_channel _client_end) {
   return ResultOf::DebugResume(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::DebugResume_Impl<Controller::DebugResumeResponse>::DebugResume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::DebugResume_Impl<Controller::DebugResumeResponse>::DebugResume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DebugResumeRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, DebugResumeRequest::PrimarySize);
@@ -1524,14 +1524,14 @@ Controller::UnownedResultOf::DebugResume_Impl<Controller::DebugResumeResponse>::
 }
 
 Controller::UnownedResultOf::DebugResume Controller::SyncClient::DebugResume(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::DebugResume(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::DebugResume(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::DebugResume Controller::Call::DebugResume(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::DebugResume Controller::Call::DebugResume(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::DebugResume(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::DebugResumeResponse> Controller::InPlace::DebugResume(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::DebugResumeResponse> Controller::InPlace::DebugResume(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(DebugResumeRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1553,7 +1553,7 @@ Controller::UnownedResultOf::DebugResume Controller::Call::DebugResume(zx::unown
 }
 
 template <>
-Controller::ResultOf::RunCompatibilityTests_Impl<Controller::RunCompatibilityTestsResponse>::RunCompatibilityTests_Impl(zx::unowned_channel _client_end, int64_t hook_wait_time) {
+Controller::ResultOf::RunCompatibilityTests_Impl<Controller::RunCompatibilityTestsResponse>::RunCompatibilityTests_Impl(::zx::unowned_channel _client_end, int64_t hook_wait_time) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1568,15 +1568,15 @@ Controller::ResultOf::RunCompatibilityTests_Impl<Controller::RunCompatibilityTes
 }
 
 Controller::ResultOf::RunCompatibilityTests Controller::SyncClient::RunCompatibilityTests(int64_t hook_wait_time) {
-  return ResultOf::RunCompatibilityTests(zx::unowned_channel(this->channel_), std::move(hook_wait_time));
+    return ResultOf::RunCompatibilityTests(::zx::unowned_channel(this->channel_), std::move(hook_wait_time));
 }
 
-Controller::ResultOf::RunCompatibilityTests Controller::Call::RunCompatibilityTests(zx::unowned_channel _client_end, int64_t hook_wait_time) {
+Controller::ResultOf::RunCompatibilityTests Controller::Call::RunCompatibilityTests(::zx::unowned_channel _client_end, int64_t hook_wait_time) {
   return ResultOf::RunCompatibilityTests(std::move(_client_end), std::move(hook_wait_time));
 }
 
 template <>
-Controller::UnownedResultOf::RunCompatibilityTests_Impl<Controller::RunCompatibilityTestsResponse>::RunCompatibilityTests_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::RunCompatibilityTests_Impl<Controller::RunCompatibilityTestsResponse>::RunCompatibilityTests_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < RunCompatibilityTestsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<RunCompatibilityTestsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1591,14 +1591,14 @@ Controller::UnownedResultOf::RunCompatibilityTests_Impl<Controller::RunCompatibi
 }
 
 Controller::UnownedResultOf::RunCompatibilityTests Controller::SyncClient::RunCompatibilityTests(::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RunCompatibilityTests(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(hook_wait_time), std::move(_response_buffer));
+  return UnownedResultOf::RunCompatibilityTests(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(hook_wait_time), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::RunCompatibilityTests Controller::Call::RunCompatibilityTests(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::RunCompatibilityTests Controller::Call::RunCompatibilityTests(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::RunCompatibilityTests(std::move(_client_end), std::move(_request_buffer), std::move(hook_wait_time), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::RunCompatibilityTestsResponse> Controller::InPlace::RunCompatibilityTests(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RunCompatibilityTestsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::RunCompatibilityTestsResponse> Controller::InPlace::RunCompatibilityTests(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RunCompatibilityTestsRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::RunCompatibilityTestsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1615,7 +1615,7 @@ Controller::UnownedResultOf::RunCompatibilityTests Controller::Call::RunCompatib
 }
 
 template <>
-Controller::ResultOf::GetDevicePowerCaps_Impl<Controller::GetDevicePowerCapsResponse>::GetDevicePowerCaps_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetDevicePowerCaps_Impl<Controller::GetDevicePowerCapsResponse>::GetDevicePowerCaps_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDevicePowerCapsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1628,15 +1628,15 @@ Controller::ResultOf::GetDevicePowerCaps_Impl<Controller::GetDevicePowerCapsResp
 }
 
 Controller::ResultOf::GetDevicePowerCaps Controller::SyncClient::GetDevicePowerCaps() {
-  return ResultOf::GetDevicePowerCaps(zx::unowned_channel(this->channel_));
+    return ResultOf::GetDevicePowerCaps(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetDevicePowerCaps Controller::Call::GetDevicePowerCaps(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetDevicePowerCaps Controller::Call::GetDevicePowerCaps(::zx::unowned_channel _client_end) {
   return ResultOf::GetDevicePowerCaps(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetDevicePowerCaps_Impl<Controller::GetDevicePowerCapsResponse>::GetDevicePowerCaps_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetDevicePowerCaps_Impl<Controller::GetDevicePowerCapsResponse>::GetDevicePowerCaps_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDevicePowerCapsRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetDevicePowerCapsRequest::PrimarySize);
@@ -1647,14 +1647,14 @@ Controller::UnownedResultOf::GetDevicePowerCaps_Impl<Controller::GetDevicePowerC
 }
 
 Controller::UnownedResultOf::GetDevicePowerCaps Controller::SyncClient::GetDevicePowerCaps(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetDevicePowerCaps(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetDevicePowerCaps(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetDevicePowerCaps Controller::Call::GetDevicePowerCaps(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetDevicePowerCaps Controller::Call::GetDevicePowerCaps(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDevicePowerCaps(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetDevicePowerCapsResponse> Controller::InPlace::GetDevicePowerCaps(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetDevicePowerCapsResponse> Controller::InPlace::GetDevicePowerCaps(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetDevicePowerCapsRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1676,7 +1676,7 @@ Controller::UnownedResultOf::GetDevicePowerCaps Controller::Call::GetDevicePower
 }
 
 template <>
-Controller::ResultOf::GetDevicePerformanceStates_Impl<Controller::GetDevicePerformanceStatesResponse>::GetDevicePerformanceStates_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetDevicePerformanceStates_Impl<Controller::GetDevicePerformanceStatesResponse>::GetDevicePerformanceStates_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDevicePerformanceStatesRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1689,15 +1689,15 @@ Controller::ResultOf::GetDevicePerformanceStates_Impl<Controller::GetDevicePerfo
 }
 
 Controller::ResultOf::GetDevicePerformanceStates Controller::SyncClient::GetDevicePerformanceStates() {
-  return ResultOf::GetDevicePerformanceStates(zx::unowned_channel(this->channel_));
+    return ResultOf::GetDevicePerformanceStates(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetDevicePerformanceStates Controller::Call::GetDevicePerformanceStates(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetDevicePerformanceStates Controller::Call::GetDevicePerformanceStates(::zx::unowned_channel _client_end) {
   return ResultOf::GetDevicePerformanceStates(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetDevicePerformanceStates_Impl<Controller::GetDevicePerformanceStatesResponse>::GetDevicePerformanceStates_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetDevicePerformanceStates_Impl<Controller::GetDevicePerformanceStatesResponse>::GetDevicePerformanceStates_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDevicePerformanceStatesRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetDevicePerformanceStatesRequest::PrimarySize);
@@ -1708,14 +1708,14 @@ Controller::UnownedResultOf::GetDevicePerformanceStates_Impl<Controller::GetDevi
 }
 
 Controller::UnownedResultOf::GetDevicePerformanceStates Controller::SyncClient::GetDevicePerformanceStates(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetDevicePerformanceStates(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetDevicePerformanceStates(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetDevicePerformanceStates Controller::Call::GetDevicePerformanceStates(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetDevicePerformanceStates Controller::Call::GetDevicePerformanceStates(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDevicePerformanceStates(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetDevicePerformanceStatesResponse> Controller::InPlace::GetDevicePerformanceStates(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetDevicePerformanceStatesResponse> Controller::InPlace::GetDevicePerformanceStates(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetDevicePerformanceStatesRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1737,7 +1737,7 @@ Controller::UnownedResultOf::GetDevicePerformanceStates Controller::Call::GetDev
 }
 
 template <>
-Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
+Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(::zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdatePowerStateMappingRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1752,15 +1752,15 @@ Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateM
 }
 
 Controller::ResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
-  return ResultOf::UpdatePowerStateMapping(zx::unowned_channel(this->channel_), std::move(mapping));
+    return ResultOf::UpdatePowerStateMapping(::zx::unowned_channel(this->channel_), std::move(mapping));
 }
 
-Controller::ResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
+Controller::ResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(::zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping) {
   return ResultOf::UpdatePowerStateMapping(std::move(_client_end), std::move(mapping));
 }
 
 template <>
-Controller::UnownedResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < UpdatePowerStateMappingRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<UpdatePowerStateMappingResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1775,14 +1775,14 @@ Controller::UnownedResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowe
 }
 
 Controller::UnownedResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::UpdatePowerStateMapping(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(mapping), std::move(_response_buffer));
+  return UnownedResultOf::UpdatePowerStateMapping(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(mapping), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::UpdatePowerStateMapping(std::move(_client_end), std::move(_request_buffer), std::move(mapping), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::UpdatePowerStateMappingResponse> Controller::InPlace::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UpdatePowerStateMappingRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::UpdatePowerStateMappingResponse> Controller::InPlace::UpdatePowerStateMapping(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UpdatePowerStateMappingRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::UpdatePowerStateMappingRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1799,7 +1799,7 @@ Controller::UnownedResultOf::UpdatePowerStateMapping Controller::Call::UpdatePow
 }
 
 template <>
-Controller::ResultOf::GetPowerStateMapping_Impl<Controller::GetPowerStateMappingResponse>::GetPowerStateMapping_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetPowerStateMapping_Impl<Controller::GetPowerStateMappingResponse>::GetPowerStateMapping_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPowerStateMappingRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1812,15 +1812,15 @@ Controller::ResultOf::GetPowerStateMapping_Impl<Controller::GetPowerStateMapping
 }
 
 Controller::ResultOf::GetPowerStateMapping Controller::SyncClient::GetPowerStateMapping() {
-  return ResultOf::GetPowerStateMapping(zx::unowned_channel(this->channel_));
+    return ResultOf::GetPowerStateMapping(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetPowerStateMapping Controller::Call::GetPowerStateMapping(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetPowerStateMapping Controller::Call::GetPowerStateMapping(::zx::unowned_channel _client_end) {
   return ResultOf::GetPowerStateMapping(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetPowerStateMapping_Impl<Controller::GetPowerStateMappingResponse>::GetPowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetPowerStateMapping_Impl<Controller::GetPowerStateMappingResponse>::GetPowerStateMapping_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPowerStateMappingRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetPowerStateMappingRequest::PrimarySize);
@@ -1831,14 +1831,14 @@ Controller::UnownedResultOf::GetPowerStateMapping_Impl<Controller::GetPowerState
 }
 
 Controller::UnownedResultOf::GetPowerStateMapping Controller::SyncClient::GetPowerStateMapping(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetPowerStateMapping(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetPowerStateMapping(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetPowerStateMapping Controller::Call::GetPowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetPowerStateMapping Controller::Call::GetPowerStateMapping(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetPowerStateMapping(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetPowerStateMappingResponse> Controller::InPlace::GetPowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetPowerStateMappingResponse> Controller::InPlace::GetPowerStateMapping(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetPowerStateMappingRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -1860,7 +1860,7 @@ Controller::UnownedResultOf::GetPowerStateMapping Controller::Call::GetPowerStat
 }
 
 template <>
-Controller::ResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
+Controller::ResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1875,15 +1875,15 @@ Controller::ResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(zx
 }
 
 Controller::ResultOf::Suspend Controller::SyncClient::Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state) {
-  return ResultOf::Suspend(zx::unowned_channel(this->channel_), std::move(requested_state));
+    return ResultOf::Suspend(::zx::unowned_channel(this->channel_), std::move(requested_state));
 }
 
-Controller::ResultOf::Suspend Controller::Call::Suspend(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
+Controller::ResultOf::Suspend Controller::Call::Suspend(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
   return ResultOf::Suspend(std::move(_client_end), std::move(requested_state));
 }
 
 template <>
-Controller::UnownedResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SuspendRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SuspendResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1898,14 +1898,14 @@ Controller::UnownedResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_
 }
 
 Controller::UnownedResultOf::Suspend Controller::SyncClient::Suspend(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Suspend(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
+  return UnownedResultOf::Suspend(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::Suspend Controller::Call::Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Suspend Controller::Call::Suspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Suspend(std::move(_client_end), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::SuspendResponse> Controller::InPlace::Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::SuspendResponse> Controller::InPlace::Suspend(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::SuspendRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1922,7 +1922,7 @@ Controller::UnownedResultOf::Suspend Controller::Call::Suspend(zx::unowned_chann
 }
 
 template <>
-Controller::ResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
+Controller::ResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ResumeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1937,15 +1937,15 @@ Controller::ResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Impl(zx::u
 }
 
 Controller::ResultOf::Resume Controller::SyncClient::Resume(::llcpp::fuchsia::device::DevicePowerState requested_state) {
-  return ResultOf::Resume(zx::unowned_channel(this->channel_), std::move(requested_state));
+    return ResultOf::Resume(::zx::unowned_channel(this->channel_), std::move(requested_state));
 }
 
-Controller::ResultOf::Resume Controller::Call::Resume(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
+Controller::ResultOf::Resume Controller::Call::Resume(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state) {
   return ResultOf::Resume(std::move(_client_end), std::move(requested_state));
 }
 
 template <>
-Controller::UnownedResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ResumeRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ResumeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1960,14 +1960,14 @@ Controller::UnownedResultOf::Resume_Impl<Controller::ResumeResponse>::Resume_Imp
 }
 
 Controller::UnownedResultOf::Resume Controller::SyncClient::Resume(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Resume(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
+  return UnownedResultOf::Resume(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::Resume Controller::Call::Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::Resume Controller::Call::Resume(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Resume(std::move(_client_end), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::ResumeResponse> Controller::InPlace::Resume(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::ResumeResponse> Controller::InPlace::Resume(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::ResumeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1984,7 +1984,7 @@ Controller::UnownedResultOf::Resume Controller::Call::Resume(zx::unowned_channel
 }
 
 template <>
-Controller::ResultOf::SetPerformanceState_Impl<Controller::SetPerformanceStateResponse>::SetPerformanceState_Impl(zx::unowned_channel _client_end, uint32_t requested_state) {
+Controller::ResultOf::SetPerformanceState_Impl<Controller::SetPerformanceStateResponse>::SetPerformanceState_Impl(::zx::unowned_channel _client_end, uint32_t requested_state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetPerformanceStateRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1999,15 +1999,15 @@ Controller::ResultOf::SetPerformanceState_Impl<Controller::SetPerformanceStateRe
 }
 
 Controller::ResultOf::SetPerformanceState Controller::SyncClient::SetPerformanceState(uint32_t requested_state) {
-  return ResultOf::SetPerformanceState(zx::unowned_channel(this->channel_), std::move(requested_state));
+    return ResultOf::SetPerformanceState(::zx::unowned_channel(this->channel_), std::move(requested_state));
 }
 
-Controller::ResultOf::SetPerformanceState Controller::Call::SetPerformanceState(zx::unowned_channel _client_end, uint32_t requested_state) {
+Controller::ResultOf::SetPerformanceState Controller::Call::SetPerformanceState(::zx::unowned_channel _client_end, uint32_t requested_state) {
   return ResultOf::SetPerformanceState(std::move(_client_end), std::move(requested_state));
 }
 
 template <>
-Controller::UnownedResultOf::SetPerformanceState_Impl<Controller::SetPerformanceStateResponse>::SetPerformanceState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::SetPerformanceState_Impl<Controller::SetPerformanceStateResponse>::SetPerformanceState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetPerformanceStateRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetPerformanceStateResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2022,14 +2022,14 @@ Controller::UnownedResultOf::SetPerformanceState_Impl<Controller::SetPerformance
 }
 
 Controller::UnownedResultOf::SetPerformanceState Controller::SyncClient::SetPerformanceState(::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetPerformanceState(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
+  return UnownedResultOf::SetPerformanceState(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::SetPerformanceState Controller::Call::SetPerformanceState(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::SetPerformanceState Controller::Call::SetPerformanceState(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetPerformanceState(std::move(_client_end), std::move(_request_buffer), std::move(requested_state), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::SetPerformanceStateResponse> Controller::InPlace::SetPerformanceState(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetPerformanceStateRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::SetPerformanceStateResponse> Controller::InPlace::SetPerformanceState(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetPerformanceStateRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::SetPerformanceStateRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2046,7 +2046,7 @@ Controller::UnownedResultOf::SetPerformanceState Controller::Call::SetPerformanc
 }
 
 template <>
-Controller::ResultOf::ConfigureAutoSuspend_Impl<Controller::ConfigureAutoSuspendResponse>::ConfigureAutoSuspend_Impl(zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state) {
+Controller::ResultOf::ConfigureAutoSuspend_Impl<Controller::ConfigureAutoSuspendResponse>::ConfigureAutoSuspend_Impl(::zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConfigureAutoSuspendRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2062,15 +2062,15 @@ Controller::ResultOf::ConfigureAutoSuspend_Impl<Controller::ConfigureAutoSuspend
 }
 
 Controller::ResultOf::ConfigureAutoSuspend Controller::SyncClient::ConfigureAutoSuspend(bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state) {
-  return ResultOf::ConfigureAutoSuspend(zx::unowned_channel(this->channel_), std::move(enable), std::move(requested_deepest_sleep_state));
+    return ResultOf::ConfigureAutoSuspend(::zx::unowned_channel(this->channel_), std::move(enable), std::move(requested_deepest_sleep_state));
 }
 
-Controller::ResultOf::ConfigureAutoSuspend Controller::Call::ConfigureAutoSuspend(zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state) {
+Controller::ResultOf::ConfigureAutoSuspend Controller::Call::ConfigureAutoSuspend(::zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state) {
   return ResultOf::ConfigureAutoSuspend(std::move(_client_end), std::move(enable), std::move(requested_deepest_sleep_state));
 }
 
 template <>
-Controller::UnownedResultOf::ConfigureAutoSuspend_Impl<Controller::ConfigureAutoSuspendResponse>::ConfigureAutoSuspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ConfigureAutoSuspend_Impl<Controller::ConfigureAutoSuspendResponse>::ConfigureAutoSuspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ConfigureAutoSuspendRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ConfigureAutoSuspendResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2086,14 +2086,14 @@ Controller::UnownedResultOf::ConfigureAutoSuspend_Impl<Controller::ConfigureAuto
 }
 
 Controller::UnownedResultOf::ConfigureAutoSuspend Controller::SyncClient::ConfigureAutoSuspend(::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ConfigureAutoSuspend(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(enable), std::move(requested_deepest_sleep_state), std::move(_response_buffer));
+  return UnownedResultOf::ConfigureAutoSuspend(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(enable), std::move(requested_deepest_sleep_state), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::ConfigureAutoSuspend Controller::Call::ConfigureAutoSuspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::ConfigureAutoSuspend Controller::Call::ConfigureAutoSuspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ConfigureAutoSuspend(std::move(_client_end), std::move(_request_buffer), std::move(enable), std::move(requested_deepest_sleep_state), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::ConfigureAutoSuspendResponse> Controller::InPlace::ConfigureAutoSuspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigureAutoSuspendRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::ConfigureAutoSuspendResponse> Controller::InPlace::ConfigureAutoSuspend(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigureAutoSuspendRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::ConfigureAutoSuspendRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

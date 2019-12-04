@@ -6,7 +6,7 @@ package fragments
 
 const SyncRequestInPlace = `
 {{- define "StaticCallSyncRequestInPlaceMethodSignature" -}}
-{{ .Name }}(zx::unowned_channel _client_end{{ if .Request }}, ::fidl::DecodedMessage<{{ .Name }}Request> params{{ end }}{{ if .HasResponse }}, ::fidl::BytePart response_buffer{{ end }})
+{{ .Name }}(::zx::unowned_channel _client_end{{ if .Request }}, ::fidl::DecodedMessage<{{ .Name }}Request> params{{ end }}{{ if .HasResponse }}, ::fidl::BytePart response_buffer{{ end }})
 {{- end }}
 
 {{- define "StaticCallSyncRequestInPlaceMethodDefinition" }}

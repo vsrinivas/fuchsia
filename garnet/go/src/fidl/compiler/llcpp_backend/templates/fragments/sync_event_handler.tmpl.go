@@ -21,14 +21,14 @@ const SyncEventHandler = `
 
 {{- define "SyncEventHandlerMethodDefinition" }}
 zx_status_t {{ .Name }}::SyncClient::HandleEvents({{ .Name }}::EventHandlers handlers) {
-  return {{ .Name }}::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+  return {{ .Name }}::Call::HandleEvents(::zx::unowned_channel(channel_), std::move(handlers));
 }
 {{- end }}
 
 {{- define "StaticCallSyncEventHandlerMethodDefinition" }}
-zx_status_t {{ .Name }}::Call::HandleEvents(zx::unowned_channel client_end, {{ .Name }}::EventHandlers handlers) {
+zx_status_t {{ .Name }}::Call::HandleEvents(::zx::unowned_channel client_end, {{ .Name }}::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                            zx::time::infinite(),
+                                            ::zx::time::infinite(),
                                             nullptr);
   if (status != ZX_OK) {
     return status;

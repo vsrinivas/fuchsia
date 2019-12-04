@@ -165,7 +165,7 @@ class Loader final {
     class Done_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Done_Impl(zx::unowned_channel _client_end);
+      Done_Impl(::zx::unowned_channel _client_end);
       ~Done_Impl() = default;
       Done_Impl(Done_Impl&& other) = default;
       Done_Impl& operator=(Done_Impl&& other) = default;
@@ -177,7 +177,7 @@ class Loader final {
     class LoadObject_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LoadObject_Impl(zx::unowned_channel _client_end, ::fidl::StringView object_name);
+      LoadObject_Impl(::zx::unowned_channel _client_end, ::fidl::StringView object_name);
       ~LoadObject_Impl() = default;
       LoadObject_Impl(LoadObject_Impl&& other) = default;
       LoadObject_Impl& operator=(LoadObject_Impl&& other) = default;
@@ -193,7 +193,7 @@ class Loader final {
     class Config_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Config_Impl(zx::unowned_channel _client_end, ::fidl::StringView config);
+      Config_Impl(::zx::unowned_channel _client_end, ::fidl::StringView config);
       ~Config_Impl() = default;
       Config_Impl(Config_Impl&& other) = default;
       Config_Impl& operator=(Config_Impl&& other) = default;
@@ -209,7 +209,7 @@ class Loader final {
     class Clone_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Clone_Impl(zx::unowned_channel _client_end, ::zx::channel loader);
+      Clone_Impl(::zx::unowned_channel _client_end, ::zx::channel loader);
       ~Clone_Impl() = default;
       Clone_Impl(Clone_Impl&& other) = default;
       Clone_Impl& operator=(Clone_Impl&& other) = default;
@@ -237,7 +237,7 @@ class Loader final {
     class Done_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Done_Impl(zx::unowned_channel _client_end);
+      Done_Impl(::zx::unowned_channel _client_end);
       ~Done_Impl() = default;
       Done_Impl(Done_Impl&& other) = default;
       Done_Impl& operator=(Done_Impl&& other) = default;
@@ -249,7 +249,7 @@ class Loader final {
     class LoadObject_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LoadObject_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer);
+      LoadObject_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer);
       ~LoadObject_Impl() = default;
       LoadObject_Impl(LoadObject_Impl&& other) = default;
       LoadObject_Impl& operator=(LoadObject_Impl&& other) = default;
@@ -265,7 +265,7 @@ class Loader final {
     class Config_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Config_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config, ::fidl::BytePart _response_buffer);
+      Config_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config, ::fidl::BytePart _response_buffer);
       ~Config_Impl() = default;
       Config_Impl(Config_Impl&& other) = default;
       Config_Impl& operator=(Config_Impl&& other) = default;
@@ -281,7 +281,7 @@ class Loader final {
     class Clone_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Clone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer);
+      Clone_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer);
       ~Clone_Impl() = default;
       Clone_Impl(Clone_Impl&& other) = default;
       Clone_Impl& operator=(Clone_Impl&& other) = default;
@@ -344,26 +344,26 @@ class Loader final {
    public:
 
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Done Done(zx::unowned_channel _client_end);
+    static ResultOf::Done Done(::zx::unowned_channel _client_end);
 
 
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::LoadObject LoadObject(zx::unowned_channel _client_end, ::fidl::StringView object_name);
+    static ResultOf::LoadObject LoadObject(::zx::unowned_channel _client_end, ::fidl::StringView object_name);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LoadObject LoadObject(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LoadObject LoadObject(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::Config Config(zx::unowned_channel _client_end, ::fidl::StringView config);
+    static ResultOf::Config Config(::zx::unowned_channel _client_end, ::fidl::StringView config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Config Config(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Config Config(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Clone Clone(zx::unowned_channel _client_end, ::zx::channel loader);
+    static ResultOf::Clone Clone(::zx::unowned_channel _client_end, ::zx::channel loader);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Clone Clone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -373,13 +373,13 @@ class Loader final {
     InPlace() = delete;
    public:
 
-    static ::fidl::internal::StatusAndError Done(zx::unowned_channel _client_end);
+    static ::fidl::internal::StatusAndError Done(::zx::unowned_channel _client_end);
 
-    static ::fidl::DecodeResult<LoadObjectResponse> LoadObject(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadObjectRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LoadObjectResponse> LoadObject(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadObjectRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ConfigResponse> Config(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ConfigResponse> Config(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<CloneResponse> Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CloneResponse> Clone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

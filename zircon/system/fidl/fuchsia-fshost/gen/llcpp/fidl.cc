@@ -132,7 +132,7 @@ extern "C" const fidl_type_t v1_fuchsia_fshost_FilesystemsWatchResponseTable;
 
 }  // namespace
 
-Filesystems::ResultOf::Clone_Impl::Clone_Impl(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object) {
+Filesystems::ResultOf::Clone_Impl::Clone_Impl(::zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloneRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -148,15 +148,15 @@ Filesystems::ResultOf::Clone_Impl::Clone_Impl(zx::unowned_channel _client_end, u
 }
 
 Filesystems::ResultOf::Clone Filesystems::SyncClient::Clone(uint32_t flags, ::zx::channel object) {
-  return ResultOf::Clone(zx::unowned_channel(this->channel_), std::move(flags), std::move(object));
+    return ResultOf::Clone(::zx::unowned_channel(this->channel_), std::move(flags), std::move(object));
 }
 
-Filesystems::ResultOf::Clone Filesystems::Call::Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object) {
+Filesystems::ResultOf::Clone Filesystems::Call::Clone(::zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object) {
   return ResultOf::Clone(std::move(_client_end), std::move(flags), std::move(object));
 }
 
 
-Filesystems::UnownedResultOf::Clone_Impl::Clone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object) {
+Filesystems::UnownedResultOf::Clone_Impl::Clone_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object) {
   if (_request_buffer.capacity() < CloneRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -173,14 +173,14 @@ Filesystems::UnownedResultOf::Clone_Impl::Clone_Impl(zx::unowned_channel _client
 }
 
 Filesystems::UnownedResultOf::Clone Filesystems::SyncClient::Clone(::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object) {
-  return UnownedResultOf::Clone(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(object));
+  return UnownedResultOf::Clone(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(object));
 }
 
-Filesystems::UnownedResultOf::Clone Filesystems::Call::Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object) {
+Filesystems::UnownedResultOf::Clone Filesystems::Call::Clone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object) {
   return UnownedResultOf::Clone(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(object));
 }
 
-::fidl::internal::StatusAndError Filesystems::InPlace::Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params) {
+::fidl::internal::StatusAndError Filesystems::InPlace::Clone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params) {
   Filesystems::SetTransactionHeaderFor::CloneRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -197,7 +197,7 @@ Filesystems::UnownedResultOf::Clone Filesystems::Call::Clone(zx::unowned_channel
 }
 
 template <>
-Filesystems::ResultOf::Close_Impl<Filesystems::CloseResponse>::Close_Impl(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::Close_Impl<Filesystems::CloseResponse>::Close_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -210,15 +210,15 @@ Filesystems::ResultOf::Close_Impl<Filesystems::CloseResponse>::Close_Impl(zx::un
 }
 
 Filesystems::ResultOf::Close Filesystems::SyncClient::Close() {
-  return ResultOf::Close(zx::unowned_channel(this->channel_));
+    return ResultOf::Close(::zx::unowned_channel(this->channel_));
 }
 
-Filesystems::ResultOf::Close Filesystems::Call::Close(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::Close Filesystems::Call::Close(::zx::unowned_channel _client_end) {
   return ResultOf::Close(std::move(_client_end));
 }
 
 template <>
-Filesystems::UnownedResultOf::Close_Impl<Filesystems::CloseResponse>::Close_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Close_Impl<Filesystems::CloseResponse>::Close_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, CloseRequest::PrimarySize);
@@ -229,14 +229,14 @@ Filesystems::UnownedResultOf::Close_Impl<Filesystems::CloseResponse>::Close_Impl
 }
 
 Filesystems::UnownedResultOf::Close Filesystems::SyncClient::Close(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Close(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Close(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::Close Filesystems::Call::Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Close Filesystems::Call::Close(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Close(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::CloseResponse> Filesystems::InPlace::Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::CloseResponse> Filesystems::InPlace::Close(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(CloseRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -258,7 +258,7 @@ Filesystems::UnownedResultOf::Close Filesystems::Call::Close(zx::unowned_channel
 }
 
 template <>
-Filesystems::ResultOf::Describe_Impl<Filesystems::DescribeResponse>::Describe_Impl(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::Describe_Impl<Filesystems::DescribeResponse>::Describe_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -271,15 +271,15 @@ Filesystems::ResultOf::Describe_Impl<Filesystems::DescribeResponse>::Describe_Im
 }
 
 Filesystems::ResultOf::Describe Filesystems::SyncClient::Describe() {
-  return ResultOf::Describe(zx::unowned_channel(this->channel_));
+    return ResultOf::Describe(::zx::unowned_channel(this->channel_));
 }
 
-Filesystems::ResultOf::Describe Filesystems::Call::Describe(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::Describe Filesystems::Call::Describe(::zx::unowned_channel _client_end) {
   return ResultOf::Describe(std::move(_client_end));
 }
 
 template <>
-Filesystems::UnownedResultOf::Describe_Impl<Filesystems::DescribeResponse>::Describe_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Describe_Impl<Filesystems::DescribeResponse>::Describe_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(DescribeRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, DescribeRequest::PrimarySize);
@@ -290,14 +290,14 @@ Filesystems::UnownedResultOf::Describe_Impl<Filesystems::DescribeResponse>::Desc
 }
 
 Filesystems::UnownedResultOf::Describe Filesystems::SyncClient::Describe(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Describe(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Describe(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::Describe Filesystems::Call::Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Describe Filesystems::Call::Describe(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Describe(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::DescribeResponse> Filesystems::InPlace::Describe(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::DescribeResponse> Filesystems::InPlace::Describe(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(DescribeRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -319,7 +319,7 @@ Filesystems::UnownedResultOf::Describe Filesystems::Call::Describe(zx::unowned_c
 }
 
 template <>
-Filesystems::ResultOf::Sync_Impl<Filesystems::SyncResponse>::Sync_Impl(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::Sync_Impl<Filesystems::SyncResponse>::Sync_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SyncRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -332,15 +332,15 @@ Filesystems::ResultOf::Sync_Impl<Filesystems::SyncResponse>::Sync_Impl(zx::unown
 }
 
 Filesystems::ResultOf::Sync Filesystems::SyncClient::Sync() {
-  return ResultOf::Sync(zx::unowned_channel(this->channel_));
+    return ResultOf::Sync(::zx::unowned_channel(this->channel_));
 }
 
-Filesystems::ResultOf::Sync Filesystems::Call::Sync(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::Sync Filesystems::Call::Sync(::zx::unowned_channel _client_end) {
   return ResultOf::Sync(std::move(_client_end));
 }
 
 template <>
-Filesystems::UnownedResultOf::Sync_Impl<Filesystems::SyncResponse>::Sync_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Sync_Impl<Filesystems::SyncResponse>::Sync_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SyncRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, SyncRequest::PrimarySize);
@@ -351,14 +351,14 @@ Filesystems::UnownedResultOf::Sync_Impl<Filesystems::SyncResponse>::Sync_Impl(zx
 }
 
 Filesystems::UnownedResultOf::Sync Filesystems::SyncClient::Sync(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Sync(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Sync(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::Sync Filesystems::Call::Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Sync Filesystems::Call::Sync(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Sync(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::SyncResponse> Filesystems::InPlace::Sync(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::SyncResponse> Filesystems::InPlace::Sync(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(SyncRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -380,7 +380,7 @@ Filesystems::UnownedResultOf::Sync Filesystems::Call::Sync(zx::unowned_channel _
 }
 
 template <>
-Filesystems::ResultOf::GetAttr_Impl<Filesystems::GetAttrResponse>::GetAttr_Impl(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::GetAttr_Impl<Filesystems::GetAttrResponse>::GetAttr_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetAttrRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -393,15 +393,15 @@ Filesystems::ResultOf::GetAttr_Impl<Filesystems::GetAttrResponse>::GetAttr_Impl(
 }
 
 Filesystems::ResultOf::GetAttr Filesystems::SyncClient::GetAttr() {
-  return ResultOf::GetAttr(zx::unowned_channel(this->channel_));
+    return ResultOf::GetAttr(::zx::unowned_channel(this->channel_));
 }
 
-Filesystems::ResultOf::GetAttr Filesystems::Call::GetAttr(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::GetAttr Filesystems::Call::GetAttr(::zx::unowned_channel _client_end) {
   return ResultOf::GetAttr(std::move(_client_end));
 }
 
 template <>
-Filesystems::UnownedResultOf::GetAttr_Impl<Filesystems::GetAttrResponse>::GetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::GetAttr_Impl<Filesystems::GetAttrResponse>::GetAttr_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetAttrRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetAttrRequest::PrimarySize);
@@ -412,14 +412,14 @@ Filesystems::UnownedResultOf::GetAttr_Impl<Filesystems::GetAttrResponse>::GetAtt
 }
 
 Filesystems::UnownedResultOf::GetAttr Filesystems::SyncClient::GetAttr(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetAttr(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetAttr(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::GetAttr Filesystems::Call::GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::GetAttr Filesystems::Call::GetAttr(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetAttr(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::GetAttrResponse> Filesystems::InPlace::GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::GetAttrResponse> Filesystems::InPlace::GetAttr(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetAttrRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -441,7 +441,7 @@ Filesystems::UnownedResultOf::GetAttr Filesystems::Call::GetAttr(zx::unowned_cha
 }
 
 template <>
-Filesystems::ResultOf::SetAttr_Impl<Filesystems::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
+Filesystems::ResultOf::SetAttr_Impl<Filesystems::SetAttrResponse>::SetAttr_Impl(::zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetAttrRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -457,15 +457,15 @@ Filesystems::ResultOf::SetAttr_Impl<Filesystems::SetAttrResponse>::SetAttr_Impl(
 }
 
 Filesystems::ResultOf::SetAttr Filesystems::SyncClient::SetAttr(uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
-  return ResultOf::SetAttr(zx::unowned_channel(this->channel_), std::move(flags), std::move(attributes));
+    return ResultOf::SetAttr(::zx::unowned_channel(this->channel_), std::move(flags), std::move(attributes));
 }
 
-Filesystems::ResultOf::SetAttr Filesystems::Call::SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
+Filesystems::ResultOf::SetAttr Filesystems::Call::SetAttr(::zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes) {
   return ResultOf::SetAttr(std::move(_client_end), std::move(flags), std::move(attributes));
 }
 
 template <>
-Filesystems::UnownedResultOf::SetAttr_Impl<Filesystems::SetAttrResponse>::SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::SetAttr_Impl<Filesystems::SetAttrResponse>::SetAttr_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetAttrRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetAttrResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -481,14 +481,14 @@ Filesystems::UnownedResultOf::SetAttr_Impl<Filesystems::SetAttrResponse>::SetAtt
 }
 
 Filesystems::UnownedResultOf::SetAttr Filesystems::SyncClient::SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetAttr(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
+  return UnownedResultOf::SetAttr(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::SetAttr Filesystems::Call::SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::SetAttr Filesystems::Call::SetAttr(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetAttr(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(attributes), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::SetAttrResponse> Filesystems::InPlace::SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::SetAttrResponse> Filesystems::InPlace::SetAttr(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer) {
   Filesystems::SetTransactionHeaderFor::SetAttrRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -505,7 +505,7 @@ Filesystems::UnownedResultOf::SetAttr Filesystems::Call::SetAttr(zx::unowned_cha
 }
 
 template <>
-Filesystems::ResultOf::NodeGetFlags_Impl<Filesystems::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::NodeGetFlags_Impl<Filesystems::NodeGetFlagsResponse>::NodeGetFlags_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeGetFlagsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -518,15 +518,15 @@ Filesystems::ResultOf::NodeGetFlags_Impl<Filesystems::NodeGetFlagsResponse>::Nod
 }
 
 Filesystems::ResultOf::NodeGetFlags Filesystems::SyncClient::NodeGetFlags() {
-  return ResultOf::NodeGetFlags(zx::unowned_channel(this->channel_));
+    return ResultOf::NodeGetFlags(::zx::unowned_channel(this->channel_));
 }
 
-Filesystems::ResultOf::NodeGetFlags Filesystems::Call::NodeGetFlags(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::NodeGetFlags Filesystems::Call::NodeGetFlags(::zx::unowned_channel _client_end) {
   return ResultOf::NodeGetFlags(std::move(_client_end));
 }
 
 template <>
-Filesystems::UnownedResultOf::NodeGetFlags_Impl<Filesystems::NodeGetFlagsResponse>::NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::NodeGetFlags_Impl<Filesystems::NodeGetFlagsResponse>::NodeGetFlags_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(NodeGetFlagsRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, NodeGetFlagsRequest::PrimarySize);
@@ -537,14 +537,14 @@ Filesystems::UnownedResultOf::NodeGetFlags_Impl<Filesystems::NodeGetFlagsRespons
 }
 
 Filesystems::UnownedResultOf::NodeGetFlags Filesystems::SyncClient::NodeGetFlags(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::NodeGetFlags(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::NodeGetFlags(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::NodeGetFlags Filesystems::Call::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::NodeGetFlags Filesystems::Call::NodeGetFlags(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::NodeGetFlags(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::NodeGetFlagsResponse> Filesystems::InPlace::NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::NodeGetFlagsResponse> Filesystems::InPlace::NodeGetFlags(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(NodeGetFlagsRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -566,7 +566,7 @@ Filesystems::UnownedResultOf::NodeGetFlags Filesystems::Call::NodeGetFlags(zx::u
 }
 
 template <>
-Filesystems::ResultOf::NodeSetFlags_Impl<Filesystems::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags) {
+Filesystems::ResultOf::NodeSetFlags_Impl<Filesystems::NodeSetFlagsResponse>::NodeSetFlags_Impl(::zx::unowned_channel _client_end, uint32_t flags) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<NodeSetFlagsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -581,15 +581,15 @@ Filesystems::ResultOf::NodeSetFlags_Impl<Filesystems::NodeSetFlagsResponse>::Nod
 }
 
 Filesystems::ResultOf::NodeSetFlags Filesystems::SyncClient::NodeSetFlags(uint32_t flags) {
-  return ResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(flags));
+    return ResultOf::NodeSetFlags(::zx::unowned_channel(this->channel_), std::move(flags));
 }
 
-Filesystems::ResultOf::NodeSetFlags Filesystems::Call::NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags) {
+Filesystems::ResultOf::NodeSetFlags Filesystems::Call::NodeSetFlags(::zx::unowned_channel _client_end, uint32_t flags) {
   return ResultOf::NodeSetFlags(std::move(_client_end), std::move(flags));
 }
 
 template <>
-Filesystems::UnownedResultOf::NodeSetFlags_Impl<Filesystems::NodeSetFlagsResponse>::NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::NodeSetFlags_Impl<Filesystems::NodeSetFlagsResponse>::NodeSetFlags_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < NodeSetFlagsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<NodeSetFlagsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -604,14 +604,14 @@ Filesystems::UnownedResultOf::NodeSetFlags_Impl<Filesystems::NodeSetFlagsRespons
 }
 
 Filesystems::UnownedResultOf::NodeSetFlags Filesystems::SyncClient::NodeSetFlags(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::NodeSetFlags(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
+  return UnownedResultOf::NodeSetFlags(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::NodeSetFlags Filesystems::Call::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::NodeSetFlags Filesystems::Call::NodeSetFlags(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::NodeSetFlags(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::NodeSetFlagsResponse> Filesystems::InPlace::NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::NodeSetFlagsResponse> Filesystems::InPlace::NodeSetFlags(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer) {
   Filesystems::SetTransactionHeaderFor::NodeSetFlagsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -628,7 +628,7 @@ Filesystems::UnownedResultOf::NodeSetFlags Filesystems::Call::NodeSetFlags(zx::u
 }
 
 
-Filesystems::ResultOf::Open_Impl::Open_Impl(zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object) {
+Filesystems::ResultOf::Open_Impl::Open_Impl(::zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OpenRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -648,15 +648,15 @@ Filesystems::ResultOf::Open_Impl::Open_Impl(zx::unowned_channel _client_end, uin
 }
 
 Filesystems::ResultOf::Open Filesystems::SyncClient::Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object) {
-  return ResultOf::Open(zx::unowned_channel(this->channel_), std::move(flags), std::move(mode), std::move(path), std::move(object));
+    return ResultOf::Open(::zx::unowned_channel(this->channel_), std::move(flags), std::move(mode), std::move(path), std::move(object));
 }
 
-Filesystems::ResultOf::Open Filesystems::Call::Open(zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object) {
+Filesystems::ResultOf::Open Filesystems::Call::Open(::zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object) {
   return ResultOf::Open(std::move(_client_end), std::move(flags), std::move(mode), std::move(path), std::move(object));
 }
 
 
-Filesystems::UnownedResultOf::Open_Impl::Open_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object) {
+Filesystems::UnownedResultOf::Open_Impl::Open_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object) {
   if (_request_buffer.capacity() < OpenRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -678,14 +678,14 @@ Filesystems::UnownedResultOf::Open_Impl::Open_Impl(zx::unowned_channel _client_e
 }
 
 Filesystems::UnownedResultOf::Open Filesystems::SyncClient::Open(::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object) {
-  return UnownedResultOf::Open(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(mode), std::move(path), std::move(object));
+  return UnownedResultOf::Open(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(flags), std::move(mode), std::move(path), std::move(object));
 }
 
-Filesystems::UnownedResultOf::Open Filesystems::Call::Open(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object) {
+Filesystems::UnownedResultOf::Open Filesystems::Call::Open(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object) {
   return UnownedResultOf::Open(std::move(_client_end), std::move(_request_buffer), std::move(flags), std::move(mode), std::move(path), std::move(object));
 }
 
-::fidl::internal::StatusAndError Filesystems::InPlace::Open(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params) {
+::fidl::internal::StatusAndError Filesystems::InPlace::Open(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params) {
   Filesystems::SetTransactionHeaderFor::OpenRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -702,7 +702,7 @@ Filesystems::UnownedResultOf::Open Filesystems::Call::Open(zx::unowned_channel _
 }
 
 template <>
-Filesystems::ResultOf::Unlink_Impl<Filesystems::UnlinkResponse>::Unlink_Impl(zx::unowned_channel _client_end, ::fidl::StringView path) {
+Filesystems::ResultOf::Unlink_Impl<Filesystems::UnlinkResponse>::Unlink_Impl(::zx::unowned_channel _client_end, ::fidl::StringView path) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnlinkRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -719,15 +719,15 @@ Filesystems::ResultOf::Unlink_Impl<Filesystems::UnlinkResponse>::Unlink_Impl(zx:
 }
 
 Filesystems::ResultOf::Unlink Filesystems::SyncClient::Unlink(::fidl::StringView path) {
-  return ResultOf::Unlink(zx::unowned_channel(this->channel_), std::move(path));
+    return ResultOf::Unlink(::zx::unowned_channel(this->channel_), std::move(path));
 }
 
-Filesystems::ResultOf::Unlink Filesystems::Call::Unlink(zx::unowned_channel _client_end, ::fidl::StringView path) {
+Filesystems::ResultOf::Unlink Filesystems::Call::Unlink(::zx::unowned_channel _client_end, ::fidl::StringView path) {
   return ResultOf::Unlink(std::move(_client_end), std::move(path));
 }
 
 template <>
-Filesystems::UnownedResultOf::Unlink_Impl<Filesystems::UnlinkResponse>::Unlink_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Unlink_Impl<Filesystems::UnlinkResponse>::Unlink_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < UnlinkRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<UnlinkResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -745,14 +745,14 @@ Filesystems::UnownedResultOf::Unlink_Impl<Filesystems::UnlinkResponse>::Unlink_I
 }
 
 Filesystems::UnownedResultOf::Unlink Filesystems::SyncClient::Unlink(::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Unlink(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(path), std::move(_response_buffer));
+  return UnownedResultOf::Unlink(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(path), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::Unlink Filesystems::Call::Unlink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Unlink Filesystems::Call::Unlink(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Unlink(std::move(_client_end), std::move(_request_buffer), std::move(path), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::UnlinkResponse> Filesystems::InPlace::Unlink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::UnlinkResponse> Filesystems::InPlace::Unlink(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer) {
   Filesystems::SetTransactionHeaderFor::UnlinkRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -769,7 +769,7 @@ Filesystems::UnownedResultOf::Unlink Filesystems::Call::Unlink(zx::unowned_chann
 }
 
 template <>
-Filesystems::ResultOf::ReadDirents_Impl<Filesystems::ReadDirentsResponse>::ReadDirents_Impl(zx::unowned_channel _client_end, uint64_t max_bytes) {
+Filesystems::ResultOf::ReadDirents_Impl<Filesystems::ReadDirentsResponse>::ReadDirents_Impl(::zx::unowned_channel _client_end, uint64_t max_bytes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDirentsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -784,15 +784,15 @@ Filesystems::ResultOf::ReadDirents_Impl<Filesystems::ReadDirentsResponse>::ReadD
 }
 
 Filesystems::ResultOf::ReadDirents Filesystems::SyncClient::ReadDirents(uint64_t max_bytes) {
-  return ResultOf::ReadDirents(zx::unowned_channel(this->channel_), std::move(max_bytes));
+    return ResultOf::ReadDirents(::zx::unowned_channel(this->channel_), std::move(max_bytes));
 }
 
-Filesystems::ResultOf::ReadDirents Filesystems::Call::ReadDirents(zx::unowned_channel _client_end, uint64_t max_bytes) {
+Filesystems::ResultOf::ReadDirents Filesystems::Call::ReadDirents(::zx::unowned_channel _client_end, uint64_t max_bytes) {
   return ResultOf::ReadDirents(std::move(_client_end), std::move(max_bytes));
 }
 
 template <>
-Filesystems::UnownedResultOf::ReadDirents_Impl<Filesystems::ReadDirentsResponse>::ReadDirents_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::ReadDirents_Impl<Filesystems::ReadDirentsResponse>::ReadDirents_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ReadDirentsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ReadDirentsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -807,14 +807,14 @@ Filesystems::UnownedResultOf::ReadDirents_Impl<Filesystems::ReadDirentsResponse>
 }
 
 Filesystems::UnownedResultOf::ReadDirents Filesystems::SyncClient::ReadDirents(::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ReadDirents(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(max_bytes), std::move(_response_buffer));
+  return UnownedResultOf::ReadDirents(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(max_bytes), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::ReadDirents Filesystems::Call::ReadDirents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::ReadDirents Filesystems::Call::ReadDirents(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ReadDirents(std::move(_client_end), std::move(_request_buffer), std::move(max_bytes), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::ReadDirentsResponse> Filesystems::InPlace::ReadDirents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadDirentsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::ReadDirentsResponse> Filesystems::InPlace::ReadDirents(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadDirentsRequest> params, ::fidl::BytePart response_buffer) {
   Filesystems::SetTransactionHeaderFor::ReadDirentsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -831,7 +831,7 @@ Filesystems::UnownedResultOf::ReadDirents Filesystems::Call::ReadDirents(zx::uno
 }
 
 template <>
-Filesystems::ResultOf::Rewind_Impl<Filesystems::RewindResponse>::Rewind_Impl(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::Rewind_Impl<Filesystems::RewindResponse>::Rewind_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RewindRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -844,15 +844,15 @@ Filesystems::ResultOf::Rewind_Impl<Filesystems::RewindResponse>::Rewind_Impl(zx:
 }
 
 Filesystems::ResultOf::Rewind Filesystems::SyncClient::Rewind() {
-  return ResultOf::Rewind(zx::unowned_channel(this->channel_));
+    return ResultOf::Rewind(::zx::unowned_channel(this->channel_));
 }
 
-Filesystems::ResultOf::Rewind Filesystems::Call::Rewind(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::Rewind Filesystems::Call::Rewind(::zx::unowned_channel _client_end) {
   return ResultOf::Rewind(std::move(_client_end));
 }
 
 template <>
-Filesystems::UnownedResultOf::Rewind_Impl<Filesystems::RewindResponse>::Rewind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Rewind_Impl<Filesystems::RewindResponse>::Rewind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RewindRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, RewindRequest::PrimarySize);
@@ -863,14 +863,14 @@ Filesystems::UnownedResultOf::Rewind_Impl<Filesystems::RewindResponse>::Rewind_I
 }
 
 Filesystems::UnownedResultOf::Rewind Filesystems::SyncClient::Rewind(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Rewind(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Rewind(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::Rewind Filesystems::Call::Rewind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Rewind Filesystems::Call::Rewind(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Rewind(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::RewindResponse> Filesystems::InPlace::Rewind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::RewindResponse> Filesystems::InPlace::Rewind(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(RewindRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -892,7 +892,7 @@ Filesystems::UnownedResultOf::Rewind Filesystems::Call::Rewind(zx::unowned_chann
 }
 
 template <>
-Filesystems::ResultOf::GetToken_Impl<Filesystems::GetTokenResponse>::GetToken_Impl(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::GetToken_Impl<Filesystems::GetTokenResponse>::GetToken_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTokenRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -905,15 +905,15 @@ Filesystems::ResultOf::GetToken_Impl<Filesystems::GetTokenResponse>::GetToken_Im
 }
 
 Filesystems::ResultOf::GetToken Filesystems::SyncClient::GetToken() {
-  return ResultOf::GetToken(zx::unowned_channel(this->channel_));
+    return ResultOf::GetToken(::zx::unowned_channel(this->channel_));
 }
 
-Filesystems::ResultOf::GetToken Filesystems::Call::GetToken(zx::unowned_channel _client_end) {
+Filesystems::ResultOf::GetToken Filesystems::Call::GetToken(::zx::unowned_channel _client_end) {
   return ResultOf::GetToken(std::move(_client_end));
 }
 
 template <>
-Filesystems::UnownedResultOf::GetToken_Impl<Filesystems::GetTokenResponse>::GetToken_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::GetToken_Impl<Filesystems::GetTokenResponse>::GetToken_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetTokenRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetTokenRequest::PrimarySize);
@@ -924,14 +924,14 @@ Filesystems::UnownedResultOf::GetToken_Impl<Filesystems::GetTokenResponse>::GetT
 }
 
 Filesystems::UnownedResultOf::GetToken Filesystems::SyncClient::GetToken(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetToken(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetToken(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::GetToken Filesystems::Call::GetToken(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::GetToken Filesystems::Call::GetToken(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetToken(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::GetTokenResponse> Filesystems::InPlace::GetToken(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::GetTokenResponse> Filesystems::InPlace::GetToken(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetTokenRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -953,7 +953,7 @@ Filesystems::UnownedResultOf::GetToken Filesystems::Call::GetToken(zx::unowned_c
 }
 
 template <>
-Filesystems::ResultOf::Rename_Impl<Filesystems::RenameResponse>::Rename_Impl(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst) {
+Filesystems::ResultOf::Rename_Impl<Filesystems::RenameResponse>::Rename_Impl(::zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RenameRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -972,15 +972,15 @@ Filesystems::ResultOf::Rename_Impl<Filesystems::RenameResponse>::Rename_Impl(zx:
 }
 
 Filesystems::ResultOf::Rename Filesystems::SyncClient::Rename(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst) {
-  return ResultOf::Rename(zx::unowned_channel(this->channel_), std::move(src), std::move(dst_parent_token), std::move(dst));
+    return ResultOf::Rename(::zx::unowned_channel(this->channel_), std::move(src), std::move(dst_parent_token), std::move(dst));
 }
 
-Filesystems::ResultOf::Rename Filesystems::Call::Rename(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst) {
+Filesystems::ResultOf::Rename Filesystems::Call::Rename(::zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst) {
   return ResultOf::Rename(std::move(_client_end), std::move(src), std::move(dst_parent_token), std::move(dst));
 }
 
 template <>
-Filesystems::UnownedResultOf::Rename_Impl<Filesystems::RenameResponse>::Rename_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Rename_Impl<Filesystems::RenameResponse>::Rename_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < RenameRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<RenameResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1000,14 +1000,14 @@ Filesystems::UnownedResultOf::Rename_Impl<Filesystems::RenameResponse>::Rename_I
 }
 
 Filesystems::UnownedResultOf::Rename Filesystems::SyncClient::Rename(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Rename(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(src), std::move(dst_parent_token), std::move(dst), std::move(_response_buffer));
+  return UnownedResultOf::Rename(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(src), std::move(dst_parent_token), std::move(dst), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::Rename Filesystems::Call::Rename(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Rename Filesystems::Call::Rename(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Rename(std::move(_client_end), std::move(_request_buffer), std::move(src), std::move(dst_parent_token), std::move(dst), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::RenameResponse> Filesystems::InPlace::Rename(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::RenameResponse> Filesystems::InPlace::Rename(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer) {
   Filesystems::SetTransactionHeaderFor::RenameRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1024,7 +1024,7 @@ Filesystems::UnownedResultOf::Rename Filesystems::Call::Rename(zx::unowned_chann
 }
 
 template <>
-Filesystems::ResultOf::Link_Impl<Filesystems::LinkResponse>::Link_Impl(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst) {
+Filesystems::ResultOf::Link_Impl<Filesystems::LinkResponse>::Link_Impl(::zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LinkRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -1043,15 +1043,15 @@ Filesystems::ResultOf::Link_Impl<Filesystems::LinkResponse>::Link_Impl(zx::unown
 }
 
 Filesystems::ResultOf::Link Filesystems::SyncClient::Link(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst) {
-  return ResultOf::Link(zx::unowned_channel(this->channel_), std::move(src), std::move(dst_parent_token), std::move(dst));
+    return ResultOf::Link(::zx::unowned_channel(this->channel_), std::move(src), std::move(dst_parent_token), std::move(dst));
 }
 
-Filesystems::ResultOf::Link Filesystems::Call::Link(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst) {
+Filesystems::ResultOf::Link Filesystems::Call::Link(::zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst) {
   return ResultOf::Link(std::move(_client_end), std::move(src), std::move(dst_parent_token), std::move(dst));
 }
 
 template <>
-Filesystems::UnownedResultOf::Link_Impl<Filesystems::LinkResponse>::Link_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Link_Impl<Filesystems::LinkResponse>::Link_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LinkRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LinkResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1071,14 +1071,14 @@ Filesystems::UnownedResultOf::Link_Impl<Filesystems::LinkResponse>::Link_Impl(zx
 }
 
 Filesystems::UnownedResultOf::Link Filesystems::SyncClient::Link(::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Link(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(src), std::move(dst_parent_token), std::move(dst), std::move(_response_buffer));
+  return UnownedResultOf::Link(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(src), std::move(dst_parent_token), std::move(dst), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::Link Filesystems::Call::Link(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Link Filesystems::Call::Link(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Link(std::move(_client_end), std::move(_request_buffer), std::move(src), std::move(dst_parent_token), std::move(dst), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::LinkResponse> Filesystems::InPlace::Link(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::LinkResponse> Filesystems::InPlace::Link(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer) {
   Filesystems::SetTransactionHeaderFor::LinkRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1095,7 +1095,7 @@ Filesystems::UnownedResultOf::Link Filesystems::Call::Link(zx::unowned_channel _
 }
 
 template <>
-Filesystems::ResultOf::Watch_Impl<Filesystems::WatchResponse>::Watch_Impl(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher) {
+Filesystems::ResultOf::Watch_Impl<Filesystems::WatchResponse>::Watch_Impl(::zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1112,15 +1112,15 @@ Filesystems::ResultOf::Watch_Impl<Filesystems::WatchResponse>::Watch_Impl(zx::un
 }
 
 Filesystems::ResultOf::Watch Filesystems::SyncClient::Watch(uint32_t mask, uint32_t options, ::zx::channel watcher) {
-  return ResultOf::Watch(zx::unowned_channel(this->channel_), std::move(mask), std::move(options), std::move(watcher));
+    return ResultOf::Watch(::zx::unowned_channel(this->channel_), std::move(mask), std::move(options), std::move(watcher));
 }
 
-Filesystems::ResultOf::Watch Filesystems::Call::Watch(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher) {
+Filesystems::ResultOf::Watch Filesystems::Call::Watch(::zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher) {
   return ResultOf::Watch(std::move(_client_end), std::move(mask), std::move(options), std::move(watcher));
 }
 
 template <>
-Filesystems::UnownedResultOf::Watch_Impl<Filesystems::WatchResponse>::Watch_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Watch_Impl<Filesystems::WatchResponse>::Watch_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < WatchRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WatchResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1137,14 +1137,14 @@ Filesystems::UnownedResultOf::Watch_Impl<Filesystems::WatchResponse>::Watch_Impl
 }
 
 Filesystems::UnownedResultOf::Watch Filesystems::SyncClient::Watch(::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Watch(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(mask), std::move(options), std::move(watcher), std::move(_response_buffer));
+  return UnownedResultOf::Watch(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(mask), std::move(options), std::move(watcher), std::move(_response_buffer));
 }
 
-Filesystems::UnownedResultOf::Watch Filesystems::Call::Watch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer) {
+Filesystems::UnownedResultOf::Watch Filesystems::Call::Watch(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Watch(std::move(_client_end), std::move(_request_buffer), std::move(mask), std::move(options), std::move(watcher), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Filesystems::WatchResponse> Filesystems::InPlace::Watch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Filesystems::WatchResponse> Filesystems::InPlace::Watch(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer) {
   Filesystems::SetTransactionHeaderFor::WatchRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1161,12 +1161,12 @@ Filesystems::UnownedResultOf::Watch Filesystems::Call::Watch(zx::unowned_channel
 }
 
 zx_status_t Filesystems::SyncClient::HandleEvents(Filesystems::EventHandlers handlers) {
-  return Filesystems::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+  return Filesystems::Call::HandleEvents(::zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Filesystems::Call::HandleEvents(zx::unowned_channel client_end, Filesystems::EventHandlers handlers) {
+zx_status_t Filesystems::Call::HandleEvents(::zx::unowned_channel client_end, Filesystems::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                            zx::time::infinite(),
+                                            ::zx::time::infinite(),
                                             nullptr);
   if (status != ZX_OK) {
     return status;
@@ -1578,7 +1578,7 @@ zx_status_t Filesystems::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s,
   if (_linearize_result.status != ZX_OK) {
     return _linearize_result.status;
   }
-  return ::fidl::Write(zx::unowned_channel(_chan), std::move(_linearize_result.message));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
 zx_status_t Filesystems::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
@@ -1595,14 +1595,14 @@ zx_status_t Filesystems::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::By
   _response.info = std::move(info);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
-	return _linearize_result.status;
+    return _linearize_result.status;
   }
-  return ::fidl::Write(zx::unowned_channel(_chan), std::move(_linearize_result.message));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
 zx_status_t Filesystems::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params) {
   Filesystems::SetTransactionHeaderFor::OnOpenResponse(params);
-  return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
 
@@ -2179,7 +2179,7 @@ extern "C" const fidl_type_t v1_fuchsia_fshost_RegistryRegisterFilesystemRespons
 
 }  // namespace
 template <>
-Registry::ResultOf::RegisterFilesystem_Impl<Registry::RegisterFilesystemResponse>::RegisterFilesystem_Impl(zx::unowned_channel _client_end, ::zx::channel public_export) {
+Registry::ResultOf::RegisterFilesystem_Impl<Registry::RegisterFilesystemResponse>::RegisterFilesystem_Impl(::zx::unowned_channel _client_end, ::zx::channel public_export) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterFilesystemRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2194,15 +2194,15 @@ Registry::ResultOf::RegisterFilesystem_Impl<Registry::RegisterFilesystemResponse
 }
 
 Registry::ResultOf::RegisterFilesystem Registry::SyncClient::RegisterFilesystem(::zx::channel public_export) {
-  return ResultOf::RegisterFilesystem(zx::unowned_channel(this->channel_), std::move(public_export));
+    return ResultOf::RegisterFilesystem(::zx::unowned_channel(this->channel_), std::move(public_export));
 }
 
-Registry::ResultOf::RegisterFilesystem Registry::Call::RegisterFilesystem(zx::unowned_channel _client_end, ::zx::channel public_export) {
+Registry::ResultOf::RegisterFilesystem Registry::Call::RegisterFilesystem(::zx::unowned_channel _client_end, ::zx::channel public_export) {
   return ResultOf::RegisterFilesystem(std::move(_client_end), std::move(public_export));
 }
 
 template <>
-Registry::UnownedResultOf::RegisterFilesystem_Impl<Registry::RegisterFilesystemResponse>::RegisterFilesystem_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel public_export, ::fidl::BytePart _response_buffer) {
+Registry::UnownedResultOf::RegisterFilesystem_Impl<Registry::RegisterFilesystemResponse>::RegisterFilesystem_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel public_export, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < RegisterFilesystemRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<RegisterFilesystemResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2217,14 +2217,14 @@ Registry::UnownedResultOf::RegisterFilesystem_Impl<Registry::RegisterFilesystemR
 }
 
 Registry::UnownedResultOf::RegisterFilesystem Registry::SyncClient::RegisterFilesystem(::fidl::BytePart _request_buffer, ::zx::channel public_export, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RegisterFilesystem(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(public_export), std::move(_response_buffer));
+  return UnownedResultOf::RegisterFilesystem(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(public_export), std::move(_response_buffer));
 }
 
-Registry::UnownedResultOf::RegisterFilesystem Registry::Call::RegisterFilesystem(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel public_export, ::fidl::BytePart _response_buffer) {
+Registry::UnownedResultOf::RegisterFilesystem Registry::Call::RegisterFilesystem(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel public_export, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::RegisterFilesystem(std::move(_client_end), std::move(_request_buffer), std::move(public_export), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Registry::RegisterFilesystemResponse> Registry::InPlace::RegisterFilesystem(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterFilesystemRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Registry::RegisterFilesystemResponse> Registry::InPlace::RegisterFilesystem(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterFilesystemRequest> params, ::fidl::BytePart response_buffer) {
   Registry::SetTransactionHeaderFor::RegisterFilesystemRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

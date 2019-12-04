@@ -103,7 +103,7 @@ class DebugData final {
     class Publish_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Publish_Impl(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data);
+      Publish_Impl(::zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data);
       ~Publish_Impl() = default;
       Publish_Impl(Publish_Impl&& other) = default;
       Publish_Impl& operator=(Publish_Impl&& other) = default;
@@ -115,7 +115,7 @@ class DebugData final {
     class LoadConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LoadConfig_Impl(zx::unowned_channel _client_end, ::fidl::StringView config_name);
+      LoadConfig_Impl(::zx::unowned_channel _client_end, ::fidl::StringView config_name);
       ~LoadConfig_Impl() = default;
       LoadConfig_Impl(LoadConfig_Impl&& other) = default;
       LoadConfig_Impl& operator=(LoadConfig_Impl&& other) = default;
@@ -141,7 +141,7 @@ class DebugData final {
     class Publish_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Publish_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data);
+      Publish_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data);
       ~Publish_Impl() = default;
       Publish_Impl(Publish_Impl&& other) = default;
       Publish_Impl& operator=(Publish_Impl&& other) = default;
@@ -153,7 +153,7 @@ class DebugData final {
     class LoadConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LoadConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer);
+      LoadConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer);
       ~LoadConfig_Impl() = default;
       LoadConfig_Impl(LoadConfig_Impl&& other) = default;
       LoadConfig_Impl& operator=(LoadConfig_Impl&& other) = default;
@@ -233,7 +233,7 @@ class DebugData final {
     // continue to write data to it.  Code instrumentation runtimes use this to deliver large
     // binary trace results.
     // Request is heap-allocated.
-    static ResultOf::Publish Publish(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data);
+    static ResultOf::Publish Publish(::zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data);
 
     // The program runtime sends a string naming a `data_sink` and transfers the sole handle to
     // a VMO containing the `data` it wants published there.  The `data_sink` string identifies
@@ -243,21 +243,21 @@ class DebugData final {
     // continue to write data to it.  Code instrumentation runtimes use this to deliver large
     // binary trace results.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Publish Publish(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data);
+    static UnownedResultOf::Publish Publish(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data);
 
     // The program runtime names a `config_name` referring to a debug configuration of some kind
     // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
     // allow large options text to be stored in a file rather than passed directly in environment
     // strings.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::LoadConfig LoadConfig(zx::unowned_channel _client_end, ::fidl::StringView config_name);
+    static ResultOf::LoadConfig LoadConfig(::zx::unowned_channel _client_end, ::fidl::StringView config_name);
 
     // The program runtime names a `config_name` referring to a debug configuration of some kind
     // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
     // allow large options text to be stored in a file rather than passed directly in environment
     // strings.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LoadConfig LoadConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LoadConfig LoadConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -274,13 +274,13 @@ class DebugData final {
     // resized without the receiver's knowledge), but it might still have the VMO mapped in and
     // continue to write data to it.  Code instrumentation runtimes use this to deliver large
     // binary trace results.
-    static ::fidl::internal::StatusAndError Publish(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PublishRequest> params);
+    static ::fidl::internal::StatusAndError Publish(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<PublishRequest> params);
 
     // The program runtime names a `config_name` referring to a debug configuration of some kind
     // and gets back a VMO to read configuration data from.  The sanitizer runtimes use this to
     // allow large options text to be stored in a file rather than passed directly in environment
     // strings.
-    static ::fidl::DecodeResult<LoadConfigResponse> LoadConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadConfigRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LoadConfigResponse> LoadConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadConfigRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

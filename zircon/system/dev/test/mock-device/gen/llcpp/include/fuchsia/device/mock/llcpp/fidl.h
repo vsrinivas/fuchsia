@@ -441,7 +441,7 @@ class MockDeviceThread final {
     class PerformActions_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      PerformActions_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions);
+      PerformActions_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions);
       ~PerformActions_Impl() = default;
       PerformActions_Impl(PerformActions_Impl&& other) = default;
       PerformActions_Impl& operator=(PerformActions_Impl&& other) = default;
@@ -462,7 +462,7 @@ class MockDeviceThread final {
     class PerformActions_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      PerformActions_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions);
+      PerformActions_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions);
       ~PerformActions_Impl() = default;
       PerformActions_Impl(PerformActions_Impl&& other) = default;
       PerformActions_Impl& operator=(PerformActions_Impl&& other) = default;
@@ -510,17 +510,17 @@ class MockDeviceThread final {
 
     // Perform the actions in the given list.  Threads may not create other threads.
     // Request is heap-allocated.
-    static ResultOf::PerformActions PerformActions(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions);
+    static ResultOf::PerformActions PerformActions(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions);
 
     // Perform the actions in the given list.  Threads may not create other threads.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::PerformActions PerformActions(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions);
+    static UnownedResultOf::PerformActions PerformActions(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -530,7 +530,7 @@ class MockDeviceThread final {
    public:
 
     // Perform the actions in the given list.  Threads may not create other threads.
-    static ::fidl::internal::StatusAndError PerformActions(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PerformActionsRequest> params);
+    static ::fidl::internal::StatusAndError PerformActions(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<PerformActionsRequest> params);
 
   };
 
@@ -1168,7 +1168,7 @@ class MockDevice final {
     class Bind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Bind_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+      Bind_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
       ~Bind_Impl() = default;
       Bind_Impl(Bind_Impl&& other) = default;
       Bind_Impl& operator=(Bind_Impl&& other) = default;
@@ -1183,7 +1183,7 @@ class MockDevice final {
     class Release_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Release_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+      Release_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
       ~Release_Impl() = default;
       Release_Impl(Release_Impl&& other) = default;
       Release_Impl& operator=(Release_Impl&& other) = default;
@@ -1195,7 +1195,7 @@ class MockDevice final {
     class GetProtocol_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetProtocol_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id);
+      GetProtocol_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id);
       ~GetProtocol_Impl() = default;
       GetProtocol_Impl(GetProtocol_Impl&& other) = default;
       GetProtocol_Impl& operator=(GetProtocol_Impl&& other) = default;
@@ -1211,7 +1211,7 @@ class MockDevice final {
     class Open_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Open_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+      Open_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
       ~Open_Impl() = default;
       Open_Impl(Open_Impl&& other) = default;
       Open_Impl& operator=(Open_Impl&& other) = default;
@@ -1227,7 +1227,7 @@ class MockDevice final {
     class Close_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Close_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+      Close_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
       ~Close_Impl() = default;
       Close_Impl(Close_Impl&& other) = default;
       Close_Impl& operator=(Close_Impl&& other) = default;
@@ -1243,7 +1243,7 @@ class MockDevice final {
     class Unbind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Unbind_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+      Unbind_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
       ~Unbind_Impl() = default;
       Unbind_Impl(Unbind_Impl&& other) = default;
       Unbind_Impl& operator=(Unbind_Impl&& other) = default;
@@ -1259,7 +1259,7 @@ class MockDevice final {
     class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Read_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off);
+      Read_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off);
       ~Read_Impl() = default;
       Read_Impl(Read_Impl&& other) = default;
       Read_Impl& operator=(Read_Impl&& other) = default;
@@ -1275,7 +1275,7 @@ class MockDevice final {
     class Write_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Write_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off);
+      Write_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off);
       ~Write_Impl() = default;
       Write_Impl(Write_Impl&& other) = default;
       Write_Impl& operator=(Write_Impl&& other) = default;
@@ -1291,7 +1291,7 @@ class MockDevice final {
     class GetSize_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetSize_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+      GetSize_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
       ~GetSize_Impl() = default;
       GetSize_Impl(GetSize_Impl&& other) = default;
       GetSize_Impl& operator=(GetSize_Impl&& other) = default;
@@ -1307,7 +1307,7 @@ class MockDevice final {
     class Suspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Suspend_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+      Suspend_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
       ~Suspend_Impl() = default;
       Suspend_Impl(Suspend_Impl&& other) = default;
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
@@ -1323,7 +1323,7 @@ class MockDevice final {
     class Resume_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Resume_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+      Resume_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
       ~Resume_Impl() = default;
       Resume_Impl(Resume_Impl&& other) = default;
       Resume_Impl& operator=(Resume_Impl&& other) = default;
@@ -1339,7 +1339,7 @@ class MockDevice final {
     class Message_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Message_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+      Message_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
       ~Message_Impl() = default;
       Message_Impl(Message_Impl&& other) = default;
       Message_Impl& operator=(Message_Impl&& other) = default;
@@ -1355,7 +1355,7 @@ class MockDevice final {
     class Rxrpc_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Rxrpc_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+      Rxrpc_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
       ~Rxrpc_Impl() = default;
       Rxrpc_Impl(Rxrpc_Impl&& other) = default;
       Rxrpc_Impl& operator=(Rxrpc_Impl&& other) = default;
@@ -1370,7 +1370,7 @@ class MockDevice final {
     class AddDeviceDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      AddDeviceDone_Impl(zx::unowned_channel _client_end, uint64_t action_id);
+      AddDeviceDone_Impl(::zx::unowned_channel _client_end, uint64_t action_id);
       ~AddDeviceDone_Impl() = default;
       AddDeviceDone_Impl(AddDeviceDone_Impl&& other) = default;
       AddDeviceDone_Impl& operator=(AddDeviceDone_Impl&& other) = default;
@@ -1381,7 +1381,7 @@ class MockDevice final {
     class UnbindReplyDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      UnbindReplyDone_Impl(zx::unowned_channel _client_end, uint64_t action_id);
+      UnbindReplyDone_Impl(::zx::unowned_channel _client_end, uint64_t action_id);
       ~UnbindReplyDone_Impl() = default;
       UnbindReplyDone_Impl(UnbindReplyDone_Impl&& other) = default;
       UnbindReplyDone_Impl& operator=(UnbindReplyDone_Impl&& other) = default;
@@ -1417,7 +1417,7 @@ class MockDevice final {
     class Bind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Bind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
+      Bind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
       ~Bind_Impl() = default;
       Bind_Impl(Bind_Impl&& other) = default;
       Bind_Impl& operator=(Bind_Impl&& other) = default;
@@ -1432,7 +1432,7 @@ class MockDevice final {
     class Release_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Release_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record);
+      Release_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record);
       ~Release_Impl() = default;
       Release_Impl(Release_Impl&& other) = default;
       Release_Impl& operator=(Release_Impl&& other) = default;
@@ -1444,7 +1444,7 @@ class MockDevice final {
     class GetProtocol_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetProtocol_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id, ::fidl::BytePart _response_buffer);
+      GetProtocol_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id, ::fidl::BytePart _response_buffer);
       ~GetProtocol_Impl() = default;
       GetProtocol_Impl(GetProtocol_Impl&& other) = default;
       GetProtocol_Impl& operator=(GetProtocol_Impl&& other) = default;
@@ -1460,7 +1460,7 @@ class MockDevice final {
     class Open_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Open_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+      Open_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
       ~Open_Impl() = default;
       Open_Impl(Open_Impl&& other) = default;
       Open_Impl& operator=(Open_Impl&& other) = default;
@@ -1476,7 +1476,7 @@ class MockDevice final {
     class Close_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Close_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+      Close_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
       ~Close_Impl() = default;
       Close_Impl(Close_Impl&& other) = default;
       Close_Impl& operator=(Close_Impl&& other) = default;
@@ -1492,7 +1492,7 @@ class MockDevice final {
     class Unbind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Unbind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
+      Unbind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
       ~Unbind_Impl() = default;
       Unbind_Impl(Unbind_Impl&& other) = default;
       Unbind_Impl& operator=(Unbind_Impl&& other) = default;
@@ -1508,7 +1508,7 @@ class MockDevice final {
     class Read_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Read_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off, ::fidl::BytePart _response_buffer);
+      Read_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off, ::fidl::BytePart _response_buffer);
       ~Read_Impl() = default;
       Read_Impl(Read_Impl&& other) = default;
       Read_Impl& operator=(Read_Impl&& other) = default;
@@ -1524,7 +1524,7 @@ class MockDevice final {
     class Write_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Write_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off, ::fidl::BytePart _response_buffer);
+      Write_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off, ::fidl::BytePart _response_buffer);
       ~Write_Impl() = default;
       Write_Impl(Write_Impl&& other) = default;
       Write_Impl& operator=(Write_Impl&& other) = default;
@@ -1540,7 +1540,7 @@ class MockDevice final {
     class GetSize_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
+      GetSize_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
       ~GetSize_Impl() = default;
       GetSize_Impl(GetSize_Impl&& other) = default;
       GetSize_Impl& operator=(GetSize_Impl&& other) = default;
@@ -1556,7 +1556,7 @@ class MockDevice final {
     class Suspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+      Suspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
       ~Suspend_Impl() = default;
       Suspend_Impl(Suspend_Impl&& other) = default;
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
@@ -1572,7 +1572,7 @@ class MockDevice final {
     class Resume_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+      Resume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
       ~Resume_Impl() = default;
       Resume_Impl(Resume_Impl&& other) = default;
       Resume_Impl& operator=(Resume_Impl&& other) = default;
@@ -1588,7 +1588,7 @@ class MockDevice final {
     class Message_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Message_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
+      Message_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
       ~Message_Impl() = default;
       Message_Impl(Message_Impl&& other) = default;
       Message_Impl& operator=(Message_Impl&& other) = default;
@@ -1604,7 +1604,7 @@ class MockDevice final {
     class Rxrpc_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Rxrpc_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
+      Rxrpc_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
       ~Rxrpc_Impl() = default;
       Rxrpc_Impl(Rxrpc_Impl&& other) = default;
       Rxrpc_Impl& operator=(Rxrpc_Impl&& other) = default;
@@ -1619,7 +1619,7 @@ class MockDevice final {
     class AddDeviceDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      AddDeviceDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
+      AddDeviceDone_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
       ~AddDeviceDone_Impl() = default;
       AddDeviceDone_Impl(AddDeviceDone_Impl&& other) = default;
       AddDeviceDone_Impl& operator=(AddDeviceDone_Impl&& other) = default;
@@ -1630,7 +1630,7 @@ class MockDevice final {
     class UnbindReplyDone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      UnbindReplyDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
+      UnbindReplyDone_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
       ~UnbindReplyDone_Impl() = default;
       UnbindReplyDone_Impl(UnbindReplyDone_Impl&& other) = default;
       UnbindReplyDone_Impl& operator=(UnbindReplyDone_Impl&& other) = default;
@@ -1773,97 +1773,97 @@ class MockDevice final {
 
     // `record.device_id` corresponds to the parent here.
     // Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Bind Bind(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+    static ResultOf::Bind Bind(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
 
     // `record.device_id` corresponds to the parent here.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Bind Bind(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Release Release(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+    static ResultOf::Release Release(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Release Release(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record);
+    static UnownedResultOf::Release Release(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record);
 
     // Allocates 48 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetProtocol GetProtocol(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id);
+    static ResultOf::GetProtocol GetProtocol(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetProtocol GetProtocol(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetProtocol GetProtocol(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Open Open(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+    static ResultOf::Open Open(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Open Open(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Open Open(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Close Close(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+    static ResultOf::Close Close(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Close Close(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Close Close(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Unbind Unbind(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+    static ResultOf::Unbind Unbind(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Unbind Unbind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Unbind Unbind(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
 
     // Allocates 56 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Read Read(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off);
+    static ResultOf::Read Read(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Read Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Read Read(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off, ::fidl::BytePart _response_buffer);
 
     // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::Write Write(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off);
+    static ResultOf::Write Write(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Write Write(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetSize GetSize(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+    static ResultOf::GetSize GetSize(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetSize GetSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetSize GetSize(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+    static ResultOf::Suspend Suspend(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Suspend Suspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Resume Resume(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
+    static ResultOf::Resume Resume(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Resume Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Resume Resume(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Message Message(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+    static ResultOf::Message Message(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Message Message(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Message Message(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Rxrpc Rxrpc(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
+    static ResultOf::Rxrpc Rxrpc(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Rxrpc Rxrpc(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Rxrpc Rxrpc(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer);
 
     // Notification that the requested action was done
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::AddDeviceDone AddDeviceDone(zx::unowned_channel _client_end, uint64_t action_id);
+    static ResultOf::AddDeviceDone AddDeviceDone(::zx::unowned_channel _client_end, uint64_t action_id);
 
     // Notification that the requested action was done
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddDeviceDone AddDeviceDone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
+    static UnownedResultOf::AddDeviceDone AddDeviceDone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::UnbindReplyDone UnbindReplyDone(zx::unowned_channel _client_end, uint64_t action_id);
+    static ResultOf::UnbindReplyDone UnbindReplyDone(::zx::unowned_channel _client_end, uint64_t action_id);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::UnbindReplyDone UnbindReplyDone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
+    static UnownedResultOf::UnbindReplyDone UnbindReplyDone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id);
 
   };
 
@@ -1874,36 +1874,36 @@ class MockDevice final {
    public:
 
     // `record.device_id` corresponds to the parent here.
-    static ::fidl::DecodeResult<BindResponse> Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<BindResponse> Bind(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::internal::StatusAndError Release(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseRequest> params);
+    static ::fidl::internal::StatusAndError Release(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseRequest> params);
 
-    static ::fidl::DecodeResult<GetProtocolResponse> GetProtocol(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetProtocolRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetProtocolResponse> GetProtocol(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetProtocolRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<OpenResponse> Open(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<OpenResponse> Open(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CloseResponse> Close(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<UnbindResponse> Unbind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnbindRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<UnbindResponse> Unbind(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnbindRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReadResponse> Read(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<WriteResponse> Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WriteResponse> Write(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetSizeResponse> GetSize(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSizeRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetSizeResponse> GetSize(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSizeRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SuspendResponse> Suspend(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ResumeResponse> Resume(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ResumeResponse> Resume(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<MessageResponse> Message(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MessageRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<MessageResponse> Message(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<MessageRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<RxrpcResponse> Rxrpc(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RxrpcRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RxrpcResponse> Rxrpc(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RxrpcRequest> params, ::fidl::BytePart response_buffer);
 
     // Notification that the requested action was done
-    static ::fidl::internal::StatusAndError AddDeviceDone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceDoneRequest> params);
+    static ::fidl::internal::StatusAndError AddDeviceDone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceDoneRequest> params);
 
-    static ::fidl::internal::StatusAndError UnbindReplyDone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnbindReplyDoneRequest> params);
+    static ::fidl::internal::StatusAndError UnbindReplyDone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnbindReplyDoneRequest> params);
 
   };
 

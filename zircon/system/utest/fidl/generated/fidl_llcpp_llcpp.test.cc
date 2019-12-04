@@ -21,7 +21,7 @@ extern "C" const fidl_type_t v1_fidl_test_coding_LlcppActionResponseTable;
 
 }  // namespace
 template <>
-Llcpp::ResultOf::Action_Impl<Llcpp::ActionResponse>::Action_Impl(zx::unowned_channel _client_end) {
+Llcpp::ResultOf::Action_Impl<Llcpp::ActionResponse>::Action_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ActionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -34,15 +34,15 @@ Llcpp::ResultOf::Action_Impl<Llcpp::ActionResponse>::Action_Impl(zx::unowned_cha
 }
 
 Llcpp::ResultOf::Action Llcpp::SyncClient::Action() {
-  return ResultOf::Action(zx::unowned_channel(this->channel_));
+    return ResultOf::Action(::zx::unowned_channel(this->channel_));
 }
 
-Llcpp::ResultOf::Action Llcpp::Call::Action(zx::unowned_channel _client_end) {
+Llcpp::ResultOf::Action Llcpp::Call::Action(::zx::unowned_channel _client_end) {
   return ResultOf::Action(std::move(_client_end));
 }
 
 template <>
-Llcpp::UnownedResultOf::Action_Impl<Llcpp::ActionResponse>::Action_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Llcpp::UnownedResultOf::Action_Impl<Llcpp::ActionResponse>::Action_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ActionRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, ActionRequest::PrimarySize);
@@ -53,14 +53,14 @@ Llcpp::UnownedResultOf::Action_Impl<Llcpp::ActionResponse>::Action_Impl(zx::unow
 }
 
 Llcpp::UnownedResultOf::Action Llcpp::SyncClient::Action(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Action(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Action(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Llcpp::UnownedResultOf::Action Llcpp::Call::Action(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Llcpp::UnownedResultOf::Action Llcpp::Call::Action(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Action(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Llcpp::ActionResponse> Llcpp::InPlace::Action(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Llcpp::ActionResponse> Llcpp::InPlace::Action(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(ActionRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

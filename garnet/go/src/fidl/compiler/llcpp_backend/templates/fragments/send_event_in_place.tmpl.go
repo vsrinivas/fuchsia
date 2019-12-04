@@ -12,7 +12,7 @@ Send{{ .Name }}Event(::zx::unowned_channel _chan, ::fidl::DecodedMessage<{{ .Nam
 {{- define "SendEventInPlaceMethodDefinition" }}
 zx_status_t {{ .LLProps.InterfaceName }}::{{ template "SendEventInPlaceMethodSignature" . }} {
   {{ .LLProps.InterfaceName }}::SetTransactionHeaderFor::{{ .Name }}Response(params);
-  return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 {{- end }}
 `

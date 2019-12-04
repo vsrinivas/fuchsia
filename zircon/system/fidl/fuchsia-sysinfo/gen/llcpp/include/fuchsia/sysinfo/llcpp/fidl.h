@@ -144,7 +144,7 @@ class Device final {
     class GetHypervisorResource_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetHypervisorResource_Impl(zx::unowned_channel _client_end);
+      GetHypervisorResource_Impl(::zx::unowned_channel _client_end);
       ~GetHypervisorResource_Impl() = default;
       GetHypervisorResource_Impl(GetHypervisorResource_Impl&& other) = default;
       GetHypervisorResource_Impl& operator=(GetHypervisorResource_Impl&& other) = default;
@@ -160,7 +160,7 @@ class Device final {
     class GetBoardName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetBoardName_Impl(zx::unowned_channel _client_end);
+      GetBoardName_Impl(::zx::unowned_channel _client_end);
       ~GetBoardName_Impl() = default;
       GetBoardName_Impl(GetBoardName_Impl&& other) = default;
       GetBoardName_Impl& operator=(GetBoardName_Impl&& other) = default;
@@ -176,7 +176,7 @@ class Device final {
     class GetBoardRevision_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetBoardRevision_Impl(zx::unowned_channel _client_end);
+      GetBoardRevision_Impl(::zx::unowned_channel _client_end);
       ~GetBoardRevision_Impl() = default;
       GetBoardRevision_Impl(GetBoardRevision_Impl&& other) = default;
       GetBoardRevision_Impl& operator=(GetBoardRevision_Impl&& other) = default;
@@ -192,7 +192,7 @@ class Device final {
     class GetInterruptControllerInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetInterruptControllerInfo_Impl(zx::unowned_channel _client_end);
+      GetInterruptControllerInfo_Impl(::zx::unowned_channel _client_end);
       ~GetInterruptControllerInfo_Impl() = default;
       GetInterruptControllerInfo_Impl(GetInterruptControllerInfo_Impl&& other) = default;
       GetInterruptControllerInfo_Impl& operator=(GetInterruptControllerInfo_Impl&& other) = default;
@@ -221,7 +221,7 @@ class Device final {
     class GetHypervisorResource_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetHypervisorResource_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetHypervisorResource_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetHypervisorResource_Impl() = default;
       GetHypervisorResource_Impl(GetHypervisorResource_Impl&& other) = default;
       GetHypervisorResource_Impl& operator=(GetHypervisorResource_Impl&& other) = default;
@@ -237,7 +237,7 @@ class Device final {
     class GetBoardName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetBoardName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetBoardName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetBoardName_Impl() = default;
       GetBoardName_Impl(GetBoardName_Impl&& other) = default;
       GetBoardName_Impl& operator=(GetBoardName_Impl&& other) = default;
@@ -253,7 +253,7 @@ class Device final {
     class GetBoardRevision_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetBoardRevision_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetBoardRevision_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetBoardRevision_Impl() = default;
       GetBoardRevision_Impl(GetBoardRevision_Impl&& other) = default;
       GetBoardRevision_Impl& operator=(GetBoardRevision_Impl&& other) = default;
@@ -269,7 +269,7 @@ class Device final {
     class GetInterruptControllerInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetInterruptControllerInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetInterruptControllerInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetInterruptControllerInfo_Impl() = default;
       GetInterruptControllerInfo_Impl(GetInterruptControllerInfo_Impl&& other) = default;
       GetInterruptControllerInfo_Impl& operator=(GetInterruptControllerInfo_Impl&& other) = default;
@@ -334,28 +334,28 @@ class Device final {
    public:
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetHypervisorResource GetHypervisorResource(zx::unowned_channel _client_end);
+    static ResultOf::GetHypervisorResource GetHypervisorResource(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetHypervisorResource GetHypervisorResource(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetHypervisorResource GetHypervisorResource(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetBoardName GetBoardName(zx::unowned_channel _client_end);
+    static ResultOf::GetBoardName GetBoardName(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetBoardName GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetBoardName GetBoardName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetBoardRevision GetBoardRevision(zx::unowned_channel _client_end);
+    static ResultOf::GetBoardRevision GetBoardRevision(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetBoardRevision GetBoardRevision(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetBoardRevision GetBoardRevision(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetInterruptControllerInfo GetInterruptControllerInfo(zx::unowned_channel _client_end);
+    static ResultOf::GetInterruptControllerInfo GetInterruptControllerInfo(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetInterruptControllerInfo GetInterruptControllerInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetInterruptControllerInfo GetInterruptControllerInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -365,13 +365,13 @@ class Device final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetBoardRevisionResponse> GetBoardRevision(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetBoardRevisionResponse> GetBoardRevision(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

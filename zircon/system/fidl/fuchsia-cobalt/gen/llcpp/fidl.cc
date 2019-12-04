@@ -137,7 +137,7 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_ControllerGenerateAggregatedObser
 
 }  // namespace
 template <>
-Controller::ResultOf::RequestSendSoon_Impl<Controller::RequestSendSoonResponse>::RequestSendSoon_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::RequestSendSoon_Impl<Controller::RequestSendSoonResponse>::RequestSendSoon_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RequestSendSoonRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -150,15 +150,15 @@ Controller::ResultOf::RequestSendSoon_Impl<Controller::RequestSendSoonResponse>:
 }
 
 Controller::ResultOf::RequestSendSoon Controller::SyncClient::RequestSendSoon() {
-  return ResultOf::RequestSendSoon(zx::unowned_channel(this->channel_));
+    return ResultOf::RequestSendSoon(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::RequestSendSoon Controller::Call::RequestSendSoon(zx::unowned_channel _client_end) {
+Controller::ResultOf::RequestSendSoon Controller::Call::RequestSendSoon(::zx::unowned_channel _client_end) {
   return ResultOf::RequestSendSoon(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::RequestSendSoon_Impl<Controller::RequestSendSoonResponse>::RequestSendSoon_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::RequestSendSoon_Impl<Controller::RequestSendSoonResponse>::RequestSendSoon_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(RequestSendSoonRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, RequestSendSoonRequest::PrimarySize);
@@ -169,14 +169,14 @@ Controller::UnownedResultOf::RequestSendSoon_Impl<Controller::RequestSendSoonRes
 }
 
 Controller::UnownedResultOf::RequestSendSoon Controller::SyncClient::RequestSendSoon(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RequestSendSoon(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::RequestSendSoon(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::RequestSendSoon Controller::Call::RequestSendSoon(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::RequestSendSoon Controller::Call::RequestSendSoon(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::RequestSendSoon(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::RequestSendSoonResponse> Controller::InPlace::RequestSendSoon(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::RequestSendSoonResponse> Controller::InPlace::RequestSendSoon(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(RequestSendSoonRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -198,7 +198,7 @@ Controller::UnownedResultOf::RequestSendSoon Controller::Call::RequestSendSoon(z
 }
 
 template <>
-Controller::ResultOf::BlockUntilEmpty_Impl<Controller::BlockUntilEmptyResponse>::BlockUntilEmpty_Impl(zx::unowned_channel _client_end, uint32_t max_wait_seconds) {
+Controller::ResultOf::BlockUntilEmpty_Impl<Controller::BlockUntilEmptyResponse>::BlockUntilEmpty_Impl(::zx::unowned_channel _client_end, uint32_t max_wait_seconds) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BlockUntilEmptyRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -213,15 +213,15 @@ Controller::ResultOf::BlockUntilEmpty_Impl<Controller::BlockUntilEmptyResponse>:
 }
 
 Controller::ResultOf::BlockUntilEmpty Controller::SyncClient::BlockUntilEmpty(uint32_t max_wait_seconds) {
-  return ResultOf::BlockUntilEmpty(zx::unowned_channel(this->channel_), std::move(max_wait_seconds));
+    return ResultOf::BlockUntilEmpty(::zx::unowned_channel(this->channel_), std::move(max_wait_seconds));
 }
 
-Controller::ResultOf::BlockUntilEmpty Controller::Call::BlockUntilEmpty(zx::unowned_channel _client_end, uint32_t max_wait_seconds) {
+Controller::ResultOf::BlockUntilEmpty Controller::Call::BlockUntilEmpty(::zx::unowned_channel _client_end, uint32_t max_wait_seconds) {
   return ResultOf::BlockUntilEmpty(std::move(_client_end), std::move(max_wait_seconds));
 }
 
 template <>
-Controller::UnownedResultOf::BlockUntilEmpty_Impl<Controller::BlockUntilEmptyResponse>::BlockUntilEmpty_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t max_wait_seconds, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::BlockUntilEmpty_Impl<Controller::BlockUntilEmptyResponse>::BlockUntilEmpty_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t max_wait_seconds, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < BlockUntilEmptyRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<BlockUntilEmptyResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -236,14 +236,14 @@ Controller::UnownedResultOf::BlockUntilEmpty_Impl<Controller::BlockUntilEmptyRes
 }
 
 Controller::UnownedResultOf::BlockUntilEmpty Controller::SyncClient::BlockUntilEmpty(::fidl::BytePart _request_buffer, uint32_t max_wait_seconds, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::BlockUntilEmpty(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(max_wait_seconds), std::move(_response_buffer));
+  return UnownedResultOf::BlockUntilEmpty(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(max_wait_seconds), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::BlockUntilEmpty Controller::Call::BlockUntilEmpty(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t max_wait_seconds, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::BlockUntilEmpty Controller::Call::BlockUntilEmpty(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t max_wait_seconds, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::BlockUntilEmpty(std::move(_client_end), std::move(_request_buffer), std::move(max_wait_seconds), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::BlockUntilEmptyResponse> Controller::InPlace::BlockUntilEmpty(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BlockUntilEmptyRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::BlockUntilEmptyResponse> Controller::InPlace::BlockUntilEmpty(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<BlockUntilEmptyRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::BlockUntilEmptyRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -260,7 +260,7 @@ Controller::UnownedResultOf::BlockUntilEmpty Controller::Call::BlockUntilEmpty(z
 }
 
 template <>
-Controller::ResultOf::GetNumSendAttempts_Impl<Controller::GetNumSendAttemptsResponse>::GetNumSendAttempts_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetNumSendAttempts_Impl<Controller::GetNumSendAttemptsResponse>::GetNumSendAttempts_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNumSendAttemptsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -273,15 +273,15 @@ Controller::ResultOf::GetNumSendAttempts_Impl<Controller::GetNumSendAttemptsResp
 }
 
 Controller::ResultOf::GetNumSendAttempts Controller::SyncClient::GetNumSendAttempts() {
-  return ResultOf::GetNumSendAttempts(zx::unowned_channel(this->channel_));
+    return ResultOf::GetNumSendAttempts(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetNumSendAttempts Controller::Call::GetNumSendAttempts(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetNumSendAttempts Controller::Call::GetNumSendAttempts(::zx::unowned_channel _client_end) {
   return ResultOf::GetNumSendAttempts(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetNumSendAttempts_Impl<Controller::GetNumSendAttemptsResponse>::GetNumSendAttempts_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetNumSendAttempts_Impl<Controller::GetNumSendAttemptsResponse>::GetNumSendAttempts_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetNumSendAttemptsRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetNumSendAttemptsRequest::PrimarySize);
@@ -292,14 +292,14 @@ Controller::UnownedResultOf::GetNumSendAttempts_Impl<Controller::GetNumSendAttem
 }
 
 Controller::UnownedResultOf::GetNumSendAttempts Controller::SyncClient::GetNumSendAttempts(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetNumSendAttempts(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetNumSendAttempts(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetNumSendAttempts Controller::Call::GetNumSendAttempts(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetNumSendAttempts Controller::Call::GetNumSendAttempts(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetNumSendAttempts(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetNumSendAttemptsResponse> Controller::InPlace::GetNumSendAttempts(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetNumSendAttemptsResponse> Controller::InPlace::GetNumSendAttempts(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetNumSendAttemptsRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -321,7 +321,7 @@ Controller::UnownedResultOf::GetNumSendAttempts Controller::Call::GetNumSendAtte
 }
 
 template <>
-Controller::ResultOf::GetFailedSendAttempts_Impl<Controller::GetFailedSendAttemptsResponse>::GetFailedSendAttempts_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetFailedSendAttempts_Impl<Controller::GetFailedSendAttemptsResponse>::GetFailedSendAttempts_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFailedSendAttemptsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -334,15 +334,15 @@ Controller::ResultOf::GetFailedSendAttempts_Impl<Controller::GetFailedSendAttemp
 }
 
 Controller::ResultOf::GetFailedSendAttempts Controller::SyncClient::GetFailedSendAttempts() {
-  return ResultOf::GetFailedSendAttempts(zx::unowned_channel(this->channel_));
+    return ResultOf::GetFailedSendAttempts(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetFailedSendAttempts Controller::Call::GetFailedSendAttempts(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetFailedSendAttempts Controller::Call::GetFailedSendAttempts(::zx::unowned_channel _client_end) {
   return ResultOf::GetFailedSendAttempts(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetFailedSendAttempts_Impl<Controller::GetFailedSendAttemptsResponse>::GetFailedSendAttempts_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetFailedSendAttempts_Impl<Controller::GetFailedSendAttemptsResponse>::GetFailedSendAttempts_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFailedSendAttemptsRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetFailedSendAttemptsRequest::PrimarySize);
@@ -353,14 +353,14 @@ Controller::UnownedResultOf::GetFailedSendAttempts_Impl<Controller::GetFailedSen
 }
 
 Controller::UnownedResultOf::GetFailedSendAttempts Controller::SyncClient::GetFailedSendAttempts(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetFailedSendAttempts(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetFailedSendAttempts(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetFailedSendAttempts Controller::Call::GetFailedSendAttempts(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetFailedSendAttempts Controller::Call::GetFailedSendAttempts(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetFailedSendAttempts(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetFailedSendAttemptsResponse> Controller::InPlace::GetFailedSendAttempts(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetFailedSendAttemptsResponse> Controller::InPlace::GetFailedSendAttempts(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetFailedSendAttemptsRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -382,7 +382,7 @@ Controller::UnownedResultOf::GetFailedSendAttempts Controller::Call::GetFailedSe
 }
 
 template <>
-Controller::ResultOf::GetNumObservationsAdded_Impl<Controller::GetNumObservationsAddedResponse>::GetNumObservationsAdded_Impl(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetNumObservationsAdded_Impl<Controller::GetNumObservationsAddedResponse>::GetNumObservationsAdded_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNumObservationsAddedRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -395,15 +395,15 @@ Controller::ResultOf::GetNumObservationsAdded_Impl<Controller::GetNumObservation
 }
 
 Controller::ResultOf::GetNumObservationsAdded Controller::SyncClient::GetNumObservationsAdded() {
-  return ResultOf::GetNumObservationsAdded(zx::unowned_channel(this->channel_));
+    return ResultOf::GetNumObservationsAdded(::zx::unowned_channel(this->channel_));
 }
 
-Controller::ResultOf::GetNumObservationsAdded Controller::Call::GetNumObservationsAdded(zx::unowned_channel _client_end) {
+Controller::ResultOf::GetNumObservationsAdded Controller::Call::GetNumObservationsAdded(::zx::unowned_channel _client_end) {
   return ResultOf::GetNumObservationsAdded(std::move(_client_end));
 }
 
 template <>
-Controller::UnownedResultOf::GetNumObservationsAdded_Impl<Controller::GetNumObservationsAddedResponse>::GetNumObservationsAdded_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetNumObservationsAdded_Impl<Controller::GetNumObservationsAddedResponse>::GetNumObservationsAdded_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetNumObservationsAddedRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetNumObservationsAddedRequest::PrimarySize);
@@ -414,14 +414,14 @@ Controller::UnownedResultOf::GetNumObservationsAdded_Impl<Controller::GetNumObse
 }
 
 Controller::UnownedResultOf::GetNumObservationsAdded Controller::SyncClient::GetNumObservationsAdded(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetNumObservationsAdded(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetNumObservationsAdded(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GetNumObservationsAdded Controller::Call::GetNumObservationsAdded(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GetNumObservationsAdded Controller::Call::GetNumObservationsAdded(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetNumObservationsAdded(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GetNumObservationsAddedResponse> Controller::InPlace::GetNumObservationsAdded(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GetNumObservationsAddedResponse> Controller::InPlace::GetNumObservationsAdded(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetNumObservationsAddedRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -443,7 +443,7 @@ Controller::UnownedResultOf::GetNumObservationsAdded Controller::Call::GetNumObs
 }
 
 template <>
-Controller::ResultOf::GenerateAggregatedObservations_Impl<Controller::GenerateAggregatedObservationsResponse>::GenerateAggregatedObservations_Impl(zx::unowned_channel _client_end, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids) {
+Controller::ResultOf::GenerateAggregatedObservations_Impl<Controller::GenerateAggregatedObservationsResponse>::GenerateAggregatedObservations_Impl(::zx::unowned_channel _client_end, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GenerateAggregatedObservationsRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -461,15 +461,15 @@ Controller::ResultOf::GenerateAggregatedObservations_Impl<Controller::GenerateAg
 }
 
 Controller::ResultOf::GenerateAggregatedObservations Controller::SyncClient::GenerateAggregatedObservations(uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids) {
-  return ResultOf::GenerateAggregatedObservations(zx::unowned_channel(this->channel_), std::move(day_index), std::move(report_ids));
+    return ResultOf::GenerateAggregatedObservations(::zx::unowned_channel(this->channel_), std::move(day_index), std::move(report_ids));
 }
 
-Controller::ResultOf::GenerateAggregatedObservations Controller::Call::GenerateAggregatedObservations(zx::unowned_channel _client_end, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids) {
+Controller::ResultOf::GenerateAggregatedObservations Controller::Call::GenerateAggregatedObservations(::zx::unowned_channel _client_end, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids) {
   return ResultOf::GenerateAggregatedObservations(std::move(_client_end), std::move(day_index), std::move(report_ids));
 }
 
 template <>
-Controller::UnownedResultOf::GenerateAggregatedObservations_Impl<Controller::GenerateAggregatedObservationsResponse>::GenerateAggregatedObservations_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GenerateAggregatedObservations_Impl<Controller::GenerateAggregatedObservationsResponse>::GenerateAggregatedObservations_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GenerateAggregatedObservationsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GenerateAggregatedObservationsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -488,14 +488,14 @@ Controller::UnownedResultOf::GenerateAggregatedObservations_Impl<Controller::Gen
 }
 
 Controller::UnownedResultOf::GenerateAggregatedObservations Controller::SyncClient::GenerateAggregatedObservations(::fidl::BytePart _request_buffer, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GenerateAggregatedObservations(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(day_index), std::move(report_ids), std::move(_response_buffer));
+  return UnownedResultOf::GenerateAggregatedObservations(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(day_index), std::move(report_ids), std::move(_response_buffer));
 }
 
-Controller::UnownedResultOf::GenerateAggregatedObservations Controller::Call::GenerateAggregatedObservations(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids, ::fidl::BytePart _response_buffer) {
+Controller::UnownedResultOf::GenerateAggregatedObservations Controller::Call::GenerateAggregatedObservations(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GenerateAggregatedObservations(std::move(_client_end), std::move(_request_buffer), std::move(day_index), std::move(report_ids), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Controller::GenerateAggregatedObservationsResponse> Controller::InPlace::GenerateAggregatedObservations(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GenerateAggregatedObservationsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Controller::GenerateAggregatedObservationsResponse> Controller::InPlace::GenerateAggregatedObservations(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GenerateAggregatedObservationsRequest> params, ::fidl::BytePart response_buffer) {
   Controller::SetTransactionHeaderFor::GenerateAggregatedObservationsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -923,7 +923,7 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseEndTimerResponseTable;
 
 }  // namespace
 template <>
-LoggerBase::ResultOf::LogEvent_Impl<LoggerBase::LogEventResponse>::LogEvent_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
+LoggerBase::ResultOf::LogEvent_Impl<LoggerBase::LogEventResponse>::LogEvent_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogEventRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -939,15 +939,15 @@ LoggerBase::ResultOf::LogEvent_Impl<LoggerBase::LogEventResponse>::LogEvent_Impl
 }
 
 LoggerBase::ResultOf::LogEvent LoggerBase::SyncClient::LogEvent(uint32_t metric_id, uint32_t event_code) {
-  return ResultOf::LogEvent(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code));
+    return ResultOf::LogEvent(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code));
 }
 
-LoggerBase::ResultOf::LogEvent LoggerBase::Call::LogEvent(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
+LoggerBase::ResultOf::LogEvent LoggerBase::Call::LogEvent(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
   return ResultOf::LogEvent(std::move(_client_end), std::move(metric_id), std::move(event_code));
 }
 
 template <>
-LoggerBase::UnownedResultOf::LogEvent_Impl<LoggerBase::LogEventResponse>::LogEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogEvent_Impl<LoggerBase::LogEventResponse>::LogEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogEventRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogEventResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -963,14 +963,14 @@ LoggerBase::UnownedResultOf::LogEvent_Impl<LoggerBase::LogEventResponse>::LogEve
 }
 
 LoggerBase::UnownedResultOf::LogEvent LoggerBase::SyncClient::LogEvent(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogEvent(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(_response_buffer));
+  return UnownedResultOf::LogEvent(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(_response_buffer));
 }
 
-LoggerBase::UnownedResultOf::LogEvent LoggerBase::Call::LogEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogEvent LoggerBase::Call::LogEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogEvent(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerBase::LogEventResponse> LoggerBase::InPlace::LogEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerBase::LogEventResponse> LoggerBase::InPlace::LogEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer) {
   LoggerBase::SetTransactionHeaderFor::LogEventRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -987,7 +987,7 @@ LoggerBase::UnownedResultOf::LogEvent LoggerBase::Call::LogEvent(zx::unowned_cha
 }
 
 template <>
-LoggerBase::ResultOf::LogEventCount_Impl<LoggerBase::LogEventCountResponse>::LogEventCount_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
+LoggerBase::ResultOf::LogEventCount_Impl<LoggerBase::LogEventCountResponse>::LogEventCount_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogEventCountRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1008,15 +1008,15 @@ LoggerBase::ResultOf::LogEventCount_Impl<LoggerBase::LogEventCountResponse>::Log
 }
 
 LoggerBase::ResultOf::LogEventCount LoggerBase::SyncClient::LogEventCount(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
-  return ResultOf::LogEventCount(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count));
+    return ResultOf::LogEventCount(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count));
 }
 
-LoggerBase::ResultOf::LogEventCount LoggerBase::Call::LogEventCount(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
+LoggerBase::ResultOf::LogEventCount LoggerBase::Call::LogEventCount(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
   return ResultOf::LogEventCount(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count));
 }
 
 template <>
-LoggerBase::UnownedResultOf::LogEventCount_Impl<LoggerBase::LogEventCountResponse>::LogEventCount_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogEventCount_Impl<LoggerBase::LogEventCountResponse>::LogEventCount_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogEventCountRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogEventCountResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1038,14 +1038,14 @@ LoggerBase::UnownedResultOf::LogEventCount_Impl<LoggerBase::LogEventCountRespons
 }
 
 LoggerBase::UnownedResultOf::LogEventCount LoggerBase::SyncClient::LogEventCount(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogEventCount(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count), std::move(_response_buffer));
+  return UnownedResultOf::LogEventCount(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count), std::move(_response_buffer));
 }
 
-LoggerBase::UnownedResultOf::LogEventCount LoggerBase::Call::LogEventCount(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogEventCount LoggerBase::Call::LogEventCount(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogEventCount(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerBase::LogEventCountResponse> LoggerBase::InPlace::LogEventCount(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerBase::LogEventCountResponse> LoggerBase::InPlace::LogEventCount(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer) {
   LoggerBase::SetTransactionHeaderFor::LogEventCountRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1062,7 +1062,7 @@ LoggerBase::UnownedResultOf::LogEventCount LoggerBase::Call::LogEventCount(zx::u
 }
 
 template <>
-LoggerBase::ResultOf::LogElapsedTime_Impl<LoggerBase::LogElapsedTimeResponse>::LogElapsedTime_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
+LoggerBase::ResultOf::LogElapsedTime_Impl<LoggerBase::LogElapsedTimeResponse>::LogElapsedTime_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogElapsedTimeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1082,15 +1082,15 @@ LoggerBase::ResultOf::LogElapsedTime_Impl<LoggerBase::LogElapsedTimeResponse>::L
 }
 
 LoggerBase::ResultOf::LogElapsedTime LoggerBase::SyncClient::LogElapsedTime(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
-  return ResultOf::LogElapsedTime(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros));
+    return ResultOf::LogElapsedTime(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros));
 }
 
-LoggerBase::ResultOf::LogElapsedTime LoggerBase::Call::LogElapsedTime(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
+LoggerBase::ResultOf::LogElapsedTime LoggerBase::Call::LogElapsedTime(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
   return ResultOf::LogElapsedTime(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros));
 }
 
 template <>
-LoggerBase::UnownedResultOf::LogElapsedTime_Impl<LoggerBase::LogElapsedTimeResponse>::LogElapsedTime_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogElapsedTime_Impl<LoggerBase::LogElapsedTimeResponse>::LogElapsedTime_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogElapsedTimeRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogElapsedTimeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1111,14 +1111,14 @@ LoggerBase::UnownedResultOf::LogElapsedTime_Impl<LoggerBase::LogElapsedTimeRespo
 }
 
 LoggerBase::UnownedResultOf::LogElapsedTime LoggerBase::SyncClient::LogElapsedTime(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogElapsedTime(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros), std::move(_response_buffer));
+  return UnownedResultOf::LogElapsedTime(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros), std::move(_response_buffer));
 }
 
-LoggerBase::UnownedResultOf::LogElapsedTime LoggerBase::Call::LogElapsedTime(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogElapsedTime LoggerBase::Call::LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogElapsedTime(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerBase::LogElapsedTimeResponse> LoggerBase::InPlace::LogElapsedTime(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerBase::LogElapsedTimeResponse> LoggerBase::InPlace::LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer) {
   LoggerBase::SetTransactionHeaderFor::LogElapsedTimeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1135,7 +1135,7 @@ LoggerBase::UnownedResultOf::LogElapsedTime LoggerBase::Call::LogElapsedTime(zx:
 }
 
 template <>
-LoggerBase::ResultOf::LogFrameRate_Impl<LoggerBase::LogFrameRateResponse>::LogFrameRate_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
+LoggerBase::ResultOf::LogFrameRate_Impl<LoggerBase::LogFrameRateResponse>::LogFrameRate_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogFrameRateRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1155,15 +1155,15 @@ LoggerBase::ResultOf::LogFrameRate_Impl<LoggerBase::LogFrameRateResponse>::LogFr
 }
 
 LoggerBase::ResultOf::LogFrameRate LoggerBase::SyncClient::LogFrameRate(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
-  return ResultOf::LogFrameRate(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps));
+    return ResultOf::LogFrameRate(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps));
 }
 
-LoggerBase::ResultOf::LogFrameRate LoggerBase::Call::LogFrameRate(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
+LoggerBase::ResultOf::LogFrameRate LoggerBase::Call::LogFrameRate(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
   return ResultOf::LogFrameRate(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps));
 }
 
 template <>
-LoggerBase::UnownedResultOf::LogFrameRate_Impl<LoggerBase::LogFrameRateResponse>::LogFrameRate_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogFrameRate_Impl<LoggerBase::LogFrameRateResponse>::LogFrameRate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogFrameRateRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogFrameRateResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1184,14 +1184,14 @@ LoggerBase::UnownedResultOf::LogFrameRate_Impl<LoggerBase::LogFrameRateResponse>
 }
 
 LoggerBase::UnownedResultOf::LogFrameRate LoggerBase::SyncClient::LogFrameRate(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogFrameRate(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps), std::move(_response_buffer));
+  return UnownedResultOf::LogFrameRate(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps), std::move(_response_buffer));
 }
 
-LoggerBase::UnownedResultOf::LogFrameRate LoggerBase::Call::LogFrameRate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogFrameRate LoggerBase::Call::LogFrameRate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogFrameRate(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerBase::LogFrameRateResponse> LoggerBase::InPlace::LogFrameRate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerBase::LogFrameRateResponse> LoggerBase::InPlace::LogFrameRate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer) {
   LoggerBase::SetTransactionHeaderFor::LogFrameRateRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1208,7 +1208,7 @@ LoggerBase::UnownedResultOf::LogFrameRate LoggerBase::Call::LogFrameRate(zx::uno
 }
 
 template <>
-LoggerBase::ResultOf::LogMemoryUsage_Impl<LoggerBase::LogMemoryUsageResponse>::LogMemoryUsage_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
+LoggerBase::ResultOf::LogMemoryUsage_Impl<LoggerBase::LogMemoryUsageResponse>::LogMemoryUsage_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogMemoryUsageRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1228,15 +1228,15 @@ LoggerBase::ResultOf::LogMemoryUsage_Impl<LoggerBase::LogMemoryUsageResponse>::L
 }
 
 LoggerBase::ResultOf::LogMemoryUsage LoggerBase::SyncClient::LogMemoryUsage(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
-  return ResultOf::LogMemoryUsage(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes));
+    return ResultOf::LogMemoryUsage(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes));
 }
 
-LoggerBase::ResultOf::LogMemoryUsage LoggerBase::Call::LogMemoryUsage(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
+LoggerBase::ResultOf::LogMemoryUsage LoggerBase::Call::LogMemoryUsage(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
   return ResultOf::LogMemoryUsage(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes));
 }
 
 template <>
-LoggerBase::UnownedResultOf::LogMemoryUsage_Impl<LoggerBase::LogMemoryUsageResponse>::LogMemoryUsage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogMemoryUsage_Impl<LoggerBase::LogMemoryUsageResponse>::LogMemoryUsage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogMemoryUsageRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogMemoryUsageResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1257,14 +1257,14 @@ LoggerBase::UnownedResultOf::LogMemoryUsage_Impl<LoggerBase::LogMemoryUsageRespo
 }
 
 LoggerBase::UnownedResultOf::LogMemoryUsage LoggerBase::SyncClient::LogMemoryUsage(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogMemoryUsage(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes), std::move(_response_buffer));
+  return UnownedResultOf::LogMemoryUsage(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes), std::move(_response_buffer));
 }
 
-LoggerBase::UnownedResultOf::LogMemoryUsage LoggerBase::Call::LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogMemoryUsage LoggerBase::Call::LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogMemoryUsage(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerBase::LogMemoryUsageResponse> LoggerBase::InPlace::LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerBase::LogMemoryUsageResponse> LoggerBase::InPlace::LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer) {
   LoggerBase::SetTransactionHeaderFor::LogMemoryUsageRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1281,7 +1281,7 @@ LoggerBase::UnownedResultOf::LogMemoryUsage LoggerBase::Call::LogMemoryUsage(zx:
 }
 
 template <>
-LoggerBase::ResultOf::LogString_Impl<LoggerBase::LogStringResponse>::LogString_Impl(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
+LoggerBase::ResultOf::LogString_Impl<LoggerBase::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogStringRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1299,15 +1299,15 @@ LoggerBase::ResultOf::LogString_Impl<LoggerBase::LogStringResponse>::LogString_I
 }
 
 LoggerBase::ResultOf::LogString LoggerBase::SyncClient::LogString(uint32_t metric_id, ::fidl::StringView s) {
-  return ResultOf::LogString(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(s));
+    return ResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(s));
 }
 
-LoggerBase::ResultOf::LogString LoggerBase::Call::LogString(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
+LoggerBase::ResultOf::LogString LoggerBase::Call::LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
   return ResultOf::LogString(std::move(_client_end), std::move(metric_id), std::move(s));
 }
 
 template <>
-LoggerBase::UnownedResultOf::LogString_Impl<LoggerBase::LogStringResponse>::LogString_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogString_Impl<LoggerBase::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogStringRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogStringResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1326,14 +1326,14 @@ LoggerBase::UnownedResultOf::LogString_Impl<LoggerBase::LogStringResponse>::LogS
 }
 
 LoggerBase::UnownedResultOf::LogString LoggerBase::SyncClient::LogString(::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogString(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
+  return UnownedResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
 }
 
-LoggerBase::UnownedResultOf::LogString LoggerBase::Call::LogString(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::LogString LoggerBase::Call::LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogString(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerBase::LogStringResponse> LoggerBase::InPlace::LogString(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerBase::LogStringResponse> LoggerBase::InPlace::LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer) {
   LoggerBase::SetTransactionHeaderFor::LogStringRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1350,7 +1350,7 @@ LoggerBase::UnownedResultOf::LogString LoggerBase::Call::LogString(zx::unowned_c
 }
 
 template <>
-LoggerBase::ResultOf::StartTimer_Impl<LoggerBase::StartTimerResponse>::StartTimer_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+LoggerBase::ResultOf::StartTimer_Impl<LoggerBase::StartTimerResponse>::StartTimer_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartTimerRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1372,15 +1372,15 @@ LoggerBase::ResultOf::StartTimer_Impl<LoggerBase::StartTimerResponse>::StartTime
 }
 
 LoggerBase::ResultOf::StartTimer LoggerBase::SyncClient::StartTimer(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
-  return ResultOf::StartTimer(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
+    return ResultOf::StartTimer(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
-LoggerBase::ResultOf::StartTimer LoggerBase::Call::StartTimer(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+LoggerBase::ResultOf::StartTimer LoggerBase::Call::StartTimer(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   return ResultOf::StartTimer(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
 template <>
-LoggerBase::UnownedResultOf::StartTimer_Impl<LoggerBase::StartTimerResponse>::StartTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::StartTimer_Impl<LoggerBase::StartTimerResponse>::StartTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < StartTimerRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<StartTimerResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1403,14 +1403,14 @@ LoggerBase::UnownedResultOf::StartTimer_Impl<LoggerBase::StartTimerResponse>::St
 }
 
 LoggerBase::UnownedResultOf::StartTimer LoggerBase::SyncClient::StartTimer(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::StartTimer(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
+  return UnownedResultOf::StartTimer(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-LoggerBase::UnownedResultOf::StartTimer LoggerBase::Call::StartTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::StartTimer LoggerBase::Call::StartTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::StartTimer(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerBase::StartTimerResponse> LoggerBase::InPlace::StartTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerBase::StartTimerResponse> LoggerBase::InPlace::StartTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer) {
   LoggerBase::SetTransactionHeaderFor::StartTimerRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1427,7 +1427,7 @@ LoggerBase::UnownedResultOf::StartTimer LoggerBase::Call::StartTimer(zx::unowned
 }
 
 template <>
-LoggerBase::ResultOf::EndTimer_Impl<LoggerBase::EndTimerResponse>::EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+LoggerBase::ResultOf::EndTimer_Impl<LoggerBase::EndTimerResponse>::EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EndTimerRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1446,15 +1446,15 @@ LoggerBase::ResultOf::EndTimer_Impl<LoggerBase::EndTimerResponse>::EndTimer_Impl
 }
 
 LoggerBase::ResultOf::EndTimer LoggerBase::SyncClient::EndTimer(::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
-  return ResultOf::EndTimer(zx::unowned_channel(this->channel_), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
+    return ResultOf::EndTimer(::zx::unowned_channel(this->channel_), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
-LoggerBase::ResultOf::EndTimer LoggerBase::Call::EndTimer(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+LoggerBase::ResultOf::EndTimer LoggerBase::Call::EndTimer(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   return ResultOf::EndTimer(std::move(_client_end), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
 template <>
-LoggerBase::UnownedResultOf::EndTimer_Impl<LoggerBase::EndTimerResponse>::EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::EndTimer_Impl<LoggerBase::EndTimerResponse>::EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < EndTimerRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<EndTimerResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1474,14 +1474,14 @@ LoggerBase::UnownedResultOf::EndTimer_Impl<LoggerBase::EndTimerResponse>::EndTim
 }
 
 LoggerBase::UnownedResultOf::EndTimer LoggerBase::SyncClient::EndTimer(::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::EndTimer(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
+  return UnownedResultOf::EndTimer(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-LoggerBase::UnownedResultOf::EndTimer LoggerBase::Call::EndTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+LoggerBase::UnownedResultOf::EndTimer LoggerBase::Call::EndTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::EndTimer(std::move(_client_end), std::move(_request_buffer), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerBase::EndTimerResponse> LoggerBase::InPlace::EndTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerBase::EndTimerResponse> LoggerBase::InPlace::EndTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer) {
   LoggerBase::SetTransactionHeaderFor::EndTimerRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2044,7 +2044,7 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogIntHistogramRespon
 
 }  // namespace
 template <>
-LoggerSimple::ResultOf::LogEvent_Impl<LoggerSimple::LogEventResponse>::LogEvent_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
+LoggerSimple::ResultOf::LogEvent_Impl<LoggerSimple::LogEventResponse>::LogEvent_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogEventRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2060,15 +2060,15 @@ LoggerSimple::ResultOf::LogEvent_Impl<LoggerSimple::LogEventResponse>::LogEvent_
 }
 
 LoggerSimple::ResultOf::LogEvent LoggerSimple::SyncClient::LogEvent(uint32_t metric_id, uint32_t event_code) {
-  return ResultOf::LogEvent(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code));
+    return ResultOf::LogEvent(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code));
 }
 
-LoggerSimple::ResultOf::LogEvent LoggerSimple::Call::LogEvent(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
+LoggerSimple::ResultOf::LogEvent LoggerSimple::Call::LogEvent(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
   return ResultOf::LogEvent(std::move(_client_end), std::move(metric_id), std::move(event_code));
 }
 
 template <>
-LoggerSimple::UnownedResultOf::LogEvent_Impl<LoggerSimple::LogEventResponse>::LogEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogEvent_Impl<LoggerSimple::LogEventResponse>::LogEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogEventRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogEventResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2084,14 +2084,14 @@ LoggerSimple::UnownedResultOf::LogEvent_Impl<LoggerSimple::LogEventResponse>::Lo
 }
 
 LoggerSimple::UnownedResultOf::LogEvent LoggerSimple::SyncClient::LogEvent(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogEvent(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(_response_buffer));
+  return UnownedResultOf::LogEvent(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(_response_buffer));
 }
 
-LoggerSimple::UnownedResultOf::LogEvent LoggerSimple::Call::LogEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogEvent LoggerSimple::Call::LogEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogEvent(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerSimple::LogEventResponse> LoggerSimple::InPlace::LogEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerSimple::LogEventResponse> LoggerSimple::InPlace::LogEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer) {
   LoggerSimple::SetTransactionHeaderFor::LogEventRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2108,7 +2108,7 @@ LoggerSimple::UnownedResultOf::LogEvent LoggerSimple::Call::LogEvent(zx::unowned
 }
 
 template <>
-LoggerSimple::ResultOf::LogEventCount_Impl<LoggerSimple::LogEventCountResponse>::LogEventCount_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
+LoggerSimple::ResultOf::LogEventCount_Impl<LoggerSimple::LogEventCountResponse>::LogEventCount_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogEventCountRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2129,15 +2129,15 @@ LoggerSimple::ResultOf::LogEventCount_Impl<LoggerSimple::LogEventCountResponse>:
 }
 
 LoggerSimple::ResultOf::LogEventCount LoggerSimple::SyncClient::LogEventCount(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
-  return ResultOf::LogEventCount(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count));
+    return ResultOf::LogEventCount(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count));
 }
 
-LoggerSimple::ResultOf::LogEventCount LoggerSimple::Call::LogEventCount(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
+LoggerSimple::ResultOf::LogEventCount LoggerSimple::Call::LogEventCount(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
   return ResultOf::LogEventCount(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count));
 }
 
 template <>
-LoggerSimple::UnownedResultOf::LogEventCount_Impl<LoggerSimple::LogEventCountResponse>::LogEventCount_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogEventCount_Impl<LoggerSimple::LogEventCountResponse>::LogEventCount_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogEventCountRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogEventCountResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2159,14 +2159,14 @@ LoggerSimple::UnownedResultOf::LogEventCount_Impl<LoggerSimple::LogEventCountRes
 }
 
 LoggerSimple::UnownedResultOf::LogEventCount LoggerSimple::SyncClient::LogEventCount(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogEventCount(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count), std::move(_response_buffer));
+  return UnownedResultOf::LogEventCount(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count), std::move(_response_buffer));
 }
 
-LoggerSimple::UnownedResultOf::LogEventCount LoggerSimple::Call::LogEventCount(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogEventCount LoggerSimple::Call::LogEventCount(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogEventCount(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerSimple::LogEventCountResponse> LoggerSimple::InPlace::LogEventCount(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerSimple::LogEventCountResponse> LoggerSimple::InPlace::LogEventCount(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer) {
   LoggerSimple::SetTransactionHeaderFor::LogEventCountRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2183,7 +2183,7 @@ LoggerSimple::UnownedResultOf::LogEventCount LoggerSimple::Call::LogEventCount(z
 }
 
 template <>
-LoggerSimple::ResultOf::LogElapsedTime_Impl<LoggerSimple::LogElapsedTimeResponse>::LogElapsedTime_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
+LoggerSimple::ResultOf::LogElapsedTime_Impl<LoggerSimple::LogElapsedTimeResponse>::LogElapsedTime_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogElapsedTimeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2203,15 +2203,15 @@ LoggerSimple::ResultOf::LogElapsedTime_Impl<LoggerSimple::LogElapsedTimeResponse
 }
 
 LoggerSimple::ResultOf::LogElapsedTime LoggerSimple::SyncClient::LogElapsedTime(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
-  return ResultOf::LogElapsedTime(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros));
+    return ResultOf::LogElapsedTime(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros));
 }
 
-LoggerSimple::ResultOf::LogElapsedTime LoggerSimple::Call::LogElapsedTime(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
+LoggerSimple::ResultOf::LogElapsedTime LoggerSimple::Call::LogElapsedTime(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
   return ResultOf::LogElapsedTime(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros));
 }
 
 template <>
-LoggerSimple::UnownedResultOf::LogElapsedTime_Impl<LoggerSimple::LogElapsedTimeResponse>::LogElapsedTime_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogElapsedTime_Impl<LoggerSimple::LogElapsedTimeResponse>::LogElapsedTime_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogElapsedTimeRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogElapsedTimeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2232,14 +2232,14 @@ LoggerSimple::UnownedResultOf::LogElapsedTime_Impl<LoggerSimple::LogElapsedTimeR
 }
 
 LoggerSimple::UnownedResultOf::LogElapsedTime LoggerSimple::SyncClient::LogElapsedTime(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogElapsedTime(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros), std::move(_response_buffer));
+  return UnownedResultOf::LogElapsedTime(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros), std::move(_response_buffer));
 }
 
-LoggerSimple::UnownedResultOf::LogElapsedTime LoggerSimple::Call::LogElapsedTime(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogElapsedTime LoggerSimple::Call::LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogElapsedTime(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerSimple::LogElapsedTimeResponse> LoggerSimple::InPlace::LogElapsedTime(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerSimple::LogElapsedTimeResponse> LoggerSimple::InPlace::LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer) {
   LoggerSimple::SetTransactionHeaderFor::LogElapsedTimeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2256,7 +2256,7 @@ LoggerSimple::UnownedResultOf::LogElapsedTime LoggerSimple::Call::LogElapsedTime
 }
 
 template <>
-LoggerSimple::ResultOf::LogFrameRate_Impl<LoggerSimple::LogFrameRateResponse>::LogFrameRate_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
+LoggerSimple::ResultOf::LogFrameRate_Impl<LoggerSimple::LogFrameRateResponse>::LogFrameRate_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogFrameRateRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2276,15 +2276,15 @@ LoggerSimple::ResultOf::LogFrameRate_Impl<LoggerSimple::LogFrameRateResponse>::L
 }
 
 LoggerSimple::ResultOf::LogFrameRate LoggerSimple::SyncClient::LogFrameRate(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
-  return ResultOf::LogFrameRate(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps));
+    return ResultOf::LogFrameRate(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps));
 }
 
-LoggerSimple::ResultOf::LogFrameRate LoggerSimple::Call::LogFrameRate(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
+LoggerSimple::ResultOf::LogFrameRate LoggerSimple::Call::LogFrameRate(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
   return ResultOf::LogFrameRate(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps));
 }
 
 template <>
-LoggerSimple::UnownedResultOf::LogFrameRate_Impl<LoggerSimple::LogFrameRateResponse>::LogFrameRate_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogFrameRate_Impl<LoggerSimple::LogFrameRateResponse>::LogFrameRate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogFrameRateRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogFrameRateResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2305,14 +2305,14 @@ LoggerSimple::UnownedResultOf::LogFrameRate_Impl<LoggerSimple::LogFrameRateRespo
 }
 
 LoggerSimple::UnownedResultOf::LogFrameRate LoggerSimple::SyncClient::LogFrameRate(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogFrameRate(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps), std::move(_response_buffer));
+  return UnownedResultOf::LogFrameRate(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps), std::move(_response_buffer));
 }
 
-LoggerSimple::UnownedResultOf::LogFrameRate LoggerSimple::Call::LogFrameRate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogFrameRate LoggerSimple::Call::LogFrameRate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogFrameRate(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerSimple::LogFrameRateResponse> LoggerSimple::InPlace::LogFrameRate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerSimple::LogFrameRateResponse> LoggerSimple::InPlace::LogFrameRate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer) {
   LoggerSimple::SetTransactionHeaderFor::LogFrameRateRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2329,7 +2329,7 @@ LoggerSimple::UnownedResultOf::LogFrameRate LoggerSimple::Call::LogFrameRate(zx:
 }
 
 template <>
-LoggerSimple::ResultOf::LogMemoryUsage_Impl<LoggerSimple::LogMemoryUsageResponse>::LogMemoryUsage_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
+LoggerSimple::ResultOf::LogMemoryUsage_Impl<LoggerSimple::LogMemoryUsageResponse>::LogMemoryUsage_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogMemoryUsageRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2349,15 +2349,15 @@ LoggerSimple::ResultOf::LogMemoryUsage_Impl<LoggerSimple::LogMemoryUsageResponse
 }
 
 LoggerSimple::ResultOf::LogMemoryUsage LoggerSimple::SyncClient::LogMemoryUsage(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
-  return ResultOf::LogMemoryUsage(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes));
+    return ResultOf::LogMemoryUsage(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes));
 }
 
-LoggerSimple::ResultOf::LogMemoryUsage LoggerSimple::Call::LogMemoryUsage(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
+LoggerSimple::ResultOf::LogMemoryUsage LoggerSimple::Call::LogMemoryUsage(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
   return ResultOf::LogMemoryUsage(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes));
 }
 
 template <>
-LoggerSimple::UnownedResultOf::LogMemoryUsage_Impl<LoggerSimple::LogMemoryUsageResponse>::LogMemoryUsage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogMemoryUsage_Impl<LoggerSimple::LogMemoryUsageResponse>::LogMemoryUsage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogMemoryUsageRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogMemoryUsageResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2378,14 +2378,14 @@ LoggerSimple::UnownedResultOf::LogMemoryUsage_Impl<LoggerSimple::LogMemoryUsageR
 }
 
 LoggerSimple::UnownedResultOf::LogMemoryUsage LoggerSimple::SyncClient::LogMemoryUsage(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogMemoryUsage(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes), std::move(_response_buffer));
+  return UnownedResultOf::LogMemoryUsage(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes), std::move(_response_buffer));
 }
 
-LoggerSimple::UnownedResultOf::LogMemoryUsage LoggerSimple::Call::LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogMemoryUsage LoggerSimple::Call::LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogMemoryUsage(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerSimple::LogMemoryUsageResponse> LoggerSimple::InPlace::LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerSimple::LogMemoryUsageResponse> LoggerSimple::InPlace::LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer) {
   LoggerSimple::SetTransactionHeaderFor::LogMemoryUsageRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2402,7 +2402,7 @@ LoggerSimple::UnownedResultOf::LogMemoryUsage LoggerSimple::Call::LogMemoryUsage
 }
 
 template <>
-LoggerSimple::ResultOf::LogString_Impl<LoggerSimple::LogStringResponse>::LogString_Impl(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
+LoggerSimple::ResultOf::LogString_Impl<LoggerSimple::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogStringRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2420,15 +2420,15 @@ LoggerSimple::ResultOf::LogString_Impl<LoggerSimple::LogStringResponse>::LogStri
 }
 
 LoggerSimple::ResultOf::LogString LoggerSimple::SyncClient::LogString(uint32_t metric_id, ::fidl::StringView s) {
-  return ResultOf::LogString(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(s));
+    return ResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(s));
 }
 
-LoggerSimple::ResultOf::LogString LoggerSimple::Call::LogString(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
+LoggerSimple::ResultOf::LogString LoggerSimple::Call::LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
   return ResultOf::LogString(std::move(_client_end), std::move(metric_id), std::move(s));
 }
 
 template <>
-LoggerSimple::UnownedResultOf::LogString_Impl<LoggerSimple::LogStringResponse>::LogString_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogString_Impl<LoggerSimple::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogStringRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogStringResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2447,14 +2447,14 @@ LoggerSimple::UnownedResultOf::LogString_Impl<LoggerSimple::LogStringResponse>::
 }
 
 LoggerSimple::UnownedResultOf::LogString LoggerSimple::SyncClient::LogString(::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogString(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
+  return UnownedResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
 }
 
-LoggerSimple::UnownedResultOf::LogString LoggerSimple::Call::LogString(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogString LoggerSimple::Call::LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogString(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerSimple::LogStringResponse> LoggerSimple::InPlace::LogString(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerSimple::LogStringResponse> LoggerSimple::InPlace::LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer) {
   LoggerSimple::SetTransactionHeaderFor::LogStringRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2471,7 +2471,7 @@ LoggerSimple::UnownedResultOf::LogString LoggerSimple::Call::LogString(zx::unown
 }
 
 template <>
-LoggerSimple::ResultOf::StartTimer_Impl<LoggerSimple::StartTimerResponse>::StartTimer_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+LoggerSimple::ResultOf::StartTimer_Impl<LoggerSimple::StartTimerResponse>::StartTimer_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartTimerRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2493,15 +2493,15 @@ LoggerSimple::ResultOf::StartTimer_Impl<LoggerSimple::StartTimerResponse>::Start
 }
 
 LoggerSimple::ResultOf::StartTimer LoggerSimple::SyncClient::StartTimer(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
-  return ResultOf::StartTimer(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
+    return ResultOf::StartTimer(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
-LoggerSimple::ResultOf::StartTimer LoggerSimple::Call::StartTimer(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+LoggerSimple::ResultOf::StartTimer LoggerSimple::Call::StartTimer(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   return ResultOf::StartTimer(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
 template <>
-LoggerSimple::UnownedResultOf::StartTimer_Impl<LoggerSimple::StartTimerResponse>::StartTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::StartTimer_Impl<LoggerSimple::StartTimerResponse>::StartTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < StartTimerRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<StartTimerResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2524,14 +2524,14 @@ LoggerSimple::UnownedResultOf::StartTimer_Impl<LoggerSimple::StartTimerResponse>
 }
 
 LoggerSimple::UnownedResultOf::StartTimer LoggerSimple::SyncClient::StartTimer(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::StartTimer(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
+  return UnownedResultOf::StartTimer(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-LoggerSimple::UnownedResultOf::StartTimer LoggerSimple::Call::StartTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::StartTimer LoggerSimple::Call::StartTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::StartTimer(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerSimple::StartTimerResponse> LoggerSimple::InPlace::StartTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerSimple::StartTimerResponse> LoggerSimple::InPlace::StartTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer) {
   LoggerSimple::SetTransactionHeaderFor::StartTimerRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2548,7 +2548,7 @@ LoggerSimple::UnownedResultOf::StartTimer LoggerSimple::Call::StartTimer(zx::uno
 }
 
 template <>
-LoggerSimple::ResultOf::EndTimer_Impl<LoggerSimple::EndTimerResponse>::EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+LoggerSimple::ResultOf::EndTimer_Impl<LoggerSimple::EndTimerResponse>::EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EndTimerRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -2567,15 +2567,15 @@ LoggerSimple::ResultOf::EndTimer_Impl<LoggerSimple::EndTimerResponse>::EndTimer_
 }
 
 LoggerSimple::ResultOf::EndTimer LoggerSimple::SyncClient::EndTimer(::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
-  return ResultOf::EndTimer(zx::unowned_channel(this->channel_), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
+    return ResultOf::EndTimer(::zx::unowned_channel(this->channel_), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
-LoggerSimple::ResultOf::EndTimer LoggerSimple::Call::EndTimer(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+LoggerSimple::ResultOf::EndTimer LoggerSimple::Call::EndTimer(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   return ResultOf::EndTimer(std::move(_client_end), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
 template <>
-LoggerSimple::UnownedResultOf::EndTimer_Impl<LoggerSimple::EndTimerResponse>::EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::EndTimer_Impl<LoggerSimple::EndTimerResponse>::EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < EndTimerRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<EndTimerResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2595,14 +2595,14 @@ LoggerSimple::UnownedResultOf::EndTimer_Impl<LoggerSimple::EndTimerResponse>::En
 }
 
 LoggerSimple::UnownedResultOf::EndTimer LoggerSimple::SyncClient::EndTimer(::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::EndTimer(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
+  return UnownedResultOf::EndTimer(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-LoggerSimple::UnownedResultOf::EndTimer LoggerSimple::Call::EndTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::EndTimer LoggerSimple::Call::EndTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::EndTimer(std::move(_client_end), std::move(_request_buffer), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerSimple::EndTimerResponse> LoggerSimple::InPlace::EndTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerSimple::EndTimerResponse> LoggerSimple::InPlace::EndTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer) {
   LoggerSimple::SetTransactionHeaderFor::EndTimerRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -2619,7 +2619,7 @@ LoggerSimple::UnownedResultOf::EndTimer LoggerSimple::Call::EndTimer(zx::unowned
 }
 
 template <>
-LoggerSimple::ResultOf::LogIntHistogram_Impl<LoggerSimple::LogIntHistogramResponse>::LogIntHistogram_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts) {
+LoggerSimple::ResultOf::LogIntHistogram_Impl<LoggerSimple::LogIntHistogramResponse>::LogIntHistogram_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogIntHistogramRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -2640,15 +2640,15 @@ LoggerSimple::ResultOf::LogIntHistogram_Impl<LoggerSimple::LogIntHistogramRespon
 }
 
 LoggerSimple::ResultOf::LogIntHistogram LoggerSimple::SyncClient::LogIntHistogram(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts) {
-  return ResultOf::LogIntHistogram(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(bucket_indices), std::move(bucket_counts));
+    return ResultOf::LogIntHistogram(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(bucket_indices), std::move(bucket_counts));
 }
 
-LoggerSimple::ResultOf::LogIntHistogram LoggerSimple::Call::LogIntHistogram(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts) {
+LoggerSimple::ResultOf::LogIntHistogram LoggerSimple::Call::LogIntHistogram(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts) {
   return ResultOf::LogIntHistogram(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(bucket_indices), std::move(bucket_counts));
 }
 
 template <>
-LoggerSimple::UnownedResultOf::LogIntHistogram_Impl<LoggerSimple::LogIntHistogramResponse>::LogIntHistogram_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogIntHistogram_Impl<LoggerSimple::LogIntHistogramResponse>::LogIntHistogram_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogIntHistogramRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogIntHistogramResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2670,14 +2670,14 @@ LoggerSimple::UnownedResultOf::LogIntHistogram_Impl<LoggerSimple::LogIntHistogra
 }
 
 LoggerSimple::UnownedResultOf::LogIntHistogram LoggerSimple::SyncClient::LogIntHistogram(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogIntHistogram(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bucket_indices), std::move(bucket_counts), std::move(_response_buffer));
+  return UnownedResultOf::LogIntHistogram(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bucket_indices), std::move(bucket_counts), std::move(_response_buffer));
 }
 
-LoggerSimple::UnownedResultOf::LogIntHistogram LoggerSimple::Call::LogIntHistogram(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts, ::fidl::BytePart _response_buffer) {
+LoggerSimple::UnownedResultOf::LogIntHistogram LoggerSimple::Call::LogIntHistogram(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogIntHistogram(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bucket_indices), std::move(bucket_counts), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerSimple::LogIntHistogramResponse> LoggerSimple::InPlace::LogIntHistogram(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogIntHistogramRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerSimple::LogIntHistogramResponse> LoggerSimple::InPlace::LogIntHistogram(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogIntHistogramRequest> params, ::fidl::BytePart response_buffer) {
   LoggerSimple::SetTransactionHeaderFor::LogIntHistogramRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -3275,7 +3275,7 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFr
 
 }  // namespace
 template <>
-LoggerFactory::ResultOf::CreateLogger_Impl<LoggerFactory::CreateLoggerResponse>::CreateLogger_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLogger_Impl<LoggerFactory::CreateLoggerResponse>::CreateLogger_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -3291,15 +3291,15 @@ LoggerFactory::ResultOf::CreateLogger_Impl<LoggerFactory::CreateLoggerResponse>:
 }
 
 LoggerFactory::ResultOf::CreateLogger LoggerFactory::SyncClient::CreateLogger(::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
-  return ResultOf::CreateLogger(zx::unowned_channel(this->channel_), std::move(profile), std::move(logger));
+    return ResultOf::CreateLogger(::zx::unowned_channel(this->channel_), std::move(profile), std::move(logger));
 }
 
-LoggerFactory::ResultOf::CreateLogger LoggerFactory::Call::CreateLogger(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLogger LoggerFactory::Call::CreateLogger(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
   return ResultOf::CreateLogger(std::move(_client_end), std::move(profile), std::move(logger));
 }
 
 template <>
-LoggerFactory::UnownedResultOf::CreateLogger_Impl<LoggerFactory::CreateLoggerResponse>::CreateLogger_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLogger_Impl<LoggerFactory::CreateLoggerResponse>::CreateLogger_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CreateLoggerRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CreateLoggerResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -3315,14 +3315,14 @@ LoggerFactory::UnownedResultOf::CreateLogger_Impl<LoggerFactory::CreateLoggerRes
 }
 
 LoggerFactory::UnownedResultOf::CreateLogger LoggerFactory::SyncClient::CreateLogger(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateLogger(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(profile), std::move(logger), std::move(_response_buffer));
+  return UnownedResultOf::CreateLogger(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(profile), std::move(logger), std::move(_response_buffer));
 }
 
-LoggerFactory::UnownedResultOf::CreateLogger LoggerFactory::Call::CreateLogger(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLogger LoggerFactory::Call::CreateLogger(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CreateLogger(std::move(_client_end), std::move(_request_buffer), std::move(profile), std::move(logger), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerFactory::CreateLoggerResponse> LoggerFactory::InPlace::CreateLogger(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerFactory::CreateLoggerResponse> LoggerFactory::InPlace::CreateLogger(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerRequest> params, ::fidl::BytePart response_buffer) {
   LoggerFactory::SetTransactionHeaderFor::CreateLoggerRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -3339,7 +3339,7 @@ LoggerFactory::UnownedResultOf::CreateLogger LoggerFactory::Call::CreateLogger(z
 }
 
 template <>
-LoggerFactory::ResultOf::CreateLoggerSimple_Impl<LoggerFactory::CreateLoggerSimpleResponse>::CreateLoggerSimple_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLoggerSimple_Impl<LoggerFactory::CreateLoggerSimpleResponse>::CreateLoggerSimple_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerSimpleRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -3355,15 +3355,15 @@ LoggerFactory::ResultOf::CreateLoggerSimple_Impl<LoggerFactory::CreateLoggerSimp
 }
 
 LoggerFactory::ResultOf::CreateLoggerSimple LoggerFactory::SyncClient::CreateLoggerSimple(::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
-  return ResultOf::CreateLoggerSimple(zx::unowned_channel(this->channel_), std::move(profile), std::move(logger));
+    return ResultOf::CreateLoggerSimple(::zx::unowned_channel(this->channel_), std::move(profile), std::move(logger));
 }
 
-LoggerFactory::ResultOf::CreateLoggerSimple LoggerFactory::Call::CreateLoggerSimple(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLoggerSimple LoggerFactory::Call::CreateLoggerSimple(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger) {
   return ResultOf::CreateLoggerSimple(std::move(_client_end), std::move(profile), std::move(logger));
 }
 
 template <>
-LoggerFactory::UnownedResultOf::CreateLoggerSimple_Impl<LoggerFactory::CreateLoggerSimpleResponse>::CreateLoggerSimple_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLoggerSimple_Impl<LoggerFactory::CreateLoggerSimpleResponse>::CreateLoggerSimple_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CreateLoggerSimpleRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CreateLoggerSimpleResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -3379,14 +3379,14 @@ LoggerFactory::UnownedResultOf::CreateLoggerSimple_Impl<LoggerFactory::CreateLog
 }
 
 LoggerFactory::UnownedResultOf::CreateLoggerSimple LoggerFactory::SyncClient::CreateLoggerSimple(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateLoggerSimple(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(profile), std::move(logger), std::move(_response_buffer));
+  return UnownedResultOf::CreateLoggerSimple(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(profile), std::move(logger), std::move(_response_buffer));
 }
 
-LoggerFactory::UnownedResultOf::CreateLoggerSimple LoggerFactory::Call::CreateLoggerSimple(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLoggerSimple LoggerFactory::Call::CreateLoggerSimple(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CreateLoggerSimple(std::move(_client_end), std::move(_request_buffer), std::move(profile), std::move(logger), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerFactory::CreateLoggerSimpleResponse> LoggerFactory::InPlace::CreateLoggerSimple(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerFactory::CreateLoggerSimpleResponse> LoggerFactory::InPlace::CreateLoggerSimple(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleRequest> params, ::fidl::BytePart response_buffer) {
   LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -3403,7 +3403,7 @@ LoggerFactory::UnownedResultOf::CreateLoggerSimple LoggerFactory::Call::CreateLo
 }
 
 template <>
-LoggerFactory::ResultOf::CreateLoggerFromProjectName_Impl<LoggerFactory::CreateLoggerFromProjectNameResponse>::CreateLoggerFromProjectName_Impl(zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLoggerFromProjectName_Impl<LoggerFactory::CreateLoggerFromProjectNameResponse>::CreateLoggerFromProjectName_Impl(::zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerFromProjectNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -3422,15 +3422,15 @@ LoggerFactory::ResultOf::CreateLoggerFromProjectName_Impl<LoggerFactory::CreateL
 }
 
 LoggerFactory::ResultOf::CreateLoggerFromProjectName LoggerFactory::SyncClient::CreateLoggerFromProjectName(::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger) {
-  return ResultOf::CreateLoggerFromProjectName(zx::unowned_channel(this->channel_), std::move(project_name), std::move(release_stage), std::move(logger));
+    return ResultOf::CreateLoggerFromProjectName(::zx::unowned_channel(this->channel_), std::move(project_name), std::move(release_stage), std::move(logger));
 }
 
-LoggerFactory::ResultOf::CreateLoggerFromProjectName LoggerFactory::Call::CreateLoggerFromProjectName(zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLoggerFromProjectName LoggerFactory::Call::CreateLoggerFromProjectName(::zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger) {
   return ResultOf::CreateLoggerFromProjectName(std::move(_client_end), std::move(project_name), std::move(release_stage), std::move(logger));
 }
 
 template <>
-LoggerFactory::UnownedResultOf::CreateLoggerFromProjectName_Impl<LoggerFactory::CreateLoggerFromProjectNameResponse>::CreateLoggerFromProjectName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLoggerFromProjectName_Impl<LoggerFactory::CreateLoggerFromProjectNameResponse>::CreateLoggerFromProjectName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CreateLoggerFromProjectNameRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CreateLoggerFromProjectNameResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -3450,14 +3450,14 @@ LoggerFactory::UnownedResultOf::CreateLoggerFromProjectName_Impl<LoggerFactory::
 }
 
 LoggerFactory::UnownedResultOf::CreateLoggerFromProjectName LoggerFactory::SyncClient::CreateLoggerFromProjectName(::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateLoggerFromProjectName(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(project_name), std::move(release_stage), std::move(logger), std::move(_response_buffer));
+  return UnownedResultOf::CreateLoggerFromProjectName(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(project_name), std::move(release_stage), std::move(logger), std::move(_response_buffer));
 }
 
-LoggerFactory::UnownedResultOf::CreateLoggerFromProjectName LoggerFactory::Call::CreateLoggerFromProjectName(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLoggerFromProjectName LoggerFactory::Call::CreateLoggerFromProjectName(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CreateLoggerFromProjectName(std::move(_client_end), std::move(_request_buffer), std::move(project_name), std::move(release_stage), std::move(logger), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerFactory::CreateLoggerFromProjectNameResponse> LoggerFactory::InPlace::CreateLoggerFromProjectName(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerFromProjectNameRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerFactory::CreateLoggerFromProjectNameResponse> LoggerFactory::InPlace::CreateLoggerFromProjectName(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerFromProjectNameRequest> params, ::fidl::BytePart response_buffer) {
   LoggerFactory::SetTransactionHeaderFor::CreateLoggerFromProjectNameRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -3474,7 +3474,7 @@ LoggerFactory::UnownedResultOf::CreateLoggerFromProjectName LoggerFactory::Call:
 }
 
 template <>
-LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectName_Impl<LoggerFactory::CreateLoggerSimpleFromProjectNameResponse>::CreateLoggerSimpleFromProjectName_Impl(zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectName_Impl<LoggerFactory::CreateLoggerSimpleFromProjectNameResponse>::CreateLoggerSimpleFromProjectName_Impl(::zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerSimpleFromProjectNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -3493,15 +3493,15 @@ LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectName_Impl<LoggerFactory::C
 }
 
 LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectName LoggerFactory::SyncClient::CreateLoggerSimpleFromProjectName(::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger) {
-  return ResultOf::CreateLoggerSimpleFromProjectName(zx::unowned_channel(this->channel_), std::move(project_name), std::move(release_stage), std::move(logger));
+    return ResultOf::CreateLoggerSimpleFromProjectName(::zx::unowned_channel(this->channel_), std::move(project_name), std::move(release_stage), std::move(logger));
 }
 
-LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectName LoggerFactory::Call::CreateLoggerSimpleFromProjectName(zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectName LoggerFactory::Call::CreateLoggerSimpleFromProjectName(::zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger) {
   return ResultOf::CreateLoggerSimpleFromProjectName(std::move(_client_end), std::move(project_name), std::move(release_stage), std::move(logger));
 }
 
 template <>
-LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectName_Impl<LoggerFactory::CreateLoggerSimpleFromProjectNameResponse>::CreateLoggerSimpleFromProjectName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectName_Impl<LoggerFactory::CreateLoggerSimpleFromProjectNameResponse>::CreateLoggerSimpleFromProjectName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CreateLoggerSimpleFromProjectNameRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CreateLoggerSimpleFromProjectNameResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -3521,14 +3521,14 @@ LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectName_Impl<LoggerFac
 }
 
 LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectName LoggerFactory::SyncClient::CreateLoggerSimpleFromProjectName(::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateLoggerSimpleFromProjectName(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(project_name), std::move(release_stage), std::move(logger), std::move(_response_buffer));
+  return UnownedResultOf::CreateLoggerSimpleFromProjectName(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(project_name), std::move(release_stage), std::move(logger), std::move(_response_buffer));
 }
 
-LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectName LoggerFactory::Call::CreateLoggerSimpleFromProjectName(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectName LoggerFactory::Call::CreateLoggerSimpleFromProjectName(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CreateLoggerSimpleFromProjectName(std::move(_client_end), std::move(_request_buffer), std::move(project_name), std::move(release_stage), std::move(logger), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerFactory::CreateLoggerSimpleFromProjectNameResponse> LoggerFactory::InPlace::CreateLoggerSimpleFromProjectName(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleFromProjectNameRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerFactory::CreateLoggerSimpleFromProjectNameResponse> LoggerFactory::InPlace::CreateLoggerSimpleFromProjectName(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleFromProjectNameRequest> params, ::fidl::BytePart response_buffer) {
   LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleFromProjectNameRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -3545,7 +3545,7 @@ LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectName LoggerFactory:
 }
 
 template <>
-LoggerFactory::ResultOf::CreateLoggerFromProjectId_Impl<LoggerFactory::CreateLoggerFromProjectIdResponse>::CreateLoggerFromProjectId_Impl(zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLoggerFromProjectId_Impl<LoggerFactory::CreateLoggerFromProjectIdResponse>::CreateLoggerFromProjectId_Impl(::zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerFromProjectIdRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -3561,15 +3561,15 @@ LoggerFactory::ResultOf::CreateLoggerFromProjectId_Impl<LoggerFactory::CreateLog
 }
 
 LoggerFactory::ResultOf::CreateLoggerFromProjectId LoggerFactory::SyncClient::CreateLoggerFromProjectId(uint32_t project_id, ::zx::channel logger) {
-  return ResultOf::CreateLoggerFromProjectId(zx::unowned_channel(this->channel_), std::move(project_id), std::move(logger));
+    return ResultOf::CreateLoggerFromProjectId(::zx::unowned_channel(this->channel_), std::move(project_id), std::move(logger));
 }
 
-LoggerFactory::ResultOf::CreateLoggerFromProjectId LoggerFactory::Call::CreateLoggerFromProjectId(zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLoggerFromProjectId LoggerFactory::Call::CreateLoggerFromProjectId(::zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger) {
   return ResultOf::CreateLoggerFromProjectId(std::move(_client_end), std::move(project_id), std::move(logger));
 }
 
 template <>
-LoggerFactory::UnownedResultOf::CreateLoggerFromProjectId_Impl<LoggerFactory::CreateLoggerFromProjectIdResponse>::CreateLoggerFromProjectId_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLoggerFromProjectId_Impl<LoggerFactory::CreateLoggerFromProjectIdResponse>::CreateLoggerFromProjectId_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CreateLoggerFromProjectIdRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CreateLoggerFromProjectIdResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -3585,14 +3585,14 @@ LoggerFactory::UnownedResultOf::CreateLoggerFromProjectId_Impl<LoggerFactory::Cr
 }
 
 LoggerFactory::UnownedResultOf::CreateLoggerFromProjectId LoggerFactory::SyncClient::CreateLoggerFromProjectId(::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateLoggerFromProjectId(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(project_id), std::move(logger), std::move(_response_buffer));
+  return UnownedResultOf::CreateLoggerFromProjectId(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(project_id), std::move(logger), std::move(_response_buffer));
 }
 
-LoggerFactory::UnownedResultOf::CreateLoggerFromProjectId LoggerFactory::Call::CreateLoggerFromProjectId(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLoggerFromProjectId LoggerFactory::Call::CreateLoggerFromProjectId(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CreateLoggerFromProjectId(std::move(_client_end), std::move(_request_buffer), std::move(project_id), std::move(logger), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerFactory::CreateLoggerFromProjectIdResponse> LoggerFactory::InPlace::CreateLoggerFromProjectId(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerFromProjectIdRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerFactory::CreateLoggerFromProjectIdResponse> LoggerFactory::InPlace::CreateLoggerFromProjectId(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerFromProjectIdRequest> params, ::fidl::BytePart response_buffer) {
   LoggerFactory::SetTransactionHeaderFor::CreateLoggerFromProjectIdRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -3609,7 +3609,7 @@ LoggerFactory::UnownedResultOf::CreateLoggerFromProjectId LoggerFactory::Call::C
 }
 
 template <>
-LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectId_Impl<LoggerFactory::CreateLoggerSimpleFromProjectIdResponse>::CreateLoggerSimpleFromProjectId_Impl(zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectId_Impl<LoggerFactory::CreateLoggerSimpleFromProjectIdResponse>::CreateLoggerSimpleFromProjectId_Impl(::zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateLoggerSimpleFromProjectIdRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -3625,15 +3625,15 @@ LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectId_Impl<LoggerFactory::Cre
 }
 
 LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectId LoggerFactory::SyncClient::CreateLoggerSimpleFromProjectId(uint32_t project_id, ::zx::channel logger) {
-  return ResultOf::CreateLoggerSimpleFromProjectId(zx::unowned_channel(this->channel_), std::move(project_id), std::move(logger));
+    return ResultOf::CreateLoggerSimpleFromProjectId(::zx::unowned_channel(this->channel_), std::move(project_id), std::move(logger));
 }
 
-LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectId LoggerFactory::Call::CreateLoggerSimpleFromProjectId(zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger) {
+LoggerFactory::ResultOf::CreateLoggerSimpleFromProjectId LoggerFactory::Call::CreateLoggerSimpleFromProjectId(::zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger) {
   return ResultOf::CreateLoggerSimpleFromProjectId(std::move(_client_end), std::move(project_id), std::move(logger));
 }
 
 template <>
-LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectId_Impl<LoggerFactory::CreateLoggerSimpleFromProjectIdResponse>::CreateLoggerSimpleFromProjectId_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectId_Impl<LoggerFactory::CreateLoggerSimpleFromProjectIdResponse>::CreateLoggerSimpleFromProjectId_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CreateLoggerSimpleFromProjectIdRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CreateLoggerSimpleFromProjectIdResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -3649,14 +3649,14 @@ LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectId_Impl<LoggerFacto
 }
 
 LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectId LoggerFactory::SyncClient::CreateLoggerSimpleFromProjectId(::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateLoggerSimpleFromProjectId(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(project_id), std::move(logger), std::move(_response_buffer));
+  return UnownedResultOf::CreateLoggerSimpleFromProjectId(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(project_id), std::move(logger), std::move(_response_buffer));
 }
 
-LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectId LoggerFactory::Call::CreateLoggerSimpleFromProjectId(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
+LoggerFactory::UnownedResultOf::CreateLoggerSimpleFromProjectId LoggerFactory::Call::CreateLoggerSimpleFromProjectId(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CreateLoggerSimpleFromProjectId(std::move(_client_end), std::move(_request_buffer), std::move(project_id), std::move(logger), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<LoggerFactory::CreateLoggerSimpleFromProjectIdResponse> LoggerFactory::InPlace::CreateLoggerSimpleFromProjectId(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleFromProjectIdRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<LoggerFactory::CreateLoggerSimpleFromProjectIdResponse> LoggerFactory::InPlace::CreateLoggerSimpleFromProjectId(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleFromProjectIdRequest> params, ::fidl::BytePart response_buffer) {
   LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleFromProjectIdRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -4058,7 +4058,7 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_SystemDataUpdaterSetChannelRespon
 
 }  // namespace
 template <>
-SystemDataUpdater::ResultOf::SetExperimentState_Impl<SystemDataUpdater::SetExperimentStateResponse>::SetExperimentState_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments) {
+SystemDataUpdater::ResultOf::SetExperimentState_Impl<SystemDataUpdater::SetExperimentStateResponse>::SetExperimentState_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetExperimentStateRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -4075,15 +4075,15 @@ SystemDataUpdater::ResultOf::SetExperimentState_Impl<SystemDataUpdater::SetExper
 }
 
 SystemDataUpdater::ResultOf::SetExperimentState SystemDataUpdater::SyncClient::SetExperimentState(::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments) {
-  return ResultOf::SetExperimentState(zx::unowned_channel(this->channel_), std::move(experiments));
+    return ResultOf::SetExperimentState(::zx::unowned_channel(this->channel_), std::move(experiments));
 }
 
-SystemDataUpdater::ResultOf::SetExperimentState SystemDataUpdater::Call::SetExperimentState(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments) {
+SystemDataUpdater::ResultOf::SetExperimentState SystemDataUpdater::Call::SetExperimentState(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments) {
   return ResultOf::SetExperimentState(std::move(_client_end), std::move(experiments));
 }
 
 template <>
-SystemDataUpdater::UnownedResultOf::SetExperimentState_Impl<SystemDataUpdater::SetExperimentStateResponse>::SetExperimentState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments, ::fidl::BytePart _response_buffer) {
+SystemDataUpdater::UnownedResultOf::SetExperimentState_Impl<SystemDataUpdater::SetExperimentStateResponse>::SetExperimentState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetExperimentStateRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetExperimentStateResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -4101,14 +4101,14 @@ SystemDataUpdater::UnownedResultOf::SetExperimentState_Impl<SystemDataUpdater::S
 }
 
 SystemDataUpdater::UnownedResultOf::SetExperimentState SystemDataUpdater::SyncClient::SetExperimentState(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetExperimentState(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(experiments), std::move(_response_buffer));
+  return UnownedResultOf::SetExperimentState(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(experiments), std::move(_response_buffer));
 }
 
-SystemDataUpdater::UnownedResultOf::SetExperimentState SystemDataUpdater::Call::SetExperimentState(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments, ::fidl::BytePart _response_buffer) {
+SystemDataUpdater::UnownedResultOf::SetExperimentState SystemDataUpdater::Call::SetExperimentState(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetExperimentState(std::move(_client_end), std::move(_request_buffer), std::move(experiments), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<SystemDataUpdater::SetExperimentStateResponse> SystemDataUpdater::InPlace::SetExperimentState(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetExperimentStateRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<SystemDataUpdater::SetExperimentStateResponse> SystemDataUpdater::InPlace::SetExperimentState(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetExperimentStateRequest> params, ::fidl::BytePart response_buffer) {
   SystemDataUpdater::SetTransactionHeaderFor::SetExperimentStateRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -4125,7 +4125,7 @@ SystemDataUpdater::UnownedResultOf::SetExperimentState SystemDataUpdater::Call::
 }
 
 template <>
-SystemDataUpdater::ResultOf::SetChannel_Impl<SystemDataUpdater::SetChannelResponse>::SetChannel_Impl(zx::unowned_channel _client_end, ::fidl::StringView current_channel) {
+SystemDataUpdater::ResultOf::SetChannel_Impl<SystemDataUpdater::SetChannelResponse>::SetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::StringView current_channel) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetChannelRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -4142,15 +4142,15 @@ SystemDataUpdater::ResultOf::SetChannel_Impl<SystemDataUpdater::SetChannelRespon
 }
 
 SystemDataUpdater::ResultOf::SetChannel SystemDataUpdater::SyncClient::SetChannel(::fidl::StringView current_channel) {
-  return ResultOf::SetChannel(zx::unowned_channel(this->channel_), std::move(current_channel));
+    return ResultOf::SetChannel(::zx::unowned_channel(this->channel_), std::move(current_channel));
 }
 
-SystemDataUpdater::ResultOf::SetChannel SystemDataUpdater::Call::SetChannel(zx::unowned_channel _client_end, ::fidl::StringView current_channel) {
+SystemDataUpdater::ResultOf::SetChannel SystemDataUpdater::Call::SetChannel(::zx::unowned_channel _client_end, ::fidl::StringView current_channel) {
   return ResultOf::SetChannel(std::move(_client_end), std::move(current_channel));
 }
 
 template <>
-SystemDataUpdater::UnownedResultOf::SetChannel_Impl<SystemDataUpdater::SetChannelResponse>::SetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView current_channel, ::fidl::BytePart _response_buffer) {
+SystemDataUpdater::UnownedResultOf::SetChannel_Impl<SystemDataUpdater::SetChannelResponse>::SetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView current_channel, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetChannelRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetChannelResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -4168,14 +4168,14 @@ SystemDataUpdater::UnownedResultOf::SetChannel_Impl<SystemDataUpdater::SetChanne
 }
 
 SystemDataUpdater::UnownedResultOf::SetChannel SystemDataUpdater::SyncClient::SetChannel(::fidl::BytePart _request_buffer, ::fidl::StringView current_channel, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetChannel(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(current_channel), std::move(_response_buffer));
+  return UnownedResultOf::SetChannel(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(current_channel), std::move(_response_buffer));
 }
 
-SystemDataUpdater::UnownedResultOf::SetChannel SystemDataUpdater::Call::SetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView current_channel, ::fidl::BytePart _response_buffer) {
+SystemDataUpdater::UnownedResultOf::SetChannel SystemDataUpdater::Call::SetChannel(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView current_channel, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetChannel(std::move(_client_end), std::move(_request_buffer), std::move(current_channel), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<SystemDataUpdater::SetChannelResponse> SystemDataUpdater::InPlace::SetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetChannelRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<SystemDataUpdater::SetChannelResponse> SystemDataUpdater::InPlace::SetChannel(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetChannelRequest> params, ::fidl::BytePart response_buffer) {
   SystemDataUpdater::SetTransactionHeaderFor::SetChannelRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -4550,7 +4550,7 @@ extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogCobaltEventsResponseTabl
 
 }  // namespace
 template <>
-Logger::ResultOf::LogEvent_Impl<Logger::LogEventResponse>::LogEvent_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
+Logger::ResultOf::LogEvent_Impl<Logger::LogEventResponse>::LogEvent_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogEventRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -4566,15 +4566,15 @@ Logger::ResultOf::LogEvent_Impl<Logger::LogEventResponse>::LogEvent_Impl(zx::uno
 }
 
 Logger::ResultOf::LogEvent Logger::SyncClient::LogEvent(uint32_t metric_id, uint32_t event_code) {
-  return ResultOf::LogEvent(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code));
+    return ResultOf::LogEvent(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code));
 }
 
-Logger::ResultOf::LogEvent Logger::Call::LogEvent(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
+Logger::ResultOf::LogEvent Logger::Call::LogEvent(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code) {
   return ResultOf::LogEvent(std::move(_client_end), std::move(metric_id), std::move(event_code));
 }
 
 template <>
-Logger::UnownedResultOf::LogEvent_Impl<Logger::LogEventResponse>::LogEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogEvent_Impl<Logger::LogEventResponse>::LogEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogEventRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogEventResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -4590,14 +4590,14 @@ Logger::UnownedResultOf::LogEvent_Impl<Logger::LogEventResponse>::LogEvent_Impl(
 }
 
 Logger::UnownedResultOf::LogEvent Logger::SyncClient::LogEvent(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogEvent(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(_response_buffer));
+  return UnownedResultOf::LogEvent(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::LogEvent Logger::Call::LogEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogEvent Logger::Call::LogEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogEvent(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::LogEventResponse> Logger::InPlace::LogEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::LogEventResponse> Logger::InPlace::LogEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::LogEventRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -4614,7 +4614,7 @@ Logger::UnownedResultOf::LogEvent Logger::Call::LogEvent(zx::unowned_channel _cl
 }
 
 template <>
-Logger::ResultOf::LogEventCount_Impl<Logger::LogEventCountResponse>::LogEventCount_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
+Logger::ResultOf::LogEventCount_Impl<Logger::LogEventCountResponse>::LogEventCount_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogEventCountRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -4635,15 +4635,15 @@ Logger::ResultOf::LogEventCount_Impl<Logger::LogEventCountResponse>::LogEventCou
 }
 
 Logger::ResultOf::LogEventCount Logger::SyncClient::LogEventCount(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
-  return ResultOf::LogEventCount(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count));
+    return ResultOf::LogEventCount(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count));
 }
 
-Logger::ResultOf::LogEventCount Logger::Call::LogEventCount(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
+Logger::ResultOf::LogEventCount Logger::Call::LogEventCount(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count) {
   return ResultOf::LogEventCount(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count));
 }
 
 template <>
-Logger::UnownedResultOf::LogEventCount_Impl<Logger::LogEventCountResponse>::LogEventCount_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogEventCount_Impl<Logger::LogEventCountResponse>::LogEventCount_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogEventCountRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogEventCountResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -4665,14 +4665,14 @@ Logger::UnownedResultOf::LogEventCount_Impl<Logger::LogEventCountResponse>::LogE
 }
 
 Logger::UnownedResultOf::LogEventCount Logger::SyncClient::LogEventCount(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogEventCount(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count), std::move(_response_buffer));
+  return UnownedResultOf::LogEventCount(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::LogEventCount Logger::Call::LogEventCount(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogEventCount Logger::Call::LogEventCount(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogEventCount(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(period_duration_micros), std::move(count), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::LogEventCountResponse> Logger::InPlace::LogEventCount(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::LogEventCountResponse> Logger::InPlace::LogEventCount(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::LogEventCountRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -4689,7 +4689,7 @@ Logger::UnownedResultOf::LogEventCount Logger::Call::LogEventCount(zx::unowned_c
 }
 
 template <>
-Logger::ResultOf::LogElapsedTime_Impl<Logger::LogElapsedTimeResponse>::LogElapsedTime_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
+Logger::ResultOf::LogElapsedTime_Impl<Logger::LogElapsedTimeResponse>::LogElapsedTime_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogElapsedTimeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -4709,15 +4709,15 @@ Logger::ResultOf::LogElapsedTime_Impl<Logger::LogElapsedTimeResponse>::LogElapse
 }
 
 Logger::ResultOf::LogElapsedTime Logger::SyncClient::LogElapsedTime(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
-  return ResultOf::LogElapsedTime(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros));
+    return ResultOf::LogElapsedTime(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros));
 }
 
-Logger::ResultOf::LogElapsedTime Logger::Call::LogElapsedTime(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
+Logger::ResultOf::LogElapsedTime Logger::Call::LogElapsedTime(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros) {
   return ResultOf::LogElapsedTime(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros));
 }
 
 template <>
-Logger::UnownedResultOf::LogElapsedTime_Impl<Logger::LogElapsedTimeResponse>::LogElapsedTime_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogElapsedTime_Impl<Logger::LogElapsedTimeResponse>::LogElapsedTime_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogElapsedTimeRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogElapsedTimeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -4738,14 +4738,14 @@ Logger::UnownedResultOf::LogElapsedTime_Impl<Logger::LogElapsedTimeResponse>::Lo
 }
 
 Logger::UnownedResultOf::LogElapsedTime Logger::SyncClient::LogElapsedTime(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogElapsedTime(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros), std::move(_response_buffer));
+  return UnownedResultOf::LogElapsedTime(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::LogElapsedTime Logger::Call::LogElapsedTime(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogElapsedTime Logger::Call::LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogElapsedTime(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(elapsed_micros), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::LogElapsedTimeResponse> Logger::InPlace::LogElapsedTime(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::LogElapsedTimeResponse> Logger::InPlace::LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::LogElapsedTimeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -4762,7 +4762,7 @@ Logger::UnownedResultOf::LogElapsedTime Logger::Call::LogElapsedTime(zx::unowned
 }
 
 template <>
-Logger::ResultOf::LogFrameRate_Impl<Logger::LogFrameRateResponse>::LogFrameRate_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
+Logger::ResultOf::LogFrameRate_Impl<Logger::LogFrameRateResponse>::LogFrameRate_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogFrameRateRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -4782,15 +4782,15 @@ Logger::ResultOf::LogFrameRate_Impl<Logger::LogFrameRateResponse>::LogFrameRate_
 }
 
 Logger::ResultOf::LogFrameRate Logger::SyncClient::LogFrameRate(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
-  return ResultOf::LogFrameRate(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps));
+    return ResultOf::LogFrameRate(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps));
 }
 
-Logger::ResultOf::LogFrameRate Logger::Call::LogFrameRate(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
+Logger::ResultOf::LogFrameRate Logger::Call::LogFrameRate(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps) {
   return ResultOf::LogFrameRate(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps));
 }
 
 template <>
-Logger::UnownedResultOf::LogFrameRate_Impl<Logger::LogFrameRateResponse>::LogFrameRate_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogFrameRate_Impl<Logger::LogFrameRateResponse>::LogFrameRate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogFrameRateRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogFrameRateResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -4811,14 +4811,14 @@ Logger::UnownedResultOf::LogFrameRate_Impl<Logger::LogFrameRateResponse>::LogFra
 }
 
 Logger::UnownedResultOf::LogFrameRate Logger::SyncClient::LogFrameRate(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogFrameRate(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps), std::move(_response_buffer));
+  return UnownedResultOf::LogFrameRate(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::LogFrameRate Logger::Call::LogFrameRate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogFrameRate Logger::Call::LogFrameRate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogFrameRate(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(fps), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::LogFrameRateResponse> Logger::InPlace::LogFrameRate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::LogFrameRateResponse> Logger::InPlace::LogFrameRate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::LogFrameRateRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -4835,7 +4835,7 @@ Logger::UnownedResultOf::LogFrameRate Logger::Call::LogFrameRate(zx::unowned_cha
 }
 
 template <>
-Logger::ResultOf::LogMemoryUsage_Impl<Logger::LogMemoryUsageResponse>::LogMemoryUsage_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
+Logger::ResultOf::LogMemoryUsage_Impl<Logger::LogMemoryUsageResponse>::LogMemoryUsage_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogMemoryUsageRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -4855,15 +4855,15 @@ Logger::ResultOf::LogMemoryUsage_Impl<Logger::LogMemoryUsageResponse>::LogMemory
 }
 
 Logger::ResultOf::LogMemoryUsage Logger::SyncClient::LogMemoryUsage(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
-  return ResultOf::LogMemoryUsage(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes));
+    return ResultOf::LogMemoryUsage(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes));
 }
 
-Logger::ResultOf::LogMemoryUsage Logger::Call::LogMemoryUsage(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
+Logger::ResultOf::LogMemoryUsage Logger::Call::LogMemoryUsage(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes) {
   return ResultOf::LogMemoryUsage(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes));
 }
 
 template <>
-Logger::UnownedResultOf::LogMemoryUsage_Impl<Logger::LogMemoryUsageResponse>::LogMemoryUsage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogMemoryUsage_Impl<Logger::LogMemoryUsageResponse>::LogMemoryUsage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogMemoryUsageRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogMemoryUsageResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -4884,14 +4884,14 @@ Logger::UnownedResultOf::LogMemoryUsage_Impl<Logger::LogMemoryUsageResponse>::Lo
 }
 
 Logger::UnownedResultOf::LogMemoryUsage Logger::SyncClient::LogMemoryUsage(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogMemoryUsage(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes), std::move(_response_buffer));
+  return UnownedResultOf::LogMemoryUsage(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::LogMemoryUsage Logger::Call::LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogMemoryUsage Logger::Call::LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogMemoryUsage(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(bytes), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::LogMemoryUsageResponse> Logger::InPlace::LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::LogMemoryUsageResponse> Logger::InPlace::LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::LogMemoryUsageRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -4908,7 +4908,7 @@ Logger::UnownedResultOf::LogMemoryUsage Logger::Call::LogMemoryUsage(zx::unowned
 }
 
 template <>
-Logger::ResultOf::LogString_Impl<Logger::LogStringResponse>::LogString_Impl(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
+Logger::ResultOf::LogString_Impl<Logger::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogStringRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -4926,15 +4926,15 @@ Logger::ResultOf::LogString_Impl<Logger::LogStringResponse>::LogString_Impl(zx::
 }
 
 Logger::ResultOf::LogString Logger::SyncClient::LogString(uint32_t metric_id, ::fidl::StringView s) {
-  return ResultOf::LogString(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(s));
+    return ResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(s));
 }
 
-Logger::ResultOf::LogString Logger::Call::LogString(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
+Logger::ResultOf::LogString Logger::Call::LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
   return ResultOf::LogString(std::move(_client_end), std::move(metric_id), std::move(s));
 }
 
 template <>
-Logger::UnownedResultOf::LogString_Impl<Logger::LogStringResponse>::LogString_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogString_Impl<Logger::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogStringRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogStringResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -4953,14 +4953,14 @@ Logger::UnownedResultOf::LogString_Impl<Logger::LogStringResponse>::LogString_Im
 }
 
 Logger::UnownedResultOf::LogString Logger::SyncClient::LogString(::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogString(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
+  return UnownedResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::LogString Logger::Call::LogString(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogString Logger::Call::LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogString(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::LogStringResponse> Logger::InPlace::LogString(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::LogStringResponse> Logger::InPlace::LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::LogStringRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -4977,7 +4977,7 @@ Logger::UnownedResultOf::LogString Logger::Call::LogString(zx::unowned_channel _
 }
 
 template <>
-Logger::ResultOf::StartTimer_Impl<Logger::StartTimerResponse>::StartTimer_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+Logger::ResultOf::StartTimer_Impl<Logger::StartTimerResponse>::StartTimer_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartTimerRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -4999,15 +4999,15 @@ Logger::ResultOf::StartTimer_Impl<Logger::StartTimerResponse>::StartTimer_Impl(z
 }
 
 Logger::ResultOf::StartTimer Logger::SyncClient::StartTimer(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
-  return ResultOf::StartTimer(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
+    return ResultOf::StartTimer(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
-Logger::ResultOf::StartTimer Logger::Call::StartTimer(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+Logger::ResultOf::StartTimer Logger::Call::StartTimer(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   return ResultOf::StartTimer(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
 template <>
-Logger::UnownedResultOf::StartTimer_Impl<Logger::StartTimerResponse>::StartTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::StartTimer_Impl<Logger::StartTimerResponse>::StartTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < StartTimerRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<StartTimerResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -5030,14 +5030,14 @@ Logger::UnownedResultOf::StartTimer_Impl<Logger::StartTimerResponse>::StartTimer
 }
 
 Logger::UnownedResultOf::StartTimer Logger::SyncClient::StartTimer(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::StartTimer(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
+  return UnownedResultOf::StartTimer(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::StartTimer Logger::Call::StartTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::StartTimer Logger::Call::StartTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::StartTimer(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::StartTimerResponse> Logger::InPlace::StartTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::StartTimerResponse> Logger::InPlace::StartTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::StartTimerRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -5054,7 +5054,7 @@ Logger::UnownedResultOf::StartTimer Logger::Call::StartTimer(zx::unowned_channel
 }
 
 template <>
-Logger::ResultOf::EndTimer_Impl<Logger::EndTimerResponse>::EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+Logger::ResultOf::EndTimer_Impl<Logger::EndTimerResponse>::EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EndTimerRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -5073,15 +5073,15 @@ Logger::ResultOf::EndTimer_Impl<Logger::EndTimerResponse>::EndTimer_Impl(zx::uno
 }
 
 Logger::ResultOf::EndTimer Logger::SyncClient::EndTimer(::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
-  return ResultOf::EndTimer(zx::unowned_channel(this->channel_), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
+    return ResultOf::EndTimer(::zx::unowned_channel(this->channel_), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
-Logger::ResultOf::EndTimer Logger::Call::EndTimer(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
+Logger::ResultOf::EndTimer Logger::Call::EndTimer(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   return ResultOf::EndTimer(std::move(_client_end), std::move(timer_id), std::move(timestamp), std::move(timeout_s));
 }
 
 template <>
-Logger::UnownedResultOf::EndTimer_Impl<Logger::EndTimerResponse>::EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::EndTimer_Impl<Logger::EndTimerResponse>::EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < EndTimerRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<EndTimerResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -5101,14 +5101,14 @@ Logger::UnownedResultOf::EndTimer_Impl<Logger::EndTimerResponse>::EndTimer_Impl(
 }
 
 Logger::UnownedResultOf::EndTimer Logger::SyncClient::EndTimer(::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::EndTimer(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
+  return UnownedResultOf::EndTimer(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::EndTimer Logger::Call::EndTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::EndTimer Logger::Call::EndTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::EndTimer(std::move(_client_end), std::move(_request_buffer), std::move(timer_id), std::move(timestamp), std::move(timeout_s), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::EndTimerResponse> Logger::InPlace::EndTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::EndTimerResponse> Logger::InPlace::EndTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::EndTimerRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -5125,7 +5125,7 @@ Logger::UnownedResultOf::EndTimer Logger::Call::EndTimer(zx::unowned_channel _cl
 }
 
 template <>
-Logger::ResultOf::LogIntHistogram_Impl<Logger::LogIntHistogramResponse>::LogIntHistogram_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram) {
+Logger::ResultOf::LogIntHistogram_Impl<Logger::LogIntHistogramResponse>::LogIntHistogram_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogIntHistogramRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -5145,15 +5145,15 @@ Logger::ResultOf::LogIntHistogram_Impl<Logger::LogIntHistogramResponse>::LogIntH
 }
 
 Logger::ResultOf::LogIntHistogram Logger::SyncClient::LogIntHistogram(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram) {
-  return ResultOf::LogIntHistogram(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(histogram));
+    return ResultOf::LogIntHistogram(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_code), std::move(component), std::move(histogram));
 }
 
-Logger::ResultOf::LogIntHistogram Logger::Call::LogIntHistogram(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram) {
+Logger::ResultOf::LogIntHistogram Logger::Call::LogIntHistogram(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram) {
   return ResultOf::LogIntHistogram(std::move(_client_end), std::move(metric_id), std::move(event_code), std::move(component), std::move(histogram));
 }
 
 template <>
-Logger::UnownedResultOf::LogIntHistogram_Impl<Logger::LogIntHistogramResponse>::LogIntHistogram_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogIntHistogram_Impl<Logger::LogIntHistogramResponse>::LogIntHistogram_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogIntHistogramRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogIntHistogramResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -5174,14 +5174,14 @@ Logger::UnownedResultOf::LogIntHistogram_Impl<Logger::LogIntHistogramResponse>::
 }
 
 Logger::UnownedResultOf::LogIntHistogram Logger::SyncClient::LogIntHistogram(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogIntHistogram(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(histogram), std::move(_response_buffer));
+  return UnownedResultOf::LogIntHistogram(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(histogram), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::LogIntHistogram Logger::Call::LogIntHistogram(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogIntHistogram Logger::Call::LogIntHistogram(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogIntHistogram(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_code), std::move(component), std::move(histogram), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::LogIntHistogramResponse> Logger::InPlace::LogIntHistogram(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogIntHistogramRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::LogIntHistogramResponse> Logger::InPlace::LogIntHistogram(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogIntHistogramRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::LogIntHistogramRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -5198,7 +5198,7 @@ Logger::UnownedResultOf::LogIntHistogram Logger::Call::LogIntHistogram(zx::unown
 }
 
 template <>
-Logger::ResultOf::LogCustomEvent_Impl<Logger::LogCustomEventResponse>::LogCustomEvent_Impl(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values) {
+Logger::ResultOf::LogCustomEvent_Impl<Logger::LogCustomEventResponse>::LogCustomEvent_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogCustomEventRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -5216,15 +5216,15 @@ Logger::ResultOf::LogCustomEvent_Impl<Logger::LogCustomEventResponse>::LogCustom
 }
 
 Logger::ResultOf::LogCustomEvent Logger::SyncClient::LogCustomEvent(uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values) {
-  return ResultOf::LogCustomEvent(zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_values));
+    return ResultOf::LogCustomEvent(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(event_values));
 }
 
-Logger::ResultOf::LogCustomEvent Logger::Call::LogCustomEvent(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values) {
+Logger::ResultOf::LogCustomEvent Logger::Call::LogCustomEvent(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values) {
   return ResultOf::LogCustomEvent(std::move(_client_end), std::move(metric_id), std::move(event_values));
 }
 
 template <>
-Logger::UnownedResultOf::LogCustomEvent_Impl<Logger::LogCustomEventResponse>::LogCustomEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogCustomEvent_Impl<Logger::LogCustomEventResponse>::LogCustomEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogCustomEventRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogCustomEventResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -5243,14 +5243,14 @@ Logger::UnownedResultOf::LogCustomEvent_Impl<Logger::LogCustomEventResponse>::Lo
 }
 
 Logger::UnownedResultOf::LogCustomEvent Logger::SyncClient::LogCustomEvent(::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogCustomEvent(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_values), std::move(_response_buffer));
+  return UnownedResultOf::LogCustomEvent(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(event_values), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::LogCustomEvent Logger::Call::LogCustomEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogCustomEvent Logger::Call::LogCustomEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogCustomEvent(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(event_values), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::LogCustomEventResponse> Logger::InPlace::LogCustomEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCustomEventRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::LogCustomEventResponse> Logger::InPlace::LogCustomEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCustomEventRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::LogCustomEventRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -5267,7 +5267,7 @@ Logger::UnownedResultOf::LogCustomEvent Logger::Call::LogCustomEvent(zx::unowned
 }
 
 template <>
-Logger::ResultOf::LogCobaltEvent_Impl<Logger::LogCobaltEventResponse>::LogCobaltEvent_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::CobaltEvent event) {
+Logger::ResultOf::LogCobaltEvent_Impl<Logger::LogCobaltEventResponse>::LogCobaltEvent_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::CobaltEvent event) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogCobaltEventRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -5284,15 +5284,15 @@ Logger::ResultOf::LogCobaltEvent_Impl<Logger::LogCobaltEventResponse>::LogCobalt
 }
 
 Logger::ResultOf::LogCobaltEvent Logger::SyncClient::LogCobaltEvent(::llcpp::fuchsia::cobalt::CobaltEvent event) {
-  return ResultOf::LogCobaltEvent(zx::unowned_channel(this->channel_), std::move(event));
+    return ResultOf::LogCobaltEvent(::zx::unowned_channel(this->channel_), std::move(event));
 }
 
-Logger::ResultOf::LogCobaltEvent Logger::Call::LogCobaltEvent(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::CobaltEvent event) {
+Logger::ResultOf::LogCobaltEvent Logger::Call::LogCobaltEvent(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::CobaltEvent event) {
   return ResultOf::LogCobaltEvent(std::move(_client_end), std::move(event));
 }
 
 template <>
-Logger::UnownedResultOf::LogCobaltEvent_Impl<Logger::LogCobaltEventResponse>::LogCobaltEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::CobaltEvent event, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogCobaltEvent_Impl<Logger::LogCobaltEventResponse>::LogCobaltEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::CobaltEvent event, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogCobaltEventRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogCobaltEventResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -5310,14 +5310,14 @@ Logger::UnownedResultOf::LogCobaltEvent_Impl<Logger::LogCobaltEventResponse>::Lo
 }
 
 Logger::UnownedResultOf::LogCobaltEvent Logger::SyncClient::LogCobaltEvent(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::CobaltEvent event, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogCobaltEvent(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(event), std::move(_response_buffer));
+  return UnownedResultOf::LogCobaltEvent(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(event), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::LogCobaltEvent Logger::Call::LogCobaltEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::CobaltEvent event, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogCobaltEvent Logger::Call::LogCobaltEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::CobaltEvent event, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogCobaltEvent(std::move(_client_end), std::move(_request_buffer), std::move(event), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::LogCobaltEventResponse> Logger::InPlace::LogCobaltEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCobaltEventRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::LogCobaltEventResponse> Logger::InPlace::LogCobaltEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCobaltEventRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::LogCobaltEventRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -5334,7 +5334,7 @@ Logger::UnownedResultOf::LogCobaltEvent Logger::Call::LogCobaltEvent(zx::unowned
 }
 
 template <>
-Logger::ResultOf::LogCobaltEvents_Impl<Logger::LogCobaltEventsResponse>::LogCobaltEvents_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events) {
+Logger::ResultOf::LogCobaltEvents_Impl<Logger::LogCobaltEventsResponse>::LogCobaltEvents_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogCobaltEventsRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -5351,15 +5351,15 @@ Logger::ResultOf::LogCobaltEvents_Impl<Logger::LogCobaltEventsResponse>::LogCoba
 }
 
 Logger::ResultOf::LogCobaltEvents Logger::SyncClient::LogCobaltEvents(::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events) {
-  return ResultOf::LogCobaltEvents(zx::unowned_channel(this->channel_), std::move(events));
+    return ResultOf::LogCobaltEvents(::zx::unowned_channel(this->channel_), std::move(events));
 }
 
-Logger::ResultOf::LogCobaltEvents Logger::Call::LogCobaltEvents(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events) {
+Logger::ResultOf::LogCobaltEvents Logger::Call::LogCobaltEvents(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events) {
   return ResultOf::LogCobaltEvents(std::move(_client_end), std::move(events));
 }
 
 template <>
-Logger::UnownedResultOf::LogCobaltEvents_Impl<Logger::LogCobaltEventsResponse>::LogCobaltEvents_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogCobaltEvents_Impl<Logger::LogCobaltEventsResponse>::LogCobaltEvents_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LogCobaltEventsRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LogCobaltEventsResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -5377,14 +5377,14 @@ Logger::UnownedResultOf::LogCobaltEvents_Impl<Logger::LogCobaltEventsResponse>::
 }
 
 Logger::UnownedResultOf::LogCobaltEvents Logger::SyncClient::LogCobaltEvents(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogCobaltEvents(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(events), std::move(_response_buffer));
+  return UnownedResultOf::LogCobaltEvents(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(events), std::move(_response_buffer));
 }
 
-Logger::UnownedResultOf::LogCobaltEvents Logger::Call::LogCobaltEvents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events, ::fidl::BytePart _response_buffer) {
+Logger::UnownedResultOf::LogCobaltEvents Logger::Call::LogCobaltEvents(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LogCobaltEvents(std::move(_client_end), std::move(_request_buffer), std::move(events), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Logger::LogCobaltEventsResponse> Logger::InPlace::LogCobaltEvents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCobaltEventsRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Logger::LogCobaltEventsResponse> Logger::InPlace::LogCobaltEvents(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCobaltEventsRequest> params, ::fidl::BytePart response_buffer) {
   Logger::SetTransactionHeaderFor::LogCobaltEventsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

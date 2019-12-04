@@ -21,7 +21,7 @@ extern "C" const fidl_type_t v1_fidl_service_test_EchoEchoStringResponseTable;
 
 }  // namespace
 template <>
-Echo::ResultOf::EchoString_Impl<Echo::EchoStringResponse>::EchoString_Impl(zx::unowned_channel _client_end, ::fidl::StringView value) {
+Echo::ResultOf::EchoString_Impl<Echo::EchoStringResponse>::EchoString_Impl(::zx::unowned_channel _client_end, ::fidl::StringView value) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EchoStringRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -38,15 +38,15 @@ Echo::ResultOf::EchoString_Impl<Echo::EchoStringResponse>::EchoString_Impl(zx::u
 }
 
 Echo::ResultOf::EchoString Echo::SyncClient::EchoString(::fidl::StringView value) {
-  return ResultOf::EchoString(zx::unowned_channel(this->channel_), std::move(value));
+    return ResultOf::EchoString(::zx::unowned_channel(this->channel_), std::move(value));
 }
 
-Echo::ResultOf::EchoString Echo::Call::EchoString(zx::unowned_channel _client_end, ::fidl::StringView value) {
+Echo::ResultOf::EchoString Echo::Call::EchoString(::zx::unowned_channel _client_end, ::fidl::StringView value) {
   return ResultOf::EchoString(std::move(_client_end), std::move(value));
 }
 
 template <>
-Echo::UnownedResultOf::EchoString_Impl<Echo::EchoStringResponse>::EchoString_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView value, ::fidl::BytePart _response_buffer) {
+Echo::UnownedResultOf::EchoString_Impl<Echo::EchoStringResponse>::EchoString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView value, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < EchoStringRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<EchoStringResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -64,14 +64,14 @@ Echo::UnownedResultOf::EchoString_Impl<Echo::EchoStringResponse>::EchoString_Imp
 }
 
 Echo::UnownedResultOf::EchoString Echo::SyncClient::EchoString(::fidl::BytePart _request_buffer, ::fidl::StringView value, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::EchoString(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(value), std::move(_response_buffer));
+  return UnownedResultOf::EchoString(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(value), std::move(_response_buffer));
 }
 
-Echo::UnownedResultOf::EchoString Echo::Call::EchoString(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView value, ::fidl::BytePart _response_buffer) {
+Echo::UnownedResultOf::EchoString Echo::Call::EchoString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView value, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::EchoString(std::move(_client_end), std::move(_request_buffer), std::move(value), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Echo::EchoStringResponse> Echo::InPlace::EchoString(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EchoStringRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Echo::EchoStringResponse> Echo::InPlace::EchoString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EchoStringRequest> params, ::fidl::BytePart response_buffer) {
   Echo::SetTransactionHeaderFor::EchoStringRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

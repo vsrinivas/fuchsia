@@ -23,10 +23,10 @@ class {{ .Name }} final {
   class ServiceClient final {
     ServiceClient() = delete;
    public:
-    ServiceClient(zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
-		: dir_(std::move(dir)), connect_func_(connect_func) {}
+    ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
+    : dir_(std::move(dir)), connect_func_(connect_func) {}
     {{- range .Members }}
-	{{ "" }}
+  {{ "" }}
     // Connects to the member protocol "{{ .Name }}". Returns a |fidl::ClientChannel| on
     // success, which can be used with |fidl::BindSyncClient| to create a synchronous
     // client.
@@ -41,13 +41,13 @@ class {{ .Name }} final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientChannel| returned from this method.
     ::fidl::result<::fidl::ClientChannel<{{ .InterfaceType }}>> connect_{{ .Name }}() {
-      zx::channel local, remote;
-      zx_status_t result = zx::channel::create(0, &local, &remote);
+      ::zx::channel local, remote;
+      zx_status_t result = ::zx::channel::create(0, &local, &remote);
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       result =
-          connect_func_(zx::unowned_channel(dir_), ::fidl::StringView("{{ .Name }}"), std::move(remote));
+          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("{{ .Name }}"), std::move(remote));
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
@@ -56,7 +56,7 @@ class {{ .Name }} final {
     {{- end }}
 
    private:
-    zx::channel dir_;
+    ::zx::channel dir_;
     ::fidl::internal::ConnectMemberFunc connect_func_;
   };
 

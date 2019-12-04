@@ -63,7 +63,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_light_LightSetRgbValueResponseT
 
 }  // namespace
 template <>
-Light::ResultOf::GetName_Impl<Light::GetNameResponse>::GetName_Impl(zx::unowned_channel _client_end, uint32_t index) {
+Light::ResultOf::GetName_Impl<Light::GetNameResponse>::GetName_Impl(::zx::unowned_channel _client_end, uint32_t index) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -78,15 +78,15 @@ Light::ResultOf::GetName_Impl<Light::GetNameResponse>::GetName_Impl(zx::unowned_
 }
 
 Light::ResultOf::GetName Light::SyncClient::GetName(uint32_t index) {
-  return ResultOf::GetName(zx::unowned_channel(this->channel_), std::move(index));
+    return ResultOf::GetName(::zx::unowned_channel(this->channel_), std::move(index));
 }
 
-Light::ResultOf::GetName Light::Call::GetName(zx::unowned_channel _client_end, uint32_t index) {
+Light::ResultOf::GetName Light::Call::GetName(::zx::unowned_channel _client_end, uint32_t index) {
   return ResultOf::GetName(std::move(_client_end), std::move(index));
 }
 
 template <>
-Light::UnownedResultOf::GetName_Impl<Light::GetNameResponse>::GetName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::GetName_Impl<Light::GetNameResponse>::GetName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetNameRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetNameResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -101,14 +101,14 @@ Light::UnownedResultOf::GetName_Impl<Light::GetNameResponse>::GetName_Impl(zx::u
 }
 
 Light::UnownedResultOf::GetName Light::SyncClient::GetName(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetName(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
+  return UnownedResultOf::GetName(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
 }
 
-Light::UnownedResultOf::GetName Light::Call::GetName(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::GetName Light::Call::GetName(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetName(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Light::GetNameResponse> Light::InPlace::GetName(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetNameRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Light::GetNameResponse> Light::InPlace::GetName(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetNameRequest> params, ::fidl::BytePart response_buffer) {
   Light::SetTransactionHeaderFor::GetNameRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -125,7 +125,7 @@ Light::UnownedResultOf::GetName Light::Call::GetName(zx::unowned_channel _client
 }
 
 template <>
-Light::ResultOf::GetCount_Impl<Light::GetCountResponse>::GetCount_Impl(zx::unowned_channel _client_end) {
+Light::ResultOf::GetCount_Impl<Light::GetCountResponse>::GetCount_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCountRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -138,15 +138,15 @@ Light::ResultOf::GetCount_Impl<Light::GetCountResponse>::GetCount_Impl(zx::unown
 }
 
 Light::ResultOf::GetCount Light::SyncClient::GetCount() {
-  return ResultOf::GetCount(zx::unowned_channel(this->channel_));
+    return ResultOf::GetCount(::zx::unowned_channel(this->channel_));
 }
 
-Light::ResultOf::GetCount Light::Call::GetCount(zx::unowned_channel _client_end) {
+Light::ResultOf::GetCount Light::Call::GetCount(::zx::unowned_channel _client_end) {
   return ResultOf::GetCount(std::move(_client_end));
 }
 
 template <>
-Light::UnownedResultOf::GetCount_Impl<Light::GetCountResponse>::GetCount_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::GetCount_Impl<Light::GetCountResponse>::GetCount_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetCountRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetCountRequest::PrimarySize);
@@ -157,14 +157,14 @@ Light::UnownedResultOf::GetCount_Impl<Light::GetCountResponse>::GetCount_Impl(zx
 }
 
 Light::UnownedResultOf::GetCount Light::SyncClient::GetCount(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetCount(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetCount(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Light::UnownedResultOf::GetCount Light::Call::GetCount(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::GetCount Light::Call::GetCount(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetCount(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Light::GetCountResponse> Light::InPlace::GetCount(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Light::GetCountResponse> Light::InPlace::GetCount(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetCountRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -186,7 +186,7 @@ Light::UnownedResultOf::GetCount Light::Call::GetCount(zx::unowned_channel _clie
 }
 
 template <>
-Light::ResultOf::HasCapability_Impl<Light::HasCapabilityResponse>::HasCapability_Impl(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability) {
+Light::ResultOf::HasCapability_Impl<Light::HasCapabilityResponse>::HasCapability_Impl(::zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<HasCapabilityRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -202,15 +202,15 @@ Light::ResultOf::HasCapability_Impl<Light::HasCapabilityResponse>::HasCapability
 }
 
 Light::ResultOf::HasCapability Light::SyncClient::HasCapability(uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability) {
-  return ResultOf::HasCapability(zx::unowned_channel(this->channel_), std::move(index), std::move(capability));
+    return ResultOf::HasCapability(::zx::unowned_channel(this->channel_), std::move(index), std::move(capability));
 }
 
-Light::ResultOf::HasCapability Light::Call::HasCapability(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability) {
+Light::ResultOf::HasCapability Light::Call::HasCapability(::zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability) {
   return ResultOf::HasCapability(std::move(_client_end), std::move(index), std::move(capability));
 }
 
 template <>
-Light::UnownedResultOf::HasCapability_Impl<Light::HasCapabilityResponse>::HasCapability_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::HasCapability_Impl<Light::HasCapabilityResponse>::HasCapability_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < HasCapabilityRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<HasCapabilityResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -226,14 +226,14 @@ Light::UnownedResultOf::HasCapability_Impl<Light::HasCapabilityResponse>::HasCap
 }
 
 Light::UnownedResultOf::HasCapability Light::SyncClient::HasCapability(::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::HasCapability(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(capability), std::move(_response_buffer));
+  return UnownedResultOf::HasCapability(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(capability), std::move(_response_buffer));
 }
 
-Light::UnownedResultOf::HasCapability Light::Call::HasCapability(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::HasCapability Light::Call::HasCapability(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::HasCapability(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(capability), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Light::HasCapabilityResponse> Light::InPlace::HasCapability(zx::unowned_channel _client_end, ::fidl::DecodedMessage<HasCapabilityRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Light::HasCapabilityResponse> Light::InPlace::HasCapability(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<HasCapabilityRequest> params, ::fidl::BytePart response_buffer) {
   Light::SetTransactionHeaderFor::HasCapabilityRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -250,7 +250,7 @@ Light::UnownedResultOf::HasCapability Light::Call::HasCapability(zx::unowned_cha
 }
 
 template <>
-Light::ResultOf::GetSimpleValue_Impl<Light::GetSimpleValueResponse>::GetSimpleValue_Impl(zx::unowned_channel _client_end, uint32_t index) {
+Light::ResultOf::GetSimpleValue_Impl<Light::GetSimpleValueResponse>::GetSimpleValue_Impl(::zx::unowned_channel _client_end, uint32_t index) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSimpleValueRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -265,15 +265,15 @@ Light::ResultOf::GetSimpleValue_Impl<Light::GetSimpleValueResponse>::GetSimpleVa
 }
 
 Light::ResultOf::GetSimpleValue Light::SyncClient::GetSimpleValue(uint32_t index) {
-  return ResultOf::GetSimpleValue(zx::unowned_channel(this->channel_), std::move(index));
+    return ResultOf::GetSimpleValue(::zx::unowned_channel(this->channel_), std::move(index));
 }
 
-Light::ResultOf::GetSimpleValue Light::Call::GetSimpleValue(zx::unowned_channel _client_end, uint32_t index) {
+Light::ResultOf::GetSimpleValue Light::Call::GetSimpleValue(::zx::unowned_channel _client_end, uint32_t index) {
   return ResultOf::GetSimpleValue(std::move(_client_end), std::move(index));
 }
 
 template <>
-Light::UnownedResultOf::GetSimpleValue_Impl<Light::GetSimpleValueResponse>::GetSimpleValue_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::GetSimpleValue_Impl<Light::GetSimpleValueResponse>::GetSimpleValue_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetSimpleValueRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetSimpleValueResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -288,14 +288,14 @@ Light::UnownedResultOf::GetSimpleValue_Impl<Light::GetSimpleValueResponse>::GetS
 }
 
 Light::UnownedResultOf::GetSimpleValue Light::SyncClient::GetSimpleValue(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetSimpleValue(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
+  return UnownedResultOf::GetSimpleValue(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
 }
 
-Light::UnownedResultOf::GetSimpleValue Light::Call::GetSimpleValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::GetSimpleValue Light::Call::GetSimpleValue(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetSimpleValue(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Light::GetSimpleValueResponse> Light::InPlace::GetSimpleValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSimpleValueRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Light::GetSimpleValueResponse> Light::InPlace::GetSimpleValue(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSimpleValueRequest> params, ::fidl::BytePart response_buffer) {
   Light::SetTransactionHeaderFor::GetSimpleValueRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -312,7 +312,7 @@ Light::UnownedResultOf::GetSimpleValue Light::Call::GetSimpleValue(zx::unowned_c
 }
 
 template <>
-Light::ResultOf::SetSimpleValue_Impl<Light::SetSimpleValueResponse>::SetSimpleValue_Impl(zx::unowned_channel _client_end, uint32_t index, uint8_t value) {
+Light::ResultOf::SetSimpleValue_Impl<Light::SetSimpleValueResponse>::SetSimpleValue_Impl(::zx::unowned_channel _client_end, uint32_t index, uint8_t value) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetSimpleValueRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -328,15 +328,15 @@ Light::ResultOf::SetSimpleValue_Impl<Light::SetSimpleValueResponse>::SetSimpleVa
 }
 
 Light::ResultOf::SetSimpleValue Light::SyncClient::SetSimpleValue(uint32_t index, uint8_t value) {
-  return ResultOf::SetSimpleValue(zx::unowned_channel(this->channel_), std::move(index), std::move(value));
+    return ResultOf::SetSimpleValue(::zx::unowned_channel(this->channel_), std::move(index), std::move(value));
 }
 
-Light::ResultOf::SetSimpleValue Light::Call::SetSimpleValue(zx::unowned_channel _client_end, uint32_t index, uint8_t value) {
+Light::ResultOf::SetSimpleValue Light::Call::SetSimpleValue(::zx::unowned_channel _client_end, uint32_t index, uint8_t value) {
   return ResultOf::SetSimpleValue(std::move(_client_end), std::move(index), std::move(value));
 }
 
 template <>
-Light::UnownedResultOf::SetSimpleValue_Impl<Light::SetSimpleValueResponse>::SetSimpleValue_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::SetSimpleValue_Impl<Light::SetSimpleValueResponse>::SetSimpleValue_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetSimpleValueRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetSimpleValueResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -352,14 +352,14 @@ Light::UnownedResultOf::SetSimpleValue_Impl<Light::SetSimpleValueResponse>::SetS
 }
 
 Light::UnownedResultOf::SetSimpleValue Light::SyncClient::SetSimpleValue(::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetSimpleValue(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(value), std::move(_response_buffer));
+  return UnownedResultOf::SetSimpleValue(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(value), std::move(_response_buffer));
 }
 
-Light::UnownedResultOf::SetSimpleValue Light::Call::SetSimpleValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::SetSimpleValue Light::Call::SetSimpleValue(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetSimpleValue(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(value), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Light::SetSimpleValueResponse> Light::InPlace::SetSimpleValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSimpleValueRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Light::SetSimpleValueResponse> Light::InPlace::SetSimpleValue(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSimpleValueRequest> params, ::fidl::BytePart response_buffer) {
   Light::SetTransactionHeaderFor::SetSimpleValueRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -376,7 +376,7 @@ Light::UnownedResultOf::SetSimpleValue Light::Call::SetSimpleValue(zx::unowned_c
 }
 
 template <>
-Light::ResultOf::GetRgbValue_Impl<Light::GetRgbValueResponse>::GetRgbValue_Impl(zx::unowned_channel _client_end, uint32_t index) {
+Light::ResultOf::GetRgbValue_Impl<Light::GetRgbValueResponse>::GetRgbValue_Impl(::zx::unowned_channel _client_end, uint32_t index) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRgbValueRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -391,15 +391,15 @@ Light::ResultOf::GetRgbValue_Impl<Light::GetRgbValueResponse>::GetRgbValue_Impl(
 }
 
 Light::ResultOf::GetRgbValue Light::SyncClient::GetRgbValue(uint32_t index) {
-  return ResultOf::GetRgbValue(zx::unowned_channel(this->channel_), std::move(index));
+    return ResultOf::GetRgbValue(::zx::unowned_channel(this->channel_), std::move(index));
 }
 
-Light::ResultOf::GetRgbValue Light::Call::GetRgbValue(zx::unowned_channel _client_end, uint32_t index) {
+Light::ResultOf::GetRgbValue Light::Call::GetRgbValue(::zx::unowned_channel _client_end, uint32_t index) {
   return ResultOf::GetRgbValue(std::move(_client_end), std::move(index));
 }
 
 template <>
-Light::UnownedResultOf::GetRgbValue_Impl<Light::GetRgbValueResponse>::GetRgbValue_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::GetRgbValue_Impl<Light::GetRgbValueResponse>::GetRgbValue_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetRgbValueRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetRgbValueResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -414,14 +414,14 @@ Light::UnownedResultOf::GetRgbValue_Impl<Light::GetRgbValueResponse>::GetRgbValu
 }
 
 Light::UnownedResultOf::GetRgbValue Light::SyncClient::GetRgbValue(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetRgbValue(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
+  return UnownedResultOf::GetRgbValue(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
 }
 
-Light::UnownedResultOf::GetRgbValue Light::Call::GetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::GetRgbValue Light::Call::GetRgbValue(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetRgbValue(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Light::GetRgbValueResponse> Light::InPlace::GetRgbValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRgbValueRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Light::GetRgbValueResponse> Light::InPlace::GetRgbValue(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRgbValueRequest> params, ::fidl::BytePart response_buffer) {
   Light::SetTransactionHeaderFor::GetRgbValueRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -438,7 +438,7 @@ Light::UnownedResultOf::GetRgbValue Light::Call::GetRgbValue(zx::unowned_channel
 }
 
 template <>
-Light::ResultOf::SetRgbValue_Impl<Light::SetRgbValueResponse>::SetRgbValue_Impl(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value) {
+Light::ResultOf::SetRgbValue_Impl<Light::SetRgbValueResponse>::SetRgbValue_Impl(::zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetRgbValueRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -454,15 +454,15 @@ Light::ResultOf::SetRgbValue_Impl<Light::SetRgbValueResponse>::SetRgbValue_Impl(
 }
 
 Light::ResultOf::SetRgbValue Light::SyncClient::SetRgbValue(uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value) {
-  return ResultOf::SetRgbValue(zx::unowned_channel(this->channel_), std::move(index), std::move(value));
+    return ResultOf::SetRgbValue(::zx::unowned_channel(this->channel_), std::move(index), std::move(value));
 }
 
-Light::ResultOf::SetRgbValue Light::Call::SetRgbValue(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value) {
+Light::ResultOf::SetRgbValue Light::Call::SetRgbValue(::zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value) {
   return ResultOf::SetRgbValue(std::move(_client_end), std::move(index), std::move(value));
 }
 
 template <>
-Light::UnownedResultOf::SetRgbValue_Impl<Light::SetRgbValueResponse>::SetRgbValue_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::SetRgbValue_Impl<Light::SetRgbValueResponse>::SetRgbValue_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetRgbValueRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetRgbValueResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -478,14 +478,14 @@ Light::UnownedResultOf::SetRgbValue_Impl<Light::SetRgbValueResponse>::SetRgbValu
 }
 
 Light::UnownedResultOf::SetRgbValue Light::SyncClient::SetRgbValue(::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetRgbValue(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(value), std::move(_response_buffer));
+  return UnownedResultOf::SetRgbValue(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(index), std::move(value), std::move(_response_buffer));
 }
 
-Light::UnownedResultOf::SetRgbValue Light::Call::SetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer) {
+Light::UnownedResultOf::SetRgbValue Light::Call::SetRgbValue(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetRgbValue(std::move(_client_end), std::move(_request_buffer), std::move(index), std::move(value), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Light::SetRgbValueResponse> Light::InPlace::SetRgbValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetRgbValueRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Light::SetRgbValueResponse> Light::InPlace::SetRgbValue(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetRgbValueRequest> params, ::fidl::BytePart response_buffer) {
   Light::SetTransactionHeaderFor::SetRgbValueRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

@@ -28,7 +28,7 @@ extern "C" const fidl_type_t v1_fidl_test_simple_SimpleCloseResponseTable;
 
 }  // namespace
 template <>
-Simple::ResultOf::Echo_Impl<Simple::EchoResponse>::Echo_Impl(zx::unowned_channel _client_end, int32_t request) {
+Simple::ResultOf::Echo_Impl<Simple::EchoResponse>::Echo_Impl(::zx::unowned_channel _client_end, int32_t request) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<EchoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -43,15 +43,15 @@ Simple::ResultOf::Echo_Impl<Simple::EchoResponse>::Echo_Impl(zx::unowned_channel
 }
 
 Simple::ResultOf::Echo Simple::SyncClient::Echo(int32_t request) {
-  return ResultOf::Echo(zx::unowned_channel(this->channel_), std::move(request));
+    return ResultOf::Echo(::zx::unowned_channel(this->channel_), std::move(request));
 }
 
-Simple::ResultOf::Echo Simple::Call::Echo(zx::unowned_channel _client_end, int32_t request) {
+Simple::ResultOf::Echo Simple::Call::Echo(::zx::unowned_channel _client_end, int32_t request) {
   return ResultOf::Echo(std::move(_client_end), std::move(request));
 }
 
 template <>
-Simple::UnownedResultOf::Echo_Impl<Simple::EchoResponse>::Echo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer) {
+Simple::UnownedResultOf::Echo_Impl<Simple::EchoResponse>::Echo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < EchoRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<EchoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -66,14 +66,14 @@ Simple::UnownedResultOf::Echo_Impl<Simple::EchoResponse>::Echo_Impl(zx::unowned_
 }
 
 Simple::UnownedResultOf::Echo Simple::SyncClient::Echo(::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Echo(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(request), std::move(_response_buffer));
+  return UnownedResultOf::Echo(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(request), std::move(_response_buffer));
 }
 
-Simple::UnownedResultOf::Echo Simple::Call::Echo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer) {
+Simple::UnownedResultOf::Echo Simple::Call::Echo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Echo(std::move(_client_end), std::move(_request_buffer), std::move(request), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Simple::EchoResponse> Simple::InPlace::Echo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EchoRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Simple::EchoResponse> Simple::InPlace::Echo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EchoRequest> params, ::fidl::BytePart response_buffer) {
   Simple::SetTransactionHeaderFor::EchoRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -90,7 +90,7 @@ Simple::UnownedResultOf::Echo Simple::Call::Echo(zx::unowned_channel _client_end
 }
 
 template <>
-Simple::ResultOf::Close_Impl<Simple::CloseResponse>::Close_Impl(zx::unowned_channel _client_end) {
+Simple::ResultOf::Close_Impl<Simple::CloseResponse>::Close_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -103,15 +103,15 @@ Simple::ResultOf::Close_Impl<Simple::CloseResponse>::Close_Impl(zx::unowned_chan
 }
 
 Simple::ResultOf::Close Simple::SyncClient::Close() {
-  return ResultOf::Close(zx::unowned_channel(this->channel_));
+    return ResultOf::Close(::zx::unowned_channel(this->channel_));
 }
 
-Simple::ResultOf::Close Simple::Call::Close(zx::unowned_channel _client_end) {
+Simple::ResultOf::Close Simple::Call::Close(::zx::unowned_channel _client_end) {
   return ResultOf::Close(std::move(_client_end));
 }
 
 template <>
-Simple::UnownedResultOf::Close_Impl<Simple::CloseResponse>::Close_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Simple::UnownedResultOf::Close_Impl<Simple::CloseResponse>::Close_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(CloseRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, CloseRequest::PrimarySize);
@@ -122,14 +122,14 @@ Simple::UnownedResultOf::Close_Impl<Simple::CloseResponse>::Close_Impl(zx::unown
 }
 
 Simple::UnownedResultOf::Close Simple::SyncClient::Close(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Close(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Close(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Simple::UnownedResultOf::Close Simple::Call::Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Simple::UnownedResultOf::Close Simple::Call::Close(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Close(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Simple::CloseResponse> Simple::InPlace::Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Simple::CloseResponse> Simple::InPlace::Close(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(CloseRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

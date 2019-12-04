@@ -152,7 +152,7 @@ extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceThreadUnbindReplyD
 
 }  // namespace
 
-MockDeviceThread::ResultOf::PerformActions_Impl::PerformActions_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions) {
+MockDeviceThread::ResultOf::PerformActions_Impl::PerformActions_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PerformActionsRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -169,15 +169,15 @@ MockDeviceThread::ResultOf::PerformActions_Impl::PerformActions_Impl(zx::unowned
 }
 
 MockDeviceThread::ResultOf::PerformActions MockDeviceThread::SyncClient::PerformActions(::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions) {
-  return ResultOf::PerformActions(zx::unowned_channel(this->channel_), std::move(actions));
+    return ResultOf::PerformActions(::zx::unowned_channel(this->channel_), std::move(actions));
 }
 
-MockDeviceThread::ResultOf::PerformActions MockDeviceThread::Call::PerformActions(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions) {
+MockDeviceThread::ResultOf::PerformActions MockDeviceThread::Call::PerformActions(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions) {
   return ResultOf::PerformActions(std::move(_client_end), std::move(actions));
 }
 
 
-MockDeviceThread::UnownedResultOf::PerformActions_Impl::PerformActions_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions) {
+MockDeviceThread::UnownedResultOf::PerformActions_Impl::PerformActions_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions) {
   if (_request_buffer.capacity() < PerformActionsRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -196,14 +196,14 @@ MockDeviceThread::UnownedResultOf::PerformActions_Impl::PerformActions_Impl(zx::
 }
 
 MockDeviceThread::UnownedResultOf::PerformActions MockDeviceThread::SyncClient::PerformActions(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions) {
-  return UnownedResultOf::PerformActions(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(actions));
+  return UnownedResultOf::PerformActions(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(actions));
 }
 
-MockDeviceThread::UnownedResultOf::PerformActions MockDeviceThread::Call::PerformActions(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions) {
+MockDeviceThread::UnownedResultOf::PerformActions MockDeviceThread::Call::PerformActions(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions) {
   return UnownedResultOf::PerformActions(std::move(_client_end), std::move(_request_buffer), std::move(actions));
 }
 
-::fidl::internal::StatusAndError MockDeviceThread::InPlace::PerformActions(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PerformActionsRequest> params) {
+::fidl::internal::StatusAndError MockDeviceThread::InPlace::PerformActions(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<PerformActionsRequest> params) {
   MockDeviceThread::SetTransactionHeaderFor::PerformActionsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -220,12 +220,12 @@ MockDeviceThread::UnownedResultOf::PerformActions MockDeviceThread::Call::Perfor
 }
 
 zx_status_t MockDeviceThread::SyncClient::HandleEvents(MockDeviceThread::EventHandlers handlers) {
-  return MockDeviceThread::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+  return MockDeviceThread::Call::HandleEvents(::zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t MockDeviceThread::Call::HandleEvents(zx::unowned_channel client_end, MockDeviceThread::EventHandlers handlers) {
+zx_status_t MockDeviceThread::Call::HandleEvents(::zx::unowned_channel client_end, MockDeviceThread::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                            zx::time::infinite(),
+                                            ::zx::time::infinite(),
                                             nullptr);
   if (status != ZX_OK) {
     return status;
@@ -386,7 +386,7 @@ zx_status_t MockDeviceThread::SendAddDeviceDoneEvent(::zx::unowned_channel _chan
               AddDeviceDoneResponse::PrimarySize)));
   _response.action_id = std::move(action_id);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceDoneResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<AddDeviceDoneResponse>(std::move(_response_bytes)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<AddDeviceDoneResponse>(std::move(_response_bytes)));
 }
 
 zx_status_t MockDeviceThread::SendAddDeviceDoneEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, uint64_t action_id) {
@@ -401,12 +401,12 @@ zx_status_t MockDeviceThread::SendAddDeviceDoneEvent(::zx::unowned_channel _chan
               AddDeviceDoneResponse::PrimarySize)));
   _response.action_id = std::move(action_id);
   _buffer.set_actual(sizeof(AddDeviceDoneResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<AddDeviceDoneResponse>(std::move(_buffer)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<AddDeviceDoneResponse>(std::move(_buffer)));
 }
 
 zx_status_t MockDeviceThread::SendAddDeviceDoneEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<AddDeviceDoneResponse> params) {
   MockDeviceThread::SetTransactionHeaderFor::AddDeviceDoneResponse(params);
-  return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
 
@@ -421,7 +421,7 @@ zx_status_t MockDeviceThread::SendUnbindReplyDoneEvent(::zx::unowned_channel _ch
               UnbindReplyDoneResponse::PrimarySize)));
   _response.action_id = std::move(action_id);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindReplyDoneResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<UnbindReplyDoneResponse>(std::move(_response_bytes)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<UnbindReplyDoneResponse>(std::move(_response_bytes)));
 }
 
 zx_status_t MockDeviceThread::SendUnbindReplyDoneEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, uint64_t action_id) {
@@ -436,12 +436,12 @@ zx_status_t MockDeviceThread::SendUnbindReplyDoneEvent(::zx::unowned_channel _ch
               UnbindReplyDoneResponse::PrimarySize)));
   _response.action_id = std::move(action_id);
   _buffer.set_actual(sizeof(UnbindReplyDoneResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<UnbindReplyDoneResponse>(std::move(_buffer)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<UnbindReplyDoneResponse>(std::move(_buffer)));
 }
 
 zx_status_t MockDeviceThread::SendUnbindReplyDoneEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<UnbindReplyDoneResponse> params) {
   MockDeviceThread::SetTransactionHeaderFor::UnbindReplyDoneResponse(params);
-  return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
 
@@ -568,7 +568,7 @@ extern "C" const fidl_type_t v1_fuchsia_device_mock_MockDeviceUnbindReplyDoneRes
 
 }  // namespace
 template <>
-MockDevice::ResultOf::Bind_Impl<MockDevice::BindResponse>::Bind_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::Bind_Impl<MockDevice::BindResponse>::Bind_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -583,15 +583,15 @@ MockDevice::ResultOf::Bind_Impl<MockDevice::BindResponse>::Bind_Impl(zx::unowned
 }
 
 MockDevice::ResultOf::Bind MockDevice::SyncClient::Bind(::llcpp::fuchsia::device::mock::HookInvocation record) {
-  return ResultOf::Bind(zx::unowned_channel(this->channel_), std::move(record));
+    return ResultOf::Bind(::zx::unowned_channel(this->channel_), std::move(record));
 }
 
-MockDevice::ResultOf::Bind MockDevice::Call::Bind(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::Bind MockDevice::Call::Bind(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   return ResultOf::Bind(std::move(_client_end), std::move(record));
 }
 
 template <>
-MockDevice::UnownedResultOf::Bind_Impl<MockDevice::BindResponse>::Bind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Bind_Impl<MockDevice::BindResponse>::Bind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < BindRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<BindResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -606,14 +606,14 @@ MockDevice::UnownedResultOf::Bind_Impl<MockDevice::BindResponse>::Bind_Impl(zx::
 }
 
 MockDevice::UnownedResultOf::Bind MockDevice::SyncClient::Bind(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Bind(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
+  return UnownedResultOf::Bind(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Bind MockDevice::Call::Bind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Bind MockDevice::Call::Bind(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Bind(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::BindResponse> MockDevice::InPlace::Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::BindResponse> MockDevice::InPlace::Bind(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::BindRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -630,7 +630,7 @@ MockDevice::UnownedResultOf::Bind MockDevice::Call::Bind(zx::unowned_channel _cl
 }
 
 
-MockDevice::ResultOf::Release_Impl::Release_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::Release_Impl::Release_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -645,15 +645,15 @@ MockDevice::ResultOf::Release_Impl::Release_Impl(zx::unowned_channel _client_end
 }
 
 MockDevice::ResultOf::Release MockDevice::SyncClient::Release(::llcpp::fuchsia::device::mock::HookInvocation record) {
-  return ResultOf::Release(zx::unowned_channel(this->channel_), std::move(record));
+    return ResultOf::Release(::zx::unowned_channel(this->channel_), std::move(record));
 }
 
-MockDevice::ResultOf::Release MockDevice::Call::Release(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::Release MockDevice::Call::Release(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   return ResultOf::Release(std::move(_client_end), std::move(record));
 }
 
 
-MockDevice::UnownedResultOf::Release_Impl::Release_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::UnownedResultOf::Release_Impl::Release_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   if (_request_buffer.capacity() < ReleaseRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -669,14 +669,14 @@ MockDevice::UnownedResultOf::Release_Impl::Release_Impl(zx::unowned_channel _cli
 }
 
 MockDevice::UnownedResultOf::Release MockDevice::SyncClient::Release(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record) {
-  return UnownedResultOf::Release(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record));
+  return UnownedResultOf::Release(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record));
 }
 
-MockDevice::UnownedResultOf::Release MockDevice::Call::Release(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::UnownedResultOf::Release MockDevice::Call::Release(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   return UnownedResultOf::Release(std::move(_client_end), std::move(_request_buffer), std::move(record));
 }
 
-::fidl::internal::StatusAndError MockDevice::InPlace::Release(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseRequest> params) {
+::fidl::internal::StatusAndError MockDevice::InPlace::Release(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseRequest> params) {
   MockDevice::SetTransactionHeaderFor::ReleaseRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -693,7 +693,7 @@ MockDevice::UnownedResultOf::Release MockDevice::Call::Release(zx::unowned_chann
 }
 
 template <>
-MockDevice::ResultOf::GetProtocol_Impl<MockDevice::GetProtocolResponse>::GetProtocol_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id) {
+MockDevice::ResultOf::GetProtocol_Impl<MockDevice::GetProtocolResponse>::GetProtocol_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetProtocolRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -709,15 +709,15 @@ MockDevice::ResultOf::GetProtocol_Impl<MockDevice::GetProtocolResponse>::GetProt
 }
 
 MockDevice::ResultOf::GetProtocol MockDevice::SyncClient::GetProtocol(::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id) {
-  return ResultOf::GetProtocol(zx::unowned_channel(this->channel_), std::move(record), std::move(protocol_id));
+    return ResultOf::GetProtocol(::zx::unowned_channel(this->channel_), std::move(record), std::move(protocol_id));
 }
 
-MockDevice::ResultOf::GetProtocol MockDevice::Call::GetProtocol(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id) {
+MockDevice::ResultOf::GetProtocol MockDevice::Call::GetProtocol(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id) {
   return ResultOf::GetProtocol(std::move(_client_end), std::move(record), std::move(protocol_id));
 }
 
 template <>
-MockDevice::UnownedResultOf::GetProtocol_Impl<MockDevice::GetProtocolResponse>::GetProtocol_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::GetProtocol_Impl<MockDevice::GetProtocolResponse>::GetProtocol_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetProtocolRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetProtocolResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -733,14 +733,14 @@ MockDevice::UnownedResultOf::GetProtocol_Impl<MockDevice::GetProtocolResponse>::
 }
 
 MockDevice::UnownedResultOf::GetProtocol MockDevice::SyncClient::GetProtocol(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetProtocol(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(protocol_id), std::move(_response_buffer));
+  return UnownedResultOf::GetProtocol(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(protocol_id), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::GetProtocol MockDevice::Call::GetProtocol(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::GetProtocol MockDevice::Call::GetProtocol(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t protocol_id, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetProtocol(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(protocol_id), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::GetProtocolResponse> MockDevice::InPlace::GetProtocol(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetProtocolRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::GetProtocolResponse> MockDevice::InPlace::GetProtocol(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetProtocolRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::GetProtocolRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -757,7 +757,7 @@ MockDevice::UnownedResultOf::GetProtocol MockDevice::Call::GetProtocol(zx::unown
 }
 
 template <>
-MockDevice::ResultOf::Open_Impl<MockDevice::OpenResponse>::Open_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
+MockDevice::ResultOf::Open_Impl<MockDevice::OpenResponse>::Open_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OpenRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -773,15 +773,15 @@ MockDevice::ResultOf::Open_Impl<MockDevice::OpenResponse>::Open_Impl(zx::unowned
 }
 
 MockDevice::ResultOf::Open MockDevice::SyncClient::Open(::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
-  return ResultOf::Open(zx::unowned_channel(this->channel_), std::move(record), std::move(flags));
+    return ResultOf::Open(::zx::unowned_channel(this->channel_), std::move(record), std::move(flags));
 }
 
-MockDevice::ResultOf::Open MockDevice::Call::Open(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
+MockDevice::ResultOf::Open MockDevice::Call::Open(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
   return ResultOf::Open(std::move(_client_end), std::move(record), std::move(flags));
 }
 
 template <>
-MockDevice::UnownedResultOf::Open_Impl<MockDevice::OpenResponse>::Open_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Open_Impl<MockDevice::OpenResponse>::Open_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < OpenRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<OpenResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -797,14 +797,14 @@ MockDevice::UnownedResultOf::Open_Impl<MockDevice::OpenResponse>::Open_Impl(zx::
 }
 
 MockDevice::UnownedResultOf::Open MockDevice::SyncClient::Open(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Open(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
+  return UnownedResultOf::Open(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Open MockDevice::Call::Open(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Open MockDevice::Call::Open(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Open(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::OpenResponse> MockDevice::InPlace::Open(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::OpenResponse> MockDevice::InPlace::Open(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::OpenRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -821,7 +821,7 @@ MockDevice::UnownedResultOf::Open MockDevice::Call::Open(zx::unowned_channel _cl
 }
 
 template <>
-MockDevice::ResultOf::Close_Impl<MockDevice::CloseResponse>::Close_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
+MockDevice::ResultOf::Close_Impl<MockDevice::CloseResponse>::Close_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloseRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -837,15 +837,15 @@ MockDevice::ResultOf::Close_Impl<MockDevice::CloseResponse>::Close_Impl(zx::unow
 }
 
 MockDevice::ResultOf::Close MockDevice::SyncClient::Close(::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
-  return ResultOf::Close(zx::unowned_channel(this->channel_), std::move(record), std::move(flags));
+    return ResultOf::Close(::zx::unowned_channel(this->channel_), std::move(record), std::move(flags));
 }
 
-MockDevice::ResultOf::Close MockDevice::Call::Close(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
+MockDevice::ResultOf::Close MockDevice::Call::Close(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
   return ResultOf::Close(std::move(_client_end), std::move(record), std::move(flags));
 }
 
 template <>
-MockDevice::UnownedResultOf::Close_Impl<MockDevice::CloseResponse>::Close_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Close_Impl<MockDevice::CloseResponse>::Close_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CloseRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CloseResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -861,14 +861,14 @@ MockDevice::UnownedResultOf::Close_Impl<MockDevice::CloseResponse>::Close_Impl(z
 }
 
 MockDevice::UnownedResultOf::Close MockDevice::SyncClient::Close(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Close(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
+  return UnownedResultOf::Close(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Close MockDevice::Call::Close(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Close MockDevice::Call::Close(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Close(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::CloseResponse> MockDevice::InPlace::Close(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::CloseResponse> MockDevice::InPlace::Close(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::CloseRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -885,7 +885,7 @@ MockDevice::UnownedResultOf::Close MockDevice::Call::Close(zx::unowned_channel _
 }
 
 template <>
-MockDevice::ResultOf::Unbind_Impl<MockDevice::UnbindResponse>::Unbind_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::Unbind_Impl<MockDevice::UnbindResponse>::Unbind_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -900,15 +900,15 @@ MockDevice::ResultOf::Unbind_Impl<MockDevice::UnbindResponse>::Unbind_Impl(zx::u
 }
 
 MockDevice::ResultOf::Unbind MockDevice::SyncClient::Unbind(::llcpp::fuchsia::device::mock::HookInvocation record) {
-  return ResultOf::Unbind(zx::unowned_channel(this->channel_), std::move(record));
+    return ResultOf::Unbind(::zx::unowned_channel(this->channel_), std::move(record));
 }
 
-MockDevice::ResultOf::Unbind MockDevice::Call::Unbind(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::Unbind MockDevice::Call::Unbind(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   return ResultOf::Unbind(std::move(_client_end), std::move(record));
 }
 
 template <>
-MockDevice::UnownedResultOf::Unbind_Impl<MockDevice::UnbindResponse>::Unbind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Unbind_Impl<MockDevice::UnbindResponse>::Unbind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < UnbindRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<UnbindResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -923,14 +923,14 @@ MockDevice::UnownedResultOf::Unbind_Impl<MockDevice::UnbindResponse>::Unbind_Imp
 }
 
 MockDevice::UnownedResultOf::Unbind MockDevice::SyncClient::Unbind(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Unbind(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
+  return UnownedResultOf::Unbind(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Unbind MockDevice::Call::Unbind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Unbind MockDevice::Call::Unbind(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Unbind(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::UnbindResponse> MockDevice::InPlace::Unbind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnbindRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::UnbindResponse> MockDevice::InPlace::Unbind(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnbindRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::UnbindRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -947,7 +947,7 @@ MockDevice::UnownedResultOf::Unbind MockDevice::Call::Unbind(zx::unowned_channel
 }
 
 template <>
-MockDevice::ResultOf::Read_Impl<MockDevice::ReadResponse>::Read_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off) {
+MockDevice::ResultOf::Read_Impl<MockDevice::ReadResponse>::Read_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -964,15 +964,15 @@ MockDevice::ResultOf::Read_Impl<MockDevice::ReadResponse>::Read_Impl(zx::unowned
 }
 
 MockDevice::ResultOf::Read MockDevice::SyncClient::Read(::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off) {
-  return ResultOf::Read(zx::unowned_channel(this->channel_), std::move(record), std::move(count), std::move(off));
+    return ResultOf::Read(::zx::unowned_channel(this->channel_), std::move(record), std::move(count), std::move(off));
 }
 
-MockDevice::ResultOf::Read MockDevice::Call::Read(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off) {
+MockDevice::ResultOf::Read MockDevice::Call::Read(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off) {
   return ResultOf::Read(std::move(_client_end), std::move(record), std::move(count), std::move(off));
 }
 
 template <>
-MockDevice::UnownedResultOf::Read_Impl<MockDevice::ReadResponse>::Read_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Read_Impl<MockDevice::ReadResponse>::Read_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ReadRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ReadResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -989,14 +989,14 @@ MockDevice::UnownedResultOf::Read_Impl<MockDevice::ReadResponse>::Read_Impl(zx::
 }
 
 MockDevice::UnownedResultOf::Read MockDevice::SyncClient::Read(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Read(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(count), std::move(off), std::move(_response_buffer));
+  return UnownedResultOf::Read(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(count), std::move(off), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Read MockDevice::Call::Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Read MockDevice::Call::Read(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint64_t count, uint64_t off, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Read(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(count), std::move(off), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::ReadResponse> MockDevice::InPlace::Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::ReadResponse> MockDevice::InPlace::Read(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::ReadRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1013,7 +1013,7 @@ MockDevice::UnownedResultOf::Read MockDevice::Call::Read(zx::unowned_channel _cl
 }
 
 template <>
-MockDevice::ResultOf::Write_Impl<MockDevice::WriteResponse>::Write_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off) {
+MockDevice::ResultOf::Write_Impl<MockDevice::WriteResponse>::Write_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -1032,15 +1032,15 @@ MockDevice::ResultOf::Write_Impl<MockDevice::WriteResponse>::Write_Impl(zx::unow
 }
 
 MockDevice::ResultOf::Write MockDevice::SyncClient::Write(::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off) {
-  return ResultOf::Write(zx::unowned_channel(this->channel_), std::move(record), std::move(buffer), std::move(off));
+    return ResultOf::Write(::zx::unowned_channel(this->channel_), std::move(record), std::move(buffer), std::move(off));
 }
 
-MockDevice::ResultOf::Write MockDevice::Call::Write(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off) {
+MockDevice::ResultOf::Write MockDevice::Call::Write(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off) {
   return ResultOf::Write(std::move(_client_end), std::move(record), std::move(buffer), std::move(off));
 }
 
 template <>
-MockDevice::UnownedResultOf::Write_Impl<MockDevice::WriteResponse>::Write_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Write_Impl<MockDevice::WriteResponse>::Write_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < WriteRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WriteResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1060,14 +1060,14 @@ MockDevice::UnownedResultOf::Write_Impl<MockDevice::WriteResponse>::Write_Impl(z
 }
 
 MockDevice::UnownedResultOf::Write MockDevice::SyncClient::Write(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Write(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(buffer), std::move(off), std::move(_response_buffer));
+  return UnownedResultOf::Write(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(buffer), std::move(off), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Write MockDevice::Call::Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Write MockDevice::Call::Write(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::VectorView<uint8_t> buffer, uint64_t off, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Write(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(buffer), std::move(off), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::WriteResponse> MockDevice::InPlace::Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::WriteResponse> MockDevice::InPlace::Write(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::WriteRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1084,7 +1084,7 @@ MockDevice::UnownedResultOf::Write MockDevice::Call::Write(zx::unowned_channel _
 }
 
 template <>
-MockDevice::ResultOf::GetSize_Impl<MockDevice::GetSizeResponse>::GetSize_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::GetSize_Impl<MockDevice::GetSizeResponse>::GetSize_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSizeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1099,15 +1099,15 @@ MockDevice::ResultOf::GetSize_Impl<MockDevice::GetSizeResponse>::GetSize_Impl(zx
 }
 
 MockDevice::ResultOf::GetSize MockDevice::SyncClient::GetSize(::llcpp::fuchsia::device::mock::HookInvocation record) {
-  return ResultOf::GetSize(zx::unowned_channel(this->channel_), std::move(record));
+    return ResultOf::GetSize(::zx::unowned_channel(this->channel_), std::move(record));
 }
 
-MockDevice::ResultOf::GetSize MockDevice::Call::GetSize(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::GetSize MockDevice::Call::GetSize(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   return ResultOf::GetSize(std::move(_client_end), std::move(record));
 }
 
 template <>
-MockDevice::UnownedResultOf::GetSize_Impl<MockDevice::GetSizeResponse>::GetSize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::GetSize_Impl<MockDevice::GetSizeResponse>::GetSize_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetSizeRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetSizeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1122,14 +1122,14 @@ MockDevice::UnownedResultOf::GetSize_Impl<MockDevice::GetSizeResponse>::GetSize_
 }
 
 MockDevice::UnownedResultOf::GetSize MockDevice::SyncClient::GetSize(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetSize(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
+  return UnownedResultOf::GetSize(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::GetSize MockDevice::Call::GetSize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::GetSize MockDevice::Call::GetSize(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetSize(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::GetSizeResponse> MockDevice::InPlace::GetSize(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSizeRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::GetSizeResponse> MockDevice::InPlace::GetSize(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSizeRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::GetSizeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1146,7 +1146,7 @@ MockDevice::UnownedResultOf::GetSize MockDevice::Call::GetSize(zx::unowned_chann
 }
 
 template <>
-MockDevice::ResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
+MockDevice::ResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1162,15 +1162,15 @@ MockDevice::ResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_Impl(zx
 }
 
 MockDevice::ResultOf::Suspend MockDevice::SyncClient::Suspend(::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
-  return ResultOf::Suspend(zx::unowned_channel(this->channel_), std::move(record), std::move(flags));
+    return ResultOf::Suspend(::zx::unowned_channel(this->channel_), std::move(record), std::move(flags));
 }
 
-MockDevice::ResultOf::Suspend MockDevice::Call::Suspend(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
+MockDevice::ResultOf::Suspend MockDevice::Call::Suspend(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
   return ResultOf::Suspend(std::move(_client_end), std::move(record), std::move(flags));
 }
 
 template <>
-MockDevice::UnownedResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SuspendRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SuspendResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1186,14 +1186,14 @@ MockDevice::UnownedResultOf::Suspend_Impl<MockDevice::SuspendResponse>::Suspend_
 }
 
 MockDevice::UnownedResultOf::Suspend MockDevice::SyncClient::Suspend(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Suspend(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
+  return UnownedResultOf::Suspend(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Suspend MockDevice::Call::Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Suspend MockDevice::Call::Suspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Suspend(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::SuspendResponse> MockDevice::InPlace::Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::SuspendResponse> MockDevice::InPlace::Suspend(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::SuspendRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1210,7 +1210,7 @@ MockDevice::UnownedResultOf::Suspend MockDevice::Call::Suspend(zx::unowned_chann
 }
 
 template <>
-MockDevice::ResultOf::Resume_Impl<MockDevice::ResumeResponse>::Resume_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
+MockDevice::ResultOf::Resume_Impl<MockDevice::ResumeResponse>::Resume_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ResumeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1226,15 +1226,15 @@ MockDevice::ResultOf::Resume_Impl<MockDevice::ResumeResponse>::Resume_Impl(zx::u
 }
 
 MockDevice::ResultOf::Resume MockDevice::SyncClient::Resume(::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
-  return ResultOf::Resume(zx::unowned_channel(this->channel_), std::move(record), std::move(flags));
+    return ResultOf::Resume(::zx::unowned_channel(this->channel_), std::move(record), std::move(flags));
 }
 
-MockDevice::ResultOf::Resume MockDevice::Call::Resume(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
+MockDevice::ResultOf::Resume MockDevice::Call::Resume(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags) {
   return ResultOf::Resume(std::move(_client_end), std::move(record), std::move(flags));
 }
 
 template <>
-MockDevice::UnownedResultOf::Resume_Impl<MockDevice::ResumeResponse>::Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Resume_Impl<MockDevice::ResumeResponse>::Resume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ResumeRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ResumeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1250,14 +1250,14 @@ MockDevice::UnownedResultOf::Resume_Impl<MockDevice::ResumeResponse>::Resume_Imp
 }
 
 MockDevice::UnownedResultOf::Resume MockDevice::SyncClient::Resume(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Resume(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
+  return UnownedResultOf::Resume(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Resume MockDevice::Call::Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Resume MockDevice::Call::Resume(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, uint32_t flags, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Resume(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(flags), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::ResumeResponse> MockDevice::InPlace::Resume(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::ResumeResponse> MockDevice::InPlace::Resume(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::ResumeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1274,7 +1274,7 @@ MockDevice::UnownedResultOf::Resume MockDevice::Call::Resume(zx::unowned_channel
 }
 
 template <>
-MockDevice::ResultOf::Message_Impl<MockDevice::MessageResponse>::Message_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::Message_Impl<MockDevice::MessageResponse>::Message_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MessageRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1289,15 +1289,15 @@ MockDevice::ResultOf::Message_Impl<MockDevice::MessageResponse>::Message_Impl(zx
 }
 
 MockDevice::ResultOf::Message MockDevice::SyncClient::Message(::llcpp::fuchsia::device::mock::HookInvocation record) {
-  return ResultOf::Message(zx::unowned_channel(this->channel_), std::move(record));
+    return ResultOf::Message(::zx::unowned_channel(this->channel_), std::move(record));
 }
 
-MockDevice::ResultOf::Message MockDevice::Call::Message(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::Message MockDevice::Call::Message(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   return ResultOf::Message(std::move(_client_end), std::move(record));
 }
 
 template <>
-MockDevice::UnownedResultOf::Message_Impl<MockDevice::MessageResponse>::Message_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Message_Impl<MockDevice::MessageResponse>::Message_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < MessageRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<MessageResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1312,14 +1312,14 @@ MockDevice::UnownedResultOf::Message_Impl<MockDevice::MessageResponse>::Message_
 }
 
 MockDevice::UnownedResultOf::Message MockDevice::SyncClient::Message(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Message(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
+  return UnownedResultOf::Message(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Message MockDevice::Call::Message(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Message MockDevice::Call::Message(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Message(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::MessageResponse> MockDevice::InPlace::Message(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MessageRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::MessageResponse> MockDevice::InPlace::Message(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<MessageRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::MessageRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1336,7 +1336,7 @@ MockDevice::UnownedResultOf::Message MockDevice::Call::Message(zx::unowned_chann
 }
 
 template <>
-MockDevice::ResultOf::Rxrpc_Impl<MockDevice::RxrpcResponse>::Rxrpc_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::Rxrpc_Impl<MockDevice::RxrpcResponse>::Rxrpc_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RxrpcRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1351,15 +1351,15 @@ MockDevice::ResultOf::Rxrpc_Impl<MockDevice::RxrpcResponse>::Rxrpc_Impl(zx::unow
 }
 
 MockDevice::ResultOf::Rxrpc MockDevice::SyncClient::Rxrpc(::llcpp::fuchsia::device::mock::HookInvocation record) {
-  return ResultOf::Rxrpc(zx::unowned_channel(this->channel_), std::move(record));
+    return ResultOf::Rxrpc(::zx::unowned_channel(this->channel_), std::move(record));
 }
 
-MockDevice::ResultOf::Rxrpc MockDevice::Call::Rxrpc(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
+MockDevice::ResultOf::Rxrpc MockDevice::Call::Rxrpc(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::mock::HookInvocation record) {
   return ResultOf::Rxrpc(std::move(_client_end), std::move(record));
 }
 
 template <>
-MockDevice::UnownedResultOf::Rxrpc_Impl<MockDevice::RxrpcResponse>::Rxrpc_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Rxrpc_Impl<MockDevice::RxrpcResponse>::Rxrpc_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < RxrpcRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<RxrpcResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1374,14 +1374,14 @@ MockDevice::UnownedResultOf::Rxrpc_Impl<MockDevice::RxrpcResponse>::Rxrpc_Impl(z
 }
 
 MockDevice::UnownedResultOf::Rxrpc MockDevice::SyncClient::Rxrpc(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Rxrpc(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
+  return UnownedResultOf::Rxrpc(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
 }
 
-MockDevice::UnownedResultOf::Rxrpc MockDevice::Call::Rxrpc(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
+MockDevice::UnownedResultOf::Rxrpc MockDevice::Call::Rxrpc(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::mock::HookInvocation record, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Rxrpc(std::move(_client_end), std::move(_request_buffer), std::move(record), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<MockDevice::RxrpcResponse> MockDevice::InPlace::Rxrpc(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RxrpcRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<MockDevice::RxrpcResponse> MockDevice::InPlace::Rxrpc(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RxrpcRequest> params, ::fidl::BytePart response_buffer) {
   MockDevice::SetTransactionHeaderFor::RxrpcRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1398,7 +1398,7 @@ MockDevice::UnownedResultOf::Rxrpc MockDevice::Call::Rxrpc(zx::unowned_channel _
 }
 
 
-MockDevice::ResultOf::AddDeviceDone_Impl::AddDeviceDone_Impl(zx::unowned_channel _client_end, uint64_t action_id) {
+MockDevice::ResultOf::AddDeviceDone_Impl::AddDeviceDone_Impl(::zx::unowned_channel _client_end, uint64_t action_id) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceDoneRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1413,15 +1413,15 @@ MockDevice::ResultOf::AddDeviceDone_Impl::AddDeviceDone_Impl(zx::unowned_channel
 }
 
 MockDevice::ResultOf::AddDeviceDone MockDevice::SyncClient::AddDeviceDone(uint64_t action_id) {
-  return ResultOf::AddDeviceDone(zx::unowned_channel(this->channel_), std::move(action_id));
+    return ResultOf::AddDeviceDone(::zx::unowned_channel(this->channel_), std::move(action_id));
 }
 
-MockDevice::ResultOf::AddDeviceDone MockDevice::Call::AddDeviceDone(zx::unowned_channel _client_end, uint64_t action_id) {
+MockDevice::ResultOf::AddDeviceDone MockDevice::Call::AddDeviceDone(::zx::unowned_channel _client_end, uint64_t action_id) {
   return ResultOf::AddDeviceDone(std::move(_client_end), std::move(action_id));
 }
 
 
-MockDevice::UnownedResultOf::AddDeviceDone_Impl::AddDeviceDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id) {
+MockDevice::UnownedResultOf::AddDeviceDone_Impl::AddDeviceDone_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id) {
   if (_request_buffer.capacity() < AddDeviceDoneRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -1437,14 +1437,14 @@ MockDevice::UnownedResultOf::AddDeviceDone_Impl::AddDeviceDone_Impl(zx::unowned_
 }
 
 MockDevice::UnownedResultOf::AddDeviceDone MockDevice::SyncClient::AddDeviceDone(::fidl::BytePart _request_buffer, uint64_t action_id) {
-  return UnownedResultOf::AddDeviceDone(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(action_id));
+  return UnownedResultOf::AddDeviceDone(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(action_id));
 }
 
-MockDevice::UnownedResultOf::AddDeviceDone MockDevice::Call::AddDeviceDone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id) {
+MockDevice::UnownedResultOf::AddDeviceDone MockDevice::Call::AddDeviceDone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id) {
   return UnownedResultOf::AddDeviceDone(std::move(_client_end), std::move(_request_buffer), std::move(action_id));
 }
 
-::fidl::internal::StatusAndError MockDevice::InPlace::AddDeviceDone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceDoneRequest> params) {
+::fidl::internal::StatusAndError MockDevice::InPlace::AddDeviceDone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceDoneRequest> params) {
   MockDevice::SetTransactionHeaderFor::AddDeviceDoneRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1461,7 +1461,7 @@ MockDevice::UnownedResultOf::AddDeviceDone MockDevice::Call::AddDeviceDone(zx::u
 }
 
 
-MockDevice::ResultOf::UnbindReplyDone_Impl::UnbindReplyDone_Impl(zx::unowned_channel _client_end, uint64_t action_id) {
+MockDevice::ResultOf::UnbindReplyDone_Impl::UnbindReplyDone_Impl(::zx::unowned_channel _client_end, uint64_t action_id) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindReplyDoneRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1476,15 +1476,15 @@ MockDevice::ResultOf::UnbindReplyDone_Impl::UnbindReplyDone_Impl(zx::unowned_cha
 }
 
 MockDevice::ResultOf::UnbindReplyDone MockDevice::SyncClient::UnbindReplyDone(uint64_t action_id) {
-  return ResultOf::UnbindReplyDone(zx::unowned_channel(this->channel_), std::move(action_id));
+    return ResultOf::UnbindReplyDone(::zx::unowned_channel(this->channel_), std::move(action_id));
 }
 
-MockDevice::ResultOf::UnbindReplyDone MockDevice::Call::UnbindReplyDone(zx::unowned_channel _client_end, uint64_t action_id) {
+MockDevice::ResultOf::UnbindReplyDone MockDevice::Call::UnbindReplyDone(::zx::unowned_channel _client_end, uint64_t action_id) {
   return ResultOf::UnbindReplyDone(std::move(_client_end), std::move(action_id));
 }
 
 
-MockDevice::UnownedResultOf::UnbindReplyDone_Impl::UnbindReplyDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id) {
+MockDevice::UnownedResultOf::UnbindReplyDone_Impl::UnbindReplyDone_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id) {
   if (_request_buffer.capacity() < UnbindReplyDoneRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -1500,14 +1500,14 @@ MockDevice::UnownedResultOf::UnbindReplyDone_Impl::UnbindReplyDone_Impl(zx::unow
 }
 
 MockDevice::UnownedResultOf::UnbindReplyDone MockDevice::SyncClient::UnbindReplyDone(::fidl::BytePart _request_buffer, uint64_t action_id) {
-  return UnownedResultOf::UnbindReplyDone(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(action_id));
+  return UnownedResultOf::UnbindReplyDone(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(action_id));
 }
 
-MockDevice::UnownedResultOf::UnbindReplyDone MockDevice::Call::UnbindReplyDone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id) {
+MockDevice::UnownedResultOf::UnbindReplyDone MockDevice::Call::UnbindReplyDone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t action_id) {
   return UnownedResultOf::UnbindReplyDone(std::move(_client_end), std::move(_request_buffer), std::move(action_id));
 }
 
-::fidl::internal::StatusAndError MockDevice::InPlace::UnbindReplyDone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnbindReplyDoneRequest> params) {
+::fidl::internal::StatusAndError MockDevice::InPlace::UnbindReplyDone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnbindReplyDoneRequest> params) {
   MockDevice::SetTransactionHeaderFor::UnbindReplyDoneRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

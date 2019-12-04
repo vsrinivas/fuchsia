@@ -559,7 +559,7 @@ class TestProtocol final {
     class StrictXUnionHenceResponseMayBeStackAllocated_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      StrictXUnionHenceResponseMayBeStackAllocated_Impl(zx::unowned_channel _client_end);
+      StrictXUnionHenceResponseMayBeStackAllocated_Impl(::zx::unowned_channel _client_end);
       ~StrictXUnionHenceResponseMayBeStackAllocated_Impl() = default;
       StrictXUnionHenceResponseMayBeStackAllocated_Impl(StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
       StrictXUnionHenceResponseMayBeStackAllocated_Impl& operator=(StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
@@ -575,7 +575,7 @@ class TestProtocol final {
     class FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(zx::unowned_channel _client_end);
+      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(::zx::unowned_channel _client_end);
       ~FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl() = default;
       FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl&& other) = default;
       FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl& operator=(FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl&& other) = default;
@@ -602,7 +602,7 @@ class TestProtocol final {
     class StrictXUnionHenceResponseMayBeStackAllocated_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      StrictXUnionHenceResponseMayBeStackAllocated_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      StrictXUnionHenceResponseMayBeStackAllocated_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~StrictXUnionHenceResponseMayBeStackAllocated_Impl() = default;
       StrictXUnionHenceResponseMayBeStackAllocated_Impl(StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
       StrictXUnionHenceResponseMayBeStackAllocated_Impl& operator=(StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
@@ -618,7 +618,7 @@ class TestProtocol final {
     class FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl() = default;
       FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl&& other) = default;
       FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl& operator=(FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl&& other) = default;
@@ -669,16 +669,16 @@ class TestProtocol final {
    public:
 
     // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::StrictXUnionHenceResponseMayBeStackAllocated StrictXUnionHenceResponseMayBeStackAllocated(zx::unowned_channel _client_end);
+    static ResultOf::StrictXUnionHenceResponseMayBeStackAllocated StrictXUnionHenceResponseMayBeStackAllocated(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated StrictXUnionHenceResponseMayBeStackAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated StrictXUnionHenceResponseMayBeStackAllocated(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated FlexibleXUnionHenceResponseMustBeHeapAllocated(zx::unowned_channel _client_end);
+    static ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated FlexibleXUnionHenceResponseMustBeHeapAllocated(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated FlexibleXUnionHenceResponseMustBeHeapAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated FlexibleXUnionHenceResponseMustBeHeapAllocated(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -688,9 +688,9 @@ class TestProtocol final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<StrictXUnionHenceResponseMayBeStackAllocatedResponse> StrictXUnionHenceResponseMayBeStackAllocated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<StrictXUnionHenceResponseMayBeStackAllocatedResponse> StrictXUnionHenceResponseMayBeStackAllocated(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> FlexibleXUnionHenceResponseMustBeHeapAllocated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> FlexibleXUnionHenceResponseMustBeHeapAllocated(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

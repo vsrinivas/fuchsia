@@ -28,7 +28,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_zxcrypt_DeviceManagerSealRespon
 
 }  // namespace
 template <>
-DeviceManager::ResultOf::Unseal_Impl<DeviceManager::UnsealResponse>::Unseal_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot) {
+DeviceManager::ResultOf::Unseal_Impl<DeviceManager::UnsealResponse>::Unseal_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnsealRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -46,15 +46,15 @@ DeviceManager::ResultOf::Unseal_Impl<DeviceManager::UnsealResponse>::Unseal_Impl
 }
 
 DeviceManager::ResultOf::Unseal DeviceManager::SyncClient::Unseal(::fidl::VectorView<uint8_t> key, uint8_t slot) {
-  return ResultOf::Unseal(zx::unowned_channel(this->channel_), std::move(key), std::move(slot));
+    return ResultOf::Unseal(::zx::unowned_channel(this->channel_), std::move(key), std::move(slot));
 }
 
-DeviceManager::ResultOf::Unseal DeviceManager::Call::Unseal(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot) {
+DeviceManager::ResultOf::Unseal DeviceManager::Call::Unseal(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot) {
   return ResultOf::Unseal(std::move(_client_end), std::move(key), std::move(slot));
 }
 
 template <>
-DeviceManager::UnownedResultOf::Unseal_Impl<DeviceManager::UnsealResponse>::Unseal_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer) {
+DeviceManager::UnownedResultOf::Unseal_Impl<DeviceManager::UnsealResponse>::Unseal_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < UnsealRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<UnsealResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -73,14 +73,14 @@ DeviceManager::UnownedResultOf::Unseal_Impl<DeviceManager::UnsealResponse>::Unse
 }
 
 DeviceManager::UnownedResultOf::Unseal DeviceManager::SyncClient::Unseal(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Unseal(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(slot), std::move(_response_buffer));
+  return UnownedResultOf::Unseal(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(key), std::move(slot), std::move(_response_buffer));
 }
 
-DeviceManager::UnownedResultOf::Unseal DeviceManager::Call::Unseal(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer) {
+DeviceManager::UnownedResultOf::Unseal DeviceManager::Call::Unseal(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Unseal(std::move(_client_end), std::move(_request_buffer), std::move(key), std::move(slot), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::InPlace::Unseal(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<DeviceManager::UnsealResponse> DeviceManager::InPlace::Unseal(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer) {
   DeviceManager::SetTransactionHeaderFor::UnsealRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -97,7 +97,7 @@ DeviceManager::UnownedResultOf::Unseal DeviceManager::Call::Unseal(zx::unowned_c
 }
 
 template <>
-DeviceManager::ResultOf::Seal_Impl<DeviceManager::SealResponse>::Seal_Impl(zx::unowned_channel _client_end) {
+DeviceManager::ResultOf::Seal_Impl<DeviceManager::SealResponse>::Seal_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SealRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -110,15 +110,15 @@ DeviceManager::ResultOf::Seal_Impl<DeviceManager::SealResponse>::Seal_Impl(zx::u
 }
 
 DeviceManager::ResultOf::Seal DeviceManager::SyncClient::Seal() {
-  return ResultOf::Seal(zx::unowned_channel(this->channel_));
+    return ResultOf::Seal(::zx::unowned_channel(this->channel_));
 }
 
-DeviceManager::ResultOf::Seal DeviceManager::Call::Seal(zx::unowned_channel _client_end) {
+DeviceManager::ResultOf::Seal DeviceManager::Call::Seal(::zx::unowned_channel _client_end) {
   return ResultOf::Seal(std::move(_client_end));
 }
 
 template <>
-DeviceManager::UnownedResultOf::Seal_Impl<DeviceManager::SealResponse>::Seal_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+DeviceManager::UnownedResultOf::Seal_Impl<DeviceManager::SealResponse>::Seal_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SealRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, SealRequest::PrimarySize);
@@ -129,14 +129,14 @@ DeviceManager::UnownedResultOf::Seal_Impl<DeviceManager::SealResponse>::Seal_Imp
 }
 
 DeviceManager::UnownedResultOf::Seal DeviceManager::SyncClient::Seal(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Seal(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Seal(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-DeviceManager::UnownedResultOf::Seal DeviceManager::Call::Seal(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+DeviceManager::UnownedResultOf::Seal DeviceManager::Call::Seal(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Seal(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<DeviceManager::SealResponse> DeviceManager::InPlace::Seal(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<DeviceManager::SealResponse> DeviceManager::InPlace::Seal(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(SealRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

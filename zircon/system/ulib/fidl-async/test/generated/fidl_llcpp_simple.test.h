@@ -102,7 +102,7 @@ class Simple final {
     class Echo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Echo_Impl(zx::unowned_channel _client_end, int32_t request);
+      Echo_Impl(::zx::unowned_channel _client_end, int32_t request);
       ~Echo_Impl() = default;
       Echo_Impl(Echo_Impl&& other) = default;
       Echo_Impl& operator=(Echo_Impl&& other) = default;
@@ -118,7 +118,7 @@ class Simple final {
     class Close_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Close_Impl(zx::unowned_channel _client_end);
+      Close_Impl(::zx::unowned_channel _client_end);
       ~Close_Impl() = default;
       Close_Impl(Close_Impl&& other) = default;
       Close_Impl& operator=(Close_Impl&& other) = default;
@@ -145,7 +145,7 @@ class Simple final {
     class Echo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Echo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer);
+      Echo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer);
       ~Echo_Impl() = default;
       Echo_Impl(Echo_Impl&& other) = default;
       Echo_Impl& operator=(Echo_Impl&& other) = default;
@@ -161,7 +161,7 @@ class Simple final {
     class Close_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Close_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Close_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Close_Impl() = default;
       Close_Impl(Close_Impl&& other) = default;
       Close_Impl& operator=(Close_Impl&& other) = default;
@@ -217,19 +217,19 @@ class Simple final {
 
     // Replies with the value requested.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Echo Echo(zx::unowned_channel _client_end, int32_t request);
+    static ResultOf::Echo Echo(::zx::unowned_channel _client_end, int32_t request);
 
     // Replies with the value requested.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Echo Echo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Echo Echo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int32_t request, ::fidl::BytePart _response_buffer);
 
     // Never actually replies.  Just closes instead.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Close Close(zx::unowned_channel _client_end);
+    static ResultOf::Close Close(::zx::unowned_channel _client_end);
 
     // Never actually replies.  Just closes instead.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Close Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Close Close(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -240,10 +240,10 @@ class Simple final {
    public:
 
     // Replies with the value requested.
-    static ::fidl::DecodeResult<EchoResponse> Echo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EchoRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<EchoResponse> Echo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EchoRequest> params, ::fidl::BytePart response_buffer);
 
     // Never actually replies.  Just closes instead.
-    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CloseResponse> Close(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

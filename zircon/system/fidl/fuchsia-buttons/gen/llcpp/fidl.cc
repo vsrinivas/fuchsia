@@ -93,7 +93,7 @@ extern "C" const fidl_type_t v1_fuchsia_buttons_ButtonsNotifyEventTable;
 
 }  // namespace
 template <>
-Buttons::ResultOf::GetState_Impl<Buttons::GetStateResponse>::GetState_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::buttons::ButtonType type) {
+Buttons::ResultOf::GetState_Impl<Buttons::GetStateResponse>::GetState_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::buttons::ButtonType type) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -108,15 +108,15 @@ Buttons::ResultOf::GetState_Impl<Buttons::GetStateResponse>::GetState_Impl(zx::u
 }
 
 Buttons::ResultOf::GetState Buttons::SyncClient::GetState(::llcpp::fuchsia::buttons::ButtonType type) {
-  return ResultOf::GetState(zx::unowned_channel(this->channel_), std::move(type));
+    return ResultOf::GetState(::zx::unowned_channel(this->channel_), std::move(type));
 }
 
-Buttons::ResultOf::GetState Buttons::Call::GetState(zx::unowned_channel _client_end, ::llcpp::fuchsia::buttons::ButtonType type) {
+Buttons::ResultOf::GetState Buttons::Call::GetState(::zx::unowned_channel _client_end, ::llcpp::fuchsia::buttons::ButtonType type) {
   return ResultOf::GetState(std::move(_client_end), std::move(type));
 }
 
 template <>
-Buttons::UnownedResultOf::GetState_Impl<Buttons::GetStateResponse>::GetState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::buttons::ButtonType type, ::fidl::BytePart _response_buffer) {
+Buttons::UnownedResultOf::GetState_Impl<Buttons::GetStateResponse>::GetState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::buttons::ButtonType type, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetStateRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetStateResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -131,14 +131,14 @@ Buttons::UnownedResultOf::GetState_Impl<Buttons::GetStateResponse>::GetState_Imp
 }
 
 Buttons::UnownedResultOf::GetState Buttons::SyncClient::GetState(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::buttons::ButtonType type, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetState(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(type), std::move(_response_buffer));
+  return UnownedResultOf::GetState(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(type), std::move(_response_buffer));
 }
 
-Buttons::UnownedResultOf::GetState Buttons::Call::GetState(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::buttons::ButtonType type, ::fidl::BytePart _response_buffer) {
+Buttons::UnownedResultOf::GetState Buttons::Call::GetState(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::buttons::ButtonType type, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetState(std::move(_client_end), std::move(_request_buffer), std::move(type), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Buttons::GetStateResponse> Buttons::InPlace::GetState(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStateRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Buttons::GetStateResponse> Buttons::InPlace::GetState(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStateRequest> params, ::fidl::BytePart response_buffer) {
   Buttons::SetTransactionHeaderFor::GetStateRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -155,7 +155,7 @@ Buttons::UnownedResultOf::GetState Buttons::Call::GetState(zx::unowned_channel _
 }
 
 template <>
-Buttons::ResultOf::RegisterNotify_Impl<Buttons::RegisterNotifyResponse>::RegisterNotify_Impl(zx::unowned_channel _client_end, uint8_t types) {
+Buttons::ResultOf::RegisterNotify_Impl<Buttons::RegisterNotifyResponse>::RegisterNotify_Impl(::zx::unowned_channel _client_end, uint8_t types) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterNotifyRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -170,15 +170,15 @@ Buttons::ResultOf::RegisterNotify_Impl<Buttons::RegisterNotifyResponse>::Registe
 }
 
 Buttons::ResultOf::RegisterNotify Buttons::SyncClient::RegisterNotify(uint8_t types) {
-  return ResultOf::RegisterNotify(zx::unowned_channel(this->channel_), std::move(types));
+    return ResultOf::RegisterNotify(::zx::unowned_channel(this->channel_), std::move(types));
 }
 
-Buttons::ResultOf::RegisterNotify Buttons::Call::RegisterNotify(zx::unowned_channel _client_end, uint8_t types) {
+Buttons::ResultOf::RegisterNotify Buttons::Call::RegisterNotify(::zx::unowned_channel _client_end, uint8_t types) {
   return ResultOf::RegisterNotify(std::move(_client_end), std::move(types));
 }
 
 template <>
-Buttons::UnownedResultOf::RegisterNotify_Impl<Buttons::RegisterNotifyResponse>::RegisterNotify_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t types, ::fidl::BytePart _response_buffer) {
+Buttons::UnownedResultOf::RegisterNotify_Impl<Buttons::RegisterNotifyResponse>::RegisterNotify_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t types, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < RegisterNotifyRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<RegisterNotifyResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -193,14 +193,14 @@ Buttons::UnownedResultOf::RegisterNotify_Impl<Buttons::RegisterNotifyResponse>::
 }
 
 Buttons::UnownedResultOf::RegisterNotify Buttons::SyncClient::RegisterNotify(::fidl::BytePart _request_buffer, uint8_t types, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RegisterNotify(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(types), std::move(_response_buffer));
+  return UnownedResultOf::RegisterNotify(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(types), std::move(_response_buffer));
 }
 
-Buttons::UnownedResultOf::RegisterNotify Buttons::Call::RegisterNotify(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t types, ::fidl::BytePart _response_buffer) {
+Buttons::UnownedResultOf::RegisterNotify Buttons::Call::RegisterNotify(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t types, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::RegisterNotify(std::move(_client_end), std::move(_request_buffer), std::move(types), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Buttons::RegisterNotifyResponse> Buttons::InPlace::RegisterNotify(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterNotifyRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Buttons::RegisterNotifyResponse> Buttons::InPlace::RegisterNotify(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterNotifyRequest> params, ::fidl::BytePart response_buffer) {
   Buttons::SetTransactionHeaderFor::RegisterNotifyRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -217,12 +217,12 @@ Buttons::UnownedResultOf::RegisterNotify Buttons::Call::RegisterNotify(zx::unown
 }
 
 zx_status_t Buttons::SyncClient::HandleEvents(Buttons::EventHandlers handlers) {
-  return Buttons::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+  return Buttons::Call::HandleEvents(::zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Buttons::Call::HandleEvents(zx::unowned_channel client_end, Buttons::EventHandlers handlers) {
+zx_status_t Buttons::Call::HandleEvents(::zx::unowned_channel client_end, Buttons::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                            zx::time::infinite(),
+                                            ::zx::time::infinite(),
                                             nullptr);
   if (status != ZX_OK) {
     return status;
@@ -446,7 +446,7 @@ zx_status_t Buttons::SendNotifyEvent(::zx::unowned_channel _chan, ::llcpp::fuchs
   _response.type = std::move(type);
   _response.pressed = std::move(pressed);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(NotifyResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<NotifyResponse>(std::move(_response_bytes)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<NotifyResponse>(std::move(_response_bytes)));
 }
 
 zx_status_t Buttons::SendNotifyEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::llcpp::fuchsia::buttons::ButtonType type, bool pressed) {
@@ -462,12 +462,12 @@ zx_status_t Buttons::SendNotifyEvent(::zx::unowned_channel _chan, ::fidl::BytePa
   _response.type = std::move(type);
   _response.pressed = std::move(pressed);
   _buffer.set_actual(sizeof(NotifyResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<NotifyResponse>(std::move(_buffer)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<NotifyResponse>(std::move(_buffer)));
 }
 
 zx_status_t Buttons::SendNotifyEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<NotifyResponse> params) {
   Buttons::SetTransactionHeaderFor::NotifyResponse(params);
-  return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
 

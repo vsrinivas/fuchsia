@@ -22,7 +22,7 @@ const SyncRequestManaged = `
 {{- end }}
 
 {{- define "StaticCallSyncRequestManagedMethodArguments" -}}
-zx::unowned_channel _client_end {{- if .Request }}, {{ end }}{{ template "Params" .Request }}
+::zx::unowned_channel _client_end {{- if .Request }}, {{ end }}{{ template "Params" .Request }}
 {{- end }}
 
 {{- define "SyncRequestManagedMethodDefinition" }}
@@ -77,7 +77,7 @@ zx::unowned_channel _client_end {{- if .Request }}, {{ end }}{{ template "Params
 
 {{ .LLProps.InterfaceName }}::ResultOf::{{ .Name }} {{ .LLProps.InterfaceName }}::SyncClient::{{ .Name }}(
   {{- template "SyncRequestManagedMethodArguments" . }}) {
-  return ResultOf::{{ .Name }}(zx::unowned_channel(this->channel_)
+    return ResultOf::{{ .Name }}(::zx::unowned_channel(this->channel_)
     {{- if .Request }}, {{ end }}
     {{- template "SyncClientMoveParams" .Request -}}
   );

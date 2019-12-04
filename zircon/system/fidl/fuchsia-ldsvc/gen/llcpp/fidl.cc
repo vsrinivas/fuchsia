@@ -41,7 +41,7 @@ extern "C" const fidl_type_t v1_fuchsia_ldsvc_LoaderCloneResponseTable;
 
 }  // namespace
 
-Loader::ResultOf::Done_Impl::Done_Impl(zx::unowned_channel _client_end) {
+Loader::ResultOf::Done_Impl::Done_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DoneRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -54,14 +54,14 @@ Loader::ResultOf::Done_Impl::Done_Impl(zx::unowned_channel _client_end) {
 }
 
 Loader::ResultOf::Done Loader::SyncClient::Done() {
-  return ResultOf::Done(zx::unowned_channel(this->channel_));
+    return ResultOf::Done(::zx::unowned_channel(this->channel_));
 }
 
-Loader::ResultOf::Done Loader::Call::Done(zx::unowned_channel _client_end) {
+Loader::ResultOf::Done Loader::Call::Done(::zx::unowned_channel _client_end) {
   return ResultOf::Done(std::move(_client_end));
 }
 
-::fidl::internal::StatusAndError Loader::InPlace::Done(zx::unowned_channel _client_end) {
+::fidl::internal::StatusAndError Loader::InPlace::Done(::zx::unowned_channel _client_end) {
   constexpr uint32_t _write_num_bytes = sizeof(DoneRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -83,7 +83,7 @@ Loader::ResultOf::Done Loader::Call::Done(zx::unowned_channel _client_end) {
 }
 
 template <>
-Loader::ResultOf::LoadObject_Impl<Loader::LoadObjectResponse>::LoadObject_Impl(zx::unowned_channel _client_end, ::fidl::StringView object_name) {
+Loader::ResultOf::LoadObject_Impl<Loader::LoadObjectResponse>::LoadObject_Impl(::zx::unowned_channel _client_end, ::fidl::StringView object_name) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadObjectRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -100,15 +100,15 @@ Loader::ResultOf::LoadObject_Impl<Loader::LoadObjectResponse>::LoadObject_Impl(z
 }
 
 Loader::ResultOf::LoadObject Loader::SyncClient::LoadObject(::fidl::StringView object_name) {
-  return ResultOf::LoadObject(zx::unowned_channel(this->channel_), std::move(object_name));
+    return ResultOf::LoadObject(::zx::unowned_channel(this->channel_), std::move(object_name));
 }
 
-Loader::ResultOf::LoadObject Loader::Call::LoadObject(zx::unowned_channel _client_end, ::fidl::StringView object_name) {
+Loader::ResultOf::LoadObject Loader::Call::LoadObject(::zx::unowned_channel _client_end, ::fidl::StringView object_name) {
   return ResultOf::LoadObject(std::move(_client_end), std::move(object_name));
 }
 
 template <>
-Loader::UnownedResultOf::LoadObject_Impl<Loader::LoadObjectResponse>::LoadObject_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer) {
+Loader::UnownedResultOf::LoadObject_Impl<Loader::LoadObjectResponse>::LoadObject_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LoadObjectRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LoadObjectResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -126,14 +126,14 @@ Loader::UnownedResultOf::LoadObject_Impl<Loader::LoadObjectResponse>::LoadObject
 }
 
 Loader::UnownedResultOf::LoadObject Loader::SyncClient::LoadObject(::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LoadObject(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(object_name), std::move(_response_buffer));
+  return UnownedResultOf::LoadObject(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(object_name), std::move(_response_buffer));
 }
 
-Loader::UnownedResultOf::LoadObject Loader::Call::LoadObject(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer) {
+Loader::UnownedResultOf::LoadObject Loader::Call::LoadObject(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LoadObject(std::move(_client_end), std::move(_request_buffer), std::move(object_name), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Loader::LoadObjectResponse> Loader::InPlace::LoadObject(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadObjectRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Loader::LoadObjectResponse> Loader::InPlace::LoadObject(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadObjectRequest> params, ::fidl::BytePart response_buffer) {
   Loader::SetTransactionHeaderFor::LoadObjectRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -150,7 +150,7 @@ Loader::UnownedResultOf::LoadObject Loader::Call::LoadObject(zx::unowned_channel
 }
 
 template <>
-Loader::ResultOf::Config_Impl<Loader::ConfigResponse>::Config_Impl(zx::unowned_channel _client_end, ::fidl::StringView config) {
+Loader::ResultOf::Config_Impl<Loader::ConfigResponse>::Config_Impl(::zx::unowned_channel _client_end, ::fidl::StringView config) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConfigRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -167,15 +167,15 @@ Loader::ResultOf::Config_Impl<Loader::ConfigResponse>::Config_Impl(zx::unowned_c
 }
 
 Loader::ResultOf::Config Loader::SyncClient::Config(::fidl::StringView config) {
-  return ResultOf::Config(zx::unowned_channel(this->channel_), std::move(config));
+    return ResultOf::Config(::zx::unowned_channel(this->channel_), std::move(config));
 }
 
-Loader::ResultOf::Config Loader::Call::Config(zx::unowned_channel _client_end, ::fidl::StringView config) {
+Loader::ResultOf::Config Loader::Call::Config(::zx::unowned_channel _client_end, ::fidl::StringView config) {
   return ResultOf::Config(std::move(_client_end), std::move(config));
 }
 
 template <>
-Loader::UnownedResultOf::Config_Impl<Loader::ConfigResponse>::Config_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config, ::fidl::BytePart _response_buffer) {
+Loader::UnownedResultOf::Config_Impl<Loader::ConfigResponse>::Config_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ConfigRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ConfigResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -193,14 +193,14 @@ Loader::UnownedResultOf::Config_Impl<Loader::ConfigResponse>::Config_Impl(zx::un
 }
 
 Loader::UnownedResultOf::Config Loader::SyncClient::Config(::fidl::BytePart _request_buffer, ::fidl::StringView config, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Config(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
+  return UnownedResultOf::Config(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
 }
 
-Loader::UnownedResultOf::Config Loader::Call::Config(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config, ::fidl::BytePart _response_buffer) {
+Loader::UnownedResultOf::Config Loader::Call::Config(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Config(std::move(_client_end), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Loader::ConfigResponse> Loader::InPlace::Config(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Loader::ConfigResponse> Loader::InPlace::Config(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigRequest> params, ::fidl::BytePart response_buffer) {
   Loader::SetTransactionHeaderFor::ConfigRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -217,7 +217,7 @@ Loader::UnownedResultOf::Config Loader::Call::Config(zx::unowned_channel _client
 }
 
 template <>
-Loader::ResultOf::Clone_Impl<Loader::CloneResponse>::Clone_Impl(zx::unowned_channel _client_end, ::zx::channel loader) {
+Loader::ResultOf::Clone_Impl<Loader::CloneResponse>::Clone_Impl(::zx::unowned_channel _client_end, ::zx::channel loader) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CloneRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -232,15 +232,15 @@ Loader::ResultOf::Clone_Impl<Loader::CloneResponse>::Clone_Impl(zx::unowned_chan
 }
 
 Loader::ResultOf::Clone Loader::SyncClient::Clone(::zx::channel loader) {
-  return ResultOf::Clone(zx::unowned_channel(this->channel_), std::move(loader));
+    return ResultOf::Clone(::zx::unowned_channel(this->channel_), std::move(loader));
 }
 
-Loader::ResultOf::Clone Loader::Call::Clone(zx::unowned_channel _client_end, ::zx::channel loader) {
+Loader::ResultOf::Clone Loader::Call::Clone(::zx::unowned_channel _client_end, ::zx::channel loader) {
   return ResultOf::Clone(std::move(_client_end), std::move(loader));
 }
 
 template <>
-Loader::UnownedResultOf::Clone_Impl<Loader::CloneResponse>::Clone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer) {
+Loader::UnownedResultOf::Clone_Impl<Loader::CloneResponse>::Clone_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CloneRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CloneResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -255,14 +255,14 @@ Loader::UnownedResultOf::Clone_Impl<Loader::CloneResponse>::Clone_Impl(zx::unown
 }
 
 Loader::UnownedResultOf::Clone Loader::SyncClient::Clone(::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Clone(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(loader), std::move(_response_buffer));
+  return UnownedResultOf::Clone(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(loader), std::move(_response_buffer));
 }
 
-Loader::UnownedResultOf::Clone Loader::Call::Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer) {
+Loader::UnownedResultOf::Clone Loader::Call::Clone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Clone(std::move(_client_end), std::move(_request_buffer), std::move(loader), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Loader::CloneResponse> Loader::InPlace::Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Loader::CloneResponse> Loader::InPlace::Clone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params, ::fidl::BytePart response_buffer) {
   Loader::SetTransactionHeaderFor::CloneRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

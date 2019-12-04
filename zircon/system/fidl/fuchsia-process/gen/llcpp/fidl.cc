@@ -20,7 +20,7 @@ extern "C" const fidl_type_t v1_fuchsia_process_ResolverResolveResponseTable;
 
 }  // namespace
 template <>
-Resolver::ResultOf::Resolve_Impl<Resolver::ResolveResponse>::Resolve_Impl(zx::unowned_channel _client_end, ::fidl::StringView name) {
+Resolver::ResultOf::Resolve_Impl<Resolver::ResolveResponse>::Resolve_Impl(::zx::unowned_channel _client_end, ::fidl::StringView name) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ResolveRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -37,15 +37,15 @@ Resolver::ResultOf::Resolve_Impl<Resolver::ResolveResponse>::Resolve_Impl(zx::un
 }
 
 Resolver::ResultOf::Resolve Resolver::SyncClient::Resolve(::fidl::StringView name) {
-  return ResultOf::Resolve(zx::unowned_channel(this->channel_), std::move(name));
+    return ResultOf::Resolve(::zx::unowned_channel(this->channel_), std::move(name));
 }
 
-Resolver::ResultOf::Resolve Resolver::Call::Resolve(zx::unowned_channel _client_end, ::fidl::StringView name) {
+Resolver::ResultOf::Resolve Resolver::Call::Resolve(::zx::unowned_channel _client_end, ::fidl::StringView name) {
   return ResultOf::Resolve(std::move(_client_end), std::move(name));
 }
 
 template <>
-Resolver::UnownedResultOf::Resolve_Impl<Resolver::ResolveResponse>::Resolve_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer) {
+Resolver::UnownedResultOf::Resolve_Impl<Resolver::ResolveResponse>::Resolve_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ResolveRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ResolveResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -63,14 +63,14 @@ Resolver::UnownedResultOf::Resolve_Impl<Resolver::ResolveResponse>::Resolve_Impl
 }
 
 Resolver::UnownedResultOf::Resolve Resolver::SyncClient::Resolve(::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Resolve(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(name), std::move(_response_buffer));
+  return UnownedResultOf::Resolve(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(name), std::move(_response_buffer));
 }
 
-Resolver::UnownedResultOf::Resolve Resolver::Call::Resolve(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer) {
+Resolver::UnownedResultOf::Resolve Resolver::Call::Resolve(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Resolve(std::move(_client_end), std::move(_request_buffer), std::move(name), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Resolver::ResolveResponse> Resolver::InPlace::Resolve(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResolveRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Resolver::ResolveResponse> Resolver::InPlace::Resolve(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResolveRequest> params, ::fidl::BytePart response_buffer) {
   Resolver::SetTransactionHeaderFor::ResolveRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -224,7 +224,7 @@ extern "C" const fidl_type_t v1_fuchsia_process_LauncherAddHandlesResponseTable;
 
 }  // namespace
 template <>
-Launcher::ResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
+Launcher::ResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LaunchRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -241,15 +241,15 @@ Launcher::ResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx::unown
 }
 
 Launcher::ResultOf::Launch Launcher::SyncClient::Launch(::llcpp::fuchsia::process::LaunchInfo info) {
-  return ResultOf::Launch(zx::unowned_channel(this->channel_), std::move(info));
+    return ResultOf::Launch(::zx::unowned_channel(this->channel_), std::move(info));
 }
 
-Launcher::ResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
+Launcher::ResultOf::Launch Launcher::Call::Launch(::zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
   return ResultOf::Launch(std::move(_client_end), std::move(info));
 }
 
 template <>
-Launcher::UnownedResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
+Launcher::UnownedResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LaunchRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LaunchResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -267,14 +267,14 @@ Launcher::UnownedResultOf::Launch_Impl<Launcher::LaunchResponse>::Launch_Impl(zx
 }
 
 Launcher::UnownedResultOf::Launch Launcher::SyncClient::Launch(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Launch(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(info), std::move(_response_buffer));
+  return UnownedResultOf::Launch(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(info), std::move(_response_buffer));
 }
 
-Launcher::UnownedResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
+Launcher::UnownedResultOf::Launch Launcher::Call::Launch(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Launch(std::move(_client_end), std::move(_request_buffer), std::move(info), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Launcher::LaunchResponse> Launcher::InPlace::Launch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LaunchRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Launcher::LaunchResponse> Launcher::InPlace::Launch(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LaunchRequest> params, ::fidl::BytePart response_buffer) {
   Launcher::SetTransactionHeaderFor::LaunchRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -291,7 +291,7 @@ Launcher::UnownedResultOf::Launch Launcher::Call::Launch(zx::unowned_channel _cl
 }
 
 template <>
-Launcher::ResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingResponse>::CreateWithoutStarting_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
+Launcher::ResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingResponse>::CreateWithoutStarting_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CreateWithoutStartingRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -308,15 +308,15 @@ Launcher::ResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingRe
 }
 
 Launcher::ResultOf::CreateWithoutStarting Launcher::SyncClient::CreateWithoutStarting(::llcpp::fuchsia::process::LaunchInfo info) {
-  return ResultOf::CreateWithoutStarting(zx::unowned_channel(this->channel_), std::move(info));
+    return ResultOf::CreateWithoutStarting(::zx::unowned_channel(this->channel_), std::move(info));
 }
 
-Launcher::ResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutStarting(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
+Launcher::ResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutStarting(::zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info) {
   return ResultOf::CreateWithoutStarting(std::move(_client_end), std::move(info));
 }
 
 template <>
-Launcher::UnownedResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingResponse>::CreateWithoutStarting_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
+Launcher::UnownedResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutStartingResponse>::CreateWithoutStarting_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < CreateWithoutStartingRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<CreateWithoutStartingResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -334,14 +334,14 @@ Launcher::UnownedResultOf::CreateWithoutStarting_Impl<Launcher::CreateWithoutSta
 }
 
 Launcher::UnownedResultOf::CreateWithoutStarting Launcher::SyncClient::CreateWithoutStarting(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::CreateWithoutStarting(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(info), std::move(_response_buffer));
+  return UnownedResultOf::CreateWithoutStarting(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(info), std::move(_response_buffer));
 }
 
-Launcher::UnownedResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutStarting(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
+Launcher::UnownedResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutStarting(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::CreateWithoutStarting(std::move(_client_end), std::move(_request_buffer), std::move(info), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Launcher::CreateWithoutStartingResponse> Launcher::InPlace::CreateWithoutStarting(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateWithoutStartingRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Launcher::CreateWithoutStartingResponse> Launcher::InPlace::CreateWithoutStarting(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateWithoutStartingRequest> params, ::fidl::BytePart response_buffer) {
   Launcher::SetTransactionHeaderFor::CreateWithoutStartingRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -358,7 +358,7 @@ Launcher::UnownedResultOf::CreateWithoutStarting Launcher::Call::CreateWithoutSt
 }
 
 
-Launcher::ResultOf::AddArgs_Impl::AddArgs_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args) {
+Launcher::ResultOf::AddArgs_Impl::AddArgs_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddArgsRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -375,15 +375,15 @@ Launcher::ResultOf::AddArgs_Impl::AddArgs_Impl(zx::unowned_channel _client_end, 
 }
 
 Launcher::ResultOf::AddArgs Launcher::SyncClient::AddArgs(::fidl::VectorView<::fidl::VectorView<uint8_t>> args) {
-  return ResultOf::AddArgs(zx::unowned_channel(this->channel_), std::move(args));
+    return ResultOf::AddArgs(::zx::unowned_channel(this->channel_), std::move(args));
 }
 
-Launcher::ResultOf::AddArgs Launcher::Call::AddArgs(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args) {
+Launcher::ResultOf::AddArgs Launcher::Call::AddArgs(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args) {
   return ResultOf::AddArgs(std::move(_client_end), std::move(args));
 }
 
 
-Launcher::UnownedResultOf::AddArgs_Impl::AddArgs_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args) {
+Launcher::UnownedResultOf::AddArgs_Impl::AddArgs_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args) {
   if (_request_buffer.capacity() < AddArgsRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -402,14 +402,14 @@ Launcher::UnownedResultOf::AddArgs_Impl::AddArgs_Impl(zx::unowned_channel _clien
 }
 
 Launcher::UnownedResultOf::AddArgs Launcher::SyncClient::AddArgs(::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args) {
-  return UnownedResultOf::AddArgs(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(args));
+  return UnownedResultOf::AddArgs(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(args));
 }
 
-Launcher::UnownedResultOf::AddArgs Launcher::Call::AddArgs(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args) {
+Launcher::UnownedResultOf::AddArgs Launcher::Call::AddArgs(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args) {
   return UnownedResultOf::AddArgs(std::move(_client_end), std::move(_request_buffer), std::move(args));
 }
 
-::fidl::internal::StatusAndError Launcher::InPlace::AddArgs(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddArgsRequest> params) {
+::fidl::internal::StatusAndError Launcher::InPlace::AddArgs(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddArgsRequest> params) {
   Launcher::SetTransactionHeaderFor::AddArgsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -426,7 +426,7 @@ Launcher::UnownedResultOf::AddArgs Launcher::Call::AddArgs(zx::unowned_channel _
 }
 
 
-Launcher::ResultOf::AddEnvirons_Impl::AddEnvirons_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ) {
+Launcher::ResultOf::AddEnvirons_Impl::AddEnvirons_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddEnvironsRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -443,15 +443,15 @@ Launcher::ResultOf::AddEnvirons_Impl::AddEnvirons_Impl(zx::unowned_channel _clie
 }
 
 Launcher::ResultOf::AddEnvirons Launcher::SyncClient::AddEnvirons(::fidl::VectorView<::fidl::VectorView<uint8_t>> environ) {
-  return ResultOf::AddEnvirons(zx::unowned_channel(this->channel_), std::move(environ));
+    return ResultOf::AddEnvirons(::zx::unowned_channel(this->channel_), std::move(environ));
 }
 
-Launcher::ResultOf::AddEnvirons Launcher::Call::AddEnvirons(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ) {
+Launcher::ResultOf::AddEnvirons Launcher::Call::AddEnvirons(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ) {
   return ResultOf::AddEnvirons(std::move(_client_end), std::move(environ));
 }
 
 
-Launcher::UnownedResultOf::AddEnvirons_Impl::AddEnvirons_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ) {
+Launcher::UnownedResultOf::AddEnvirons_Impl::AddEnvirons_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ) {
   if (_request_buffer.capacity() < AddEnvironsRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -470,14 +470,14 @@ Launcher::UnownedResultOf::AddEnvirons_Impl::AddEnvirons_Impl(zx::unowned_channe
 }
 
 Launcher::UnownedResultOf::AddEnvirons Launcher::SyncClient::AddEnvirons(::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ) {
-  return UnownedResultOf::AddEnvirons(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(environ));
+  return UnownedResultOf::AddEnvirons(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(environ));
 }
 
-Launcher::UnownedResultOf::AddEnvirons Launcher::Call::AddEnvirons(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ) {
+Launcher::UnownedResultOf::AddEnvirons Launcher::Call::AddEnvirons(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ) {
   return UnownedResultOf::AddEnvirons(std::move(_client_end), std::move(_request_buffer), std::move(environ));
 }
 
-::fidl::internal::StatusAndError Launcher::InPlace::AddEnvirons(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddEnvironsRequest> params) {
+::fidl::internal::StatusAndError Launcher::InPlace::AddEnvirons(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddEnvironsRequest> params) {
   Launcher::SetTransactionHeaderFor::AddEnvironsRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -494,7 +494,7 @@ Launcher::UnownedResultOf::AddEnvirons Launcher::Call::AddEnvirons(zx::unowned_c
 }
 
 
-Launcher::ResultOf::AddNames_Impl::AddNames_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
+Launcher::ResultOf::AddNames_Impl::AddNames_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddNamesRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -511,15 +511,15 @@ Launcher::ResultOf::AddNames_Impl::AddNames_Impl(zx::unowned_channel _client_end
 }
 
 Launcher::ResultOf::AddNames Launcher::SyncClient::AddNames(::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
-  return ResultOf::AddNames(zx::unowned_channel(this->channel_), std::move(names));
+    return ResultOf::AddNames(::zx::unowned_channel(this->channel_), std::move(names));
 }
 
-Launcher::ResultOf::AddNames Launcher::Call::AddNames(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
+Launcher::ResultOf::AddNames Launcher::Call::AddNames(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
   return ResultOf::AddNames(std::move(_client_end), std::move(names));
 }
 
 
-Launcher::UnownedResultOf::AddNames_Impl::AddNames_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
+Launcher::UnownedResultOf::AddNames_Impl::AddNames_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
   if (_request_buffer.capacity() < AddNamesRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -538,14 +538,14 @@ Launcher::UnownedResultOf::AddNames_Impl::AddNames_Impl(zx::unowned_channel _cli
 }
 
 Launcher::UnownedResultOf::AddNames Launcher::SyncClient::AddNames(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
-  return UnownedResultOf::AddNames(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(names));
+  return UnownedResultOf::AddNames(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(names));
 }
 
-Launcher::UnownedResultOf::AddNames Launcher::Call::AddNames(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
+Launcher::UnownedResultOf::AddNames Launcher::Call::AddNames(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names) {
   return UnownedResultOf::AddNames(std::move(_client_end), std::move(_request_buffer), std::move(names));
 }
 
-::fidl::internal::StatusAndError Launcher::InPlace::AddNames(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddNamesRequest> params) {
+::fidl::internal::StatusAndError Launcher::InPlace::AddNames(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddNamesRequest> params) {
   Launcher::SetTransactionHeaderFor::AddNamesRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -562,7 +562,7 @@ Launcher::UnownedResultOf::AddNames Launcher::Call::AddNames(zx::unowned_channel
 }
 
 
-Launcher::ResultOf::AddHandles_Impl::AddHandles_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
+Launcher::ResultOf::AddHandles_Impl::AddHandles_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddHandlesRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -579,15 +579,15 @@ Launcher::ResultOf::AddHandles_Impl::AddHandles_Impl(zx::unowned_channel _client
 }
 
 Launcher::ResultOf::AddHandles Launcher::SyncClient::AddHandles(::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
-  return ResultOf::AddHandles(zx::unowned_channel(this->channel_), std::move(handles));
+    return ResultOf::AddHandles(::zx::unowned_channel(this->channel_), std::move(handles));
 }
 
-Launcher::ResultOf::AddHandles Launcher::Call::AddHandles(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
+Launcher::ResultOf::AddHandles Launcher::Call::AddHandles(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
   return ResultOf::AddHandles(std::move(_client_end), std::move(handles));
 }
 
 
-Launcher::UnownedResultOf::AddHandles_Impl::AddHandles_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
+Launcher::UnownedResultOf::AddHandles_Impl::AddHandles_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
   if (_request_buffer.capacity() < AddHandlesRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -606,14 +606,14 @@ Launcher::UnownedResultOf::AddHandles_Impl::AddHandles_Impl(zx::unowned_channel 
 }
 
 Launcher::UnownedResultOf::AddHandles Launcher::SyncClient::AddHandles(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
-  return UnownedResultOf::AddHandles(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(handles));
+  return UnownedResultOf::AddHandles(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(handles));
 }
 
-Launcher::UnownedResultOf::AddHandles Launcher::Call::AddHandles(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
+Launcher::UnownedResultOf::AddHandles Launcher::Call::AddHandles(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles) {
   return UnownedResultOf::AddHandles(std::move(_client_end), std::move(_request_buffer), std::move(handles));
 }
 
-::fidl::internal::StatusAndError Launcher::InPlace::AddHandles(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddHandlesRequest> params) {
+::fidl::internal::StatusAndError Launcher::InPlace::AddHandles(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddHandlesRequest> params) {
   Launcher::SetTransactionHeaderFor::AddHandlesRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

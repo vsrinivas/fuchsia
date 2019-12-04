@@ -518,7 +518,7 @@ class MexecBroker final {
     class PerformMexec_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      PerformMexec_Impl(zx::unowned_channel _client_end, ::zx::vmo kernel, ::zx::vmo bootdata);
+      PerformMexec_Impl(::zx::unowned_channel _client_end, ::zx::vmo kernel, ::zx::vmo bootdata);
       ~PerformMexec_Impl() = default;
       PerformMexec_Impl(PerformMexec_Impl&& other) = default;
       PerformMexec_Impl& operator=(PerformMexec_Impl&& other) = default;
@@ -539,7 +539,7 @@ class MexecBroker final {
     class PerformMexec_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      PerformMexec_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata);
+      PerformMexec_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata);
       ~PerformMexec_Impl() = default;
       PerformMexec_Impl(PerformMexec_Impl&& other) = default;
       PerformMexec_Impl& operator=(PerformMexec_Impl&& other) = default;
@@ -585,12 +585,12 @@ class MexecBroker final {
     // Perform an mexec with the given kernel and bootdata.
     // See ZX-2069 for the thoughts on deprecating mexec.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::PerformMexec PerformMexec(zx::unowned_channel _client_end, ::zx::vmo kernel, ::zx::vmo bootdata);
+    static ResultOf::PerformMexec PerformMexec(::zx::unowned_channel _client_end, ::zx::vmo kernel, ::zx::vmo bootdata);
 
     // Perform an mexec with the given kernel and bootdata.
     // See ZX-2069 for the thoughts on deprecating mexec.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::PerformMexec PerformMexec(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata);
+    static UnownedResultOf::PerformMexec PerformMexec(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo kernel, ::zx::vmo bootdata);
 
   };
 
@@ -602,7 +602,7 @@ class MexecBroker final {
 
     // Perform an mexec with the given kernel and bootdata.
     // See ZX-2069 for the thoughts on deprecating mexec.
-    static ::fidl::internal::StatusAndError PerformMexec(zx::unowned_channel _client_end, ::fidl::DecodedMessage<PerformMexecRequest> params);
+    static ::fidl::internal::StatusAndError PerformMexec(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<PerformMexecRequest> params);
 
   };
 
@@ -743,7 +743,7 @@ class DebugBroker final {
     class SendDebugCommand_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SendDebugCommand_Impl(zx::unowned_channel _client_end, ::fidl::StringView command);
+      SendDebugCommand_Impl(::zx::unowned_channel _client_end, ::fidl::StringView command);
       ~SendDebugCommand_Impl() = default;
       SendDebugCommand_Impl(SendDebugCommand_Impl&& other) = default;
       SendDebugCommand_Impl& operator=(SendDebugCommand_Impl&& other) = default;
@@ -759,7 +759,7 @@ class DebugBroker final {
     class SetTracingEnabled_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetTracingEnabled_Impl(zx::unowned_channel _client_end, bool enabled);
+      SetTracingEnabled_Impl(::zx::unowned_channel _client_end, bool enabled);
       ~SetTracingEnabled_Impl() = default;
       SetTracingEnabled_Impl(SetTracingEnabled_Impl&& other) = default;
       SetTracingEnabled_Impl& operator=(SetTracingEnabled_Impl&& other) = default;
@@ -786,7 +786,7 @@ class DebugBroker final {
     class SendDebugCommand_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SendDebugCommand_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView command, ::fidl::BytePart _response_buffer);
+      SendDebugCommand_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView command, ::fidl::BytePart _response_buffer);
       ~SendDebugCommand_Impl() = default;
       SendDebugCommand_Impl(SendDebugCommand_Impl&& other) = default;
       SendDebugCommand_Impl& operator=(SendDebugCommand_Impl&& other) = default;
@@ -802,7 +802,7 @@ class DebugBroker final {
     class SetTracingEnabled_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetTracingEnabled_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enabled, ::fidl::BytePart _response_buffer);
+      SetTracingEnabled_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enabled, ::fidl::BytePart _response_buffer);
       ~SetTracingEnabled_Impl() = default;
       SetTracingEnabled_Impl(SetTracingEnabled_Impl&& other) = default;
       SetTracingEnabled_Impl& operator=(SetTracingEnabled_Impl&& other) = default;
@@ -861,20 +861,20 @@ class DebugBroker final {
     // Pass debug command through to the kernel shell.
     // Look at zx_debug_send_command syscall handling to find valid values.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::SendDebugCommand SendDebugCommand(zx::unowned_channel _client_end, ::fidl::StringView command);
+    static ResultOf::SendDebugCommand SendDebugCommand(::zx::unowned_channel _client_end, ::fidl::StringView command);
 
     // Pass debug command through to the kernel shell.
     // Look at zx_debug_send_command syscall handling to find valid values.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SendDebugCommand SendDebugCommand(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView command, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SendDebugCommand SendDebugCommand(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView command, ::fidl::BytePart _response_buffer);
 
     // Sets whether kernel tracing (ktrace) is enabled or disabled.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetTracingEnabled SetTracingEnabled(zx::unowned_channel _client_end, bool enabled);
+    static ResultOf::SetTracingEnabled SetTracingEnabled(::zx::unowned_channel _client_end, bool enabled);
 
     // Sets whether kernel tracing (ktrace) is enabled or disabled.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetTracingEnabled SetTracingEnabled(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enabled, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetTracingEnabled SetTracingEnabled(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enabled, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -886,10 +886,10 @@ class DebugBroker final {
 
     // Pass debug command through to the kernel shell.
     // Look at zx_debug_send_command syscall handling to find valid values.
-    static ::fidl::DecodeResult<SendDebugCommandResponse> SendDebugCommand(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SendDebugCommandRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SendDebugCommandResponse> SendDebugCommand(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SendDebugCommandRequest> params, ::fidl::BytePart response_buffer);
 
     // Sets whether kernel tracing (ktrace) is enabled or disabled.
-    static ::fidl::DecodeResult<SetTracingEnabledResponse> SetTracingEnabled(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTracingEnabledRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetTracingEnabledResponse> SetTracingEnabled(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTracingEnabledRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1024,7 +1024,7 @@ class Counter final {
     class GetInspectVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetInspectVmo_Impl(zx::unowned_channel _client_end);
+      GetInspectVmo_Impl(::zx::unowned_channel _client_end);
       ~GetInspectVmo_Impl() = default;
       GetInspectVmo_Impl(GetInspectVmo_Impl&& other) = default;
       GetInspectVmo_Impl& operator=(GetInspectVmo_Impl&& other) = default;
@@ -1040,7 +1040,7 @@ class Counter final {
     class UpdateInspectVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      UpdateInspectVmo_Impl(zx::unowned_channel _client_end);
+      UpdateInspectVmo_Impl(::zx::unowned_channel _client_end);
       ~UpdateInspectVmo_Impl() = default;
       UpdateInspectVmo_Impl(UpdateInspectVmo_Impl&& other) = default;
       UpdateInspectVmo_Impl& operator=(UpdateInspectVmo_Impl&& other) = default;
@@ -1067,7 +1067,7 @@ class Counter final {
     class GetInspectVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetInspectVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetInspectVmo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetInspectVmo_Impl() = default;
       GetInspectVmo_Impl(GetInspectVmo_Impl&& other) = default;
       GetInspectVmo_Impl& operator=(GetInspectVmo_Impl&& other) = default;
@@ -1083,7 +1083,7 @@ class Counter final {
     class UpdateInspectVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      UpdateInspectVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      UpdateInspectVmo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~UpdateInspectVmo_Impl() = default;
       UpdateInspectVmo_Impl(UpdateInspectVmo_Impl&& other) = default;
       UpdateInspectVmo_Impl& operator=(UpdateInspectVmo_Impl&& other) = default;
@@ -1146,24 +1146,24 @@ class Counter final {
     // Retrives a VMO containining summarized kcounter data. The vmo returned
     // in |buffer| is in "inspect-vmo" format, documented elsewhere.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetInspectVmo GetInspectVmo(zx::unowned_channel _client_end);
+    static ResultOf::GetInspectVmo GetInspectVmo(::zx::unowned_channel _client_end);
 
     // Retrives a VMO containining summarized kcounter data. The vmo returned
     // in |buffer| is in "inspect-vmo" format, documented elsewhere.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetInspectVmo GetInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetInspectVmo GetInspectVmo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Request that the previously-returned VMO buffer's data be updated. The
     // data may not be updated if it was already recently updated (updates are
     // limited to an unspecified rate, but approximately every few seconds).
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::UpdateInspectVmo UpdateInspectVmo(zx::unowned_channel _client_end);
+    static ResultOf::UpdateInspectVmo UpdateInspectVmo(::zx::unowned_channel _client_end);
 
     // Request that the previously-returned VMO buffer's data be updated. The
     // data may not be updated if it was already recently updated (updates are
     // limited to an unspecified rate, but approximately every few seconds).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::UpdateInspectVmo UpdateInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::UpdateInspectVmo UpdateInspectVmo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1175,12 +1175,12 @@ class Counter final {
 
     // Retrives a VMO containining summarized kcounter data. The vmo returned
     // in |buffer| is in "inspect-vmo" format, documented elsewhere.
-    static ::fidl::DecodeResult<GetInspectVmoResponse> GetInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetInspectVmoResponse> GetInspectVmo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Request that the previously-returned VMO buffer's data be updated. The
     // data may not be updated if it was already recently updated (updates are
     // limited to an unspecified rate, but approximately every few seconds).
-    static ::fidl::DecodeResult<UpdateInspectVmoResponse> UpdateInspectVmo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<UpdateInspectVmoResponse> UpdateInspectVmo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1318,7 +1318,7 @@ class Stats final {
     class GetMemoryStats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetMemoryStats_Impl(zx::unowned_channel _client_end);
+      GetMemoryStats_Impl(::zx::unowned_channel _client_end);
       ~GetMemoryStats_Impl() = default;
       GetMemoryStats_Impl(GetMemoryStats_Impl&& other) = default;
       GetMemoryStats_Impl& operator=(GetMemoryStats_Impl&& other) = default;
@@ -1334,7 +1334,7 @@ class Stats final {
     class GetCpuStats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetCpuStats_Impl(zx::unowned_channel _client_end);
+      GetCpuStats_Impl(::zx::unowned_channel _client_end);
       ~GetCpuStats_Impl() = default;
       GetCpuStats_Impl(GetCpuStats_Impl&& other) = default;
       GetCpuStats_Impl& operator=(GetCpuStats_Impl&& other) = default;
@@ -1361,7 +1361,7 @@ class Stats final {
     class GetMemoryStats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetMemoryStats_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetMemoryStats_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetMemoryStats_Impl() = default;
       GetMemoryStats_Impl(GetMemoryStats_Impl&& other) = default;
       GetMemoryStats_Impl& operator=(GetMemoryStats_Impl&& other) = default;
@@ -1377,7 +1377,7 @@ class Stats final {
     class GetCpuStats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetCpuStats_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetCpuStats_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetCpuStats_Impl() = default;
       GetCpuStats_Impl(GetCpuStats_Impl&& other) = default;
       GetCpuStats_Impl& operator=(GetCpuStats_Impl&& other) = default;
@@ -1428,16 +1428,16 @@ class Stats final {
    public:
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetMemoryStats GetMemoryStats(zx::unowned_channel _client_end);
+    static ResultOf::GetMemoryStats GetMemoryStats(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetMemoryStats GetMemoryStats(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetMemoryStats GetMemoryStats(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetCpuStats GetCpuStats(zx::unowned_channel _client_end);
+    static ResultOf::GetCpuStats GetCpuStats(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetCpuStats GetCpuStats(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetCpuStats GetCpuStats(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1447,9 +1447,9 @@ class Stats final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<GetMemoryStatsResponse> GetMemoryStats(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetMemoryStatsResponse> GetMemoryStats(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetCpuStatsResponse> GetCpuStats(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetCpuStatsResponse> GetCpuStats(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

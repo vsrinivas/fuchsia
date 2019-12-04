@@ -21,7 +21,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_virtioconsole_DeviceGetChannelR
 
 }  // namespace
 
-Device::ResultOf::GetChannel_Impl::GetChannel_Impl(zx::unowned_channel _client_end, ::zx::channel req) {
+Device::ResultOf::GetChannel_Impl::GetChannel_Impl(::zx::unowned_channel _client_end, ::zx::channel req) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -36,15 +36,15 @@ Device::ResultOf::GetChannel_Impl::GetChannel_Impl(zx::unowned_channel _client_e
 }
 
 Device::ResultOf::GetChannel Device::SyncClient::GetChannel(::zx::channel req) {
-  return ResultOf::GetChannel(zx::unowned_channel(this->channel_), std::move(req));
+    return ResultOf::GetChannel(::zx::unowned_channel(this->channel_), std::move(req));
 }
 
-Device::ResultOf::GetChannel Device::Call::GetChannel(zx::unowned_channel _client_end, ::zx::channel req) {
+Device::ResultOf::GetChannel Device::Call::GetChannel(::zx::unowned_channel _client_end, ::zx::channel req) {
   return ResultOf::GetChannel(std::move(_client_end), std::move(req));
 }
 
 
-Device::UnownedResultOf::GetChannel_Impl::GetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req) {
+Device::UnownedResultOf::GetChannel_Impl::GetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req) {
   if (_request_buffer.capacity() < GetChannelRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -60,14 +60,14 @@ Device::UnownedResultOf::GetChannel_Impl::GetChannel_Impl(zx::unowned_channel _c
 }
 
 Device::UnownedResultOf::GetChannel Device::SyncClient::GetChannel(::fidl::BytePart _request_buffer, ::zx::channel req) {
-  return UnownedResultOf::GetChannel(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(req));
+  return UnownedResultOf::GetChannel(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(req));
 }
 
-Device::UnownedResultOf::GetChannel Device::Call::GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req) {
+Device::UnownedResultOf::GetChannel Device::Call::GetChannel(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req) {
   return UnownedResultOf::GetChannel(std::move(_client_end), std::move(_request_buffer), std::move(req));
 }
 
-::fidl::internal::StatusAndError Device::InPlace::GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params) {
+::fidl::internal::StatusAndError Device::InPlace::GetChannel(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params) {
   Device::SetTransactionHeaderFor::GetChannelRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

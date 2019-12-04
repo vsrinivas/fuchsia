@@ -91,7 +91,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_DeviceSetFanLevelRespon
 
 }  // namespace
 template <>
-Device::ResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -104,15 +104,15 @@ Device::ResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(zx::unowne
 }
 
 Device::ResultOf::GetInfo Device::SyncClient::GetInfo() {
-  return ResultOf::GetInfo(zx::unowned_channel(this->channel_));
+    return ResultOf::GetInfo(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetInfo Device::Call::GetInfo(zx::unowned_channel _client_end) {
+Device::ResultOf::GetInfo Device::Call::GetInfo(::zx::unowned_channel _client_end) {
   return ResultOf::GetInfo(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetInfoRequest::PrimarySize);
@@ -123,14 +123,14 @@ Device::UnownedResultOf::GetInfo_Impl<Device::GetInfoResponse>::GetInfo_Impl(zx:
 }
 
 Device::UnownedResultOf::GetInfo Device::SyncClient::GetInfo(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetInfo(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetInfo Device::Call::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetInfo Device::Call::GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetInfo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetInfoResponse> Device::InPlace::GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetInfoResponse> Device::InPlace::GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetInfoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -152,7 +152,7 @@ Device::UnownedResultOf::GetInfo Device::Call::GetInfo(zx::unowned_channel _clie
 }
 
 template <>
-Device::ResultOf::GetDeviceInfo_Impl<Device::GetDeviceInfoResponse>::GetDeviceInfo_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetDeviceInfo_Impl<Device::GetDeviceInfoResponse>::GetDeviceInfo_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDeviceInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -165,15 +165,15 @@ Device::ResultOf::GetDeviceInfo_Impl<Device::GetDeviceInfoResponse>::GetDeviceIn
 }
 
 Device::ResultOf::GetDeviceInfo Device::SyncClient::GetDeviceInfo() {
-  return ResultOf::GetDeviceInfo(zx::unowned_channel(this->channel_));
+    return ResultOf::GetDeviceInfo(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetDeviceInfo Device::Call::GetDeviceInfo(zx::unowned_channel _client_end) {
+Device::ResultOf::GetDeviceInfo Device::Call::GetDeviceInfo(::zx::unowned_channel _client_end) {
   return ResultOf::GetDeviceInfo(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetDeviceInfo_Impl<Device::GetDeviceInfoResponse>::GetDeviceInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDeviceInfo_Impl<Device::GetDeviceInfoResponse>::GetDeviceInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDeviceInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetDeviceInfoRequest::PrimarySize);
@@ -184,14 +184,14 @@ Device::UnownedResultOf::GetDeviceInfo_Impl<Device::GetDeviceInfoResponse>::GetD
 }
 
 Device::UnownedResultOf::GetDeviceInfo Device::SyncClient::GetDeviceInfo(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetDeviceInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetDeviceInfo(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetDeviceInfo Device::Call::GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDeviceInfo Device::Call::GetDeviceInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDeviceInfo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetDeviceInfoResponse> Device::InPlace::GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetDeviceInfoResponse> Device::InPlace::GetDeviceInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetDeviceInfoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -213,7 +213,7 @@ Device::UnownedResultOf::GetDeviceInfo Device::Call::GetDeviceInfo(zx::unowned_c
 }
 
 template <>
-Device::ResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsInfo_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
+Device::ResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsInfo_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDvfsInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -228,15 +228,15 @@ Device::ResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsInfo_Imp
 }
 
 Device::ResultOf::GetDvfsInfo Device::SyncClient::GetDvfsInfo(::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
-  return ResultOf::GetDvfsInfo(zx::unowned_channel(this->channel_), std::move(power_domain));
+    return ResultOf::GetDvfsInfo(::zx::unowned_channel(this->channel_), std::move(power_domain));
 }
 
-Device::ResultOf::GetDvfsInfo Device::Call::GetDvfsInfo(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
+Device::ResultOf::GetDvfsInfo Device::Call::GetDvfsInfo(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   return ResultOf::GetDvfsInfo(std::move(_client_end), std::move(power_domain));
 }
 
 template <>
-Device::UnownedResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetDvfsInfoRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetDvfsInfoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -251,14 +251,14 @@ Device::UnownedResultOf::GetDvfsInfo_Impl<Device::GetDvfsInfoResponse>::GetDvfsI
 }
 
 Device::UnownedResultOf::GetDvfsInfo Device::SyncClient::GetDvfsInfo(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetDvfsInfo(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(power_domain), std::move(_response_buffer));
+  return UnownedResultOf::GetDvfsInfo(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(power_domain), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetDvfsInfo Device::Call::GetDvfsInfo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDvfsInfo Device::Call::GetDvfsInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDvfsInfo(std::move(_client_end), std::move(_request_buffer), std::move(power_domain), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetDvfsInfoResponse> Device::InPlace::GetDvfsInfo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetDvfsInfoRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetDvfsInfoResponse> Device::InPlace::GetDvfsInfo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetDvfsInfoRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::GetDvfsInfoRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -275,7 +275,7 @@ Device::UnownedResultOf::GetDvfsInfo Device::Call::GetDvfsInfo(zx::unowned_chann
 }
 
 template <>
-Device::ResultOf::GetTemperatureCelsius_Impl<Device::GetTemperatureCelsiusResponse>::GetTemperatureCelsius_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetTemperatureCelsius_Impl<Device::GetTemperatureCelsiusResponse>::GetTemperatureCelsius_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTemperatureCelsiusRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -288,15 +288,15 @@ Device::ResultOf::GetTemperatureCelsius_Impl<Device::GetTemperatureCelsiusRespon
 }
 
 Device::ResultOf::GetTemperatureCelsius Device::SyncClient::GetTemperatureCelsius() {
-  return ResultOf::GetTemperatureCelsius(zx::unowned_channel(this->channel_));
+    return ResultOf::GetTemperatureCelsius(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetTemperatureCelsius Device::Call::GetTemperatureCelsius(zx::unowned_channel _client_end) {
+Device::ResultOf::GetTemperatureCelsius Device::Call::GetTemperatureCelsius(::zx::unowned_channel _client_end) {
   return ResultOf::GetTemperatureCelsius(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetTemperatureCelsius_Impl<Device::GetTemperatureCelsiusResponse>::GetTemperatureCelsius_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetTemperatureCelsius_Impl<Device::GetTemperatureCelsiusResponse>::GetTemperatureCelsius_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetTemperatureCelsiusRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetTemperatureCelsiusRequest::PrimarySize);
@@ -307,14 +307,14 @@ Device::UnownedResultOf::GetTemperatureCelsius_Impl<Device::GetTemperatureCelsiu
 }
 
 Device::UnownedResultOf::GetTemperatureCelsius Device::SyncClient::GetTemperatureCelsius(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetTemperatureCelsius(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetTemperatureCelsius(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetTemperatureCelsius Device::Call::GetTemperatureCelsius(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetTemperatureCelsius Device::Call::GetTemperatureCelsius(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetTemperatureCelsius(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetTemperatureCelsiusResponse> Device::InPlace::GetTemperatureCelsius(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetTemperatureCelsiusResponse> Device::InPlace::GetTemperatureCelsius(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetTemperatureCelsiusRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -336,7 +336,7 @@ Device::UnownedResultOf::GetTemperatureCelsius Device::Call::GetTemperatureCelsi
 }
 
 template <>
-Device::ResultOf::GetStateChangeEvent_Impl<Device::GetStateChangeEventResponse>::GetStateChangeEvent_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetStateChangeEvent_Impl<Device::GetStateChangeEventResponse>::GetStateChangeEvent_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateChangeEventRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -349,15 +349,15 @@ Device::ResultOf::GetStateChangeEvent_Impl<Device::GetStateChangeEventResponse>:
 }
 
 Device::ResultOf::GetStateChangeEvent Device::SyncClient::GetStateChangeEvent() {
-  return ResultOf::GetStateChangeEvent(zx::unowned_channel(this->channel_));
+    return ResultOf::GetStateChangeEvent(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetStateChangeEvent Device::Call::GetStateChangeEvent(zx::unowned_channel _client_end) {
+Device::ResultOf::GetStateChangeEvent Device::Call::GetStateChangeEvent(::zx::unowned_channel _client_end) {
   return ResultOf::GetStateChangeEvent(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetStateChangeEvent_Impl<Device::GetStateChangeEventResponse>::GetStateChangeEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetStateChangeEvent_Impl<Device::GetStateChangeEventResponse>::GetStateChangeEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetStateChangeEventRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetStateChangeEventRequest::PrimarySize);
@@ -368,14 +368,14 @@ Device::UnownedResultOf::GetStateChangeEvent_Impl<Device::GetStateChangeEventRes
 }
 
 Device::UnownedResultOf::GetStateChangeEvent Device::SyncClient::GetStateChangeEvent(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetStateChangeEvent(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetStateChangeEvent(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetStateChangeEvent Device::Call::GetStateChangeEvent(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetStateChangeEvent Device::Call::GetStateChangeEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetStateChangeEvent(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetStateChangeEventResponse> Device::InPlace::GetStateChangeEvent(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetStateChangeEventResponse> Device::InPlace::GetStateChangeEvent(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetStateChangeEventRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -397,7 +397,7 @@ Device::UnownedResultOf::GetStateChangeEvent Device::Call::GetStateChangeEvent(z
 }
 
 template <>
-Device::ResultOf::GetStateChangePort_Impl<Device::GetStateChangePortResponse>::GetStateChangePort_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetStateChangePort_Impl<Device::GetStateChangePortResponse>::GetStateChangePort_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateChangePortRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -410,15 +410,15 @@ Device::ResultOf::GetStateChangePort_Impl<Device::GetStateChangePortResponse>::G
 }
 
 Device::ResultOf::GetStateChangePort Device::SyncClient::GetStateChangePort() {
-  return ResultOf::GetStateChangePort(zx::unowned_channel(this->channel_));
+    return ResultOf::GetStateChangePort(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetStateChangePort Device::Call::GetStateChangePort(zx::unowned_channel _client_end) {
+Device::ResultOf::GetStateChangePort Device::Call::GetStateChangePort(::zx::unowned_channel _client_end) {
   return ResultOf::GetStateChangePort(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetStateChangePort_Impl<Device::GetStateChangePortResponse>::GetStateChangePort_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetStateChangePort_Impl<Device::GetStateChangePortResponse>::GetStateChangePort_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetStateChangePortRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetStateChangePortRequest::PrimarySize);
@@ -429,14 +429,14 @@ Device::UnownedResultOf::GetStateChangePort_Impl<Device::GetStateChangePortRespo
 }
 
 Device::UnownedResultOf::GetStateChangePort Device::SyncClient::GetStateChangePort(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetStateChangePort(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetStateChangePort(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetStateChangePort Device::Call::GetStateChangePort(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetStateChangePort Device::Call::GetStateChangePort(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetStateChangePort(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetStateChangePortResponse> Device::InPlace::GetStateChangePort(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetStateChangePortResponse> Device::InPlace::GetStateChangePort(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetStateChangePortRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -458,7 +458,7 @@ Device::UnownedResultOf::GetStateChangePort Device::Call::GetStateChangePort(zx:
 }
 
 template <>
-Device::ResultOf::SetTripCelsius_Impl<Device::SetTripCelsiusResponse>::SetTripCelsius_Impl(zx::unowned_channel _client_end, uint32_t id, float temp) {
+Device::ResultOf::SetTripCelsius_Impl<Device::SetTripCelsiusResponse>::SetTripCelsius_Impl(::zx::unowned_channel _client_end, uint32_t id, float temp) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetTripCelsiusRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -474,15 +474,15 @@ Device::ResultOf::SetTripCelsius_Impl<Device::SetTripCelsiusResponse>::SetTripCe
 }
 
 Device::ResultOf::SetTripCelsius Device::SyncClient::SetTripCelsius(uint32_t id, float temp) {
-  return ResultOf::SetTripCelsius(zx::unowned_channel(this->channel_), std::move(id), std::move(temp));
+    return ResultOf::SetTripCelsius(::zx::unowned_channel(this->channel_), std::move(id), std::move(temp));
 }
 
-Device::ResultOf::SetTripCelsius Device::Call::SetTripCelsius(zx::unowned_channel _client_end, uint32_t id, float temp) {
+Device::ResultOf::SetTripCelsius Device::Call::SetTripCelsius(::zx::unowned_channel _client_end, uint32_t id, float temp) {
   return ResultOf::SetTripCelsius(std::move(_client_end), std::move(id), std::move(temp));
 }
 
 template <>
-Device::UnownedResultOf::SetTripCelsius_Impl<Device::SetTripCelsiusResponse>::SetTripCelsius_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id, float temp, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetTripCelsius_Impl<Device::SetTripCelsiusResponse>::SetTripCelsius_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id, float temp, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetTripCelsiusRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetTripCelsiusResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -498,14 +498,14 @@ Device::UnownedResultOf::SetTripCelsius_Impl<Device::SetTripCelsiusResponse>::Se
 }
 
 Device::UnownedResultOf::SetTripCelsius Device::SyncClient::SetTripCelsius(::fidl::BytePart _request_buffer, uint32_t id, float temp, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetTripCelsius(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(id), std::move(temp), std::move(_response_buffer));
+  return UnownedResultOf::SetTripCelsius(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(id), std::move(temp), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetTripCelsius Device::Call::SetTripCelsius(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id, float temp, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetTripCelsius Device::Call::SetTripCelsius(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id, float temp, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetTripCelsius(std::move(_client_end), std::move(_request_buffer), std::move(id), std::move(temp), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::SetTripCelsiusResponse> Device::InPlace::SetTripCelsius(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTripCelsiusRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::SetTripCelsiusResponse> Device::InPlace::SetTripCelsius(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTripCelsiusRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::SetTripCelsiusRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -522,7 +522,7 @@ Device::UnownedResultOf::SetTripCelsius Device::Call::SetTripCelsius(zx::unowned
 }
 
 template <>
-Device::ResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPointResponse>::GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
+Device::ResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPointResponse>::GetDvfsOperatingPoint_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDvfsOperatingPointRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -537,15 +537,15 @@ Device::ResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPointRespon
 }
 
 Device::ResultOf::GetDvfsOperatingPoint Device::SyncClient::GetDvfsOperatingPoint(::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
-  return ResultOf::GetDvfsOperatingPoint(zx::unowned_channel(this->channel_), std::move(power_domain));
+    return ResultOf::GetDvfsOperatingPoint(::zx::unowned_channel(this->channel_), std::move(power_domain));
 }
 
-Device::ResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
+Device::ResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoint(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   return ResultOf::GetDvfsOperatingPoint(std::move(_client_end), std::move(power_domain));
 }
 
 template <>
-Device::UnownedResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPointResponse>::GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPointResponse>::GetDvfsOperatingPoint_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetDvfsOperatingPointRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetDvfsOperatingPointResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -560,14 +560,14 @@ Device::UnownedResultOf::GetDvfsOperatingPoint_Impl<Device::GetDvfsOperatingPoin
 }
 
 Device::UnownedResultOf::GetDvfsOperatingPoint Device::SyncClient::GetDvfsOperatingPoint(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetDvfsOperatingPoint(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(power_domain), std::move(_response_buffer));
+  return UnownedResultOf::GetDvfsOperatingPoint(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(power_domain), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoint(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDvfsOperatingPoint(std::move(_client_end), std::move(_request_buffer), std::move(power_domain), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetDvfsOperatingPointResponse> Device::InPlace::GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetDvfsOperatingPointRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetDvfsOperatingPointResponse> Device::InPlace::GetDvfsOperatingPoint(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetDvfsOperatingPointRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::GetDvfsOperatingPointRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -584,7 +584,7 @@ Device::UnownedResultOf::GetDvfsOperatingPoint Device::Call::GetDvfsOperatingPoi
 }
 
 template <>
-Device::ResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPointResponse>::SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
+Device::ResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPointResponse>::SetDvfsOperatingPoint_Impl(::zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetDvfsOperatingPointRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -600,15 +600,15 @@ Device::ResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPointRespon
 }
 
 Device::ResultOf::SetDvfsOperatingPoint Device::SyncClient::SetDvfsOperatingPoint(uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
-  return ResultOf::SetDvfsOperatingPoint(zx::unowned_channel(this->channel_), std::move(op_idx), std::move(power_domain));
+    return ResultOf::SetDvfsOperatingPoint(::zx::unowned_channel(this->channel_), std::move(op_idx), std::move(power_domain));
 }
 
-Device::ResultOf::SetDvfsOperatingPoint Device::Call::SetDvfsOperatingPoint(zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
+Device::ResultOf::SetDvfsOperatingPoint Device::Call::SetDvfsOperatingPoint(::zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain) {
   return ResultOf::SetDvfsOperatingPoint(std::move(_client_end), std::move(op_idx), std::move(power_domain));
 }
 
 template <>
-Device::UnownedResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPointResponse>::SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPointResponse>::SetDvfsOperatingPoint_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetDvfsOperatingPointRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetDvfsOperatingPointResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -624,14 +624,14 @@ Device::UnownedResultOf::SetDvfsOperatingPoint_Impl<Device::SetDvfsOperatingPoin
 }
 
 Device::UnownedResultOf::SetDvfsOperatingPoint Device::SyncClient::SetDvfsOperatingPoint(::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetDvfsOperatingPoint(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op_idx), std::move(power_domain), std::move(_response_buffer));
+  return UnownedResultOf::SetDvfsOperatingPoint(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op_idx), std::move(power_domain), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetDvfsOperatingPoint Device::Call::SetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetDvfsOperatingPoint Device::Call::SetDvfsOperatingPoint(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetDvfsOperatingPoint(std::move(_client_end), std::move(_request_buffer), std::move(op_idx), std::move(power_domain), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::SetDvfsOperatingPointResponse> Device::InPlace::SetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDvfsOperatingPointRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::SetDvfsOperatingPointResponse> Device::InPlace::SetDvfsOperatingPoint(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDvfsOperatingPointRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::SetDvfsOperatingPointRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -648,7 +648,7 @@ Device::UnownedResultOf::SetDvfsOperatingPoint Device::Call::SetDvfsOperatingPoi
 }
 
 template <>
-Device::ResultOf::GetFanLevel_Impl<Device::GetFanLevelResponse>::GetFanLevel_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetFanLevel_Impl<Device::GetFanLevelResponse>::GetFanLevel_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFanLevelRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -661,15 +661,15 @@ Device::ResultOf::GetFanLevel_Impl<Device::GetFanLevelResponse>::GetFanLevel_Imp
 }
 
 Device::ResultOf::GetFanLevel Device::SyncClient::GetFanLevel() {
-  return ResultOf::GetFanLevel(zx::unowned_channel(this->channel_));
+    return ResultOf::GetFanLevel(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetFanLevel Device::Call::GetFanLevel(zx::unowned_channel _client_end) {
+Device::ResultOf::GetFanLevel Device::Call::GetFanLevel(::zx::unowned_channel _client_end) {
   return ResultOf::GetFanLevel(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetFanLevel_Impl<Device::GetFanLevelResponse>::GetFanLevel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetFanLevel_Impl<Device::GetFanLevelResponse>::GetFanLevel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFanLevelRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetFanLevelRequest::PrimarySize);
@@ -680,14 +680,14 @@ Device::UnownedResultOf::GetFanLevel_Impl<Device::GetFanLevelResponse>::GetFanLe
 }
 
 Device::UnownedResultOf::GetFanLevel Device::SyncClient::GetFanLevel(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetFanLevel(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetFanLevel(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetFanLevel Device::Call::GetFanLevel(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetFanLevel Device::Call::GetFanLevel(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetFanLevel(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetFanLevelResponse> Device::InPlace::GetFanLevel(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetFanLevelResponse> Device::InPlace::GetFanLevel(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetFanLevelRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -709,7 +709,7 @@ Device::UnownedResultOf::GetFanLevel Device::Call::GetFanLevel(zx::unowned_chann
 }
 
 template <>
-Device::ResultOf::SetFanLevel_Impl<Device::SetFanLevelResponse>::SetFanLevel_Impl(zx::unowned_channel _client_end, uint32_t fan_level) {
+Device::ResultOf::SetFanLevel_Impl<Device::SetFanLevelResponse>::SetFanLevel_Impl(::zx::unowned_channel _client_end, uint32_t fan_level) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetFanLevelRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -724,15 +724,15 @@ Device::ResultOf::SetFanLevel_Impl<Device::SetFanLevelResponse>::SetFanLevel_Imp
 }
 
 Device::ResultOf::SetFanLevel Device::SyncClient::SetFanLevel(uint32_t fan_level) {
-  return ResultOf::SetFanLevel(zx::unowned_channel(this->channel_), std::move(fan_level));
+    return ResultOf::SetFanLevel(::zx::unowned_channel(this->channel_), std::move(fan_level));
 }
 
-Device::ResultOf::SetFanLevel Device::Call::SetFanLevel(zx::unowned_channel _client_end, uint32_t fan_level) {
+Device::ResultOf::SetFanLevel Device::Call::SetFanLevel(::zx::unowned_channel _client_end, uint32_t fan_level) {
   return ResultOf::SetFanLevel(std::move(_client_end), std::move(fan_level));
 }
 
 template <>
-Device::UnownedResultOf::SetFanLevel_Impl<Device::SetFanLevelResponse>::SetFanLevel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t fan_level, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetFanLevel_Impl<Device::SetFanLevelResponse>::SetFanLevel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t fan_level, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetFanLevelRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetFanLevelResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -747,14 +747,14 @@ Device::UnownedResultOf::SetFanLevel_Impl<Device::SetFanLevelResponse>::SetFanLe
 }
 
 Device::UnownedResultOf::SetFanLevel Device::SyncClient::SetFanLevel(::fidl::BytePart _request_buffer, uint32_t fan_level, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetFanLevel(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(fan_level), std::move(_response_buffer));
+  return UnownedResultOf::SetFanLevel(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(fan_level), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetFanLevel Device::Call::SetFanLevel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t fan_level, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetFanLevel Device::Call::SetFanLevel(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t fan_level, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetFanLevel(std::move(_client_end), std::move(_request_buffer), std::move(fan_level), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::SetFanLevelResponse> Device::InPlace::SetFanLevel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetFanLevelRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::SetFanLevelResponse> Device::InPlace::SetFanLevel(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetFanLevelRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::SetFanLevelRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

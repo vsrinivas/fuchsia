@@ -222,7 +222,7 @@ class NameProvider final {
     class GetDeviceName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDeviceName_Impl(zx::unowned_channel _client_end);
+      GetDeviceName_Impl(::zx::unowned_channel _client_end);
       ~GetDeviceName_Impl() = default;
       GetDeviceName_Impl(GetDeviceName_Impl&& other) = default;
       GetDeviceName_Impl& operator=(GetDeviceName_Impl&& other) = default;
@@ -248,7 +248,7 @@ class NameProvider final {
     class GetDeviceName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDeviceName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetDeviceName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetDeviceName_Impl() = default;
       GetDeviceName_Impl(GetDeviceName_Impl&& other) = default;
       GetDeviceName_Impl& operator=(GetDeviceName_Impl&& other) = default;
@@ -295,11 +295,11 @@ class NameProvider final {
 
     // Return the name of this Fuchsia device.
     // Allocates 312 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end);
+    static ResultOf::GetDeviceName GetDeviceName(::zx::unowned_channel _client_end);
 
     // Return the name of this Fuchsia device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDeviceName GetDeviceName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -310,7 +310,7 @@ class NameProvider final {
    public:
 
     // Return the name of this Fuchsia device.
-    static ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -2134,7 +2134,7 @@ class Controller final {
     class Bind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Bind_Impl(zx::unowned_channel _client_end, ::fidl::StringView driver);
+      Bind_Impl(::zx::unowned_channel _client_end, ::fidl::StringView driver);
       ~Bind_Impl() = default;
       Bind_Impl(Bind_Impl&& other) = default;
       Bind_Impl& operator=(Bind_Impl&& other) = default;
@@ -2150,7 +2150,7 @@ class Controller final {
     class Rebind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Rebind_Impl(zx::unowned_channel _client_end, ::fidl::StringView driver);
+      Rebind_Impl(::zx::unowned_channel _client_end, ::fidl::StringView driver);
       ~Rebind_Impl() = default;
       Rebind_Impl(Rebind_Impl&& other) = default;
       Rebind_Impl& operator=(Rebind_Impl&& other) = default;
@@ -2166,7 +2166,7 @@ class Controller final {
     class ScheduleUnbind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ScheduleUnbind_Impl(zx::unowned_channel _client_end);
+      ScheduleUnbind_Impl(::zx::unowned_channel _client_end);
       ~ScheduleUnbind_Impl() = default;
       ScheduleUnbind_Impl(ScheduleUnbind_Impl&& other) = default;
       ScheduleUnbind_Impl& operator=(ScheduleUnbind_Impl&& other) = default;
@@ -2182,7 +2182,7 @@ class Controller final {
     class GetDriverName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDriverName_Impl(zx::unowned_channel _client_end);
+      GetDriverName_Impl(::zx::unowned_channel _client_end);
       ~GetDriverName_Impl() = default;
       GetDriverName_Impl(GetDriverName_Impl&& other) = default;
       GetDriverName_Impl& operator=(GetDriverName_Impl&& other) = default;
@@ -2198,7 +2198,7 @@ class Controller final {
     class GetDeviceName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDeviceName_Impl(zx::unowned_channel _client_end);
+      GetDeviceName_Impl(::zx::unowned_channel _client_end);
       ~GetDeviceName_Impl() = default;
       GetDeviceName_Impl(GetDeviceName_Impl&& other) = default;
       GetDeviceName_Impl& operator=(GetDeviceName_Impl&& other) = default;
@@ -2214,7 +2214,7 @@ class Controller final {
     class GetTopologicalPath_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetTopologicalPath_Impl(zx::unowned_channel _client_end);
+      GetTopologicalPath_Impl(::zx::unowned_channel _client_end);
       ~GetTopologicalPath_Impl() = default;
       GetTopologicalPath_Impl(GetTopologicalPath_Impl&& other) = default;
       GetTopologicalPath_Impl& operator=(GetTopologicalPath_Impl&& other) = default;
@@ -2230,7 +2230,7 @@ class Controller final {
     class GetEventHandle_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetEventHandle_Impl(zx::unowned_channel _client_end);
+      GetEventHandle_Impl(::zx::unowned_channel _client_end);
       ~GetEventHandle_Impl() = default;
       GetEventHandle_Impl(GetEventHandle_Impl&& other) = default;
       GetEventHandle_Impl& operator=(GetEventHandle_Impl&& other) = default;
@@ -2246,7 +2246,7 @@ class Controller final {
     class GetDriverLogFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDriverLogFlags_Impl(zx::unowned_channel _client_end);
+      GetDriverLogFlags_Impl(::zx::unowned_channel _client_end);
       ~GetDriverLogFlags_Impl() = default;
       GetDriverLogFlags_Impl(GetDriverLogFlags_Impl&& other) = default;
       GetDriverLogFlags_Impl& operator=(GetDriverLogFlags_Impl&& other) = default;
@@ -2262,7 +2262,7 @@ class Controller final {
     class SetDriverLogFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetDriverLogFlags_Impl(zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags);
+      SetDriverLogFlags_Impl(::zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags);
       ~SetDriverLogFlags_Impl() = default;
       SetDriverLogFlags_Impl(SetDriverLogFlags_Impl&& other) = default;
       SetDriverLogFlags_Impl& operator=(SetDriverLogFlags_Impl&& other) = default;
@@ -2278,7 +2278,7 @@ class Controller final {
     class DebugSuspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      DebugSuspend_Impl(zx::unowned_channel _client_end);
+      DebugSuspend_Impl(::zx::unowned_channel _client_end);
       ~DebugSuspend_Impl() = default;
       DebugSuspend_Impl(DebugSuspend_Impl&& other) = default;
       DebugSuspend_Impl& operator=(DebugSuspend_Impl&& other) = default;
@@ -2294,7 +2294,7 @@ class Controller final {
     class DebugResume_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      DebugResume_Impl(zx::unowned_channel _client_end);
+      DebugResume_Impl(::zx::unowned_channel _client_end);
       ~DebugResume_Impl() = default;
       DebugResume_Impl(DebugResume_Impl&& other) = default;
       DebugResume_Impl& operator=(DebugResume_Impl&& other) = default;
@@ -2310,7 +2310,7 @@ class Controller final {
     class RunCompatibilityTests_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      RunCompatibilityTests_Impl(zx::unowned_channel _client_end, int64_t hook_wait_time);
+      RunCompatibilityTests_Impl(::zx::unowned_channel _client_end, int64_t hook_wait_time);
       ~RunCompatibilityTests_Impl() = default;
       RunCompatibilityTests_Impl(RunCompatibilityTests_Impl&& other) = default;
       RunCompatibilityTests_Impl& operator=(RunCompatibilityTests_Impl&& other) = default;
@@ -2326,7 +2326,7 @@ class Controller final {
     class GetDevicePowerCaps_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDevicePowerCaps_Impl(zx::unowned_channel _client_end);
+      GetDevicePowerCaps_Impl(::zx::unowned_channel _client_end);
       ~GetDevicePowerCaps_Impl() = default;
       GetDevicePowerCaps_Impl(GetDevicePowerCaps_Impl&& other) = default;
       GetDevicePowerCaps_Impl& operator=(GetDevicePowerCaps_Impl&& other) = default;
@@ -2342,7 +2342,7 @@ class Controller final {
     class GetDevicePerformanceStates_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDevicePerformanceStates_Impl(zx::unowned_channel _client_end);
+      GetDevicePerformanceStates_Impl(::zx::unowned_channel _client_end);
       ~GetDevicePerformanceStates_Impl() = default;
       GetDevicePerformanceStates_Impl(GetDevicePerformanceStates_Impl&& other) = default;
       GetDevicePerformanceStates_Impl& operator=(GetDevicePerformanceStates_Impl&& other) = default;
@@ -2358,7 +2358,7 @@ class Controller final {
     class UpdatePowerStateMapping_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping);
+      UpdatePowerStateMapping_Impl(::zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping);
       ~UpdatePowerStateMapping_Impl() = default;
       UpdatePowerStateMapping_Impl(UpdatePowerStateMapping_Impl&& other) = default;
       UpdatePowerStateMapping_Impl& operator=(UpdatePowerStateMapping_Impl&& other) = default;
@@ -2374,7 +2374,7 @@ class Controller final {
     class GetPowerStateMapping_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetPowerStateMapping_Impl(zx::unowned_channel _client_end);
+      GetPowerStateMapping_Impl(::zx::unowned_channel _client_end);
       ~GetPowerStateMapping_Impl() = default;
       GetPowerStateMapping_Impl(GetPowerStateMapping_Impl&& other) = default;
       GetPowerStateMapping_Impl& operator=(GetPowerStateMapping_Impl&& other) = default;
@@ -2390,7 +2390,7 @@ class Controller final {
     class Suspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Suspend_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
+      Suspend_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
       ~Suspend_Impl() = default;
       Suspend_Impl(Suspend_Impl&& other) = default;
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
@@ -2406,7 +2406,7 @@ class Controller final {
     class Resume_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Resume_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
+      Resume_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
       ~Resume_Impl() = default;
       Resume_Impl(Resume_Impl&& other) = default;
       Resume_Impl& operator=(Resume_Impl&& other) = default;
@@ -2422,7 +2422,7 @@ class Controller final {
     class SetPerformanceState_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetPerformanceState_Impl(zx::unowned_channel _client_end, uint32_t requested_state);
+      SetPerformanceState_Impl(::zx::unowned_channel _client_end, uint32_t requested_state);
       ~SetPerformanceState_Impl() = default;
       SetPerformanceState_Impl(SetPerformanceState_Impl&& other) = default;
       SetPerformanceState_Impl& operator=(SetPerformanceState_Impl&& other) = default;
@@ -2438,7 +2438,7 @@ class Controller final {
     class ConfigureAutoSuspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ConfigureAutoSuspend_Impl(zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state);
+      ConfigureAutoSuspend_Impl(::zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state);
       ~ConfigureAutoSuspend_Impl() = default;
       ConfigureAutoSuspend_Impl(ConfigureAutoSuspend_Impl&& other) = default;
       ConfigureAutoSuspend_Impl& operator=(ConfigureAutoSuspend_Impl&& other) = default;
@@ -2483,7 +2483,7 @@ class Controller final {
     class Bind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Bind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
+      Bind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
       ~Bind_Impl() = default;
       Bind_Impl(Bind_Impl&& other) = default;
       Bind_Impl& operator=(Bind_Impl&& other) = default;
@@ -2499,7 +2499,7 @@ class Controller final {
     class Rebind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Rebind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
+      Rebind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
       ~Rebind_Impl() = default;
       Rebind_Impl(Rebind_Impl&& other) = default;
       Rebind_Impl& operator=(Rebind_Impl&& other) = default;
@@ -2515,7 +2515,7 @@ class Controller final {
     class ScheduleUnbind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ScheduleUnbind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ScheduleUnbind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~ScheduleUnbind_Impl() = default;
       ScheduleUnbind_Impl(ScheduleUnbind_Impl&& other) = default;
       ScheduleUnbind_Impl& operator=(ScheduleUnbind_Impl&& other) = default;
@@ -2531,7 +2531,7 @@ class Controller final {
     class GetDriverName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDriverName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetDriverName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetDriverName_Impl() = default;
       GetDriverName_Impl(GetDriverName_Impl&& other) = default;
       GetDriverName_Impl& operator=(GetDriverName_Impl&& other) = default;
@@ -2547,7 +2547,7 @@ class Controller final {
     class GetDeviceName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDeviceName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetDeviceName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetDeviceName_Impl() = default;
       GetDeviceName_Impl(GetDeviceName_Impl&& other) = default;
       GetDeviceName_Impl& operator=(GetDeviceName_Impl&& other) = default;
@@ -2563,7 +2563,7 @@ class Controller final {
     class GetTopologicalPath_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetTopologicalPath_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetTopologicalPath_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetTopologicalPath_Impl() = default;
       GetTopologicalPath_Impl(GetTopologicalPath_Impl&& other) = default;
       GetTopologicalPath_Impl& operator=(GetTopologicalPath_Impl&& other) = default;
@@ -2579,7 +2579,7 @@ class Controller final {
     class GetEventHandle_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetEventHandle_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetEventHandle_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetEventHandle_Impl() = default;
       GetEventHandle_Impl(GetEventHandle_Impl&& other) = default;
       GetEventHandle_Impl& operator=(GetEventHandle_Impl&& other) = default;
@@ -2595,7 +2595,7 @@ class Controller final {
     class GetDriverLogFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDriverLogFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetDriverLogFlags_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetDriverLogFlags_Impl() = default;
       GetDriverLogFlags_Impl(GetDriverLogFlags_Impl&& other) = default;
       GetDriverLogFlags_Impl& operator=(GetDriverLogFlags_Impl&& other) = default;
@@ -2611,7 +2611,7 @@ class Controller final {
     class SetDriverLogFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetDriverLogFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer);
+      SetDriverLogFlags_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer);
       ~SetDriverLogFlags_Impl() = default;
       SetDriverLogFlags_Impl(SetDriverLogFlags_Impl&& other) = default;
       SetDriverLogFlags_Impl& operator=(SetDriverLogFlags_Impl&& other) = default;
@@ -2627,7 +2627,7 @@ class Controller final {
     class DebugSuspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      DebugSuspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      DebugSuspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~DebugSuspend_Impl() = default;
       DebugSuspend_Impl(DebugSuspend_Impl&& other) = default;
       DebugSuspend_Impl& operator=(DebugSuspend_Impl&& other) = default;
@@ -2643,7 +2643,7 @@ class Controller final {
     class DebugResume_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      DebugResume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      DebugResume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~DebugResume_Impl() = default;
       DebugResume_Impl(DebugResume_Impl&& other) = default;
       DebugResume_Impl& operator=(DebugResume_Impl&& other) = default;
@@ -2659,7 +2659,7 @@ class Controller final {
     class RunCompatibilityTests_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      RunCompatibilityTests_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer);
+      RunCompatibilityTests_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer);
       ~RunCompatibilityTests_Impl() = default;
       RunCompatibilityTests_Impl(RunCompatibilityTests_Impl&& other) = default;
       RunCompatibilityTests_Impl& operator=(RunCompatibilityTests_Impl&& other) = default;
@@ -2675,7 +2675,7 @@ class Controller final {
     class GetDevicePowerCaps_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDevicePowerCaps_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetDevicePowerCaps_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetDevicePowerCaps_Impl() = default;
       GetDevicePowerCaps_Impl(GetDevicePowerCaps_Impl&& other) = default;
       GetDevicePowerCaps_Impl& operator=(GetDevicePowerCaps_Impl&& other) = default;
@@ -2691,7 +2691,7 @@ class Controller final {
     class GetDevicePerformanceStates_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDevicePerformanceStates_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetDevicePerformanceStates_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetDevicePerformanceStates_Impl() = default;
       GetDevicePerformanceStates_Impl(GetDevicePerformanceStates_Impl&& other) = default;
       GetDevicePerformanceStates_Impl& operator=(GetDevicePerformanceStates_Impl&& other) = default;
@@ -2707,7 +2707,7 @@ class Controller final {
     class UpdatePowerStateMapping_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer);
+      UpdatePowerStateMapping_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer);
       ~UpdatePowerStateMapping_Impl() = default;
       UpdatePowerStateMapping_Impl(UpdatePowerStateMapping_Impl&& other) = default;
       UpdatePowerStateMapping_Impl& operator=(UpdatePowerStateMapping_Impl&& other) = default;
@@ -2723,7 +2723,7 @@ class Controller final {
     class GetPowerStateMapping_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetPowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetPowerStateMapping_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetPowerStateMapping_Impl() = default;
       GetPowerStateMapping_Impl(GetPowerStateMapping_Impl&& other) = default;
       GetPowerStateMapping_Impl& operator=(GetPowerStateMapping_Impl&& other) = default;
@@ -2739,7 +2739,7 @@ class Controller final {
     class Suspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+      Suspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
       ~Suspend_Impl() = default;
       Suspend_Impl(Suspend_Impl&& other) = default;
       Suspend_Impl& operator=(Suspend_Impl&& other) = default;
@@ -2755,7 +2755,7 @@ class Controller final {
     class Resume_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+      Resume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
       ~Resume_Impl() = default;
       Resume_Impl(Resume_Impl&& other) = default;
       Resume_Impl& operator=(Resume_Impl&& other) = default;
@@ -2771,7 +2771,7 @@ class Controller final {
     class SetPerformanceState_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetPerformanceState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer);
+      SetPerformanceState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer);
       ~SetPerformanceState_Impl() = default;
       SetPerformanceState_Impl(SetPerformanceState_Impl&& other) = default;
       SetPerformanceState_Impl& operator=(SetPerformanceState_Impl&& other) = default;
@@ -2787,7 +2787,7 @@ class Controller final {
     class ConfigureAutoSuspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ConfigureAutoSuspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer);
+      ConfigureAutoSuspend_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer);
       ~ConfigureAutoSuspend_Impl() = default;
       ConfigureAutoSuspend_Impl(ConfigureAutoSuspend_Impl&& other) = default;
       ConfigureAutoSuspend_Impl& operator=(ConfigureAutoSuspend_Impl&& other) = default;
@@ -3045,173 +3045,173 @@ class Controller final {
 
     // Attempt to bind the requested driver to this device
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::StringView driver);
+    static ResultOf::Bind Bind(::zx::unowned_channel _client_end, ::fidl::StringView driver);
 
     // Attempt to bind the requested driver to this device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Bind Bind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Bind Bind(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
 
     // This api will unbind all the children of this device and bind the
     // requested driver. If the driver is empty, it will autobind.
     // The Rebind will not return until the bind completes.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::Rebind Rebind(zx::unowned_channel _client_end, ::fidl::StringView driver);
+    static ResultOf::Rebind Rebind(::zx::unowned_channel _client_end, ::fidl::StringView driver);
 
     // This api will unbind all the children of this device and bind the
     // requested driver. If the driver is empty, it will autobind.
     // The Rebind will not return until the bind completes.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Rebind Rebind(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Rebind Rebind(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView driver, ::fidl::BytePart _response_buffer);
 
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ScheduleUnbind ScheduleUnbind(zx::unowned_channel _client_end);
+    static ResultOf::ScheduleUnbind ScheduleUnbind(::zx::unowned_channel _client_end);
 
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ScheduleUnbind ScheduleUnbind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ScheduleUnbind ScheduleUnbind(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Return the name of the driver managing this the device
     // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDriverName GetDriverName(zx::unowned_channel _client_end);
+    static ResultOf::GetDriverName GetDriverName(::zx::unowned_channel _client_end);
 
     // Return the name of the driver managing this the device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDriverName GetDriverName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDriverName GetDriverName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Return the name of the device
     // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end);
+    static ResultOf::GetDeviceName GetDeviceName(::zx::unowned_channel _client_end);
 
     // Return the name of the device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDeviceName GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDeviceName GetDeviceName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Return the topological path for this device
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetTopologicalPath GetTopologicalPath(zx::unowned_channel _client_end);
+    static ResultOf::GetTopologicalPath GetTopologicalPath(::zx::unowned_channel _client_end);
 
     // Return the topological path for this device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetTopologicalPath GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetTopologicalPath GetTopologicalPath(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetEventHandle GetEventHandle(zx::unowned_channel _client_end);
+    static ResultOf::GetEventHandle GetEventHandle(::zx::unowned_channel _client_end);
 
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetEventHandle GetEventHandle(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetEventHandle GetEventHandle(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Return the current logging flags for this device's driver
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDriverLogFlags GetDriverLogFlags(zx::unowned_channel _client_end);
+    static ResultOf::GetDriverLogFlags GetDriverLogFlags(::zx::unowned_channel _client_end);
 
     // Return the current logging flags for this device's driver
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDriverLogFlags GetDriverLogFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDriverLogFlags GetDriverLogFlags(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Set the logging flags for this device's driver.
     // Each set bit in `clear_flags` will be cleared in the log flags state.
     // Each set bit in `set_flags` will then be set in the log flags state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetDriverLogFlags SetDriverLogFlags(zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags);
+    static ResultOf::SetDriverLogFlags SetDriverLogFlags(::zx::unowned_channel _client_end, uint32_t clear_flags, uint32_t set_flags);
 
     // Set the logging flags for this device's driver.
     // Each set bit in `clear_flags` will be cleared in the log flags state.
     // Each set bit in `set_flags` will then be set in the log flags state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetDriverLogFlags SetDriverLogFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetDriverLogFlags SetDriverLogFlags(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t clear_flags, uint32_t set_flags, ::fidl::BytePart _response_buffer);
 
     // Debug command: execute the device's suspend hook
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::DebugSuspend DebugSuspend(zx::unowned_channel _client_end);
+    static ResultOf::DebugSuspend DebugSuspend(::zx::unowned_channel _client_end);
 
     // Debug command: execute the device's suspend hook
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::DebugSuspend DebugSuspend(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::DebugSuspend DebugSuspend(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Debug command: execute the device's resume hook
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::DebugResume DebugResume(zx::unowned_channel _client_end);
+    static ResultOf::DebugResume DebugResume(::zx::unowned_channel _client_end);
 
     // Debug command: execute the device's resume hook
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::DebugResume DebugResume(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::DebugResume DebugResume(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Runs compatibility tests for the driver that binds to this device.
     // The |hook_wait_time| is the time that the driver expects to take for
     // each device hook in nanoseconds.
     // Returns whether the driver passed the compatibility check.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::RunCompatibilityTests RunCompatibilityTests(zx::unowned_channel _client_end, int64_t hook_wait_time);
+    static ResultOf::RunCompatibilityTests RunCompatibilityTests(::zx::unowned_channel _client_end, int64_t hook_wait_time);
 
     // Runs compatibility tests for the driver that binds to this device.
     // The |hook_wait_time| is the time that the driver expects to take for
     // each device hook in nanoseconds.
     // Returns whether the driver passed the compatibility check.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RunCompatibilityTests RunCompatibilityTests(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::RunCompatibilityTests RunCompatibilityTests(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t hook_wait_time, ::fidl::BytePart _response_buffer);
 
     // Gets the device power capabilities. Used by the system wide power manager
     // to manage power for this device.
     // Allocates 160 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDevicePowerCaps GetDevicePowerCaps(zx::unowned_channel _client_end);
+    static ResultOf::GetDevicePowerCaps GetDevicePowerCaps(::zx::unowned_channel _client_end);
 
     // Gets the device power capabilities. Used by the system wide power manager
     // to manage power for this device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDevicePowerCaps GetDevicePowerCaps(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDevicePowerCaps GetDevicePowerCaps(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Gets the device performance states. Used by the system wide power manager
     // to manage power for this device.
     // Allocates 520 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDevicePerformanceStates GetDevicePerformanceStates(zx::unowned_channel _client_end);
+    static ResultOf::GetDevicePerformanceStates GetDevicePerformanceStates(::zx::unowned_channel _client_end);
 
     // Gets the device performance states. Used by the system wide power manager
     // to manage power for this device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDevicePerformanceStates GetDevicePerformanceStates(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDevicePerformanceStates GetDevicePerformanceStates(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
     // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping);
+    static ResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(::zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping);
 
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping, ::fidl::BytePart _response_buffer);
 
     // Get the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device.
     // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetPowerStateMapping GetPowerStateMapping(zx::unowned_channel _client_end);
+    static ResultOf::GetPowerStateMapping GetPowerStateMapping(::zx::unowned_channel _client_end);
 
     // Get the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetPowerStateMapping GetPowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetPowerStateMapping GetPowerStateMapping(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
     // state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
+    static ResultOf::Suspend Suspend(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
 
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
     // state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Suspend Suspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
     // Transition this device from a sleep state to a working state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Resume Resume(zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
+    static ResultOf::Resume Resume(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
 
     // Transition this device from a sleep state to a working state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Resume Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Resume Resume(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
     // Set the performance state of this device to the requested performance state. This is only
     // called for the current device and none of the descendants are aware of the state
@@ -3222,7 +3222,7 @@ class Controller final {
     // device transitions to working state.
     // On failure, the out_state will have the state that the device can go into.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetPerformanceState SetPerformanceState(zx::unowned_channel _client_end, uint32_t requested_state);
+    static ResultOf::SetPerformanceState SetPerformanceState(::zx::unowned_channel _client_end, uint32_t requested_state);
 
     // Set the performance state of this device to the requested performance state. This is only
     // called for the current device and none of the descendants are aware of the state
@@ -3233,15 +3233,15 @@ class Controller final {
     // device transitions to working state.
     // On failure, the out_state will have the state that the device can go into.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetPerformanceState SetPerformanceState(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetPerformanceState SetPerformanceState(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t requested_state, ::fidl::BytePart _response_buffer);
 
     // Configure autosuspend of device to this deepest sleep state.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ConfigureAutoSuspend ConfigureAutoSuspend(zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state);
+    static ResultOf::ConfigureAutoSuspend ConfigureAutoSuspend(::zx::unowned_channel _client_end, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state);
 
     // Configure autosuspend of device to this deepest sleep state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ConfigureAutoSuspend ConfigureAutoSuspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ConfigureAutoSuspend ConfigureAutoSuspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable, ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -3252,71 +3252,71 @@ class Controller final {
    public:
 
     // Attempt to bind the requested driver to this device
-    static ::fidl::DecodeResult<BindResponse> Bind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<BindResponse> Bind(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<BindRequest> params, ::fidl::BytePart response_buffer);
 
     // This api will unbind all the children of this device and bind the
     // requested driver. If the driver is empty, it will autobind.
     // The Rebind will not return until the bind completes.
-    static ::fidl::DecodeResult<RebindResponse> Rebind(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RebindRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RebindResponse> Rebind(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RebindRequest> params, ::fidl::BytePart response_buffer);
 
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
-    static ::fidl::DecodeResult<ScheduleUnbindResponse> ScheduleUnbind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ScheduleUnbindResponse> ScheduleUnbind(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Return the name of the driver managing this the device
-    static ::fidl::DecodeResult<GetDriverNameResponse> GetDriverName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDriverNameResponse> GetDriverName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Return the name of the device
-    static ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDeviceNameResponse> GetDeviceName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Return the topological path for this device
-    static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
-    static ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Return the current logging flags for this device's driver
-    static ::fidl::DecodeResult<GetDriverLogFlagsResponse> GetDriverLogFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDriverLogFlagsResponse> GetDriverLogFlags(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Set the logging flags for this device's driver.
     // Each set bit in `clear_flags` will be cleared in the log flags state.
     // Each set bit in `set_flags` will then be set in the log flags state.
-    static ::fidl::DecodeResult<SetDriverLogFlagsResponse> SetDriverLogFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDriverLogFlagsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetDriverLogFlagsResponse> SetDriverLogFlags(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDriverLogFlagsRequest> params, ::fidl::BytePart response_buffer);
 
     // Debug command: execute the device's suspend hook
-    static ::fidl::DecodeResult<DebugSuspendResponse> DebugSuspend(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<DebugSuspendResponse> DebugSuspend(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Debug command: execute the device's resume hook
-    static ::fidl::DecodeResult<DebugResumeResponse> DebugResume(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<DebugResumeResponse> DebugResume(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Runs compatibility tests for the driver that binds to this device.
     // The |hook_wait_time| is the time that the driver expects to take for
     // each device hook in nanoseconds.
     // Returns whether the driver passed the compatibility check.
-    static ::fidl::DecodeResult<RunCompatibilityTestsResponse> RunCompatibilityTests(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RunCompatibilityTestsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RunCompatibilityTestsResponse> RunCompatibilityTests(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RunCompatibilityTestsRequest> params, ::fidl::BytePart response_buffer);
 
     // Gets the device power capabilities. Used by the system wide power manager
     // to manage power for this device.
-    static ::fidl::DecodeResult<GetDevicePowerCapsResponse> GetDevicePowerCaps(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDevicePowerCapsResponse> GetDevicePowerCaps(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Gets the device performance states. Used by the system wide power manager
     // to manage power for this device.
-    static ::fidl::DecodeResult<GetDevicePerformanceStatesResponse> GetDevicePerformanceStates(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDevicePerformanceStatesResponse> GetDevicePerformanceStates(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
-    static ::fidl::DecodeResult<UpdatePowerStateMappingResponse> UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UpdatePowerStateMappingRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<UpdatePowerStateMappingResponse> UpdatePowerStateMapping(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UpdatePowerStateMappingRequest> params, ::fidl::BytePart response_buffer);
 
     // Get the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device.
-    static ::fidl::DecodeResult<GetPowerStateMappingResponse> GetPowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetPowerStateMappingResponse> GetPowerStateMapping(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
     // state.
-    static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SuspendResponse> Suspend(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
 
     // Transition this device from a sleep state to a working state.
-    static ::fidl::DecodeResult<ResumeResponse> Resume(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ResumeResponse> Resume(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer);
 
     // Set the performance state of this device to the requested performance state. This is only
     // called for the current device and none of the descendants are aware of the state
@@ -3326,10 +3326,10 @@ class Controller final {
     // is in non-working state, the performance state will be the requested_state whenever the
     // device transitions to working state.
     // On failure, the out_state will have the state that the device can go into.
-    static ::fidl::DecodeResult<SetPerformanceStateResponse> SetPerformanceState(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetPerformanceStateRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetPerformanceStateResponse> SetPerformanceState(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetPerformanceStateRequest> params, ::fidl::BytePart response_buffer);
 
     // Configure autosuspend of device to this deepest sleep state.
-    static ::fidl::DecodeResult<ConfigureAutoSuspendResponse> ConfigureAutoSuspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigureAutoSuspendRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ConfigureAutoSuspendResponse> ConfigureAutoSuspend(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigureAutoSuspendRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

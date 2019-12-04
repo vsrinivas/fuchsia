@@ -410,7 +410,7 @@ class Controller final {
     class RequestSendSoon_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      RequestSendSoon_Impl(zx::unowned_channel _client_end);
+      RequestSendSoon_Impl(::zx::unowned_channel _client_end);
       ~RequestSendSoon_Impl() = default;
       RequestSendSoon_Impl(RequestSendSoon_Impl&& other) = default;
       RequestSendSoon_Impl& operator=(RequestSendSoon_Impl&& other) = default;
@@ -426,7 +426,7 @@ class Controller final {
     class BlockUntilEmpty_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      BlockUntilEmpty_Impl(zx::unowned_channel _client_end, uint32_t max_wait_seconds);
+      BlockUntilEmpty_Impl(::zx::unowned_channel _client_end, uint32_t max_wait_seconds);
       ~BlockUntilEmpty_Impl() = default;
       BlockUntilEmpty_Impl(BlockUntilEmpty_Impl&& other) = default;
       BlockUntilEmpty_Impl& operator=(BlockUntilEmpty_Impl&& other) = default;
@@ -442,7 +442,7 @@ class Controller final {
     class GetNumSendAttempts_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetNumSendAttempts_Impl(zx::unowned_channel _client_end);
+      GetNumSendAttempts_Impl(::zx::unowned_channel _client_end);
       ~GetNumSendAttempts_Impl() = default;
       GetNumSendAttempts_Impl(GetNumSendAttempts_Impl&& other) = default;
       GetNumSendAttempts_Impl& operator=(GetNumSendAttempts_Impl&& other) = default;
@@ -458,7 +458,7 @@ class Controller final {
     class GetFailedSendAttempts_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetFailedSendAttempts_Impl(zx::unowned_channel _client_end);
+      GetFailedSendAttempts_Impl(::zx::unowned_channel _client_end);
       ~GetFailedSendAttempts_Impl() = default;
       GetFailedSendAttempts_Impl(GetFailedSendAttempts_Impl&& other) = default;
       GetFailedSendAttempts_Impl& operator=(GetFailedSendAttempts_Impl&& other) = default;
@@ -474,7 +474,7 @@ class Controller final {
     class GetNumObservationsAdded_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetNumObservationsAdded_Impl(zx::unowned_channel _client_end);
+      GetNumObservationsAdded_Impl(::zx::unowned_channel _client_end);
       ~GetNumObservationsAdded_Impl() = default;
       GetNumObservationsAdded_Impl(GetNumObservationsAdded_Impl&& other) = default;
       GetNumObservationsAdded_Impl& operator=(GetNumObservationsAdded_Impl&& other) = default;
@@ -490,7 +490,7 @@ class Controller final {
     class GenerateAggregatedObservations_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GenerateAggregatedObservations_Impl(zx::unowned_channel _client_end, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids);
+      GenerateAggregatedObservations_Impl(::zx::unowned_channel _client_end, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids);
       ~GenerateAggregatedObservations_Impl() = default;
       GenerateAggregatedObservations_Impl(GenerateAggregatedObservations_Impl&& other) = default;
       GenerateAggregatedObservations_Impl& operator=(GenerateAggregatedObservations_Impl&& other) = default;
@@ -521,7 +521,7 @@ class Controller final {
     class RequestSendSoon_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      RequestSendSoon_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      RequestSendSoon_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~RequestSendSoon_Impl() = default;
       RequestSendSoon_Impl(RequestSendSoon_Impl&& other) = default;
       RequestSendSoon_Impl& operator=(RequestSendSoon_Impl&& other) = default;
@@ -537,7 +537,7 @@ class Controller final {
     class BlockUntilEmpty_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      BlockUntilEmpty_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t max_wait_seconds, ::fidl::BytePart _response_buffer);
+      BlockUntilEmpty_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t max_wait_seconds, ::fidl::BytePart _response_buffer);
       ~BlockUntilEmpty_Impl() = default;
       BlockUntilEmpty_Impl(BlockUntilEmpty_Impl&& other) = default;
       BlockUntilEmpty_Impl& operator=(BlockUntilEmpty_Impl&& other) = default;
@@ -553,7 +553,7 @@ class Controller final {
     class GetNumSendAttempts_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetNumSendAttempts_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetNumSendAttempts_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetNumSendAttempts_Impl() = default;
       GetNumSendAttempts_Impl(GetNumSendAttempts_Impl&& other) = default;
       GetNumSendAttempts_Impl& operator=(GetNumSendAttempts_Impl&& other) = default;
@@ -569,7 +569,7 @@ class Controller final {
     class GetFailedSendAttempts_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetFailedSendAttempts_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetFailedSendAttempts_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetFailedSendAttempts_Impl() = default;
       GetFailedSendAttempts_Impl(GetFailedSendAttempts_Impl&& other) = default;
       GetFailedSendAttempts_Impl& operator=(GetFailedSendAttempts_Impl&& other) = default;
@@ -585,7 +585,7 @@ class Controller final {
     class GetNumObservationsAdded_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetNumObservationsAdded_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetNumObservationsAdded_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetNumObservationsAdded_Impl() = default;
       GetNumObservationsAdded_Impl(GetNumObservationsAdded_Impl&& other) = default;
       GetNumObservationsAdded_Impl& operator=(GetNumObservationsAdded_Impl&& other) = default;
@@ -601,7 +601,7 @@ class Controller final {
     class GenerateAggregatedObservations_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GenerateAggregatedObservations_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids, ::fidl::BytePart _response_buffer);
+      GenerateAggregatedObservations_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids, ::fidl::BytePart _response_buffer);
       ~GenerateAggregatedObservations_Impl() = default;
       GenerateAggregatedObservations_Impl(GenerateAggregatedObservations_Impl&& other) = default;
       GenerateAggregatedObservations_Impl& operator=(GenerateAggregatedObservations_Impl&& other) = default;
@@ -680,40 +680,40 @@ class Controller final {
    public:
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::RequestSendSoon RequestSendSoon(zx::unowned_channel _client_end);
+    static ResultOf::RequestSendSoon RequestSendSoon(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RequestSendSoon RequestSendSoon(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::RequestSendSoon RequestSendSoon(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::BlockUntilEmpty BlockUntilEmpty(zx::unowned_channel _client_end, uint32_t max_wait_seconds);
+    static ResultOf::BlockUntilEmpty BlockUntilEmpty(::zx::unowned_channel _client_end, uint32_t max_wait_seconds);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::BlockUntilEmpty BlockUntilEmpty(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t max_wait_seconds, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::BlockUntilEmpty BlockUntilEmpty(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t max_wait_seconds, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetNumSendAttempts GetNumSendAttempts(zx::unowned_channel _client_end);
+    static ResultOf::GetNumSendAttempts GetNumSendAttempts(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetNumSendAttempts GetNumSendAttempts(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetNumSendAttempts GetNumSendAttempts(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetFailedSendAttempts GetFailedSendAttempts(zx::unowned_channel _client_end);
+    static ResultOf::GetFailedSendAttempts GetFailedSendAttempts(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetFailedSendAttempts GetFailedSendAttempts(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetFailedSendAttempts GetFailedSendAttempts(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetNumObservationsAdded GetNumObservationsAdded(zx::unowned_channel _client_end);
+    static ResultOf::GetNumObservationsAdded GetNumObservationsAdded(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetNumObservationsAdded GetNumObservationsAdded(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetNumObservationsAdded GetNumObservationsAdded(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::GenerateAggregatedObservations GenerateAggregatedObservations(zx::unowned_channel _client_end, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids);
+    static ResultOf::GenerateAggregatedObservations GenerateAggregatedObservations(::zx::unowned_channel _client_end, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GenerateAggregatedObservations GenerateAggregatedObservations(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GenerateAggregatedObservations GenerateAggregatedObservations(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t day_index, ::fidl::VectorView<uint32_t> report_ids, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -723,17 +723,17 @@ class Controller final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<RequestSendSoonResponse> RequestSendSoon(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RequestSendSoonResponse> RequestSendSoon(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<BlockUntilEmptyResponse> BlockUntilEmpty(zx::unowned_channel _client_end, ::fidl::DecodedMessage<BlockUntilEmptyRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<BlockUntilEmptyResponse> BlockUntilEmpty(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<BlockUntilEmptyRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetNumSendAttemptsResponse> GetNumSendAttempts(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetNumSendAttemptsResponse> GetNumSendAttempts(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetFailedSendAttemptsResponse> GetFailedSendAttempts(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetFailedSendAttemptsResponse> GetFailedSendAttempts(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetNumObservationsAddedResponse> GetNumObservationsAdded(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetNumObservationsAddedResponse> GetNumObservationsAdded(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GenerateAggregatedObservationsResponse> GenerateAggregatedObservations(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GenerateAggregatedObservationsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GenerateAggregatedObservationsResponse> GenerateAggregatedObservations(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GenerateAggregatedObservationsRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1224,7 +1224,7 @@ class LoggerBase final {
     class LogEvent_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogEvent_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
+      LogEvent_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
       ~LogEvent_Impl() = default;
       LogEvent_Impl(LogEvent_Impl&& other) = default;
       LogEvent_Impl& operator=(LogEvent_Impl&& other) = default;
@@ -1240,7 +1240,7 @@ class LoggerBase final {
     class LogEventCount_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogEventCount_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
+      LogEventCount_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
       ~LogEventCount_Impl() = default;
       LogEventCount_Impl(LogEventCount_Impl&& other) = default;
       LogEventCount_Impl& operator=(LogEventCount_Impl&& other) = default;
@@ -1256,7 +1256,7 @@ class LoggerBase final {
     class LogElapsedTime_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogElapsedTime_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
+      LogElapsedTime_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
       ~LogElapsedTime_Impl() = default;
       LogElapsedTime_Impl(LogElapsedTime_Impl&& other) = default;
       LogElapsedTime_Impl& operator=(LogElapsedTime_Impl&& other) = default;
@@ -1272,7 +1272,7 @@ class LoggerBase final {
     class LogFrameRate_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogFrameRate_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
+      LogFrameRate_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
       ~LogFrameRate_Impl() = default;
       LogFrameRate_Impl(LogFrameRate_Impl&& other) = default;
       LogFrameRate_Impl& operator=(LogFrameRate_Impl&& other) = default;
@@ -1288,7 +1288,7 @@ class LoggerBase final {
     class LogMemoryUsage_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogMemoryUsage_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
+      LogMemoryUsage_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
       ~LogMemoryUsage_Impl() = default;
       LogMemoryUsage_Impl(LogMemoryUsage_Impl&& other) = default;
       LogMemoryUsage_Impl& operator=(LogMemoryUsage_Impl&& other) = default;
@@ -1304,7 +1304,7 @@ class LoggerBase final {
     class LogString_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogString_Impl(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
+      LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
       ~LogString_Impl() = default;
       LogString_Impl(LogString_Impl&& other) = default;
       LogString_Impl& operator=(LogString_Impl&& other) = default;
@@ -1320,7 +1320,7 @@ class LoggerBase final {
     class StartTimer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      StartTimer_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+      StartTimer_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
       ~StartTimer_Impl() = default;
       StartTimer_Impl(StartTimer_Impl&& other) = default;
       StartTimer_Impl& operator=(StartTimer_Impl&& other) = default;
@@ -1336,7 +1336,7 @@ class LoggerBase final {
     class EndTimer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+      EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
       ~EndTimer_Impl() = default;
       EndTimer_Impl(EndTimer_Impl&& other) = default;
       EndTimer_Impl& operator=(EndTimer_Impl&& other) = default;
@@ -1369,7 +1369,7 @@ class LoggerBase final {
     class LogEvent_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
+      LogEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
       ~LogEvent_Impl() = default;
       LogEvent_Impl(LogEvent_Impl&& other) = default;
       LogEvent_Impl& operator=(LogEvent_Impl&& other) = default;
@@ -1385,7 +1385,7 @@ class LoggerBase final {
     class LogEventCount_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogEventCount_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
+      LogEventCount_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
       ~LogEventCount_Impl() = default;
       LogEventCount_Impl(LogEventCount_Impl&& other) = default;
       LogEventCount_Impl& operator=(LogEventCount_Impl&& other) = default;
@@ -1401,7 +1401,7 @@ class LoggerBase final {
     class LogElapsedTime_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogElapsedTime_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
+      LogElapsedTime_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
       ~LogElapsedTime_Impl() = default;
       LogElapsedTime_Impl(LogElapsedTime_Impl&& other) = default;
       LogElapsedTime_Impl& operator=(LogElapsedTime_Impl&& other) = default;
@@ -1417,7 +1417,7 @@ class LoggerBase final {
     class LogFrameRate_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogFrameRate_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
+      LogFrameRate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
       ~LogFrameRate_Impl() = default;
       LogFrameRate_Impl(LogFrameRate_Impl&& other) = default;
       LogFrameRate_Impl& operator=(LogFrameRate_Impl&& other) = default;
@@ -1433,7 +1433,7 @@ class LoggerBase final {
     class LogMemoryUsage_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogMemoryUsage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
+      LogMemoryUsage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
       ~LogMemoryUsage_Impl() = default;
       LogMemoryUsage_Impl(LogMemoryUsage_Impl&& other) = default;
       LogMemoryUsage_Impl& operator=(LogMemoryUsage_Impl&& other) = default;
@@ -1449,7 +1449,7 @@ class LoggerBase final {
     class LogString_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogString_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
+      LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
       ~LogString_Impl() = default;
       LogString_Impl(LogString_Impl&& other) = default;
       LogString_Impl& operator=(LogString_Impl&& other) = default;
@@ -1465,7 +1465,7 @@ class LoggerBase final {
     class StartTimer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      StartTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+      StartTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
       ~StartTimer_Impl() = default;
       StartTimer_Impl(StartTimer_Impl&& other) = default;
       StartTimer_Impl& operator=(StartTimer_Impl&& other) = default;
@@ -1481,7 +1481,7 @@ class LoggerBase final {
     class EndTimer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+      EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
       ~EndTimer_Impl() = default;
       EndTimer_Impl(EndTimer_Impl&& other) = default;
       EndTimer_Impl& operator=(EndTimer_Impl&& other) = default;
@@ -1574,52 +1574,52 @@ class LoggerBase final {
    public:
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogEvent LogEvent(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
+    static ResultOf::LogEvent LogEvent(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogEvent LogEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogEvent LogEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
 
     // Allocates 144 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogEventCount LogEventCount(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
+    static ResultOf::LogEventCount LogEventCount(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogEventCount LogEventCount(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogEventCount LogEventCount(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogElapsedTime LogElapsedTime(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
+    static ResultOf::LogElapsedTime LogElapsedTime(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogElapsedTime LogElapsedTime(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogElapsedTime LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogFrameRate LogFrameRate(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
+    static ResultOf::LogFrameRate LogFrameRate(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogFrameRate LogFrameRate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogFrameRate LogFrameRate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogMemoryUsage LogMemoryUsage(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
+    static ResultOf::LogMemoryUsage LogMemoryUsage(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogMemoryUsage LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogMemoryUsage LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
 
     // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogString LogString(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
+    static ResultOf::LogString LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogString LogString(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogString LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
 
     // Allocates 224 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::StartTimer StartTimer(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+    static ResultOf::StartTimer StartTimer(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::StartTimer StartTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::StartTimer StartTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::EndTimer EndTimer(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+    static ResultOf::EndTimer EndTimer(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::EndTimer EndTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::EndTimer EndTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1629,21 +1629,21 @@ class LoggerBase final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<LogEventResponse> LogEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogEventResponse> LogEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogEventCountResponse> LogEventCount(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogEventCountResponse> LogEventCount(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogElapsedTimeResponse> LogElapsedTime(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogElapsedTimeResponse> LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogFrameRateResponse> LogFrameRate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogFrameRateResponse> LogFrameRate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogMemoryUsageResponse> LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogMemoryUsageResponse> LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogStringResponse> LogString(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogStringResponse> LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<StartTimerResponse> StartTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<StartTimerResponse> StartTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<EndTimerResponse> EndTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<EndTimerResponse> EndTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -2212,7 +2212,7 @@ class LoggerSimple final {
     class LogEvent_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogEvent_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
+      LogEvent_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
       ~LogEvent_Impl() = default;
       LogEvent_Impl(LogEvent_Impl&& other) = default;
       LogEvent_Impl& operator=(LogEvent_Impl&& other) = default;
@@ -2228,7 +2228,7 @@ class LoggerSimple final {
     class LogEventCount_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogEventCount_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
+      LogEventCount_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
       ~LogEventCount_Impl() = default;
       LogEventCount_Impl(LogEventCount_Impl&& other) = default;
       LogEventCount_Impl& operator=(LogEventCount_Impl&& other) = default;
@@ -2244,7 +2244,7 @@ class LoggerSimple final {
     class LogElapsedTime_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogElapsedTime_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
+      LogElapsedTime_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
       ~LogElapsedTime_Impl() = default;
       LogElapsedTime_Impl(LogElapsedTime_Impl&& other) = default;
       LogElapsedTime_Impl& operator=(LogElapsedTime_Impl&& other) = default;
@@ -2260,7 +2260,7 @@ class LoggerSimple final {
     class LogFrameRate_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogFrameRate_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
+      LogFrameRate_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
       ~LogFrameRate_Impl() = default;
       LogFrameRate_Impl(LogFrameRate_Impl&& other) = default;
       LogFrameRate_Impl& operator=(LogFrameRate_Impl&& other) = default;
@@ -2276,7 +2276,7 @@ class LoggerSimple final {
     class LogMemoryUsage_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogMemoryUsage_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
+      LogMemoryUsage_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
       ~LogMemoryUsage_Impl() = default;
       LogMemoryUsage_Impl(LogMemoryUsage_Impl&& other) = default;
       LogMemoryUsage_Impl& operator=(LogMemoryUsage_Impl&& other) = default;
@@ -2292,7 +2292,7 @@ class LoggerSimple final {
     class LogString_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogString_Impl(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
+      LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
       ~LogString_Impl() = default;
       LogString_Impl(LogString_Impl&& other) = default;
       LogString_Impl& operator=(LogString_Impl&& other) = default;
@@ -2308,7 +2308,7 @@ class LoggerSimple final {
     class StartTimer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      StartTimer_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+      StartTimer_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
       ~StartTimer_Impl() = default;
       StartTimer_Impl(StartTimer_Impl&& other) = default;
       StartTimer_Impl& operator=(StartTimer_Impl&& other) = default;
@@ -2324,7 +2324,7 @@ class LoggerSimple final {
     class EndTimer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+      EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
       ~EndTimer_Impl() = default;
       EndTimer_Impl(EndTimer_Impl&& other) = default;
       EndTimer_Impl& operator=(EndTimer_Impl&& other) = default;
@@ -2340,7 +2340,7 @@ class LoggerSimple final {
     class LogIntHistogram_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogIntHistogram_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts);
+      LogIntHistogram_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts);
       ~LogIntHistogram_Impl() = default;
       LogIntHistogram_Impl(LogIntHistogram_Impl&& other) = default;
       LogIntHistogram_Impl& operator=(LogIntHistogram_Impl&& other) = default;
@@ -2374,7 +2374,7 @@ class LoggerSimple final {
     class LogEvent_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
+      LogEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
       ~LogEvent_Impl() = default;
       LogEvent_Impl(LogEvent_Impl&& other) = default;
       LogEvent_Impl& operator=(LogEvent_Impl&& other) = default;
@@ -2390,7 +2390,7 @@ class LoggerSimple final {
     class LogEventCount_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogEventCount_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
+      LogEventCount_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
       ~LogEventCount_Impl() = default;
       LogEventCount_Impl(LogEventCount_Impl&& other) = default;
       LogEventCount_Impl& operator=(LogEventCount_Impl&& other) = default;
@@ -2406,7 +2406,7 @@ class LoggerSimple final {
     class LogElapsedTime_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogElapsedTime_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
+      LogElapsedTime_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
       ~LogElapsedTime_Impl() = default;
       LogElapsedTime_Impl(LogElapsedTime_Impl&& other) = default;
       LogElapsedTime_Impl& operator=(LogElapsedTime_Impl&& other) = default;
@@ -2422,7 +2422,7 @@ class LoggerSimple final {
     class LogFrameRate_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogFrameRate_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
+      LogFrameRate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
       ~LogFrameRate_Impl() = default;
       LogFrameRate_Impl(LogFrameRate_Impl&& other) = default;
       LogFrameRate_Impl& operator=(LogFrameRate_Impl&& other) = default;
@@ -2438,7 +2438,7 @@ class LoggerSimple final {
     class LogMemoryUsage_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogMemoryUsage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
+      LogMemoryUsage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
       ~LogMemoryUsage_Impl() = default;
       LogMemoryUsage_Impl(LogMemoryUsage_Impl&& other) = default;
       LogMemoryUsage_Impl& operator=(LogMemoryUsage_Impl&& other) = default;
@@ -2454,7 +2454,7 @@ class LoggerSimple final {
     class LogString_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogString_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
+      LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
       ~LogString_Impl() = default;
       LogString_Impl(LogString_Impl&& other) = default;
       LogString_Impl& operator=(LogString_Impl&& other) = default;
@@ -2470,7 +2470,7 @@ class LoggerSimple final {
     class StartTimer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      StartTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+      StartTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
       ~StartTimer_Impl() = default;
       StartTimer_Impl(StartTimer_Impl&& other) = default;
       StartTimer_Impl& operator=(StartTimer_Impl&& other) = default;
@@ -2486,7 +2486,7 @@ class LoggerSimple final {
     class EndTimer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+      EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
       ~EndTimer_Impl() = default;
       EndTimer_Impl(EndTimer_Impl&& other) = default;
       EndTimer_Impl& operator=(EndTimer_Impl&& other) = default;
@@ -2502,7 +2502,7 @@ class LoggerSimple final {
     class LogIntHistogram_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogIntHistogram_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts, ::fidl::BytePart _response_buffer);
+      LogIntHistogram_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts, ::fidl::BytePart _response_buffer);
       ~LogIntHistogram_Impl() = default;
       LogIntHistogram_Impl(LogIntHistogram_Impl&& other) = default;
       LogIntHistogram_Impl& operator=(LogIntHistogram_Impl&& other) = default;
@@ -2602,58 +2602,58 @@ class LoggerSimple final {
    public:
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogEvent LogEvent(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
+    static ResultOf::LogEvent LogEvent(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogEvent LogEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogEvent LogEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
 
     // Allocates 144 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogEventCount LogEventCount(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
+    static ResultOf::LogEventCount LogEventCount(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogEventCount LogEventCount(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogEventCount LogEventCount(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogElapsedTime LogElapsedTime(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
+    static ResultOf::LogElapsedTime LogElapsedTime(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogElapsedTime LogElapsedTime(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogElapsedTime LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogFrameRate LogFrameRate(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
+    static ResultOf::LogFrameRate LogFrameRate(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogFrameRate LogFrameRate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogFrameRate LogFrameRate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogMemoryUsage LogMemoryUsage(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
+    static ResultOf::LogMemoryUsage LogMemoryUsage(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogMemoryUsage LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogMemoryUsage LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
 
     // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogString LogString(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
+    static ResultOf::LogString LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogString LogString(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogString LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
 
     // Allocates 224 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::StartTimer StartTimer(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+    static ResultOf::StartTimer StartTimer(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::StartTimer StartTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::StartTimer StartTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::EndTimer EndTimer(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+    static ResultOf::EndTimer EndTimer(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::EndTimer EndTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::EndTimer EndTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::LogIntHistogram LogIntHistogram(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts);
+    static ResultOf::LogIntHistogram LogIntHistogram(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogIntHistogram LogIntHistogram(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogIntHistogram LogIntHistogram(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<uint32_t> bucket_indices, ::fidl::VectorView<uint64_t> bucket_counts, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -2663,23 +2663,23 @@ class LoggerSimple final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<LogEventResponse> LogEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogEventResponse> LogEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogEventCountResponse> LogEventCount(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogEventCountResponse> LogEventCount(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogElapsedTimeResponse> LogElapsedTime(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogElapsedTimeResponse> LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogFrameRateResponse> LogFrameRate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogFrameRateResponse> LogFrameRate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogMemoryUsageResponse> LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogMemoryUsageResponse> LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogStringResponse> LogString(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogStringResponse> LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<StartTimerResponse> StartTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<StartTimerResponse> StartTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<EndTimerResponse> EndTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<EndTimerResponse> EndTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogIntHistogramResponse> LogIntHistogram(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogIntHistogramRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogIntHistogramResponse> LogIntHistogram(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogIntHistogramRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -3145,7 +3145,7 @@ class LoggerFactory final {
     class CreateLogger_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CreateLogger_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
+      CreateLogger_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
       ~CreateLogger_Impl() = default;
       CreateLogger_Impl(CreateLogger_Impl&& other) = default;
       CreateLogger_Impl& operator=(CreateLogger_Impl&& other) = default;
@@ -3161,7 +3161,7 @@ class LoggerFactory final {
     class CreateLoggerSimple_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CreateLoggerSimple_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
+      CreateLoggerSimple_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
       ~CreateLoggerSimple_Impl() = default;
       CreateLoggerSimple_Impl(CreateLoggerSimple_Impl&& other) = default;
       CreateLoggerSimple_Impl& operator=(CreateLoggerSimple_Impl&& other) = default;
@@ -3177,7 +3177,7 @@ class LoggerFactory final {
     class CreateLoggerFromProjectName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CreateLoggerFromProjectName_Impl(zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger);
+      CreateLoggerFromProjectName_Impl(::zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger);
       ~CreateLoggerFromProjectName_Impl() = default;
       CreateLoggerFromProjectName_Impl(CreateLoggerFromProjectName_Impl&& other) = default;
       CreateLoggerFromProjectName_Impl& operator=(CreateLoggerFromProjectName_Impl&& other) = default;
@@ -3193,7 +3193,7 @@ class LoggerFactory final {
     class CreateLoggerSimpleFromProjectName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CreateLoggerSimpleFromProjectName_Impl(zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger);
+      CreateLoggerSimpleFromProjectName_Impl(::zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger);
       ~CreateLoggerSimpleFromProjectName_Impl() = default;
       CreateLoggerSimpleFromProjectName_Impl(CreateLoggerSimpleFromProjectName_Impl&& other) = default;
       CreateLoggerSimpleFromProjectName_Impl& operator=(CreateLoggerSimpleFromProjectName_Impl&& other) = default;
@@ -3209,7 +3209,7 @@ class LoggerFactory final {
     class CreateLoggerFromProjectId_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CreateLoggerFromProjectId_Impl(zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger);
+      CreateLoggerFromProjectId_Impl(::zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger);
       ~CreateLoggerFromProjectId_Impl() = default;
       CreateLoggerFromProjectId_Impl(CreateLoggerFromProjectId_Impl&& other) = default;
       CreateLoggerFromProjectId_Impl& operator=(CreateLoggerFromProjectId_Impl&& other) = default;
@@ -3225,7 +3225,7 @@ class LoggerFactory final {
     class CreateLoggerSimpleFromProjectId_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CreateLoggerSimpleFromProjectId_Impl(zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger);
+      CreateLoggerSimpleFromProjectId_Impl(::zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger);
       ~CreateLoggerSimpleFromProjectId_Impl() = default;
       CreateLoggerSimpleFromProjectId_Impl(CreateLoggerSimpleFromProjectId_Impl&& other) = default;
       CreateLoggerSimpleFromProjectId_Impl& operator=(CreateLoggerSimpleFromProjectId_Impl&& other) = default;
@@ -3256,7 +3256,7 @@ class LoggerFactory final {
     class CreateLogger_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CreateLogger_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+      CreateLogger_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
       ~CreateLogger_Impl() = default;
       CreateLogger_Impl(CreateLogger_Impl&& other) = default;
       CreateLogger_Impl& operator=(CreateLogger_Impl&& other) = default;
@@ -3272,7 +3272,7 @@ class LoggerFactory final {
     class CreateLoggerSimple_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CreateLoggerSimple_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+      CreateLoggerSimple_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
       ~CreateLoggerSimple_Impl() = default;
       CreateLoggerSimple_Impl(CreateLoggerSimple_Impl&& other) = default;
       CreateLoggerSimple_Impl& operator=(CreateLoggerSimple_Impl&& other) = default;
@@ -3288,7 +3288,7 @@ class LoggerFactory final {
     class CreateLoggerFromProjectName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CreateLoggerFromProjectName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+      CreateLoggerFromProjectName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer);
       ~CreateLoggerFromProjectName_Impl() = default;
       CreateLoggerFromProjectName_Impl(CreateLoggerFromProjectName_Impl&& other) = default;
       CreateLoggerFromProjectName_Impl& operator=(CreateLoggerFromProjectName_Impl&& other) = default;
@@ -3304,7 +3304,7 @@ class LoggerFactory final {
     class CreateLoggerSimpleFromProjectName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CreateLoggerSimpleFromProjectName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+      CreateLoggerSimpleFromProjectName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer);
       ~CreateLoggerSimpleFromProjectName_Impl() = default;
       CreateLoggerSimpleFromProjectName_Impl(CreateLoggerSimpleFromProjectName_Impl&& other) = default;
       CreateLoggerSimpleFromProjectName_Impl& operator=(CreateLoggerSimpleFromProjectName_Impl&& other) = default;
@@ -3320,7 +3320,7 @@ class LoggerFactory final {
     class CreateLoggerFromProjectId_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CreateLoggerFromProjectId_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+      CreateLoggerFromProjectId_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer);
       ~CreateLoggerFromProjectId_Impl() = default;
       CreateLoggerFromProjectId_Impl(CreateLoggerFromProjectId_Impl&& other) = default;
       CreateLoggerFromProjectId_Impl& operator=(CreateLoggerFromProjectId_Impl&& other) = default;
@@ -3336,7 +3336,7 @@ class LoggerFactory final {
     class CreateLoggerSimpleFromProjectId_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CreateLoggerSimpleFromProjectId_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+      CreateLoggerSimpleFromProjectId_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer);
       ~CreateLoggerSimpleFromProjectId_Impl() = default;
       CreateLoggerSimpleFromProjectId_Impl(CreateLoggerSimpleFromProjectId_Impl&& other) = default;
       CreateLoggerSimpleFromProjectId_Impl& operator=(CreateLoggerSimpleFromProjectId_Impl&& other) = default;
@@ -3415,40 +3415,40 @@ class LoggerFactory final {
    public:
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateLogger CreateLogger(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
+    static ResultOf::CreateLogger CreateLogger(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateLogger CreateLogger(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CreateLogger CreateLogger(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateLoggerSimple CreateLoggerSimple(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
+    static ResultOf::CreateLoggerSimple CreateLoggerSimple(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateLoggerSimple CreateLoggerSimple(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CreateLoggerSimple CreateLoggerSimple(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::ProjectProfile profile, ::zx::channel logger, ::fidl::BytePart _response_buffer);
 
     // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateLoggerFromProjectName CreateLoggerFromProjectName(zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger);
+    static ResultOf::CreateLoggerFromProjectName CreateLoggerFromProjectName(::zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateLoggerFromProjectName CreateLoggerFromProjectName(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CreateLoggerFromProjectName CreateLoggerFromProjectName(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer);
 
     // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateLoggerSimpleFromProjectName CreateLoggerSimpleFromProjectName(zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger);
+    static ResultOf::CreateLoggerSimpleFromProjectName CreateLoggerSimpleFromProjectName(::zx::unowned_channel _client_end, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateLoggerSimpleFromProjectName CreateLoggerSimpleFromProjectName(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CreateLoggerSimpleFromProjectName CreateLoggerSimpleFromProjectName(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage, ::zx::channel logger, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateLoggerFromProjectId CreateLoggerFromProjectId(zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger);
+    static ResultOf::CreateLoggerFromProjectId CreateLoggerFromProjectId(::zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateLoggerFromProjectId CreateLoggerFromProjectId(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CreateLoggerFromProjectId CreateLoggerFromProjectId(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateLoggerSimpleFromProjectId CreateLoggerSimpleFromProjectId(zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger);
+    static ResultOf::CreateLoggerSimpleFromProjectId CreateLoggerSimpleFromProjectId(::zx::unowned_channel _client_end, uint32_t project_id, ::zx::channel logger);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateLoggerSimpleFromProjectId CreateLoggerSimpleFromProjectId(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CreateLoggerSimpleFromProjectId CreateLoggerSimpleFromProjectId(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t project_id, ::zx::channel logger, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -3458,17 +3458,17 @@ class LoggerFactory final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<CreateLoggerResponse> CreateLogger(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CreateLoggerResponse> CreateLogger(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<CreateLoggerSimpleResponse> CreateLoggerSimple(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CreateLoggerSimpleResponse> CreateLoggerSimple(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<CreateLoggerFromProjectNameResponse> CreateLoggerFromProjectName(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerFromProjectNameRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CreateLoggerFromProjectNameResponse> CreateLoggerFromProjectName(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerFromProjectNameRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<CreateLoggerSimpleFromProjectNameResponse> CreateLoggerSimpleFromProjectName(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleFromProjectNameRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CreateLoggerSimpleFromProjectNameResponse> CreateLoggerSimpleFromProjectName(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleFromProjectNameRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<CreateLoggerFromProjectIdResponse> CreateLoggerFromProjectId(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerFromProjectIdRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CreateLoggerFromProjectIdResponse> CreateLoggerFromProjectId(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerFromProjectIdRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<CreateLoggerSimpleFromProjectIdResponse> CreateLoggerSimpleFromProjectId(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleFromProjectIdRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CreateLoggerSimpleFromProjectIdResponse> CreateLoggerSimpleFromProjectId(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateLoggerSimpleFromProjectIdRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -3756,7 +3756,7 @@ class SystemDataUpdater final {
     class SetExperimentState_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetExperimentState_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments);
+      SetExperimentState_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments);
       ~SetExperimentState_Impl() = default;
       SetExperimentState_Impl(SetExperimentState_Impl&& other) = default;
       SetExperimentState_Impl& operator=(SetExperimentState_Impl&& other) = default;
@@ -3772,7 +3772,7 @@ class SystemDataUpdater final {
     class SetChannel_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetChannel_Impl(zx::unowned_channel _client_end, ::fidl::StringView current_channel);
+      SetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::StringView current_channel);
       ~SetChannel_Impl() = default;
       SetChannel_Impl(SetChannel_Impl&& other) = default;
       SetChannel_Impl& operator=(SetChannel_Impl&& other) = default;
@@ -3799,7 +3799,7 @@ class SystemDataUpdater final {
     class SetExperimentState_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetExperimentState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments, ::fidl::BytePart _response_buffer);
+      SetExperimentState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments, ::fidl::BytePart _response_buffer);
       ~SetExperimentState_Impl() = default;
       SetExperimentState_Impl(SetExperimentState_Impl&& other) = default;
       SetExperimentState_Impl& operator=(SetExperimentState_Impl&& other) = default;
@@ -3815,7 +3815,7 @@ class SystemDataUpdater final {
     class SetChannel_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView current_channel, ::fidl::BytePart _response_buffer);
+      SetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView current_channel, ::fidl::BytePart _response_buffer);
       ~SetChannel_Impl() = default;
       SetChannel_Impl(SetChannel_Impl&& other) = default;
       SetChannel_Impl& operator=(SetChannel_Impl&& other) = default;
@@ -3866,16 +3866,16 @@ class SystemDataUpdater final {
    public:
 
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::SetExperimentState SetExperimentState(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments);
+    static ResultOf::SetExperimentState SetExperimentState(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetExperimentState SetExperimentState(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetExperimentState SetExperimentState(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::Experiment> experiments, ::fidl::BytePart _response_buffer);
 
     // Allocates 312 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetChannel SetChannel(zx::unowned_channel _client_end, ::fidl::StringView current_channel);
+    static ResultOf::SetChannel SetChannel(::zx::unowned_channel _client_end, ::fidl::StringView current_channel);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetChannel SetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView current_channel, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetChannel SetChannel(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView current_channel, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -3885,9 +3885,9 @@ class SystemDataUpdater final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<SetExperimentStateResponse> SetExperimentState(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetExperimentStateRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetExperimentStateResponse> SetExperimentState(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetExperimentStateRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<SetChannelResponse> SetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetChannelRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetChannelResponse> SetChannel(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetChannelRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -4781,7 +4781,7 @@ class Logger final {
     class LogEvent_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogEvent_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
+      LogEvent_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
       ~LogEvent_Impl() = default;
       LogEvent_Impl(LogEvent_Impl&& other) = default;
       LogEvent_Impl& operator=(LogEvent_Impl&& other) = default;
@@ -4797,7 +4797,7 @@ class Logger final {
     class LogEventCount_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogEventCount_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
+      LogEventCount_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
       ~LogEventCount_Impl() = default;
       LogEventCount_Impl(LogEventCount_Impl&& other) = default;
       LogEventCount_Impl& operator=(LogEventCount_Impl&& other) = default;
@@ -4813,7 +4813,7 @@ class Logger final {
     class LogElapsedTime_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogElapsedTime_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
+      LogElapsedTime_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
       ~LogElapsedTime_Impl() = default;
       LogElapsedTime_Impl(LogElapsedTime_Impl&& other) = default;
       LogElapsedTime_Impl& operator=(LogElapsedTime_Impl&& other) = default;
@@ -4829,7 +4829,7 @@ class Logger final {
     class LogFrameRate_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogFrameRate_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
+      LogFrameRate_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
       ~LogFrameRate_Impl() = default;
       LogFrameRate_Impl(LogFrameRate_Impl&& other) = default;
       LogFrameRate_Impl& operator=(LogFrameRate_Impl&& other) = default;
@@ -4845,7 +4845,7 @@ class Logger final {
     class LogMemoryUsage_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogMemoryUsage_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
+      LogMemoryUsage_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
       ~LogMemoryUsage_Impl() = default;
       LogMemoryUsage_Impl(LogMemoryUsage_Impl&& other) = default;
       LogMemoryUsage_Impl& operator=(LogMemoryUsage_Impl&& other) = default;
@@ -4861,7 +4861,7 @@ class Logger final {
     class LogString_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogString_Impl(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
+      LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
       ~LogString_Impl() = default;
       LogString_Impl(LogString_Impl&& other) = default;
       LogString_Impl& operator=(LogString_Impl&& other) = default;
@@ -4877,7 +4877,7 @@ class Logger final {
     class StartTimer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      StartTimer_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+      StartTimer_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
       ~StartTimer_Impl() = default;
       StartTimer_Impl(StartTimer_Impl&& other) = default;
       StartTimer_Impl& operator=(StartTimer_Impl&& other) = default;
@@ -4893,7 +4893,7 @@ class Logger final {
     class EndTimer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+      EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
       ~EndTimer_Impl() = default;
       EndTimer_Impl(EndTimer_Impl&& other) = default;
       EndTimer_Impl& operator=(EndTimer_Impl&& other) = default;
@@ -4909,7 +4909,7 @@ class Logger final {
     class LogIntHistogram_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogIntHistogram_Impl(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram);
+      LogIntHistogram_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram);
       ~LogIntHistogram_Impl() = default;
       LogIntHistogram_Impl(LogIntHistogram_Impl&& other) = default;
       LogIntHistogram_Impl& operator=(LogIntHistogram_Impl&& other) = default;
@@ -4925,7 +4925,7 @@ class Logger final {
     class LogCustomEvent_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogCustomEvent_Impl(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values);
+      LogCustomEvent_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values);
       ~LogCustomEvent_Impl() = default;
       LogCustomEvent_Impl(LogCustomEvent_Impl&& other) = default;
       LogCustomEvent_Impl& operator=(LogCustomEvent_Impl&& other) = default;
@@ -4941,7 +4941,7 @@ class Logger final {
     class LogCobaltEvent_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogCobaltEvent_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::CobaltEvent event);
+      LogCobaltEvent_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::CobaltEvent event);
       ~LogCobaltEvent_Impl() = default;
       LogCobaltEvent_Impl(LogCobaltEvent_Impl&& other) = default;
       LogCobaltEvent_Impl& operator=(LogCobaltEvent_Impl&& other) = default;
@@ -4957,7 +4957,7 @@ class Logger final {
     class LogCobaltEvents_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      LogCobaltEvents_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events);
+      LogCobaltEvents_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events);
       ~LogCobaltEvents_Impl() = default;
       LogCobaltEvents_Impl(LogCobaltEvents_Impl&& other) = default;
       LogCobaltEvents_Impl& operator=(LogCobaltEvents_Impl&& other) = default;
@@ -4994,7 +4994,7 @@ class Logger final {
     class LogEvent_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
+      LogEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
       ~LogEvent_Impl() = default;
       LogEvent_Impl(LogEvent_Impl&& other) = default;
       LogEvent_Impl& operator=(LogEvent_Impl&& other) = default;
@@ -5010,7 +5010,7 @@ class Logger final {
     class LogEventCount_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogEventCount_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
+      LogEventCount_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
       ~LogEventCount_Impl() = default;
       LogEventCount_Impl(LogEventCount_Impl&& other) = default;
       LogEventCount_Impl& operator=(LogEventCount_Impl&& other) = default;
@@ -5026,7 +5026,7 @@ class Logger final {
     class LogElapsedTime_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogElapsedTime_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
+      LogElapsedTime_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
       ~LogElapsedTime_Impl() = default;
       LogElapsedTime_Impl(LogElapsedTime_Impl&& other) = default;
       LogElapsedTime_Impl& operator=(LogElapsedTime_Impl&& other) = default;
@@ -5042,7 +5042,7 @@ class Logger final {
     class LogFrameRate_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogFrameRate_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
+      LogFrameRate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
       ~LogFrameRate_Impl() = default;
       LogFrameRate_Impl(LogFrameRate_Impl&& other) = default;
       LogFrameRate_Impl& operator=(LogFrameRate_Impl&& other) = default;
@@ -5058,7 +5058,7 @@ class Logger final {
     class LogMemoryUsage_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogMemoryUsage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
+      LogMemoryUsage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
       ~LogMemoryUsage_Impl() = default;
       LogMemoryUsage_Impl(LogMemoryUsage_Impl&& other) = default;
       LogMemoryUsage_Impl& operator=(LogMemoryUsage_Impl&& other) = default;
@@ -5074,7 +5074,7 @@ class Logger final {
     class LogString_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogString_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
+      LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
       ~LogString_Impl() = default;
       LogString_Impl(LogString_Impl&& other) = default;
       LogString_Impl& operator=(LogString_Impl&& other) = default;
@@ -5090,7 +5090,7 @@ class Logger final {
     class StartTimer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      StartTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+      StartTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
       ~StartTimer_Impl() = default;
       StartTimer_Impl(StartTimer_Impl&& other) = default;
       StartTimer_Impl& operator=(StartTimer_Impl&& other) = default;
@@ -5106,7 +5106,7 @@ class Logger final {
     class EndTimer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      EndTimer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+      EndTimer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
       ~EndTimer_Impl() = default;
       EndTimer_Impl(EndTimer_Impl&& other) = default;
       EndTimer_Impl& operator=(EndTimer_Impl&& other) = default;
@@ -5122,7 +5122,7 @@ class Logger final {
     class LogIntHistogram_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogIntHistogram_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram, ::fidl::BytePart _response_buffer);
+      LogIntHistogram_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram, ::fidl::BytePart _response_buffer);
       ~LogIntHistogram_Impl() = default;
       LogIntHistogram_Impl(LogIntHistogram_Impl&& other) = default;
       LogIntHistogram_Impl& operator=(LogIntHistogram_Impl&& other) = default;
@@ -5138,7 +5138,7 @@ class Logger final {
     class LogCustomEvent_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogCustomEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values, ::fidl::BytePart _response_buffer);
+      LogCustomEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values, ::fidl::BytePart _response_buffer);
       ~LogCustomEvent_Impl() = default;
       LogCustomEvent_Impl(LogCustomEvent_Impl&& other) = default;
       LogCustomEvent_Impl& operator=(LogCustomEvent_Impl&& other) = default;
@@ -5154,7 +5154,7 @@ class Logger final {
     class LogCobaltEvent_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogCobaltEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::CobaltEvent event, ::fidl::BytePart _response_buffer);
+      LogCobaltEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::CobaltEvent event, ::fidl::BytePart _response_buffer);
       ~LogCobaltEvent_Impl() = default;
       LogCobaltEvent_Impl(LogCobaltEvent_Impl&& other) = default;
       LogCobaltEvent_Impl& operator=(LogCobaltEvent_Impl&& other) = default;
@@ -5170,7 +5170,7 @@ class Logger final {
     class LogCobaltEvents_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      LogCobaltEvents_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events, ::fidl::BytePart _response_buffer);
+      LogCobaltEvents_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events, ::fidl::BytePart _response_buffer);
       ~LogCobaltEvents_Impl() = default;
       LogCobaltEvents_Impl(LogCobaltEvents_Impl&& other) = default;
       LogCobaltEvents_Impl& operator=(LogCobaltEvents_Impl&& other) = default;
@@ -5291,76 +5291,76 @@ class Logger final {
    public:
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogEvent LogEvent(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
+    static ResultOf::LogEvent LogEvent(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogEvent LogEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogEvent LogEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::BytePart _response_buffer);
 
     // Allocates 144 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogEventCount LogEventCount(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
+    static ResultOf::LogEventCount LogEventCount(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogEventCount LogEventCount(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogEventCount LogEventCount(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t period_duration_micros, int64_t count, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogElapsedTime LogElapsedTime(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
+    static ResultOf::LogElapsedTime LogElapsedTime(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogElapsedTime LogElapsedTime(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogElapsedTime LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t elapsed_micros, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogFrameRate LogFrameRate(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
+    static ResultOf::LogFrameRate LogFrameRate(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogFrameRate LogFrameRate(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogFrameRate LogFrameRate(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, float fps, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogMemoryUsage LogMemoryUsage(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
+    static ResultOf::LogMemoryUsage LogMemoryUsage(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogMemoryUsage LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogMemoryUsage LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
 
     // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogString LogString(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
+    static ResultOf::LogString LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogString LogString(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogString LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
 
     // Allocates 224 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::StartTimer StartTimer(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+    static ResultOf::StartTimer StartTimer(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::StartTimer StartTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::StartTimer StartTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
 
     // Allocates 136 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::EndTimer EndTimer(zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
+    static ResultOf::EndTimer EndTimer(::zx::unowned_channel _client_end, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::EndTimer EndTimer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::EndTimer EndTimer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::LogIntHistogram LogIntHistogram(zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram);
+    static ResultOf::LogIntHistogram LogIntHistogram(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogIntHistogram LogIntHistogram(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogIntHistogram LogIntHistogram(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> histogram, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::LogCustomEvent LogCustomEvent(zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values);
+    static ResultOf::LogCustomEvent LogCustomEvent(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogCustomEvent LogCustomEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogCustomEvent LogCustomEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CustomEventValue> event_values, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::LogCobaltEvent LogCobaltEvent(zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::CobaltEvent event);
+    static ResultOf::LogCobaltEvent LogCobaltEvent(::zx::unowned_channel _client_end, ::llcpp::fuchsia::cobalt::CobaltEvent event);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogCobaltEvent LogCobaltEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::CobaltEvent event, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogCobaltEvent LogCobaltEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::cobalt::CobaltEvent event, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::LogCobaltEvents LogCobaltEvents(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events);
+    static ResultOf::LogCobaltEvents LogCobaltEvents(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogCobaltEvents LogCobaltEvents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::LogCobaltEvents LogCobaltEvents(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::cobalt::CobaltEvent> events, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -5370,29 +5370,29 @@ class Logger final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<LogEventResponse> LogEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogEventResponse> LogEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogEventCountResponse> LogEventCount(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogEventCountResponse> LogEventCount(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogEventCountRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogElapsedTimeResponse> LogElapsedTime(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogElapsedTimeResponse> LogElapsedTime(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogElapsedTimeRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogFrameRateResponse> LogFrameRate(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogFrameRateResponse> LogFrameRate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogMemoryUsageResponse> LogMemoryUsage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogMemoryUsageResponse> LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogStringResponse> LogString(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogStringResponse> LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<StartTimerResponse> StartTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<StartTimerResponse> StartTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<EndTimerResponse> EndTimer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<EndTimerResponse> EndTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EndTimerRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogIntHistogramResponse> LogIntHistogram(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogIntHistogramRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogIntHistogramResponse> LogIntHistogram(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogIntHistogramRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogCustomEventResponse> LogCustomEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCustomEventRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogCustomEventResponse> LogCustomEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCustomEventRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogCobaltEventResponse> LogCobaltEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCobaltEventRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogCobaltEventResponse> LogCobaltEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCobaltEventRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<LogCobaltEventsResponse> LogCobaltEvents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCobaltEventsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LogCobaltEventsResponse> LogCobaltEvents(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogCobaltEventsRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

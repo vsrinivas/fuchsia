@@ -822,7 +822,7 @@ class Device final {
     class GetOsInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetOsInfo_Impl(zx::unowned_channel _client_end);
+      GetOsInfo_Impl(::zx::unowned_channel _client_end);
       ~GetOsInfo_Impl() = default;
       GetOsInfo_Impl(GetOsInfo_Impl&& other) = default;
       GetOsInfo_Impl& operator=(GetOsInfo_Impl&& other) = default;
@@ -838,7 +838,7 @@ class Device final {
     class OpenSession_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      OpenSession_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
+      OpenSession_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
       ~OpenSession_Impl() = default;
       OpenSession_Impl(OpenSession_Impl&& other) = default;
       OpenSession_Impl& operator=(OpenSession_Impl&& other) = default;
@@ -854,7 +854,7 @@ class Device final {
     class InvokeCommand_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      InvokeCommand_Impl(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
+      InvokeCommand_Impl(::zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
       ~InvokeCommand_Impl() = default;
       InvokeCommand_Impl(InvokeCommand_Impl&& other) = default;
       InvokeCommand_Impl& operator=(InvokeCommand_Impl&& other) = default;
@@ -870,7 +870,7 @@ class Device final {
     class CloseSession_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CloseSession_Impl(zx::unowned_channel _client_end, uint32_t session_id);
+      CloseSession_Impl(::zx::unowned_channel _client_end, uint32_t session_id);
       ~CloseSession_Impl() = default;
       CloseSession_Impl(CloseSession_Impl&& other) = default;
       CloseSession_Impl& operator=(CloseSession_Impl&& other) = default;
@@ -899,7 +899,7 @@ class Device final {
     class GetOsInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetOsInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetOsInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetOsInfo_Impl() = default;
       GetOsInfo_Impl(GetOsInfo_Impl&& other) = default;
       GetOsInfo_Impl& operator=(GetOsInfo_Impl&& other) = default;
@@ -915,7 +915,7 @@ class Device final {
     class OpenSession_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      OpenSession_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
+      OpenSession_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
       ~OpenSession_Impl() = default;
       OpenSession_Impl(OpenSession_Impl&& other) = default;
       OpenSession_Impl& operator=(OpenSession_Impl&& other) = default;
@@ -931,7 +931,7 @@ class Device final {
     class InvokeCommand_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      InvokeCommand_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
+      InvokeCommand_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
       ~InvokeCommand_Impl() = default;
       InvokeCommand_Impl(InvokeCommand_Impl&& other) = default;
       InvokeCommand_Impl& operator=(InvokeCommand_Impl&& other) = default;
@@ -947,7 +947,7 @@ class Device final {
     class CloseSession_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CloseSession_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer);
+      CloseSession_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer);
       ~CloseSession_Impl() = default;
       CloseSession_Impl(CloseSession_Impl&& other) = default;
       CloseSession_Impl& operator=(CloseSession_Impl&& other) = default;
@@ -1023,37 +1023,37 @@ class Device final {
 
     // Obtain information about the TEE OS
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetOsInfo GetOsInfo(zx::unowned_channel _client_end);
+    static ResultOf::GetOsInfo GetOsInfo(::zx::unowned_channel _client_end);
 
     // Obtain information about the TEE OS
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetOsInfo GetOsInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetOsInfo GetOsInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Initiates a communication session with the specified trusted application.
     // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::OpenSession OpenSession(zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
+    static ResultOf::OpenSession OpenSession(::zx::unowned_channel _client_end, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
 
     // Initiates a communication session with the specified trusted application.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::OpenSession OpenSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::OpenSession OpenSession(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::tee::Uuid trusted_app, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
 
     // Requests the trusted application perform the provided command. The command is unique to the
     // trusted application.
     // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::InvokeCommand InvokeCommand(zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
+    static ResultOf::InvokeCommand InvokeCommand(::zx::unowned_channel _client_end, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set);
 
     // Requests the trusted application perform the provided command. The command is unique to the
     // trusted application.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::InvokeCommand InvokeCommand(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::InvokeCommand InvokeCommand(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, uint32_t command_id, ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set, ::fidl::BytePart _response_buffer);
 
     // Closes an established session.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CloseSession CloseSession(zx::unowned_channel _client_end, uint32_t session_id);
+    static ResultOf::CloseSession CloseSession(::zx::unowned_channel _client_end, uint32_t session_id);
 
     // Closes an established session.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CloseSession CloseSession(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CloseSession CloseSession(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t session_id, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1064,17 +1064,17 @@ class Device final {
    public:
 
     // Obtain information about the TEE OS
-    static ::fidl::DecodeResult<GetOsInfoResponse> GetOsInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetOsInfoResponse> GetOsInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Initiates a communication session with the specified trusted application.
-    static ::fidl::DecodeResult<OpenSessionResponse> OpenSession(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenSessionRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<OpenSessionResponse> OpenSession(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenSessionRequest> params, ::fidl::BytePart response_buffer);
 
     // Requests the trusted application perform the provided command. The command is unique to the
     // trusted application.
-    static ::fidl::DecodeResult<InvokeCommandResponse> InvokeCommand(zx::unowned_channel _client_end, ::fidl::DecodedMessage<InvokeCommandRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<InvokeCommandResponse> InvokeCommand(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<InvokeCommandRequest> params, ::fidl::BytePart response_buffer);
 
     // Closes an established session.
-    static ::fidl::DecodeResult<CloseSessionResponse> CloseSession(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseSessionRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CloseSessionResponse> CloseSession(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloseSessionRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

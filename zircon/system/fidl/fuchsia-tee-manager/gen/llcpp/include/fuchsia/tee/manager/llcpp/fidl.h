@@ -65,7 +65,7 @@ class Provider final {
     class RequestPersistentStorage_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      RequestPersistentStorage_Impl(zx::unowned_channel _client_end, ::zx::channel dir);
+      RequestPersistentStorage_Impl(::zx::unowned_channel _client_end, ::zx::channel dir);
       ~RequestPersistentStorage_Impl() = default;
       RequestPersistentStorage_Impl(RequestPersistentStorage_Impl&& other) = default;
       RequestPersistentStorage_Impl& operator=(RequestPersistentStorage_Impl&& other) = default;
@@ -86,7 +86,7 @@ class Provider final {
     class RequestPersistentStorage_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      RequestPersistentStorage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel dir);
+      RequestPersistentStorage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel dir);
       ~RequestPersistentStorage_Impl() = default;
       RequestPersistentStorage_Impl(RequestPersistentStorage_Impl&& other) = default;
       RequestPersistentStorage_Impl& operator=(RequestPersistentStorage_Impl&& other) = default;
@@ -126,10 +126,10 @@ class Provider final {
    public:
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::RequestPersistentStorage RequestPersistentStorage(zx::unowned_channel _client_end, ::zx::channel dir);
+    static ResultOf::RequestPersistentStorage RequestPersistentStorage(::zx::unowned_channel _client_end, ::zx::channel dir);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RequestPersistentStorage RequestPersistentStorage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel dir);
+    static UnownedResultOf::RequestPersistentStorage RequestPersistentStorage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel dir);
 
   };
 
@@ -139,7 +139,7 @@ class Provider final {
     InPlace() = delete;
    public:
 
-    static ::fidl::internal::StatusAndError RequestPersistentStorage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RequestPersistentStorageRequest> params);
+    static ::fidl::internal::StatusAndError RequestPersistentStorage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RequestPersistentStorageRequest> params);
 
   };
 

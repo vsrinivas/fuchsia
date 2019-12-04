@@ -75,7 +75,7 @@ extern "C" const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceRespons
 
 }  // namespace
 template <>
-TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated_Impl<TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>::StrictXUnionHenceResponseMayBeStackAllocated_Impl(zx::unowned_channel _client_end) {
+TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated_Impl<TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>::StrictXUnionHenceResponseMayBeStackAllocated_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StrictXUnionHenceResponseMayBeStackAllocatedRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -88,15 +88,15 @@ TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated_Impl<TestPr
 }
 
 TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated TestProtocol::SyncClient::StrictXUnionHenceResponseMayBeStackAllocated() {
-  return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(zx::unowned_channel(this->channel_));
+    return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(::zx::unowned_channel(this->channel_));
 }
 
-TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated TestProtocol::Call::StrictXUnionHenceResponseMayBeStackAllocated(zx::unowned_channel _client_end) {
+TestProtocol::ResultOf::StrictXUnionHenceResponseMayBeStackAllocated TestProtocol::Call::StrictXUnionHenceResponseMayBeStackAllocated(::zx::unowned_channel _client_end) {
   return ResultOf::StrictXUnionHenceResponseMayBeStackAllocated(std::move(_client_end));
 }
 
 template <>
-TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated_Impl<TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>::StrictXUnionHenceResponseMayBeStackAllocated_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated_Impl<TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>::StrictXUnionHenceResponseMayBeStackAllocated_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(StrictXUnionHenceResponseMayBeStackAllocatedRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, StrictXUnionHenceResponseMayBeStackAllocatedRequest::PrimarySize);
@@ -107,14 +107,14 @@ TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated_Impl
 }
 
 TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated TestProtocol::SyncClient::StrictXUnionHenceResponseMayBeStackAllocated(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated TestProtocol::Call::StrictXUnionHenceResponseMayBeStackAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated TestProtocol::Call::StrictXUnionHenceResponseMayBeStackAllocated(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse> TestProtocol::InPlace::StrictXUnionHenceResponseMayBeStackAllocated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse> TestProtocol::InPlace::StrictXUnionHenceResponseMayBeStackAllocated(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(StrictXUnionHenceResponseMayBeStackAllocatedRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -136,7 +136,7 @@ TestProtocol::UnownedResultOf::StrictXUnionHenceResponseMayBeStackAllocated Test
 }
 
 template <>
-TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(zx::unowned_channel _client_end) {
+TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -149,15 +149,15 @@ TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl<Test
 }
 
 TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated TestProtocol::SyncClient::FlexibleXUnionHenceResponseMustBeHeapAllocated() {
-  return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(zx::unowned_channel(this->channel_));
+    return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(::zx::unowned_channel(this->channel_));
 }
 
-TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated TestProtocol::Call::FlexibleXUnionHenceResponseMustBeHeapAllocated(zx::unowned_channel _client_end) {
+TestProtocol::ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated TestProtocol::Call::FlexibleXUnionHenceResponseMustBeHeapAllocated(::zx::unowned_channel _client_end) {
   return ResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(std::move(_client_end));
 }
 
 template <>
-TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest::PrimarySize);
@@ -168,14 +168,14 @@ TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated_Im
 }
 
 TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated TestProtocol::SyncClient::FlexibleXUnionHenceResponseMustBeHeapAllocated(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated TestProtocol::Call::FlexibleXUnionHenceResponseMustBeHeapAllocated(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestProtocol::UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated TestProtocol::Call::FlexibleXUnionHenceResponseMustBeHeapAllocated(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> TestProtocol::InPlace::FlexibleXUnionHenceResponseMustBeHeapAllocated(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> TestProtocol::InPlace::FlexibleXUnionHenceResponseMustBeHeapAllocated(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

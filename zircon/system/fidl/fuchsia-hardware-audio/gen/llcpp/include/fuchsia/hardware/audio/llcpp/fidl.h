@@ -62,7 +62,7 @@ class Device final {
     class GetChannel_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetChannel_Impl(zx::unowned_channel _client_end);
+      GetChannel_Impl(::zx::unowned_channel _client_end);
       ~GetChannel_Impl() = default;
       GetChannel_Impl(GetChannel_Impl&& other) = default;
       GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
@@ -88,7 +88,7 @@ class Device final {
     class GetChannel_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetChannel_Impl() = default;
       GetChannel_Impl(GetChannel_Impl&& other) = default;
       GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
@@ -132,10 +132,10 @@ class Device final {
    public:
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetChannel GetChannel(zx::unowned_channel _client_end);
+    static ResultOf::GetChannel GetChannel(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetChannel GetChannel(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -145,7 +145,7 @@ class Device final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<GetChannelResponse> GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetChannelResponse> GetChannel(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

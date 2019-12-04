@@ -42,7 +42,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_SkipBlockWriteBytesRe
 
 }  // namespace
 template <>
-SkipBlock::ResultOf::GetPartitionInfo_Impl<SkipBlock::GetPartitionInfoResponse>::GetPartitionInfo_Impl(zx::unowned_channel _client_end) {
+SkipBlock::ResultOf::GetPartitionInfo_Impl<SkipBlock::GetPartitionInfoResponse>::GetPartitionInfo_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPartitionInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -55,15 +55,15 @@ SkipBlock::ResultOf::GetPartitionInfo_Impl<SkipBlock::GetPartitionInfoResponse>:
 }
 
 SkipBlock::ResultOf::GetPartitionInfo SkipBlock::SyncClient::GetPartitionInfo() {
-  return ResultOf::GetPartitionInfo(zx::unowned_channel(this->channel_));
+    return ResultOf::GetPartitionInfo(::zx::unowned_channel(this->channel_));
 }
 
-SkipBlock::ResultOf::GetPartitionInfo SkipBlock::Call::GetPartitionInfo(zx::unowned_channel _client_end) {
+SkipBlock::ResultOf::GetPartitionInfo SkipBlock::Call::GetPartitionInfo(::zx::unowned_channel _client_end) {
   return ResultOf::GetPartitionInfo(std::move(_client_end));
 }
 
 template <>
-SkipBlock::UnownedResultOf::GetPartitionInfo_Impl<SkipBlock::GetPartitionInfoResponse>::GetPartitionInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+SkipBlock::UnownedResultOf::GetPartitionInfo_Impl<SkipBlock::GetPartitionInfoResponse>::GetPartitionInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPartitionInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetPartitionInfoRequest::PrimarySize);
@@ -74,14 +74,14 @@ SkipBlock::UnownedResultOf::GetPartitionInfo_Impl<SkipBlock::GetPartitionInfoRes
 }
 
 SkipBlock::UnownedResultOf::GetPartitionInfo SkipBlock::SyncClient::GetPartitionInfo(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetPartitionInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetPartitionInfo(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-SkipBlock::UnownedResultOf::GetPartitionInfo SkipBlock::Call::GetPartitionInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+SkipBlock::UnownedResultOf::GetPartitionInfo SkipBlock::Call::GetPartitionInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetPartitionInfo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse> SkipBlock::InPlace::GetPartitionInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<SkipBlock::GetPartitionInfoResponse> SkipBlock::InPlace::GetPartitionInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetPartitionInfoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -103,7 +103,7 @@ SkipBlock::UnownedResultOf::GetPartitionInfo SkipBlock::Call::GetPartitionInfo(z
 }
 
 template <>
-SkipBlock::ResultOf::Read_Impl<SkipBlock::ReadResponse>::Read_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op) {
+SkipBlock::ResultOf::Read_Impl<SkipBlock::ReadResponse>::Read_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -118,15 +118,15 @@ SkipBlock::ResultOf::Read_Impl<SkipBlock::ReadResponse>::Read_Impl(zx::unowned_c
 }
 
 SkipBlock::ResultOf::Read SkipBlock::SyncClient::Read(::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op) {
-  return ResultOf::Read(zx::unowned_channel(this->channel_), std::move(op));
+    return ResultOf::Read(::zx::unowned_channel(this->channel_), std::move(op));
 }
 
-SkipBlock::ResultOf::Read SkipBlock::Call::Read(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op) {
+SkipBlock::ResultOf::Read SkipBlock::Call::Read(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op) {
   return ResultOf::Read(std::move(_client_end), std::move(op));
 }
 
 template <>
-SkipBlock::UnownedResultOf::Read_Impl<SkipBlock::ReadResponse>::Read_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer) {
+SkipBlock::UnownedResultOf::Read_Impl<SkipBlock::ReadResponse>::Read_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ReadRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ReadResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -141,14 +141,14 @@ SkipBlock::UnownedResultOf::Read_Impl<SkipBlock::ReadResponse>::Read_Impl(zx::un
 }
 
 SkipBlock::UnownedResultOf::Read SkipBlock::SyncClient::Read(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Read(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
+  return UnownedResultOf::Read(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
 }
 
-SkipBlock::UnownedResultOf::Read SkipBlock::Call::Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer) {
+SkipBlock::UnownedResultOf::Read SkipBlock::Call::Read(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Read(std::move(_client_end), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::InPlace::Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<SkipBlock::ReadResponse> SkipBlock::InPlace::Read(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer) {
   SkipBlock::SetTransactionHeaderFor::ReadRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -165,7 +165,7 @@ SkipBlock::UnownedResultOf::Read SkipBlock::Call::Read(zx::unowned_channel _clie
 }
 
 template <>
-SkipBlock::ResultOf::Write_Impl<SkipBlock::WriteResponse>::Write_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op) {
+SkipBlock::ResultOf::Write_Impl<SkipBlock::WriteResponse>::Write_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -180,15 +180,15 @@ SkipBlock::ResultOf::Write_Impl<SkipBlock::WriteResponse>::Write_Impl(zx::unowne
 }
 
 SkipBlock::ResultOf::Write SkipBlock::SyncClient::Write(::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op) {
-  return ResultOf::Write(zx::unowned_channel(this->channel_), std::move(op));
+    return ResultOf::Write(::zx::unowned_channel(this->channel_), std::move(op));
 }
 
-SkipBlock::ResultOf::Write SkipBlock::Call::Write(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op) {
+SkipBlock::ResultOf::Write SkipBlock::Call::Write(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op) {
   return ResultOf::Write(std::move(_client_end), std::move(op));
 }
 
 template <>
-SkipBlock::UnownedResultOf::Write_Impl<SkipBlock::WriteResponse>::Write_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer) {
+SkipBlock::UnownedResultOf::Write_Impl<SkipBlock::WriteResponse>::Write_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < WriteRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WriteResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -203,14 +203,14 @@ SkipBlock::UnownedResultOf::Write_Impl<SkipBlock::WriteResponse>::Write_Impl(zx:
 }
 
 SkipBlock::UnownedResultOf::Write SkipBlock::SyncClient::Write(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Write(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
+  return UnownedResultOf::Write(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
 }
 
-SkipBlock::UnownedResultOf::Write SkipBlock::Call::Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer) {
+SkipBlock::UnownedResultOf::Write SkipBlock::Call::Write(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Write(std::move(_client_end), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::InPlace::Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<SkipBlock::WriteResponse> SkipBlock::InPlace::Write(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
   SkipBlock::SetTransactionHeaderFor::WriteRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -227,7 +227,7 @@ SkipBlock::UnownedResultOf::Write SkipBlock::Call::Write(zx::unowned_channel _cl
 }
 
 template <>
-SkipBlock::ResultOf::WriteBytes_Impl<SkipBlock::WriteBytesResponse>::WriteBytes_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op) {
+SkipBlock::ResultOf::WriteBytes_Impl<SkipBlock::WriteBytesResponse>::WriteBytes_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBytesRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -242,15 +242,15 @@ SkipBlock::ResultOf::WriteBytes_Impl<SkipBlock::WriteBytesResponse>::WriteBytes_
 }
 
 SkipBlock::ResultOf::WriteBytes SkipBlock::SyncClient::WriteBytes(::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op) {
-  return ResultOf::WriteBytes(zx::unowned_channel(this->channel_), std::move(op));
+    return ResultOf::WriteBytes(::zx::unowned_channel(this->channel_), std::move(op));
 }
 
-SkipBlock::ResultOf::WriteBytes SkipBlock::Call::WriteBytes(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op) {
+SkipBlock::ResultOf::WriteBytes SkipBlock::Call::WriteBytes(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op) {
   return ResultOf::WriteBytes(std::move(_client_end), std::move(op));
 }
 
 template <>
-SkipBlock::UnownedResultOf::WriteBytes_Impl<SkipBlock::WriteBytesResponse>::WriteBytes_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op, ::fidl::BytePart _response_buffer) {
+SkipBlock::UnownedResultOf::WriteBytes_Impl<SkipBlock::WriteBytesResponse>::WriteBytes_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < WriteBytesRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WriteBytesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -265,14 +265,14 @@ SkipBlock::UnownedResultOf::WriteBytes_Impl<SkipBlock::WriteBytesResponse>::Writ
 }
 
 SkipBlock::UnownedResultOf::WriteBytes SkipBlock::SyncClient::WriteBytes(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WriteBytes(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
+  return UnownedResultOf::WriteBytes(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
 }
 
-SkipBlock::UnownedResultOf::WriteBytes SkipBlock::Call::WriteBytes(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op, ::fidl::BytePart _response_buffer) {
+SkipBlock::UnownedResultOf::WriteBytes SkipBlock::Call::WriteBytes(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteBytes(std::move(_client_end), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<SkipBlock::WriteBytesResponse> SkipBlock::InPlace::WriteBytes(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBytesRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<SkipBlock::WriteBytesResponse> SkipBlock::InPlace::WriteBytes(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBytesRequest> params, ::fidl::BytePart response_buffer) {
   SkipBlock::SetTransactionHeaderFor::WriteBytesRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

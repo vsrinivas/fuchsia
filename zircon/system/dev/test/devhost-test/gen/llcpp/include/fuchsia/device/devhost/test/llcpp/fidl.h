@@ -190,7 +190,7 @@ class TestDevice final {
     class AddChildDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AddChildDevice_Impl(zx::unowned_channel _client_end);
+      AddChildDevice_Impl(::zx::unowned_channel _client_end);
       ~AddChildDevice_Impl() = default;
       AddChildDevice_Impl(AddChildDevice_Impl&& other) = default;
       AddChildDevice_Impl& operator=(AddChildDevice_Impl&& other) = default;
@@ -216,7 +216,7 @@ class TestDevice final {
     class AddChildDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AddChildDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      AddChildDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~AddChildDevice_Impl() = default;
       AddChildDevice_Impl(AddChildDevice_Impl&& other) = default;
       AddChildDevice_Impl& operator=(AddChildDevice_Impl&& other) = default;
@@ -263,11 +263,11 @@ class TestDevice final {
 
     // Add child test device
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::AddChildDevice AddChildDevice(zx::unowned_channel _client_end);
+    static ResultOf::AddChildDevice AddChildDevice(::zx::unowned_channel _client_end);
 
     // Add child test device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddChildDevice AddChildDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AddChildDevice AddChildDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -278,7 +278,7 @@ class TestDevice final {
    public:
 
     // Add child test device
-    static ::fidl::DecodeResult<AddChildDeviceResponse> AddChildDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<AddChildDeviceResponse> AddChildDevice(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

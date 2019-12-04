@@ -20,7 +20,7 @@ extern "C" const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondResponseTa
 
 }  // namespace
 
-SecondProtocol::ResultOf::MethodOnSecond_Impl::MethodOnSecond_Impl(zx::unowned_channel _client_end) {
+SecondProtocol::ResultOf::MethodOnSecond_Impl::MethodOnSecond_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodOnSecondRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -33,14 +33,14 @@ SecondProtocol::ResultOf::MethodOnSecond_Impl::MethodOnSecond_Impl(zx::unowned_c
 }
 
 SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::SyncClient::MethodOnSecond() {
-  return ResultOf::MethodOnSecond(zx::unowned_channel(this->channel_));
+    return ResultOf::MethodOnSecond(::zx::unowned_channel(this->channel_));
 }
 
-SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(zx::unowned_channel _client_end) {
+SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(::zx::unowned_channel _client_end) {
   return ResultOf::MethodOnSecond(std::move(_client_end));
 }
 
-::fidl::internal::StatusAndError SecondProtocol::InPlace::MethodOnSecond(zx::unowned_channel _client_end) {
+::fidl::internal::StatusAndError SecondProtocol::InPlace::MethodOnSecond(::zx::unowned_channel _client_end) {
   constexpr uint32_t _write_num_bytes = sizeof(MethodOnSecondRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -120,7 +120,7 @@ extern "C" const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstResponseTabl
 
 }  // namespace
 
-FirstProtocol::ResultOf::MethodOnFirst_Impl::MethodOnFirst_Impl(zx::unowned_channel _client_end) {
+FirstProtocol::ResultOf::MethodOnFirst_Impl::MethodOnFirst_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodOnFirstRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -133,14 +133,14 @@ FirstProtocol::ResultOf::MethodOnFirst_Impl::MethodOnFirst_Impl(zx::unowned_chan
 }
 
 FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::SyncClient::MethodOnFirst() {
-  return ResultOf::MethodOnFirst(zx::unowned_channel(this->channel_));
+    return ResultOf::MethodOnFirst(::zx::unowned_channel(this->channel_));
 }
 
-FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(zx::unowned_channel _client_end) {
+FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(::zx::unowned_channel _client_end) {
   return ResultOf::MethodOnFirst(std::move(_client_end));
 }
 
-::fidl::internal::StatusAndError FirstProtocol::InPlace::MethodOnFirst(zx::unowned_channel _client_end) {
+::fidl::internal::StatusAndError FirstProtocol::InPlace::MethodOnFirst(::zx::unowned_channel _client_end) {
   constexpr uint32_t _write_num_bytes = sizeof(MethodOnFirstRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

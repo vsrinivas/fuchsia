@@ -344,7 +344,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_DeviceGetMaxAbsoluteB
 
 }  // namespace
 template <>
-Device::ResultOf::GetStateNormalized_Impl<Device::GetStateNormalizedResponse>::GetStateNormalized_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetStateNormalized_Impl<Device::GetStateNormalizedResponse>::GetStateNormalized_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateNormalizedRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -357,15 +357,15 @@ Device::ResultOf::GetStateNormalized_Impl<Device::GetStateNormalizedResponse>::G
 }
 
 Device::ResultOf::GetStateNormalized Device::SyncClient::GetStateNormalized() {
-  return ResultOf::GetStateNormalized(zx::unowned_channel(this->channel_));
+    return ResultOf::GetStateNormalized(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetStateNormalized Device::Call::GetStateNormalized(zx::unowned_channel _client_end) {
+Device::ResultOf::GetStateNormalized Device::Call::GetStateNormalized(::zx::unowned_channel _client_end) {
   return ResultOf::GetStateNormalized(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetStateNormalized_Impl<Device::GetStateNormalizedResponse>::GetStateNormalized_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetStateNormalized_Impl<Device::GetStateNormalizedResponse>::GetStateNormalized_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetStateNormalizedRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetStateNormalizedRequest::PrimarySize);
@@ -376,14 +376,14 @@ Device::UnownedResultOf::GetStateNormalized_Impl<Device::GetStateNormalizedRespo
 }
 
 Device::UnownedResultOf::GetStateNormalized Device::SyncClient::GetStateNormalized(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetStateNormalized(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetStateNormalized(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetStateNormalized Device::Call::GetStateNormalized(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetStateNormalized Device::Call::GetStateNormalized(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetStateNormalized(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetStateNormalizedResponse> Device::InPlace::GetStateNormalized(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetStateNormalizedResponse> Device::InPlace::GetStateNormalized(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetStateNormalizedRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -405,7 +405,7 @@ Device::UnownedResultOf::GetStateNormalized Device::Call::GetStateNormalized(zx:
 }
 
 template <>
-Device::ResultOf::SetStateNormalized_Impl<Device::SetStateNormalizedResponse>::SetStateNormalized_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state) {
+Device::ResultOf::SetStateNormalized_Impl<Device::SetStateNormalizedResponse>::SetStateNormalized_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetStateNormalizedRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -420,15 +420,15 @@ Device::ResultOf::SetStateNormalized_Impl<Device::SetStateNormalizedResponse>::S
 }
 
 Device::ResultOf::SetStateNormalized Device::SyncClient::SetStateNormalized(::llcpp::fuchsia::hardware::backlight::State state) {
-  return ResultOf::SetStateNormalized(zx::unowned_channel(this->channel_), std::move(state));
+    return ResultOf::SetStateNormalized(::zx::unowned_channel(this->channel_), std::move(state));
 }
 
-Device::ResultOf::SetStateNormalized Device::Call::SetStateNormalized(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state) {
+Device::ResultOf::SetStateNormalized Device::Call::SetStateNormalized(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state) {
   return ResultOf::SetStateNormalized(std::move(_client_end), std::move(state));
 }
 
 template <>
-Device::UnownedResultOf::SetStateNormalized_Impl<Device::SetStateNormalizedResponse>::SetStateNormalized_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetStateNormalized_Impl<Device::SetStateNormalizedResponse>::SetStateNormalized_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetStateNormalizedRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetStateNormalizedResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -443,14 +443,14 @@ Device::UnownedResultOf::SetStateNormalized_Impl<Device::SetStateNormalizedRespo
 }
 
 Device::UnownedResultOf::SetStateNormalized Device::SyncClient::SetStateNormalized(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetStateNormalized(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(state), std::move(_response_buffer));
+  return UnownedResultOf::SetStateNormalized(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(state), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetStateNormalized Device::Call::SetStateNormalized(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetStateNormalized Device::Call::SetStateNormalized(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetStateNormalized(std::move(_client_end), std::move(_request_buffer), std::move(state), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::SetStateNormalizedResponse> Device::InPlace::SetStateNormalized(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateNormalizedRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::SetStateNormalizedResponse> Device::InPlace::SetStateNormalized(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateNormalizedRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::SetStateNormalizedRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -467,7 +467,7 @@ Device::UnownedResultOf::SetStateNormalized Device::Call::SetStateNormalized(zx:
 }
 
 template <>
-Device::ResultOf::GetStateAbsolute_Impl<Device::GetStateAbsoluteResponse>::GetStateAbsolute_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetStateAbsolute_Impl<Device::GetStateAbsoluteResponse>::GetStateAbsolute_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateAbsoluteRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -480,15 +480,15 @@ Device::ResultOf::GetStateAbsolute_Impl<Device::GetStateAbsoluteResponse>::GetSt
 }
 
 Device::ResultOf::GetStateAbsolute Device::SyncClient::GetStateAbsolute() {
-  return ResultOf::GetStateAbsolute(zx::unowned_channel(this->channel_));
+    return ResultOf::GetStateAbsolute(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetStateAbsolute Device::Call::GetStateAbsolute(zx::unowned_channel _client_end) {
+Device::ResultOf::GetStateAbsolute Device::Call::GetStateAbsolute(::zx::unowned_channel _client_end) {
   return ResultOf::GetStateAbsolute(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetStateAbsolute_Impl<Device::GetStateAbsoluteResponse>::GetStateAbsolute_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetStateAbsolute_Impl<Device::GetStateAbsoluteResponse>::GetStateAbsolute_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetStateAbsoluteRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetStateAbsoluteRequest::PrimarySize);
@@ -499,14 +499,14 @@ Device::UnownedResultOf::GetStateAbsolute_Impl<Device::GetStateAbsoluteResponse>
 }
 
 Device::UnownedResultOf::GetStateAbsolute Device::SyncClient::GetStateAbsolute(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetStateAbsolute(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetStateAbsolute(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetStateAbsolute Device::Call::GetStateAbsolute(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetStateAbsolute Device::Call::GetStateAbsolute(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetStateAbsolute(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetStateAbsoluteResponse> Device::InPlace::GetStateAbsolute(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetStateAbsoluteResponse> Device::InPlace::GetStateAbsolute(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetStateAbsoluteRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -528,7 +528,7 @@ Device::UnownedResultOf::GetStateAbsolute Device::Call::GetStateAbsolute(zx::uno
 }
 
 template <>
-Device::ResultOf::SetStateAbsolute_Impl<Device::SetStateAbsoluteResponse>::SetStateAbsolute_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state) {
+Device::ResultOf::SetStateAbsolute_Impl<Device::SetStateAbsoluteResponse>::SetStateAbsolute_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetStateAbsoluteRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -543,15 +543,15 @@ Device::ResultOf::SetStateAbsolute_Impl<Device::SetStateAbsoluteResponse>::SetSt
 }
 
 Device::ResultOf::SetStateAbsolute Device::SyncClient::SetStateAbsolute(::llcpp::fuchsia::hardware::backlight::State state) {
-  return ResultOf::SetStateAbsolute(zx::unowned_channel(this->channel_), std::move(state));
+    return ResultOf::SetStateAbsolute(::zx::unowned_channel(this->channel_), std::move(state));
 }
 
-Device::ResultOf::SetStateAbsolute Device::Call::SetStateAbsolute(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state) {
+Device::ResultOf::SetStateAbsolute Device::Call::SetStateAbsolute(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state) {
   return ResultOf::SetStateAbsolute(std::move(_client_end), std::move(state));
 }
 
 template <>
-Device::UnownedResultOf::SetStateAbsolute_Impl<Device::SetStateAbsoluteResponse>::SetStateAbsolute_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetStateAbsolute_Impl<Device::SetStateAbsoluteResponse>::SetStateAbsolute_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetStateAbsoluteRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetStateAbsoluteResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -566,14 +566,14 @@ Device::UnownedResultOf::SetStateAbsolute_Impl<Device::SetStateAbsoluteResponse>
 }
 
 Device::UnownedResultOf::SetStateAbsolute Device::SyncClient::SetStateAbsolute(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetStateAbsolute(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(state), std::move(_response_buffer));
+  return UnownedResultOf::SetStateAbsolute(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(state), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetStateAbsolute Device::Call::SetStateAbsolute(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetStateAbsolute Device::Call::SetStateAbsolute(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetStateAbsolute(std::move(_client_end), std::move(_request_buffer), std::move(state), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::SetStateAbsoluteResponse> Device::InPlace::SetStateAbsolute(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateAbsoluteRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::SetStateAbsoluteResponse> Device::InPlace::SetStateAbsolute(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateAbsoluteRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::SetStateAbsoluteRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -590,7 +590,7 @@ Device::UnownedResultOf::SetStateAbsolute Device::Call::SetStateAbsolute(zx::uno
 }
 
 template <>
-Device::ResultOf::GetMaxAbsoluteBrightness_Impl<Device::GetMaxAbsoluteBrightnessResponse>::GetMaxAbsoluteBrightness_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetMaxAbsoluteBrightness_Impl<Device::GetMaxAbsoluteBrightnessResponse>::GetMaxAbsoluteBrightness_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMaxAbsoluteBrightnessRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -603,15 +603,15 @@ Device::ResultOf::GetMaxAbsoluteBrightness_Impl<Device::GetMaxAbsoluteBrightness
 }
 
 Device::ResultOf::GetMaxAbsoluteBrightness Device::SyncClient::GetMaxAbsoluteBrightness() {
-  return ResultOf::GetMaxAbsoluteBrightness(zx::unowned_channel(this->channel_));
+    return ResultOf::GetMaxAbsoluteBrightness(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetMaxAbsoluteBrightness Device::Call::GetMaxAbsoluteBrightness(zx::unowned_channel _client_end) {
+Device::ResultOf::GetMaxAbsoluteBrightness Device::Call::GetMaxAbsoluteBrightness(::zx::unowned_channel _client_end) {
   return ResultOf::GetMaxAbsoluteBrightness(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetMaxAbsoluteBrightness_Impl<Device::GetMaxAbsoluteBrightnessResponse>::GetMaxAbsoluteBrightness_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetMaxAbsoluteBrightness_Impl<Device::GetMaxAbsoluteBrightnessResponse>::GetMaxAbsoluteBrightness_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetMaxAbsoluteBrightnessRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetMaxAbsoluteBrightnessRequest::PrimarySize);
@@ -622,14 +622,14 @@ Device::UnownedResultOf::GetMaxAbsoluteBrightness_Impl<Device::GetMaxAbsoluteBri
 }
 
 Device::UnownedResultOf::GetMaxAbsoluteBrightness Device::SyncClient::GetMaxAbsoluteBrightness(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetMaxAbsoluteBrightness(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetMaxAbsoluteBrightness(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetMaxAbsoluteBrightness Device::Call::GetMaxAbsoluteBrightness(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetMaxAbsoluteBrightness Device::Call::GetMaxAbsoluteBrightness(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetMaxAbsoluteBrightness(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetMaxAbsoluteBrightnessResponse> Device::InPlace::GetMaxAbsoluteBrightness(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetMaxAbsoluteBrightnessResponse> Device::InPlace::GetMaxAbsoluteBrightness(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetMaxAbsoluteBrightnessRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

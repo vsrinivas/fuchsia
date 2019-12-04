@@ -109,7 +109,7 @@ class DeviceManager final {
     class Unseal_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Unseal_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot);
+      Unseal_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot);
       ~Unseal_Impl() = default;
       Unseal_Impl(Unseal_Impl&& other) = default;
       Unseal_Impl& operator=(Unseal_Impl&& other) = default;
@@ -125,7 +125,7 @@ class DeviceManager final {
     class Seal_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Seal_Impl(zx::unowned_channel _client_end);
+      Seal_Impl(::zx::unowned_channel _client_end);
       ~Seal_Impl() = default;
       Seal_Impl(Seal_Impl&& other) = default;
       Seal_Impl& operator=(Seal_Impl&& other) = default;
@@ -152,7 +152,7 @@ class DeviceManager final {
     class Unseal_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Unseal_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer);
+      Unseal_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer);
       ~Unseal_Impl() = default;
       Unseal_Impl(Unseal_Impl&& other) = default;
       Unseal_Impl& operator=(Unseal_Impl&& other) = default;
@@ -168,7 +168,7 @@ class DeviceManager final {
     class Seal_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Seal_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Seal_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Seal_Impl() = default;
       Seal_Impl(Seal_Impl&& other) = default;
       Seal_Impl& operator=(Seal_Impl&& other) = default;
@@ -256,7 +256,7 @@ class DeviceManager final {
     // Returns other errors if operations on the underlying block device return errors.
     // Returns `ZX_OK` on success.
     // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Unseal Unseal(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot);
+    static ResultOf::Unseal Unseal(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> key, uint8_t slot);
 
     // Attempts to unseal the device by using the provided master key to unwrap
     // the data key wrapped in the specified key slot.  If the key provided was
@@ -268,7 +268,7 @@ class DeviceManager final {
     // Returns other errors if operations on the underlying block device return errors.
     // Returns `ZX_OK` on success.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Unseal Unseal(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Unseal Unseal(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> key, uint8_t slot, ::fidl::BytePart _response_buffer);
 
     // Seals the device, causing any previously-created child zxcrypt Device to
     // be removed some time later.  (Someday we'd like this to only return once
@@ -276,7 +276,7 @@ class DeviceManager final {
     // Returns `ZX_ERR_BAD_STATE` if the device is already sealed.
     // Returns `ZX_OK` on success.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Seal Seal(zx::unowned_channel _client_end);
+    static ResultOf::Seal Seal(::zx::unowned_channel _client_end);
 
     // Seals the device, causing any previously-created child zxcrypt Device to
     // be removed some time later.  (Someday we'd like this to only return once
@@ -284,7 +284,7 @@ class DeviceManager final {
     // Returns `ZX_ERR_BAD_STATE` if the device is already sealed.
     // Returns `ZX_OK` on success.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Seal Seal(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Seal Seal(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -303,14 +303,14 @@ class DeviceManager final {
     // Returns `ZX_ERR_BAD_STATE` and keeps the device open if the device is already unsealed.
     // Returns other errors if operations on the underlying block device return errors.
     // Returns `ZX_OK` on success.
-    static ::fidl::DecodeResult<UnsealResponse> Unseal(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<UnsealResponse> Unseal(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnsealRequest> params, ::fidl::BytePart response_buffer);
 
     // Seals the device, causing any previously-created child zxcrypt Device to
     // be removed some time later.  (Someday we'd like this to only return once
     // the unsealed child device is removed, but that's not straightforward today.)
     // Returns `ZX_ERR_BAD_STATE` if the device is already sealed.
     // Returns `ZX_OK` on success.
-    static ::fidl::DecodeResult<SealResponse> Seal(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SealResponse> Seal(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

@@ -74,7 +74,7 @@ class WriteOnlyLog final {
     class Get_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end);
+      Get_Impl(::zx::unowned_channel _client_end);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -100,7 +100,7 @@ class WriteOnlyLog final {
     class Get_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Get_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -147,11 +147,11 @@ class WriteOnlyLog final {
 
     // Get write-only handle to the kernel `log`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Get Get(zx::unowned_channel _client_end);
+    static ResultOf::Get Get(::zx::unowned_channel _client_end);
 
     // Get write-only handle to the kernel `log`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Get Get(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -162,7 +162,7 @@ class WriteOnlyLog final {
    public:
 
     // Get write-only handle to the kernel `log`.
-    static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetResponse> Get(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -257,7 +257,7 @@ class ReadOnlyLog final {
     class Get_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end);
+      Get_Impl(::zx::unowned_channel _client_end);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -283,7 +283,7 @@ class ReadOnlyLog final {
     class Get_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Get_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -330,11 +330,11 @@ class ReadOnlyLog final {
 
     // Get read-only handle to the kernel `log`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Get Get(zx::unowned_channel _client_end);
+    static ResultOf::Get Get(::zx::unowned_channel _client_end);
 
     // Get read-only handle to the kernel `log`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Get Get(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -345,7 +345,7 @@ class ReadOnlyLog final {
    public:
 
     // Get read-only handle to the kernel `log`.
-    static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetResponse> Get(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -459,7 +459,7 @@ class Items final {
     class Get_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end, uint32_t type, uint32_t extra);
+      Get_Impl(::zx::unowned_channel _client_end, uint32_t type, uint32_t extra);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -485,7 +485,7 @@ class Items final {
     class Get_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t type, uint32_t extra, ::fidl::BytePart _response_buffer);
+      Get_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t type, uint32_t extra, ::fidl::BytePart _response_buffer);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -544,7 +544,7 @@ class Items final {
     // For a list of `type`s, refer to <zircon/boot/image.h>.
     // For a list of `extra`s, refer to <zircon/boot/driver-config.h>.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Get Get(zx::unowned_channel _client_end, uint32_t type, uint32_t extra);
+    static ResultOf::Get Get(::zx::unowned_channel _client_end, uint32_t type, uint32_t extra);
 
     // Get a `payload` for a boot item of `type` and `extra`.
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
@@ -552,7 +552,7 @@ class Items final {
     // For a list of `type`s, refer to <zircon/boot/image.h>.
     // For a list of `extra`s, refer to <zircon/boot/driver-config.h>.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t type, uint32_t extra, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Get Get(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t type, uint32_t extra, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -567,7 +567,7 @@ class Items final {
     //
     // For a list of `type`s, refer to <zircon/boot/image.h>.
     // For a list of `extra`s, refer to <zircon/boot/driver-config.h>.
-    static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetResponse> Get(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -680,7 +680,7 @@ class FactoryItems final {
     class Get_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end, uint32_t extra);
+      Get_Impl(::zx::unowned_channel _client_end, uint32_t extra);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -706,7 +706,7 @@ class FactoryItems final {
     class Get_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t extra, ::fidl::BytePart _response_buffer);
+      Get_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t extra, ::fidl::BytePart _response_buffer);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -762,14 +762,14 @@ class FactoryItems final {
     //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Get Get(zx::unowned_channel _client_end, uint32_t extra);
+    static ResultOf::Get Get(::zx::unowned_channel _client_end, uint32_t extra);
 
     // Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     // extra field set to `extra`.
     //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t extra, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Get Get(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t extra, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -783,7 +783,7 @@ class FactoryItems final {
     // extra field set to `extra`.
     //
     // NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetResponse> Get(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -878,7 +878,7 @@ class RootResource final {
     class Get_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end);
+      Get_Impl(::zx::unowned_channel _client_end);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -904,7 +904,7 @@ class RootResource final {
     class Get_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Get_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -951,11 +951,11 @@ class RootResource final {
 
     // Get the root |resource|.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Get Get(zx::unowned_channel _client_end);
+    static ResultOf::Get Get(::zx::unowned_channel _client_end);
 
     // Get the root |resource|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Get Get(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -966,7 +966,7 @@ class RootResource final {
    public:
 
     // Get the root |resource|.
-    static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetResponse> Get(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1063,7 +1063,7 @@ class RootJob final {
     class Get_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end);
+      Get_Impl(::zx::unowned_channel _client_end);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -1089,7 +1089,7 @@ class RootJob final {
     class Get_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Get_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -1136,11 +1136,11 @@ class RootJob final {
 
     // Get the root `job`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Get Get(zx::unowned_channel _client_end);
+    static ResultOf::Get Get(::zx::unowned_channel _client_end);
 
     // Get the root `job`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Get Get(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1151,7 +1151,7 @@ class RootJob final {
    public:
 
     // Get the root `job`.
-    static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetResponse> Get(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1247,7 +1247,7 @@ class RootJobForInspect final {
     class Get_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end);
+      Get_Impl(::zx::unowned_channel _client_end);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -1273,7 +1273,7 @@ class RootJobForInspect final {
     class Get_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Get_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -1320,11 +1320,11 @@ class RootJobForInspect final {
 
     // Get the root `job`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Get Get(zx::unowned_channel _client_end);
+    static ResultOf::Get Get(::zx::unowned_channel _client_end);
 
     // Get the root `job`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Get Get(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1335,7 +1335,7 @@ class RootJobForInspect final {
    public:
 
     // Get the root `job`.
-    static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetResponse> Get(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1431,7 +1431,7 @@ class Arguments final {
     class Get_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end);
+      Get_Impl(::zx::unowned_channel _client_end);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -1457,7 +1457,7 @@ class Arguments final {
     class Get_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Get_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Get_Impl() = default;
       Get_Impl(Get_Impl&& other) = default;
       Get_Impl& operator=(Get_Impl&& other) = default;
@@ -1507,12 +1507,12 @@ class Arguments final {
     // Get a `vmo` containing boot arguments, along with the `size` of the boot
     // arguments contained within.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Get Get(zx::unowned_channel _client_end);
+    static ResultOf::Get Get(::zx::unowned_channel _client_end);
 
     // Get a `vmo` containing boot arguments, along with the `size` of the boot
     // arguments contained within.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Get Get(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1524,7 +1524,7 @@ class Arguments final {
 
     // Get a `vmo` containing boot arguments, along with the `size` of the boot
     // arguments contained within.
-    static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetResponse> Get(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

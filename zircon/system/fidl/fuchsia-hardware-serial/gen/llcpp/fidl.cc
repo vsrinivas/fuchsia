@@ -21,7 +21,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceProxyGetChannel
 
 }  // namespace
 
-NewDeviceProxy::ResultOf::GetChannel_Impl::GetChannel_Impl(zx::unowned_channel _client_end, ::zx::channel req) {
+NewDeviceProxy::ResultOf::GetChannel_Impl::GetChannel_Impl(::zx::unowned_channel _client_end, ::zx::channel req) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -36,15 +36,15 @@ NewDeviceProxy::ResultOf::GetChannel_Impl::GetChannel_Impl(zx::unowned_channel _
 }
 
 NewDeviceProxy::ResultOf::GetChannel NewDeviceProxy::SyncClient::GetChannel(::zx::channel req) {
-  return ResultOf::GetChannel(zx::unowned_channel(this->channel_), std::move(req));
+    return ResultOf::GetChannel(::zx::unowned_channel(this->channel_), std::move(req));
 }
 
-NewDeviceProxy::ResultOf::GetChannel NewDeviceProxy::Call::GetChannel(zx::unowned_channel _client_end, ::zx::channel req) {
+NewDeviceProxy::ResultOf::GetChannel NewDeviceProxy::Call::GetChannel(::zx::unowned_channel _client_end, ::zx::channel req) {
   return ResultOf::GetChannel(std::move(_client_end), std::move(req));
 }
 
 
-NewDeviceProxy::UnownedResultOf::GetChannel_Impl::GetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req) {
+NewDeviceProxy::UnownedResultOf::GetChannel_Impl::GetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req) {
   if (_request_buffer.capacity() < GetChannelRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -60,14 +60,14 @@ NewDeviceProxy::UnownedResultOf::GetChannel_Impl::GetChannel_Impl(zx::unowned_ch
 }
 
 NewDeviceProxy::UnownedResultOf::GetChannel NewDeviceProxy::SyncClient::GetChannel(::fidl::BytePart _request_buffer, ::zx::channel req) {
-  return UnownedResultOf::GetChannel(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(req));
+  return UnownedResultOf::GetChannel(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(req));
 }
 
-NewDeviceProxy::UnownedResultOf::GetChannel NewDeviceProxy::Call::GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req) {
+NewDeviceProxy::UnownedResultOf::GetChannel NewDeviceProxy::Call::GetChannel(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req) {
   return UnownedResultOf::GetChannel(std::move(_client_end), std::move(_request_buffer), std::move(req));
 }
 
-::fidl::internal::StatusAndError NewDeviceProxy::InPlace::GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params) {
+::fidl::internal::StatusAndError NewDeviceProxy::InPlace::GetChannel(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params) {
   NewDeviceProxy::SetTransactionHeaderFor::GetChannelRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -268,7 +268,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_serial_DeviceSetConfigResponseT
 
 }  // namespace
 template <>
-Device::ResultOf::GetClass_Impl<Device::GetClassResponse>::GetClass_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetClass_Impl<Device::GetClassResponse>::GetClass_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetClassRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -281,15 +281,15 @@ Device::ResultOf::GetClass_Impl<Device::GetClassResponse>::GetClass_Impl(zx::uno
 }
 
 Device::ResultOf::GetClass Device::SyncClient::GetClass() {
-  return ResultOf::GetClass(zx::unowned_channel(this->channel_));
+    return ResultOf::GetClass(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetClass Device::Call::GetClass(zx::unowned_channel _client_end) {
+Device::ResultOf::GetClass Device::Call::GetClass(::zx::unowned_channel _client_end) {
   return ResultOf::GetClass(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetClass_Impl<Device::GetClassResponse>::GetClass_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetClass_Impl<Device::GetClassResponse>::GetClass_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetClassRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetClassRequest::PrimarySize);
@@ -300,14 +300,14 @@ Device::UnownedResultOf::GetClass_Impl<Device::GetClassResponse>::GetClass_Impl(
 }
 
 Device::UnownedResultOf::GetClass Device::SyncClient::GetClass(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetClass(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetClass(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetClass Device::Call::GetClass(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetClass Device::Call::GetClass(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetClass(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetClassResponse> Device::InPlace::GetClass(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetClassResponse> Device::InPlace::GetClass(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetClassRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -329,7 +329,7 @@ Device::UnownedResultOf::GetClass Device::Call::GetClass(zx::unowned_channel _cl
 }
 
 template <>
-Device::ResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config) {
+Device::ResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -344,15 +344,15 @@ Device::ResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Impl(zx::
 }
 
 Device::ResultOf::SetConfig Device::SyncClient::SetConfig(::llcpp::fuchsia::hardware::serial::Config config) {
-  return ResultOf::SetConfig(zx::unowned_channel(this->channel_), std::move(config));
+    return ResultOf::SetConfig(::zx::unowned_channel(this->channel_), std::move(config));
 }
 
-Device::ResultOf::SetConfig Device::Call::SetConfig(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config) {
+Device::ResultOf::SetConfig Device::Call::SetConfig(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config) {
   return ResultOf::SetConfig(std::move(_client_end), std::move(config));
 }
 
 template <>
-Device::UnownedResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetConfigRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetConfigResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -367,14 +367,14 @@ Device::UnownedResultOf::SetConfig_Impl<Device::SetConfigResponse>::SetConfig_Im
 }
 
 Device::UnownedResultOf::SetConfig Device::SyncClient::SetConfig(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetConfig(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
+  return UnownedResultOf::SetConfig(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetConfig Device::Call::SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetConfig Device::Call::SetConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfig(std::move(_client_end), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::SetConfigResponse> Device::InPlace::SetConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::SetConfigResponse> Device::InPlace::SetConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::SetConfigRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -565,7 +565,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_serial_NewDeviceWriteResponseTa
 
 }  // namespace
 template <>
-NewDevice::ResultOf::GetClass_Impl<NewDevice::GetClassResponse>::GetClass_Impl(zx::unowned_channel _client_end) {
+NewDevice::ResultOf::GetClass_Impl<NewDevice::GetClassResponse>::GetClass_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetClassRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -578,15 +578,15 @@ NewDevice::ResultOf::GetClass_Impl<NewDevice::GetClassResponse>::GetClass_Impl(z
 }
 
 NewDevice::ResultOf::GetClass NewDevice::SyncClient::GetClass() {
-  return ResultOf::GetClass(zx::unowned_channel(this->channel_));
+    return ResultOf::GetClass(::zx::unowned_channel(this->channel_));
 }
 
-NewDevice::ResultOf::GetClass NewDevice::Call::GetClass(zx::unowned_channel _client_end) {
+NewDevice::ResultOf::GetClass NewDevice::Call::GetClass(::zx::unowned_channel _client_end) {
   return ResultOf::GetClass(std::move(_client_end));
 }
 
 template <>
-NewDevice::UnownedResultOf::GetClass_Impl<NewDevice::GetClassResponse>::GetClass_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+NewDevice::UnownedResultOf::GetClass_Impl<NewDevice::GetClassResponse>::GetClass_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetClassRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetClassRequest::PrimarySize);
@@ -597,14 +597,14 @@ NewDevice::UnownedResultOf::GetClass_Impl<NewDevice::GetClassResponse>::GetClass
 }
 
 NewDevice::UnownedResultOf::GetClass NewDevice::SyncClient::GetClass(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetClass(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetClass(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-NewDevice::UnownedResultOf::GetClass NewDevice::Call::GetClass(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+NewDevice::UnownedResultOf::GetClass NewDevice::Call::GetClass(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetClass(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<NewDevice::GetClassResponse> NewDevice::InPlace::GetClass(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<NewDevice::GetClassResponse> NewDevice::InPlace::GetClass(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetClassRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -626,7 +626,7 @@ NewDevice::UnownedResultOf::GetClass NewDevice::Call::GetClass(zx::unowned_chann
 }
 
 template <>
-NewDevice::ResultOf::SetConfig_Impl<NewDevice::SetConfigResponse>::SetConfig_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config) {
+NewDevice::ResultOf::SetConfig_Impl<NewDevice::SetConfigResponse>::SetConfig_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -641,15 +641,15 @@ NewDevice::ResultOf::SetConfig_Impl<NewDevice::SetConfigResponse>::SetConfig_Imp
 }
 
 NewDevice::ResultOf::SetConfig NewDevice::SyncClient::SetConfig(::llcpp::fuchsia::hardware::serial::Config config) {
-  return ResultOf::SetConfig(zx::unowned_channel(this->channel_), std::move(config));
+    return ResultOf::SetConfig(::zx::unowned_channel(this->channel_), std::move(config));
 }
 
-NewDevice::ResultOf::SetConfig NewDevice::Call::SetConfig(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config) {
+NewDevice::ResultOf::SetConfig NewDevice::Call::SetConfig(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config) {
   return ResultOf::SetConfig(std::move(_client_end), std::move(config));
 }
 
 template <>
-NewDevice::UnownedResultOf::SetConfig_Impl<NewDevice::SetConfigResponse>::SetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
+NewDevice::UnownedResultOf::SetConfig_Impl<NewDevice::SetConfigResponse>::SetConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetConfigRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetConfigResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -664,14 +664,14 @@ NewDevice::UnownedResultOf::SetConfig_Impl<NewDevice::SetConfigResponse>::SetCon
 }
 
 NewDevice::UnownedResultOf::SetConfig NewDevice::SyncClient::SetConfig(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetConfig(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
+  return UnownedResultOf::SetConfig(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
 }
 
-NewDevice::UnownedResultOf::SetConfig NewDevice::Call::SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
+NewDevice::UnownedResultOf::SetConfig NewDevice::Call::SetConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfig(std::move(_client_end), std::move(_request_buffer), std::move(config), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<NewDevice::SetConfigResponse> NewDevice::InPlace::SetConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<NewDevice::SetConfigResponse> NewDevice::InPlace::SetConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer) {
   NewDevice::SetTransactionHeaderFor::SetConfigRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -688,7 +688,7 @@ NewDevice::UnownedResultOf::SetConfig NewDevice::Call::SetConfig(zx::unowned_cha
 }
 
 template <>
-NewDevice::ResultOf::Read_Impl<NewDevice::ReadResponse>::Read_Impl(zx::unowned_channel _client_end) {
+NewDevice::ResultOf::Read_Impl<NewDevice::ReadResponse>::Read_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -701,15 +701,15 @@ NewDevice::ResultOf::Read_Impl<NewDevice::ReadResponse>::Read_Impl(zx::unowned_c
 }
 
 NewDevice::ResultOf::Read NewDevice::SyncClient::Read() {
-  return ResultOf::Read(zx::unowned_channel(this->channel_));
+    return ResultOf::Read(::zx::unowned_channel(this->channel_));
 }
 
-NewDevice::ResultOf::Read NewDevice::Call::Read(zx::unowned_channel _client_end) {
+NewDevice::ResultOf::Read NewDevice::Call::Read(::zx::unowned_channel _client_end) {
   return ResultOf::Read(std::move(_client_end));
 }
 
 template <>
-NewDevice::UnownedResultOf::Read_Impl<NewDevice::ReadResponse>::Read_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+NewDevice::UnownedResultOf::Read_Impl<NewDevice::ReadResponse>::Read_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ReadRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, ReadRequest::PrimarySize);
@@ -720,14 +720,14 @@ NewDevice::UnownedResultOf::Read_Impl<NewDevice::ReadResponse>::Read_Impl(zx::un
 }
 
 NewDevice::UnownedResultOf::Read NewDevice::SyncClient::Read(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Read(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::Read(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-NewDevice::UnownedResultOf::Read NewDevice::Call::Read(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+NewDevice::UnownedResultOf::Read NewDevice::Call::Read(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Read(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<NewDevice::ReadResponse> NewDevice::InPlace::Read(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<NewDevice::ReadResponse> NewDevice::InPlace::Read(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(ReadRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -749,7 +749,7 @@ NewDevice::UnownedResultOf::Read NewDevice::Call::Read(zx::unowned_channel _clie
 }
 
 template <>
-NewDevice::ResultOf::Write_Impl<NewDevice::WriteResponse>::Write_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data) {
+NewDevice::ResultOf::Write_Impl<NewDevice::WriteResponse>::Write_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -766,15 +766,15 @@ NewDevice::ResultOf::Write_Impl<NewDevice::WriteResponse>::Write_Impl(zx::unowne
 }
 
 NewDevice::ResultOf::Write NewDevice::SyncClient::Write(::fidl::VectorView<uint8_t> data) {
-  return ResultOf::Write(zx::unowned_channel(this->channel_), std::move(data));
+    return ResultOf::Write(::zx::unowned_channel(this->channel_), std::move(data));
 }
 
-NewDevice::ResultOf::Write NewDevice::Call::Write(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data) {
+NewDevice::ResultOf::Write NewDevice::Call::Write(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data) {
   return ResultOf::Write(std::move(_client_end), std::move(data));
 }
 
 template <>
-NewDevice::UnownedResultOf::Write_Impl<NewDevice::WriteResponse>::Write_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
+NewDevice::UnownedResultOf::Write_Impl<NewDevice::WriteResponse>::Write_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < WriteRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WriteResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -792,14 +792,14 @@ NewDevice::UnownedResultOf::Write_Impl<NewDevice::WriteResponse>::Write_Impl(zx:
 }
 
 NewDevice::UnownedResultOf::Write NewDevice::SyncClient::Write(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Write(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(data), std::move(_response_buffer));
+  return UnownedResultOf::Write(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(data), std::move(_response_buffer));
 }
 
-NewDevice::UnownedResultOf::Write NewDevice::Call::Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
+NewDevice::UnownedResultOf::Write NewDevice::Call::Write(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Write(std::move(_client_end), std::move(_request_buffer), std::move(data), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<NewDevice::WriteResponse> NewDevice::InPlace::Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<NewDevice::WriteResponse> NewDevice::InPlace::Write(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer) {
   NewDevice::SetTransactionHeaderFor::WriteRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

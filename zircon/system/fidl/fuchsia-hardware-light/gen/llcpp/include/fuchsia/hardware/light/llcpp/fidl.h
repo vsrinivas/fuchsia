@@ -339,7 +339,7 @@ class Light final {
     class GetName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetName_Impl(zx::unowned_channel _client_end, uint32_t index);
+      GetName_Impl(::zx::unowned_channel _client_end, uint32_t index);
       ~GetName_Impl() = default;
       GetName_Impl(GetName_Impl&& other) = default;
       GetName_Impl& operator=(GetName_Impl&& other) = default;
@@ -355,7 +355,7 @@ class Light final {
     class GetCount_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetCount_Impl(zx::unowned_channel _client_end);
+      GetCount_Impl(::zx::unowned_channel _client_end);
       ~GetCount_Impl() = default;
       GetCount_Impl(GetCount_Impl&& other) = default;
       GetCount_Impl& operator=(GetCount_Impl&& other) = default;
@@ -371,7 +371,7 @@ class Light final {
     class HasCapability_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      HasCapability_Impl(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability);
+      HasCapability_Impl(::zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability);
       ~HasCapability_Impl() = default;
       HasCapability_Impl(HasCapability_Impl&& other) = default;
       HasCapability_Impl& operator=(HasCapability_Impl&& other) = default;
@@ -387,7 +387,7 @@ class Light final {
     class GetSimpleValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetSimpleValue_Impl(zx::unowned_channel _client_end, uint32_t index);
+      GetSimpleValue_Impl(::zx::unowned_channel _client_end, uint32_t index);
       ~GetSimpleValue_Impl() = default;
       GetSimpleValue_Impl(GetSimpleValue_Impl&& other) = default;
       GetSimpleValue_Impl& operator=(GetSimpleValue_Impl&& other) = default;
@@ -403,7 +403,7 @@ class Light final {
     class SetSimpleValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetSimpleValue_Impl(zx::unowned_channel _client_end, uint32_t index, uint8_t value);
+      SetSimpleValue_Impl(::zx::unowned_channel _client_end, uint32_t index, uint8_t value);
       ~SetSimpleValue_Impl() = default;
       SetSimpleValue_Impl(SetSimpleValue_Impl&& other) = default;
       SetSimpleValue_Impl& operator=(SetSimpleValue_Impl&& other) = default;
@@ -419,7 +419,7 @@ class Light final {
     class GetRgbValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetRgbValue_Impl(zx::unowned_channel _client_end, uint32_t index);
+      GetRgbValue_Impl(::zx::unowned_channel _client_end, uint32_t index);
       ~GetRgbValue_Impl() = default;
       GetRgbValue_Impl(GetRgbValue_Impl&& other) = default;
       GetRgbValue_Impl& operator=(GetRgbValue_Impl&& other) = default;
@@ -435,7 +435,7 @@ class Light final {
     class SetRgbValue_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetRgbValue_Impl(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value);
+      SetRgbValue_Impl(::zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value);
       ~SetRgbValue_Impl() = default;
       SetRgbValue_Impl(SetRgbValue_Impl&& other) = default;
       SetRgbValue_Impl& operator=(SetRgbValue_Impl&& other) = default;
@@ -467,7 +467,7 @@ class Light final {
     class GetName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
+      GetName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
       ~GetName_Impl() = default;
       GetName_Impl(GetName_Impl&& other) = default;
       GetName_Impl& operator=(GetName_Impl&& other) = default;
@@ -483,7 +483,7 @@ class Light final {
     class GetCount_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetCount_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetCount_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetCount_Impl() = default;
       GetCount_Impl(GetCount_Impl&& other) = default;
       GetCount_Impl& operator=(GetCount_Impl&& other) = default;
@@ -499,7 +499,7 @@ class Light final {
     class HasCapability_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      HasCapability_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer);
+      HasCapability_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer);
       ~HasCapability_Impl() = default;
       HasCapability_Impl(HasCapability_Impl&& other) = default;
       HasCapability_Impl& operator=(HasCapability_Impl&& other) = default;
@@ -515,7 +515,7 @@ class Light final {
     class GetSimpleValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetSimpleValue_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
+      GetSimpleValue_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
       ~GetSimpleValue_Impl() = default;
       GetSimpleValue_Impl(GetSimpleValue_Impl&& other) = default;
       GetSimpleValue_Impl& operator=(GetSimpleValue_Impl&& other) = default;
@@ -531,7 +531,7 @@ class Light final {
     class SetSimpleValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetSimpleValue_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer);
+      SetSimpleValue_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer);
       ~SetSimpleValue_Impl() = default;
       SetSimpleValue_Impl(SetSimpleValue_Impl&& other) = default;
       SetSimpleValue_Impl& operator=(SetSimpleValue_Impl&& other) = default;
@@ -547,7 +547,7 @@ class Light final {
     class GetRgbValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetRgbValue_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
+      GetRgbValue_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
       ~GetRgbValue_Impl() = default;
       GetRgbValue_Impl(GetRgbValue_Impl&& other) = default;
       GetRgbValue_Impl& operator=(GetRgbValue_Impl&& other) = default;
@@ -563,7 +563,7 @@ class Light final {
     class SetRgbValue_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetRgbValue_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer);
+      SetRgbValue_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer);
       ~SetRgbValue_Impl() = default;
       SetRgbValue_Impl(SetRgbValue_Impl&& other) = default;
       SetRgbValue_Impl& operator=(SetRgbValue_Impl&& other) = default;
@@ -649,46 +649,46 @@ class Light final {
    public:
 
     // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetName GetName(zx::unowned_channel _client_end, uint32_t index);
+    static ResultOf::GetName GetName(::zx::unowned_channel _client_end, uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetName GetName(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetName GetName(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetCount GetCount(zx::unowned_channel _client_end);
+    static ResultOf::GetCount GetCount(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetCount GetCount(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetCount GetCount(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::HasCapability HasCapability(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability);
+    static ResultOf::HasCapability HasCapability(::zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::HasCapability HasCapability(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::HasCapability HasCapability(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Capability capability, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetSimpleValue GetSimpleValue(zx::unowned_channel _client_end, uint32_t index);
+    static ResultOf::GetSimpleValue GetSimpleValue(::zx::unowned_channel _client_end, uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetSimpleValue GetSimpleValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetSimpleValue GetSimpleValue(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetSimpleValue SetSimpleValue(zx::unowned_channel _client_end, uint32_t index, uint8_t value);
+    static ResultOf::SetSimpleValue SetSimpleValue(::zx::unowned_channel _client_end, uint32_t index, uint8_t value);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetSimpleValue SetSimpleValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetSimpleValue SetSimpleValue(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, uint8_t value, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetRgbValue GetRgbValue(zx::unowned_channel _client_end, uint32_t index);
+    static ResultOf::GetRgbValue GetRgbValue(::zx::unowned_channel _client_end, uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetRgbValue GetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetRgbValue GetRgbValue(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetRgbValue SetRgbValue(zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value);
+    static ResultOf::SetRgbValue SetRgbValue(::zx::unowned_channel _client_end, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetRgbValue SetRgbValue(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetRgbValue SetRgbValue(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::llcpp::fuchsia::hardware::light::Rgb value, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -698,19 +698,19 @@ class Light final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<GetNameResponse> GetName(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetNameRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetNameResponse> GetName(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetNameRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetCountResponse> GetCount(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetCountResponse> GetCount(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<HasCapabilityResponse> HasCapability(zx::unowned_channel _client_end, ::fidl::DecodedMessage<HasCapabilityRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<HasCapabilityResponse> HasCapability(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<HasCapabilityRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetSimpleValueResponse> GetSimpleValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSimpleValueRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetSimpleValueResponse> GetSimpleValue(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSimpleValueRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<SetSimpleValueResponse> SetSimpleValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSimpleValueRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetSimpleValueResponse> SetSimpleValue(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetSimpleValueRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetRgbValueResponse> GetRgbValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRgbValueRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetRgbValueResponse> GetRgbValue(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetRgbValueRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<SetRgbValueResponse> SetRgbValue(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetRgbValueRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetRgbValueResponse> SetRgbValue(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetRgbValueRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

@@ -61,7 +61,7 @@ class Events final {
     class FunctionRegistered_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      FunctionRegistered_Impl(zx::unowned_channel _client_end);
+      FunctionRegistered_Impl(::zx::unowned_channel _client_end);
       ~FunctionRegistered_Impl() = default;
       FunctionRegistered_Impl(FunctionRegistered_Impl&& other) = default;
       FunctionRegistered_Impl& operator=(FunctionRegistered_Impl&& other) = default;
@@ -76,7 +76,7 @@ class Events final {
     class FunctionsCleared_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      FunctionsCleared_Impl(zx::unowned_channel _client_end);
+      FunctionsCleared_Impl(::zx::unowned_channel _client_end);
       ~FunctionsCleared_Impl() = default;
       FunctionsCleared_Impl(FunctionsCleared_Impl&& other) = default;
       FunctionsCleared_Impl& operator=(FunctionsCleared_Impl&& other) = default;
@@ -99,7 +99,7 @@ class Events final {
     class FunctionRegistered_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      FunctionRegistered_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      FunctionRegistered_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~FunctionRegistered_Impl() = default;
       FunctionRegistered_Impl(FunctionRegistered_Impl&& other) = default;
       FunctionRegistered_Impl& operator=(FunctionRegistered_Impl&& other) = default;
@@ -114,7 +114,7 @@ class Events final {
     class FunctionsCleared_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      FunctionsCleared_Impl(zx::unowned_channel _client_end);
+      FunctionsCleared_Impl(::zx::unowned_channel _client_end);
       ~FunctionsCleared_Impl() = default;
       FunctionsCleared_Impl(FunctionsCleared_Impl&& other) = default;
       FunctionsCleared_Impl& operator=(FunctionsCleared_Impl&& other) = default;
@@ -160,12 +160,12 @@ class Events final {
 
     // Invoked when a function registers
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::FunctionRegistered FunctionRegistered(zx::unowned_channel _client_end);
+    static ResultOf::FunctionRegistered FunctionRegistered(::zx::unowned_channel _client_end);
 
 
     // Invoked when all functions have been cleared.
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::FunctionsCleared FunctionsCleared(zx::unowned_channel _client_end);
+    static ResultOf::FunctionsCleared FunctionsCleared(::zx::unowned_channel _client_end);
 
 
   };
@@ -177,10 +177,10 @@ class Events final {
    public:
 
     // Invoked when a function registers
-    static ::fidl::DecodeResult<FunctionRegisteredResponse> FunctionRegistered(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<FunctionRegisteredResponse> FunctionRegistered(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Invoked when all functions have been cleared.
-    static ::fidl::internal::StatusAndError FunctionsCleared(zx::unowned_channel _client_end);
+    static ::fidl::internal::StatusAndError FunctionsCleared(::zx::unowned_channel _client_end);
 
   };
 
@@ -516,7 +516,7 @@ class Device final {
     class SetConfiguration_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetConfiguration_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors);
+      SetConfiguration_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors);
       ~SetConfiguration_Impl() = default;
       SetConfiguration_Impl(SetConfiguration_Impl&& other) = default;
       SetConfiguration_Impl& operator=(SetConfiguration_Impl&& other) = default;
@@ -532,7 +532,7 @@ class Device final {
     class ClearFunctions_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ClearFunctions_Impl(zx::unowned_channel _client_end);
+      ClearFunctions_Impl(::zx::unowned_channel _client_end);
       ~ClearFunctions_Impl() = default;
       ClearFunctions_Impl(ClearFunctions_Impl&& other) = default;
       ClearFunctions_Impl& operator=(ClearFunctions_Impl&& other) = default;
@@ -547,7 +547,7 @@ class Device final {
     class SetStateChangeListener_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetStateChangeListener_Impl(zx::unowned_channel _client_end, ::zx::channel listener);
+      SetStateChangeListener_Impl(::zx::unowned_channel _client_end, ::zx::channel listener);
       ~SetStateChangeListener_Impl() = default;
       SetStateChangeListener_Impl(SetStateChangeListener_Impl&& other) = default;
       SetStateChangeListener_Impl& operator=(SetStateChangeListener_Impl&& other) = default;
@@ -571,7 +571,7 @@ class Device final {
     class SetConfiguration_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetConfiguration_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
+      SetConfiguration_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
       ~SetConfiguration_Impl() = default;
       SetConfiguration_Impl(SetConfiguration_Impl&& other) = default;
       SetConfiguration_Impl& operator=(SetConfiguration_Impl&& other) = default;
@@ -587,7 +587,7 @@ class Device final {
     class ClearFunctions_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ClearFunctions_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ClearFunctions_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~ClearFunctions_Impl() = default;
       ClearFunctions_Impl(ClearFunctions_Impl&& other) = default;
       ClearFunctions_Impl& operator=(ClearFunctions_Impl&& other) = default;
@@ -602,7 +602,7 @@ class Device final {
     class SetStateChangeListener_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetStateChangeListener_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
+      SetStateChangeListener_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
       ~SetStateChangeListener_Impl() = default;
       SetStateChangeListener_Impl(SetStateChangeListener_Impl&& other) = default;
       SetStateChangeListener_Impl& operator=(SetStateChangeListener_Impl&& other) = default;
@@ -668,28 +668,28 @@ class Device final {
     // configuration's interfaces.
     // At least one function descriptor must be provided.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::SetConfiguration SetConfiguration(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors);
+    static ResultOf::SetConfiguration SetConfiguration(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors);
 
     // Sets the device's descriptors, adds the functions and creates the child devices for the
     // configuration's interfaces.
     // At least one function descriptor must be provided.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetConfiguration SetConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetConfiguration SetConfiguration(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer);
 
     // Tells the device to remove the child devices for the configuration's interfaces
     // and reset the list of functions to empty.
     // The caller should wait for the |FunctionsCleared| event.
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ClearFunctions ClearFunctions(zx::unowned_channel _client_end);
+    static ResultOf::ClearFunctions ClearFunctions(::zx::unowned_channel _client_end);
 
 
     // Adds a state change listener that is invoked when a state change completes.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetStateChangeListener SetStateChangeListener(zx::unowned_channel _client_end, ::zx::channel listener);
+    static ResultOf::SetStateChangeListener SetStateChangeListener(::zx::unowned_channel _client_end, ::zx::channel listener);
 
     // Adds a state change listener that is invoked when a state change completes.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetStateChangeListener SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
+    static UnownedResultOf::SetStateChangeListener SetStateChangeListener(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener);
 
   };
 
@@ -702,15 +702,15 @@ class Device final {
     // Sets the device's descriptors, adds the functions and creates the child devices for the
     // configuration's interfaces.
     // At least one function descriptor must be provided.
-    static ::fidl::DecodeResult<SetConfigurationResponse> SetConfiguration(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetConfigurationResponse> SetConfiguration(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationRequest> params, ::fidl::BytePart response_buffer);
 
     // Tells the device to remove the child devices for the configuration's interfaces
     // and reset the list of functions to empty.
     // The caller should wait for the |FunctionsCleared| event.
-    static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Adds a state change listener that is invoked when a state change completes.
-    static ::fidl::internal::StatusAndError SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateChangeListenerRequest> params);
+    static ::fidl::internal::StatusAndError SetStateChangeListener(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateChangeListenerRequest> params);
 
   };
 

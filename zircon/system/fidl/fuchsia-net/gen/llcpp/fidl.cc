@@ -20,12 +20,12 @@ extern "C" const fidl_type_t v1_fuchsia_net_ConnectivityOnNetworkReachableEventT
 
 }  // namespace
 zx_status_t Connectivity::SyncClient::HandleEvents(Connectivity::EventHandlers handlers) {
-  return Connectivity::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+  return Connectivity::Call::HandleEvents(::zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Connectivity::Call::HandleEvents(zx::unowned_channel client_end, Connectivity::EventHandlers handlers) {
+zx_status_t Connectivity::Call::HandleEvents(::zx::unowned_channel client_end, Connectivity::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                            zx::time::infinite(),
+                                            ::zx::time::infinite(),
                                             nullptr);
   if (status != ZX_OK) {
     return status;
@@ -137,7 +137,7 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
               OnNetworkReachableResponse::PrimarySize)));
   _response.reachable = std::move(reachable);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnNetworkReachableResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnNetworkReachableResponse>(std::move(_response_bytes)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnNetworkReachableResponse>(std::move(_response_bytes)));
 }
 
 zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, bool reachable) {
@@ -152,12 +152,12 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
               OnNetworkReachableResponse::PrimarySize)));
   _response.reachable = std::move(reachable);
   _buffer.set_actual(sizeof(OnNetworkReachableResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnNetworkReachableResponse>(std::move(_buffer)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnNetworkReachableResponse>(std::move(_buffer)));
 }
 
 zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnNetworkReachableResponse> params) {
   Connectivity::SetTransactionHeaderFor::OnNetworkReachableResponse(params);
-  return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
 
@@ -371,7 +371,7 @@ extern "C" const fidl_type_t v1_fuchsia_net_NameLookupLookupHostnameResponseTabl
 
 }  // namespace
 template <>
-NameLookup::ResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options) {
+NameLookup::ResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::LookupIp_Impl(::zx::unowned_channel _client_end, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupIpRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -389,15 +389,15 @@ NameLookup::ResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::LookupIp_Impl
 }
 
 NameLookup::ResultOf::LookupIp NameLookup::SyncClient::LookupIp(::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options) {
-  return ResultOf::LookupIp(zx::unowned_channel(this->channel_), std::move(hostname), std::move(options));
+    return ResultOf::LookupIp(::zx::unowned_channel(this->channel_), std::move(hostname), std::move(options));
 }
 
-NameLookup::ResultOf::LookupIp NameLookup::Call::LookupIp(zx::unowned_channel _client_end, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options) {
+NameLookup::ResultOf::LookupIp NameLookup::Call::LookupIp(::zx::unowned_channel _client_end, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options) {
   return ResultOf::LookupIp(std::move(_client_end), std::move(hostname), std::move(options));
 }
 
 template <>
-NameLookup::UnownedResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::LookupIp_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer) {
+NameLookup::UnownedResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::LookupIp_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LookupIpRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LookupIpResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -416,14 +416,14 @@ NameLookup::UnownedResultOf::LookupIp_Impl<NameLookup::LookupIpResponse>::Lookup
 }
 
 NameLookup::UnownedResultOf::LookupIp NameLookup::SyncClient::LookupIp(::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LookupIp(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(hostname), std::move(options), std::move(_response_buffer));
+  return UnownedResultOf::LookupIp(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(hostname), std::move(options), std::move(_response_buffer));
 }
 
-NameLookup::UnownedResultOf::LookupIp NameLookup::Call::LookupIp(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer) {
+NameLookup::UnownedResultOf::LookupIp NameLookup::Call::LookupIp(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LookupIp(std::move(_client_end), std::move(_request_buffer), std::move(hostname), std::move(options), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<NameLookup::LookupIpResponse> NameLookup::InPlace::LookupIp(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<NameLookup::LookupIpResponse> NameLookup::InPlace::LookupIp(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer) {
   NameLookup::SetTransactionHeaderFor::LookupIpRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -440,7 +440,7 @@ NameLookup::UnownedResultOf::LookupIp NameLookup::Call::LookupIp(zx::unowned_cha
 }
 
 template <>
-NameLookup::ResultOf::LookupHostname_Impl<NameLookup::LookupHostnameResponse>::LookupHostname_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr) {
+NameLookup::ResultOf::LookupHostname_Impl<NameLookup::LookupHostnameResponse>::LookupHostname_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupHostnameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -455,15 +455,15 @@ NameLookup::ResultOf::LookupHostname_Impl<NameLookup::LookupHostnameResponse>::L
 }
 
 NameLookup::ResultOf::LookupHostname NameLookup::SyncClient::LookupHostname(::llcpp::fuchsia::net::IpAddress addr) {
-  return ResultOf::LookupHostname(zx::unowned_channel(this->channel_), std::move(addr));
+    return ResultOf::LookupHostname(::zx::unowned_channel(this->channel_), std::move(addr));
 }
 
-NameLookup::ResultOf::LookupHostname NameLookup::Call::LookupHostname(zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr) {
+NameLookup::ResultOf::LookupHostname NameLookup::Call::LookupHostname(::zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr) {
   return ResultOf::LookupHostname(std::move(_client_end), std::move(addr));
 }
 
 template <>
-NameLookup::UnownedResultOf::LookupHostname_Impl<NameLookup::LookupHostnameResponse>::LookupHostname_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer) {
+NameLookup::UnownedResultOf::LookupHostname_Impl<NameLookup::LookupHostnameResponse>::LookupHostname_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < LookupHostnameRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<LookupHostnameResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -478,14 +478,14 @@ NameLookup::UnownedResultOf::LookupHostname_Impl<NameLookup::LookupHostnameRespo
 }
 
 NameLookup::UnownedResultOf::LookupHostname NameLookup::SyncClient::LookupHostname(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LookupHostname(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(addr), std::move(_response_buffer));
+  return UnownedResultOf::LookupHostname(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(addr), std::move(_response_buffer));
 }
 
-NameLookup::UnownedResultOf::LookupHostname NameLookup::Call::LookupHostname(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer) {
+NameLookup::UnownedResultOf::LookupHostname NameLookup::Call::LookupHostname(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::net::IpAddress addr, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::LookupHostname(std::move(_client_end), std::move(_request_buffer), std::move(addr), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<NameLookup::LookupHostnameResponse> NameLookup::InPlace::LookupHostname(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<NameLookup::LookupHostnameResponse> NameLookup::InPlace::LookupHostname(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupHostnameRequest> params, ::fidl::BytePart response_buffer) {
   NameLookup::SetTransactionHeaderFor::LookupHostnameRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

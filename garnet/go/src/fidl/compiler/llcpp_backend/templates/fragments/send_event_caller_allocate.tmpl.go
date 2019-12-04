@@ -26,12 +26,12 @@ zx_status_t {{ .LLProps.InterfaceName }}::{{ template "SendEventCallerAllocateMe
   {{- if .LLProps.LinearizeResponse }}
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
-	return _linearize_result.status;
+    return _linearize_result.status;
   }
-  return ::fidl::Write(zx::unowned_channel(_chan), std::move(_linearize_result.message));
+  return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_linearize_result.message));
   {{- else }}
   _buffer.set_actual(sizeof({{ .Name }}Response));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<{{ .Name }}Response>(std::move(_buffer)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<{{ .Name }}Response>(std::move(_buffer)));
   {{- end }}
 }
 {{- end }}

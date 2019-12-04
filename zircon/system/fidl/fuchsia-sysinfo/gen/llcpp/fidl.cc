@@ -41,7 +41,7 @@ extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetInterruptControllerInfo
 
 }  // namespace
 template <>
-Device::ResultOf::GetHypervisorResource_Impl<Device::GetHypervisorResourceResponse>::GetHypervisorResource_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetHypervisorResource_Impl<Device::GetHypervisorResourceResponse>::GetHypervisorResource_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -54,15 +54,15 @@ Device::ResultOf::GetHypervisorResource_Impl<Device::GetHypervisorResourceRespon
 }
 
 Device::ResultOf::GetHypervisorResource Device::SyncClient::GetHypervisorResource() {
-  return ResultOf::GetHypervisorResource(zx::unowned_channel(this->channel_));
+    return ResultOf::GetHypervisorResource(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetHypervisorResource Device::Call::GetHypervisorResource(zx::unowned_channel _client_end) {
+Device::ResultOf::GetHypervisorResource Device::Call::GetHypervisorResource(::zx::unowned_channel _client_end) {
   return ResultOf::GetHypervisorResource(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetHypervisorResource_Impl<Device::GetHypervisorResourceResponse>::GetHypervisorResource_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetHypervisorResource_Impl<Device::GetHypervisorResourceResponse>::GetHypervisorResource_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetHypervisorResourceRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetHypervisorResourceRequest::PrimarySize);
@@ -73,14 +73,14 @@ Device::UnownedResultOf::GetHypervisorResource_Impl<Device::GetHypervisorResourc
 }
 
 Device::UnownedResultOf::GetHypervisorResource Device::SyncClient::GetHypervisorResource(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetHypervisorResource(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetHypervisorResource(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetHypervisorResource Device::Call::GetHypervisorResource(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetHypervisorResource Device::Call::GetHypervisorResource(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetHypervisorResource(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetHypervisorResourceResponse> Device::InPlace::GetHypervisorResource(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetHypervisorResourceResponse> Device::InPlace::GetHypervisorResource(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetHypervisorResourceRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -102,7 +102,7 @@ Device::UnownedResultOf::GetHypervisorResource Device::Call::GetHypervisorResour
 }
 
 template <>
-Device::ResultOf::GetBoardName_Impl<Device::GetBoardNameResponse>::GetBoardName_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetBoardName_Impl<Device::GetBoardNameResponse>::GetBoardName_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBoardNameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -115,15 +115,15 @@ Device::ResultOf::GetBoardName_Impl<Device::GetBoardNameResponse>::GetBoardName_
 }
 
 Device::ResultOf::GetBoardName Device::SyncClient::GetBoardName() {
-  return ResultOf::GetBoardName(zx::unowned_channel(this->channel_));
+    return ResultOf::GetBoardName(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetBoardName Device::Call::GetBoardName(zx::unowned_channel _client_end) {
+Device::ResultOf::GetBoardName Device::Call::GetBoardName(::zx::unowned_channel _client_end) {
   return ResultOf::GetBoardName(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetBoardName_Impl<Device::GetBoardNameResponse>::GetBoardName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetBoardName_Impl<Device::GetBoardNameResponse>::GetBoardName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetBoardNameRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetBoardNameRequest::PrimarySize);
@@ -134,14 +134,14 @@ Device::UnownedResultOf::GetBoardName_Impl<Device::GetBoardNameResponse>::GetBoa
 }
 
 Device::UnownedResultOf::GetBoardName Device::SyncClient::GetBoardName(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetBoardName(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetBoardName(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetBoardName Device::Call::GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetBoardName Device::Call::GetBoardName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetBoardName(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetBoardNameResponse> Device::InPlace::GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetBoardNameResponse> Device::InPlace::GetBoardName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetBoardNameRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -163,7 +163,7 @@ Device::UnownedResultOf::GetBoardName Device::Call::GetBoardName(zx::unowned_cha
 }
 
 template <>
-Device::ResultOf::GetBoardRevision_Impl<Device::GetBoardRevisionResponse>::GetBoardRevision_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetBoardRevision_Impl<Device::GetBoardRevisionResponse>::GetBoardRevision_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBoardRevisionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -176,15 +176,15 @@ Device::ResultOf::GetBoardRevision_Impl<Device::GetBoardRevisionResponse>::GetBo
 }
 
 Device::ResultOf::GetBoardRevision Device::SyncClient::GetBoardRevision() {
-  return ResultOf::GetBoardRevision(zx::unowned_channel(this->channel_));
+    return ResultOf::GetBoardRevision(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetBoardRevision Device::Call::GetBoardRevision(zx::unowned_channel _client_end) {
+Device::ResultOf::GetBoardRevision Device::Call::GetBoardRevision(::zx::unowned_channel _client_end) {
   return ResultOf::GetBoardRevision(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetBoardRevision_Impl<Device::GetBoardRevisionResponse>::GetBoardRevision_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetBoardRevision_Impl<Device::GetBoardRevisionResponse>::GetBoardRevision_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetBoardRevisionRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetBoardRevisionRequest::PrimarySize);
@@ -195,14 +195,14 @@ Device::UnownedResultOf::GetBoardRevision_Impl<Device::GetBoardRevisionResponse>
 }
 
 Device::UnownedResultOf::GetBoardRevision Device::SyncClient::GetBoardRevision(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetBoardRevision(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetBoardRevision(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetBoardRevision Device::Call::GetBoardRevision(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetBoardRevision Device::Call::GetBoardRevision(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetBoardRevision(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetBoardRevisionResponse> Device::InPlace::GetBoardRevision(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetBoardRevisionResponse> Device::InPlace::GetBoardRevision(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetBoardRevisionRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -224,7 +224,7 @@ Device::UnownedResultOf::GetBoardRevision Device::Call::GetBoardRevision(zx::uno
 }
 
 template <>
-Device::ResultOf::GetInterruptControllerInfo_Impl<Device::GetInterruptControllerInfoResponse>::GetInterruptControllerInfo_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::GetInterruptControllerInfo_Impl<Device::GetInterruptControllerInfoResponse>::GetInterruptControllerInfo_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInterruptControllerInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -237,15 +237,15 @@ Device::ResultOf::GetInterruptControllerInfo_Impl<Device::GetInterruptController
 }
 
 Device::ResultOf::GetInterruptControllerInfo Device::SyncClient::GetInterruptControllerInfo() {
-  return ResultOf::GetInterruptControllerInfo(zx::unowned_channel(this->channel_));
+    return ResultOf::GetInterruptControllerInfo(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::GetInterruptControllerInfo Device::Call::GetInterruptControllerInfo(zx::unowned_channel _client_end) {
+Device::ResultOf::GetInterruptControllerInfo Device::Call::GetInterruptControllerInfo(::zx::unowned_channel _client_end) {
   return ResultOf::GetInterruptControllerInfo(std::move(_client_end));
 }
 
 template <>
-Device::UnownedResultOf::GetInterruptControllerInfo_Impl<Device::GetInterruptControllerInfoResponse>::GetInterruptControllerInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetInterruptControllerInfo_Impl<Device::GetInterruptControllerInfoResponse>::GetInterruptControllerInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetInterruptControllerInfoRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetInterruptControllerInfoRequest::PrimarySize);
@@ -256,14 +256,14 @@ Device::UnownedResultOf::GetInterruptControllerInfo_Impl<Device::GetInterruptCon
 }
 
 Device::UnownedResultOf::GetInterruptControllerInfo Device::SyncClient::GetInterruptControllerInfo(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetInterruptControllerInfo(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetInterruptControllerInfo(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetInterruptControllerInfo Device::Call::GetInterruptControllerInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetInterruptControllerInfo Device::Call::GetInterruptControllerInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetInterruptControllerInfo(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetInterruptControllerInfoResponse> Device::InPlace::GetInterruptControllerInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetInterruptControllerInfoResponse> Device::InPlace::GetInterruptControllerInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetInterruptControllerInfoRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

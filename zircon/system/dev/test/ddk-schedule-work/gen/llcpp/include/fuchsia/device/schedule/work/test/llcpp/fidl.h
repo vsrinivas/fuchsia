@@ -733,7 +733,7 @@ class TestDevice final {
     class ScheduleWork_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ScheduleWork_Impl(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
+      ScheduleWork_Impl(::zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
       ~ScheduleWork_Impl() = default;
       ScheduleWork_Impl(ScheduleWork_Impl&& other) = default;
       ScheduleWork_Impl& operator=(ScheduleWork_Impl&& other) = default;
@@ -749,7 +749,7 @@ class TestDevice final {
     class ScheduleWorkDifferentThread_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ScheduleWorkDifferentThread_Impl(zx::unowned_channel _client_end);
+      ScheduleWorkDifferentThread_Impl(::zx::unowned_channel _client_end);
       ~ScheduleWorkDifferentThread_Impl() = default;
       ScheduleWorkDifferentThread_Impl(ScheduleWorkDifferentThread_Impl&& other) = default;
       ScheduleWorkDifferentThread_Impl& operator=(ScheduleWorkDifferentThread_Impl&& other) = default;
@@ -765,7 +765,7 @@ class TestDevice final {
     class GetDoneEvent_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDoneEvent_Impl(zx::unowned_channel _client_end);
+      GetDoneEvent_Impl(::zx::unowned_channel _client_end);
       ~GetDoneEvent_Impl() = default;
       GetDoneEvent_Impl(GetDoneEvent_Impl&& other) = default;
       GetDoneEvent_Impl& operator=(GetDoneEvent_Impl&& other) = default;
@@ -781,7 +781,7 @@ class TestDevice final {
     class ScheduledWorkRan_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ScheduledWorkRan_Impl(zx::unowned_channel _client_end);
+      ScheduledWorkRan_Impl(::zx::unowned_channel _client_end);
       ~ScheduledWorkRan_Impl() = default;
       ScheduledWorkRan_Impl(ScheduledWorkRan_Impl&& other) = default;
       ScheduledWorkRan_Impl& operator=(ScheduledWorkRan_Impl&& other) = default;
@@ -797,7 +797,7 @@ class TestDevice final {
     class GetChannel_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetChannel_Impl(zx::unowned_channel _client_end, ::zx::channel test);
+      GetChannel_Impl(::zx::unowned_channel _client_end, ::zx::channel test);
       ~GetChannel_Impl() = default;
       GetChannel_Impl(GetChannel_Impl&& other) = default;
       GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
@@ -827,7 +827,7 @@ class TestDevice final {
     class ScheduleWork_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ScheduleWork_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
+      ScheduleWork_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
       ~ScheduleWork_Impl() = default;
       ScheduleWork_Impl(ScheduleWork_Impl&& other) = default;
       ScheduleWork_Impl& operator=(ScheduleWork_Impl&& other) = default;
@@ -843,7 +843,7 @@ class TestDevice final {
     class ScheduleWorkDifferentThread_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ScheduleWorkDifferentThread_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ScheduleWorkDifferentThread_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~ScheduleWorkDifferentThread_Impl() = default;
       ScheduleWorkDifferentThread_Impl(ScheduleWorkDifferentThread_Impl&& other) = default;
       ScheduleWorkDifferentThread_Impl& operator=(ScheduleWorkDifferentThread_Impl&& other) = default;
@@ -859,7 +859,7 @@ class TestDevice final {
     class GetDoneEvent_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDoneEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetDoneEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetDoneEvent_Impl() = default;
       GetDoneEvent_Impl(GetDoneEvent_Impl&& other) = default;
       GetDoneEvent_Impl& operator=(GetDoneEvent_Impl&& other) = default;
@@ -875,7 +875,7 @@ class TestDevice final {
     class ScheduledWorkRan_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ScheduledWorkRan_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ScheduledWorkRan_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~ScheduledWorkRan_Impl() = default;
       ScheduledWorkRan_Impl(ScheduledWorkRan_Impl&& other) = default;
       ScheduledWorkRan_Impl& operator=(ScheduledWorkRan_Impl&& other) = default;
@@ -891,7 +891,7 @@ class TestDevice final {
     class GetChannel_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel test, ::fidl::BytePart _response_buffer);
+      GetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel test, ::fidl::BytePart _response_buffer);
       ~GetChannel_Impl() = default;
       GetChannel_Impl(GetChannel_Impl&& other) = default;
       GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
@@ -980,45 +980,45 @@ class TestDevice final {
     // outstanding at any given time, while |num_work_items| refers to total
     // number of work items.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
+    static ResultOf::ScheduleWork ScheduleWork(::zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
 
     // Schedules work. |batch_size| refers to how many work_items to keep
     // outstanding at any given time, while |num_work_items| refers to total
     // number of work items.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ScheduleWork ScheduleWork(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
 
     // Spawns a thread which schedules work.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ScheduleWorkDifferentThread ScheduleWorkDifferentThread(zx::unowned_channel _client_end);
+    static ResultOf::ScheduleWorkDifferentThread ScheduleWorkDifferentThread(::zx::unowned_channel _client_end);
 
     // Spawns a thread which schedules work.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ScheduleWorkDifferentThread ScheduleWorkDifferentThread(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ScheduleWorkDifferentThread ScheduleWorkDifferentThread(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Triggers once all outstanding work is complete.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDoneEvent GetDoneEvent(zx::unowned_channel _client_end);
+    static ResultOf::GetDoneEvent GetDoneEvent(::zx::unowned_channel _client_end);
 
     // Triggers once all outstanding work is complete.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDoneEvent GetDoneEvent(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDoneEvent GetDoneEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Returns whether how many work items ran since last time it was invoked.
     // Allocates 120 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ScheduledWorkRan ScheduledWorkRan(zx::unowned_channel _client_end);
+    static ResultOf::ScheduledWorkRan ScheduledWorkRan(::zx::unowned_channel _client_end);
 
     // Returns whether how many work items ran since last time it was invoked.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ScheduledWorkRan ScheduledWorkRan(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ScheduledWorkRan ScheduledWorkRan(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Spawns an thread with a dedicated async loop.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::zx::channel test);
+    static ResultOf::GetChannel GetChannel(::zx::unowned_channel _client_end, ::zx::channel test);
 
     // Spawns an thread with a dedicated async loop.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel test, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetChannel GetChannel(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel test, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1031,19 +1031,19 @@ class TestDevice final {
     // Schedules work. |batch_size| refers to how many work_items to keep
     // outstanding at any given time, while |num_work_items| refers to total
     // number of work items.
-    static ::fidl::DecodeResult<ScheduleWorkResponse> ScheduleWork(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleWorkRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ScheduleWorkResponse> ScheduleWork(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleWorkRequest> params, ::fidl::BytePart response_buffer);
 
     // Spawns a thread which schedules work.
-    static ::fidl::DecodeResult<ScheduleWorkDifferentThreadResponse> ScheduleWorkDifferentThread(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ScheduleWorkDifferentThreadResponse> ScheduleWorkDifferentThread(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Triggers once all outstanding work is complete.
-    static ::fidl::DecodeResult<GetDoneEventResponse> GetDoneEvent(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDoneEventResponse> GetDoneEvent(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns whether how many work items ran since last time it was invoked.
-    static ::fidl::DecodeResult<ScheduledWorkRanResponse> ScheduledWorkRan(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ScheduledWorkRanResponse> ScheduledWorkRan(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Spawns an thread with a dedicated async loop.
-    static ::fidl::DecodeResult<GetChannelResponse> GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetChannelResponse> GetChannel(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1355,7 +1355,7 @@ class OwnedChannelDevice final {
     class ScheduleWork_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ScheduleWork_Impl(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
+      ScheduleWork_Impl(::zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
       ~ScheduleWork_Impl() = default;
       ScheduleWork_Impl(ScheduleWork_Impl&& other) = default;
       ScheduleWork_Impl& operator=(ScheduleWork_Impl&& other) = default;
@@ -1381,7 +1381,7 @@ class OwnedChannelDevice final {
     class ScheduleWork_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ScheduleWork_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
+      ScheduleWork_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
       ~ScheduleWork_Impl() = default;
       ScheduleWork_Impl(ScheduleWork_Impl&& other) = default;
       ScheduleWork_Impl& operator=(ScheduleWork_Impl&& other) = default;
@@ -1434,13 +1434,13 @@ class OwnedChannelDevice final {
     // many work_items to keep outstanding at any given time, while
     // |num_work_items| refers to total number of work items.
     // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
+    static ResultOf::ScheduleWork ScheduleWork(::zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items);
 
     // Schedules work and blocks until it completes. |batch_size| refers to how
     // many work_items to keep outstanding at any given time, while
     // |num_work_items| refers to total number of work items.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ScheduleWork ScheduleWork(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ScheduleWork ScheduleWork(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1453,7 +1453,7 @@ class OwnedChannelDevice final {
     // Schedules work and blocks until it completes. |batch_size| refers to how
     // many work_items to keep outstanding at any given time, while
     // |num_work_items| refers to total number of work items.
-    static ::fidl::DecodeResult<ScheduleWorkResponse> ScheduleWork(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleWorkRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ScheduleWorkResponse> ScheduleWork(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleWorkRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

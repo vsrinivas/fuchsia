@@ -269,7 +269,7 @@ class SkipBlock final {
     class GetPartitionInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetPartitionInfo_Impl(zx::unowned_channel _client_end);
+      GetPartitionInfo_Impl(::zx::unowned_channel _client_end);
       ~GetPartitionInfo_Impl() = default;
       GetPartitionInfo_Impl(GetPartitionInfo_Impl&& other) = default;
       GetPartitionInfo_Impl& operator=(GetPartitionInfo_Impl&& other) = default;
@@ -285,7 +285,7 @@ class SkipBlock final {
     class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Read_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op);
+      Read_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op);
       ~Read_Impl() = default;
       Read_Impl(Read_Impl&& other) = default;
       Read_Impl& operator=(Read_Impl&& other) = default;
@@ -301,7 +301,7 @@ class SkipBlock final {
     class Write_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Write_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op);
+      Write_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op);
       ~Write_Impl() = default;
       Write_Impl(Write_Impl&& other) = default;
       Write_Impl& operator=(Write_Impl&& other) = default;
@@ -317,7 +317,7 @@ class SkipBlock final {
     class WriteBytes_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      WriteBytes_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op);
+      WriteBytes_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op);
       ~WriteBytes_Impl() = default;
       WriteBytes_Impl(WriteBytes_Impl&& other) = default;
       WriteBytes_Impl& operator=(WriteBytes_Impl&& other) = default;
@@ -346,7 +346,7 @@ class SkipBlock final {
     class GetPartitionInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetPartitionInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetPartitionInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetPartitionInfo_Impl() = default;
       GetPartitionInfo_Impl(GetPartitionInfo_Impl&& other) = default;
       GetPartitionInfo_Impl& operator=(GetPartitionInfo_Impl&& other) = default;
@@ -362,7 +362,7 @@ class SkipBlock final {
     class Read_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Read_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer);
+      Read_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer);
       ~Read_Impl() = default;
       Read_Impl(Read_Impl&& other) = default;
       Read_Impl& operator=(Read_Impl&& other) = default;
@@ -378,7 +378,7 @@ class SkipBlock final {
     class Write_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Write_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer);
+      Write_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer);
       ~Write_Impl() = default;
       Write_Impl(Write_Impl&& other) = default;
       Write_Impl& operator=(Write_Impl&& other) = default;
@@ -394,7 +394,7 @@ class SkipBlock final {
     class WriteBytes_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      WriteBytes_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op, ::fidl::BytePart _response_buffer);
+      WriteBytes_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op, ::fidl::BytePart _response_buffer);
       ~WriteBytes_Impl() = default;
       WriteBytes_Impl(WriteBytes_Impl&& other) = default;
       WriteBytes_Impl& operator=(WriteBytes_Impl&& other) = default;
@@ -507,22 +507,22 @@ class SkipBlock final {
     // The block count can shrink in the event that a bad block is grown. It is
     // recommended to call this again after a bad block is grown.
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetPartitionInfo GetPartitionInfo(zx::unowned_channel _client_end);
+    static ResultOf::GetPartitionInfo GetPartitionInfo(::zx::unowned_channel _client_end);
 
     // Returns information about the skip-block partition.
     //
     // The block count can shrink in the event that a bad block is grown. It is
     // recommended to call this again after a bad block is grown.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetPartitionInfo GetPartitionInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetPartitionInfo GetPartitionInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Reads the specified blocks into the provided vmo.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Read Read(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op);
+    static ResultOf::Read Read(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op);
 
     // Reads the specified blocks into the provided vmo.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Read Read(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Read Read(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
@@ -532,7 +532,7 @@ class SkipBlock final {
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Write Write(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op);
+    static ResultOf::Write Write(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
@@ -542,7 +542,7 @@ class SkipBlock final {
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Write Write(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op, ::fidl::BytePart _response_buffer);
 
     // Erases and writes the specified bytes from the provided vmo. If offset
     // and size in |op| are not aligned to |block_size_bytes| then the driver will
@@ -555,7 +555,7 @@ class SkipBlock final {
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::WriteBytes WriteBytes(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op);
+    static ResultOf::WriteBytes WriteBytes(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op);
 
     // Erases and writes the specified bytes from the provided vmo. If offset
     // and size in |op| are not aligned to |block_size_bytes| then the driver will
@@ -568,7 +568,7 @@ class SkipBlock final {
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WriteBytes WriteBytes(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::WriteBytes WriteBytes(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -582,10 +582,10 @@ class SkipBlock final {
     //
     // The block count can shrink in the event that a bad block is grown. It is
     // recommended to call this again after a bad block is grown.
-    static ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetPartitionInfoResponse> GetPartitionInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Reads the specified blocks into the provided vmo.
-    static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReadResponse> Read(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadRequest> params, ::fidl::BytePart response_buffer);
 
     // Erases and writes the specified blocks from the provided vmo.
     //
@@ -594,7 +594,7 @@ class SkipBlock final {
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
-    static ::fidl::DecodeResult<WriteResponse> Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WriteResponse> Write(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
 
     // Erases and writes the specified bytes from the provided vmo. If offset
     // and size in |op| are not aligned to |block_size_bytes| then the driver will
@@ -606,7 +606,7 @@ class SkipBlock final {
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
-    static ::fidl::DecodeResult<WriteBytesResponse> WriteBytes(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBytesRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WriteBytesResponse> WriteBytes(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBytesRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

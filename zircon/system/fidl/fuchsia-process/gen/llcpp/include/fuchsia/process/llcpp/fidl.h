@@ -198,7 +198,7 @@ class Resolver final {
     class Resolve_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Resolve_Impl(zx::unowned_channel _client_end, ::fidl::StringView name);
+      Resolve_Impl(::zx::unowned_channel _client_end, ::fidl::StringView name);
       ~Resolve_Impl() = default;
       Resolve_Impl(Resolve_Impl&& other) = default;
       Resolve_Impl& operator=(Resolve_Impl&& other) = default;
@@ -224,7 +224,7 @@ class Resolver final {
     class Resolve_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Resolve_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer);
+      Resolve_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer);
       ~Resolve_Impl() = default;
       Resolve_Impl(Resolve_Impl&& other) = default;
       Resolve_Impl& operator=(Resolve_Impl&& other) = default;
@@ -298,7 +298,7 @@ class Resolver final {
     // and return the executable binary from the package as well as a shared
     // library loader scoped to that package.
     // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::Resolve Resolve(zx::unowned_channel _client_end, ::fidl::StringView name);
+    static ResultOf::Resolve Resolve(::zx::unowned_channel _client_end, ::fidl::StringView name);
 
     // Resolves the given `name` to an `executable` and an shared library
     // loader.
@@ -311,7 +311,7 @@ class Resolver final {
     // and return the executable binary from the package as well as a shared
     // library loader scoped to that package.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Resolve Resolve(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Resolve Resolve(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView name, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -331,7 +331,7 @@ class Resolver final {
     // For example, the resolver might locate the given `name` inside a package
     // and return the executable binary from the package as well as a shared
     // library loader scoped to that package.
-    static ::fidl::DecodeResult<ResolveResponse> Resolve(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResolveRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ResolveResponse> Resolve(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResolveRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -645,7 +645,7 @@ class Launcher final {
     class Launch_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Launch_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info);
+      Launch_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info);
       ~Launch_Impl() = default;
       Launch_Impl(Launch_Impl&& other) = default;
       Launch_Impl& operator=(Launch_Impl&& other) = default;
@@ -661,7 +661,7 @@ class Launcher final {
     class CreateWithoutStarting_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CreateWithoutStarting_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info);
+      CreateWithoutStarting_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info);
       ~CreateWithoutStarting_Impl() = default;
       CreateWithoutStarting_Impl(CreateWithoutStarting_Impl&& other) = default;
       CreateWithoutStarting_Impl& operator=(CreateWithoutStarting_Impl&& other) = default;
@@ -676,7 +676,7 @@ class Launcher final {
     class AddArgs_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      AddArgs_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args);
+      AddArgs_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args);
       ~AddArgs_Impl() = default;
       AddArgs_Impl(AddArgs_Impl&& other) = default;
       AddArgs_Impl& operator=(AddArgs_Impl&& other) = default;
@@ -687,7 +687,7 @@ class Launcher final {
     class AddEnvirons_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      AddEnvirons_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ);
+      AddEnvirons_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ);
       ~AddEnvirons_Impl() = default;
       AddEnvirons_Impl(AddEnvirons_Impl&& other) = default;
       AddEnvirons_Impl& operator=(AddEnvirons_Impl&& other) = default;
@@ -698,7 +698,7 @@ class Launcher final {
     class AddNames_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      AddNames_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names);
+      AddNames_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names);
       ~AddNames_Impl() = default;
       AddNames_Impl(AddNames_Impl&& other) = default;
       AddNames_Impl& operator=(AddNames_Impl&& other) = default;
@@ -709,7 +709,7 @@ class Launcher final {
     class AddHandles_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      AddHandles_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles);
+      AddHandles_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles);
       ~AddHandles_Impl() = default;
       AddHandles_Impl(AddHandles_Impl&& other) = default;
       AddHandles_Impl& operator=(AddHandles_Impl&& other) = default;
@@ -736,7 +736,7 @@ class Launcher final {
     class Launch_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Launch_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer);
+      Launch_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer);
       ~Launch_Impl() = default;
       Launch_Impl(Launch_Impl&& other) = default;
       Launch_Impl& operator=(Launch_Impl&& other) = default;
@@ -752,7 +752,7 @@ class Launcher final {
     class CreateWithoutStarting_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CreateWithoutStarting_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer);
+      CreateWithoutStarting_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer);
       ~CreateWithoutStarting_Impl() = default;
       CreateWithoutStarting_Impl(CreateWithoutStarting_Impl&& other) = default;
       CreateWithoutStarting_Impl& operator=(CreateWithoutStarting_Impl&& other) = default;
@@ -767,7 +767,7 @@ class Launcher final {
     class AddArgs_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      AddArgs_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args);
+      AddArgs_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args);
       ~AddArgs_Impl() = default;
       AddArgs_Impl(AddArgs_Impl&& other) = default;
       AddArgs_Impl& operator=(AddArgs_Impl&& other) = default;
@@ -778,7 +778,7 @@ class Launcher final {
     class AddEnvirons_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      AddEnvirons_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ);
+      AddEnvirons_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ);
       ~AddEnvirons_Impl() = default;
       AddEnvirons_Impl(AddEnvirons_Impl&& other) = default;
       AddEnvirons_Impl& operator=(AddEnvirons_Impl&& other) = default;
@@ -789,7 +789,7 @@ class Launcher final {
     class AddNames_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      AddNames_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names);
+      AddNames_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names);
       ~AddNames_Impl() = default;
       AddNames_Impl(AddNames_Impl&& other) = default;
       AddNames_Impl& operator=(AddNames_Impl&& other) = default;
@@ -800,7 +800,7 @@ class Launcher final {
     class AddHandles_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      AddHandles_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles);
+      AddHandles_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles);
       ~AddHandles_Impl() = default;
       AddHandles_Impl(AddHandles_Impl&& other) = default;
       AddHandles_Impl& operator=(AddHandles_Impl&& other) = default;
@@ -941,7 +941,7 @@ class Launcher final {
     //
     // `process` is present if, and only if, `status` is `ZX_OK`.
     // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Launch Launch(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info);
+    static ResultOf::Launch Launch(::zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info);
 
     // Creates and starts the process described by `info`.
     //
@@ -950,7 +950,7 @@ class Launcher final {
     //
     // `process` is present if, and only if, `status` is `ZX_OK`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Launch Launch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Launch Launch(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer);
 
     // Creates the process described by `info` but does not start it.
     //
@@ -962,7 +962,7 @@ class Launcher final {
     //
     // `data` is present if, and only if, `status` is `ZX_OK`.
     // Allocates 160 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateWithoutStarting CreateWithoutStarting(zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info);
+    static ResultOf::CreateWithoutStarting CreateWithoutStarting(::zx::unowned_channel _client_end, ::llcpp::fuchsia::process::LaunchInfo info);
 
     // Creates the process described by `info` but does not start it.
     //
@@ -974,31 +974,31 @@ class Launcher final {
     //
     // `data` is present if, and only if, `status` is `ZX_OK`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateWithoutStarting CreateWithoutStarting(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CreateWithoutStarting CreateWithoutStarting(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::process::LaunchInfo info, ::fidl::BytePart _response_buffer);
 
     // Adds the given arguments to the command-line for the process.
     //
     // Calling this method multiple times concatenates the arguments.
     // Request is heap-allocated.
-    static ResultOf::AddArgs AddArgs(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args);
+    static ResultOf::AddArgs AddArgs(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args);
 
     // Adds the given arguments to the command-line for the process.
     //
     // Calling this method multiple times concatenates the arguments.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddArgs AddArgs(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args);
+    static UnownedResultOf::AddArgs AddArgs(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> args);
 
     // Adds the given variables to the environment variables for the process.
     //
     // Calling this method multiple times concatenates the variables.
     // Request is heap-allocated.
-    static ResultOf::AddEnvirons AddEnvirons(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ);
+    static ResultOf::AddEnvirons AddEnvirons(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ);
 
     // Adds the given variables to the environment variables for the process.
     //
     // Calling this method multiple times concatenates the variables.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddEnvirons AddEnvirons(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ);
+    static UnownedResultOf::AddEnvirons AddEnvirons(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::VectorView<uint8_t>> environ);
 
     // Adds the given names to the namespace for the process.
     //
@@ -1007,7 +1007,7 @@ class Launcher final {
     //
     // Calling this method multiple times concatenates the names.
     // Request is heap-allocated.
-    static ResultOf::AddNames AddNames(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names);
+    static ResultOf::AddNames AddNames(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names);
 
     // Adds the given names to the namespace for the process.
     //
@@ -1016,19 +1016,19 @@ class Launcher final {
     //
     // Calling this method multiple times concatenates the names.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddNames AddNames(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names);
+    static UnownedResultOf::AddNames AddNames(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::NameInfo> names);
 
     // Adds the given handles to the startup handles for the process.
     //
     // Calling this method multiple times concatenates the handles.
     // Request is heap-allocated.
-    static ResultOf::AddHandles AddHandles(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles);
+    static ResultOf::AddHandles AddHandles(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles);
 
     // Adds the given handles to the startup handles for the process.
     //
     // Calling this method multiple times concatenates the handles.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddHandles AddHandles(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles);
+    static UnownedResultOf::AddHandles AddHandles(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::process::HandleInfo> handles);
 
   };
 
@@ -1044,7 +1044,7 @@ class Launcher final {
     // state and is ready to launch another process.
     //
     // `process` is present if, and only if, `status` is `ZX_OK`.
-    static ::fidl::DecodeResult<LaunchResponse> Launch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LaunchRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LaunchResponse> Launch(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LaunchRequest> params, ::fidl::BytePart response_buffer);
 
     // Creates the process described by `info` but does not start it.
     //
@@ -1055,17 +1055,17 @@ class Launcher final {
     // in `ProcessStartData` to actually start the process.
     //
     // `data` is present if, and only if, `status` is `ZX_OK`.
-    static ::fidl::DecodeResult<CreateWithoutStartingResponse> CreateWithoutStarting(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateWithoutStartingRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CreateWithoutStartingResponse> CreateWithoutStarting(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateWithoutStartingRequest> params, ::fidl::BytePart response_buffer);
 
     // Adds the given arguments to the command-line for the process.
     //
     // Calling this method multiple times concatenates the arguments.
-    static ::fidl::internal::StatusAndError AddArgs(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddArgsRequest> params);
+    static ::fidl::internal::StatusAndError AddArgs(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddArgsRequest> params);
 
     // Adds the given variables to the environment variables for the process.
     //
     // Calling this method multiple times concatenates the variables.
-    static ::fidl::internal::StatusAndError AddEnvirons(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddEnvironsRequest> params);
+    static ::fidl::internal::StatusAndError AddEnvirons(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddEnvironsRequest> params);
 
     // Adds the given names to the namespace for the process.
     //
@@ -1073,12 +1073,12 @@ class Launcher final {
     // <https://fuchsia.dev/fuchsia-src/concepts/framework/namespaces> for details.
     //
     // Calling this method multiple times concatenates the names.
-    static ::fidl::internal::StatusAndError AddNames(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddNamesRequest> params);
+    static ::fidl::internal::StatusAndError AddNames(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddNamesRequest> params);
 
     // Adds the given handles to the startup handles for the process.
     //
     // Calling this method multiple times concatenates the handles.
-    static ::fidl::internal::StatusAndError AddHandles(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddHandlesRequest> params);
+    static ::fidl::internal::StatusAndError AddHandles(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddHandlesRequest> params);
 
   };
 

@@ -470,7 +470,7 @@ class Device final {
     class GetInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetInfo_Impl(zx::unowned_channel _client_end);
+      GetInfo_Impl(::zx::unowned_channel _client_end);
       ~GetInfo_Impl() = default;
       GetInfo_Impl(GetInfo_Impl&& other) = default;
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
@@ -486,7 +486,7 @@ class Device final {
     class GetDeviceInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDeviceInfo_Impl(zx::unowned_channel _client_end);
+      GetDeviceInfo_Impl(::zx::unowned_channel _client_end);
       ~GetDeviceInfo_Impl() = default;
       GetDeviceInfo_Impl(GetDeviceInfo_Impl&& other) = default;
       GetDeviceInfo_Impl& operator=(GetDeviceInfo_Impl&& other) = default;
@@ -502,7 +502,7 @@ class Device final {
     class GetDvfsInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDvfsInfo_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
+      GetDvfsInfo_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
       ~GetDvfsInfo_Impl() = default;
       GetDvfsInfo_Impl(GetDvfsInfo_Impl&& other) = default;
       GetDvfsInfo_Impl& operator=(GetDvfsInfo_Impl&& other) = default;
@@ -518,7 +518,7 @@ class Device final {
     class GetTemperatureCelsius_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetTemperatureCelsius_Impl(zx::unowned_channel _client_end);
+      GetTemperatureCelsius_Impl(::zx::unowned_channel _client_end);
       ~GetTemperatureCelsius_Impl() = default;
       GetTemperatureCelsius_Impl(GetTemperatureCelsius_Impl&& other) = default;
       GetTemperatureCelsius_Impl& operator=(GetTemperatureCelsius_Impl&& other) = default;
@@ -534,7 +534,7 @@ class Device final {
     class GetStateChangeEvent_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetStateChangeEvent_Impl(zx::unowned_channel _client_end);
+      GetStateChangeEvent_Impl(::zx::unowned_channel _client_end);
       ~GetStateChangeEvent_Impl() = default;
       GetStateChangeEvent_Impl(GetStateChangeEvent_Impl&& other) = default;
       GetStateChangeEvent_Impl& operator=(GetStateChangeEvent_Impl&& other) = default;
@@ -550,7 +550,7 @@ class Device final {
     class GetStateChangePort_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetStateChangePort_Impl(zx::unowned_channel _client_end);
+      GetStateChangePort_Impl(::zx::unowned_channel _client_end);
       ~GetStateChangePort_Impl() = default;
       GetStateChangePort_Impl(GetStateChangePort_Impl&& other) = default;
       GetStateChangePort_Impl& operator=(GetStateChangePort_Impl&& other) = default;
@@ -566,7 +566,7 @@ class Device final {
     class SetTripCelsius_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetTripCelsius_Impl(zx::unowned_channel _client_end, uint32_t id, float temp);
+      SetTripCelsius_Impl(::zx::unowned_channel _client_end, uint32_t id, float temp);
       ~SetTripCelsius_Impl() = default;
       SetTripCelsius_Impl(SetTripCelsius_Impl&& other) = default;
       SetTripCelsius_Impl& operator=(SetTripCelsius_Impl&& other) = default;
@@ -582,7 +582,7 @@ class Device final {
     class GetDvfsOperatingPoint_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
+      GetDvfsOperatingPoint_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
       ~GetDvfsOperatingPoint_Impl() = default;
       GetDvfsOperatingPoint_Impl(GetDvfsOperatingPoint_Impl&& other) = default;
       GetDvfsOperatingPoint_Impl& operator=(GetDvfsOperatingPoint_Impl&& other) = default;
@@ -598,7 +598,7 @@ class Device final {
     class SetDvfsOperatingPoint_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
+      SetDvfsOperatingPoint_Impl(::zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
       ~SetDvfsOperatingPoint_Impl() = default;
       SetDvfsOperatingPoint_Impl(SetDvfsOperatingPoint_Impl&& other) = default;
       SetDvfsOperatingPoint_Impl& operator=(SetDvfsOperatingPoint_Impl&& other) = default;
@@ -614,7 +614,7 @@ class Device final {
     class GetFanLevel_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetFanLevel_Impl(zx::unowned_channel _client_end);
+      GetFanLevel_Impl(::zx::unowned_channel _client_end);
       ~GetFanLevel_Impl() = default;
       GetFanLevel_Impl(GetFanLevel_Impl&& other) = default;
       GetFanLevel_Impl& operator=(GetFanLevel_Impl&& other) = default;
@@ -630,7 +630,7 @@ class Device final {
     class SetFanLevel_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetFanLevel_Impl(zx::unowned_channel _client_end, uint32_t fan_level);
+      SetFanLevel_Impl(::zx::unowned_channel _client_end, uint32_t fan_level);
       ~SetFanLevel_Impl() = default;
       SetFanLevel_Impl(SetFanLevel_Impl&& other) = default;
       SetFanLevel_Impl& operator=(SetFanLevel_Impl&& other) = default;
@@ -666,7 +666,7 @@ class Device final {
     class GetInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetInfo_Impl() = default;
       GetInfo_Impl(GetInfo_Impl&& other) = default;
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
@@ -682,7 +682,7 @@ class Device final {
     class GetDeviceInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDeviceInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetDeviceInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetDeviceInfo_Impl() = default;
       GetDeviceInfo_Impl(GetDeviceInfo_Impl&& other) = default;
       GetDeviceInfo_Impl& operator=(GetDeviceInfo_Impl&& other) = default;
@@ -698,7 +698,7 @@ class Device final {
     class GetDvfsInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDvfsInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+      GetDvfsInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
       ~GetDvfsInfo_Impl() = default;
       GetDvfsInfo_Impl(GetDvfsInfo_Impl&& other) = default;
       GetDvfsInfo_Impl& operator=(GetDvfsInfo_Impl&& other) = default;
@@ -714,7 +714,7 @@ class Device final {
     class GetTemperatureCelsius_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetTemperatureCelsius_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetTemperatureCelsius_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetTemperatureCelsius_Impl() = default;
       GetTemperatureCelsius_Impl(GetTemperatureCelsius_Impl&& other) = default;
       GetTemperatureCelsius_Impl& operator=(GetTemperatureCelsius_Impl&& other) = default;
@@ -730,7 +730,7 @@ class Device final {
     class GetStateChangeEvent_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetStateChangeEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetStateChangeEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetStateChangeEvent_Impl() = default;
       GetStateChangeEvent_Impl(GetStateChangeEvent_Impl&& other) = default;
       GetStateChangeEvent_Impl& operator=(GetStateChangeEvent_Impl&& other) = default;
@@ -746,7 +746,7 @@ class Device final {
     class GetStateChangePort_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetStateChangePort_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetStateChangePort_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetStateChangePort_Impl() = default;
       GetStateChangePort_Impl(GetStateChangePort_Impl&& other) = default;
       GetStateChangePort_Impl& operator=(GetStateChangePort_Impl&& other) = default;
@@ -762,7 +762,7 @@ class Device final {
     class SetTripCelsius_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetTripCelsius_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id, float temp, ::fidl::BytePart _response_buffer);
+      SetTripCelsius_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id, float temp, ::fidl::BytePart _response_buffer);
       ~SetTripCelsius_Impl() = default;
       SetTripCelsius_Impl(SetTripCelsius_Impl&& other) = default;
       SetTripCelsius_Impl& operator=(SetTripCelsius_Impl&& other) = default;
@@ -778,7 +778,7 @@ class Device final {
     class GetDvfsOperatingPoint_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+      GetDvfsOperatingPoint_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
       ~GetDvfsOperatingPoint_Impl() = default;
       GetDvfsOperatingPoint_Impl(GetDvfsOperatingPoint_Impl&& other) = default;
       GetDvfsOperatingPoint_Impl& operator=(GetDvfsOperatingPoint_Impl&& other) = default;
@@ -794,7 +794,7 @@ class Device final {
     class SetDvfsOperatingPoint_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetDvfsOperatingPoint_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+      SetDvfsOperatingPoint_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
       ~SetDvfsOperatingPoint_Impl() = default;
       SetDvfsOperatingPoint_Impl(SetDvfsOperatingPoint_Impl&& other) = default;
       SetDvfsOperatingPoint_Impl& operator=(SetDvfsOperatingPoint_Impl&& other) = default;
@@ -810,7 +810,7 @@ class Device final {
     class GetFanLevel_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetFanLevel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetFanLevel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetFanLevel_Impl() = default;
       GetFanLevel_Impl(GetFanLevel_Impl&& other) = default;
       GetFanLevel_Impl& operator=(GetFanLevel_Impl&& other) = default;
@@ -826,7 +826,7 @@ class Device final {
     class SetFanLevel_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetFanLevel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t fan_level, ::fidl::BytePart _response_buffer);
+      SetFanLevel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t fan_level, ::fidl::BytePart _response_buffer);
       ~SetFanLevel_Impl() = default;
       SetFanLevel_Impl(SetFanLevel_Impl&& other) = default;
       SetFanLevel_Impl& operator=(SetFanLevel_Impl&& other) = default;
@@ -969,97 +969,97 @@ class Device final {
 
     // Get information about the device's current state.
     // Allocates 128 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetInfo GetInfo(zx::unowned_channel _client_end);
+    static ResultOf::GetInfo GetInfo(::zx::unowned_channel _client_end);
 
     // Get information about the device's current state.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetInfo GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetInfo GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get information about the device's thermal capabilities and trip points.
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetDeviceInfo GetDeviceInfo(zx::unowned_channel _client_end);
+    static ResultOf::GetDeviceInfo GetDeviceInfo(::zx::unowned_channel _client_end);
 
     // Get information about the device's thermal capabilities and trip points.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDeviceInfo GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDeviceInfo GetDeviceInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get the device's operating points.
     // TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
     // Allocates 192 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDvfsInfo GetDvfsInfo(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
+    static ResultOf::GetDvfsInfo GetDvfsInfo(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
 
     // Get the device's operating points.
     // TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDvfsInfo GetDvfsInfo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDvfsInfo GetDvfsInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
 
     // Get the current temperature in degrees Celsius.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetTemperatureCelsius GetTemperatureCelsius(zx::unowned_channel _client_end);
+    static ResultOf::GetTemperatureCelsius GetTemperatureCelsius(::zx::unowned_channel _client_end);
 
     // Get the current temperature in degrees Celsius.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetTemperatureCelsius GetTemperatureCelsius(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetTemperatureCelsius GetTemperatureCelsius(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get an event to get trip point notifications on. `ZX_USER_SIGNAL_`0 is changed when either
     // trip point is reached. It is deasserted when the state is read via GetInfo.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetStateChangeEvent GetStateChangeEvent(zx::unowned_channel _client_end);
+    static ResultOf::GetStateChangeEvent GetStateChangeEvent(::zx::unowned_channel _client_end);
 
     // Get an event to get trip point notifications on. `ZX_USER_SIGNAL_`0 is changed when either
     // trip point is reached. It is deasserted when the state is read via GetInfo.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetStateChangeEvent GetStateChangeEvent(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetStateChangeEvent GetStateChangeEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get a port to get trip point notification packets.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetStateChangePort GetStateChangePort(zx::unowned_channel _client_end);
+    static ResultOf::GetStateChangePort GetStateChangePort(::zx::unowned_channel _client_end);
 
     // Get a port to get trip point notification packets.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetStateChangePort GetStateChangePort(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetStateChangePort GetStateChangePort(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Sets a trip point in degrees Celsius. When the sensor reaches the trip point temperature the
     // device will notify on an event.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetTripCelsius SetTripCelsius(zx::unowned_channel _client_end, uint32_t id, float temp);
+    static ResultOf::SetTripCelsius SetTripCelsius(::zx::unowned_channel _client_end, uint32_t id, float temp);
 
     // Sets a trip point in degrees Celsius. When the sensor reaches the trip point temperature the
     // device will notify on an event.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetTripCelsius SetTripCelsius(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id, float temp, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetTripCelsius SetTripCelsius(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t id, float temp, ::fidl::BytePart _response_buffer);
 
     // Get the current operating point index.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
+    static ResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
 
     // Get the current operating point index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetDvfsOperatingPoint GetDvfsOperatingPoint(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
 
     // Set the operating point index.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
+    static ResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(::zx::unowned_channel _client_end, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain);
 
     // Set the operating point index.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetDvfsOperatingPoint SetDvfsOperatingPoint(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint16_t op_idx, ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain, ::fidl::BytePart _response_buffer);
 
     // Get the current fan level.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetFanLevel GetFanLevel(zx::unowned_channel _client_end);
+    static ResultOf::GetFanLevel GetFanLevel(::zx::unowned_channel _client_end);
 
     // Get the current fan level.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetFanLevel GetFanLevel(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetFanLevel GetFanLevel(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Set the fan level.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetFanLevel SetFanLevel(zx::unowned_channel _client_end, uint32_t fan_level);
+    static ResultOf::SetFanLevel SetFanLevel(::zx::unowned_channel _client_end, uint32_t fan_level);
 
     // Set the fan level.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetFanLevel SetFanLevel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t fan_level, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetFanLevel SetFanLevel(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t fan_level, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1070,40 +1070,40 @@ class Device final {
    public:
 
     // Get information about the device's current state.
-    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get information about the device's thermal capabilities and trip points.
-    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get the device's operating points.
     // TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
-    static ::fidl::DecodeResult<GetDvfsInfoResponse> GetDvfsInfo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetDvfsInfoRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDvfsInfoResponse> GetDvfsInfo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetDvfsInfoRequest> params, ::fidl::BytePart response_buffer);
 
     // Get the current temperature in degrees Celsius.
-    static ::fidl::DecodeResult<GetTemperatureCelsiusResponse> GetTemperatureCelsius(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetTemperatureCelsiusResponse> GetTemperatureCelsius(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get an event to get trip point notifications on. `ZX_USER_SIGNAL_`0 is changed when either
     // trip point is reached. It is deasserted when the state is read via GetInfo.
-    static ::fidl::DecodeResult<GetStateChangeEventResponse> GetStateChangeEvent(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetStateChangeEventResponse> GetStateChangeEvent(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get a port to get trip point notification packets.
-    static ::fidl::DecodeResult<GetStateChangePortResponse> GetStateChangePort(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetStateChangePortResponse> GetStateChangePort(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Sets a trip point in degrees Celsius. When the sensor reaches the trip point temperature the
     // device will notify on an event.
-    static ::fidl::DecodeResult<SetTripCelsiusResponse> SetTripCelsius(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTripCelsiusRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetTripCelsiusResponse> SetTripCelsius(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetTripCelsiusRequest> params, ::fidl::BytePart response_buffer);
 
     // Get the current operating point index.
-    static ::fidl::DecodeResult<GetDvfsOperatingPointResponse> GetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetDvfsOperatingPointRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetDvfsOperatingPointResponse> GetDvfsOperatingPoint(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetDvfsOperatingPointRequest> params, ::fidl::BytePart response_buffer);
 
     // Set the operating point index.
-    static ::fidl::DecodeResult<SetDvfsOperatingPointResponse> SetDvfsOperatingPoint(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDvfsOperatingPointRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetDvfsOperatingPointResponse> SetDvfsOperatingPoint(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDvfsOperatingPointRequest> params, ::fidl::BytePart response_buffer);
 
     // Get the current fan level.
-    static ::fidl::DecodeResult<GetFanLevelResponse> GetFanLevel(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetFanLevelResponse> GetFanLevel(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Set the fan level.
-    static ::fidl::DecodeResult<SetFanLevelResponse> SetFanLevel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetFanLevelRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetFanLevelResponse> SetFanLevel(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetFanLevelRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

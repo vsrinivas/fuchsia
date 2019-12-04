@@ -197,7 +197,7 @@ extern "C" const fidl_type_t v1_fuchsia_exception_HandlerOnExceptionResponseTabl
 
 }  // namespace
 template <>
-Handler::ResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_Impl(zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info) {
+Handler::ResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_Impl(::zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnExceptionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -213,15 +213,15 @@ Handler::ResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_I
 }
 
 Handler::ResultOf::OnException Handler::SyncClient::OnException(::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info) {
-  return ResultOf::OnException(zx::unowned_channel(this->channel_), std::move(exception), std::move(info));
+    return ResultOf::OnException(::zx::unowned_channel(this->channel_), std::move(exception), std::move(info));
 }
 
-Handler::ResultOf::OnException Handler::Call::OnException(zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info) {
+Handler::ResultOf::OnException Handler::Call::OnException(::zx::unowned_channel _client_end, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info) {
   return ResultOf::OnException(std::move(_client_end), std::move(exception), std::move(info));
 }
 
 template <>
-Handler::UnownedResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer) {
+Handler::UnownedResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnException_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < OnExceptionRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<OnExceptionResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -237,14 +237,14 @@ Handler::UnownedResultOf::OnException_Impl<Handler::OnExceptionResponse>::OnExce
 }
 
 Handler::UnownedResultOf::OnException Handler::SyncClient::OnException(::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::OnException(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(exception), std::move(info), std::move(_response_buffer));
+  return UnownedResultOf::OnException(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(exception), std::move(info), std::move(_response_buffer));
 }
 
-Handler::UnownedResultOf::OnException Handler::Call::OnException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer) {
+Handler::UnownedResultOf::OnException Handler::Call::OnException(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::exception exception, ::llcpp::fuchsia::exception::ExceptionInfo info, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::OnException(std::move(_client_end), std::move(_request_buffer), std::move(exception), std::move(info), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Handler::OnExceptionResponse> Handler::InPlace::OnException(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnExceptionRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Handler::OnExceptionResponse> Handler::InPlace::OnException(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnExceptionRequest> params, ::fidl::BytePart response_buffer) {
   Handler::SetTransactionHeaderFor::OnExceptionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -568,7 +568,7 @@ extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboGetFiltersResponse
 
 }  // namespace
 template <>
-ProcessLimbo::ResultOf::WatchActive_Impl<ProcessLimbo::WatchActiveResponse>::WatchActive_Impl(zx::unowned_channel _client_end) {
+ProcessLimbo::ResultOf::WatchActive_Impl<ProcessLimbo::WatchActiveResponse>::WatchActive_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchActiveRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -581,15 +581,15 @@ ProcessLimbo::ResultOf::WatchActive_Impl<ProcessLimbo::WatchActiveResponse>::Wat
 }
 
 ProcessLimbo::ResultOf::WatchActive ProcessLimbo::SyncClient::WatchActive() {
-  return ResultOf::WatchActive(zx::unowned_channel(this->channel_));
+    return ResultOf::WatchActive(::zx::unowned_channel(this->channel_));
 }
 
-ProcessLimbo::ResultOf::WatchActive ProcessLimbo::Call::WatchActive(zx::unowned_channel _client_end) {
+ProcessLimbo::ResultOf::WatchActive ProcessLimbo::Call::WatchActive(::zx::unowned_channel _client_end) {
   return ResultOf::WatchActive(std::move(_client_end));
 }
 
 template <>
-ProcessLimbo::UnownedResultOf::WatchActive_Impl<ProcessLimbo::WatchActiveResponse>::WatchActive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::WatchActive_Impl<ProcessLimbo::WatchActiveResponse>::WatchActive_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WatchActiveRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, WatchActiveRequest::PrimarySize);
@@ -600,14 +600,14 @@ ProcessLimbo::UnownedResultOf::WatchActive_Impl<ProcessLimbo::WatchActiveRespons
 }
 
 ProcessLimbo::UnownedResultOf::WatchActive ProcessLimbo::SyncClient::WatchActive(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WatchActive(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::WatchActive(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-ProcessLimbo::UnownedResultOf::WatchActive ProcessLimbo::Call::WatchActive(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::WatchActive ProcessLimbo::Call::WatchActive(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WatchActive(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<ProcessLimbo::WatchActiveResponse> ProcessLimbo::InPlace::WatchActive(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<ProcessLimbo::WatchActiveResponse> ProcessLimbo::InPlace::WatchActive(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(WatchActiveRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -629,7 +629,7 @@ ProcessLimbo::UnownedResultOf::WatchActive ProcessLimbo::Call::WatchActive(zx::u
 }
 
 template <>
-ProcessLimbo::ResultOf::WatchProcessesWaitingOnException_Impl<ProcessLimbo::WatchProcessesWaitingOnExceptionResponse>::WatchProcessesWaitingOnException_Impl(zx::unowned_channel _client_end) {
+ProcessLimbo::ResultOf::WatchProcessesWaitingOnException_Impl<ProcessLimbo::WatchProcessesWaitingOnExceptionResponse>::WatchProcessesWaitingOnException_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WatchProcessesWaitingOnExceptionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -642,15 +642,15 @@ ProcessLimbo::ResultOf::WatchProcessesWaitingOnException_Impl<ProcessLimbo::Watc
 }
 
 ProcessLimbo::ResultOf::WatchProcessesWaitingOnException ProcessLimbo::SyncClient::WatchProcessesWaitingOnException() {
-  return ResultOf::WatchProcessesWaitingOnException(zx::unowned_channel(this->channel_));
+    return ResultOf::WatchProcessesWaitingOnException(::zx::unowned_channel(this->channel_));
 }
 
-ProcessLimbo::ResultOf::WatchProcessesWaitingOnException ProcessLimbo::Call::WatchProcessesWaitingOnException(zx::unowned_channel _client_end) {
+ProcessLimbo::ResultOf::WatchProcessesWaitingOnException ProcessLimbo::Call::WatchProcessesWaitingOnException(::zx::unowned_channel _client_end) {
   return ResultOf::WatchProcessesWaitingOnException(std::move(_client_end));
 }
 
 template <>
-ProcessLimbo::UnownedResultOf::WatchProcessesWaitingOnException_Impl<ProcessLimbo::WatchProcessesWaitingOnExceptionResponse>::WatchProcessesWaitingOnException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::WatchProcessesWaitingOnException_Impl<ProcessLimbo::WatchProcessesWaitingOnExceptionResponse>::WatchProcessesWaitingOnException_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WatchProcessesWaitingOnExceptionRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, WatchProcessesWaitingOnExceptionRequest::PrimarySize);
@@ -661,14 +661,14 @@ ProcessLimbo::UnownedResultOf::WatchProcessesWaitingOnException_Impl<ProcessLimb
 }
 
 ProcessLimbo::UnownedResultOf::WatchProcessesWaitingOnException ProcessLimbo::SyncClient::WatchProcessesWaitingOnException(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WatchProcessesWaitingOnException(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::WatchProcessesWaitingOnException(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-ProcessLimbo::UnownedResultOf::WatchProcessesWaitingOnException ProcessLimbo::Call::WatchProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::WatchProcessesWaitingOnException ProcessLimbo::Call::WatchProcessesWaitingOnException(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WatchProcessesWaitingOnException(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<ProcessLimbo::WatchProcessesWaitingOnExceptionResponse> ProcessLimbo::InPlace::WatchProcessesWaitingOnException(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<ProcessLimbo::WatchProcessesWaitingOnExceptionResponse> ProcessLimbo::InPlace::WatchProcessesWaitingOnException(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(WatchProcessesWaitingOnExceptionRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -690,7 +690,7 @@ ProcessLimbo::UnownedResultOf::WatchProcessesWaitingOnException ProcessLimbo::Ca
 }
 
 template <>
-ProcessLimbo::ResultOf::RetrieveException_Impl<ProcessLimbo::RetrieveExceptionResponse>::RetrieveException_Impl(zx::unowned_channel _client_end, uint64_t process_koid) {
+ProcessLimbo::ResultOf::RetrieveException_Impl<ProcessLimbo::RetrieveExceptionResponse>::RetrieveException_Impl(::zx::unowned_channel _client_end, uint64_t process_koid) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RetrieveExceptionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -705,15 +705,15 @@ ProcessLimbo::ResultOf::RetrieveException_Impl<ProcessLimbo::RetrieveExceptionRe
 }
 
 ProcessLimbo::ResultOf::RetrieveException ProcessLimbo::SyncClient::RetrieveException(uint64_t process_koid) {
-  return ResultOf::RetrieveException(zx::unowned_channel(this->channel_), std::move(process_koid));
+    return ResultOf::RetrieveException(::zx::unowned_channel(this->channel_), std::move(process_koid));
 }
 
-ProcessLimbo::ResultOf::RetrieveException ProcessLimbo::Call::RetrieveException(zx::unowned_channel _client_end, uint64_t process_koid) {
+ProcessLimbo::ResultOf::RetrieveException ProcessLimbo::Call::RetrieveException(::zx::unowned_channel _client_end, uint64_t process_koid) {
   return ResultOf::RetrieveException(std::move(_client_end), std::move(process_koid));
 }
 
 template <>
-ProcessLimbo::UnownedResultOf::RetrieveException_Impl<ProcessLimbo::RetrieveExceptionResponse>::RetrieveException_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::RetrieveException_Impl<ProcessLimbo::RetrieveExceptionResponse>::RetrieveException_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < RetrieveExceptionRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<RetrieveExceptionResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -728,14 +728,14 @@ ProcessLimbo::UnownedResultOf::RetrieveException_Impl<ProcessLimbo::RetrieveExce
 }
 
 ProcessLimbo::UnownedResultOf::RetrieveException ProcessLimbo::SyncClient::RetrieveException(::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RetrieveException(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(process_koid), std::move(_response_buffer));
+  return UnownedResultOf::RetrieveException(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(process_koid), std::move(_response_buffer));
 }
 
-ProcessLimbo::UnownedResultOf::RetrieveException ProcessLimbo::Call::RetrieveException(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::RetrieveException ProcessLimbo::Call::RetrieveException(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::RetrieveException(std::move(_client_end), std::move(_request_buffer), std::move(process_koid), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<ProcessLimbo::RetrieveExceptionResponse> ProcessLimbo::InPlace::RetrieveException(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RetrieveExceptionRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<ProcessLimbo::RetrieveExceptionResponse> ProcessLimbo::InPlace::RetrieveException(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RetrieveExceptionRequest> params, ::fidl::BytePart response_buffer) {
   ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -752,7 +752,7 @@ ProcessLimbo::UnownedResultOf::RetrieveException ProcessLimbo::Call::RetrieveExc
 }
 
 template <>
-ProcessLimbo::ResultOf::ReleaseProcess_Impl<ProcessLimbo::ReleaseProcessResponse>::ReleaseProcess_Impl(zx::unowned_channel _client_end, uint64_t process_koid) {
+ProcessLimbo::ResultOf::ReleaseProcess_Impl<ProcessLimbo::ReleaseProcessResponse>::ReleaseProcess_Impl(::zx::unowned_channel _client_end, uint64_t process_koid) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseProcessRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -767,15 +767,15 @@ ProcessLimbo::ResultOf::ReleaseProcess_Impl<ProcessLimbo::ReleaseProcessResponse
 }
 
 ProcessLimbo::ResultOf::ReleaseProcess ProcessLimbo::SyncClient::ReleaseProcess(uint64_t process_koid) {
-  return ResultOf::ReleaseProcess(zx::unowned_channel(this->channel_), std::move(process_koid));
+    return ResultOf::ReleaseProcess(::zx::unowned_channel(this->channel_), std::move(process_koid));
 }
 
-ProcessLimbo::ResultOf::ReleaseProcess ProcessLimbo::Call::ReleaseProcess(zx::unowned_channel _client_end, uint64_t process_koid) {
+ProcessLimbo::ResultOf::ReleaseProcess ProcessLimbo::Call::ReleaseProcess(::zx::unowned_channel _client_end, uint64_t process_koid) {
   return ResultOf::ReleaseProcess(std::move(_client_end), std::move(process_koid));
 }
 
 template <>
-ProcessLimbo::UnownedResultOf::ReleaseProcess_Impl<ProcessLimbo::ReleaseProcessResponse>::ReleaseProcess_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::ReleaseProcess_Impl<ProcessLimbo::ReleaseProcessResponse>::ReleaseProcess_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ReleaseProcessRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ReleaseProcessResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -790,14 +790,14 @@ ProcessLimbo::UnownedResultOf::ReleaseProcess_Impl<ProcessLimbo::ReleaseProcessR
 }
 
 ProcessLimbo::UnownedResultOf::ReleaseProcess ProcessLimbo::SyncClient::ReleaseProcess(::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ReleaseProcess(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(process_koid), std::move(_response_buffer));
+  return UnownedResultOf::ReleaseProcess(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(process_koid), std::move(_response_buffer));
 }
 
-ProcessLimbo::UnownedResultOf::ReleaseProcess ProcessLimbo::Call::ReleaseProcess(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::ReleaseProcess ProcessLimbo::Call::ReleaseProcess(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ReleaseProcess(std::move(_client_end), std::move(_request_buffer), std::move(process_koid), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<ProcessLimbo::ReleaseProcessResponse> ProcessLimbo::InPlace::ReleaseProcess(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseProcessRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<ProcessLimbo::ReleaseProcessResponse> ProcessLimbo::InPlace::ReleaseProcess(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseProcessRequest> params, ::fidl::BytePart response_buffer) {
   ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -814,7 +814,7 @@ ProcessLimbo::UnownedResultOf::ReleaseProcess ProcessLimbo::Call::ReleaseProcess
 }
 
 template <>
-ProcessLimbo::ResultOf::AppendFilters_Impl<ProcessLimbo::AppendFiltersResponse>::AppendFilters_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
+ProcessLimbo::ResultOf::AppendFilters_Impl<ProcessLimbo::AppendFiltersResponse>::AppendFilters_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AppendFiltersRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -831,15 +831,15 @@ ProcessLimbo::ResultOf::AppendFilters_Impl<ProcessLimbo::AppendFiltersResponse>:
 }
 
 ProcessLimbo::ResultOf::AppendFilters ProcessLimbo::SyncClient::AppendFilters(::fidl::VectorView<::fidl::StringView> filters) {
-  return ResultOf::AppendFilters(zx::unowned_channel(this->channel_), std::move(filters));
+    return ResultOf::AppendFilters(::zx::unowned_channel(this->channel_), std::move(filters));
 }
 
-ProcessLimbo::ResultOf::AppendFilters ProcessLimbo::Call::AppendFilters(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
+ProcessLimbo::ResultOf::AppendFilters ProcessLimbo::Call::AppendFilters(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
   return ResultOf::AppendFilters(std::move(_client_end), std::move(filters));
 }
 
 template <>
-ProcessLimbo::UnownedResultOf::AppendFilters_Impl<ProcessLimbo::AppendFiltersResponse>::AppendFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::AppendFilters_Impl<ProcessLimbo::AppendFiltersResponse>::AppendFilters_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < AppendFiltersRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<AppendFiltersResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -857,14 +857,14 @@ ProcessLimbo::UnownedResultOf::AppendFilters_Impl<ProcessLimbo::AppendFiltersRes
 }
 
 ProcessLimbo::UnownedResultOf::AppendFilters ProcessLimbo::SyncClient::AppendFilters(::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AppendFilters(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(filters), std::move(_response_buffer));
+  return UnownedResultOf::AppendFilters(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(filters), std::move(_response_buffer));
 }
 
-ProcessLimbo::UnownedResultOf::AppendFilters ProcessLimbo::Call::AppendFilters(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::AppendFilters ProcessLimbo::Call::AppendFilters(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::AppendFilters(std::move(_client_end), std::move(_request_buffer), std::move(filters), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<ProcessLimbo::AppendFiltersResponse> ProcessLimbo::InPlace::AppendFilters(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AppendFiltersRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<ProcessLimbo::AppendFiltersResponse> ProcessLimbo::InPlace::AppendFilters(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AppendFiltersRequest> params, ::fidl::BytePart response_buffer) {
   ProcessLimbo::SetTransactionHeaderFor::AppendFiltersRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -881,7 +881,7 @@ ProcessLimbo::UnownedResultOf::AppendFilters ProcessLimbo::Call::AppendFilters(z
 }
 
 template <>
-ProcessLimbo::ResultOf::RemoveFilters_Impl<ProcessLimbo::RemoveFiltersResponse>::RemoveFilters_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
+ProcessLimbo::ResultOf::RemoveFilters_Impl<ProcessLimbo::RemoveFiltersResponse>::RemoveFilters_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveFiltersRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -898,15 +898,15 @@ ProcessLimbo::ResultOf::RemoveFilters_Impl<ProcessLimbo::RemoveFiltersResponse>:
 }
 
 ProcessLimbo::ResultOf::RemoveFilters ProcessLimbo::SyncClient::RemoveFilters(::fidl::VectorView<::fidl::StringView> filters) {
-  return ResultOf::RemoveFilters(zx::unowned_channel(this->channel_), std::move(filters));
+    return ResultOf::RemoveFilters(::zx::unowned_channel(this->channel_), std::move(filters));
 }
 
-ProcessLimbo::ResultOf::RemoveFilters ProcessLimbo::Call::RemoveFilters(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
+ProcessLimbo::ResultOf::RemoveFilters ProcessLimbo::Call::RemoveFilters(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
   return ResultOf::RemoveFilters(std::move(_client_end), std::move(filters));
 }
 
 template <>
-ProcessLimbo::UnownedResultOf::RemoveFilters_Impl<ProcessLimbo::RemoveFiltersResponse>::RemoveFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::RemoveFilters_Impl<ProcessLimbo::RemoveFiltersResponse>::RemoveFilters_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < RemoveFiltersRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<RemoveFiltersResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -924,14 +924,14 @@ ProcessLimbo::UnownedResultOf::RemoveFilters_Impl<ProcessLimbo::RemoveFiltersRes
 }
 
 ProcessLimbo::UnownedResultOf::RemoveFilters ProcessLimbo::SyncClient::RemoveFilters(::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::RemoveFilters(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(filters), std::move(_response_buffer));
+  return UnownedResultOf::RemoveFilters(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(filters), std::move(_response_buffer));
 }
 
-ProcessLimbo::UnownedResultOf::RemoveFilters ProcessLimbo::Call::RemoveFilters(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::RemoveFilters ProcessLimbo::Call::RemoveFilters(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::RemoveFilters(std::move(_client_end), std::move(_request_buffer), std::move(filters), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<ProcessLimbo::RemoveFiltersResponse> ProcessLimbo::InPlace::RemoveFilters(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RemoveFiltersRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<ProcessLimbo::RemoveFiltersResponse> ProcessLimbo::InPlace::RemoveFilters(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RemoveFiltersRequest> params, ::fidl::BytePart response_buffer) {
   ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -948,7 +948,7 @@ ProcessLimbo::UnownedResultOf::RemoveFilters ProcessLimbo::Call::RemoveFilters(z
 }
 
 template <>
-ProcessLimbo::ResultOf::GetFilters_Impl<ProcessLimbo::GetFiltersResponse>::GetFilters_Impl(zx::unowned_channel _client_end) {
+ProcessLimbo::ResultOf::GetFilters_Impl<ProcessLimbo::GetFiltersResponse>::GetFilters_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFiltersRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -961,15 +961,15 @@ ProcessLimbo::ResultOf::GetFilters_Impl<ProcessLimbo::GetFiltersResponse>::GetFi
 }
 
 ProcessLimbo::ResultOf::GetFilters ProcessLimbo::SyncClient::GetFilters() {
-  return ResultOf::GetFilters(zx::unowned_channel(this->channel_));
+    return ResultOf::GetFilters(::zx::unowned_channel(this->channel_));
 }
 
-ProcessLimbo::ResultOf::GetFilters ProcessLimbo::Call::GetFilters(zx::unowned_channel _client_end) {
+ProcessLimbo::ResultOf::GetFilters ProcessLimbo::Call::GetFilters(::zx::unowned_channel _client_end) {
   return ResultOf::GetFilters(std::move(_client_end));
 }
 
 template <>
-ProcessLimbo::UnownedResultOf::GetFilters_Impl<ProcessLimbo::GetFiltersResponse>::GetFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::GetFilters_Impl<ProcessLimbo::GetFiltersResponse>::GetFilters_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFiltersRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetFiltersRequest::PrimarySize);
@@ -980,14 +980,14 @@ ProcessLimbo::UnownedResultOf::GetFilters_Impl<ProcessLimbo::GetFiltersResponse>
 }
 
 ProcessLimbo::UnownedResultOf::GetFilters ProcessLimbo::SyncClient::GetFilters(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetFilters(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetFilters(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-ProcessLimbo::UnownedResultOf::GetFilters ProcessLimbo::Call::GetFilters(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+ProcessLimbo::UnownedResultOf::GetFilters ProcessLimbo::Call::GetFilters(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetFilters(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<ProcessLimbo::GetFiltersResponse> ProcessLimbo::InPlace::GetFilters(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<ProcessLimbo::GetFiltersResponse> ProcessLimbo::InPlace::GetFilters(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetFiltersRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

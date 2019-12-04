@@ -850,7 +850,7 @@ class Device final {
     class GetStateNormalized_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetStateNormalized_Impl(zx::unowned_channel _client_end);
+      GetStateNormalized_Impl(::zx::unowned_channel _client_end);
       ~GetStateNormalized_Impl() = default;
       GetStateNormalized_Impl(GetStateNormalized_Impl&& other) = default;
       GetStateNormalized_Impl& operator=(GetStateNormalized_Impl&& other) = default;
@@ -866,7 +866,7 @@ class Device final {
     class SetStateNormalized_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetStateNormalized_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
+      SetStateNormalized_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
       ~SetStateNormalized_Impl() = default;
       SetStateNormalized_Impl(SetStateNormalized_Impl&& other) = default;
       SetStateNormalized_Impl& operator=(SetStateNormalized_Impl&& other) = default;
@@ -882,7 +882,7 @@ class Device final {
     class GetStateAbsolute_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetStateAbsolute_Impl(zx::unowned_channel _client_end);
+      GetStateAbsolute_Impl(::zx::unowned_channel _client_end);
       ~GetStateAbsolute_Impl() = default;
       GetStateAbsolute_Impl(GetStateAbsolute_Impl&& other) = default;
       GetStateAbsolute_Impl& operator=(GetStateAbsolute_Impl&& other) = default;
@@ -898,7 +898,7 @@ class Device final {
     class SetStateAbsolute_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetStateAbsolute_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
+      SetStateAbsolute_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
       ~SetStateAbsolute_Impl() = default;
       SetStateAbsolute_Impl(SetStateAbsolute_Impl&& other) = default;
       SetStateAbsolute_Impl& operator=(SetStateAbsolute_Impl&& other) = default;
@@ -914,7 +914,7 @@ class Device final {
     class GetMaxAbsoluteBrightness_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetMaxAbsoluteBrightness_Impl(zx::unowned_channel _client_end);
+      GetMaxAbsoluteBrightness_Impl(::zx::unowned_channel _client_end);
       ~GetMaxAbsoluteBrightness_Impl() = default;
       GetMaxAbsoluteBrightness_Impl(GetMaxAbsoluteBrightness_Impl&& other) = default;
       GetMaxAbsoluteBrightness_Impl& operator=(GetMaxAbsoluteBrightness_Impl&& other) = default;
@@ -944,7 +944,7 @@ class Device final {
     class GetStateNormalized_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetStateNormalized_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetStateNormalized_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetStateNormalized_Impl() = default;
       GetStateNormalized_Impl(GetStateNormalized_Impl&& other) = default;
       GetStateNormalized_Impl& operator=(GetStateNormalized_Impl&& other) = default;
@@ -960,7 +960,7 @@ class Device final {
     class SetStateNormalized_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetStateNormalized_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
+      SetStateNormalized_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
       ~SetStateNormalized_Impl() = default;
       SetStateNormalized_Impl(SetStateNormalized_Impl&& other) = default;
       SetStateNormalized_Impl& operator=(SetStateNormalized_Impl&& other) = default;
@@ -976,7 +976,7 @@ class Device final {
     class GetStateAbsolute_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetStateAbsolute_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetStateAbsolute_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetStateAbsolute_Impl() = default;
       GetStateAbsolute_Impl(GetStateAbsolute_Impl&& other) = default;
       GetStateAbsolute_Impl& operator=(GetStateAbsolute_Impl&& other) = default;
@@ -992,7 +992,7 @@ class Device final {
     class SetStateAbsolute_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetStateAbsolute_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
+      SetStateAbsolute_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
       ~SetStateAbsolute_Impl() = default;
       SetStateAbsolute_Impl(SetStateAbsolute_Impl&& other) = default;
       SetStateAbsolute_Impl& operator=(SetStateAbsolute_Impl&& other) = default;
@@ -1008,7 +1008,7 @@ class Device final {
     class GetMaxAbsoluteBrightness_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetMaxAbsoluteBrightness_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetMaxAbsoluteBrightness_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetMaxAbsoluteBrightness_Impl() = default;
       GetMaxAbsoluteBrightness_Impl(GetMaxAbsoluteBrightness_Impl&& other) = default;
       GetMaxAbsoluteBrightness_Impl& operator=(GetMaxAbsoluteBrightness_Impl&& other) = default;
@@ -1098,48 +1098,48 @@ class Device final {
     // Gets the current backlight brightness as a percentage value between 0.0
     // and 1.0
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetStateNormalized GetStateNormalized(zx::unowned_channel _client_end);
+    static ResultOf::GetStateNormalized GetStateNormalized(::zx::unowned_channel _client_end);
 
     // Gets the current backlight brightness as a percentage value between 0.0
     // and 1.0
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetStateNormalized GetStateNormalized(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetStateNormalized GetStateNormalized(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Sets the current backlight brightness as a percentage value between 0.0
     // and 1.0
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetStateNormalized SetStateNormalized(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
+    static ResultOf::SetStateNormalized SetStateNormalized(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
 
     // Sets the current backlight brightness as a percentage value between 0.0
     // and 1.0
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetStateNormalized SetStateNormalized(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetStateNormalized SetStateNormalized(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
 
     // Gets the current backlight brightness in nits
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetStateAbsolute GetStateAbsolute(zx::unowned_channel _client_end);
+    static ResultOf::GetStateAbsolute GetStateAbsolute(::zx::unowned_channel _client_end);
 
     // Gets the current backlight brightness in nits
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetStateAbsolute GetStateAbsolute(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetStateAbsolute GetStateAbsolute(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Sets the current backlight brightness in nits
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetStateAbsolute SetStateAbsolute(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
+    static ResultOf::SetStateAbsolute SetStateAbsolute(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
 
     // Sets the current backlight brightness in nits
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetStateAbsolute SetStateAbsolute(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetStateAbsolute SetStateAbsolute(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
 
     // Gets the maximum supported backlight brightness in nits, if known.
     // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetMaxAbsoluteBrightness GetMaxAbsoluteBrightness(zx::unowned_channel _client_end);
+    static ResultOf::GetMaxAbsoluteBrightness GetMaxAbsoluteBrightness(::zx::unowned_channel _client_end);
 
     // Gets the maximum supported backlight brightness in nits, if known.
     // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetMaxAbsoluteBrightness GetMaxAbsoluteBrightness(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetMaxAbsoluteBrightness GetMaxAbsoluteBrightness(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1151,21 +1151,21 @@ class Device final {
 
     // Gets the current backlight brightness as a percentage value between 0.0
     // and 1.0
-    static ::fidl::DecodeResult<GetStateNormalizedResponse> GetStateNormalized(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetStateNormalizedResponse> GetStateNormalized(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Sets the current backlight brightness as a percentage value between 0.0
     // and 1.0
-    static ::fidl::DecodeResult<SetStateNormalizedResponse> SetStateNormalized(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateNormalizedRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetStateNormalizedResponse> SetStateNormalized(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateNormalizedRequest> params, ::fidl::BytePart response_buffer);
 
     // Gets the current backlight brightness in nits
-    static ::fidl::DecodeResult<GetStateAbsoluteResponse> GetStateAbsolute(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetStateAbsoluteResponse> GetStateAbsolute(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Sets the current backlight brightness in nits
-    static ::fidl::DecodeResult<SetStateAbsoluteResponse> SetStateAbsolute(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateAbsoluteRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetStateAbsoluteResponse> SetStateAbsolute(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateAbsoluteRequest> params, ::fidl::BytePart response_buffer);
 
     // Gets the maximum supported backlight brightness in nits, if known.
     // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
-    static ::fidl::DecodeResult<GetMaxAbsoluteBrightnessResponse> GetMaxAbsoluteBrightness(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetMaxAbsoluteBrightnessResponse> GetMaxAbsoluteBrightness(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

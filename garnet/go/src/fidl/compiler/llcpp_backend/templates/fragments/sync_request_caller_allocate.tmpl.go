@@ -18,7 +18,7 @@ const SyncRequestCallerAllocate = `
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodArguments" -}}
-zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBufferParams" .Request }}{{ if .HasResponse }}, ::fidl::BytePart _response_buffer{{ end }}
+::zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBufferParams" .Request }}{{ if .HasResponse }}, ::fidl::BytePart _response_buffer{{ end }}
 {{- end }}
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}
@@ -76,7 +76,7 @@ zx::unowned_channel _client_end{{ if .Request }}, {{ end }}{{ template "CallerBu
 
 {{ .LLProps.InterfaceName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.InterfaceName }}::SyncClient::{{ .Name }}(
   {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
-  return UnownedResultOf::{{ .Name }}(zx::unowned_channel(this->channel_)
+  return UnownedResultOf::{{ .Name }}(::zx::unowned_channel(this->channel_)
     {{- if .Request -}}
       , std::move(_request_buffer), {{ template "SyncClientMoveParams" .Request }}
     {{- end }}

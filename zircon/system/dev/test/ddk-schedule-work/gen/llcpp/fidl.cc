@@ -287,7 +287,7 @@ extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_TestDeviceGetC
 
 }  // namespace
 template <>
-TestDevice::ResultOf::ScheduleWork_Impl<TestDevice::ScheduleWorkResponse>::ScheduleWork_Impl(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items) {
+TestDevice::ResultOf::ScheduleWork_Impl<TestDevice::ScheduleWorkResponse>::ScheduleWork_Impl(::zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleWorkRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -303,15 +303,15 @@ TestDevice::ResultOf::ScheduleWork_Impl<TestDevice::ScheduleWorkResponse>::Sched
 }
 
 TestDevice::ResultOf::ScheduleWork TestDevice::SyncClient::ScheduleWork(uint32_t batch_size, uint32_t num_work_items) {
-  return ResultOf::ScheduleWork(zx::unowned_channel(this->channel_), std::move(batch_size), std::move(num_work_items));
+    return ResultOf::ScheduleWork(::zx::unowned_channel(this->channel_), std::move(batch_size), std::move(num_work_items));
 }
 
-TestDevice::ResultOf::ScheduleWork TestDevice::Call::ScheduleWork(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items) {
+TestDevice::ResultOf::ScheduleWork TestDevice::Call::ScheduleWork(::zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items) {
   return ResultOf::ScheduleWork(std::move(_client_end), std::move(batch_size), std::move(num_work_items));
 }
 
 template <>
-TestDevice::UnownedResultOf::ScheduleWork_Impl<TestDevice::ScheduleWorkResponse>::ScheduleWork_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::ScheduleWork_Impl<TestDevice::ScheduleWorkResponse>::ScheduleWork_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ScheduleWorkRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ScheduleWorkResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -327,14 +327,14 @@ TestDevice::UnownedResultOf::ScheduleWork_Impl<TestDevice::ScheduleWorkResponse>
 }
 
 TestDevice::UnownedResultOf::ScheduleWork TestDevice::SyncClient::ScheduleWork(::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ScheduleWork(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(batch_size), std::move(num_work_items), std::move(_response_buffer));
+  return UnownedResultOf::ScheduleWork(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(batch_size), std::move(num_work_items), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::ScheduleWork TestDevice::Call::ScheduleWork(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::ScheduleWork TestDevice::Call::ScheduleWork(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ScheduleWork(std::move(_client_end), std::move(_request_buffer), std::move(batch_size), std::move(num_work_items), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::ScheduleWorkResponse> TestDevice::InPlace::ScheduleWork(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleWorkRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::ScheduleWorkResponse> TestDevice::InPlace::ScheduleWork(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleWorkRequest> params, ::fidl::BytePart response_buffer) {
   TestDevice::SetTransactionHeaderFor::ScheduleWorkRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -351,7 +351,7 @@ TestDevice::UnownedResultOf::ScheduleWork TestDevice::Call::ScheduleWork(zx::uno
 }
 
 template <>
-TestDevice::ResultOf::ScheduleWorkDifferentThread_Impl<TestDevice::ScheduleWorkDifferentThreadResponse>::ScheduleWorkDifferentThread_Impl(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::ScheduleWorkDifferentThread_Impl<TestDevice::ScheduleWorkDifferentThreadResponse>::ScheduleWorkDifferentThread_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleWorkDifferentThreadRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -364,15 +364,15 @@ TestDevice::ResultOf::ScheduleWorkDifferentThread_Impl<TestDevice::ScheduleWorkD
 }
 
 TestDevice::ResultOf::ScheduleWorkDifferentThread TestDevice::SyncClient::ScheduleWorkDifferentThread() {
-  return ResultOf::ScheduleWorkDifferentThread(zx::unowned_channel(this->channel_));
+    return ResultOf::ScheduleWorkDifferentThread(::zx::unowned_channel(this->channel_));
 }
 
-TestDevice::ResultOf::ScheduleWorkDifferentThread TestDevice::Call::ScheduleWorkDifferentThread(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::ScheduleWorkDifferentThread TestDevice::Call::ScheduleWorkDifferentThread(::zx::unowned_channel _client_end) {
   return ResultOf::ScheduleWorkDifferentThread(std::move(_client_end));
 }
 
 template <>
-TestDevice::UnownedResultOf::ScheduleWorkDifferentThread_Impl<TestDevice::ScheduleWorkDifferentThreadResponse>::ScheduleWorkDifferentThread_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::ScheduleWorkDifferentThread_Impl<TestDevice::ScheduleWorkDifferentThreadResponse>::ScheduleWorkDifferentThread_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ScheduleWorkDifferentThreadRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, ScheduleWorkDifferentThreadRequest::PrimarySize);
@@ -383,14 +383,14 @@ TestDevice::UnownedResultOf::ScheduleWorkDifferentThread_Impl<TestDevice::Schedu
 }
 
 TestDevice::UnownedResultOf::ScheduleWorkDifferentThread TestDevice::SyncClient::ScheduleWorkDifferentThread(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ScheduleWorkDifferentThread(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::ScheduleWorkDifferentThread(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::ScheduleWorkDifferentThread TestDevice::Call::ScheduleWorkDifferentThread(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::ScheduleWorkDifferentThread TestDevice::Call::ScheduleWorkDifferentThread(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ScheduleWorkDifferentThread(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::ScheduleWorkDifferentThreadResponse> TestDevice::InPlace::ScheduleWorkDifferentThread(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::ScheduleWorkDifferentThreadResponse> TestDevice::InPlace::ScheduleWorkDifferentThread(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(ScheduleWorkDifferentThreadRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -412,7 +412,7 @@ TestDevice::UnownedResultOf::ScheduleWorkDifferentThread TestDevice::Call::Sched
 }
 
 template <>
-TestDevice::ResultOf::GetDoneEvent_Impl<TestDevice::GetDoneEventResponse>::GetDoneEvent_Impl(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::GetDoneEvent_Impl<TestDevice::GetDoneEventResponse>::GetDoneEvent_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDoneEventRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -425,15 +425,15 @@ TestDevice::ResultOf::GetDoneEvent_Impl<TestDevice::GetDoneEventResponse>::GetDo
 }
 
 TestDevice::ResultOf::GetDoneEvent TestDevice::SyncClient::GetDoneEvent() {
-  return ResultOf::GetDoneEvent(zx::unowned_channel(this->channel_));
+    return ResultOf::GetDoneEvent(::zx::unowned_channel(this->channel_));
 }
 
-TestDevice::ResultOf::GetDoneEvent TestDevice::Call::GetDoneEvent(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::GetDoneEvent TestDevice::Call::GetDoneEvent(::zx::unowned_channel _client_end) {
   return ResultOf::GetDoneEvent(std::move(_client_end));
 }
 
 template <>
-TestDevice::UnownedResultOf::GetDoneEvent_Impl<TestDevice::GetDoneEventResponse>::GetDoneEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetDoneEvent_Impl<TestDevice::GetDoneEventResponse>::GetDoneEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetDoneEventRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetDoneEventRequest::PrimarySize);
@@ -444,14 +444,14 @@ TestDevice::UnownedResultOf::GetDoneEvent_Impl<TestDevice::GetDoneEventResponse>
 }
 
 TestDevice::UnownedResultOf::GetDoneEvent TestDevice::SyncClient::GetDoneEvent(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetDoneEvent(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::GetDoneEvent(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::GetDoneEvent TestDevice::Call::GetDoneEvent(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetDoneEvent TestDevice::Call::GetDoneEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetDoneEvent(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::GetDoneEventResponse> TestDevice::InPlace::GetDoneEvent(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::GetDoneEventResponse> TestDevice::InPlace::GetDoneEvent(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetDoneEventRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -473,7 +473,7 @@ TestDevice::UnownedResultOf::GetDoneEvent TestDevice::Call::GetDoneEvent(zx::uno
 }
 
 template <>
-TestDevice::ResultOf::ScheduledWorkRan_Impl<TestDevice::ScheduledWorkRanResponse>::ScheduledWorkRan_Impl(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::ScheduledWorkRan_Impl<TestDevice::ScheduledWorkRanResponse>::ScheduledWorkRan_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduledWorkRanRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -486,15 +486,15 @@ TestDevice::ResultOf::ScheduledWorkRan_Impl<TestDevice::ScheduledWorkRanResponse
 }
 
 TestDevice::ResultOf::ScheduledWorkRan TestDevice::SyncClient::ScheduledWorkRan() {
-  return ResultOf::ScheduledWorkRan(zx::unowned_channel(this->channel_));
+    return ResultOf::ScheduledWorkRan(::zx::unowned_channel(this->channel_));
 }
 
-TestDevice::ResultOf::ScheduledWorkRan TestDevice::Call::ScheduledWorkRan(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::ScheduledWorkRan TestDevice::Call::ScheduledWorkRan(::zx::unowned_channel _client_end) {
   return ResultOf::ScheduledWorkRan(std::move(_client_end));
 }
 
 template <>
-TestDevice::UnownedResultOf::ScheduledWorkRan_Impl<TestDevice::ScheduledWorkRanResponse>::ScheduledWorkRan_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::ScheduledWorkRan_Impl<TestDevice::ScheduledWorkRanResponse>::ScheduledWorkRan_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ScheduledWorkRanRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, ScheduledWorkRanRequest::PrimarySize);
@@ -505,14 +505,14 @@ TestDevice::UnownedResultOf::ScheduledWorkRan_Impl<TestDevice::ScheduledWorkRanR
 }
 
 TestDevice::UnownedResultOf::ScheduledWorkRan TestDevice::SyncClient::ScheduledWorkRan(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ScheduledWorkRan(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::ScheduledWorkRan(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::ScheduledWorkRan TestDevice::Call::ScheduledWorkRan(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::ScheduledWorkRan TestDevice::Call::ScheduledWorkRan(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ScheduledWorkRan(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::ScheduledWorkRanResponse> TestDevice::InPlace::ScheduledWorkRan(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::ScheduledWorkRanResponse> TestDevice::InPlace::ScheduledWorkRan(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(ScheduledWorkRanRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -534,7 +534,7 @@ TestDevice::UnownedResultOf::ScheduledWorkRan TestDevice::Call::ScheduledWorkRan
 }
 
 template <>
-TestDevice::ResultOf::GetChannel_Impl<TestDevice::GetChannelResponse>::GetChannel_Impl(zx::unowned_channel _client_end, ::zx::channel test) {
+TestDevice::ResultOf::GetChannel_Impl<TestDevice::GetChannelResponse>::GetChannel_Impl(::zx::unowned_channel _client_end, ::zx::channel test) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -549,15 +549,15 @@ TestDevice::ResultOf::GetChannel_Impl<TestDevice::GetChannelResponse>::GetChanne
 }
 
 TestDevice::ResultOf::GetChannel TestDevice::SyncClient::GetChannel(::zx::channel test) {
-  return ResultOf::GetChannel(zx::unowned_channel(this->channel_), std::move(test));
+    return ResultOf::GetChannel(::zx::unowned_channel(this->channel_), std::move(test));
 }
 
-TestDevice::ResultOf::GetChannel TestDevice::Call::GetChannel(zx::unowned_channel _client_end, ::zx::channel test) {
+TestDevice::ResultOf::GetChannel TestDevice::Call::GetChannel(::zx::unowned_channel _client_end, ::zx::channel test) {
   return ResultOf::GetChannel(std::move(_client_end), std::move(test));
 }
 
 template <>
-TestDevice::UnownedResultOf::GetChannel_Impl<TestDevice::GetChannelResponse>::GetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel test, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetChannel_Impl<TestDevice::GetChannelResponse>::GetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel test, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetChannelRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetChannelResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -572,14 +572,14 @@ TestDevice::UnownedResultOf::GetChannel_Impl<TestDevice::GetChannelResponse>::Ge
 }
 
 TestDevice::UnownedResultOf::GetChannel TestDevice::SyncClient::GetChannel(::fidl::BytePart _request_buffer, ::zx::channel test, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetChannel(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(test), std::move(_response_buffer));
+  return UnownedResultOf::GetChannel(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(test), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::GetChannel TestDevice::Call::GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel test, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::GetChannel TestDevice::Call::GetChannel(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel test, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetChannel(std::move(_client_end), std::move(_request_buffer), std::move(test), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::GetChannelResponse> TestDevice::InPlace::GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::GetChannelResponse> TestDevice::InPlace::GetChannel(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params, ::fidl::BytePart response_buffer) {
   TestDevice::SetTransactionHeaderFor::GetChannelRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -1030,7 +1030,7 @@ extern "C" const fidl_type_t v1_fuchsia_device_schedule_work_test_OwnedChannelDe
 
 }  // namespace
 template <>
-OwnedChannelDevice::ResultOf::ScheduleWork_Impl<OwnedChannelDevice::ScheduleWorkResponse>::ScheduleWork_Impl(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items) {
+OwnedChannelDevice::ResultOf::ScheduleWork_Impl<OwnedChannelDevice::ScheduleWorkResponse>::ScheduleWork_Impl(::zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleWorkRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1046,15 +1046,15 @@ OwnedChannelDevice::ResultOf::ScheduleWork_Impl<OwnedChannelDevice::ScheduleWork
 }
 
 OwnedChannelDevice::ResultOf::ScheduleWork OwnedChannelDevice::SyncClient::ScheduleWork(uint32_t batch_size, uint32_t num_work_items) {
-  return ResultOf::ScheduleWork(zx::unowned_channel(this->channel_), std::move(batch_size), std::move(num_work_items));
+    return ResultOf::ScheduleWork(::zx::unowned_channel(this->channel_), std::move(batch_size), std::move(num_work_items));
 }
 
-OwnedChannelDevice::ResultOf::ScheduleWork OwnedChannelDevice::Call::ScheduleWork(zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items) {
+OwnedChannelDevice::ResultOf::ScheduleWork OwnedChannelDevice::Call::ScheduleWork(::zx::unowned_channel _client_end, uint32_t batch_size, uint32_t num_work_items) {
   return ResultOf::ScheduleWork(std::move(_client_end), std::move(batch_size), std::move(num_work_items));
 }
 
 template <>
-OwnedChannelDevice::UnownedResultOf::ScheduleWork_Impl<OwnedChannelDevice::ScheduleWorkResponse>::ScheduleWork_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer) {
+OwnedChannelDevice::UnownedResultOf::ScheduleWork_Impl<OwnedChannelDevice::ScheduleWorkResponse>::ScheduleWork_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ScheduleWorkRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ScheduleWorkResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1070,14 +1070,14 @@ OwnedChannelDevice::UnownedResultOf::ScheduleWork_Impl<OwnedChannelDevice::Sched
 }
 
 OwnedChannelDevice::UnownedResultOf::ScheduleWork OwnedChannelDevice::SyncClient::ScheduleWork(::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ScheduleWork(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(batch_size), std::move(num_work_items), std::move(_response_buffer));
+  return UnownedResultOf::ScheduleWork(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(batch_size), std::move(num_work_items), std::move(_response_buffer));
 }
 
-OwnedChannelDevice::UnownedResultOf::ScheduleWork OwnedChannelDevice::Call::ScheduleWork(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer) {
+OwnedChannelDevice::UnownedResultOf::ScheduleWork OwnedChannelDevice::Call::ScheduleWork(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t batch_size, uint32_t num_work_items, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ScheduleWork(std::move(_client_end), std::move(_request_buffer), std::move(batch_size), std::move(num_work_items), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<OwnedChannelDevice::ScheduleWorkResponse> OwnedChannelDevice::InPlace::ScheduleWork(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleWorkRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<OwnedChannelDevice::ScheduleWorkResponse> OwnedChannelDevice::InPlace::ScheduleWork(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ScheduleWorkRequest> params, ::fidl::BytePart response_buffer) {
   OwnedChannelDevice::SetTransactionHeaderFor::ScheduleWorkRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

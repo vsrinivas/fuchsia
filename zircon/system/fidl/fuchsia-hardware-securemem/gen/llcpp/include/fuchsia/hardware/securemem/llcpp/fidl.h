@@ -83,7 +83,7 @@ class Device final {
     class GetSecureMemoryPhysicalAddress_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetSecureMemoryPhysicalAddress_Impl(zx::unowned_channel _client_end, ::zx::vmo secure_mem);
+      GetSecureMemoryPhysicalAddress_Impl(::zx::unowned_channel _client_end, ::zx::vmo secure_mem);
       ~GetSecureMemoryPhysicalAddress_Impl() = default;
       GetSecureMemoryPhysicalAddress_Impl(GetSecureMemoryPhysicalAddress_Impl&& other) = default;
       GetSecureMemoryPhysicalAddress_Impl& operator=(GetSecureMemoryPhysicalAddress_Impl&& other) = default;
@@ -109,7 +109,7 @@ class Device final {
     class GetSecureMemoryPhysicalAddress_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetSecureMemoryPhysicalAddress_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo secure_mem, ::fidl::BytePart _response_buffer);
+      GetSecureMemoryPhysicalAddress_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo secure_mem, ::fidl::BytePart _response_buffer);
       ~GetSecureMemoryPhysicalAddress_Impl() = default;
       GetSecureMemoryPhysicalAddress_Impl(GetSecureMemoryPhysicalAddress_Impl&& other) = default;
       GetSecureMemoryPhysicalAddress_Impl& operator=(GetSecureMemoryPhysicalAddress_Impl&& other) = default;
@@ -177,7 +177,7 @@ class Device final {
     //  * The server implementation must not use an IOMMU-backed BTI handle, as the physical
     //    address of the VMO being pinned must be stable.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetSecureMemoryPhysicalAddress GetSecureMemoryPhysicalAddress(zx::unowned_channel _client_end, ::zx::vmo secure_mem);
+    static ResultOf::GetSecureMemoryPhysicalAddress GetSecureMemoryPhysicalAddress(::zx::unowned_channel _client_end, ::zx::vmo secure_mem);
 
     // Gets the physical address of a previously pinned VMO.
     //
@@ -188,7 +188,7 @@ class Device final {
     //  * The server implementation must not use an IOMMU-backed BTI handle, as the physical
     //    address of the VMO being pinned must be stable.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetSecureMemoryPhysicalAddress GetSecureMemoryPhysicalAddress(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo secure_mem, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetSecureMemoryPhysicalAddress GetSecureMemoryPhysicalAddress(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo secure_mem, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -206,7 +206,7 @@ class Device final {
     //    entity. The protocol implementation should not be expected to keep the VMO pinned.
     //  * The server implementation must not use an IOMMU-backed BTI handle, as the physical
     //    address of the VMO being pinned must be stable.
-    static ::fidl::DecodeResult<GetSecureMemoryPhysicalAddressResponse> GetSecureMemoryPhysicalAddress(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSecureMemoryPhysicalAddressRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetSecureMemoryPhysicalAddressResponse> GetSecureMemoryPhysicalAddress(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSecureMemoryPhysicalAddressRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

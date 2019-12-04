@@ -293,7 +293,7 @@ class Partition final {
     class GetInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetInfo_Impl(zx::unowned_channel _client_end);
+      GetInfo_Impl(::zx::unowned_channel _client_end);
       ~GetInfo_Impl() = default;
       GetInfo_Impl(GetInfo_Impl&& other) = default;
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
@@ -309,7 +309,7 @@ class Partition final {
     class GetStats_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetStats_Impl(zx::unowned_channel _client_end, bool clear);
+      GetStats_Impl(::zx::unowned_channel _client_end, bool clear);
       ~GetStats_Impl() = default;
       GetStats_Impl(GetStats_Impl&& other) = default;
       GetStats_Impl& operator=(GetStats_Impl&& other) = default;
@@ -325,7 +325,7 @@ class Partition final {
     class GetFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetFifo_Impl(zx::unowned_channel _client_end);
+      GetFifo_Impl(::zx::unowned_channel _client_end);
       ~GetFifo_Impl() = default;
       GetFifo_Impl(GetFifo_Impl&& other) = default;
       GetFifo_Impl& operator=(GetFifo_Impl&& other) = default;
@@ -341,7 +341,7 @@ class Partition final {
     class AttachVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AttachVmo_Impl(zx::unowned_channel _client_end, ::zx::vmo vmo);
+      AttachVmo_Impl(::zx::unowned_channel _client_end, ::zx::vmo vmo);
       ~AttachVmo_Impl() = default;
       AttachVmo_Impl(AttachVmo_Impl&& other) = default;
       AttachVmo_Impl& operator=(AttachVmo_Impl&& other) = default;
@@ -357,7 +357,7 @@ class Partition final {
     class CloseFifo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CloseFifo_Impl(zx::unowned_channel _client_end);
+      CloseFifo_Impl(::zx::unowned_channel _client_end);
       ~CloseFifo_Impl() = default;
       CloseFifo_Impl(CloseFifo_Impl&& other) = default;
       CloseFifo_Impl& operator=(CloseFifo_Impl&& other) = default;
@@ -373,7 +373,7 @@ class Partition final {
     class RebindDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      RebindDevice_Impl(zx::unowned_channel _client_end);
+      RebindDevice_Impl(::zx::unowned_channel _client_end);
       ~RebindDevice_Impl() = default;
       RebindDevice_Impl(RebindDevice_Impl&& other) = default;
       RebindDevice_Impl& operator=(RebindDevice_Impl&& other) = default;
@@ -389,7 +389,7 @@ class Partition final {
     class GetTypeGuid_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetTypeGuid_Impl(zx::unowned_channel _client_end);
+      GetTypeGuid_Impl(::zx::unowned_channel _client_end);
       ~GetTypeGuid_Impl() = default;
       GetTypeGuid_Impl(GetTypeGuid_Impl&& other) = default;
       GetTypeGuid_Impl& operator=(GetTypeGuid_Impl&& other) = default;
@@ -405,7 +405,7 @@ class Partition final {
     class GetInstanceGuid_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetInstanceGuid_Impl(zx::unowned_channel _client_end);
+      GetInstanceGuid_Impl(::zx::unowned_channel _client_end);
       ~GetInstanceGuid_Impl() = default;
       GetInstanceGuid_Impl(GetInstanceGuid_Impl&& other) = default;
       GetInstanceGuid_Impl& operator=(GetInstanceGuid_Impl&& other) = default;
@@ -421,7 +421,7 @@ class Partition final {
     class GetName_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetName_Impl(zx::unowned_channel _client_end);
+      GetName_Impl(::zx::unowned_channel _client_end);
       ~GetName_Impl() = default;
       GetName_Impl(GetName_Impl&& other) = default;
       GetName_Impl& operator=(GetName_Impl&& other) = default;
@@ -455,7 +455,7 @@ class Partition final {
     class GetInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetInfo_Impl() = default;
       GetInfo_Impl(GetInfo_Impl&& other) = default;
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
@@ -471,7 +471,7 @@ class Partition final {
     class GetStats_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetStats_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
+      GetStats_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
       ~GetStats_Impl() = default;
       GetStats_Impl(GetStats_Impl&& other) = default;
       GetStats_Impl& operator=(GetStats_Impl&& other) = default;
@@ -487,7 +487,7 @@ class Partition final {
     class GetFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetFifo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetFifo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetFifo_Impl() = default;
       GetFifo_Impl(GetFifo_Impl&& other) = default;
       GetFifo_Impl& operator=(GetFifo_Impl&& other) = default;
@@ -503,7 +503,7 @@ class Partition final {
     class AttachVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AttachVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
+      AttachVmo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
       ~AttachVmo_Impl() = default;
       AttachVmo_Impl(AttachVmo_Impl&& other) = default;
       AttachVmo_Impl& operator=(AttachVmo_Impl&& other) = default;
@@ -519,7 +519,7 @@ class Partition final {
     class CloseFifo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CloseFifo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      CloseFifo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~CloseFifo_Impl() = default;
       CloseFifo_Impl(CloseFifo_Impl&& other) = default;
       CloseFifo_Impl& operator=(CloseFifo_Impl&& other) = default;
@@ -535,7 +535,7 @@ class Partition final {
     class RebindDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      RebindDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      RebindDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~RebindDevice_Impl() = default;
       RebindDevice_Impl(RebindDevice_Impl&& other) = default;
       RebindDevice_Impl& operator=(RebindDevice_Impl&& other) = default;
@@ -551,7 +551,7 @@ class Partition final {
     class GetTypeGuid_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetTypeGuid_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetTypeGuid_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetTypeGuid_Impl() = default;
       GetTypeGuid_Impl(GetTypeGuid_Impl&& other) = default;
       GetTypeGuid_Impl& operator=(GetTypeGuid_Impl&& other) = default;
@@ -567,7 +567,7 @@ class Partition final {
     class GetInstanceGuid_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetInstanceGuid_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetInstanceGuid_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetInstanceGuid_Impl() = default;
       GetInstanceGuid_Impl(GetInstanceGuid_Impl&& other) = default;
       GetInstanceGuid_Impl& operator=(GetInstanceGuid_Impl&& other) = default;
@@ -583,7 +583,7 @@ class Partition final {
     class GetName_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetName_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetName_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetName_Impl() = default;
       GetName_Impl(GetName_Impl&& other) = default;
       GetName_Impl& operator=(GetName_Impl&& other) = default;
@@ -683,58 +683,58 @@ class Partition final {
    public:
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetInfo GetInfo(zx::unowned_channel _client_end);
+    static ResultOf::GetInfo GetInfo(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetInfo GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetInfo GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetStats GetStats(zx::unowned_channel _client_end, bool clear);
+    static ResultOf::GetStats GetStats(::zx::unowned_channel _client_end, bool clear);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetStats GetStats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetStats GetStats(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool clear, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetFifo GetFifo(zx::unowned_channel _client_end);
+    static ResultOf::GetFifo GetFifo(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetFifo GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetFifo GetFifo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::AttachVmo AttachVmo(zx::unowned_channel _client_end, ::zx::vmo vmo);
+    static ResultOf::AttachVmo AttachVmo(::zx::unowned_channel _client_end, ::zx::vmo vmo);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AttachVmo AttachVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AttachVmo AttachVmo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CloseFifo CloseFifo(zx::unowned_channel _client_end);
+    static ResultOf::CloseFifo CloseFifo(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CloseFifo CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CloseFifo CloseFifo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::RebindDevice RebindDevice(zx::unowned_channel _client_end);
+    static ResultOf::RebindDevice RebindDevice(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RebindDevice RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::RebindDevice RebindDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetTypeGuid GetTypeGuid(zx::unowned_channel _client_end);
+    static ResultOf::GetTypeGuid GetTypeGuid(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetTypeGuid GetTypeGuid(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetTypeGuid GetTypeGuid(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetInstanceGuid GetInstanceGuid(zx::unowned_channel _client_end);
+    static ResultOf::GetInstanceGuid GetInstanceGuid(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetInstanceGuid GetInstanceGuid(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetInstanceGuid GetInstanceGuid(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 184 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetName GetName(zx::unowned_channel _client_end);
+    static ResultOf::GetName GetName(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetName GetName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetName GetName(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -744,23 +744,23 @@ class Partition final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetStatsResponse> GetStats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetStatsResponse> GetStats(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetStatsRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetFifoResponse> GetFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetFifoResponse> GetFifo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<AttachVmoResponse> AttachVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<AttachVmoResponse> AttachVmo(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AttachVmoRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<CloseFifoResponse> CloseFifo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CloseFifoResponse> CloseFifo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<RebindDeviceResponse> RebindDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RebindDeviceResponse> RebindDevice(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetTypeGuidResponse> GetTypeGuid(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetTypeGuidResponse> GetTypeGuid(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetInstanceGuidResponse> GetInstanceGuid(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetInstanceGuidResponse> GetInstanceGuid(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetNameResponse> GetName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetNameResponse> GetName(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

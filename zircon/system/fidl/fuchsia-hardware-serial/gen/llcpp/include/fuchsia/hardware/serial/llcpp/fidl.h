@@ -101,7 +101,7 @@ class NewDeviceProxy final {
     class GetChannel_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      GetChannel_Impl(zx::unowned_channel _client_end, ::zx::channel req);
+      GetChannel_Impl(::zx::unowned_channel _client_end, ::zx::channel req);
       ~GetChannel_Impl() = default;
       GetChannel_Impl(GetChannel_Impl&& other) = default;
       GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
@@ -122,7 +122,7 @@ class NewDeviceProxy final {
     class GetChannel_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      GetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
+      GetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
       ~GetChannel_Impl() = default;
       GetChannel_Impl(GetChannel_Impl&& other) = default;
       GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
@@ -162,10 +162,10 @@ class NewDeviceProxy final {
    public:
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::zx::channel req);
+    static ResultOf::GetChannel GetChannel(::zx::unowned_channel _client_end, ::zx::channel req);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
+    static UnownedResultOf::GetChannel GetChannel(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
 
   };
 
@@ -175,7 +175,7 @@ class NewDeviceProxy final {
     InPlace() = delete;
    public:
 
-    static ::fidl::internal::StatusAndError GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params);
+    static ::fidl::internal::StatusAndError GetChannel(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params);
 
   };
 
@@ -574,7 +574,7 @@ class Device final {
     class GetClass_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetClass_Impl(zx::unowned_channel _client_end);
+      GetClass_Impl(::zx::unowned_channel _client_end);
       ~GetClass_Impl() = default;
       GetClass_Impl(GetClass_Impl&& other) = default;
       GetClass_Impl& operator=(GetClass_Impl&& other) = default;
@@ -590,7 +590,7 @@ class Device final {
     class SetConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetConfig_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
+      SetConfig_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
       ~SetConfig_Impl() = default;
       SetConfig_Impl(SetConfig_Impl&& other) = default;
       SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
@@ -617,7 +617,7 @@ class Device final {
     class GetClass_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetClass_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetClass_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetClass_Impl() = default;
       GetClass_Impl(GetClass_Impl&& other) = default;
       GetClass_Impl& operator=(GetClass_Impl&& other) = default;
@@ -633,7 +633,7 @@ class Device final {
     class SetConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
+      SetConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
       ~SetConfig_Impl() = default;
       SetConfig_Impl(SetConfig_Impl&& other) = default;
       SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
@@ -689,19 +689,19 @@ class Device final {
 
     // Lookup what type of serial device this is.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetClass GetClass(zx::unowned_channel _client_end);
+    static ResultOf::GetClass GetClass(::zx::unowned_channel _client_end);
 
     // Lookup what type of serial device this is.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetClass GetClass(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetClass GetClass(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Set the configuration of this serial device.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
+    static ResultOf::SetConfig SetConfig(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
 
     // Set the configuration of this serial device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetConfig SetConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -712,10 +712,10 @@ class Device final {
    public:
 
     // Lookup what type of serial device this is.
-    static ::fidl::DecodeResult<GetClassResponse> GetClass(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetClassResponse> GetClass(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Set the configuration of this serial device.
-    static ::fidl::DecodeResult<SetConfigResponse> SetConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetConfigResponse> SetConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -930,7 +930,7 @@ class NewDevice final {
     class GetClass_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetClass_Impl(zx::unowned_channel _client_end);
+      GetClass_Impl(::zx::unowned_channel _client_end);
       ~GetClass_Impl() = default;
       GetClass_Impl(GetClass_Impl&& other) = default;
       GetClass_Impl& operator=(GetClass_Impl&& other) = default;
@@ -946,7 +946,7 @@ class NewDevice final {
     class SetConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetConfig_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
+      SetConfig_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
       ~SetConfig_Impl() = default;
       SetConfig_Impl(SetConfig_Impl&& other) = default;
       SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
@@ -962,7 +962,7 @@ class NewDevice final {
     class Read_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Read_Impl(zx::unowned_channel _client_end);
+      Read_Impl(::zx::unowned_channel _client_end);
       ~Read_Impl() = default;
       Read_Impl(Read_Impl&& other) = default;
       Read_Impl& operator=(Read_Impl&& other) = default;
@@ -978,7 +978,7 @@ class NewDevice final {
     class Write_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Write_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
+      Write_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
       ~Write_Impl() = default;
       Write_Impl(Write_Impl&& other) = default;
       Write_Impl& operator=(Write_Impl&& other) = default;
@@ -1007,7 +1007,7 @@ class NewDevice final {
     class GetClass_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetClass_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetClass_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetClass_Impl() = default;
       GetClass_Impl(GetClass_Impl&& other) = default;
       GetClass_Impl& operator=(GetClass_Impl&& other) = default;
@@ -1023,7 +1023,7 @@ class NewDevice final {
     class SetConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
+      SetConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
       ~SetConfig_Impl() = default;
       SetConfig_Impl(SetConfig_Impl&& other) = default;
       SetConfig_Impl& operator=(SetConfig_Impl&& other) = default;
@@ -1039,7 +1039,7 @@ class NewDevice final {
     class Read_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Read_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Read_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Read_Impl() = default;
       Read_Impl(Read_Impl&& other) = default;
       Read_Impl& operator=(Read_Impl&& other) = default;
@@ -1055,7 +1055,7 @@ class NewDevice final {
     class Write_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Write_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
+      Write_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
       ~Write_Impl() = default;
       Write_Impl(Write_Impl&& other) = default;
       Write_Impl& operator=(Write_Impl&& other) = default;
@@ -1129,35 +1129,35 @@ class NewDevice final {
 
     // Lookup what type of serial device this is.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetClass GetClass(zx::unowned_channel _client_end);
+    static ResultOf::GetClass GetClass(::zx::unowned_channel _client_end);
 
     // Lookup what type of serial device this is.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetClass GetClass(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetClass GetClass(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Set the configuration of this serial device.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
+    static ResultOf::SetConfig SetConfig(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::serial::Config config);
 
     // Set the configuration of this serial device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetConfig SetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetConfig SetConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::serial::Config config, ::fidl::BytePart _response_buffer);
 
     // Reads data from the serial port
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::Read Read(zx::unowned_channel _client_end);
+    static ResultOf::Read Read(::zx::unowned_channel _client_end);
 
     // Reads data from the serial port
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Read Read(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Read Read(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Writes data to the serial port
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
+    static ResultOf::Write Write(::zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> data);
 
     // Writes data to the serial port
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Write Write(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> data, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1168,16 +1168,16 @@ class NewDevice final {
    public:
 
     // Lookup what type of serial device this is.
-    static ::fidl::DecodeResult<GetClassResponse> GetClass(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetClassResponse> GetClass(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Set the configuration of this serial device.
-    static ::fidl::DecodeResult<SetConfigResponse> SetConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetConfigResponse> SetConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigRequest> params, ::fidl::BytePart response_buffer);
 
     // Reads data from the serial port
-    static ::fidl::DecodeResult<ReadResponse> Read(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReadResponse> Read(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Writes data to the serial port
-    static ::fidl::DecodeResult<WriteResponse> Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WriteResponse> Write(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

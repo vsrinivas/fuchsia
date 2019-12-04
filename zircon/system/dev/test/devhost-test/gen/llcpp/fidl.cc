@@ -81,7 +81,7 @@ extern "C" const fidl_type_t v1_fuchsia_device_devhost_test_TestDeviceAddChildDe
 
 }  // namespace
 template <>
-TestDevice::ResultOf::AddChildDevice_Impl<TestDevice::AddChildDeviceResponse>::AddChildDevice_Impl(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::AddChildDevice_Impl<TestDevice::AddChildDeviceResponse>::AddChildDevice_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddChildDeviceRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -94,15 +94,15 @@ TestDevice::ResultOf::AddChildDevice_Impl<TestDevice::AddChildDeviceResponse>::A
 }
 
 TestDevice::ResultOf::AddChildDevice TestDevice::SyncClient::AddChildDevice() {
-  return ResultOf::AddChildDevice(zx::unowned_channel(this->channel_));
+    return ResultOf::AddChildDevice(::zx::unowned_channel(this->channel_));
 }
 
-TestDevice::ResultOf::AddChildDevice TestDevice::Call::AddChildDevice(zx::unowned_channel _client_end) {
+TestDevice::ResultOf::AddChildDevice TestDevice::Call::AddChildDevice(::zx::unowned_channel _client_end) {
   return ResultOf::AddChildDevice(std::move(_client_end));
 }
 
 template <>
-TestDevice::UnownedResultOf::AddChildDevice_Impl<TestDevice::AddChildDeviceResponse>::AddChildDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::AddChildDevice_Impl<TestDevice::AddChildDeviceResponse>::AddChildDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(AddChildDeviceRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, AddChildDeviceRequest::PrimarySize);
@@ -113,14 +113,14 @@ TestDevice::UnownedResultOf::AddChildDevice_Impl<TestDevice::AddChildDeviceRespo
 }
 
 TestDevice::UnownedResultOf::AddChildDevice TestDevice::SyncClient::AddChildDevice(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddChildDevice(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::AddChildDevice(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::AddChildDevice TestDevice::Call::AddChildDevice(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+TestDevice::UnownedResultOf::AddChildDevice TestDevice::Call::AddChildDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::AddChildDevice(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::AddChildDeviceResponse> TestDevice::InPlace::AddChildDevice(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<TestDevice::AddChildDeviceResponse> TestDevice::InPlace::AddChildDevice(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(AddChildDeviceRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();

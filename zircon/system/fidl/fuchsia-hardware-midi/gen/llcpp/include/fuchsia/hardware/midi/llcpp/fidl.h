@@ -85,7 +85,7 @@ class Device final {
     class GetInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetInfo_Impl(zx::unowned_channel _client_end);
+      GetInfo_Impl(::zx::unowned_channel _client_end);
       ~GetInfo_Impl() = default;
       GetInfo_Impl(GetInfo_Impl&& other) = default;
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
@@ -111,7 +111,7 @@ class Device final {
     class GetInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetInfo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetInfo_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetInfo_Impl() = default;
       GetInfo_Impl(GetInfo_Impl&& other) = default;
       GetInfo_Impl& operator=(GetInfo_Impl&& other) = default;
@@ -158,11 +158,11 @@ class Device final {
 
     // Get information about the type of MIDI device
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetInfo GetInfo(zx::unowned_channel _client_end);
+    static ResultOf::GetInfo GetInfo(::zx::unowned_channel _client_end);
 
     // Get information about the type of MIDI device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetInfo GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetInfo GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -173,7 +173,7 @@ class Device final {
    public:
 
     // Get information about the type of MIDI device
-    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetInfoResponse> GetInfo(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

@@ -907,7 +907,7 @@ class Controller final {
     class GetProperties_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetProperties_Impl(zx::unowned_channel _client_end);
+      GetProperties_Impl(::zx::unowned_channel _client_end);
       ~GetProperties_Impl() = default;
       GetProperties_Impl(GetProperties_Impl&& other) = default;
       GetProperties_Impl& operator=(GetProperties_Impl&& other) = default;
@@ -923,7 +923,7 @@ class Controller final {
     class Initialize_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Initialize_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation);
+      Initialize_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation);
       ~Initialize_Impl() = default;
       Initialize_Impl(Initialize_Impl&& other) = default;
       Initialize_Impl& operator=(Initialize_Impl&& other) = default;
@@ -939,7 +939,7 @@ class Controller final {
     class Terminate_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Terminate_Impl(zx::unowned_channel _client_end);
+      Terminate_Impl(::zx::unowned_channel _client_end);
       ~Terminate_Impl() = default;
       Terminate_Impl(Terminate_Impl&& other) = default;
       Terminate_Impl& operator=(Terminate_Impl&& other) = default;
@@ -955,7 +955,7 @@ class Controller final {
     class GetAllocation_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetAllocation_Impl(zx::unowned_channel _client_end);
+      GetAllocation_Impl(::zx::unowned_channel _client_end);
       ~GetAllocation_Impl() = default;
       GetAllocation_Impl(GetAllocation_Impl&& other) = default;
       GetAllocation_Impl& operator=(GetAllocation_Impl&& other) = default;
@@ -971,7 +971,7 @@ class Controller final {
     class StageConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      StageConfig_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Config config);
+      StageConfig_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Config config);
       ~StageConfig_Impl() = default;
       StageConfig_Impl(StageConfig_Impl&& other) = default;
       StageConfig_Impl& operator=(StageConfig_Impl&& other) = default;
@@ -987,7 +987,7 @@ class Controller final {
     class GetConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetConfig_Impl(zx::unowned_channel _client_end);
+      GetConfig_Impl(::zx::unowned_channel _client_end);
       ~GetConfig_Impl() = default;
       GetConfig_Impl(GetConfig_Impl&& other) = default;
       GetConfig_Impl& operator=(GetConfig_Impl&& other) = default;
@@ -1003,7 +1003,7 @@ class Controller final {
     class GetBufferHandle_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetBufferHandle_Impl(zx::unowned_channel _client_end, uint32_t descriptor);
+      GetBufferHandle_Impl(::zx::unowned_channel _client_end, uint32_t descriptor);
       ~GetBufferHandle_Impl() = default;
       GetBufferHandle_Impl(GetBufferHandle_Impl&& other) = default;
       GetBufferHandle_Impl& operator=(GetBufferHandle_Impl&& other) = default;
@@ -1019,7 +1019,7 @@ class Controller final {
     class Start_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Start_Impl(zx::unowned_channel _client_end);
+      Start_Impl(::zx::unowned_channel _client_end);
       ~Start_Impl() = default;
       Start_Impl(Start_Impl&& other) = default;
       Start_Impl& operator=(Start_Impl&& other) = default;
@@ -1035,7 +1035,7 @@ class Controller final {
     class Stop_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Stop_Impl(zx::unowned_channel _client_end);
+      Stop_Impl(::zx::unowned_channel _client_end);
       ~Stop_Impl() = default;
       Stop_Impl(Stop_Impl&& other) = default;
       Stop_Impl& operator=(Stop_Impl&& other) = default;
@@ -1069,7 +1069,7 @@ class Controller final {
     class GetProperties_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetProperties_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetProperties_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetProperties_Impl() = default;
       GetProperties_Impl(GetProperties_Impl&& other) = default;
       GetProperties_Impl& operator=(GetProperties_Impl&& other) = default;
@@ -1085,7 +1085,7 @@ class Controller final {
     class Initialize_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Initialize_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation, ::fidl::BytePart _response_buffer);
+      Initialize_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation, ::fidl::BytePart _response_buffer);
       ~Initialize_Impl() = default;
       Initialize_Impl(Initialize_Impl&& other) = default;
       Initialize_Impl& operator=(Initialize_Impl&& other) = default;
@@ -1101,7 +1101,7 @@ class Controller final {
     class Terminate_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Terminate_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Terminate_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Terminate_Impl() = default;
       Terminate_Impl(Terminate_Impl&& other) = default;
       Terminate_Impl& operator=(Terminate_Impl&& other) = default;
@@ -1117,7 +1117,7 @@ class Controller final {
     class GetAllocation_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetAllocation_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetAllocation_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetAllocation_Impl() = default;
       GetAllocation_Impl(GetAllocation_Impl&& other) = default;
       GetAllocation_Impl& operator=(GetAllocation_Impl&& other) = default;
@@ -1133,7 +1133,7 @@ class Controller final {
     class StageConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      StageConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Config config, ::fidl::BytePart _response_buffer);
+      StageConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Config config, ::fidl::BytePart _response_buffer);
       ~StageConfig_Impl() = default;
       StageConfig_Impl(StageConfig_Impl&& other) = default;
       StageConfig_Impl& operator=(StageConfig_Impl&& other) = default;
@@ -1149,7 +1149,7 @@ class Controller final {
     class GetConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetConfig_Impl() = default;
       GetConfig_Impl(GetConfig_Impl&& other) = default;
       GetConfig_Impl& operator=(GetConfig_Impl&& other) = default;
@@ -1165,7 +1165,7 @@ class Controller final {
     class GetBufferHandle_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetBufferHandle_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t descriptor, ::fidl::BytePart _response_buffer);
+      GetBufferHandle_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t descriptor, ::fidl::BytePart _response_buffer);
       ~GetBufferHandle_Impl() = default;
       GetBufferHandle_Impl(GetBufferHandle_Impl&& other) = default;
       GetBufferHandle_Impl& operator=(GetBufferHandle_Impl&& other) = default;
@@ -1181,7 +1181,7 @@ class Controller final {
     class Start_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Start_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Start_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Start_Impl() = default;
       Start_Impl(Start_Impl&& other) = default;
       Start_Impl& operator=(Start_Impl&& other) = default;
@@ -1197,7 +1197,7 @@ class Controller final {
     class Stop_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Stop_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Stop_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Stop_Impl() = default;
       Stop_Impl(Stop_Impl&& other) = default;
       Stop_Impl& operator=(Stop_Impl&& other) = default;
@@ -1338,96 +1338,96 @@ class Controller final {
 
     // Fetch the performance monitor properties of the system.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetProperties GetProperties(zx::unowned_channel _client_end);
+    static ResultOf::GetProperties GetProperties(::zx::unowned_channel _client_end);
 
     // Fetch the performance monitor properties of the system.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetProperties GetProperties(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetProperties GetProperties(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Create a trace, allocating the needed trace buffers and other resources.
     // "other resources" is basically a catch-all for other things that will
     // be needed. This does not include reserving the events, that is done
     // later by `StageConfig()`.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Initialize Initialize(zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation);
+    static ResultOf::Initialize Initialize(::zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation);
 
     // Create a trace, allocating the needed trace buffers and other resources.
     // "other resources" is basically a catch-all for other things that will
     // be needed. This does not include reserving the events, that is done
     // later by `StageConfig()`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Initialize Initialize(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Initialize Initialize(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation, ::fidl::BytePart _response_buffer);
 
     // Free all trace buffers and any other resources allocated for the trace.
     // This is also done when the connection is closed.
     // Tracing is first stopped if not already stopped.
     // May be called multiple times.
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Terminate Terminate(zx::unowned_channel _client_end);
+    static ResultOf::Terminate Terminate(::zx::unowned_channel _client_end);
 
 
     // Return the trace allocation configuration, if there is one.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetAllocation GetAllocation(zx::unowned_channel _client_end);
+    static ResultOf::GetAllocation GetAllocation(::zx::unowned_channel _client_end);
 
     // Return the trace allocation configuration, if there is one.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetAllocation GetAllocation(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetAllocation GetAllocation(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Stage performance monitor specification for a cpu.
     // Must be called with data collection off and after `Initialize()`.
     // Note: This doesn't actually configure the h/w, this just stages
     // the values for subsequent use by `Start()`.
     // Allocates 424 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::StageConfig StageConfig(zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Config config);
+    static ResultOf::StageConfig StageConfig(::zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Config config);
 
     // Stage performance monitor specification for a cpu.
     // Must be called with data collection off and after `Initialize()`.
     // Note: This doesn't actually configure the h/w, this just stages
     // the values for subsequent use by `Start()`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::StageConfig StageConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Config config, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::StageConfig StageConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::perfmon::cpu::Config config, ::fidl::BytePart _response_buffer);
 
     // Fetch performance monitor specification for a cpu, if it exists.
     // Must be called with data collection off and after `StageConfig()`.
     // Allocates 424 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetConfig GetConfig(zx::unowned_channel _client_end);
+    static ResultOf::GetConfig GetConfig(::zx::unowned_channel _client_end);
 
     // Fetch performance monitor specification for a cpu, if it exists.
     // Must be called with data collection off and after `StageConfig()`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetConfig GetConfig(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetConfig GetConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Return a handle of a trace buffer, if it exists, and if `descriptor`
     // is valid.
     // `descriptor` is (0, 1, 2, ..., `num_buffers`-1)
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetBufferHandle GetBufferHandle(zx::unowned_channel _client_end, uint32_t descriptor);
+    static ResultOf::GetBufferHandle GetBufferHandle(::zx::unowned_channel _client_end, uint32_t descriptor);
 
     // Return a handle of a trace buffer, if it exists, and if `descriptor`
     // is valid.
     // `descriptor` is (0, 1, 2, ..., `num_buffers`-1)
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetBufferHandle GetBufferHandle(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t descriptor, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetBufferHandle GetBufferHandle(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t descriptor, ::fidl::BytePart _response_buffer);
 
     // Turn on data collection.
     // Must be called after `Initialize()` + `StageConfig()` and with data
     // collection off.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Start Start(zx::unowned_channel _client_end);
+    static ResultOf::Start Start(::zx::unowned_channel _client_end);
 
     // Turn on data collection.
     // Must be called after `Initialize()` + `StageConfig()` and with data
     // collection off.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Start Start(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Start Start(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Turn off data collection.
     // May be called any time after `Initialize()` has been called and before
     // `Terminate()`. If called at other times the call is ignored.
     // May be called multiple times.
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Stop Stop(zx::unowned_channel _client_end);
+    static ResultOf::Stop Stop(::zx::unowned_channel _client_end);
 
 
   };
@@ -1439,48 +1439,48 @@ class Controller final {
    public:
 
     // Fetch the performance monitor properties of the system.
-    static ::fidl::DecodeResult<GetPropertiesResponse> GetProperties(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetPropertiesResponse> GetProperties(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Create a trace, allocating the needed trace buffers and other resources.
     // "other resources" is basically a catch-all for other things that will
     // be needed. This does not include reserving the events, that is done
     // later by `StageConfig()`.
-    static ::fidl::DecodeResult<InitializeResponse> Initialize(zx::unowned_channel _client_end, ::fidl::DecodedMessage<InitializeRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<InitializeResponse> Initialize(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<InitializeRequest> params, ::fidl::BytePart response_buffer);
 
     // Free all trace buffers and any other resources allocated for the trace.
     // This is also done when the connection is closed.
     // Tracing is first stopped if not already stopped.
     // May be called multiple times.
-    static ::fidl::DecodeResult<TerminateResponse> Terminate(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<TerminateResponse> Terminate(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Return the trace allocation configuration, if there is one.
-    static ::fidl::DecodeResult<GetAllocationResponse> GetAllocation(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetAllocationResponse> GetAllocation(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Stage performance monitor specification for a cpu.
     // Must be called with data collection off and after `Initialize()`.
     // Note: This doesn't actually configure the h/w, this just stages
     // the values for subsequent use by `Start()`.
-    static ::fidl::DecodeResult<StageConfigResponse> StageConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<StageConfigRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<StageConfigResponse> StageConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StageConfigRequest> params, ::fidl::BytePart response_buffer);
 
     // Fetch performance monitor specification for a cpu, if it exists.
     // Must be called with data collection off and after `StageConfig()`.
-    static ::fidl::DecodeResult<GetConfigResponse> GetConfig(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetConfigResponse> GetConfig(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Return a handle of a trace buffer, if it exists, and if `descriptor`
     // is valid.
     // `descriptor` is (0, 1, 2, ..., `num_buffers`-1)
-    static ::fidl::DecodeResult<GetBufferHandleResponse> GetBufferHandle(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferHandleRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetBufferHandleResponse> GetBufferHandle(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferHandleRequest> params, ::fidl::BytePart response_buffer);
 
     // Turn on data collection.
     // Must be called after `Initialize()` + `StageConfig()` and with data
     // collection off.
-    static ::fidl::DecodeResult<StartResponse> Start(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<StartResponse> Start(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Turn off data collection.
     // May be called any time after `Initialize()` has been called and before
     // `Terminate()`. If called at other times the call is ignored.
     // May be called multiple times.
-    static ::fidl::DecodeResult<StopResponse> Stop(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<StopResponse> Stop(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

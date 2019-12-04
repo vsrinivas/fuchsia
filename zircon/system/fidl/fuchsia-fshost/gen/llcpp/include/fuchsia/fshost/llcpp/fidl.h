@@ -578,7 +578,7 @@ class Filesystems final {
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Clone_Impl(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
+      Clone_Impl(::zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
       ~Clone_Impl() = default;
       Clone_Impl(Clone_Impl&& other) = default;
       Clone_Impl& operator=(Clone_Impl&& other) = default;
@@ -590,7 +590,7 @@ class Filesystems final {
     class Close_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Close_Impl(zx::unowned_channel _client_end);
+      Close_Impl(::zx::unowned_channel _client_end);
       ~Close_Impl() = default;
       Close_Impl(Close_Impl&& other) = default;
       Close_Impl& operator=(Close_Impl&& other) = default;
@@ -606,7 +606,7 @@ class Filesystems final {
     class Describe_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Describe_Impl(zx::unowned_channel _client_end);
+      Describe_Impl(::zx::unowned_channel _client_end);
       ~Describe_Impl() = default;
       Describe_Impl(Describe_Impl&& other) = default;
       Describe_Impl& operator=(Describe_Impl&& other) = default;
@@ -622,7 +622,7 @@ class Filesystems final {
     class Sync_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Sync_Impl(zx::unowned_channel _client_end);
+      Sync_Impl(::zx::unowned_channel _client_end);
       ~Sync_Impl() = default;
       Sync_Impl(Sync_Impl&& other) = default;
       Sync_Impl& operator=(Sync_Impl&& other) = default;
@@ -638,7 +638,7 @@ class Filesystems final {
     class GetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetAttr_Impl(zx::unowned_channel _client_end);
+      GetAttr_Impl(::zx::unowned_channel _client_end);
       ~GetAttr_Impl() = default;
       GetAttr_Impl(GetAttr_Impl&& other) = default;
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
@@ -654,7 +654,7 @@ class Filesystems final {
     class SetAttr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetAttr_Impl(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
+      SetAttr_Impl(::zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
@@ -670,7 +670,7 @@ class Filesystems final {
     class NodeGetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      NodeGetFlags_Impl(zx::unowned_channel _client_end);
+      NodeGetFlags_Impl(::zx::unowned_channel _client_end);
       ~NodeGetFlags_Impl() = default;
       NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
       NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
@@ -686,7 +686,7 @@ class Filesystems final {
     class NodeSetFlags_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      NodeSetFlags_Impl(zx::unowned_channel _client_end, uint32_t flags);
+      NodeSetFlags_Impl(::zx::unowned_channel _client_end, uint32_t flags);
       ~NodeSetFlags_Impl() = default;
       NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
       NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
@@ -701,7 +701,7 @@ class Filesystems final {
     class Open_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Open_Impl(zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
+      Open_Impl(::zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
       ~Open_Impl() = default;
       Open_Impl(Open_Impl&& other) = default;
       Open_Impl& operator=(Open_Impl&& other) = default;
@@ -713,7 +713,7 @@ class Filesystems final {
     class Unlink_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Unlink_Impl(zx::unowned_channel _client_end, ::fidl::StringView path);
+      Unlink_Impl(::zx::unowned_channel _client_end, ::fidl::StringView path);
       ~Unlink_Impl() = default;
       Unlink_Impl(Unlink_Impl&& other) = default;
       Unlink_Impl& operator=(Unlink_Impl&& other) = default;
@@ -729,7 +729,7 @@ class Filesystems final {
     class ReadDirents_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ReadDirents_Impl(zx::unowned_channel _client_end, uint64_t max_bytes);
+      ReadDirents_Impl(::zx::unowned_channel _client_end, uint64_t max_bytes);
       ~ReadDirents_Impl() = default;
       ReadDirents_Impl(ReadDirents_Impl&& other) = default;
       ReadDirents_Impl& operator=(ReadDirents_Impl&& other) = default;
@@ -745,7 +745,7 @@ class Filesystems final {
     class Rewind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Rewind_Impl(zx::unowned_channel _client_end);
+      Rewind_Impl(::zx::unowned_channel _client_end);
       ~Rewind_Impl() = default;
       Rewind_Impl(Rewind_Impl&& other) = default;
       Rewind_Impl& operator=(Rewind_Impl&& other) = default;
@@ -761,7 +761,7 @@ class Filesystems final {
     class GetToken_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetToken_Impl(zx::unowned_channel _client_end);
+      GetToken_Impl(::zx::unowned_channel _client_end);
       ~GetToken_Impl() = default;
       GetToken_Impl(GetToken_Impl&& other) = default;
       GetToken_Impl& operator=(GetToken_Impl&& other) = default;
@@ -777,7 +777,7 @@ class Filesystems final {
     class Rename_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Rename_Impl(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
+      Rename_Impl(::zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
       ~Rename_Impl() = default;
       Rename_Impl(Rename_Impl&& other) = default;
       Rename_Impl& operator=(Rename_Impl&& other) = default;
@@ -793,7 +793,7 @@ class Filesystems final {
     class Link_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Link_Impl(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
+      Link_Impl(::zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
       ~Link_Impl() = default;
       Link_Impl(Link_Impl&& other) = default;
       Link_Impl& operator=(Link_Impl&& other) = default;
@@ -809,7 +809,7 @@ class Filesystems final {
     class Watch_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Watch_Impl(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher);
+      Watch_Impl(::zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher);
       ~Watch_Impl() = default;
       Watch_Impl(Watch_Impl&& other) = default;
       Watch_Impl& operator=(Watch_Impl&& other) = default;
@@ -849,7 +849,7 @@ class Filesystems final {
     class Clone_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Clone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
+      Clone_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
       ~Clone_Impl() = default;
       Clone_Impl(Clone_Impl&& other) = default;
       Clone_Impl& operator=(Clone_Impl&& other) = default;
@@ -861,7 +861,7 @@ class Filesystems final {
     class Close_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Close_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Close_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Close_Impl() = default;
       Close_Impl(Close_Impl&& other) = default;
       Close_Impl& operator=(Close_Impl&& other) = default;
@@ -877,7 +877,7 @@ class Filesystems final {
     class Describe_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Describe_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Describe_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Describe_Impl() = default;
       Describe_Impl(Describe_Impl&& other) = default;
       Describe_Impl& operator=(Describe_Impl&& other) = default;
@@ -893,7 +893,7 @@ class Filesystems final {
     class Sync_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Sync_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Sync_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Sync_Impl() = default;
       Sync_Impl(Sync_Impl&& other) = default;
       Sync_Impl& operator=(Sync_Impl&& other) = default;
@@ -909,7 +909,7 @@ class Filesystems final {
     class GetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetAttr_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetAttr_Impl() = default;
       GetAttr_Impl(GetAttr_Impl&& other) = default;
       GetAttr_Impl& operator=(GetAttr_Impl&& other) = default;
@@ -925,7 +925,7 @@ class Filesystems final {
     class SetAttr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetAttr_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+      SetAttr_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
       ~SetAttr_Impl() = default;
       SetAttr_Impl(SetAttr_Impl&& other) = default;
       SetAttr_Impl& operator=(SetAttr_Impl&& other) = default;
@@ -941,7 +941,7 @@ class Filesystems final {
     class NodeGetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      NodeGetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      NodeGetFlags_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~NodeGetFlags_Impl() = default;
       NodeGetFlags_Impl(NodeGetFlags_Impl&& other) = default;
       NodeGetFlags_Impl& operator=(NodeGetFlags_Impl&& other) = default;
@@ -957,7 +957,7 @@ class Filesystems final {
     class NodeSetFlags_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      NodeSetFlags_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+      NodeSetFlags_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
       ~NodeSetFlags_Impl() = default;
       NodeSetFlags_Impl(NodeSetFlags_Impl&& other) = default;
       NodeSetFlags_Impl& operator=(NodeSetFlags_Impl&& other) = default;
@@ -972,7 +972,7 @@ class Filesystems final {
     class Open_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Open_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
+      Open_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
       ~Open_Impl() = default;
       Open_Impl(Open_Impl&& other) = default;
       Open_Impl& operator=(Open_Impl&& other) = default;
@@ -984,7 +984,7 @@ class Filesystems final {
     class Unlink_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Unlink_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer);
+      Unlink_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer);
       ~Unlink_Impl() = default;
       Unlink_Impl(Unlink_Impl&& other) = default;
       Unlink_Impl& operator=(Unlink_Impl&& other) = default;
@@ -1000,7 +1000,7 @@ class Filesystems final {
     class ReadDirents_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ReadDirents_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer);
+      ReadDirents_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer);
       ~ReadDirents_Impl() = default;
       ReadDirents_Impl(ReadDirents_Impl&& other) = default;
       ReadDirents_Impl& operator=(ReadDirents_Impl&& other) = default;
@@ -1016,7 +1016,7 @@ class Filesystems final {
     class Rewind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Rewind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Rewind_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Rewind_Impl() = default;
       Rewind_Impl(Rewind_Impl&& other) = default;
       Rewind_Impl& operator=(Rewind_Impl&& other) = default;
@@ -1032,7 +1032,7 @@ class Filesystems final {
     class GetToken_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetToken_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetToken_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetToken_Impl() = default;
       GetToken_Impl(GetToken_Impl&& other) = default;
       GetToken_Impl& operator=(GetToken_Impl&& other) = default;
@@ -1048,7 +1048,7 @@ class Filesystems final {
     class Rename_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Rename_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
+      Rename_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
       ~Rename_Impl() = default;
       Rename_Impl(Rename_Impl&& other) = default;
       Rename_Impl& operator=(Rename_Impl&& other) = default;
@@ -1064,7 +1064,7 @@ class Filesystems final {
     class Link_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Link_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
+      Link_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
       ~Link_Impl() = default;
       Link_Impl(Link_Impl&& other) = default;
       Link_Impl& operator=(Link_Impl&& other) = default;
@@ -1080,7 +1080,7 @@ class Filesystems final {
     class Watch_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Watch_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer);
+      Watch_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer);
       ~Watch_Impl() = default;
       Watch_Impl(Watch_Impl&& other) = default;
       Watch_Impl& operator=(Watch_Impl&& other) = default;
@@ -1576,7 +1576,7 @@ class Filesystems final {
     // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
     // `CLONE_FLAG_SAME_RIGHTS`.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Clone Clone(zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
+    static ResultOf::Clone Clone(::zx::unowned_channel _client_end, uint32_t flags, ::zx::channel object);
 
     // Create another connection to the same remote object.
     //
@@ -1597,71 +1597,71 @@ class Filesystems final {
     // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
     // `CLONE_FLAG_SAME_RIGHTS`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
+    static UnownedResultOf::Clone Clone(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::zx::channel object);
 
     // Terminates connection with object.
     //
     // This method does not require any rights.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Close Close(zx::unowned_channel _client_end);
+    static ResultOf::Close Close(::zx::unowned_channel _client_end);
 
     // Terminates connection with object.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Close Close(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Close Close(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Describe Describe(zx::unowned_channel _client_end);
+    static ResultOf::Describe Describe(::zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Describe Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Describe Describe(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Sync Sync(zx::unowned_channel _client_end);
+    static ResultOf::Sync Sync(::zx::unowned_channel _client_end);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Sync Sync(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Sync Sync(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Acquires information about the node.
     //
     // This method does not require any rights.
     // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetAttr GetAttr(zx::unowned_channel _client_end);
+    static ResultOf::GetAttr GetAttr(::zx::unowned_channel _client_end);
 
     // Acquires information about the node.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetAttr GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetAttr GetAttr(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
+    static ResultOf::SetAttr SetAttr(::zx::unowned_channel _client_end, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetAttr SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetAttr SetAttr(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::llcpp::fuchsia::io::NodeAttributes attributes, ::fidl::BytePart _response_buffer);
 
     // Acquires the `Directory.Open` rights and flags used to access this file.
     //
@@ -1669,7 +1669,7 @@ class Filesystems final {
     // This method has the same functionality as GetFlags for File and is
     // meant as an in-progress replacement.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end);
+    static ResultOf::NodeGetFlags NodeGetFlags(::zx::unowned_channel _client_end);
 
     // Acquires the `Directory.Open` rights and flags used to access this file.
     //
@@ -1677,7 +1677,7 @@ class Filesystems final {
     // This method has the same functionality as GetFlags for File and is
     // meant as an in-progress replacement.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::NodeGetFlags NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::NodeGetFlags NodeGetFlags(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
@@ -1687,7 +1687,7 @@ class Filesystems final {
     // This method has the same functionality as SetFlags for File and is
     // meant as an in-progress replacement.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, uint32_t flags);
+    static ResultOf::NodeSetFlags NodeSetFlags(::zx::unowned_channel _client_end, uint32_t flags);
 
     // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
@@ -1697,7 +1697,7 @@ class Filesystems final {
     // This method has the same functionality as SetFlags for File and is
     // meant as an in-progress replacement.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::NodeSetFlags NodeSetFlags(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::NodeSetFlags NodeSetFlags(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer);
 
     // Opens a new object relative to this directory object.
     //
@@ -1722,7 +1722,7 @@ class Filesystems final {
     // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
     // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Request is heap-allocated.
-    static ResultOf::Open Open(zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
+    static ResultOf::Open Open(::zx::unowned_channel _client_end, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
     // Opens a new object relative to this directory object.
     //
@@ -1747,7 +1747,7 @@ class Filesystems final {
     // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
     // the `OPEN_FLAG_NODE_REFERENCE` flag.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Open Open(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
+    static UnownedResultOf::Open Open(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object);
 
     // Detaches an object from this directory object.
     //
@@ -1777,7 +1777,7 @@ class Filesystems final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::Unlink Unlink(zx::unowned_channel _client_end, ::fidl::StringView path);
+    static ResultOf::Unlink Unlink(::zx::unowned_channel _client_end, ::fidl::StringView path);
 
     // Detaches an object from this directory object.
     //
@@ -1807,7 +1807,7 @@ class Filesystems final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Unlink Unlink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Unlink Unlink(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView path, ::fidl::BytePart _response_buffer);
 
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
@@ -1832,7 +1832,7 @@ class Filesystems final {
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::ReadDirents ReadDirents(zx::unowned_channel _client_end, uint64_t max_bytes);
+    static ResultOf::ReadDirents ReadDirents(::zx::unowned_channel _client_end, uint64_t max_bytes);
 
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
@@ -1857,33 +1857,33 @@ class Filesystems final {
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ReadDirents ReadDirents(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ReadDirents ReadDirents(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t max_bytes, ::fidl::BytePart _response_buffer);
 
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Rewind Rewind(zx::unowned_channel _client_end);
+    static ResultOf::Rewind Rewind(::zx::unowned_channel _client_end);
 
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Rewind Rewind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Rewind Rewind(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetToken GetToken(zx::unowned_channel _client_end);
+    static ResultOf::GetToken GetToken(::zx::unowned_channel _client_end);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetToken GetToken(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetToken GetToken(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -1894,7 +1894,7 @@ class Filesystems final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::Rename Rename(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
+    static ResultOf::Rename Rename(::zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -1905,7 +1905,7 @@ class Filesystems final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Rename Rename(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Rename Rename(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -1918,7 +1918,7 @@ class Filesystems final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::Link Link(zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
+    static ResultOf::Link Link(::zx::unowned_channel _client_end, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -1931,7 +1931,7 @@ class Filesystems final {
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Link Link(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Link Link(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst, ::fidl::BytePart _response_buffer);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -1953,7 +1953,7 @@ class Filesystems final {
     //
     // This method does not require any rights, similar to ReadDirents.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Watch Watch(zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher);
+    static ResultOf::Watch Watch(::zx::unowned_channel _client_end, uint32_t mask, uint32_t options, ::zx::channel watcher);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -1975,13 +1975,13 @@ class Filesystems final {
     //
     // This method does not require any rights, similar to ReadDirents.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Watch Watch(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Watch Watch(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t mask, uint32_t options, ::zx::channel watcher, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -2008,41 +2008,41 @@ class Filesystems final {
     // Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
     // It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
     // `CLONE_FLAG_SAME_RIGHTS`.
-    static ::fidl::internal::StatusAndError Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
+    static ::fidl::internal::StatusAndError Clone(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params);
 
     // Terminates connection with object.
     //
     // This method does not require any rights.
-    static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CloseResponse> Close(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<DescribeResponse> Describe(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Synchronizes updates to the node to the underlying media, if it exists.
     //
     // This method does not require any rights.
-    static ::fidl::DecodeResult<SyncResponse> Sync(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SyncResponse> Sync(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Acquires information about the node.
     //
     // This method does not require any rights.
-    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetAttrResponse> GetAttr(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
     // `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
-    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetAttrResponse> SetAttr(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetAttrRequest> params, ::fidl::BytePart response_buffer);
 
     // Acquires the `Directory.Open` rights and flags used to access this file.
     //
     // This method does not require any rights.
     // This method has the same functionality as GetFlags for File and is
     // meant as an in-progress replacement.
-    static ::fidl::DecodeResult<NodeGetFlagsResponse> NodeGetFlags(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<NodeGetFlagsResponse> NodeGetFlags(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Changes the `Directory.Open` flags used to access the file.
     // Supported flags which can be turned on / off:
@@ -2051,7 +2051,7 @@ class Filesystems final {
     // This method does not require any rights.
     // This method has the same functionality as SetFlags for File and is
     // meant as an in-progress replacement.
-    static ::fidl::DecodeResult<NodeSetFlagsResponse> NodeSetFlags(zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<NodeSetFlagsResponse> NodeSetFlags(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<NodeSetFlagsRequest> params, ::fidl::BytePart response_buffer);
 
     // Opens a new object relative to this directory object.
     //
@@ -2075,7 +2075,7 @@ class Filesystems final {
     //
     // The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
     // the `OPEN_FLAG_NODE_REFERENCE` flag.
-    static ::fidl::internal::StatusAndError Open(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params);
+    static ::fidl::internal::StatusAndError Open(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenRequest> params);
 
     // Detaches an object from this directory object.
     //
@@ -2104,7 +2104,7 @@ class Filesystems final {
     // Other errors may be returned for filesystem-specific reasons.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
-    static ::fidl::DecodeResult<UnlinkResponse> Unlink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<UnlinkResponse> Unlink(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UnlinkRequest> params, ::fidl::BytePart response_buffer);
 
     // Reads a collection of variably sized dirents into a buffer.
     // The number of dirents in a directory may be very large: akin to
@@ -2128,18 +2128,18 @@ class Filesystems final {
     //
     // This method does not require any rights, since one could always probe for
     // directory contents by triggering name conflicts during file creation.
-    static ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadDirentsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReadDirentsResponse> ReadDirents(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadDirentsRequest> params, ::fidl::BytePart response_buffer);
 
     // Resets the directory seek offset.
     //
     // This method does not require any rights, similar to ReadDirents.
-    static ::fidl::DecodeResult<RewindResponse> Rewind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RewindResponse> Rewind(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Acquires a token to a Directory which can be used to identify
     // access to it at a later point in time.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
-    static ::fidl::DecodeResult<GetTokenResponse> GetToken(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetTokenResponse> GetToken(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
@@ -2149,7 +2149,7 @@ class Filesystems final {
     // directory, or else `ZX_ERR_NOT_DIR` should be returned.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
-    static ::fidl::DecodeResult<RenameResponse> Rename(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RenameResponse> Rename(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RenameRequest> params, ::fidl::BytePart response_buffer);
 
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
@@ -2161,7 +2161,7 @@ class Filesystems final {
     // return `ZX_ERR_INVALID_ARGS`.
     //
     // This method requires following rights: `OPEN_RIGHT_WRITABLE`.
-    static ::fidl::DecodeResult<LinkResponse> Link(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<LinkResponse> Link(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LinkRequest> params, ::fidl::BytePart response_buffer);
 
     // Watches a directory, receiving events of added messages on the
     // watcher request channel.
@@ -2182,7 +2182,7 @@ class Filesystems final {
     // Options must be zero; it is reserved.
     //
     // This method does not require any rights, similar to ReadDirents.
-    static ::fidl::DecodeResult<WatchResponse> Watch(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WatchResponse> Watch(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WatchRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -2536,7 +2536,7 @@ class Registry final {
     class RegisterFilesystem_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      RegisterFilesystem_Impl(zx::unowned_channel _client_end, ::zx::channel public_export);
+      RegisterFilesystem_Impl(::zx::unowned_channel _client_end, ::zx::channel public_export);
       ~RegisterFilesystem_Impl() = default;
       RegisterFilesystem_Impl(RegisterFilesystem_Impl&& other) = default;
       RegisterFilesystem_Impl& operator=(RegisterFilesystem_Impl&& other) = default;
@@ -2562,7 +2562,7 @@ class Registry final {
     class RegisterFilesystem_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      RegisterFilesystem_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel public_export, ::fidl::BytePart _response_buffer);
+      RegisterFilesystem_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel public_export, ::fidl::BytePart _response_buffer);
       ~RegisterFilesystem_Impl() = default;
       RegisterFilesystem_Impl(RegisterFilesystem_Impl&& other) = default;
       RegisterFilesystem_Impl& operator=(RegisterFilesystem_Impl&& other) = default;
@@ -2624,7 +2624,7 @@ class Registry final {
     // This directory is automatically de-registered from fuchsia.fshost.Filesystems
     // if the server end of the connection is closed.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::RegisterFilesystem RegisterFilesystem(zx::unowned_channel _client_end, ::zx::channel public_export);
+    static ResultOf::RegisterFilesystem RegisterFilesystem(::zx::unowned_channel _client_end, ::zx::channel public_export);
 
     // Registers the output directory of a filesystem. These filesystems are
     // exported from the fuchsia.fshost.Filesystems service, where they are
@@ -2633,7 +2633,7 @@ class Registry final {
     // This directory is automatically de-registered from fuchsia.fshost.Filesystems
     // if the server end of the connection is closed.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RegisterFilesystem RegisterFilesystem(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel public_export, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::RegisterFilesystem RegisterFilesystem(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel public_export, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -2649,7 +2649,7 @@ class Registry final {
     //
     // This directory is automatically de-registered from fuchsia.fshost.Filesystems
     // if the server end of the connection is closed.
-    static ::fidl::DecodeResult<RegisterFilesystemResponse> RegisterFilesystem(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterFilesystemRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<RegisterFilesystemResponse> RegisterFilesystem(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RegisterFilesystemRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

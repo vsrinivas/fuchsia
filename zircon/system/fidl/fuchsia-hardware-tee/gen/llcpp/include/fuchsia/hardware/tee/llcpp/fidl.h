@@ -65,7 +65,7 @@ class DeviceConnector final {
     class ConnectTee_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ConnectTee_Impl(zx::unowned_channel _client_end, ::zx::channel service_provider, ::zx::channel tee_request);
+      ConnectTee_Impl(::zx::unowned_channel _client_end, ::zx::channel service_provider, ::zx::channel tee_request);
       ~ConnectTee_Impl() = default;
       ConnectTee_Impl(ConnectTee_Impl&& other) = default;
       ConnectTee_Impl& operator=(ConnectTee_Impl&& other) = default;
@@ -86,7 +86,7 @@ class DeviceConnector final {
     class ConnectTee_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ConnectTee_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel service_provider, ::zx::channel tee_request);
+      ConnectTee_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel service_provider, ::zx::channel tee_request);
       ~ConnectTee_Impl() = default;
       ConnectTee_Impl(ConnectTee_Impl&& other) = default;
       ConnectTee_Impl& operator=(ConnectTee_Impl&& other) = default;
@@ -138,14 +138,14 @@ class DeviceConnector final {
     //
     // The sole caller of this should be the TEE Manager.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ConnectTee ConnectTee(zx::unowned_channel _client_end, ::zx::channel service_provider, ::zx::channel tee_request);
+    static ResultOf::ConnectTee ConnectTee(::zx::unowned_channel _client_end, ::zx::channel service_provider, ::zx::channel tee_request);
 
     // Requests service from the TEE driver while the caller provides a client end to a
     // Provider server that supports the driver on any RPCs.
     //
     // The sole caller of this should be the TEE Manager.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ConnectTee ConnectTee(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel service_provider, ::zx::channel tee_request);
+    static UnownedResultOf::ConnectTee ConnectTee(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel service_provider, ::zx::channel tee_request);
 
   };
 
@@ -159,7 +159,7 @@ class DeviceConnector final {
     // Provider server that supports the driver on any RPCs.
     //
     // The sole caller of this should be the TEE Manager.
-    static ::fidl::internal::StatusAndError ConnectTee(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectTeeRequest> params);
+    static ::fidl::internal::StatusAndError ConnectTee(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectTeeRequest> params);
 
   };
 

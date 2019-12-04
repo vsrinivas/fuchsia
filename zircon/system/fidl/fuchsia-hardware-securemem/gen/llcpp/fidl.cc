@@ -21,7 +21,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_securemem_DeviceGetSecureMemory
 
 }  // namespace
 template <>
-Device::ResultOf::GetSecureMemoryPhysicalAddress_Impl<Device::GetSecureMemoryPhysicalAddressResponse>::GetSecureMemoryPhysicalAddress_Impl(zx::unowned_channel _client_end, ::zx::vmo secure_mem) {
+Device::ResultOf::GetSecureMemoryPhysicalAddress_Impl<Device::GetSecureMemoryPhysicalAddressResponse>::GetSecureMemoryPhysicalAddress_Impl(::zx::unowned_channel _client_end, ::zx::vmo secure_mem) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetSecureMemoryPhysicalAddressRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -36,15 +36,15 @@ Device::ResultOf::GetSecureMemoryPhysicalAddress_Impl<Device::GetSecureMemoryPhy
 }
 
 Device::ResultOf::GetSecureMemoryPhysicalAddress Device::SyncClient::GetSecureMemoryPhysicalAddress(::zx::vmo secure_mem) {
-  return ResultOf::GetSecureMemoryPhysicalAddress(zx::unowned_channel(this->channel_), std::move(secure_mem));
+    return ResultOf::GetSecureMemoryPhysicalAddress(::zx::unowned_channel(this->channel_), std::move(secure_mem));
 }
 
-Device::ResultOf::GetSecureMemoryPhysicalAddress Device::Call::GetSecureMemoryPhysicalAddress(zx::unowned_channel _client_end, ::zx::vmo secure_mem) {
+Device::ResultOf::GetSecureMemoryPhysicalAddress Device::Call::GetSecureMemoryPhysicalAddress(::zx::unowned_channel _client_end, ::zx::vmo secure_mem) {
   return ResultOf::GetSecureMemoryPhysicalAddress(std::move(_client_end), std::move(secure_mem));
 }
 
 template <>
-Device::UnownedResultOf::GetSecureMemoryPhysicalAddress_Impl<Device::GetSecureMemoryPhysicalAddressResponse>::GetSecureMemoryPhysicalAddress_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo secure_mem, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetSecureMemoryPhysicalAddress_Impl<Device::GetSecureMemoryPhysicalAddressResponse>::GetSecureMemoryPhysicalAddress_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo secure_mem, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < GetSecureMemoryPhysicalAddressRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<GetSecureMemoryPhysicalAddressResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -59,14 +59,14 @@ Device::UnownedResultOf::GetSecureMemoryPhysicalAddress_Impl<Device::GetSecureMe
 }
 
 Device::UnownedResultOf::GetSecureMemoryPhysicalAddress Device::SyncClient::GetSecureMemoryPhysicalAddress(::fidl::BytePart _request_buffer, ::zx::vmo secure_mem, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetSecureMemoryPhysicalAddress(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(secure_mem), std::move(_response_buffer));
+  return UnownedResultOf::GetSecureMemoryPhysicalAddress(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(secure_mem), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::GetSecureMemoryPhysicalAddress Device::Call::GetSecureMemoryPhysicalAddress(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo secure_mem, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::GetSecureMemoryPhysicalAddress Device::Call::GetSecureMemoryPhysicalAddress(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo secure_mem, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::GetSecureMemoryPhysicalAddress(std::move(_client_end), std::move(_request_buffer), std::move(secure_mem), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::GetSecureMemoryPhysicalAddressResponse> Device::InPlace::GetSecureMemoryPhysicalAddress(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSecureMemoryPhysicalAddressRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::GetSecureMemoryPhysicalAddressResponse> Device::InPlace::GetSecureMemoryPhysicalAddress(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetSecureMemoryPhysicalAddressRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::GetSecureMemoryPhysicalAddressRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

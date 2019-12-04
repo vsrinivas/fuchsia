@@ -29,7 +29,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_EventsFunctionsC
 
 }  // namespace
 template <>
-Events::ResultOf::FunctionRegistered_Impl<Events::FunctionRegisteredResponse>::FunctionRegistered_Impl(zx::unowned_channel _client_end) {
+Events::ResultOf::FunctionRegistered_Impl<Events::FunctionRegisteredResponse>::FunctionRegistered_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<FunctionRegisteredRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -42,14 +42,14 @@ Events::ResultOf::FunctionRegistered_Impl<Events::FunctionRegisteredResponse>::F
 }
 
 Events::ResultOf::FunctionRegistered Events::SyncClient::FunctionRegistered() {
-  return ResultOf::FunctionRegistered(zx::unowned_channel(this->channel_));
+    return ResultOf::FunctionRegistered(::zx::unowned_channel(this->channel_));
 }
 
-Events::ResultOf::FunctionRegistered Events::Call::FunctionRegistered(zx::unowned_channel _client_end) {
+Events::ResultOf::FunctionRegistered Events::Call::FunctionRegistered(::zx::unowned_channel _client_end) {
   return ResultOf::FunctionRegistered(std::move(_client_end));
 }
 
-::fidl::DecodeResult<Events::FunctionRegisteredResponse> Events::InPlace::FunctionRegistered(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Events::FunctionRegisteredResponse> Events::InPlace::FunctionRegistered(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(FunctionRegisteredRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -71,7 +71,7 @@ Events::ResultOf::FunctionRegistered Events::Call::FunctionRegistered(zx::unowne
 }
 
 
-Events::ResultOf::FunctionsCleared_Impl::FunctionsCleared_Impl(zx::unowned_channel _client_end) {
+Events::ResultOf::FunctionsCleared_Impl::FunctionsCleared_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<FunctionsClearedRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -84,14 +84,14 @@ Events::ResultOf::FunctionsCleared_Impl::FunctionsCleared_Impl(zx::unowned_chann
 }
 
 Events::ResultOf::FunctionsCleared Events::SyncClient::FunctionsCleared() {
-  return ResultOf::FunctionsCleared(zx::unowned_channel(this->channel_));
+    return ResultOf::FunctionsCleared(::zx::unowned_channel(this->channel_));
 }
 
-Events::ResultOf::FunctionsCleared Events::Call::FunctionsCleared(zx::unowned_channel _client_end) {
+Events::ResultOf::FunctionsCleared Events::Call::FunctionsCleared(::zx::unowned_channel _client_end) {
   return ResultOf::FunctionsCleared(std::move(_client_end));
 }
 
-::fidl::internal::StatusAndError Events::InPlace::FunctionsCleared(zx::unowned_channel _client_end) {
+::fidl::internal::StatusAndError Events::InPlace::FunctionsCleared(::zx::unowned_channel _client_end) {
   constexpr uint32_t _write_num_bytes = sizeof(FunctionsClearedRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -277,7 +277,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_usb_peripheral_DeviceSetStateCh
 
 }  // namespace
 template <>
-Device::ResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>::SetConfiguration_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors) {
+Device::ResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>::SetConfiguration_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -295,15 +295,15 @@ Device::ResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>::SetCo
 }
 
 Device::ResultOf::SetConfiguration Device::SyncClient::SetConfiguration(::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors) {
-  return ResultOf::SetConfiguration(zx::unowned_channel(this->channel_), std::move(device_desc), std::move(function_descriptors));
+    return ResultOf::SetConfiguration(::zx::unowned_channel(this->channel_), std::move(device_desc), std::move(function_descriptors));
 }
 
-Device::ResultOf::SetConfiguration Device::Call::SetConfiguration(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors) {
+Device::ResultOf::SetConfiguration Device::Call::SetConfiguration(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors) {
   return ResultOf::SetConfiguration(std::move(_client_end), std::move(device_desc), std::move(function_descriptors));
 }
 
 template <>
-Device::UnownedResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>::SetConfiguration_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>::SetConfiguration_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetConfigurationRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetConfigurationResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -322,14 +322,14 @@ Device::UnownedResultOf::SetConfiguration_Impl<Device::SetConfigurationResponse>
 }
 
 Device::UnownedResultOf::SetConfiguration Device::SyncClient::SetConfiguration(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::SetConfiguration(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(device_desc), std::move(function_descriptors), std::move(_response_buffer));
+  return UnownedResultOf::SetConfiguration(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(device_desc), std::move(function_descriptors), std::move(_response_buffer));
 }
 
-Device::UnownedResultOf::SetConfiguration Device::Call::SetConfiguration(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
+Device::UnownedResultOf::SetConfiguration Device::Call::SetConfiguration(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor device_desc, ::fidl::VectorView<::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor> function_descriptors, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfiguration(std::move(_client_end), std::move(_request_buffer), std::move(device_desc), std::move(function_descriptors), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Device::SetConfigurationResponse> Device::InPlace::SetConfiguration(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationRequest> params, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::SetConfigurationResponse> Device::InPlace::SetConfiguration(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationRequest> params, ::fidl::BytePart response_buffer) {
   Device::SetTransactionHeaderFor::SetConfigurationRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -346,7 +346,7 @@ Device::UnownedResultOf::SetConfiguration Device::Call::SetConfiguration(zx::uno
 }
 
 template <>
-Device::ResultOf::ClearFunctions_Impl<Device::ClearFunctionsResponse>::ClearFunctions_Impl(zx::unowned_channel _client_end) {
+Device::ResultOf::ClearFunctions_Impl<Device::ClearFunctionsResponse>::ClearFunctions_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ClearFunctionsRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -359,14 +359,14 @@ Device::ResultOf::ClearFunctions_Impl<Device::ClearFunctionsResponse>::ClearFunc
 }
 
 Device::ResultOf::ClearFunctions Device::SyncClient::ClearFunctions() {
-  return ResultOf::ClearFunctions(zx::unowned_channel(this->channel_));
+    return ResultOf::ClearFunctions(::zx::unowned_channel(this->channel_));
 }
 
-Device::ResultOf::ClearFunctions Device::Call::ClearFunctions(zx::unowned_channel _client_end) {
+Device::ResultOf::ClearFunctions Device::Call::ClearFunctions(::zx::unowned_channel _client_end) {
   return ResultOf::ClearFunctions(std::move(_client_end));
 }
 
-::fidl::DecodeResult<Device::ClearFunctionsResponse> Device::InPlace::ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<Device::ClearFunctionsResponse> Device::InPlace::ClearFunctions(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(ClearFunctionsRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -388,7 +388,7 @@ Device::ResultOf::ClearFunctions Device::Call::ClearFunctions(zx::unowned_channe
 }
 
 
-Device::ResultOf::SetStateChangeListener_Impl::SetStateChangeListener_Impl(zx::unowned_channel _client_end, ::zx::channel listener) {
+Device::ResultOf::SetStateChangeListener_Impl::SetStateChangeListener_Impl(::zx::unowned_channel _client_end, ::zx::channel listener) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetStateChangeListenerRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -403,15 +403,15 @@ Device::ResultOf::SetStateChangeListener_Impl::SetStateChangeListener_Impl(zx::u
 }
 
 Device::ResultOf::SetStateChangeListener Device::SyncClient::SetStateChangeListener(::zx::channel listener) {
-  return ResultOf::SetStateChangeListener(zx::unowned_channel(this->channel_), std::move(listener));
+    return ResultOf::SetStateChangeListener(::zx::unowned_channel(this->channel_), std::move(listener));
 }
 
-Device::ResultOf::SetStateChangeListener Device::Call::SetStateChangeListener(zx::unowned_channel _client_end, ::zx::channel listener) {
+Device::ResultOf::SetStateChangeListener Device::Call::SetStateChangeListener(::zx::unowned_channel _client_end, ::zx::channel listener) {
   return ResultOf::SetStateChangeListener(std::move(_client_end), std::move(listener));
 }
 
 
-Device::UnownedResultOf::SetStateChangeListener_Impl::SetStateChangeListener_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener) {
+Device::UnownedResultOf::SetStateChangeListener_Impl::SetStateChangeListener_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener) {
   if (_request_buffer.capacity() < SetStateChangeListenerRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -427,14 +427,14 @@ Device::UnownedResultOf::SetStateChangeListener_Impl::SetStateChangeListener_Imp
 }
 
 Device::UnownedResultOf::SetStateChangeListener Device::SyncClient::SetStateChangeListener(::fidl::BytePart _request_buffer, ::zx::channel listener) {
-  return UnownedResultOf::SetStateChangeListener(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(listener));
+  return UnownedResultOf::SetStateChangeListener(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(listener));
 }
 
-Device::UnownedResultOf::SetStateChangeListener Device::Call::SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener) {
+Device::UnownedResultOf::SetStateChangeListener Device::Call::SetStateChangeListener(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel listener) {
   return UnownedResultOf::SetStateChangeListener(std::move(_client_end), std::move(_request_buffer), std::move(listener));
 }
 
-::fidl::internal::StatusAndError Device::InPlace::SetStateChangeListener(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateChangeListenerRequest> params) {
+::fidl::internal::StatusAndError Device::InPlace::SetStateChangeListener(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetStateChangeListenerRequest> params) {
   Device::SetTransactionHeaderFor::SetStateChangeListenerRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

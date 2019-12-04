@@ -80,7 +80,7 @@ class Echo final {
     class EchoString_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      EchoString_Impl(zx::unowned_channel _client_end, ::fidl::StringView value);
+      EchoString_Impl(::zx::unowned_channel _client_end, ::fidl::StringView value);
       ~EchoString_Impl() = default;
       EchoString_Impl(EchoString_Impl&& other) = default;
       EchoString_Impl& operator=(EchoString_Impl&& other) = default;
@@ -106,7 +106,7 @@ class Echo final {
     class EchoString_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      EchoString_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView value, ::fidl::BytePart _response_buffer);
+      EchoString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView value, ::fidl::BytePart _response_buffer);
       ~EchoString_Impl() = default;
       EchoString_Impl(EchoString_Impl&& other) = default;
       EchoString_Impl& operator=(EchoString_Impl&& other) = default;
@@ -150,10 +150,10 @@ class Echo final {
    public:
 
     // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::EchoString EchoString(zx::unowned_channel _client_end, ::fidl::StringView value);
+    static ResultOf::EchoString EchoString(::zx::unowned_channel _client_end, ::fidl::StringView value);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::EchoString EchoString(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView value, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::EchoString EchoString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView value, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -163,7 +163,7 @@ class Echo final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<EchoStringResponse> EchoString(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EchoStringRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<EchoStringResponse> EchoString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EchoStringRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -229,9 +229,9 @@ class EchoService final {
   class ServiceClient final {
     ServiceClient() = delete;
    public:
-    ServiceClient(zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
-		: dir_(std::move(dir)), connect_func_(connect_func) {}
-	
+    ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
+    : dir_(std::move(dir)), connect_func_(connect_func) {}
+  
     // Connects to the member protocol "foo". Returns a |fidl::ClientChannel| on
     // success, which can be used with |fidl::BindSyncClient| to create a synchronous
     // client.
@@ -246,19 +246,19 @@ class EchoService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientChannel| returned from this method.
     ::fidl::result<::fidl::ClientChannel<Echo>> connect_foo() {
-      zx::channel local, remote;
-      zx_status_t result = zx::channel::create(0, &local, &remote);
+      ::zx::channel local, remote;
+      zx_status_t result = ::zx::channel::create(0, &local, &remote);
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       result =
-          connect_func_(zx::unowned_channel(dir_), ::fidl::StringView("foo"), std::move(remote));
+          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("foo"), std::move(remote));
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       return ::fit::ok(::fidl::ClientChannel<Echo>(std::move(local)));
     }
-	
+  
     // Connects to the member protocol "bar". Returns a |fidl::ClientChannel| on
     // success, which can be used with |fidl::BindSyncClient| to create a synchronous
     // client.
@@ -273,13 +273,13 @@ class EchoService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientChannel| returned from this method.
     ::fidl::result<::fidl::ClientChannel<Echo>> connect_bar() {
-      zx::channel local, remote;
-      zx_status_t result = zx::channel::create(0, &local, &remote);
+      ::zx::channel local, remote;
+      zx_status_t result = ::zx::channel::create(0, &local, &remote);
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       result =
-          connect_func_(zx::unowned_channel(dir_), ::fidl::StringView("bar"), std::move(remote));
+          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("bar"), std::move(remote));
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
@@ -287,7 +287,7 @@ class EchoService final {
     }
 
    private:
-    zx::channel dir_;
+    ::zx::channel dir_;
     ::fidl::internal::ConnectMemberFunc connect_func_;
   };
 

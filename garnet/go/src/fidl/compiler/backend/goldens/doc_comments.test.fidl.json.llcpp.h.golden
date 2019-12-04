@@ -253,7 +253,7 @@ class Interface final {
     class Method_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Method_Impl(zx::unowned_channel _client_end);
+      Method_Impl(::zx::unowned_channel _client_end);
       ~Method_Impl() = default;
       Method_Impl(Method_Impl&& other) = default;
       Method_Impl& operator=(Method_Impl&& other) = default;
@@ -274,7 +274,7 @@ class Interface final {
     class Method_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      Method_Impl(zx::unowned_channel _client_end);
+      Method_Impl(::zx::unowned_channel _client_end);
       ~Method_Impl() = default;
       Method_Impl(Method_Impl&& other) = default;
       Method_Impl& operator=(Method_Impl&& other) = default;
@@ -323,14 +323,14 @@ class Interface final {
     //
     // method comment #3
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Method Method(zx::unowned_channel _client_end);
+    static ResultOf::Method Method(::zx::unowned_channel _client_end);
 
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -342,7 +342,7 @@ class Interface final {
     // method comment #1
     //
     // method comment #3
-    static ::fidl::internal::StatusAndError Method(zx::unowned_channel _client_end);
+    static ::fidl::internal::StatusAndError Method(::zx::unowned_channel _client_end);
 
   };
 
@@ -405,9 +405,9 @@ class Service final {
   class ServiceClient final {
     ServiceClient() = delete;
    public:
-    ServiceClient(zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
-		: dir_(std::move(dir)), connect_func_(connect_func) {}
-	
+    ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
+    : dir_(std::move(dir)), connect_func_(connect_func) {}
+  
     // Connects to the member protocol "interface". Returns a |fidl::ClientChannel| on
     // success, which can be used with |fidl::BindSyncClient| to create a synchronous
     // client.
@@ -422,13 +422,13 @@ class Service final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientChannel| returned from this method.
     ::fidl::result<::fidl::ClientChannel<Interface>> connect_interface() {
-      zx::channel local, remote;
-      zx_status_t result = zx::channel::create(0, &local, &remote);
+      ::zx::channel local, remote;
+      zx_status_t result = ::zx::channel::create(0, &local, &remote);
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       result =
-          connect_func_(zx::unowned_channel(dir_), ::fidl::StringView("interface"), std::move(remote));
+          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("interface"), std::move(remote));
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
@@ -436,7 +436,7 @@ class Service final {
     }
 
    private:
-    zx::channel dir_;
+    ::zx::channel dir_;
     ::fidl::internal::ConnectMemberFunc connect_func_;
   };
 

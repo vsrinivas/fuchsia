@@ -21,7 +21,7 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_tee_DeviceConnectorConnectTeeRe
 
 }  // namespace
 
-DeviceConnector::ResultOf::ConnectTee_Impl::ConnectTee_Impl(zx::unowned_channel _client_end, ::zx::channel service_provider, ::zx::channel tee_request) {
+DeviceConnector::ResultOf::ConnectTee_Impl::ConnectTee_Impl(::zx::unowned_channel _client_end, ::zx::channel service_provider, ::zx::channel tee_request) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConnectTeeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -37,15 +37,15 @@ DeviceConnector::ResultOf::ConnectTee_Impl::ConnectTee_Impl(zx::unowned_channel 
 }
 
 DeviceConnector::ResultOf::ConnectTee DeviceConnector::SyncClient::ConnectTee(::zx::channel service_provider, ::zx::channel tee_request) {
-  return ResultOf::ConnectTee(zx::unowned_channel(this->channel_), std::move(service_provider), std::move(tee_request));
+    return ResultOf::ConnectTee(::zx::unowned_channel(this->channel_), std::move(service_provider), std::move(tee_request));
 }
 
-DeviceConnector::ResultOf::ConnectTee DeviceConnector::Call::ConnectTee(zx::unowned_channel _client_end, ::zx::channel service_provider, ::zx::channel tee_request) {
+DeviceConnector::ResultOf::ConnectTee DeviceConnector::Call::ConnectTee(::zx::unowned_channel _client_end, ::zx::channel service_provider, ::zx::channel tee_request) {
   return ResultOf::ConnectTee(std::move(_client_end), std::move(service_provider), std::move(tee_request));
 }
 
 
-DeviceConnector::UnownedResultOf::ConnectTee_Impl::ConnectTee_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel service_provider, ::zx::channel tee_request) {
+DeviceConnector::UnownedResultOf::ConnectTee_Impl::ConnectTee_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel service_provider, ::zx::channel tee_request) {
   if (_request_buffer.capacity() < ConnectTeeRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -62,14 +62,14 @@ DeviceConnector::UnownedResultOf::ConnectTee_Impl::ConnectTee_Impl(zx::unowned_c
 }
 
 DeviceConnector::UnownedResultOf::ConnectTee DeviceConnector::SyncClient::ConnectTee(::fidl::BytePart _request_buffer, ::zx::channel service_provider, ::zx::channel tee_request) {
-  return UnownedResultOf::ConnectTee(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(service_provider), std::move(tee_request));
+  return UnownedResultOf::ConnectTee(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(service_provider), std::move(tee_request));
 }
 
-DeviceConnector::UnownedResultOf::ConnectTee DeviceConnector::Call::ConnectTee(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel service_provider, ::zx::channel tee_request) {
+DeviceConnector::UnownedResultOf::ConnectTee DeviceConnector::Call::ConnectTee(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel service_provider, ::zx::channel tee_request) {
   return UnownedResultOf::ConnectTee(std::move(_client_end), std::move(_request_buffer), std::move(service_provider), std::move(tee_request));
 }
 
-::fidl::internal::StatusAndError DeviceConnector::InPlace::ConnectTee(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectTeeRequest> params) {
+::fidl::internal::StatusAndError DeviceConnector::InPlace::ConnectTee(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectTeeRequest> params) {
   DeviceConnector::SetTransactionHeaderFor::ConnectTeeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

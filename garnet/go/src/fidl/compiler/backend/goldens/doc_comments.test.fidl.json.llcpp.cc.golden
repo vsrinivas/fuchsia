@@ -83,7 +83,7 @@ extern "C" const fidl_type_t v1_test_name_InterfaceOnEventEventTable;
 
 }  // namespace
 
-Interface::ResultOf::Method_Impl::Method_Impl(zx::unowned_channel _client_end) {
+Interface::ResultOf::Method_Impl::Method_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MethodRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -96,14 +96,14 @@ Interface::ResultOf::Method_Impl::Method_Impl(zx::unowned_channel _client_end) {
 }
 
 Interface::ResultOf::Method Interface::SyncClient::Method() {
-  return ResultOf::Method(zx::unowned_channel(this->channel_));
+    return ResultOf::Method(::zx::unowned_channel(this->channel_));
 }
 
-Interface::ResultOf::Method Interface::Call::Method(zx::unowned_channel _client_end) {
+Interface::ResultOf::Method Interface::Call::Method(::zx::unowned_channel _client_end) {
   return ResultOf::Method(std::move(_client_end));
 }
 
-::fidl::internal::StatusAndError Interface::InPlace::Method(zx::unowned_channel _client_end) {
+::fidl::internal::StatusAndError Interface::InPlace::Method(::zx::unowned_channel _client_end) {
   constexpr uint32_t _write_num_bytes = sizeof(MethodRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
@@ -125,12 +125,12 @@ Interface::ResultOf::Method Interface::Call::Method(zx::unowned_channel _client_
 }
 
 zx_status_t Interface::SyncClient::HandleEvents(Interface::EventHandlers handlers) {
-  return Interface::Call::HandleEvents(zx::unowned_channel(channel_), std::move(handlers));
+  return Interface::Call::HandleEvents(::zx::unowned_channel(channel_), std::move(handlers));
 }
 
-zx_status_t Interface::Call::HandleEvents(zx::unowned_channel client_end, Interface::EventHandlers handlers) {
+zx_status_t Interface::Call::HandleEvents(::zx::unowned_channel client_end, Interface::EventHandlers handlers) {
   zx_status_t status = client_end->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                            zx::time::infinite(),
+                                            ::zx::time::infinite(),
                                             nullptr);
   if (status != ZX_OK) {
     return status;
@@ -252,7 +252,7 @@ zx_status_t Interface::SendOnEventEvent(::zx::unowned_channel _chan) {
               OnEventResponse::PrimarySize,
               OnEventResponse::PrimarySize)));
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(OnEventResponse));
-  return ::fidl::Write(zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnEventResponse>(std::move(_response_bytes)));
+  return ::fidl::Write(::zx::unowned_channel(_chan), ::fidl::DecodedMessage<OnEventResponse>(std::move(_response_bytes)));
 }
 
 

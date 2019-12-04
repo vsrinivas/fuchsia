@@ -21,7 +21,7 @@ extern "C" const fidl_type_t v1_fuchsia_tee_manager_ProviderRequestPersistentSto
 
 }  // namespace
 
-Provider::ResultOf::RequestPersistentStorage_Impl::RequestPersistentStorage_Impl(zx::unowned_channel _client_end, ::zx::channel dir) {
+Provider::ResultOf::RequestPersistentStorage_Impl::RequestPersistentStorage_Impl(::zx::unowned_channel _client_end, ::zx::channel dir) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RequestPersistentStorageRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -36,15 +36,15 @@ Provider::ResultOf::RequestPersistentStorage_Impl::RequestPersistentStorage_Impl
 }
 
 Provider::ResultOf::RequestPersistentStorage Provider::SyncClient::RequestPersistentStorage(::zx::channel dir) {
-  return ResultOf::RequestPersistentStorage(zx::unowned_channel(this->channel_), std::move(dir));
+    return ResultOf::RequestPersistentStorage(::zx::unowned_channel(this->channel_), std::move(dir));
 }
 
-Provider::ResultOf::RequestPersistentStorage Provider::Call::RequestPersistentStorage(zx::unowned_channel _client_end, ::zx::channel dir) {
+Provider::ResultOf::RequestPersistentStorage Provider::Call::RequestPersistentStorage(::zx::unowned_channel _client_end, ::zx::channel dir) {
   return ResultOf::RequestPersistentStorage(std::move(_client_end), std::move(dir));
 }
 
 
-Provider::UnownedResultOf::RequestPersistentStorage_Impl::RequestPersistentStorage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel dir) {
+Provider::UnownedResultOf::RequestPersistentStorage_Impl::RequestPersistentStorage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel dir) {
   if (_request_buffer.capacity() < RequestPersistentStorageRequest::PrimarySize) {
     Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
     Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
@@ -60,14 +60,14 @@ Provider::UnownedResultOf::RequestPersistentStorage_Impl::RequestPersistentStora
 }
 
 Provider::UnownedResultOf::RequestPersistentStorage Provider::SyncClient::RequestPersistentStorage(::fidl::BytePart _request_buffer, ::zx::channel dir) {
-  return UnownedResultOf::RequestPersistentStorage(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(dir));
+  return UnownedResultOf::RequestPersistentStorage(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(dir));
 }
 
-Provider::UnownedResultOf::RequestPersistentStorage Provider::Call::RequestPersistentStorage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel dir) {
+Provider::UnownedResultOf::RequestPersistentStorage Provider::Call::RequestPersistentStorage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel dir) {
   return UnownedResultOf::RequestPersistentStorage(std::move(_client_end), std::move(_request_buffer), std::move(dir));
 }
 
-::fidl::internal::StatusAndError Provider::InPlace::RequestPersistentStorage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RequestPersistentStorageRequest> params) {
+::fidl::internal::StatusAndError Provider::InPlace::RequestPersistentStorage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RequestPersistentStorageRequest> params) {
   Provider::SetTransactionHeaderFor::RequestPersistentStorageRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {

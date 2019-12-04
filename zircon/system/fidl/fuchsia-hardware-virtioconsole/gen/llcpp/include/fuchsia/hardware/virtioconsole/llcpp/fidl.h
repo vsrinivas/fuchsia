@@ -62,7 +62,7 @@ class Device final {
     class GetChannel_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      GetChannel_Impl(zx::unowned_channel _client_end, ::zx::channel req);
+      GetChannel_Impl(::zx::unowned_channel _client_end, ::zx::channel req);
       ~GetChannel_Impl() = default;
       GetChannel_Impl(GetChannel_Impl&& other) = default;
       GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
@@ -83,7 +83,7 @@ class Device final {
     class GetChannel_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      GetChannel_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
+      GetChannel_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
       ~GetChannel_Impl() = default;
       GetChannel_Impl(GetChannel_Impl&& other) = default;
       GetChannel_Impl& operator=(GetChannel_Impl&& other) = default;
@@ -138,7 +138,7 @@ class Device final {
     // the devhost stops the behavior, we can remove this interface and
     // have virtio-console just serve fuchsia.hardware.pty.Device directly.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::zx::channel req);
+    static ResultOf::GetChannel GetChannel(::zx::unowned_channel _client_end, ::zx::channel req);
 
     // This API is temporary.  It exists because devhost multiplexes
     // fuchsia.io.File on top of the device connections, and
@@ -146,7 +146,7 @@ class Device final {
     // the devhost stops the behavior, we can remove this interface and
     // have virtio-console just serve fuchsia.hardware.pty.Device directly.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetChannel GetChannel(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
+    static UnownedResultOf::GetChannel GetChannel(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel req);
 
   };
 
@@ -161,7 +161,7 @@ class Device final {
     // fuchsia.hardware.pty.Device composes with that interface.  Once
     // the devhost stops the behavior, we can remove this interface and
     // have virtio-console just serve fuchsia.hardware.pty.Device directly.
-    static ::fidl::internal::StatusAndError GetChannel(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params);
+    static ::fidl::internal::StatusAndError GetChannel(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetChannelRequest> params);
 
   };
 

@@ -202,7 +202,7 @@ class Provider final {
     class OpenVirtconController_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      OpenVirtconController_Impl(zx::unowned_channel _client_end, ::zx::channel device, ::zx::channel controller);
+      OpenVirtconController_Impl(::zx::unowned_channel _client_end, ::zx::channel device, ::zx::channel controller);
       ~OpenVirtconController_Impl() = default;
       OpenVirtconController_Impl(OpenVirtconController_Impl&& other) = default;
       OpenVirtconController_Impl& operator=(OpenVirtconController_Impl&& other) = default;
@@ -218,7 +218,7 @@ class Provider final {
     class OpenController_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      OpenController_Impl(zx::unowned_channel _client_end, ::zx::channel device, ::zx::channel controller);
+      OpenController_Impl(::zx::unowned_channel _client_end, ::zx::channel device, ::zx::channel controller);
       ~OpenController_Impl() = default;
       OpenController_Impl(OpenController_Impl&& other) = default;
       OpenController_Impl& operator=(OpenController_Impl&& other) = default;
@@ -245,7 +245,7 @@ class Provider final {
     class OpenVirtconController_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      OpenVirtconController_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel device, ::zx::channel controller, ::fidl::BytePart _response_buffer);
+      OpenVirtconController_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel device, ::zx::channel controller, ::fidl::BytePart _response_buffer);
       ~OpenVirtconController_Impl() = default;
       OpenVirtconController_Impl(OpenVirtconController_Impl&& other) = default;
       OpenVirtconController_Impl& operator=(OpenVirtconController_Impl&& other) = default;
@@ -261,7 +261,7 @@ class Provider final {
     class OpenController_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      OpenController_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel device, ::zx::channel controller, ::fidl::BytePart _response_buffer);
+      OpenController_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel device, ::zx::channel controller, ::fidl::BytePart _response_buffer);
       ~OpenController_Impl() = default;
       OpenController_Impl(OpenController_Impl&& other) = default;
       OpenController_Impl& operator=(OpenController_Impl&& other) = default;
@@ -347,7 +347,7 @@ class Provider final {
     // the display device already has a virtcon controller then this method
     // will return `ZX_ERR_ALREADY_BOUND`.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::OpenVirtconController OpenVirtconController(zx::unowned_channel _client_end, ::zx::channel device, ::zx::channel controller);
+    static ResultOf::OpenVirtconController OpenVirtconController(::zx::unowned_channel _client_end, ::zx::channel device, ::zx::channel controller);
 
     // Open a virtcon client. `device` should be a handle to one endpoint of a
     // channel that (on success) will become an open connection to a new
@@ -357,7 +357,7 @@ class Provider final {
     // the display device already has a virtcon controller then this method
     // will return `ZX_ERR_ALREADY_BOUND`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::OpenVirtconController OpenVirtconController(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel device, ::zx::channel controller, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::OpenVirtconController OpenVirtconController(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel device, ::zx::channel controller, ::fidl::BytePart _response_buffer);
 
     // Open a primary client. `device` should be a handle to one endpoint of a
     // channel that (on success) will become an open connection to a new
@@ -367,7 +367,7 @@ class Provider final {
     // the display device already has a primary controller then this method
     // will return `ZX_ERR_ALREADY_BOUND`.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::OpenController OpenController(zx::unowned_channel _client_end, ::zx::channel device, ::zx::channel controller);
+    static ResultOf::OpenController OpenController(::zx::unowned_channel _client_end, ::zx::channel device, ::zx::channel controller);
 
     // Open a primary client. `device` should be a handle to one endpoint of a
     // channel that (on success) will become an open connection to a new
@@ -377,7 +377,7 @@ class Provider final {
     // the display device already has a primary controller then this method
     // will return `ZX_ERR_ALREADY_BOUND`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::OpenController OpenController(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel device, ::zx::channel controller, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::OpenController OpenController(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel device, ::zx::channel controller, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -394,7 +394,7 @@ class Provider final {
     // connection to `device` will also close the `controller` interface. If
     // the display device already has a virtcon controller then this method
     // will return `ZX_ERR_ALREADY_BOUND`.
-    static ::fidl::DecodeResult<OpenVirtconControllerResponse> OpenVirtconController(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenVirtconControllerRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<OpenVirtconControllerResponse> OpenVirtconController(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenVirtconControllerRequest> params, ::fidl::BytePart response_buffer);
 
     // Open a primary client. `device` should be a handle to one endpoint of a
     // channel that (on success) will become an open connection to a new
@@ -403,7 +403,7 @@ class Provider final {
     // connection to `device` will also close the `controller` interface. If
     // the display device already has a primary controller then this method
     // will return `ZX_ERR_ALREADY_BOUND`.
-    static ::fidl::DecodeResult<OpenControllerResponse> OpenController(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenControllerRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<OpenControllerResponse> OpenController(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<OpenControllerRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -2046,7 +2046,7 @@ class Controller final {
     class ImportVmoImage_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ImportVmoImage_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
+      ImportVmoImage_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
       ~ImportVmoImage_Impl() = default;
       ImportVmoImage_Impl(ImportVmoImage_Impl&& other) = default;
       ImportVmoImage_Impl& operator=(ImportVmoImage_Impl&& other) = default;
@@ -2062,7 +2062,7 @@ class Controller final {
     class ImportImage_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ImportImage_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
+      ImportImage_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
       ~ImportImage_Impl() = default;
       ImportImage_Impl(ImportImage_Impl&& other) = default;
       ImportImage_Impl& operator=(ImportImage_Impl&& other) = default;
@@ -2077,7 +2077,7 @@ class Controller final {
     class ReleaseImage_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ReleaseImage_Impl(zx::unowned_channel _client_end, uint64_t image_id);
+      ReleaseImage_Impl(::zx::unowned_channel _client_end, uint64_t image_id);
       ~ReleaseImage_Impl() = default;
       ReleaseImage_Impl(ReleaseImage_Impl&& other) = default;
       ReleaseImage_Impl& operator=(ReleaseImage_Impl&& other) = default;
@@ -2088,7 +2088,7 @@ class Controller final {
     class ImportEvent_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ImportEvent_Impl(zx::unowned_channel _client_end, ::zx::event event, uint64_t id);
+      ImportEvent_Impl(::zx::unowned_channel _client_end, ::zx::event event, uint64_t id);
       ~ImportEvent_Impl() = default;
       ImportEvent_Impl(ImportEvent_Impl&& other) = default;
       ImportEvent_Impl& operator=(ImportEvent_Impl&& other) = default;
@@ -2099,7 +2099,7 @@ class Controller final {
     class ReleaseEvent_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ReleaseEvent_Impl(zx::unowned_channel _client_end, uint64_t id);
+      ReleaseEvent_Impl(::zx::unowned_channel _client_end, uint64_t id);
       ~ReleaseEvent_Impl() = default;
       ReleaseEvent_Impl(ReleaseEvent_Impl&& other) = default;
       ReleaseEvent_Impl& operator=(ReleaseEvent_Impl&& other) = default;
@@ -2111,7 +2111,7 @@ class Controller final {
     class CreateLayer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CreateLayer_Impl(zx::unowned_channel _client_end);
+      CreateLayer_Impl(::zx::unowned_channel _client_end);
       ~CreateLayer_Impl() = default;
       CreateLayer_Impl(CreateLayer_Impl&& other) = default;
       CreateLayer_Impl& operator=(CreateLayer_Impl&& other) = default;
@@ -2126,7 +2126,7 @@ class Controller final {
     class DestroyLayer_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      DestroyLayer_Impl(zx::unowned_channel _client_end, uint64_t layer_id);
+      DestroyLayer_Impl(::zx::unowned_channel _client_end, uint64_t layer_id);
       ~DestroyLayer_Impl() = default;
       DestroyLayer_Impl(DestroyLayer_Impl&& other) = default;
       DestroyLayer_Impl& operator=(DestroyLayer_Impl&& other) = default;
@@ -2137,7 +2137,7 @@ class Controller final {
     class SetDisplayMode_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetDisplayMode_Impl(zx::unowned_channel _client_end, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
+      SetDisplayMode_Impl(::zx::unowned_channel _client_end, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
       ~SetDisplayMode_Impl() = default;
       SetDisplayMode_Impl(SetDisplayMode_Impl&& other) = default;
       SetDisplayMode_Impl& operator=(SetDisplayMode_Impl&& other) = default;
@@ -2148,7 +2148,7 @@ class Controller final {
     class SetDisplayColorConversion_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetDisplayColorConversion_Impl(zx::unowned_channel _client_end, uint64_t display_id, ::fidl::Array<float, 3> preoffsets, ::fidl::Array<float, 9> coefficients, ::fidl::Array<float, 3> postoffsets);
+      SetDisplayColorConversion_Impl(::zx::unowned_channel _client_end, uint64_t display_id, ::fidl::Array<float, 3> preoffsets, ::fidl::Array<float, 9> coefficients, ::fidl::Array<float, 3> postoffsets);
       ~SetDisplayColorConversion_Impl() = default;
       SetDisplayColorConversion_Impl(SetDisplayColorConversion_Impl&& other) = default;
       SetDisplayColorConversion_Impl& operator=(SetDisplayColorConversion_Impl&& other) = default;
@@ -2159,7 +2159,7 @@ class Controller final {
     class SetDisplayLayers_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetDisplayLayers_Impl(zx::unowned_channel _client_end, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
+      SetDisplayLayers_Impl(::zx::unowned_channel _client_end, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
       ~SetDisplayLayers_Impl() = default;
       SetDisplayLayers_Impl(SetDisplayLayers_Impl&& other) = default;
       SetDisplayLayers_Impl& operator=(SetDisplayLayers_Impl&& other) = default;
@@ -2170,7 +2170,7 @@ class Controller final {
     class SetLayerPrimaryConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
+      SetLayerPrimaryConfig_Impl(::zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
       ~SetLayerPrimaryConfig_Impl() = default;
       SetLayerPrimaryConfig_Impl(SetLayerPrimaryConfig_Impl&& other) = default;
       SetLayerPrimaryConfig_Impl& operator=(SetLayerPrimaryConfig_Impl&& other) = default;
@@ -2181,7 +2181,7 @@ class Controller final {
     class SetLayerPrimaryPosition_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryPosition_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
+      SetLayerPrimaryPosition_Impl(::zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
       ~SetLayerPrimaryPosition_Impl() = default;
       SetLayerPrimaryPosition_Impl(SetLayerPrimaryPosition_Impl&& other) = default;
       SetLayerPrimaryPosition_Impl& operator=(SetLayerPrimaryPosition_Impl&& other) = default;
@@ -2192,7 +2192,7 @@ class Controller final {
     class SetLayerPrimaryAlpha_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryAlpha_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
+      SetLayerPrimaryAlpha_Impl(::zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
       ~SetLayerPrimaryAlpha_Impl() = default;
       SetLayerPrimaryAlpha_Impl(SetLayerPrimaryAlpha_Impl&& other) = default;
       SetLayerPrimaryAlpha_Impl& operator=(SetLayerPrimaryAlpha_Impl&& other) = default;
@@ -2203,7 +2203,7 @@ class Controller final {
     class SetLayerCursorConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerCursorConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
+      SetLayerCursorConfig_Impl(::zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
       ~SetLayerCursorConfig_Impl() = default;
       SetLayerCursorConfig_Impl(SetLayerCursorConfig_Impl&& other) = default;
       SetLayerCursorConfig_Impl& operator=(SetLayerCursorConfig_Impl&& other) = default;
@@ -2214,7 +2214,7 @@ class Controller final {
     class SetLayerCursorPosition_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerCursorPosition_Impl(zx::unowned_channel _client_end, uint64_t layer_id, int32_t x, int32_t y);
+      SetLayerCursorPosition_Impl(::zx::unowned_channel _client_end, uint64_t layer_id, int32_t x, int32_t y);
       ~SetLayerCursorPosition_Impl() = default;
       SetLayerCursorPosition_Impl(SetLayerCursorPosition_Impl&& other) = default;
       SetLayerCursorPosition_Impl& operator=(SetLayerCursorPosition_Impl&& other) = default;
@@ -2225,7 +2225,7 @@ class Controller final {
     class SetLayerColorConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerColorConfig_Impl(zx::unowned_channel _client_end, uint64_t layer_id, uint32_t pixel_format, ::fidl::VectorView<uint8_t> color_bytes);
+      SetLayerColorConfig_Impl(::zx::unowned_channel _client_end, uint64_t layer_id, uint32_t pixel_format, ::fidl::VectorView<uint8_t> color_bytes);
       ~SetLayerColorConfig_Impl() = default;
       SetLayerColorConfig_Impl(SetLayerColorConfig_Impl&& other) = default;
       SetLayerColorConfig_Impl& operator=(SetLayerColorConfig_Impl&& other) = default;
@@ -2236,7 +2236,7 @@ class Controller final {
     class SetLayerImage_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerImage_Impl(zx::unowned_channel _client_end, uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id);
+      SetLayerImage_Impl(::zx::unowned_channel _client_end, uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id);
       ~SetLayerImage_Impl() = default;
       SetLayerImage_Impl(SetLayerImage_Impl&& other) = default;
       SetLayerImage_Impl& operator=(SetLayerImage_Impl&& other) = default;
@@ -2248,7 +2248,7 @@ class Controller final {
     class CheckConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CheckConfig_Impl(zx::unowned_channel _client_end, bool discard);
+      CheckConfig_Impl(::zx::unowned_channel _client_end, bool discard);
       ~CheckConfig_Impl() = default;
       CheckConfig_Impl(CheckConfig_Impl&& other) = default;
       CheckConfig_Impl& operator=(CheckConfig_Impl&& other) = default;
@@ -2263,7 +2263,7 @@ class Controller final {
     class ApplyConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ApplyConfig_Impl(zx::unowned_channel _client_end);
+      ApplyConfig_Impl(::zx::unowned_channel _client_end);
       ~ApplyConfig_Impl() = default;
       ApplyConfig_Impl(ApplyConfig_Impl&& other) = default;
       ApplyConfig_Impl& operator=(ApplyConfig_Impl&& other) = default;
@@ -2274,7 +2274,7 @@ class Controller final {
     class EnableVsync_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      EnableVsync_Impl(zx::unowned_channel _client_end, bool enable);
+      EnableVsync_Impl(::zx::unowned_channel _client_end, bool enable);
       ~EnableVsync_Impl() = default;
       EnableVsync_Impl(EnableVsync_Impl&& other) = default;
       EnableVsync_Impl& operator=(EnableVsync_Impl&& other) = default;
@@ -2285,7 +2285,7 @@ class Controller final {
     class SetVirtconMode_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetVirtconMode_Impl(zx::unowned_channel _client_end, uint8_t mode);
+      SetVirtconMode_Impl(::zx::unowned_channel _client_end, uint8_t mode);
       ~SetVirtconMode_Impl() = default;
       SetVirtconMode_Impl(SetVirtconMode_Impl&& other) = default;
       SetVirtconMode_Impl& operator=(SetVirtconMode_Impl&& other) = default;
@@ -2297,7 +2297,7 @@ class Controller final {
     class ImportBufferCollection_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ImportBufferCollection_Impl(zx::unowned_channel _client_end, uint64_t collection_id, ::zx::channel collection_token);
+      ImportBufferCollection_Impl(::zx::unowned_channel _client_end, uint64_t collection_id, ::zx::channel collection_token);
       ~ImportBufferCollection_Impl() = default;
       ImportBufferCollection_Impl(ImportBufferCollection_Impl&& other) = default;
       ImportBufferCollection_Impl& operator=(ImportBufferCollection_Impl&& other) = default;
@@ -2312,7 +2312,7 @@ class Controller final {
     class ReleaseBufferCollection_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ReleaseBufferCollection_Impl(zx::unowned_channel _client_end, uint64_t collection_id);
+      ReleaseBufferCollection_Impl(::zx::unowned_channel _client_end, uint64_t collection_id);
       ~ReleaseBufferCollection_Impl() = default;
       ReleaseBufferCollection_Impl(ReleaseBufferCollection_Impl&& other) = default;
       ReleaseBufferCollection_Impl& operator=(ReleaseBufferCollection_Impl&& other) = default;
@@ -2324,7 +2324,7 @@ class Controller final {
     class SetBufferCollectionConstraints_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      SetBufferCollectionConstraints_Impl(zx::unowned_channel _client_end, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config);
+      SetBufferCollectionConstraints_Impl(::zx::unowned_channel _client_end, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config);
       ~SetBufferCollectionConstraints_Impl() = default;
       SetBufferCollectionConstraints_Impl(SetBufferCollectionConstraints_Impl&& other) = default;
       SetBufferCollectionConstraints_Impl& operator=(SetBufferCollectionConstraints_Impl&& other) = default;
@@ -2340,7 +2340,7 @@ class Controller final {
     class GetSingleBufferFramebuffer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetSingleBufferFramebuffer_Impl(zx::unowned_channel _client_end);
+      GetSingleBufferFramebuffer_Impl(::zx::unowned_channel _client_end);
       ~GetSingleBufferFramebuffer_Impl() = default;
       GetSingleBufferFramebuffer_Impl(GetSingleBufferFramebuffer_Impl&& other) = default;
       GetSingleBufferFramebuffer_Impl& operator=(GetSingleBufferFramebuffer_Impl&& other) = default;
@@ -2356,7 +2356,7 @@ class Controller final {
     class IsCaptureSupported_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      IsCaptureSupported_Impl(zx::unowned_channel _client_end);
+      IsCaptureSupported_Impl(::zx::unowned_channel _client_end);
       ~IsCaptureSupported_Impl() = default;
       IsCaptureSupported_Impl(IsCaptureSupported_Impl&& other) = default;
       IsCaptureSupported_Impl& operator=(IsCaptureSupported_Impl&& other) = default;
@@ -2372,7 +2372,7 @@ class Controller final {
     class ImportImageForCapture_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ImportImageForCapture_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
+      ImportImageForCapture_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
       ~ImportImageForCapture_Impl() = default;
       ImportImageForCapture_Impl(ImportImageForCapture_Impl&& other) = default;
       ImportImageForCapture_Impl& operator=(ImportImageForCapture_Impl&& other) = default;
@@ -2388,7 +2388,7 @@ class Controller final {
     class StartCapture_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      StartCapture_Impl(zx::unowned_channel _client_end, uint64_t signal_event_id, uint64_t image_id);
+      StartCapture_Impl(::zx::unowned_channel _client_end, uint64_t signal_event_id, uint64_t image_id);
       ~StartCapture_Impl() = default;
       StartCapture_Impl(StartCapture_Impl&& other) = default;
       StartCapture_Impl& operator=(StartCapture_Impl&& other) = default;
@@ -2404,7 +2404,7 @@ class Controller final {
     class ReleaseCapture_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ReleaseCapture_Impl(zx::unowned_channel _client_end, uint64_t image_id);
+      ReleaseCapture_Impl(::zx::unowned_channel _client_end, uint64_t image_id);
       ~ReleaseCapture_Impl() = default;
       ReleaseCapture_Impl(ReleaseCapture_Impl&& other) = default;
       ReleaseCapture_Impl& operator=(ReleaseCapture_Impl&& other) = default;
@@ -2458,7 +2458,7 @@ class Controller final {
     class ImportVmoImage_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ImportVmoImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
+      ImportVmoImage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
       ~ImportVmoImage_Impl() = default;
       ImportVmoImage_Impl(ImportVmoImage_Impl&& other) = default;
       ImportVmoImage_Impl& operator=(ImportVmoImage_Impl&& other) = default;
@@ -2474,7 +2474,7 @@ class Controller final {
     class ImportImage_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ImportImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
+      ImportImage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
       ~ImportImage_Impl() = default;
       ImportImage_Impl(ImportImage_Impl&& other) = default;
       ImportImage_Impl& operator=(ImportImage_Impl&& other) = default;
@@ -2489,7 +2489,7 @@ class Controller final {
     class ReleaseImage_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ReleaseImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t image_id);
+      ReleaseImage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t image_id);
       ~ReleaseImage_Impl() = default;
       ReleaseImage_Impl(ReleaseImage_Impl&& other) = default;
       ReleaseImage_Impl& operator=(ReleaseImage_Impl&& other) = default;
@@ -2500,7 +2500,7 @@ class Controller final {
     class ImportEvent_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ImportEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::event event, uint64_t id);
+      ImportEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::event event, uint64_t id);
       ~ImportEvent_Impl() = default;
       ImportEvent_Impl(ImportEvent_Impl&& other) = default;
       ImportEvent_Impl& operator=(ImportEvent_Impl&& other) = default;
@@ -2511,7 +2511,7 @@ class Controller final {
     class ReleaseEvent_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ReleaseEvent_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t id);
+      ReleaseEvent_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t id);
       ~ReleaseEvent_Impl() = default;
       ReleaseEvent_Impl(ReleaseEvent_Impl&& other) = default;
       ReleaseEvent_Impl& operator=(ReleaseEvent_Impl&& other) = default;
@@ -2523,7 +2523,7 @@ class Controller final {
     class CreateLayer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CreateLayer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      CreateLayer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~CreateLayer_Impl() = default;
       CreateLayer_Impl(CreateLayer_Impl&& other) = default;
       CreateLayer_Impl& operator=(CreateLayer_Impl&& other) = default;
@@ -2538,7 +2538,7 @@ class Controller final {
     class DestroyLayer_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      DestroyLayer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id);
+      DestroyLayer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id);
       ~DestroyLayer_Impl() = default;
       DestroyLayer_Impl(DestroyLayer_Impl&& other) = default;
       DestroyLayer_Impl& operator=(DestroyLayer_Impl&& other) = default;
@@ -2549,7 +2549,7 @@ class Controller final {
     class SetDisplayMode_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetDisplayMode_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
+      SetDisplayMode_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
       ~SetDisplayMode_Impl() = default;
       SetDisplayMode_Impl(SetDisplayMode_Impl&& other) = default;
       SetDisplayMode_Impl& operator=(SetDisplayMode_Impl&& other) = default;
@@ -2560,7 +2560,7 @@ class Controller final {
     class SetDisplayColorConversion_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetDisplayColorConversion_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::Array<float, 3> preoffsets, ::fidl::Array<float, 9> coefficients, ::fidl::Array<float, 3> postoffsets);
+      SetDisplayColorConversion_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::Array<float, 3> preoffsets, ::fidl::Array<float, 9> coefficients, ::fidl::Array<float, 3> postoffsets);
       ~SetDisplayColorConversion_Impl() = default;
       SetDisplayColorConversion_Impl(SetDisplayColorConversion_Impl&& other) = default;
       SetDisplayColorConversion_Impl& operator=(SetDisplayColorConversion_Impl&& other) = default;
@@ -2571,7 +2571,7 @@ class Controller final {
     class SetDisplayLayers_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetDisplayLayers_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
+      SetDisplayLayers_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
       ~SetDisplayLayers_Impl() = default;
       SetDisplayLayers_Impl(SetDisplayLayers_Impl&& other) = default;
       SetDisplayLayers_Impl& operator=(SetDisplayLayers_Impl&& other) = default;
@@ -2582,7 +2582,7 @@ class Controller final {
     class SetLayerPrimaryConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
+      SetLayerPrimaryConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
       ~SetLayerPrimaryConfig_Impl() = default;
       SetLayerPrimaryConfig_Impl(SetLayerPrimaryConfig_Impl&& other) = default;
       SetLayerPrimaryConfig_Impl& operator=(SetLayerPrimaryConfig_Impl&& other) = default;
@@ -2593,7 +2593,7 @@ class Controller final {
     class SetLayerPrimaryPosition_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryPosition_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
+      SetLayerPrimaryPosition_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
       ~SetLayerPrimaryPosition_Impl() = default;
       SetLayerPrimaryPosition_Impl(SetLayerPrimaryPosition_Impl&& other) = default;
       SetLayerPrimaryPosition_Impl& operator=(SetLayerPrimaryPosition_Impl&& other) = default;
@@ -2604,7 +2604,7 @@ class Controller final {
     class SetLayerPrimaryAlpha_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerPrimaryAlpha_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
+      SetLayerPrimaryAlpha_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
       ~SetLayerPrimaryAlpha_Impl() = default;
       SetLayerPrimaryAlpha_Impl(SetLayerPrimaryAlpha_Impl&& other) = default;
       SetLayerPrimaryAlpha_Impl& operator=(SetLayerPrimaryAlpha_Impl&& other) = default;
@@ -2615,7 +2615,7 @@ class Controller final {
     class SetLayerCursorConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerCursorConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
+      SetLayerCursorConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
       ~SetLayerCursorConfig_Impl() = default;
       SetLayerCursorConfig_Impl(SetLayerCursorConfig_Impl&& other) = default;
       SetLayerCursorConfig_Impl& operator=(SetLayerCursorConfig_Impl&& other) = default;
@@ -2626,7 +2626,7 @@ class Controller final {
     class SetLayerCursorPosition_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerCursorPosition_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, int32_t x, int32_t y);
+      SetLayerCursorPosition_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, int32_t x, int32_t y);
       ~SetLayerCursorPosition_Impl() = default;
       SetLayerCursorPosition_Impl(SetLayerCursorPosition_Impl&& other) = default;
       SetLayerCursorPosition_Impl& operator=(SetLayerCursorPosition_Impl&& other) = default;
@@ -2637,7 +2637,7 @@ class Controller final {
     class SetLayerColorConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerColorConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, uint32_t pixel_format, ::fidl::VectorView<uint8_t> color_bytes);
+      SetLayerColorConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, uint32_t pixel_format, ::fidl::VectorView<uint8_t> color_bytes);
       ~SetLayerColorConfig_Impl() = default;
       SetLayerColorConfig_Impl(SetLayerColorConfig_Impl&& other) = default;
       SetLayerColorConfig_Impl& operator=(SetLayerColorConfig_Impl&& other) = default;
@@ -2648,7 +2648,7 @@ class Controller final {
     class SetLayerImage_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetLayerImage_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id);
+      SetLayerImage_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id);
       ~SetLayerImage_Impl() = default;
       SetLayerImage_Impl(SetLayerImage_Impl&& other) = default;
       SetLayerImage_Impl& operator=(SetLayerImage_Impl&& other) = default;
@@ -2660,7 +2660,7 @@ class Controller final {
     class CheckConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CheckConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool discard, ::fidl::BytePart _response_buffer);
+      CheckConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool discard, ::fidl::BytePart _response_buffer);
       ~CheckConfig_Impl() = default;
       CheckConfig_Impl(CheckConfig_Impl&& other) = default;
       CheckConfig_Impl& operator=(CheckConfig_Impl&& other) = default;
@@ -2675,7 +2675,7 @@ class Controller final {
     class ApplyConfig_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ApplyConfig_Impl(zx::unowned_channel _client_end);
+      ApplyConfig_Impl(::zx::unowned_channel _client_end);
       ~ApplyConfig_Impl() = default;
       ApplyConfig_Impl(ApplyConfig_Impl&& other) = default;
       ApplyConfig_Impl& operator=(ApplyConfig_Impl&& other) = default;
@@ -2686,7 +2686,7 @@ class Controller final {
     class EnableVsync_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      EnableVsync_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable);
+      EnableVsync_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable);
       ~EnableVsync_Impl() = default;
       EnableVsync_Impl(EnableVsync_Impl&& other) = default;
       EnableVsync_Impl& operator=(EnableVsync_Impl&& other) = default;
@@ -2697,7 +2697,7 @@ class Controller final {
     class SetVirtconMode_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      SetVirtconMode_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t mode);
+      SetVirtconMode_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t mode);
       ~SetVirtconMode_Impl() = default;
       SetVirtconMode_Impl(SetVirtconMode_Impl&& other) = default;
       SetVirtconMode_Impl& operator=(SetVirtconMode_Impl&& other) = default;
@@ -2709,7 +2709,7 @@ class Controller final {
     class ImportBufferCollection_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ImportBufferCollection_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::zx::channel collection_token, ::fidl::BytePart _response_buffer);
+      ImportBufferCollection_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::zx::channel collection_token, ::fidl::BytePart _response_buffer);
       ~ImportBufferCollection_Impl() = default;
       ImportBufferCollection_Impl(ImportBufferCollection_Impl&& other) = default;
       ImportBufferCollection_Impl& operator=(ImportBufferCollection_Impl&& other) = default;
@@ -2724,7 +2724,7 @@ class Controller final {
     class ReleaseBufferCollection_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      ReleaseBufferCollection_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id);
+      ReleaseBufferCollection_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id);
       ~ReleaseBufferCollection_Impl() = default;
       ReleaseBufferCollection_Impl(ReleaseBufferCollection_Impl&& other) = default;
       ReleaseBufferCollection_Impl& operator=(ReleaseBufferCollection_Impl&& other) = default;
@@ -2736,7 +2736,7 @@ class Controller final {
     class SetBufferCollectionConstraints_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      SetBufferCollectionConstraints_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, ::fidl::BytePart _response_buffer);
+      SetBufferCollectionConstraints_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, ::fidl::BytePart _response_buffer);
       ~SetBufferCollectionConstraints_Impl() = default;
       SetBufferCollectionConstraints_Impl(SetBufferCollectionConstraints_Impl&& other) = default;
       SetBufferCollectionConstraints_Impl& operator=(SetBufferCollectionConstraints_Impl&& other) = default;
@@ -2752,7 +2752,7 @@ class Controller final {
     class GetSingleBufferFramebuffer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetSingleBufferFramebuffer_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetSingleBufferFramebuffer_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetSingleBufferFramebuffer_Impl() = default;
       GetSingleBufferFramebuffer_Impl(GetSingleBufferFramebuffer_Impl&& other) = default;
       GetSingleBufferFramebuffer_Impl& operator=(GetSingleBufferFramebuffer_Impl&& other) = default;
@@ -2768,7 +2768,7 @@ class Controller final {
     class IsCaptureSupported_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      IsCaptureSupported_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      IsCaptureSupported_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~IsCaptureSupported_Impl() = default;
       IsCaptureSupported_Impl(IsCaptureSupported_Impl&& other) = default;
       IsCaptureSupported_Impl& operator=(IsCaptureSupported_Impl&& other) = default;
@@ -2784,7 +2784,7 @@ class Controller final {
     class ImportImageForCapture_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ImportImageForCapture_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
+      ImportImageForCapture_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
       ~ImportImageForCapture_Impl() = default;
       ImportImageForCapture_Impl(ImportImageForCapture_Impl&& other) = default;
       ImportImageForCapture_Impl& operator=(ImportImageForCapture_Impl&& other) = default;
@@ -2800,7 +2800,7 @@ class Controller final {
     class StartCapture_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      StartCapture_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t signal_event_id, uint64_t image_id, ::fidl::BytePart _response_buffer);
+      StartCapture_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t signal_event_id, uint64_t image_id, ::fidl::BytePart _response_buffer);
       ~StartCapture_Impl() = default;
       StartCapture_Impl(StartCapture_Impl&& other) = default;
       StartCapture_Impl& operator=(StartCapture_Impl&& other) = default;
@@ -2816,7 +2816,7 @@ class Controller final {
     class ReleaseCapture_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ReleaseCapture_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t image_id, ::fidl::BytePart _response_buffer);
+      ReleaseCapture_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t image_id, ::fidl::BytePart _response_buffer);
       ~ReleaseCapture_Impl() = default;
       ReleaseCapture_Impl(ReleaseCapture_Impl&& other) = default;
       ReleaseCapture_Impl& operator=(ReleaseCapture_Impl&& other) = default;
@@ -3115,22 +3115,22 @@ class Controller final {
    public:
 
     // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ImportVmoImage ImportVmoImage(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
+    static ResultOf::ImportVmoImage ImportVmoImage(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ImportVmoImage ImportVmoImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ImportVmoImage ImportVmoImage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
 
     // Allocates 112 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ImportImage ImportImage(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
+    static ResultOf::ImportImage ImportImage(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ImportImage ImportImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ImportImage ImportImage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ReleaseImage ReleaseImage(zx::unowned_channel _client_end, uint64_t image_id);
+    static ResultOf::ReleaseImage ReleaseImage(::zx::unowned_channel _client_end, uint64_t image_id);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ReleaseImage ReleaseImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t image_id);
+    static UnownedResultOf::ReleaseImage ReleaseImage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t image_id);
 
     // Imports an event into the driver and associates it with the given id.
     //
@@ -3141,7 +3141,7 @@ class Controller final {
     // If a client is reusing events, they must clear the signal
     // before referencing the id again.
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ImportEvent ImportEvent(zx::unowned_channel _client_end, ::zx::event event, uint64_t id);
+    static ResultOf::ImportEvent ImportEvent(::zx::unowned_channel _client_end, ::zx::event event, uint64_t id);
 
     // Imports an event into the driver and associates it with the given id.
     //
@@ -3152,7 +3152,7 @@ class Controller final {
     // If a client is reusing events, they must clear the signal
     // before referencing the id again.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ImportEvent ImportEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::event event, uint64_t id);
+    static UnownedResultOf::ImportEvent ImportEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::event event, uint64_t id);
 
     // Releases the event imported with the given id.
     //
@@ -3161,7 +3161,7 @@ class Controller final {
     // resources are released. It is an error to reuse an ID while the
     // active config has references to it.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ReleaseEvent ReleaseEvent(zx::unowned_channel _client_end, uint64_t id);
+    static ResultOf::ReleaseEvent ReleaseEvent(::zx::unowned_channel _client_end, uint64_t id);
 
     // Releases the event imported with the given id.
     //
@@ -3170,133 +3170,133 @@ class Controller final {
     // resources are released. It is an error to reuse an ID while the
     // active config has references to it.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ReleaseEvent ReleaseEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t id);
+    static UnownedResultOf::ReleaseEvent ReleaseEvent(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t id);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateLayer CreateLayer(zx::unowned_channel _client_end);
+    static ResultOf::CreateLayer CreateLayer(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateLayer CreateLayer(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CreateLayer CreateLayer(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::DestroyLayer DestroyLayer(zx::unowned_channel _client_end, uint64_t layer_id);
+    static ResultOf::DestroyLayer DestroyLayer(::zx::unowned_channel _client_end, uint64_t layer_id);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::DestroyLayer DestroyLayer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id);
+    static UnownedResultOf::DestroyLayer DestroyLayer(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetDisplayMode SetDisplayMode(zx::unowned_channel _client_end, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
+    static ResultOf::SetDisplayMode SetDisplayMode(::zx::unowned_channel _client_end, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetDisplayMode SetDisplayMode(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
+    static UnownedResultOf::SetDisplayMode SetDisplayMode(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::llcpp::fuchsia::hardware::display::Mode mode);
 
     // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetDisplayColorConversion SetDisplayColorConversion(zx::unowned_channel _client_end, uint64_t display_id, ::fidl::Array<float, 3> preoffsets, ::fidl::Array<float, 9> coefficients, ::fidl::Array<float, 3> postoffsets);
+    static ResultOf::SetDisplayColorConversion SetDisplayColorConversion(::zx::unowned_channel _client_end, uint64_t display_id, ::fidl::Array<float, 3> preoffsets, ::fidl::Array<float, 9> coefficients, ::fidl::Array<float, 3> postoffsets);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetDisplayColorConversion SetDisplayColorConversion(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::Array<float, 3> preoffsets, ::fidl::Array<float, 9> coefficients, ::fidl::Array<float, 3> postoffsets);
+    static UnownedResultOf::SetDisplayColorConversion SetDisplayColorConversion(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::Array<float, 3> preoffsets, ::fidl::Array<float, 9> coefficients, ::fidl::Array<float, 3> postoffsets);
 
     // Request is heap-allocated.
-    static ResultOf::SetDisplayLayers SetDisplayLayers(zx::unowned_channel _client_end, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
+    static ResultOf::SetDisplayLayers SetDisplayLayers(::zx::unowned_channel _client_end, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetDisplayLayers SetDisplayLayers(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
+    static UnownedResultOf::SetDisplayLayers SetDisplayLayers(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
+    static ResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(::zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
+    static UnownedResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
+    static ResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(::zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
+    static UnownedResultOf::SetLayerPrimaryPosition SetLayerPrimaryPosition(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::Transform transform, ::llcpp::fuchsia::hardware::display::Frame src_frame, ::llcpp::fuchsia::hardware::display::Frame dest_frame);
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
+    static ResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(::zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
+    static UnownedResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
 
     // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetLayerCursorConfig SetLayerCursorConfig(zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
+    static ResultOf::SetLayerCursorConfig SetLayerCursorConfig(::zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerCursorConfig SetLayerCursorConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
+    static UnownedResultOf::SetLayerCursorConfig SetLayerCursorConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetLayerCursorPosition SetLayerCursorPosition(zx::unowned_channel _client_end, uint64_t layer_id, int32_t x, int32_t y);
+    static ResultOf::SetLayerCursorPosition SetLayerCursorPosition(::zx::unowned_channel _client_end, uint64_t layer_id, int32_t x, int32_t y);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerCursorPosition SetLayerCursorPosition(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, int32_t x, int32_t y);
+    static UnownedResultOf::SetLayerCursorPosition SetLayerCursorPosition(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, int32_t x, int32_t y);
 
     // Request is heap-allocated.
-    static ResultOf::SetLayerColorConfig SetLayerColorConfig(zx::unowned_channel _client_end, uint64_t layer_id, uint32_t pixel_format, ::fidl::VectorView<uint8_t> color_bytes);
+    static ResultOf::SetLayerColorConfig SetLayerColorConfig(::zx::unowned_channel _client_end, uint64_t layer_id, uint32_t pixel_format, ::fidl::VectorView<uint8_t> color_bytes);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerColorConfig SetLayerColorConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, uint32_t pixel_format, ::fidl::VectorView<uint8_t> color_bytes);
+    static UnownedResultOf::SetLayerColorConfig SetLayerColorConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, uint32_t pixel_format, ::fidl::VectorView<uint8_t> color_bytes);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetLayerImage SetLayerImage(zx::unowned_channel _client_end, uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id);
+    static ResultOf::SetLayerImage SetLayerImage(::zx::unowned_channel _client_end, uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetLayerImage SetLayerImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id);
+    static UnownedResultOf::SetLayerImage SetLayerImage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, uint64_t image_id, uint64_t wait_event_id, uint64_t signal_event_id);
 
     // Allocates 24 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::CheckConfig CheckConfig(zx::unowned_channel _client_end, bool discard);
+    static ResultOf::CheckConfig CheckConfig(::zx::unowned_channel _client_end, bool discard);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CheckConfig CheckConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool discard, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CheckConfig CheckConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool discard, ::fidl::BytePart _response_buffer);
 
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ApplyConfig ApplyConfig(zx::unowned_channel _client_end);
+    static ResultOf::ApplyConfig ApplyConfig(::zx::unowned_channel _client_end);
 
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::EnableVsync EnableVsync(zx::unowned_channel _client_end, bool enable);
+    static ResultOf::EnableVsync EnableVsync(::zx::unowned_channel _client_end, bool enable);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::EnableVsync EnableVsync(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable);
+    static UnownedResultOf::EnableVsync EnableVsync(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool enable);
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetVirtconMode SetVirtconMode(zx::unowned_channel _client_end, uint8_t mode);
+    static ResultOf::SetVirtconMode SetVirtconMode(::zx::unowned_channel _client_end, uint8_t mode);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetVirtconMode SetVirtconMode(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t mode);
+    static UnownedResultOf::SetVirtconMode SetVirtconMode(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t mode);
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ImportBufferCollection ImportBufferCollection(zx::unowned_channel _client_end, uint64_t collection_id, ::zx::channel collection_token);
+    static ResultOf::ImportBufferCollection ImportBufferCollection(::zx::unowned_channel _client_end, uint64_t collection_id, ::zx::channel collection_token);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ImportBufferCollection ImportBufferCollection(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::zx::channel collection_token, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ImportBufferCollection ImportBufferCollection(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::zx::channel collection_token, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ReleaseBufferCollection ReleaseBufferCollection(zx::unowned_channel _client_end, uint64_t collection_id);
+    static ResultOf::ReleaseBufferCollection ReleaseBufferCollection(::zx::unowned_channel _client_end, uint64_t collection_id);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ReleaseBufferCollection ReleaseBufferCollection(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id);
+    static UnownedResultOf::ReleaseBufferCollection ReleaseBufferCollection(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id);
 
     // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(zx::unowned_channel _client_end, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config);
+    static ResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(::zx::unowned_channel _client_end, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetSingleBufferFramebuffer GetSingleBufferFramebuffer(zx::unowned_channel _client_end);
+    static ResultOf::GetSingleBufferFramebuffer GetSingleBufferFramebuffer(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetSingleBufferFramebuffer GetSingleBufferFramebuffer(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetSingleBufferFramebuffer GetSingleBufferFramebuffer(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Returns true if Capture is supported on the platform.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::IsCaptureSupported IsCaptureSupported(zx::unowned_channel _client_end);
+    static ResultOf::IsCaptureSupported IsCaptureSupported(::zx::unowned_channel _client_end);
 
     // Returns true if Capture is supported on the platform.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::IsCaptureSupported IsCaptureSupported(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::IsCaptureSupported IsCaptureSupported(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Imports a buffer collection backed VMO into the display controller. The VMO
     // will be used by display controller to capture the image being displayed.
@@ -3305,7 +3305,7 @@ class Controller final {
     // resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     // Allocates 112 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ImportImageForCapture ImportImageForCapture(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
+    static ResultOf::ImportImageForCapture ImportImageForCapture(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
 
     // Imports a buffer collection backed VMO into the display controller. The VMO
     // will be used by display controller to capture the image being displayed.
@@ -3314,7 +3314,7 @@ class Controller final {
     // resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ImportImageForCapture ImportImageForCapture(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ImportImageForCapture ImportImageForCapture(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index, ::fidl::BytePart _response_buffer);
 
     // Starts capture. Client must provide a valid signal_event_id and
     // image_id. signal_event_id must have been imported into the driver
@@ -3322,7 +3322,7 @@ class Controller final {
     // The client will get notified once capture is complete via signal_event_id.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::StartCapture StartCapture(zx::unowned_channel _client_end, uint64_t signal_event_id, uint64_t image_id);
+    static ResultOf::StartCapture StartCapture(::zx::unowned_channel _client_end, uint64_t signal_event_id, uint64_t image_id);
 
     // Starts capture. Client must provide a valid signal_event_id and
     // image_id. signal_event_id must have been imported into the driver
@@ -3330,23 +3330,23 @@ class Controller final {
     // The client will get notified once capture is complete via signal_event_id.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::StartCapture StartCapture(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t signal_event_id, uint64_t image_id, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::StartCapture StartCapture(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t signal_event_id, uint64_t image_id, ::fidl::BytePart _response_buffer);
 
     // Releases resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ReleaseCapture ReleaseCapture(zx::unowned_channel _client_end, uint64_t image_id);
+    static ResultOf::ReleaseCapture ReleaseCapture(::zx::unowned_channel _client_end, uint64_t image_id);
 
     // Releases resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ReleaseCapture ReleaseCapture(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t image_id, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ReleaseCapture ReleaseCapture(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t image_id, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -3355,11 +3355,11 @@ class Controller final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<ImportVmoImageResponse> ImportVmoImage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportVmoImageRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ImportVmoImageResponse> ImportVmoImage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportVmoImageRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ImportImageResponse> ImportImage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportImageRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ImportImageResponse> ImportImage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportImageRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::internal::StatusAndError ReleaseImage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseImageRequest> params);
+    static ::fidl::internal::StatusAndError ReleaseImage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseImageRequest> params);
 
     // Imports an event into the driver and associates it with the given id.
     //
@@ -3369,7 +3369,7 @@ class Controller final {
     //
     // If a client is reusing events, they must clear the signal
     // before referencing the id again.
-    static ::fidl::internal::StatusAndError ImportEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportEventRequest> params);
+    static ::fidl::internal::StatusAndError ImportEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportEventRequest> params);
 
     // Releases the event imported with the given id.
     //
@@ -3377,50 +3377,50 @@ class Controller final {
     // will still be waited up or signaled as appropriate before its
     // resources are released. It is an error to reuse an ID while the
     // active config has references to it.
-    static ::fidl::internal::StatusAndError ReleaseEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseEventRequest> params);
+    static ::fidl::internal::StatusAndError ReleaseEvent(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseEventRequest> params);
 
-    static ::fidl::DecodeResult<CreateLayerResponse> CreateLayer(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CreateLayerResponse> CreateLayer(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::internal::StatusAndError DestroyLayer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DestroyLayerRequest> params);
+    static ::fidl::internal::StatusAndError DestroyLayer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<DestroyLayerRequest> params);
 
-    static ::fidl::internal::StatusAndError SetDisplayMode(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDisplayModeRequest> params);
+    static ::fidl::internal::StatusAndError SetDisplayMode(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDisplayModeRequest> params);
 
-    static ::fidl::internal::StatusAndError SetDisplayColorConversion(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDisplayColorConversionRequest> params);
+    static ::fidl::internal::StatusAndError SetDisplayColorConversion(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDisplayColorConversionRequest> params);
 
-    static ::fidl::internal::StatusAndError SetDisplayLayers(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDisplayLayersRequest> params);
+    static ::fidl::internal::StatusAndError SetDisplayLayers(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetDisplayLayersRequest> params);
 
-    static ::fidl::internal::StatusAndError SetLayerPrimaryConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerPrimaryConfigRequest> params);
+    static ::fidl::internal::StatusAndError SetLayerPrimaryConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerPrimaryConfigRequest> params);
 
-    static ::fidl::internal::StatusAndError SetLayerPrimaryPosition(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerPrimaryPositionRequest> params);
+    static ::fidl::internal::StatusAndError SetLayerPrimaryPosition(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerPrimaryPositionRequest> params);
 
-    static ::fidl::internal::StatusAndError SetLayerPrimaryAlpha(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerPrimaryAlphaRequest> params);
+    static ::fidl::internal::StatusAndError SetLayerPrimaryAlpha(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerPrimaryAlphaRequest> params);
 
-    static ::fidl::internal::StatusAndError SetLayerCursorConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerCursorConfigRequest> params);
+    static ::fidl::internal::StatusAndError SetLayerCursorConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerCursorConfigRequest> params);
 
-    static ::fidl::internal::StatusAndError SetLayerCursorPosition(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerCursorPositionRequest> params);
+    static ::fidl::internal::StatusAndError SetLayerCursorPosition(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerCursorPositionRequest> params);
 
-    static ::fidl::internal::StatusAndError SetLayerColorConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerColorConfigRequest> params);
+    static ::fidl::internal::StatusAndError SetLayerColorConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerColorConfigRequest> params);
 
-    static ::fidl::internal::StatusAndError SetLayerImage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerImageRequest> params);
+    static ::fidl::internal::StatusAndError SetLayerImage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetLayerImageRequest> params);
 
-    static ::fidl::DecodeResult<CheckConfigResponse> CheckConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CheckConfigRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<CheckConfigResponse> CheckConfig(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CheckConfigRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::internal::StatusAndError ApplyConfig(zx::unowned_channel _client_end);
+    static ::fidl::internal::StatusAndError ApplyConfig(::zx::unowned_channel _client_end);
 
-    static ::fidl::internal::StatusAndError EnableVsync(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EnableVsyncRequest> params);
+    static ::fidl::internal::StatusAndError EnableVsync(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<EnableVsyncRequest> params);
 
-    static ::fidl::internal::StatusAndError SetVirtconMode(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetVirtconModeRequest> params);
+    static ::fidl::internal::StatusAndError SetVirtconMode(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetVirtconModeRequest> params);
 
-    static ::fidl::DecodeResult<ImportBufferCollectionResponse> ImportBufferCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportBufferCollectionRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ImportBufferCollectionResponse> ImportBufferCollection(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportBufferCollectionRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::internal::StatusAndError ReleaseBufferCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseBufferCollectionRequest> params);
+    static ::fidl::internal::StatusAndError ReleaseBufferCollection(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseBufferCollectionRequest> params);
 
-    static ::fidl::DecodeResult<SetBufferCollectionConstraintsResponse> SetBufferCollectionConstraints(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetBufferCollectionConstraintsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<SetBufferCollectionConstraintsResponse> SetBufferCollectionConstraints(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetBufferCollectionConstraintsRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<GetSingleBufferFramebufferResponse> GetSingleBufferFramebuffer(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetSingleBufferFramebufferResponse> GetSingleBufferFramebuffer(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns true if Capture is supported on the platform.
-    static ::fidl::DecodeResult<IsCaptureSupportedResponse> IsCaptureSupported(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<IsCaptureSupportedResponse> IsCaptureSupported(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Imports a buffer collection backed VMO into the display controller. The VMO
     // will be used by display controller to capture the image being displayed.
@@ -3428,18 +3428,18 @@ class Controller final {
     // image_id must be used by the client to start capture and/or release
     // resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
-    static ::fidl::DecodeResult<ImportImageForCaptureResponse> ImportImageForCapture(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportImageForCaptureRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ImportImageForCaptureResponse> ImportImageForCapture(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportImageForCaptureRequest> params, ::fidl::BytePart response_buffer);
 
     // Starts capture. Client must provide a valid signal_event_id and
     // image_id. signal_event_id must have been imported into the driver
     // using ImportEvent FIDL API. Image_id is the id from ImportImageForCapture.
     // The client will get notified once capture is complete via signal_event_id.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
-    static ::fidl::DecodeResult<StartCaptureResponse> StartCapture(zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartCaptureRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<StartCaptureResponse> StartCapture(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartCaptureRequest> params, ::fidl::BytePart response_buffer);
 
     // Releases resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
-    static ::fidl::DecodeResult<ReleaseCaptureResponse> ReleaseCapture(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseCaptureRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ReleaseCaptureResponse> ReleaseCapture(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseCaptureRequest> params, ::fidl::BytePart response_buffer);
 
   };
 

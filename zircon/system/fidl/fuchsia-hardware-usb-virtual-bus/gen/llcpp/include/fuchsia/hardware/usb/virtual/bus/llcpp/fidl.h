@@ -133,7 +133,7 @@ class Bus final {
     class Enable_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Enable_Impl(zx::unowned_channel _client_end);
+      Enable_Impl(::zx::unowned_channel _client_end);
       ~Enable_Impl() = default;
       Enable_Impl(Enable_Impl&& other) = default;
       Enable_Impl& operator=(Enable_Impl&& other) = default;
@@ -149,7 +149,7 @@ class Bus final {
     class Disable_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Disable_Impl(zx::unowned_channel _client_end);
+      Disable_Impl(::zx::unowned_channel _client_end);
       ~Disable_Impl() = default;
       Disable_Impl(Disable_Impl&& other) = default;
       Disable_Impl& operator=(Disable_Impl&& other) = default;
@@ -165,7 +165,7 @@ class Bus final {
     class Connect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Connect_Impl(zx::unowned_channel _client_end);
+      Connect_Impl(::zx::unowned_channel _client_end);
       ~Connect_Impl() = default;
       Connect_Impl(Connect_Impl&& other) = default;
       Connect_Impl& operator=(Connect_Impl&& other) = default;
@@ -181,7 +181,7 @@ class Bus final {
     class Disconnect_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      Disconnect_Impl(zx::unowned_channel _client_end);
+      Disconnect_Impl(::zx::unowned_channel _client_end);
       ~Disconnect_Impl() = default;
       Disconnect_Impl(Disconnect_Impl&& other) = default;
       Disconnect_Impl& operator=(Disconnect_Impl&& other) = default;
@@ -210,7 +210,7 @@ class Bus final {
     class Enable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Enable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Enable_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Enable_Impl() = default;
       Enable_Impl(Enable_Impl&& other) = default;
       Enable_Impl& operator=(Enable_Impl&& other) = default;
@@ -226,7 +226,7 @@ class Bus final {
     class Disable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Disable_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Disable_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Disable_Impl() = default;
       Disable_Impl(Disable_Impl&& other) = default;
       Disable_Impl& operator=(Disable_Impl&& other) = default;
@@ -242,7 +242,7 @@ class Bus final {
     class Connect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Connect_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Connect_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Connect_Impl() = default;
       Connect_Impl(Connect_Impl&& other) = default;
       Connect_Impl& operator=(Connect_Impl&& other) = default;
@@ -258,7 +258,7 @@ class Bus final {
     class Disconnect_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Disconnect_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      Disconnect_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Disconnect_Impl() = default;
       Disconnect_Impl(Disconnect_Impl&& other) = default;
       Disconnect_Impl& operator=(Disconnect_Impl&& other) = default;
@@ -332,35 +332,35 @@ class Bus final {
 
     // Enables the virtual bus.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Enable Enable(zx::unowned_channel _client_end);
+    static ResultOf::Enable Enable(::zx::unowned_channel _client_end);
 
     // Enables the virtual bus.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Enable Enable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Enable Enable(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Disables the virtual bus.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Disable Disable(zx::unowned_channel _client_end);
+    static ResultOf::Disable Disable(::zx::unowned_channel _client_end);
 
     // Disables the virtual bus.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Disable Disable(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Disable Disable(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Simulates a USB connected event.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Connect Connect(zx::unowned_channel _client_end);
+    static ResultOf::Connect Connect(::zx::unowned_channel _client_end);
 
     // Simulates a USB connected event.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Connect Connect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Connect Connect(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Simulates a USB connected event.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::Disconnect Disconnect(zx::unowned_channel _client_end);
+    static ResultOf::Disconnect Disconnect(::zx::unowned_channel _client_end);
 
     // Simulates a USB connected event.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::Disconnect Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::Disconnect Disconnect(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -371,16 +371,16 @@ class Bus final {
    public:
 
     // Enables the virtual bus.
-    static ::fidl::DecodeResult<EnableResponse> Enable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<EnableResponse> Enable(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Disables the virtual bus.
-    static ::fidl::DecodeResult<DisableResponse> Disable(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<DisableResponse> Disable(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Simulates a USB connected event.
-    static ::fidl::DecodeResult<ConnectResponse> Connect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ConnectResponse> Connect(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Simulates a USB connected event.
-    static ::fidl::DecodeResult<DisconnectResponse> Disconnect(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<DisconnectResponse> Disconnect(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

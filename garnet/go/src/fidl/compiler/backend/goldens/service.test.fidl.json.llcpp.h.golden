@@ -46,7 +46,7 @@ class SecondProtocol final {
     class MethodOnSecond_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      MethodOnSecond_Impl(zx::unowned_channel _client_end);
+      MethodOnSecond_Impl(::zx::unowned_channel _client_end);
       ~MethodOnSecond_Impl() = default;
       MethodOnSecond_Impl(MethodOnSecond_Impl&& other) = default;
       MethodOnSecond_Impl& operator=(MethodOnSecond_Impl&& other) = default;
@@ -67,7 +67,7 @@ class SecondProtocol final {
     class MethodOnSecond_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      MethodOnSecond_Impl(zx::unowned_channel _client_end);
+      MethodOnSecond_Impl(::zx::unowned_channel _client_end);
       ~MethodOnSecond_Impl() = default;
       MethodOnSecond_Impl(MethodOnSecond_Impl&& other) = default;
       MethodOnSecond_Impl& operator=(MethodOnSecond_Impl&& other) = default;
@@ -105,7 +105,7 @@ class SecondProtocol final {
    public:
 
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::MethodOnSecond MethodOnSecond(zx::unowned_channel _client_end);
+    static ResultOf::MethodOnSecond MethodOnSecond(::zx::unowned_channel _client_end);
 
 
   };
@@ -116,7 +116,7 @@ class SecondProtocol final {
     InPlace() = delete;
    public:
 
-    static ::fidl::internal::StatusAndError MethodOnSecond(zx::unowned_channel _client_end);
+    static ::fidl::internal::StatusAndError MethodOnSecond(::zx::unowned_channel _client_end);
 
   };
 
@@ -179,7 +179,7 @@ class FirstProtocol final {
     class MethodOnFirst_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      MethodOnFirst_Impl(zx::unowned_channel _client_end);
+      MethodOnFirst_Impl(::zx::unowned_channel _client_end);
       ~MethodOnFirst_Impl() = default;
       MethodOnFirst_Impl(MethodOnFirst_Impl&& other) = default;
       MethodOnFirst_Impl& operator=(MethodOnFirst_Impl&& other) = default;
@@ -200,7 +200,7 @@ class FirstProtocol final {
     class MethodOnFirst_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      MethodOnFirst_Impl(zx::unowned_channel _client_end);
+      MethodOnFirst_Impl(::zx::unowned_channel _client_end);
       ~MethodOnFirst_Impl() = default;
       MethodOnFirst_Impl(MethodOnFirst_Impl&& other) = default;
       MethodOnFirst_Impl& operator=(MethodOnFirst_Impl&& other) = default;
@@ -238,7 +238,7 @@ class FirstProtocol final {
    public:
 
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::MethodOnFirst MethodOnFirst(zx::unowned_channel _client_end);
+    static ResultOf::MethodOnFirst MethodOnFirst(::zx::unowned_channel _client_end);
 
 
   };
@@ -249,7 +249,7 @@ class FirstProtocol final {
     InPlace() = delete;
    public:
 
-    static ::fidl::internal::StatusAndError MethodOnFirst(zx::unowned_channel _client_end);
+    static ::fidl::internal::StatusAndError MethodOnFirst(::zx::unowned_channel _client_end);
 
   };
 
@@ -303,9 +303,9 @@ class SingleMemberService final {
   class ServiceClient final {
     ServiceClient() = delete;
    public:
-    ServiceClient(zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
-		: dir_(std::move(dir)), connect_func_(connect_func) {}
-	
+    ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
+    : dir_(std::move(dir)), connect_func_(connect_func) {}
+  
     // Connects to the member protocol "single_member". Returns a |fidl::ClientChannel| on
     // success, which can be used with |fidl::BindSyncClient| to create a synchronous
     // client.
@@ -320,13 +320,13 @@ class SingleMemberService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientChannel| returned from this method.
     ::fidl::result<::fidl::ClientChannel<FirstProtocol>> connect_single_member() {
-      zx::channel local, remote;
-      zx_status_t result = zx::channel::create(0, &local, &remote);
+      ::zx::channel local, remote;
+      zx_status_t result = ::zx::channel::create(0, &local, &remote);
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       result =
-          connect_func_(zx::unowned_channel(dir_), ::fidl::StringView("single_member"), std::move(remote));
+          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("single_member"), std::move(remote));
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
@@ -334,7 +334,7 @@ class SingleMemberService final {
     }
 
    private:
-    zx::channel dir_;
+    ::zx::channel dir_;
     ::fidl::internal::ConnectMemberFunc connect_func_;
   };
 
@@ -369,9 +369,9 @@ class MultiHomogeneousMemberService final {
   class ServiceClient final {
     ServiceClient() = delete;
    public:
-    ServiceClient(zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
-		: dir_(std::move(dir)), connect_func_(connect_func) {}
-	
+    ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
+    : dir_(std::move(dir)), connect_func_(connect_func) {}
+  
     // Connects to the member protocol "first_member". Returns a |fidl::ClientChannel| on
     // success, which can be used with |fidl::BindSyncClient| to create a synchronous
     // client.
@@ -386,19 +386,19 @@ class MultiHomogeneousMemberService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientChannel| returned from this method.
     ::fidl::result<::fidl::ClientChannel<FirstProtocol>> connect_first_member() {
-      zx::channel local, remote;
-      zx_status_t result = zx::channel::create(0, &local, &remote);
+      ::zx::channel local, remote;
+      zx_status_t result = ::zx::channel::create(0, &local, &remote);
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       result =
-          connect_func_(zx::unowned_channel(dir_), ::fidl::StringView("first_member"), std::move(remote));
+          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("first_member"), std::move(remote));
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       return ::fit::ok(::fidl::ClientChannel<FirstProtocol>(std::move(local)));
     }
-	
+  
     // Connects to the member protocol "second_member". Returns a |fidl::ClientChannel| on
     // success, which can be used with |fidl::BindSyncClient| to create a synchronous
     // client.
@@ -413,13 +413,13 @@ class MultiHomogeneousMemberService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientChannel| returned from this method.
     ::fidl::result<::fidl::ClientChannel<FirstProtocol>> connect_second_member() {
-      zx::channel local, remote;
-      zx_status_t result = zx::channel::create(0, &local, &remote);
+      ::zx::channel local, remote;
+      zx_status_t result = ::zx::channel::create(0, &local, &remote);
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       result =
-          connect_func_(zx::unowned_channel(dir_), ::fidl::StringView("second_member"), std::move(remote));
+          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("second_member"), std::move(remote));
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
@@ -427,7 +427,7 @@ class MultiHomogeneousMemberService final {
     }
 
    private:
-    zx::channel dir_;
+    ::zx::channel dir_;
     ::fidl::internal::ConnectMemberFunc connect_func_;
   };
 
@@ -472,9 +472,9 @@ class MultiHeterogeneousMemberService final {
   class ServiceClient final {
     ServiceClient() = delete;
    public:
-    ServiceClient(zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
-		: dir_(std::move(dir)), connect_func_(connect_func) {}
-	
+    ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
+    : dir_(std::move(dir)), connect_func_(connect_func) {}
+  
     // Connects to the member protocol "first_member". Returns a |fidl::ClientChannel| on
     // success, which can be used with |fidl::BindSyncClient| to create a synchronous
     // client.
@@ -489,19 +489,19 @@ class MultiHeterogeneousMemberService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientChannel| returned from this method.
     ::fidl::result<::fidl::ClientChannel<FirstProtocol>> connect_first_member() {
-      zx::channel local, remote;
-      zx_status_t result = zx::channel::create(0, &local, &remote);
+      ::zx::channel local, remote;
+      zx_status_t result = ::zx::channel::create(0, &local, &remote);
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       result =
-          connect_func_(zx::unowned_channel(dir_), ::fidl::StringView("first_member"), std::move(remote));
+          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("first_member"), std::move(remote));
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       return ::fit::ok(::fidl::ClientChannel<FirstProtocol>(std::move(local)));
     }
-	
+  
     // Connects to the member protocol "second_member". Returns a |fidl::ClientChannel| on
     // success, which can be used with |fidl::BindSyncClient| to create a synchronous
     // client.
@@ -516,13 +516,13 @@ class MultiHeterogeneousMemberService final {
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientChannel| returned from this method.
     ::fidl::result<::fidl::ClientChannel<SecondProtocol>> connect_second_member() {
-      zx::channel local, remote;
-      zx_status_t result = zx::channel::create(0, &local, &remote);
+      ::zx::channel local, remote;
+      zx_status_t result = ::zx::channel::create(0, &local, &remote);
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
       result =
-          connect_func_(zx::unowned_channel(dir_), ::fidl::StringView("second_member"), std::move(remote));
+          connect_func_(::zx::unowned_channel(dir_), ::fidl::StringView("second_member"), std::move(remote));
       if (result != ZX_OK) {
         return ::fit::error(result);
       }
@@ -530,7 +530,7 @@ class MultiHeterogeneousMemberService final {
     }
 
    private:
-    zx::channel dir_;
+    ::zx::channel dir_;
     ::fidl::internal::ConnectMemberFunc connect_func_;
   };
 

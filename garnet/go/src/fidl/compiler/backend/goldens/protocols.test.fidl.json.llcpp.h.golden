@@ -457,7 +457,7 @@ class ChannelProtocol final {
     class MethodA_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      MethodA_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b);
+      MethodA_Impl(::zx::unowned_channel _client_end, int64_t a, int64_t b);
       ~MethodA_Impl() = default;
       MethodA_Impl(MethodA_Impl&& other) = default;
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
@@ -469,7 +469,7 @@ class ChannelProtocol final {
     class MethodB_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      MethodB_Impl(zx::unowned_channel _client_end, int64_t a, int64_t b);
+      MethodB_Impl(::zx::unowned_channel _client_end, int64_t a, int64_t b);
       ~MethodB_Impl() = default;
       MethodB_Impl(MethodB_Impl&& other) = default;
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
@@ -485,7 +485,7 @@ class ChannelProtocol final {
     class MutateSocket_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      MutateSocket_Impl(zx::unowned_channel _client_end, ::zx::socket a);
+      MutateSocket_Impl(::zx::unowned_channel _client_end, ::zx::socket a);
       ~MutateSocket_Impl() = default;
       MutateSocket_Impl(MutateSocket_Impl&& other) = default;
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
@@ -512,7 +512,7 @@ class ChannelProtocol final {
     class MethodA_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      MethodA_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+      MethodA_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
       ~MethodA_Impl() = default;
       MethodA_Impl(MethodA_Impl&& other) = default;
       MethodA_Impl& operator=(MethodA_Impl&& other) = default;
@@ -524,7 +524,7 @@ class ChannelProtocol final {
     class MethodB_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      MethodB_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+      MethodB_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
       ~MethodB_Impl() = default;
       MethodB_Impl(MethodB_Impl&& other) = default;
       MethodB_Impl& operator=(MethodB_Impl&& other) = default;
@@ -540,7 +540,7 @@ class ChannelProtocol final {
     class MutateSocket_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      MutateSocket_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
+      MutateSocket_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
       ~MutateSocket_Impl() = default;
       MutateSocket_Impl(MutateSocket_Impl&& other) = default;
       MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
@@ -603,28 +603,28 @@ class ChannelProtocol final {
    public:
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::MethodA MethodA(zx::unowned_channel _client_end, int64_t a, int64_t b);
+    static ResultOf::MethodA MethodA(::zx::unowned_channel _client_end, int64_t a, int64_t b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::MethodA MethodA(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
+    static UnownedResultOf::MethodA MethodA(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::MethodB MethodB(zx::unowned_channel _client_end, int64_t a, int64_t b);
+    static ResultOf::MethodB MethodB(::zx::unowned_channel _client_end, int64_t a, int64_t b);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::MethodB MethodB(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::MethodB MethodB(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t a, int64_t b, ::fidl::BytePart _response_buffer);
 
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::MutateSocket MutateSocket(zx::unowned_channel _client_end, ::zx::socket a);
+    static ResultOf::MutateSocket MutateSocket(::zx::unowned_channel _client_end, ::zx::socket a);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::MutateSocket MutateSocket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::MutateSocket MutateSocket(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::socket a, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -633,11 +633,11 @@ class ChannelProtocol final {
     InPlace() = delete;
    public:
 
-    static ::fidl::internal::StatusAndError MethodA(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
+    static ::fidl::internal::StatusAndError MethodA(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodARequest> params);
 
-    static ::fidl::DecodeResult<MethodBResponse> MethodB(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<MethodBResponse> MethodB(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<MethodBRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<MutateSocketRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -893,7 +893,7 @@ class WithAndWithoutRequestResponse final {
     class NoRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      NoRequestNoResponse_Impl(zx::unowned_channel _client_end);
+      NoRequestNoResponse_Impl(::zx::unowned_channel _client_end);
       ~NoRequestNoResponse_Impl() = default;
       NoRequestNoResponse_Impl(NoRequestNoResponse_Impl&& other) = default;
       NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) = default;
@@ -905,7 +905,7 @@ class WithAndWithoutRequestResponse final {
     class NoRequestEmptyResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      NoRequestEmptyResponse_Impl(zx::unowned_channel _client_end);
+      NoRequestEmptyResponse_Impl(::zx::unowned_channel _client_end);
       ~NoRequestEmptyResponse_Impl() = default;
       NoRequestEmptyResponse_Impl(NoRequestEmptyResponse_Impl&& other) = default;
       NoRequestEmptyResponse_Impl& operator=(NoRequestEmptyResponse_Impl&& other) = default;
@@ -921,7 +921,7 @@ class WithAndWithoutRequestResponse final {
     class NoRequestWithResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      NoRequestWithResponse_Impl(zx::unowned_channel _client_end);
+      NoRequestWithResponse_Impl(::zx::unowned_channel _client_end);
       ~NoRequestWithResponse_Impl() = default;
       NoRequestWithResponse_Impl(NoRequestWithResponse_Impl&& other) = default;
       NoRequestWithResponse_Impl& operator=(NoRequestWithResponse_Impl&& other) = default;
@@ -936,7 +936,7 @@ class WithAndWithoutRequestResponse final {
     class WithRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      WithRequestNoResponse_Impl(zx::unowned_channel _client_end, ::fidl::StringView arg);
+      WithRequestNoResponse_Impl(::zx::unowned_channel _client_end, ::fidl::StringView arg);
       ~WithRequestNoResponse_Impl() = default;
       WithRequestNoResponse_Impl(WithRequestNoResponse_Impl&& other) = default;
       WithRequestNoResponse_Impl& operator=(WithRequestNoResponse_Impl&& other) = default;
@@ -948,7 +948,7 @@ class WithAndWithoutRequestResponse final {
     class WithRequestEmptyResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      WithRequestEmptyResponse_Impl(zx::unowned_channel _client_end, ::fidl::StringView arg);
+      WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end, ::fidl::StringView arg);
       ~WithRequestEmptyResponse_Impl() = default;
       WithRequestEmptyResponse_Impl(WithRequestEmptyResponse_Impl&& other) = default;
       WithRequestEmptyResponse_Impl& operator=(WithRequestEmptyResponse_Impl&& other) = default;
@@ -964,7 +964,7 @@ class WithAndWithoutRequestResponse final {
     class WithRequestWithResponse_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      WithRequestWithResponse_Impl(zx::unowned_channel _client_end, ::fidl::StringView arg);
+      WithRequestWithResponse_Impl(::zx::unowned_channel _client_end, ::fidl::StringView arg);
       ~WithRequestWithResponse_Impl() = default;
       WithRequestWithResponse_Impl(WithRequestWithResponse_Impl&& other) = default;
       WithRequestWithResponse_Impl& operator=(WithRequestWithResponse_Impl&& other) = default;
@@ -994,7 +994,7 @@ class WithAndWithoutRequestResponse final {
     class NoRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      NoRequestNoResponse_Impl(zx::unowned_channel _client_end);
+      NoRequestNoResponse_Impl(::zx::unowned_channel _client_end);
       ~NoRequestNoResponse_Impl() = default;
       NoRequestNoResponse_Impl(NoRequestNoResponse_Impl&& other) = default;
       NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) = default;
@@ -1006,7 +1006,7 @@ class WithAndWithoutRequestResponse final {
     class NoRequestEmptyResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      NoRequestEmptyResponse_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      NoRequestEmptyResponse_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~NoRequestEmptyResponse_Impl() = default;
       NoRequestEmptyResponse_Impl(NoRequestEmptyResponse_Impl&& other) = default;
       NoRequestEmptyResponse_Impl& operator=(NoRequestEmptyResponse_Impl&& other) = default;
@@ -1022,7 +1022,7 @@ class WithAndWithoutRequestResponse final {
     class NoRequestWithResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      NoRequestWithResponse_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      NoRequestWithResponse_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~NoRequestWithResponse_Impl() = default;
       NoRequestWithResponse_Impl(NoRequestWithResponse_Impl&& other) = default;
       NoRequestWithResponse_Impl& operator=(NoRequestWithResponse_Impl&& other) = default;
@@ -1037,7 +1037,7 @@ class WithAndWithoutRequestResponse final {
     class WithRequestNoResponse_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      WithRequestNoResponse_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+      WithRequestNoResponse_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
       ~WithRequestNoResponse_Impl() = default;
       WithRequestNoResponse_Impl(WithRequestNoResponse_Impl&& other) = default;
       WithRequestNoResponse_Impl& operator=(WithRequestNoResponse_Impl&& other) = default;
@@ -1049,7 +1049,7 @@ class WithAndWithoutRequestResponse final {
     class WithRequestEmptyResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      WithRequestEmptyResponse_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+      WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
       ~WithRequestEmptyResponse_Impl() = default;
       WithRequestEmptyResponse_Impl(WithRequestEmptyResponse_Impl&& other) = default;
       WithRequestEmptyResponse_Impl& operator=(WithRequestEmptyResponse_Impl&& other) = default;
@@ -1065,7 +1065,7 @@ class WithAndWithoutRequestResponse final {
     class WithRequestWithResponse_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      WithRequestWithResponse_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+      WithRequestWithResponse_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
       ~WithRequestWithResponse_Impl() = default;
       WithRequestWithResponse_Impl(WithRequestWithResponse_Impl&& other) = default;
       WithRequestWithResponse_Impl& operator=(WithRequestWithResponse_Impl&& other) = default;
@@ -1145,42 +1145,42 @@ class WithAndWithoutRequestResponse final {
    public:
 
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::NoRequestNoResponse NoRequestNoResponse(zx::unowned_channel _client_end);
+    static ResultOf::NoRequestNoResponse NoRequestNoResponse(::zx::unowned_channel _client_end);
 
 
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse(zx::unowned_channel _client_end);
+    static ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse(::zx::unowned_channel _client_end);
 
 
     // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::NoRequestWithResponse NoRequestWithResponse(zx::unowned_channel _client_end);
+    static ResultOf::NoRequestWithResponse NoRequestWithResponse(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Request is heap-allocated.
-    static ResultOf::WithRequestNoResponse WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::StringView arg);
+    static ResultOf::WithRequestNoResponse WithRequestNoResponse(::zx::unowned_channel _client_end, ::fidl::StringView arg);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
+    static UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg);
 
     // Allocates 16 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::StringView arg);
+    static ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(::zx::unowned_channel _client_end, ::fidl::StringView arg);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
 
     // Request is heap-allocated. Response is heap-allocated.
-    static ResultOf::WithRequestWithResponse WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::StringView arg);
+    static ResultOf::WithRequestWithResponse WithRequestWithResponse(::zx::unowned_channel _client_end, ::fidl::StringView arg);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView arg, ::fidl::BytePart _response_buffer);
 
     // Handle all possible events defined in this protocol.
     // Blocks to consume exactly one message from the channel, then call the corresponding handler
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
-    static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers handlers);
+    static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -1189,17 +1189,17 @@ class WithAndWithoutRequestResponse final {
     InPlace() = delete;
    public:
 
-    static ::fidl::internal::StatusAndError NoRequestNoResponse(zx::unowned_channel _client_end);
+    static ::fidl::internal::StatusAndError NoRequestNoResponse(::zx::unowned_channel _client_end);
 
-    static ::fidl::DecodeResult<NoRequestEmptyResponseResponse> NoRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<NoRequestEmptyResponseResponse> NoRequestEmptyResponse(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<NoRequestWithResponseResponse> NoRequestWithResponse(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::internal::StatusAndError WithRequestNoResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestNoResponseRequest> params);
+    static ::fidl::internal::StatusAndError WithRequestNoResponse(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestNoResponseRequest> params);
 
-    static ::fidl::DecodeResult<WithRequestEmptyResponseResponse> WithRequestEmptyResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WithRequestEmptyResponseResponse> WithRequestEmptyResponse(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<WithRequestWithResponseResponse> WithRequestWithResponse(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WithRequestWithResponseResponse> WithRequestWithResponse(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WithRequestWithResponseRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1512,7 +1512,7 @@ class WithErrorSyntax final {
     class ResponseAsStruct_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ResponseAsStruct_Impl(zx::unowned_channel _client_end);
+      ResponseAsStruct_Impl(::zx::unowned_channel _client_end);
       ~ResponseAsStruct_Impl() = default;
       ResponseAsStruct_Impl(ResponseAsStruct_Impl&& other) = default;
       ResponseAsStruct_Impl& operator=(ResponseAsStruct_Impl&& other) = default;
@@ -1528,7 +1528,7 @@ class WithErrorSyntax final {
     class ErrorAsPrimitive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ErrorAsPrimitive_Impl(zx::unowned_channel _client_end);
+      ErrorAsPrimitive_Impl(::zx::unowned_channel _client_end);
       ~ErrorAsPrimitive_Impl() = default;
       ErrorAsPrimitive_Impl(ErrorAsPrimitive_Impl&& other) = default;
       ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
@@ -1544,7 +1544,7 @@ class WithErrorSyntax final {
     class ErrorAsEnum_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      ErrorAsEnum_Impl(zx::unowned_channel _client_end);
+      ErrorAsEnum_Impl(::zx::unowned_channel _client_end);
       ~ErrorAsEnum_Impl() = default;
       ErrorAsEnum_Impl(ErrorAsEnum_Impl&& other) = default;
       ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
@@ -1572,7 +1572,7 @@ class WithErrorSyntax final {
     class ResponseAsStruct_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ResponseAsStruct_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ResponseAsStruct_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~ResponseAsStruct_Impl() = default;
       ResponseAsStruct_Impl(ResponseAsStruct_Impl&& other) = default;
       ResponseAsStruct_Impl& operator=(ResponseAsStruct_Impl&& other) = default;
@@ -1588,7 +1588,7 @@ class WithErrorSyntax final {
     class ErrorAsPrimitive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ErrorAsPrimitive_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ErrorAsPrimitive_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~ErrorAsPrimitive_Impl() = default;
       ErrorAsPrimitive_Impl(ErrorAsPrimitive_Impl&& other) = default;
       ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
@@ -1604,7 +1604,7 @@ class WithErrorSyntax final {
     class ErrorAsEnum_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      ErrorAsEnum_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ErrorAsEnum_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~ErrorAsEnum_Impl() = default;
       ErrorAsEnum_Impl(ErrorAsEnum_Impl&& other) = default;
       ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
@@ -1662,22 +1662,22 @@ class WithErrorSyntax final {
    public:
 
     // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ResponseAsStruct ResponseAsStruct(zx::unowned_channel _client_end);
+    static ResultOf::ResponseAsStruct ResponseAsStruct(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ResponseAsStruct ResponseAsStruct(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ResponseAsStruct ResponseAsStruct(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(zx::unowned_channel _client_end);
+    static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ErrorAsEnum ErrorAsEnum(zx::unowned_channel _client_end);
+    static ResultOf::ErrorAsEnum ErrorAsEnum(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ErrorAsEnum ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::ErrorAsEnum ErrorAsEnum(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1687,11 +1687,11 @@ class WithErrorSyntax final {
     InPlace() = delete;
    public:
 
-    static ::fidl::DecodeResult<ResponseAsStructResponse> ResponseAsStruct(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ResponseAsStructResponse> ResponseAsStruct(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    static ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 

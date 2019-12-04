@@ -853,7 +853,7 @@ class TestDevice final {
     class AddDeviceWithPowerArgs_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AddDeviceWithPowerArgs_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible);
+      AddDeviceWithPowerArgs_Impl(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible);
       ~AddDeviceWithPowerArgs_Impl() = default;
       AddDeviceWithPowerArgs_Impl(AddDeviceWithPowerArgs_Impl&& other) = default;
       AddDeviceWithPowerArgs_Impl& operator=(AddDeviceWithPowerArgs_Impl&& other) = default;
@@ -869,7 +869,7 @@ class TestDevice final {
     class GetCurrentDevicePowerState_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetCurrentDevicePowerState_Impl(zx::unowned_channel _client_end);
+      GetCurrentDevicePowerState_Impl(::zx::unowned_channel _client_end);
       ~GetCurrentDevicePowerState_Impl() = default;
       GetCurrentDevicePowerState_Impl(GetCurrentDevicePowerState_Impl&& other) = default;
       GetCurrentDevicePowerState_Impl& operator=(GetCurrentDevicePowerState_Impl&& other) = default;
@@ -885,7 +885,7 @@ class TestDevice final {
     class GetCurrentSuspendReason_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetCurrentSuspendReason_Impl(zx::unowned_channel _client_end);
+      GetCurrentSuspendReason_Impl(::zx::unowned_channel _client_end);
       ~GetCurrentSuspendReason_Impl() = default;
       GetCurrentSuspendReason_Impl(GetCurrentSuspendReason_Impl&& other) = default;
       GetCurrentSuspendReason_Impl& operator=(GetCurrentSuspendReason_Impl&& other) = default;
@@ -901,7 +901,7 @@ class TestDevice final {
     class GetCurrentDevicePerformanceState_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetCurrentDevicePerformanceState_Impl(zx::unowned_channel _client_end);
+      GetCurrentDevicePerformanceState_Impl(::zx::unowned_channel _client_end);
       ~GetCurrentDevicePerformanceState_Impl() = default;
       GetCurrentDevicePerformanceState_Impl(GetCurrentDevicePerformanceState_Impl&& other) = default;
       GetCurrentDevicePerformanceState_Impl& operator=(GetCurrentDevicePerformanceState_Impl&& other) = default;
@@ -917,7 +917,7 @@ class TestDevice final {
     class GetCurrentDeviceAutoSuspendConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      GetCurrentDeviceAutoSuspendConfig_Impl(zx::unowned_channel _client_end);
+      GetCurrentDeviceAutoSuspendConfig_Impl(::zx::unowned_channel _client_end);
       ~GetCurrentDeviceAutoSuspendConfig_Impl() = default;
       GetCurrentDeviceAutoSuspendConfig_Impl(GetCurrentDeviceAutoSuspendConfig_Impl&& other) = default;
       GetCurrentDeviceAutoSuspendConfig_Impl& operator=(GetCurrentDeviceAutoSuspendConfig_Impl&& other) = default;
@@ -947,7 +947,7 @@ class TestDevice final {
     class AddDeviceWithPowerArgs_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AddDeviceWithPowerArgs_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer);
+      AddDeviceWithPowerArgs_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer);
       ~AddDeviceWithPowerArgs_Impl() = default;
       AddDeviceWithPowerArgs_Impl(AddDeviceWithPowerArgs_Impl&& other) = default;
       AddDeviceWithPowerArgs_Impl& operator=(AddDeviceWithPowerArgs_Impl&& other) = default;
@@ -963,7 +963,7 @@ class TestDevice final {
     class GetCurrentDevicePowerState_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetCurrentDevicePowerState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetCurrentDevicePowerState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetCurrentDevicePowerState_Impl() = default;
       GetCurrentDevicePowerState_Impl(GetCurrentDevicePowerState_Impl&& other) = default;
       GetCurrentDevicePowerState_Impl& operator=(GetCurrentDevicePowerState_Impl&& other) = default;
@@ -979,7 +979,7 @@ class TestDevice final {
     class GetCurrentSuspendReason_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetCurrentSuspendReason_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetCurrentSuspendReason_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetCurrentSuspendReason_Impl() = default;
       GetCurrentSuspendReason_Impl(GetCurrentSuspendReason_Impl&& other) = default;
       GetCurrentSuspendReason_Impl& operator=(GetCurrentSuspendReason_Impl&& other) = default;
@@ -995,7 +995,7 @@ class TestDevice final {
     class GetCurrentDevicePerformanceState_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetCurrentDevicePerformanceState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetCurrentDevicePerformanceState_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetCurrentDevicePerformanceState_Impl() = default;
       GetCurrentDevicePerformanceState_Impl(GetCurrentDevicePerformanceState_Impl&& other) = default;
       GetCurrentDevicePerformanceState_Impl& operator=(GetCurrentDevicePerformanceState_Impl&& other) = default;
@@ -1011,7 +1011,7 @@ class TestDevice final {
     class GetCurrentDeviceAutoSuspendConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      GetCurrentDeviceAutoSuspendConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      GetCurrentDeviceAutoSuspendConfig_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~GetCurrentDeviceAutoSuspendConfig_Impl() = default;
       GetCurrentDeviceAutoSuspendConfig_Impl(GetCurrentDeviceAutoSuspendConfig_Impl&& other) = default;
       GetCurrentDeviceAutoSuspendConfig_Impl& operator=(GetCurrentDeviceAutoSuspendConfig_Impl&& other) = default;
@@ -1094,43 +1094,43 @@ class TestDevice final {
 
     // Add Test Device with some powerargs
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible);
+    static ResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible);
 
     // Add Test Device with some powerargs
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer);
 
     // Get current power state of the device
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(zx::unowned_channel _client_end);
+    static ResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(::zx::unowned_channel _client_end);
 
     // Get current power state of the device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get the suspend reason of the last suspend call
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetCurrentSuspendReason GetCurrentSuspendReason(zx::unowned_channel _client_end);
+    static ResultOf::GetCurrentSuspendReason GetCurrentSuspendReason(::zx::unowned_channel _client_end);
 
     // Get the suspend reason of the last suspend call
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetCurrentSuspendReason GetCurrentSuspendReason(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetCurrentSuspendReason GetCurrentSuspendReason(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get current performance state of the device
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState(zx::unowned_channel _client_end);
+    static ResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState(::zx::unowned_channel _client_end);
 
     // Get current performance state of the device
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get current auto suspend status and deepest_sleep_state
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::GetCurrentDeviceAutoSuspendConfig GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel _client_end);
+    static ResultOf::GetCurrentDeviceAutoSuspendConfig GetCurrentDeviceAutoSuspendConfig(::zx::unowned_channel _client_end);
 
     // Get current auto suspend status and deepest_sleep_state
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetCurrentDeviceAutoSuspendConfig GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::GetCurrentDeviceAutoSuspendConfig GetCurrentDeviceAutoSuspendConfig(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1141,19 +1141,19 @@ class TestDevice final {
    public:
 
     // Add Test Device with some powerargs
-    static ::fidl::DecodeResult<AddDeviceWithPowerArgsResponse> AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceWithPowerArgsRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<AddDeviceWithPowerArgsResponse> AddDeviceWithPowerArgs(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceWithPowerArgsRequest> params, ::fidl::BytePart response_buffer);
 
     // Get current power state of the device
-    static ::fidl::DecodeResult<GetCurrentDevicePowerStateResponse> GetCurrentDevicePowerState(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetCurrentDevicePowerStateResponse> GetCurrentDevicePowerState(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get the suspend reason of the last suspend call
-    static ::fidl::DecodeResult<GetCurrentSuspendReasonResponse> GetCurrentSuspendReason(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetCurrentSuspendReasonResponse> GetCurrentSuspendReason(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get current performance state of the device
-    static ::fidl::DecodeResult<GetCurrentDevicePerformanceStateResponse> GetCurrentDevicePerformanceState(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetCurrentDevicePerformanceStateResponse> GetCurrentDevicePerformanceState(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Get current auto suspend status and deepest_sleep_state
-    static ::fidl::DecodeResult<GetCurrentDeviceAutoSuspendConfigResponse> GetCurrentDeviceAutoSuspendConfig(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<GetCurrentDeviceAutoSuspendConfigResponse> GetCurrentDeviceAutoSuspendConfig(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
