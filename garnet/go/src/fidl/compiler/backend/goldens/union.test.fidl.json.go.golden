@@ -21,29 +21,32 @@ var _mNullableUnionStruct = _bindings.CreateLazyMarshaler(NullableUnionStruct{})
 func (msg *NullableUnionStruct) Marshaler() _bindings.Marshaler {
 	return _mNullableUnionStruct
 }
-type I_unionTag uint32
+type I_unionTag uint64
 const (
-	_ I_unionTag = iota
-	UnionPrimitive
-	UnionStringNeedsConstructor
-	UnionVectorStringAlsoNeedsConstructor
+	UnionPrimitive = 1 // 0x00000001
+	UnionStringNeedsConstructor = 2 // 0x00000002
+	UnionVectorStringAlsoNeedsConstructor = 3 // 0x00000003
 )
 
 
 type Union struct {
-	I_unionTag `fidl:"u,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_unionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	Primitive int32  `fidl:"1"`
 	StringNeedsConstructor string  `fidl:"2,"`
 	VectorStringAlsoNeedsConstructor []string  `fidl:"3,,"`
 }
 
-func (u *Union) Which() I_unionTag {
-	return u.I_unionTag
+func (_m *Union) Which() I_unionTag {
+	return _m.I_unionTag
 }
 
-func (u *Union) SetPrimitive(primitive int32) {
-	u.I_unionTag = UnionPrimitive
-	u.Primitive = primitive
+func (_m *Union) Ordinal() uint64 {
+	return uint64(_m.I_unionTag)
+}
+
+func (_m *Union) SetPrimitive(primitive int32) {
+	_m.I_unionTag = UnionPrimitive
+	_m.Primitive = primitive
 }
 
 func UnionWithPrimitive(primitive int32) Union {
@@ -52,9 +55,9 @@ func UnionWithPrimitive(primitive int32) Union {
 	return _u
 }
 
-func (u *Union) SetStringNeedsConstructor(stringNeedsConstructor string) {
-	u.I_unionTag = UnionStringNeedsConstructor
-	u.StringNeedsConstructor = stringNeedsConstructor
+func (_m *Union) SetStringNeedsConstructor(stringNeedsConstructor string) {
+	_m.I_unionTag = UnionStringNeedsConstructor
+	_m.StringNeedsConstructor = stringNeedsConstructor
 }
 
 func UnionWithStringNeedsConstructor(stringNeedsConstructor string) Union {
@@ -63,9 +66,9 @@ func UnionWithStringNeedsConstructor(stringNeedsConstructor string) Union {
 	return _u
 }
 
-func (u *Union) SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor []string) {
-	u.I_unionTag = UnionVectorStringAlsoNeedsConstructor
-	u.VectorStringAlsoNeedsConstructor = vectorStringAlsoNeedsConstructor
+func (_m *Union) SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor []string) {
+	_m.I_unionTag = UnionVectorStringAlsoNeedsConstructor
+	_m.VectorStringAlsoNeedsConstructor = vectorStringAlsoNeedsConstructor
 }
 
 func UnionWithVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor []string) Union {
@@ -73,25 +76,30 @@ func UnionWithVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor 
 	_u.SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor)
 	return _u
 }
-type I_fieldCollisionTag uint32
+
+
+type I_fieldCollisionTag uint64
 const (
-	_ I_fieldCollisionTag = iota
-	FieldCollisionFieldCollisionTag
+	FieldCollisionFieldCollisionTag = 1 // 0x00000001
 )
 
 
 type FieldCollision struct {
-	I_fieldCollisionTag `fidl:"u,8,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_fieldCollisionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	FieldCollisionTag int32  `fidl:"1"`
 }
 
-func (u *FieldCollision) Which() I_fieldCollisionTag {
-	return u.I_fieldCollisionTag
+func (_m *FieldCollision) Which() I_fieldCollisionTag {
+	return _m.I_fieldCollisionTag
 }
 
-func (u *FieldCollision) SetFieldCollisionTag(fieldCollisionTag int32) {
-	u.I_fieldCollisionTag = FieldCollisionFieldCollisionTag
-	u.FieldCollisionTag = fieldCollisionTag
+func (_m *FieldCollision) Ordinal() uint64 {
+	return uint64(_m.I_fieldCollisionTag)
+}
+
+func (_m *FieldCollision) SetFieldCollisionTag(fieldCollisionTag int32) {
+	_m.I_fieldCollisionTag = FieldCollisionFieldCollisionTag
+	_m.FieldCollisionTag = fieldCollisionTag
 }
 
 func FieldCollisionWithFieldCollisionTag(fieldCollisionTag int32) FieldCollision {
@@ -99,27 +107,32 @@ func FieldCollisionWithFieldCollisionTag(fieldCollisionTag int32) FieldCollision
 	_u.SetFieldCollisionTag(fieldCollisionTag)
 	return _u
 }
-type I_explicitUnionTag uint32
+
+
+type I_explicitUnionTag uint64
 const (
-	_ I_explicitUnionTag = iota
-	ExplicitUnionPrimitive
-	ExplicitUnionStringNeedsConstructor
+	ExplicitUnionPrimitive = 1 // 0x00000001
+	ExplicitUnionStringNeedsConstructor = 3 // 0x00000003
 )
 
 
 type ExplicitUnion struct {
-	I_explicitUnionTag `fidl:"u,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_explicitUnionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	Primitive int32  `fidl:"1"`
 	StringNeedsConstructor string  `fidl:"3,"`
 }
 
-func (u *ExplicitUnion) Which() I_explicitUnionTag {
-	return u.I_explicitUnionTag
+func (_m *ExplicitUnion) Which() I_explicitUnionTag {
+	return _m.I_explicitUnionTag
 }
 
-func (u *ExplicitUnion) SetPrimitive(primitive int32) {
-	u.I_explicitUnionTag = ExplicitUnionPrimitive
-	u.Primitive = primitive
+func (_m *ExplicitUnion) Ordinal() uint64 {
+	return uint64(_m.I_explicitUnionTag)
+}
+
+func (_m *ExplicitUnion) SetPrimitive(primitive int32) {
+	_m.I_explicitUnionTag = ExplicitUnionPrimitive
+	_m.Primitive = primitive
 }
 
 func ExplicitUnionWithPrimitive(primitive int32) ExplicitUnion {
@@ -128,9 +141,9 @@ func ExplicitUnionWithPrimitive(primitive int32) ExplicitUnion {
 	return _u
 }
 
-func (u *ExplicitUnion) SetStringNeedsConstructor(stringNeedsConstructor string) {
-	u.I_explicitUnionTag = ExplicitUnionStringNeedsConstructor
-	u.StringNeedsConstructor = stringNeedsConstructor
+func (_m *ExplicitUnion) SetStringNeedsConstructor(stringNeedsConstructor string) {
+	_m.I_explicitUnionTag = ExplicitUnionStringNeedsConstructor
+	_m.StringNeedsConstructor = stringNeedsConstructor
 }
 
 func ExplicitUnionWithStringNeedsConstructor(stringNeedsConstructor string) ExplicitUnion {
@@ -138,27 +151,32 @@ func ExplicitUnionWithStringNeedsConstructor(stringNeedsConstructor string) Expl
 	_u.SetStringNeedsConstructor(stringNeedsConstructor)
 	return _u
 }
-type I_reverseOrdinalUnionTag uint32
+
+
+type I_reverseOrdinalUnionTag uint64
 const (
-	_ I_reverseOrdinalUnionTag = iota
-	ReverseOrdinalUnionFirst
-	ReverseOrdinalUnionSecond
+	ReverseOrdinalUnionFirst = 1 // 0x00000001
+	ReverseOrdinalUnionSecond = 2 // 0x00000002
 )
 
 
 type ReverseOrdinalUnion struct {
-	I_reverseOrdinalUnionTag `fidl:"u,8,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_reverseOrdinalUnionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	First uint32  `fidl:"1"`
 	Second uint32  `fidl:"2"`
 }
 
-func (u *ReverseOrdinalUnion) Which() I_reverseOrdinalUnionTag {
-	return u.I_reverseOrdinalUnionTag
+func (_m *ReverseOrdinalUnion) Which() I_reverseOrdinalUnionTag {
+	return _m.I_reverseOrdinalUnionTag
 }
 
-func (u *ReverseOrdinalUnion) SetFirst(first uint32) {
-	u.I_reverseOrdinalUnionTag = ReverseOrdinalUnionFirst
-	u.First = first
+func (_m *ReverseOrdinalUnion) Ordinal() uint64 {
+	return uint64(_m.I_reverseOrdinalUnionTag)
+}
+
+func (_m *ReverseOrdinalUnion) SetFirst(first uint32) {
+	_m.I_reverseOrdinalUnionTag = ReverseOrdinalUnionFirst
+	_m.First = first
 }
 
 func ReverseOrdinalUnionWithFirst(first uint32) ReverseOrdinalUnion {
@@ -167,9 +185,9 @@ func ReverseOrdinalUnionWithFirst(first uint32) ReverseOrdinalUnion {
 	return _u
 }
 
-func (u *ReverseOrdinalUnion) SetSecond(second uint32) {
-	u.I_reverseOrdinalUnionTag = ReverseOrdinalUnionSecond
-	u.Second = second
+func (_m *ReverseOrdinalUnion) SetSecond(second uint32) {
+	_m.I_reverseOrdinalUnionTag = ReverseOrdinalUnionSecond
+	_m.Second = second
 }
 
 func ReverseOrdinalUnionWithSecond(second uint32) ReverseOrdinalUnion {
@@ -177,3 +195,5 @@ func ReverseOrdinalUnionWithSecond(second uint32) ReverseOrdinalUnion {
 	_u.SetSecond(second)
 	return _u
 }
+
+

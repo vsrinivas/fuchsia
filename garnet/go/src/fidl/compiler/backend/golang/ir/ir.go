@@ -1023,7 +1023,7 @@ func Compile(fidlData types.Root) Root {
 		r.Structs = append(r.Structs, c.compileStruct(v))
 	}
 	for _, v := range fidlData.Unions {
-		r.Unions = append(r.Unions, c.compileUnion(v))
+		r.XUnions = append(r.XUnions, c.compileXUnion(types.ConvertUnionToXUnion(v)))
 	}
 	for _, v := range fidlData.XUnions {
 		r.XUnions = append(r.XUnions, c.compileXUnion(v))

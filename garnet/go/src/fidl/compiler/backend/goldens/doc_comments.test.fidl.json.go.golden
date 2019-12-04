@@ -35,10 +35,9 @@ var _mStruct = _bindings.CreateLazyMarshaler(Struct{})
 func (msg *Struct) Marshaler() _bindings.Marshaler {
 	return _mStruct
 }
-type I_unionTag uint32
+type I_unionTag uint64
 const (
-	_ I_unionTag = iota
-	UnionField
+	UnionField = 1 // 0x00000001
 )
 
 
@@ -46,20 +45,24 @@ const (
 //
 // union comment #3
 type Union struct {
-	I_unionTag `fidl:"u,8,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_unionTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	// union member comment #1
 	//
 	// union member comment #3
 	Field int32  `fidl:"1"`
 }
 
-func (u *Union) Which() I_unionTag {
-	return u.I_unionTag
+func (_m *Union) Which() I_unionTag {
+	return _m.I_unionTag
 }
 
-func (u *Union) SetField(field int32) {
-	u.I_unionTag = UnionField
-	u.Field = field
+func (_m *Union) Ordinal() uint64 {
+	return uint64(_m.I_unionTag)
+}
+
+func (_m *Union) SetField(field int32) {
+	_m.I_unionTag = UnionField
+	_m.Field = field
 }
 
 func UnionWithField(field int32) Union {
@@ -67,6 +70,8 @@ func UnionWithField(field int32) Union {
 	_u.SetField(field)
 	return _u
 }
+
+
 
 // table comment #1
 //

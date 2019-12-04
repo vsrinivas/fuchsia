@@ -59,27 +59,30 @@ var _mWithErrorSyntaxErrorAsEnumResponse = _bindings.CreateLazyMarshaler(WithErr
 func (msg *WithErrorSyntaxErrorAsEnumResponse) Marshaler() _bindings.Marshaler {
 	return _mWithErrorSyntaxErrorAsEnumResponse
 }
-type I_withErrorSyntaxResponseAsStructResultTag uint32
+type I_withErrorSyntaxResponseAsStructResultTag uint64
 const (
-	_ I_withErrorSyntaxResponseAsStructResultTag = iota
-	WithErrorSyntaxResponseAsStructResultResponse
-	WithErrorSyntaxResponseAsStructResultErr
+	WithErrorSyntaxResponseAsStructResultResponse = 1 // 0x00000001
+	WithErrorSyntaxResponseAsStructResultErr = 2 // 0x00000002
 )
 
 
 type WithErrorSyntaxResponseAsStructResult struct {
-	I_withErrorSyntaxResponseAsStructResultTag `fidl:"u,32,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_withErrorSyntaxResponseAsStructResultTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	Response WithErrorSyntaxResponseAsStructResponse  `fidl:"1"`
 	Err uint32  `fidl:"2"`
 }
 
-func (u *WithErrorSyntaxResponseAsStructResult) Which() I_withErrorSyntaxResponseAsStructResultTag {
-	return u.I_withErrorSyntaxResponseAsStructResultTag
+func (_m *WithErrorSyntaxResponseAsStructResult) Which() I_withErrorSyntaxResponseAsStructResultTag {
+	return _m.I_withErrorSyntaxResponseAsStructResultTag
 }
 
-func (u *WithErrorSyntaxResponseAsStructResult) SetResponse(response WithErrorSyntaxResponseAsStructResponse) {
-	u.I_withErrorSyntaxResponseAsStructResultTag = WithErrorSyntaxResponseAsStructResultResponse
-	u.Response = response
+func (_m *WithErrorSyntaxResponseAsStructResult) Ordinal() uint64 {
+	return uint64(_m.I_withErrorSyntaxResponseAsStructResultTag)
+}
+
+func (_m *WithErrorSyntaxResponseAsStructResult) SetResponse(response WithErrorSyntaxResponseAsStructResponse) {
+	_m.I_withErrorSyntaxResponseAsStructResultTag = WithErrorSyntaxResponseAsStructResultResponse
+	_m.Response = response
 }
 
 func WithErrorSyntaxResponseAsStructResultWithResponse(response WithErrorSyntaxResponseAsStructResponse) WithErrorSyntaxResponseAsStructResult {
@@ -88,9 +91,9 @@ func WithErrorSyntaxResponseAsStructResultWithResponse(response WithErrorSyntaxR
 	return _u
 }
 
-func (u *WithErrorSyntaxResponseAsStructResult) SetErr(err uint32) {
-	u.I_withErrorSyntaxResponseAsStructResultTag = WithErrorSyntaxResponseAsStructResultErr
-	u.Err = err
+func (_m *WithErrorSyntaxResponseAsStructResult) SetErr(err uint32) {
+	_m.I_withErrorSyntaxResponseAsStructResultTag = WithErrorSyntaxResponseAsStructResultErr
+	_m.Err = err
 }
 
 func WithErrorSyntaxResponseAsStructResultWithErr(err uint32) WithErrorSyntaxResponseAsStructResult {
@@ -98,27 +101,32 @@ func WithErrorSyntaxResponseAsStructResultWithErr(err uint32) WithErrorSyntaxRes
 	_u.SetErr(err)
 	return _u
 }
-type I_withErrorSyntaxErrorAsPrimitiveResultTag uint32
+
+
+type I_withErrorSyntaxErrorAsPrimitiveResultTag uint64
 const (
-	_ I_withErrorSyntaxErrorAsPrimitiveResultTag = iota
-	WithErrorSyntaxErrorAsPrimitiveResultResponse
-	WithErrorSyntaxErrorAsPrimitiveResultErr
+	WithErrorSyntaxErrorAsPrimitiveResultResponse = 1 // 0x00000001
+	WithErrorSyntaxErrorAsPrimitiveResultErr = 2 // 0x00000002
 )
 
 
 type WithErrorSyntaxErrorAsPrimitiveResult struct {
-	I_withErrorSyntaxErrorAsPrimitiveResultTag `fidl:"u,8,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_withErrorSyntaxErrorAsPrimitiveResultTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	Response WithErrorSyntaxErrorAsPrimitiveResponse  `fidl:"1"`
 	Err uint32  `fidl:"2"`
 }
 
-func (u *WithErrorSyntaxErrorAsPrimitiveResult) Which() I_withErrorSyntaxErrorAsPrimitiveResultTag {
-	return u.I_withErrorSyntaxErrorAsPrimitiveResultTag
+func (_m *WithErrorSyntaxErrorAsPrimitiveResult) Which() I_withErrorSyntaxErrorAsPrimitiveResultTag {
+	return _m.I_withErrorSyntaxErrorAsPrimitiveResultTag
 }
 
-func (u *WithErrorSyntaxErrorAsPrimitiveResult) SetResponse(response WithErrorSyntaxErrorAsPrimitiveResponse) {
-	u.I_withErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultResponse
-	u.Response = response
+func (_m *WithErrorSyntaxErrorAsPrimitiveResult) Ordinal() uint64 {
+	return uint64(_m.I_withErrorSyntaxErrorAsPrimitiveResultTag)
+}
+
+func (_m *WithErrorSyntaxErrorAsPrimitiveResult) SetResponse(response WithErrorSyntaxErrorAsPrimitiveResponse) {
+	_m.I_withErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultResponse
+	_m.Response = response
 }
 
 func WithErrorSyntaxErrorAsPrimitiveResultWithResponse(response WithErrorSyntaxErrorAsPrimitiveResponse) WithErrorSyntaxErrorAsPrimitiveResult {
@@ -127,9 +135,9 @@ func WithErrorSyntaxErrorAsPrimitiveResultWithResponse(response WithErrorSyntaxE
 	return _u
 }
 
-func (u *WithErrorSyntaxErrorAsPrimitiveResult) SetErr(err uint32) {
-	u.I_withErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultErr
-	u.Err = err
+func (_m *WithErrorSyntaxErrorAsPrimitiveResult) SetErr(err uint32) {
+	_m.I_withErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultErr
+	_m.Err = err
 }
 
 func WithErrorSyntaxErrorAsPrimitiveResultWithErr(err uint32) WithErrorSyntaxErrorAsPrimitiveResult {
@@ -137,27 +145,32 @@ func WithErrorSyntaxErrorAsPrimitiveResultWithErr(err uint32) WithErrorSyntaxErr
 	_u.SetErr(err)
 	return _u
 }
-type I_withErrorSyntaxErrorAsEnumResultTag uint32
+
+
+type I_withErrorSyntaxErrorAsEnumResultTag uint64
 const (
-	_ I_withErrorSyntaxErrorAsEnumResultTag = iota
-	WithErrorSyntaxErrorAsEnumResultResponse
-	WithErrorSyntaxErrorAsEnumResultErr
+	WithErrorSyntaxErrorAsEnumResultResponse = 1 // 0x00000001
+	WithErrorSyntaxErrorAsEnumResultErr = 2 // 0x00000002
 )
 
 
 type WithErrorSyntaxErrorAsEnumResult struct {
-	I_withErrorSyntaxErrorAsEnumResultTag `fidl:"u,8,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_withErrorSyntaxErrorAsEnumResultTag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	Response WithErrorSyntaxErrorAsEnumResponse  `fidl:"1"`
 	Err ErrorEnun  `fidl:"2"`
 }
 
-func (u *WithErrorSyntaxErrorAsEnumResult) Which() I_withErrorSyntaxErrorAsEnumResultTag {
-	return u.I_withErrorSyntaxErrorAsEnumResultTag
+func (_m *WithErrorSyntaxErrorAsEnumResult) Which() I_withErrorSyntaxErrorAsEnumResultTag {
+	return _m.I_withErrorSyntaxErrorAsEnumResultTag
 }
 
-func (u *WithErrorSyntaxErrorAsEnumResult) SetResponse(response WithErrorSyntaxErrorAsEnumResponse) {
-	u.I_withErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultResponse
-	u.Response = response
+func (_m *WithErrorSyntaxErrorAsEnumResult) Ordinal() uint64 {
+	return uint64(_m.I_withErrorSyntaxErrorAsEnumResultTag)
+}
+
+func (_m *WithErrorSyntaxErrorAsEnumResult) SetResponse(response WithErrorSyntaxErrorAsEnumResponse) {
+	_m.I_withErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultResponse
+	_m.Response = response
 }
 
 func WithErrorSyntaxErrorAsEnumResultWithResponse(response WithErrorSyntaxErrorAsEnumResponse) WithErrorSyntaxErrorAsEnumResult {
@@ -166,9 +179,9 @@ func WithErrorSyntaxErrorAsEnumResultWithResponse(response WithErrorSyntaxErrorA
 	return _u
 }
 
-func (u *WithErrorSyntaxErrorAsEnumResult) SetErr(err ErrorEnun) {
-	u.I_withErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultErr
-	u.Err = err
+func (_m *WithErrorSyntaxErrorAsEnumResult) SetErr(err ErrorEnun) {
+	_m.I_withErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultErr
+	_m.Err = err
 }
 
 func WithErrorSyntaxErrorAsEnumResultWithErr(err ErrorEnun) WithErrorSyntaxErrorAsEnumResult {
@@ -176,6 +189,8 @@ func WithErrorSyntaxErrorAsEnumResultWithErr(err ErrorEnun) WithErrorSyntaxError
 	_u.SetErr(err)
 	return _u
 }
+
+
 const (
 	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal uint64 = 0x1e03f87500000000
 	WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal uint64 = 0x3931f96bc77fba8

@@ -74,25 +74,28 @@ var _mSandwichUnionSize36Alignment4 = _bindings.CreateLazyMarshaler(SandwichUnio
 func (msg *SandwichUnionSize36Alignment4) Marshaler() _bindings.Marshaler {
 	return _mSandwichUnionSize36Alignment4
 }
-type I_unionSize8Alignment4Tag uint32
+type I_unionSize8Alignment4Tag uint64
 const (
-	_ I_unionSize8Alignment4Tag = iota
-	UnionSize8Alignment4Variant
+	UnionSize8Alignment4Variant = 1 // 0x00000001
 )
 
 
 type UnionSize8Alignment4 struct {
-	I_unionSize8Alignment4Tag `fidl:"u,8,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_unionSize8Alignment4Tag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	Variant uint32  `fidl:"1"`
 }
 
-func (u *UnionSize8Alignment4) Which() I_unionSize8Alignment4Tag {
-	return u.I_unionSize8Alignment4Tag
+func (_m *UnionSize8Alignment4) Which() I_unionSize8Alignment4Tag {
+	return _m.I_unionSize8Alignment4Tag
 }
 
-func (u *UnionSize8Alignment4) SetVariant(variant uint32) {
-	u.I_unionSize8Alignment4Tag = UnionSize8Alignment4Variant
-	u.Variant = variant
+func (_m *UnionSize8Alignment4) Ordinal() uint64 {
+	return uint64(_m.I_unionSize8Alignment4Tag)
+}
+
+func (_m *UnionSize8Alignment4) SetVariant(variant uint32) {
+	_m.I_unionSize8Alignment4Tag = UnionSize8Alignment4Variant
+	_m.Variant = variant
 }
 
 func UnionSize8Alignment4WithVariant(variant uint32) UnionSize8Alignment4 {
@@ -100,25 +103,30 @@ func UnionSize8Alignment4WithVariant(variant uint32) UnionSize8Alignment4 {
 	_u.SetVariant(variant)
 	return _u
 }
-type I_unionSize12Alignment4Tag uint32
+
+
+type I_unionSize12Alignment4Tag uint64
 const (
-	_ I_unionSize12Alignment4Tag = iota
-	UnionSize12Alignment4Variant
+	UnionSize12Alignment4Variant = 1 // 0x00000001
 )
 
 
 type UnionSize12Alignment4 struct {
-	I_unionSize12Alignment4Tag `fidl:"u,12,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_unionSize12Alignment4Tag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	Variant [6]uint8  `fidl:"1"`
 }
 
-func (u *UnionSize12Alignment4) Which() I_unionSize12Alignment4Tag {
-	return u.I_unionSize12Alignment4Tag
+func (_m *UnionSize12Alignment4) Which() I_unionSize12Alignment4Tag {
+	return _m.I_unionSize12Alignment4Tag
 }
 
-func (u *UnionSize12Alignment4) SetVariant(variant [6]uint8) {
-	u.I_unionSize12Alignment4Tag = UnionSize12Alignment4Variant
-	u.Variant = variant
+func (_m *UnionSize12Alignment4) Ordinal() uint64 {
+	return uint64(_m.I_unionSize12Alignment4Tag)
+}
+
+func (_m *UnionSize12Alignment4) SetVariant(variant [6]uint8) {
+	_m.I_unionSize12Alignment4Tag = UnionSize12Alignment4Variant
+	_m.Variant = variant
 }
 
 func UnionSize12Alignment4WithVariant(variant [6]uint8) UnionSize12Alignment4 {
@@ -126,25 +134,30 @@ func UnionSize12Alignment4WithVariant(variant [6]uint8) UnionSize12Alignment4 {
 	_u.SetVariant(variant)
 	return _u
 }
-type I_unionSize24Alignment8Tag uint32
+
+
+type I_unionSize24Alignment8Tag uint64
 const (
-	_ I_unionSize24Alignment8Tag = iota
-	UnionSize24Alignment8Variant
+	UnionSize24Alignment8Variant = 1 // 0x00000001
 )
 
 
 type UnionSize24Alignment8 struct {
-	I_unionSize24Alignment8Tag `fidl:"u,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_unionSize24Alignment8Tag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	Variant StructSize16Alignment8  `fidl:"1"`
 }
 
-func (u *UnionSize24Alignment8) Which() I_unionSize24Alignment8Tag {
-	return u.I_unionSize24Alignment8Tag
+func (_m *UnionSize24Alignment8) Which() I_unionSize24Alignment8Tag {
+	return _m.I_unionSize24Alignment8Tag
 }
 
-func (u *UnionSize24Alignment8) SetVariant(variant StructSize16Alignment8) {
-	u.I_unionSize24Alignment8Tag = UnionSize24Alignment8Variant
-	u.Variant = variant
+func (_m *UnionSize24Alignment8) Ordinal() uint64 {
+	return uint64(_m.I_unionSize24Alignment8Tag)
+}
+
+func (_m *UnionSize24Alignment8) SetVariant(variant StructSize16Alignment8) {
+	_m.I_unionSize24Alignment8Tag = UnionSize24Alignment8Variant
+	_m.Variant = variant
 }
 
 func UnionSize24Alignment8WithVariant(variant StructSize16Alignment8) UnionSize24Alignment8 {
@@ -152,25 +165,30 @@ func UnionSize24Alignment8WithVariant(variant StructSize16Alignment8) UnionSize2
 	_u.SetVariant(variant)
 	return _u
 }
-type I_unionSize36Alignment4Tag uint32
+
+
+type I_unionSize36Alignment4Tag uint64
 const (
-	_ I_unionSize36Alignment4Tag = iota
-	UnionSize36Alignment4Variant
+	UnionSize36Alignment4Variant = 1 // 0x00000001
 )
 
 
 type UnionSize36Alignment4 struct {
-	I_unionSize36Alignment4Tag `fidl:"u,36,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	I_unionSize36Alignment4Tag `fidl:"x!,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	Variant [32]uint8  `fidl:"1"`
 }
 
-func (u *UnionSize36Alignment4) Which() I_unionSize36Alignment4Tag {
-	return u.I_unionSize36Alignment4Tag
+func (_m *UnionSize36Alignment4) Which() I_unionSize36Alignment4Tag {
+	return _m.I_unionSize36Alignment4Tag
 }
 
-func (u *UnionSize36Alignment4) SetVariant(variant [32]uint8) {
-	u.I_unionSize36Alignment4Tag = UnionSize36Alignment4Variant
-	u.Variant = variant
+func (_m *UnionSize36Alignment4) Ordinal() uint64 {
+	return uint64(_m.I_unionSize36Alignment4Tag)
+}
+
+func (_m *UnionSize36Alignment4) SetVariant(variant [32]uint8) {
+	_m.I_unionSize36Alignment4Tag = UnionSize36Alignment4Variant
+	_m.Variant = variant
 }
 
 func UnionSize36Alignment4WithVariant(variant [32]uint8) UnionSize36Alignment4 {
@@ -178,3 +196,5 @@ func UnionSize36Alignment4WithVariant(variant [32]uint8) UnionSize36Alignment4 {
 	_u.SetVariant(variant)
 	return _u
 }
+
+

@@ -41,8 +41,8 @@ func compileExpect(t *testing.T, testName string, kind expectKind, input types.R
 			actual = wrapped_actual.Structs
 			expect = wrapped_expect.Structs
 		case expectUnion:
-			actual = wrapped_actual.Unions
-			expect = wrapped_expect.Unions
+			actual = wrapped_actual.XUnions
+			expect = wrapped_expect.XUnions
 		case expectXUnion:
 			actual = wrapped_actual.XUnions
 			expect = wrapped_expect.XUnions
@@ -73,8 +73,8 @@ func compileStructsExpect(t *testing.T, testName string, input []types.Struct, e
 	compileExpect(t, testName, expectStructs, types.Root{Structs: input}, Root{Structs: expect})
 }
 
-func compileUnionExpect(t *testing.T, testName string, input types.Union, expect Union) {
-	compileExpect(t, testName, expectUnion, types.Root{Unions: []types.Union{input}}, Root{Unions: []Union{expect}})
+func compileUnionExpect(t *testing.T, testName string, input types.Union, expect XUnion) {
+	compileExpect(t, testName, expectUnion, types.Root{Unions: []types.Union{input}}, Root{XUnions: []XUnion{expect}})
 }
 
 func compileXUnionExpect(t *testing.T, testName string, input types.XUnion, expect XUnion) {
@@ -967,22 +967,23 @@ func TestCompileUnion(t *testing.T) {
 				},
 			},
 		},
-		Union{
+		XUnion{
 			Name:          "MyUnion",
 			TagName:       "I_myUnionTag",
-			InlineSizeOld: 123,
-			InlineSizeV1:  123,
-			AlignmentOld:  456,
-			AlignmentV1:   456,
-			Members: []UnionMember{
+			InlineSizeOld: 24,
+			InlineSizeV1:  24,
+			AlignmentOld:  8,
+			AlignmentV1:   8,
+			Members: []XUnionMember{
 				{
-					Type:          "[]uint32",
-					XUnionOrdinal: 2,
-					PrivateName:   "second",
-					Name:          "Second",
-					FidlTag:       "2,7",
+					Ordinal:     2,
+					Type:        "[]uint32",
+					Name:        "Second",
+					PrivateName: "second",
+					FidlTag:     "2,7",
 				},
 			},
+			Strictness: true,
 		})
 }
 
