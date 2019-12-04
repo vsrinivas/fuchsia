@@ -70,7 +70,6 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
     "//src/lib/inspect_deprecated/testing:testing",
-    "//src/lib/json_parser",
     "//src/lib/testing/loop_fixture",
     "//src/lib/timekeeper:testing",
     "//third_party/abseil-cpp",
