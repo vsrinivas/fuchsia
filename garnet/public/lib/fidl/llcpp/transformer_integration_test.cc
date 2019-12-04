@@ -99,7 +99,7 @@ class TransformerIntegrationTest : public ::testing::Test {
     for (size_t i = 0; i < array.size(); i++) {
       array[i] = static_cast<uint8_t>(0xa0 + i);
     }
-    sandwich->the_union.set_variant(&array);
+    sandwich->the_union.set_variant(array);
   }
 
  private:

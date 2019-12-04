@@ -267,6 +267,12 @@ struct NewDevice_Write_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static NewDevice_Write_Result WithResponse(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response&& val) {
+    NewDevice_Write_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static NewDevice_Write_Result WithResponse(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response* val) {
     NewDevice_Write_Result result;
     result.set_response(val);
@@ -275,10 +281,24 @@ struct NewDevice_Write_Result {
 
   ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -291,6 +311,12 @@ struct NewDevice_Write_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static NewDevice_Write_Result WithErr(int32_t&& val) {
+    NewDevice_Write_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static NewDevice_Write_Result WithErr(int32_t* val) {
     NewDevice_Write_Result result;
     result.set_err(val);
@@ -299,10 +325,24 @@ struct NewDevice_Write_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -392,6 +432,12 @@ struct NewDevice_Read_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static NewDevice_Read_Result WithResponse(::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response&& val) {
+    NewDevice_Read_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static NewDevice_Read_Result WithResponse(::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response* val) {
     NewDevice_Read_Result result;
     result.set_response(val);
@@ -400,10 +446,24 @@ struct NewDevice_Read_Result {
 
   ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -416,6 +476,12 @@ struct NewDevice_Read_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static NewDevice_Read_Result WithErr(int32_t&& val) {
+    NewDevice_Read_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static NewDevice_Read_Result WithErr(int32_t* val) {
     NewDevice_Read_Result result;
     result.set_err(val);
@@ -424,10 +490,24 @@ struct NewDevice_Read_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>

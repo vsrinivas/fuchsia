@@ -322,6 +322,12 @@ struct NameLookup_LookupHostname_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static NameLookup_LookupHostname_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupHostname_Response&& val) {
+    NameLookup_LookupHostname_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static NameLookup_LookupHostname_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupHostname_Response* val) {
     NameLookup_LookupHostname_Result result;
     result.set_response(val);
@@ -330,10 +336,24 @@ struct NameLookup_LookupHostname_Result {
 
   ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -346,6 +366,12 @@ struct NameLookup_LookupHostname_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static NameLookup_LookupHostname_Result WithErr(::llcpp::fuchsia::net::LookupError&& val) {
+    NameLookup_LookupHostname_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static NameLookup_LookupHostname_Result WithErr(::llcpp::fuchsia::net::LookupError* val) {
     NameLookup_LookupHostname_Result result;
     result.set_err(val);
@@ -354,10 +380,24 @@ struct NameLookup_LookupHostname_Result {
 
   ::llcpp::fuchsia::net::LookupError& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -509,6 +549,12 @@ struct NameLookup_LookupIp_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static NameLookup_LookupIp_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupIp_Response&& val) {
+    NameLookup_LookupIp_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static NameLookup_LookupIp_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupIp_Response* val) {
     NameLookup_LookupIp_Result result;
     result.set_response(val);
@@ -517,10 +563,24 @@ struct NameLookup_LookupIp_Result {
 
   ::llcpp::fuchsia::net::NameLookup_LookupIp_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupIp_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupIp_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupIp_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -533,6 +593,12 @@ struct NameLookup_LookupIp_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static NameLookup_LookupIp_Result WithErr(::llcpp::fuchsia::net::LookupError&& val) {
+    NameLookup_LookupIp_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static NameLookup_LookupIp_Result WithErr(::llcpp::fuchsia::net::LookupError* val) {
     NameLookup_LookupIp_Result result;
     result.set_err(val);
@@ -541,10 +607,24 @@ struct NameLookup_LookupIp_Result {
 
   ::llcpp::fuchsia::net::LookupError& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -618,6 +698,12 @@ struct IpAddress {
 
   bool is_ipv4() const { return ordinal_ == Ordinal::kIpv4; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static IpAddress WithIpv4(::llcpp::fuchsia::net::Ipv4Address&& val) {
+    IpAddress result;
+    result.set_ipv4(std::move(val));
+    return result;
+  }
   static IpAddress WithIpv4(::llcpp::fuchsia::net::Ipv4Address* val) {
     IpAddress result;
     result.set_ipv4(val);
@@ -626,10 +712,24 @@ struct IpAddress {
 
   ::llcpp::fuchsia::net::Ipv4Address& mutable_ipv4();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv4Address>::value && std::is_copy_assignable<T>::value>
+  set_ipv4(const T& v) {
+    mutable_ipv4() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv4Address>::value && std::is_copy_assignable<T>::value>
   set_ipv4(const T* v) {
     mutable_ipv4() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv4Address>::value && std::is_move_assignable<T>::value>
+  set_ipv4(T&& v) {
+    mutable_ipv4() = std::move(v);
   }
 
   template <typename T>
@@ -642,6 +742,12 @@ struct IpAddress {
 
   bool is_ipv6() const { return ordinal_ == Ordinal::kIpv6; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static IpAddress WithIpv6(::llcpp::fuchsia::net::Ipv6Address&& val) {
+    IpAddress result;
+    result.set_ipv6(std::move(val));
+    return result;
+  }
   static IpAddress WithIpv6(::llcpp::fuchsia::net::Ipv6Address* val) {
     IpAddress result;
     result.set_ipv6(val);
@@ -650,10 +756,24 @@ struct IpAddress {
 
   ::llcpp::fuchsia::net::Ipv6Address& mutable_ipv6();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv6Address>::value && std::is_copy_assignable<T>::value>
+  set_ipv6(const T& v) {
+    mutable_ipv6() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv6Address>::value && std::is_copy_assignable<T>::value>
   set_ipv6(const T* v) {
     mutable_ipv6() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv6Address>::value && std::is_move_assignable<T>::value>
+  set_ipv6(T&& v) {
+    mutable_ipv6() = std::move(v);
   }
 
   template <typename T>

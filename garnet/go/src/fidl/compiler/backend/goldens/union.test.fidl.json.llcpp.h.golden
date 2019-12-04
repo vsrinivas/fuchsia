@@ -58,6 +58,12 @@ struct Union {
 
   bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Union WithPrimitive(int32_t&& val) {
+    Union result;
+    result.set_Primitive(std::move(val));
+    return result;
+  }
   static Union WithPrimitive(int32_t* val) {
     Union result;
     result.set_Primitive(val);
@@ -66,10 +72,24 @@ struct Union {
 
   int32_t& mutable_Primitive();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_Primitive(const T& v) {
+    mutable_Primitive() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_Primitive(const T* v) {
     mutable_Primitive() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_Primitive(T&& v) {
+    mutable_Primitive() = std::move(v);
   }
 
   template <typename T>
@@ -82,6 +102,12 @@ struct Union {
 
   bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Union WithStringNeedsConstructor(::fidl::StringView&& val) {
+    Union result;
+    result.set_StringNeedsConstructor(std::move(val));
+    return result;
+  }
   static Union WithStringNeedsConstructor(::fidl::StringView* val) {
     Union result;
     result.set_StringNeedsConstructor(val);
@@ -90,10 +116,24 @@ struct Union {
 
   ::fidl::StringView& mutable_StringNeedsConstructor();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
+  set_StringNeedsConstructor(const T& v) {
+    mutable_StringNeedsConstructor() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
   set_StringNeedsConstructor(const T* v) {
     mutable_StringNeedsConstructor() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
+  set_StringNeedsConstructor(T&& v) {
+    mutable_StringNeedsConstructor() = std::move(v);
   }
 
   template <typename T>
@@ -106,6 +146,12 @@ struct Union {
 
   bool is_VectorStringAlsoNeedsConstructor() const { return ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static Union WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>&& val) {
+    Union result;
+    result.set_VectorStringAlsoNeedsConstructor(std::move(val));
+    return result;
+  }
   static Union WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* val) {
     Union result;
     result.set_VectorStringAlsoNeedsConstructor(val);
@@ -114,10 +160,24 @@ struct Union {
 
   ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::fidl::StringView>>::value && std::is_copy_assignable<T>::value>
+  set_VectorStringAlsoNeedsConstructor(const T& v) {
+    mutable_VectorStringAlsoNeedsConstructor() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::fidl::StringView>>::value && std::is_copy_assignable<T>::value>
   set_VectorStringAlsoNeedsConstructor(const T* v) {
     mutable_VectorStringAlsoNeedsConstructor() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::fidl::StringView>>::value && std::is_move_assignable<T>::value>
+  set_VectorStringAlsoNeedsConstructor(T&& v) {
+    mutable_VectorStringAlsoNeedsConstructor() = std::move(v);
   }
 
   template <typename T>
@@ -192,6 +252,12 @@ struct ReverseOrdinalUnion {
 
   bool is_first() const { return ordinal_ == Ordinal::kFirst; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static ReverseOrdinalUnion WithFirst(uint32_t&& val) {
+    ReverseOrdinalUnion result;
+    result.set_first(std::move(val));
+    return result;
+  }
   static ReverseOrdinalUnion WithFirst(uint32_t* val) {
     ReverseOrdinalUnion result;
     result.set_first(val);
@@ -200,10 +266,24 @@ struct ReverseOrdinalUnion {
 
   uint32_t& mutable_first();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
+  set_first(const T& v) {
+    mutable_first() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
   set_first(const T* v) {
     mutable_first() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
+  set_first(T&& v) {
+    mutable_first() = std::move(v);
   }
 
   template <typename T>
@@ -216,6 +296,12 @@ struct ReverseOrdinalUnion {
 
   bool is_second() const { return ordinal_ == Ordinal::kSecond; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static ReverseOrdinalUnion WithSecond(uint32_t&& val) {
+    ReverseOrdinalUnion result;
+    result.set_second(std::move(val));
+    return result;
+  }
   static ReverseOrdinalUnion WithSecond(uint32_t* val) {
     ReverseOrdinalUnion result;
     result.set_second(val);
@@ -224,10 +310,24 @@ struct ReverseOrdinalUnion {
 
   uint32_t& mutable_second();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
+  set_second(const T& v) {
+    mutable_second() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
   set_second(const T* v) {
     mutable_second() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
+  set_second(T&& v) {
+    mutable_second() = std::move(v);
   }
 
   template <typename T>
@@ -316,6 +416,12 @@ struct FieldCollision {
 
   bool is_field_collision_tag() const { return ordinal_ == Ordinal::kFieldCollisionTag; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static FieldCollision WithFieldCollisionTag(int32_t&& val) {
+    FieldCollision result;
+    result.set_field_collision_tag(std::move(val));
+    return result;
+  }
   static FieldCollision WithFieldCollisionTag(int32_t* val) {
     FieldCollision result;
     result.set_field_collision_tag(val);
@@ -324,10 +430,24 @@ struct FieldCollision {
 
   int32_t& mutable_field_collision_tag();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_field_collision_tag(const T& v) {
+    mutable_field_collision_tag() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_field_collision_tag(const T* v) {
     mutable_field_collision_tag() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_field_collision_tag(T&& v) {
+    mutable_field_collision_tag() = std::move(v);
   }
 
   template <typename T>
@@ -398,6 +518,12 @@ struct ExplicitUnion {
 
   bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static ExplicitUnion WithPrimitive(int32_t&& val) {
+    ExplicitUnion result;
+    result.set_Primitive(std::move(val));
+    return result;
+  }
   static ExplicitUnion WithPrimitive(int32_t* val) {
     ExplicitUnion result;
     result.set_Primitive(val);
@@ -406,10 +532,24 @@ struct ExplicitUnion {
 
   int32_t& mutable_Primitive();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_Primitive(const T& v) {
+    mutable_Primitive() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_Primitive(const T* v) {
     mutable_Primitive() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_Primitive(T&& v) {
+    mutable_Primitive() = std::move(v);
   }
 
   template <typename T>
@@ -422,6 +562,12 @@ struct ExplicitUnion {
 
   bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static ExplicitUnion WithStringNeedsConstructor(::fidl::StringView&& val) {
+    ExplicitUnion result;
+    result.set_StringNeedsConstructor(std::move(val));
+    return result;
+  }
   static ExplicitUnion WithStringNeedsConstructor(::fidl::StringView* val) {
     ExplicitUnion result;
     result.set_StringNeedsConstructor(val);
@@ -430,10 +576,24 @@ struct ExplicitUnion {
 
   ::fidl::StringView& mutable_StringNeedsConstructor();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
+  set_StringNeedsConstructor(const T& v) {
+    mutable_StringNeedsConstructor() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
   set_StringNeedsConstructor(const T* v) {
     mutable_StringNeedsConstructor() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
+  set_StringNeedsConstructor(T&& v) {
+    mutable_StringNeedsConstructor() = std::move(v);
   }
 
   template <typename T>

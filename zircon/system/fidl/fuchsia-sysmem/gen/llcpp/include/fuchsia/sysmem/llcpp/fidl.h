@@ -2116,6 +2116,12 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static SecureMem_SetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response&& val) {
+    SecureMem_SetPhysicalSecureHeaps_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static SecureMem_SetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response* val) {
     SecureMem_SetPhysicalSecureHeaps_Result result;
     result.set_response(val);
@@ -2124,10 +2130,24 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
 
   ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -2140,6 +2160,12 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static SecureMem_SetPhysicalSecureHeaps_Result WithErr(int32_t&& val) {
+    SecureMem_SetPhysicalSecureHeaps_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static SecureMem_SetPhysicalSecureHeaps_Result WithErr(int32_t* val) {
     SecureMem_SetPhysicalSecureHeaps_Result result;
     result.set_err(val);
@@ -2148,10 +2174,24 @@ struct SecureMem_SetPhysicalSecureHeaps_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -2310,6 +2350,12 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static SecureMem_GetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response&& val) {
+    SecureMem_GetPhysicalSecureHeaps_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
   static SecureMem_GetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response* val) {
     SecureMem_GetPhysicalSecureHeaps_Result result;
     result.set_response(val);
@@ -2318,10 +2364,24 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
 
   ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -2334,6 +2394,12 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  static SecureMem_GetPhysicalSecureHeaps_Result WithErr(int32_t&& val) {
+    SecureMem_GetPhysicalSecureHeaps_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
   static SecureMem_GetPhysicalSecureHeaps_Result WithErr(int32_t* val) {
     SecureMem_GetPhysicalSecureHeaps_Result result;
     result.set_err(val);
@@ -2342,10 +2408,24 @@ struct SecureMem_GetPhysicalSecureHeaps_Result {
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
   }
 
   template <typename T>
