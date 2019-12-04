@@ -67,9 +67,7 @@ class AudioRendererImpl : public AudioObject,
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
-
   void SetUsage(fuchsia::media::AudioRenderUsage usage) override;
-  fuchsia::media::AudioRenderUsage GetUsage() { return usage_; };
 
   // |fuchsia::media::audio::GainControl|
   void SetGain(float gain_db) final;

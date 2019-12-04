@@ -54,9 +54,6 @@ class AudioCapturerImpl : public AudioObject,
   void SetInitialFormat(fuchsia::media::AudioStreamType format)
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
-  void SetUsage(fuchsia::media::AudioCaptureUsage usage) override;
-  fuchsia::media::AudioCaptureUsage GetUsage() { return usage_; };
-
   void OverflowOccurred(int64_t source_start, int64_t mix_point, zx::duration overflow_duration);
   void PartialOverflowOccurred(int64_t source_offset, int64_t mix_offset);
 
@@ -178,6 +175,7 @@ class AudioCapturerImpl : public AudioObject,
   void StopAsyncCapture(StopAsyncCaptureCallback cbk) final;
   void StopAsyncCaptureNoReply() final;
   void BindGainControl(fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) final;
+  void SetUsage(fuchsia::media::AudioCaptureUsage usage) final;
 
   // |fuchsia::media::audio::GainControl|
   void SetGain(float gain_db) final;
