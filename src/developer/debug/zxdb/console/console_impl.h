@@ -30,6 +30,9 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
   void Init() override;
   void Output(const OutputBuffer& output) override;
   void Clear() override;
+  void ModalGetOption(const line_input::ModalPromptOptions& options, OutputBuffer message,
+                      const std::string& prompt,
+                      line_input::ModalLineInput::ModalCompletionCallback cb) override;
   Console::Result ProcessInputLine(const std::string& line,
                                    CommandCallback callback = nullptr) override;
 

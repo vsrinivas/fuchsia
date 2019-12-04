@@ -52,7 +52,9 @@ class MockConsole : public Console {
   void Init() override {}
   void Clear() override;
   void Output(const OutputBuffer& output) override;
-
+  void ModalGetOption(const line_input::ModalPromptOptions& options, OutputBuffer message,
+                      const std::string& prompt,
+                      line_input::ModalLineInput::ModalCompletionCallback cb) override;
   Console::Result ProcessInputLine(const std::string& line,
                                    CommandCallback callback = nullptr) override;
 

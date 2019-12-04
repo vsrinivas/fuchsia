@@ -10,6 +10,22 @@
 
 namespace line_input {
 
+struct ModalPromptOptions {
+  // When set, requires that the user press enter after typing. Otherwise, if the user has typed
+  // an input that matches one of the options it will be implicitly accepted. Implicit enter
+  // normally only makes sense for single-letter input ("y"/"n" type things).
+  bool require_enter = true;
+
+  // Compares a lower-case version of the user input to the option values. The option values must
+  // be lower-case for this to work. The lower-cased version of the input will be passed to the
+  // accept callback.
+  bool case_sensitive = false;
+
+  // Possible valid options that will cause the prompt to accept the input. If accepting case
+  // insensitive input, these should be lower-case.
+  std::vector<std::string> options;
+};
+
 // Manages multiple line input objects to manage regular input and temporary modal input for
 // questions. This is a base class, it delegates to a derived class to provide the line editor
 // implementations for different I/O schemes.
@@ -36,6 +52,7 @@ class ModalLineInput : public LineInput {
 
   // LineInput implementation.
   void SetAutocompleteCallback(AutocompleteCallback cb) override;
+  void SetChangeCallback(ChangeCallback cb) override;
   void SetEofCallback(EofCallback cb) override;
   void SetMaxCols(size_t max) override;
   const std::string& GetLine() const override;
@@ -45,11 +62,20 @@ class ModalLineInput : public LineInput {
   void Hide() override;
   void Show() override;
 
+  // Higher-level version of BeginModal() and EndModal() that takes a list of possible options and
+  // will call the callback only when the user enters a match for one of the options. The completion
+  // callback should not need to call EndModal(), it will be done automatically when a valid input
+  // is selected.
+  void ModalGetOption(const ModalPromptOptions& options, const std::string& prompt,
+                      ModalCompletionCallback cb,
+                      WillShowModalCallback will_show = WillShowModalCallback());
+
   // Begins a modal question with the given prompt. The normal prompt will be hidden and replaced
   // with the given one. The callback (see definition above for implementation requirements) will be
-  // called when the user presses enter.
+  // called when the user presses enter. This callback should call EndModal() if the input is
+  // accepted.
   //
-  // There are be multiple callbacks happeening at the same time. If the is a current modal input
+  // There can be multiple callbacks happening at the same time. If there is a current modal input
   // active at the time of this call, the new one will be added to a queue and will be shown when
   // when the modal prompts before it have been completed.
   //
@@ -59,6 +85,9 @@ class ModalLineInput : public LineInput {
 
   // Closes the current modal entry. If there is another modal prompt in the queue, it will be
   // shown. If there is none, the normal prompt will be shown again.
+  //
+  // Normally this will be called from within the completion callback of BeginModal() when the
+  // input is accepted.
   void EndModal();
 
  private:

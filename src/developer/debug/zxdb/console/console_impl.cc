@@ -182,6 +182,17 @@ void ConsoleImpl::Output(const OutputBuffer& output) {
     fcntl(STDOUT_FILENO, F_SETFL, old_bits);
 }
 
+void ConsoleImpl::ModalGetOption(const line_input::ModalPromptOptions& options,
+                                 OutputBuffer message, const std::string& prompt,
+                                 line_input::ModalLineInput::ModalCompletionCallback cb) {
+  // Print the message from within the "will show" callback to ensure proper serialization if there
+  // are multiple prompts pending.
+  //
+  // Okay to capture |this| because we own the line_input_.
+  line_input_.ModalGetOption(options, prompt, std::move(cb),
+                             [this, message = std::move(message)]() { Output(message); });
+}
+
 void ConsoleImpl::Clear() {
   // We write directly instead of using Output because WriteToStdout expects to append '\n' to
   // outputs and won't flush it explicitly otherwise.

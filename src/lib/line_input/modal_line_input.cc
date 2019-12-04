@@ -4,9 +4,67 @@
 
 #include "src/lib/line_input/modal_line_input.h"
 
+#include <locale>
+
 #include "src/lib/fxl/logging.h"
 
 namespace line_input {
+
+namespace {
+
+// State associated with running a modal options prompt.
+class ModalOptionState {
+ public:
+  ModalOptionState(ModalLineInput* input, ModalPromptOptions opts,
+                   ModalLineInput::ModalCompletionCallback cb)
+      : input_(input), options_(std::move(opts)), on_complete_(std::move(cb)) {}
+
+  void OnAccept(const std::string& line) { CheckAccept(line, true); }
+
+  void OnChanged(const std::string& line) {
+    if (options_.require_enter)
+      return;  // Nothing to do.
+
+    if (CheckAccept(line, false)) {
+      // When the user has typed valid input and we don't require enter, synthesize an enter to
+      // invoke the normal accept codepath. We could close the input now, but skipping tne
+      // enter will erase the current line in normal console mode.
+      //
+      // This will cause OnAccept() above to be called which will then signal completion.
+      input_->OnInput('\r');
+    }
+  }
+
+ private:
+  // Checks whether the current line is a valid option. On success, returns true and optionally
+  // signals completion (which closes the modal prompt).
+  bool CheckAccept(const std::string& line, bool signal_complete) {
+    // Optionally check case-insensitively.
+    std::string to_check(line);
+    if (!options_.case_sensitive) {
+      for (size_t i = 0; i < to_check.size(); i++)
+        to_check[i] = std::tolower(to_check[i]);
+    }
+
+    for (const auto& opt : options_.options) {
+      if (to_check == opt) {
+        if (signal_complete) {
+          input_->EndModal();
+          on_complete_(to_check);
+        }
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  ModalLineInput* input_;  // Non-owning (it owns us).
+  ModalPromptOptions options_;
+  ModalLineInput::ModalCompletionCallback on_complete_;
+};
+
+}  // namespace
 
 void ModalLineInput::Init(AcceptCallback accept_cb, const std::string& prompt) {
   FXL_DCHECK(!normal_input_) << "Calling Init() twice.";
@@ -19,6 +77,12 @@ void ModalLineInput::SetAutocompleteCallback(AutocompleteCallback cb) {
   FXL_DCHECK(normal_input_) << "Need to call Init() first.";
   // Autocomplete only works for the non-modal input.
   normal_input_->SetAutocompleteCallback(std::move(cb));
+}
+
+void ModalLineInput::SetChangeCallback(ChangeCallback cb) {
+  // Change callbacks only go to the non-modal input. Our model interface handles changes on the
+  // modal one.
+  normal_input_->SetChangeCallback(std::move(cb));
 }
 
 void ModalLineInput::SetEofCallback(EofCallback cb) { eof_callback_ = std::move(cb); }
@@ -59,6 +123,23 @@ void ModalLineInput::Hide() {
 void ModalLineInput::Show() {
   hidden_ = false;
   current_input_->Show();
+}
+
+void ModalLineInput::ModalGetOption(const ModalPromptOptions& options, const std::string& prompt,
+                                    ModalCompletionCallback cb, WillShowModalCallback will_show) {
+  auto state = std::make_shared<ModalOptionState>(this, options, std::move(cb));
+
+  // This will show callback registers our changed callback on the new modal input class and
+  // calls the user will_show callback if provided. |this| can be captured here because this
+  // owns the callback.
+  auto do_will_show = [this, state, will_show = std::move(will_show)]() mutable {
+    modal_input_->SetChangeCallback([state](const std::string& line) { state->OnChanged(line); });
+    if (will_show)
+      will_show();
+  };
+
+  BeginModal(
+      prompt, [state](const std::string& line) { state->OnAccept(line); }, std::move(do_will_show));
 }
 
 void ModalLineInput::BeginModal(const std::string& prompt, ModalCompletionCallback cb,
@@ -108,11 +189,11 @@ void ModalLineInput::ShowNextModal() {
 
   auto& record = modal_callbacks_.front();
 
-  if (record.will_show)
-    record.will_show();
-
   modal_input_ = MakeAndSetupLineInput(std::move(record.complete), record.prompt);
   current_input_ = modal_input_.get();
+
+  if (record.will_show)
+    record.will_show();
 
   if (!hidden_)
     current_input_->Show();

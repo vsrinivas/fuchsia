@@ -64,6 +64,8 @@ void LineInputEditor::SetAutocompleteCallback(AutocompleteCallback cb) {
   autocomplete_callback_ = std::move(cb);
 }
 
+void LineInputEditor::SetChangeCallback(ChangeCallback cb) { change_callback_ = std::move(cb); }
+
 void LineInputEditor::SetEofCallback(EofCallback cb) { eof_callback_ = std::move(cb); }
 
 void LineInputEditor::SetMaxCols(size_t max) { max_cols_ = max; }
@@ -208,21 +210,35 @@ void LineInputEditor::HandleEscapedInput(char c) {
   if (escape_sequence_.size() < 2)
     return;
 
+  if (escape_sequence_.size() < 3 && escape_sequence_[0] == '[' && escape_sequence_[1] >= '0' &&
+      escape_sequence_[1] <= '9') {
+    // This is a three-character escape sequence but we've only received two. Wait for more.
+    return;
+  }
+
+  // Clear the escaped state before running any functions. Some of them can change the input
+  // which can in turn issue callbacks which can cause other stuff to happen, and we want to be
+  // in a fresh state if it does.
+  reading_escaped_input_ = false;
+  std::string sequence = escape_sequence_;
+  escape_sequence_.clear();
+
   // See https://en.wikipedia.org/wiki/ANSI_escape_code for escape codes.
-  if (escape_sequence_[0] == '[') {
-    if (escape_sequence_[1] >= '0' && escape_sequence_[1] <= '9') {
+  if (sequence[0] == '[') {
+    if (sequence[1] >= '0' && sequence[1] <= '9') {
       // 3-character extended sequence.
-      if (escape_sequence_.size() < 3)
+      if (sequence.size() < 3)
         return;  // Wait for another character.
-      if (escape_sequence_[1] == '3' && escape_sequence_[2] == '~')
+      if (sequence[1] == '3' && sequence[2] == '~') {
         HandleDelete();
-      else if (escape_sequence_[1] == '1' && escape_sequence_[2] == '~')
+      } else if (sequence[1] == '1' && sequence[2] == '~') {
         MoveHome();
-      else if (escape_sequence_[1] == '4' && escape_sequence_[2] == '~')
+      } else if (sequence[1] == '4' && sequence[2] == '~') {
         MoveEnd();
+      }
     } else {
       // Two-character '[' sequence.
-      switch (escape_sequence_[1]) {
+      switch (sequence[1]) {
         case 'A':
           MoveUp();
           break;
@@ -243,8 +259,8 @@ void LineInputEditor::HandleEscapedInput(char c) {
           break;
       }
     }
-  } else if (escape_sequence_[0] == '0') {
-    switch (escape_sequence_[1]) {
+  } else if (sequence[0] == '0') {
+    switch (sequence[1]) {
       case 'H':
         MoveHome();
         break;
@@ -253,9 +269,6 @@ void LineInputEditor::HandleEscapedInput(char c) {
         break;
     }
   }
-
-  reading_escaped_input_ = false;
-  escape_sequence_.clear();
 }
 
 void LineInputEditor::HandleBackspace() {
@@ -263,13 +276,13 @@ void LineInputEditor::HandleBackspace() {
     return;
   pos_--;
   cur_line().erase(pos_, 1);
-  RepaintLine();
+  LineChanged();
 }
 
 void LineInputEditor::HandleDelete() {
   if (pos_ < cur_line().size()) {
     cur_line().erase(pos_, 1);
-    RepaintLine();
+    LineChanged();
   }
 }
 
@@ -317,13 +330,13 @@ void LineInputEditor::HandleTab() {
   // Show the new completion.
   cur_line() = completions_[completion_index_];
   pos_ = cur_line().size();
-  RepaintLine();
+  LineChanged();
 }
 
 void LineInputEditor::HandleNegAck() {
   cur_line() = cur_line().substr(pos_);
   pos_ = 0;
-  RepaintLine();
+  LineChanged();
 }
 
 void LineInputEditor::HandleEndOfTransimission() {
@@ -350,7 +363,7 @@ void LineInputEditor::HandleEndOfTransimission() {
   size_t diff = line.size() - new_line.size();
   pos_ -= diff;
   cur_line() = std::move(new_line);
-  RepaintLine();
+  LineChanged();
 }
 
 void LineInputEditor::HandleEndOfFile() {
@@ -360,7 +373,7 @@ void LineInputEditor::HandleEndOfFile() {
 
   ResetLineState();
   if (visible_)
-    RepaintLine();
+    LineChanged();
 }
 
 void LineInputEditor::HandleReverseHistory(char c) {
@@ -422,7 +435,7 @@ void LineInputEditor::HandleReverseHistory(char c) {
       break;
   }
 
-  RepaintLine();
+  LineChanged();
 };
 
 void LineInputEditor::StartReverseHistoryMode() {
@@ -431,7 +444,7 @@ void LineInputEditor::StartReverseHistoryMode() {
   reverse_history_index_ = 0;
   reverse_history_input_.clear();
 
-  RepaintLine();
+  LineChanged();
 }
 
 void LineInputEditor::EndReverseHistoryMode(bool accept_suggestion) {
@@ -482,7 +495,7 @@ void LineInputEditor::SearchNextReverseHistory(bool restart) {
 
 void LineInputEditor::HandleFormFeed() {
   Write("\033c");  // Form feed.
-  RepaintLine();
+  LineChanged();
 }
 
 void LineInputEditor::Insert(char c) {
@@ -493,11 +506,13 @@ void LineInputEditor::Insert(char c) {
     cur_line().push_back(c);
     pos_++;
     Write(std::string(1, c));
+    if (change_callback_)
+      change_callback_(cur_line());
   } else {
     // Insert in the middle.
     cur_line().insert(pos_, 1, c);
     pos_++;
-    RepaintLine();
+    LineChanged();
   }
 }
 
@@ -546,19 +561,21 @@ void LineInputEditor::TransposeLastTwoCharacters() {
     auto swap = cur_line()[pos_ - 1];
     cur_line()[pos_ - 1] = cur_line()[pos_ - 2];
     cur_line()[pos_ - 2] = swap;
-    RepaintLine();
+    LineChanged();
   }
 }
 
 void LineInputEditor::CancelCommand() {
   Write("^C\r\n");
   ResetLineState();
-  RepaintLine();
+  LineChanged();
 }
 
 void LineInputEditor::DeleteToEnd() {
-  cur_line().resize(pos_);
-  RepaintLine();
+  if (pos_ != cur_line().size()) {
+    cur_line().resize(pos_);
+    LineChanged();
+  }
 }
 
 void LineInputEditor::CancelCompletion() {
@@ -566,13 +583,19 @@ void LineInputEditor::CancelCompletion() {
   pos_ = pos_before_completion_;
   completion_mode_ = false;
   completions_ = std::vector<std::string>();
-  RepaintLine();
+  LineChanged();
 }
 
 void LineInputEditor::AcceptCompletion() {
   completion_mode_ = false;
   completions_ = std::vector<std::string>();
   // Line shouldn't need repainting since this doesn't update it.
+}
+
+void LineInputEditor::LineChanged() {
+  RepaintLine();
+  if (change_callback_)
+    change_callback_(cur_line());
 }
 
 void LineInputEditor::RepaintLine() {

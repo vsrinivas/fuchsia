@@ -82,4 +82,69 @@ TEST(ModalLineInputTest, Nested) {
   EXPECT_EQ("abc", accept_line);
 }
 
+TEST(ModalLineInputTest, ModalGetOption) {
+  TestModalLineInput input;
+  std::optional<std::string> read_line;  // Last non-modal result.
+  input.Init([&read_line](const std::string& line) { read_line = line; }, "Prompt ");
+  input.Show();
+
+  ModalPromptOptions options;
+  options.require_enter = true;
+  options.case_sensitive = true;
+  options.options.push_back("y");
+  options.options.push_back("n");
+
+  std::string result;
+  input.ModalGetOption(options, ">", [&result](const std::string& line) { result = line; });
+
+  // Empty input should get rejected.
+  input.OnInput('\r');
+  EXPECT_TRUE(result.empty());
+
+  // Invalid input should get rejected.
+  input.OnInput('X');
+  input.OnInput('\r');
+  EXPECT_TRUE(result.empty());
+
+  // It was marked case-sensitive so uppercase should be rejected.
+  input.OnInput('Y');
+  input.OnInput('\r');
+  EXPECT_TRUE(result.empty());
+
+  // It was marked case-sensitive so uppercase should be rejected.
+  input.OnInput('y');
+  EXPECT_TRUE(result.empty());  // Because enter was marked required.
+  input.OnInput('\r');
+  ASSERT_EQ("y", result);
+
+  // Should have gone back to normal mode.
+  input.OnInput('z');
+  input.OnInput('\r');
+  ASSERT_TRUE(read_line);
+  EXPECT_EQ("z", *read_line);
+
+  // Now try one with the opposite options.
+  options.require_enter = false;
+  options.case_sensitive = false;
+  result.clear();
+  input.ModalGetOption(options, ">", [&result](const std::string& line) { result = line; });
+
+  // Invalid input should still be rejected.
+  input.OnInput('X');
+  input.OnInput('\r');
+  EXPECT_TRUE(result.empty());
+
+  // Case-insensitive uppercase should implicitly accept with new newline required.
+  input.OnInput('Y');
+  ASSERT_EQ("y", result);  // Result should be lower-cased.
+
+  // Should have gone back to normal mode.
+  read_line = std::nullopt;
+  input.OnInput('y');
+  input.OnInput('\r');
+  ASSERT_TRUE(read_line);
+  EXPECT_EQ("y", *read_line);
+
+}
+
 }  // namespace line_input

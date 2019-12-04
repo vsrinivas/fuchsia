@@ -72,6 +72,10 @@ class LineInput {
   // Called with the user input when the user acceps a line.
   using AcceptCallback = fit::function<void(const std::string&)>;
 
+  // Called when the current line changes. This is not called for <Enter> which doesn't change
+  // anything but will call the AcceptCallback.
+  using ChangeCallback = fit::function<void(const std::string&)>;
+
   // Given some typing, returns a prioritized list of completions.
   using AutocompleteCallback = fit::function<std::vector<std::string>(const std::string&)>;
 
@@ -82,6 +86,9 @@ class LineInput {
 
   // Provides the callback for tab completion.
   virtual void SetAutocompleteCallback(AutocompleteCallback cb) = 0;
+
+  // Provides the callback for when the current line changes.
+  virtual void SetChangeCallback(ChangeCallback cb) = 0;
 
   // Provides the callback for handling EOF. If unset EOF will be ignored.
   virtual void SetEofCallback(EofCallback cb) = 0;
@@ -137,6 +144,7 @@ class LineInputEditor : public LineInput {
 
   // LineInput implementation.
   void SetAutocompleteCallback(AutocompleteCallback cb) override;
+  void SetChangeCallback(ChangeCallback cb) override;
   void SetEofCallback(EofCallback cb) override;
   void SetMaxCols(size_t max) override;
   const std::string& GetLine() const override;
@@ -209,16 +217,21 @@ class LineInputEditor : public LineInput {
   void CancelCompletion();
   void AcceptCompletion();
 
+  // Issues a line change notification and repaints the current line.
+  void LineChanged();
+
+  // Repaints the current line without issuing a line change notification.
   void RepaintLine();
 
   void ResetLineState();
 
   AcceptCallback accept_callback_;
+  ChangeCallback change_callback_;  // Possibly null.
   std::string prompt_;
 
   size_t max_cols_ = 0;
-  AutocompleteCallback autocomplete_callback_;
-  EofCallback eof_callback_;
+  AutocompleteCallback autocomplete_callback_;  // Possibly null.
+  EofCallback eof_callback_;                    // Possibly null;.
 
   // Indicates whether the line is currently visible (as controlled by Show()/Hide()).
   bool visible_ = false;

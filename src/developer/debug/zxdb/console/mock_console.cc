@@ -50,6 +50,13 @@ MockConsole::OutputEvent MockConsole::GetOutputEvent() {
   return ret;
 }
 
+void MockConsole::ModalGetOption(const line_input::ModalPromptOptions& options,
+                                 OutputBuffer message, const std::string& prompt,
+                                 line_input::ModalLineInput::ModalCompletionCallback cb) {
+  // Not implemented in the mock.
+  FXL_NOTREACHED();
+}
+
 Console::Result MockConsole::ProcessInputLine(const std::string& line, CommandCallback callback) {
   FXL_DCHECK(!line.empty());
 

@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/line_input/modal_line_input.h"
 
 namespace zxdb {
 
@@ -42,6 +43,16 @@ class Console {
 
   // Clears the contents of the console.
   virtual void Clear() = 0;
+
+  // Asks the user a question. The possible answers are stored in the options struct.
+  //
+  // Callers should pass anything they want to print above the prompt in the |message|. It's
+  // important to do this instead of calling Output() followed by ModalGetOption() because there
+  // can theoretically be multiple prompts pendingx (in case they're triggered by async events)
+  // and the message passed here will always get printed above the prompt when its turn comes.
+  virtual void ModalGetOption(const line_input::ModalPromptOptions& options, OutputBuffer message,
+                              const std::string& prompt,
+                              line_input::ModalLineInput::ModalCompletionCallback cb) = 0;
 
   // The result of dispatching input is either to keep running or quit the message loop to exit.
   enum class Result { kContinue, kQuit };

@@ -14,21 +14,23 @@ void OnQuitAccept(const std::string& line) {
   g_line_input->Hide();  // Always hide before quitting to put the terminal back.
   if (line == "y" || line == "Y") {
     g_should_quit = true;
-  } else if (line == "n" || line == "N") {
-    printf("Not exiting.\n");
-    g_line_input->EndModal();
-    g_line_input->Show();
-  } else {
-    printf("You need to type a 'y' or 'n'.\n");
-    g_line_input->Show();
+    return;
   }
+
+  printf("Not exiting.\n");
+  g_line_input->Show();
 }
 
 void OnAccept(const std::string& line) {
   g_line_input->AddToHistory(line);
   if (line == "quit" || line == "q") {
-    g_line_input->BeginModal("(y/n) ", &OnQuitAccept,
-                             []() { printf("Are you sure you want to exit?\n"); });
+    line_input::ModalPromptOptions opts;
+    opts.require_enter = false;
+    opts.options.push_back("y");
+    opts.options.push_back("n");
+
+    g_line_input->ModalGetOption(opts, "(y/n) ", &OnQuitAccept,
+                                 []() { printf("Are you sure you want to exit?\n"); });
   } else if (line == "prompt" || line == "p") {
     // This creates two prompts at the same time to test that we can handle sequential asynchonous
     // prompts.
