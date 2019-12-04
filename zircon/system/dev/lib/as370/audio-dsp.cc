@@ -10,6 +10,11 @@
 
 // Cascaded integrator–comb filter.
 // TODO(andresoportus) generalize and place in signal processing library.
+#if defined(__clang__)
+// Integrator and differentiator states are allowed to overflow and wrap,
+// differentiator undoes intergrator's overflow and wrapping.
+[[clang::no_sanitize("undefined")]]
+#endif
 uint32_t CicFilter::Filter(uint32_t index,  // e.g. 0.
                            void* input,
                            uint32_t input_size,  // e.g. 16K.
