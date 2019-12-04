@@ -52,7 +52,6 @@ test("ledger_unittests") {
     "//src/ledger/bin/synchronization:unittests",
     "//src/ledger/bin/testing:unittests",
     "//src/ledger/bin/testing/overnet:unittests",
-    "//src/lib/fxl:printers",
     "//src/lib/fxl/test:gtest_main",
   ]
 

@@ -26,7 +26,6 @@
 #include "src/ledger/bin/sync_coordinator/public/page_sync.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace ledger {
 // Manages an "active" ledger page.

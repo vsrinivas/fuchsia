@@ -26,7 +26,6 @@
 #include "src/lib/callback/destruction_sentinel.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/time/time_delta.h"
 
 namespace cloud_sync {
 
