@@ -11,6 +11,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    ":component_manager_panic_test",
     ":elf_runner_test",
     ":shutdown_integration_test",
     "base_resolver_test",
@@ -79,6 +80,18 @@ rustc_binary("system_controller_client") {
   ]
 }
 
+rustc_test("component_manager_panic_test_bin") {
+  name = "component_manager_panic_test"
+  edition = "2018"
+  source_root = "component_manager_panic.rs"
+  deps = [
+    ":test_utils",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
 test_package("shutdown_integration_test") {
   deps = [
     ":shutdown_integration_test_bin",
@@ -108,6 +121,21 @@ test_package("shutdown_integration_test") {
   tests = [
     {
       name = "shutdown_integration_test"
+    },
+  ]
+}
+
+test_package("component_manager_panic_test") {
+  deps = [
+    ":component_manager_panic_test_bin",
+  ]
+
+  components =
+      [ "//src/sys/component_manager:component_manager_as_v1_component" ]
+
+  tests = [
+    {
+      name = "component_manager_panic_test"
     },
   ]
 }

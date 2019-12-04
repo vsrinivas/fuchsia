@@ -15,12 +15,19 @@ use {
     failure::{Error, ResultExt},
     fuchsia_async as fasync,
     log::*,
-    std::{process, sync::Arc},
+    std::{panic, process, sync::Arc},
 };
 
 const NUM_THREADS: usize = 2;
 
 fn main() -> Result<(), Error> {
+    // Make sure we exit if there is a panic. Add this hook before we init the
+    // KernelLogger because it installs its own hook and then calls any
+    // existing hook.
+    panic::set_hook(Box::new(|_| {
+        println!("Panic in component_manager, aborting process.");
+        process::abort();
+    }));
     klog::KernelLogger::init().expect("Failed to initialize logger");
     let args = match startup::Arguments::from_args() {
         Ok(args) => args,
@@ -40,8 +47,7 @@ fn main() -> Result<(), Error> {
                 model.wait_for_root_realm_stop().await;
             }
             Err(err) => {
-                error!("Component manager setup failed: {:?}", err);
-                process::exit(1)
+                panic!("Component manager setup failed: {:?}", err);
             }
         }
     };
