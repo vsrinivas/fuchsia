@@ -17,24 +17,11 @@ AudioCoreClient::AudioCoreClient(sys::ComponentContext* component_context,
 
   component_context->svc()->Connect(audio_core_.NewRequest());
 
-  audio_core_.events().SystemGainMuteChanged = [this](float gain, bool muted) {
-    system_gain_db_ = gain;
-    system_muted_ = muted;
-    NotifyGainMuteChanged();
-  };
-
   component_context->outgoing()->AddPublicService<fuchsia::media::Audio>(
       [this](fidl::InterfaceRequest<fuchsia::media::Audio> request) {
         bindings_.AddBinding(this,
                              fidl::InterfaceRequest<fuchsia::media::Audio>(std::move(request)));
-        bindings_.bindings().back()->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
       });
-}
-
-void AudioCoreClient::NotifyGainMuteChanged() {
-  for (auto& binding : bindings_.bindings()) {
-    binding->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
-  }
 }
 
 }  // namespace media::audio

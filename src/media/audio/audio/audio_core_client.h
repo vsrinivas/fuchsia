@@ -28,16 +28,7 @@ class AudioCoreClient : public fuchsia::media::Audio {
     audio_core_->CreateAudioCapturer(loopback, std::move(audio_capturer_request));
   };
 
-  void SetSystemGain(float gain_db) final { audio_core_->SetSystemGain(gain_db); };
-
-  void SetSystemMute(bool muted) final { audio_core_->SetSystemMute(muted); };
-
  private:
-  void NotifyGainMuteChanged();
-
-  float system_gain_db_;
-  bool system_muted_;
-
   void PublishServices();
 
   fidl::BindingSet<fuchsia::media::Audio> bindings_;
