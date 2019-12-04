@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/factory_protocol_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/isp-device-test"
+        ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

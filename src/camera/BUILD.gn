@@ -37,7 +37,8 @@ group("tests") {
 
 test_package("camera_tests") {
   deps = [
-    "//src/camera/calibration/blc/test:blc_test",
+    "//src/camera/calibration/algorithms/test:algorithms_test",
+    "//src/camera/calibration/factory_protocol/test:factory_protocol_test",
     "//src/camera/camera_manager2/test:buffer_leak_test",
     "//src/camera/camera_manager2/test:camera-manager-test",
     "//src/camera/camera_manager2/test:camera_plug_detector_test",
@@ -150,8 +151,8 @@ test_package("camera_tests") {
       environments = basic_envs
     },
     {
-      name = "blc_test"
-      manifest = "calibration/blc/test/meta/blc_test.cmx"
+      name = "algorithms_test"
+      manifest = "calibration/algorithms/test/meta/algorithms_test.cmx"
       environments = basic_envs
     },
     {
@@ -192,6 +193,11 @@ test_package("camera_tests") {
     {
       name = "buffer_leak_test"
       manifest = "camera_manager2/test/meta/buffer_leak_test.cmx"
+      environments = [ sherlock_env ]
+    },
+    {
+      name = "factory_protocol_test"
+      manifest = "//src/camera/calibration/factory_protocol/test/meta/factory_protocol_test.cmx"
       environments = [ sherlock_env ]
     },
 

@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("factory_protocol_test") {
+  testonly = true
+  sources = [
+    "factory_protocol_test.cc",
+  ]
+
+  deps = [
+    "//src/camera/calibration/factory_protocol",
+    "//src/camera/drivers/test_utils",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}

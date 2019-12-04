@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/blc_test"
+        "binary": "test/algorithms_test"
     },
     "sandbox": {
         "services": [

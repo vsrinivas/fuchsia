@@ -2,16 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("blc_test") {
-  testonly = true
+import("//build/package.gni")
+
+source_set("algorithms") {
   sources = [
-    "blc_test.cc",
+    "blc.cc",
+  ]
+
+  public = [
+    "blc.h",
   ]
 
   deps = [
-    "//src/camera/calibration/blc",
-    "//src/camera/drivers/test_utils",
     "//src/camera/image_writer",
-    "//src/lib/fxl/test:gtest_main_with_syslog",
   ]
 }

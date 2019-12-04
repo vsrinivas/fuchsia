@@ -47,7 +47,7 @@ class ImageIOUtil {
   }
 
  private:
-  // Path to the directory under `/data` that frames will be written to.
+  // Path to the directory under `kMutablePartitionDirPath` that frames will be written to.
   const std::string dir_path_;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_;
   // Number of image files written so far.
