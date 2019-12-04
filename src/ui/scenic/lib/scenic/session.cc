@@ -79,6 +79,10 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
 }
 
 void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback callback) {
+  TRACE_DURATION("gfx", "scenic_impl::Session::Present2");
+  TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
+  next_present_trace_id_++;
+
   if (!valid_)
     return;
 
