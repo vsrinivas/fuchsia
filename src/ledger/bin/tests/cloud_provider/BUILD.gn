@@ -21,7 +21,6 @@ executable("cloud_provider") {
     "//src/ledger/lib/convert",
     "//src/ledger/lib/socket",
     "//src/ledger/lib/vmo",
-    "//src/lib/uuid",
   ]
 
   public_deps = [

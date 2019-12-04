@@ -15,7 +15,6 @@
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/uuid/uuid.h"
 
 using ::testing::AllOf;
 using ::testing::AnyOf;
@@ -261,7 +260,7 @@ TEST_F(PageCloudTest, AddAndGetObjects) {
   // previous test runs.
   // TODO(ppi): use a fixed ID here once the cloud provider implementations
   // support erasing objects.
-  const std::string id = uuid::Generate();
+  const std::string id = convert::ToString(GetUniqueRandomId());
   ASSERT_EQ(page_cloud->AddObject(convert::ToArray(id), std::move(data).ToTransport(), {}, &status),
             ZX_OK);
   EXPECT_EQ(status, Status::OK);
