@@ -22,7 +22,8 @@ use std::rc::Rc;
 /// Sends Messages: N/A
 ///
 /// FIDL dependencies:
-///     - fidl_fuchsia_hardware_thermal: used by this node to query the thermal driver.
+///     - fidl_fuchsia_hardware_thermal: used by this node to query the thermal driver specified by
+///       "driver_path" in the TemperatureHandler constructor
 
 pub struct TemperatureHandler {
     driver_path: String,

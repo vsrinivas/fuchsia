@@ -25,6 +25,10 @@ pub enum Message {
     /// Instruct the node to limit the power consumption of its corresponding component (e.g., CPU)
     /// Arg: the max number of watts that the component should be allowed to consume
     SetMaxPowerConsumption(Watts),
+
+    /// Command a system shutdown
+    /// Arg: a string specifying the reason for the shutdown, to be used for logging
+    SystemShutdown(String),
 }
 
 /// Defines the return values for each of the Message types from above
@@ -43,4 +47,7 @@ pub enum MessageReturn {
 
     /// There is no arg in this MessageReturn type. It essentially only serves as an ACK.
     SetMaxPowerConsumption,
+
+    /// There is no arg in this MessageReturn type. It essentially only serves as an ACK.
+    SystemShutdown,
 }

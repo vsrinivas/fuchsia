@@ -23,6 +23,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
+    "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
     "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal-rustc",
     "//zircon/system/fidl/fuchsia-kernel:fuchsia-kernel-rustc",
     "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo-rustc",

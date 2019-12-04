@@ -9,7 +9,10 @@ use fuchsia_syslog::fx_log_info;
 use std::rc::Rc;
 
 // nodes
-use crate::{cpu_control_handler, cpu_stats_handler, temperature_handler, thermal_policy};
+use crate::{
+    cpu_control_handler, cpu_stats_handler, system_power_handler, temperature_handler,
+    thermal_policy,
+};
 
 pub struct PowerManager {
     board: String,
@@ -48,21 +51,28 @@ impl PowerManager {
         let cpu_control_node = cpu_control_handler::CpuControlHandler::new();
         self.nodes.push(cpu_control_node.clone());
 
+        let sys_pwr_handler = system_power_handler::SystemPowerStateHandler::new()?;
+        self.nodes.push(sys_pwr_handler.clone());
+
         let thermal_config = thermal_policy::ThermalConfig {
             temperature_node: cpu_temperature,
             cpu_control_node,
+            sys_pwr_handler,
 
-            // TODO(fxb/41452): these are just placeholder ThermalParams. The real params should be
-            // populated here once they have been properly determined.
-            thermal_params: thermal_policy::ThermalParams {
-                sample_interval: Seconds(1.0),
-                filter_time_constant: Seconds(10.0),
-                target_temperature: Celsius(85.0),
-                e_integral_min: -20.0,
-                e_integral_max: 0.0,
-                sustainable_power: Watts(1.1),
-                proportional_gain: 0.0,
-                integral_gain: 0.2,
+            // TODO(fxb/41452): these are just placeholder ThermalPolicyParams. The real params
+            // should be populated here once they have been properly determined.
+            thermal_params: thermal_policy::ThermalPolicyParams {
+                controller_params: thermal_policy::ThermalControllerParams {
+                    sample_interval: Seconds(1.0),
+                    filter_time_constant: Seconds(10.0),
+                    target_temperature: Celsius(85.0),
+                    e_integral_min: -20.0,
+                    e_integral_max: 0.0,
+                    sustainable_power: Watts(1.1),
+                    proportional_gain: 0.0,
+                    integral_gain: 0.2,
+                },
+                thermal_shutdown_temperature: Celsius(95.0),
             },
         };
         let thermal_policy = thermal_policy::ThermalPolicy::new(thermal_config)?;

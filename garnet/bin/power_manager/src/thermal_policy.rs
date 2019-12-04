@@ -23,6 +23,7 @@ use std::rc::Rc;
 /// Message Outputs:
 ///     - ReadTemperature
 ///     - SetMaxPowerConsumption
+///     - SystemShutdown
 ///
 /// FIDL dependencies: N/A
 
@@ -41,12 +42,25 @@ pub struct ThermalConfig {
     /// the SetMaxPowerConsumption message.
     pub cpu_control_node: Rc<dyn Node>,
 
+    /// The node to handle system power state changes (e.g., shutdown). It is expected that this
+    /// node responds to the SystemShutdown message.
+    pub sys_pwr_handler: Rc<dyn Node>,
+
+    /// All parameter values relating to the thermal policy itself
+    pub thermal_params: ThermalPolicyParams,
+}
+
+/// A struct to store all configurable aspects of the thermal policy itself
+pub struct ThermalPolicyParams {
     /// The thermal control loop parameters
-    pub thermal_params: ThermalParams,
+    pub controller_params: ThermalControllerParams,
+
+    /// If temperature reaches or exceeds this value, the policy will command a system shutdown
+    pub thermal_shutdown_temperature: Celsius,
 }
 
 /// A struct to store the tunable thermal control loop parameters
-pub struct ThermalParams {
+pub struct ThermalControllerParams {
     /// The interval at which to run the thermal control loop
     pub sample_interval: Seconds,
 
@@ -80,7 +94,7 @@ struct ThermalState {
     /// The temperature reading from the previous controller iteration
     prev_temperature: Cell<Celsius>,
 
-    /// The integral error [degC * s] that is accumlated across controller iterations
+    /// The integral error [degC * s] that is accumulated across controller iterations
     error_integral: Cell<f64>,
 
     /// A flag to know if the rest of ThermalState has not been initialized yet
@@ -107,14 +121,12 @@ impl ThermalPolicy {
     /// resulting errors are logged.
     fn start_periodic_thermal_loop(self: Rc<Self>) -> Result<(), Error> {
         let mut periodic_timer = fasync::Interval::new(zx::Duration::from_nanos(
-            self.config.thermal_params.sample_interval.into_nanos(),
+            self.config.thermal_params.controller_params.sample_interval.into_nanos(),
         ));
-
-        let s = self.clone();
 
         fasync::spawn_local(async move {
             while let Some(()) = periodic_timer.next().await {
-                if let Err(e) = s.iterate_thermal_control().await {
+                if let Err(e) = self.iterate_thermal_control().await {
                     fx_log_err!("{}", e);
                 }
             }
@@ -152,21 +164,28 @@ impl ThermalPolicy {
             raw_temperature.0,
             self.state.prev_temperature.get().0,
             time_delta.0,
-            self.config.thermal_params.filter_time_constant.0,
+            self.config.thermal_params.controller_params.filter_time_constant.0,
         ));
         self.state.prev_temperature.set(filtered_temperature);
+
+        // Quick check to see if the new filtered temperature is above the critical threshold. If
+        // it is, shutdown the system.
+        self.check_critical_temperature(filtered_temperature).await;
 
         let available_power = self.calculate_available_power(filtered_temperature, time_delta);
         fx_vlog!(
             1,
-            "iteration_period={}s; raw_temperature={}C; available_power={}W",
+            "iteration_period={}s; raw_temperature={}C; \
+             filtered_temperature={}C; available_power={}W",
             time_delta.0,
             raw_temperature.0,
+            filtered_temperature.0,
             available_power.0
         );
         self.distribute_power(available_power).await
     }
 
+    /// Query the current temperature from the temperature handler node
     async fn get_temperature(&self) -> Result<Celsius, Error> {
         match self.send_message(&self.config.temperature_node, &Message::ReadTemperature).await {
             Ok(MessageReturn::ReadTemperature(t)) => Ok(t),
@@ -175,21 +194,50 @@ impl ThermalPolicy {
         }
     }
 
+    /// Compares the supplied temperature with the thermal config thermal shutdown temperature. If
+    /// we've reached or exceeded the shutdown temperature, message the system power handler node
+    /// to initiate a system shutdown.
+    async fn check_critical_temperature(&self, temperature: Celsius) {
+        if temperature.0 >= self.config.thermal_params.thermal_shutdown_temperature.0 {
+            let result = self
+                .send_message(
+                    &self.config.sys_pwr_handler,
+                    &Message::SystemShutdown(
+                        format!(
+                            "Exceeded thermal limit ({}C > {}C)",
+                            temperature.0,
+                            self.config.thermal_params.thermal_shutdown_temperature.0
+                        )
+                        .to_string(),
+                    ),
+                )
+                .await;
+
+            if let Err(e) = result {
+                // TODO(pshickel): We shouldn't ever get an error here. But we should probably have
+                // some type of fallback or secondary mechanism of halting the system if it somehow
+                // does happen. This could have physical safety implications.
+                fx_log_err!("Failed to shutdown the system: {}", e);
+            }
+        }
+    }
+
     /// A PID control algorithm that uses temperature as the measured process variable, and
     /// available power as the control variable. Each call to the function will also
     /// update the state variable `error_integral` to be used on subsequent iterations.
     fn calculate_available_power(&self, temperature: Celsius, time_delta: Seconds) -> Watts {
-        let temperature_error = self.config.thermal_params.target_temperature.0 - temperature.0;
+        let controller_params = &self.config.thermal_params.controller_params;
+        let temperature_error = controller_params.target_temperature.0 - temperature.0;
         let error_integral = clamp(
             self.state.error_integral.get() + temperature_error * time_delta.0,
-            self.config.thermal_params.e_integral_min,
-            self.config.thermal_params.e_integral_max,
+            controller_params.e_integral_min,
+            controller_params.e_integral_max,
         );
         self.state.error_integral.set(error_integral);
 
-        let p_term = temperature_error * self.config.thermal_params.proportional_gain;
-        let i_term = error_integral * self.config.thermal_params.integral_gain;
-        let power_available = self.config.thermal_params.sustainable_power.0 + p_term + i_term;
+        let p_term = temperature_error * controller_params.proportional_gain;
+        let i_term = error_integral * controller_params.integral_gain;
+        let power_available = controller_params.sustainable_power.0 + p_term + i_term;
 
         Watts(power_available)
     }
@@ -236,7 +284,7 @@ impl Node for ThermalPolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{cpu_control_handler, temperature_handler};
+    use crate::{cpu_control_handler, system_power_handler, temperature_handler};
 
     // TODO (pshickel): The most useful test for this node will likely come from claridge@'s
     // thermal simulator. Once the simulator is ready, we can use it here to test the control
@@ -245,18 +293,23 @@ mod tests {
     fn setup_test_node(temperature_readings: Vec<f32>) -> Rc<ThermalPolicy> {
         let temperature_node = temperature_handler::tests::setup_test_node(temperature_readings);
         let cpu_control_node = cpu_control_handler::tests::setup_test_node();
+        let sys_pwr_handler = system_power_handler::tests::setup_test_node();
         let thermal_config = ThermalConfig {
             temperature_node,
             cpu_control_node,
-            thermal_params: ThermalParams {
-                sample_interval: Seconds(0.0),
-                filter_time_constant: Seconds(0.0),
-                target_temperature: Celsius(0.0),
-                e_integral_min: 0.0,
-                e_integral_max: 0.0,
-                sustainable_power: Watts(0.0),
-                proportional_gain: 0.0,
-                integral_gain: 0.0,
+            sys_pwr_handler,
+            thermal_params: ThermalPolicyParams {
+                controller_params: ThermalControllerParams {
+                    sample_interval: Seconds(0.0),
+                    filter_time_constant: Seconds(0.0),
+                    target_temperature: Celsius(0.0),
+                    e_integral_min: 0.0,
+                    e_integral_max: 0.0,
+                    sustainable_power: Watts(0.0),
+                    proportional_gain: 0.0,
+                    integral_gain: 0.0,
+                },
+                thermal_shutdown_temperature: Celsius(0.0),
             },
         };
         ThermalPolicy::new(thermal_config).unwrap()
