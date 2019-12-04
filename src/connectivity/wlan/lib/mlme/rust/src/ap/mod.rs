@@ -12,7 +12,6 @@ use {
         buffer::BufferProvider,
         device::Device,
         error::Error,
-        key::KeyConfig,
         timer::{EventId, Scheduler, Timer},
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
@@ -182,17 +181,12 @@ impl Ap {
     /// Handles MLME-SETKEYS.request (IEEE Std 802.11-2016, 6.3.19.1) from the SME.
     ///
     /// The MLME should set the keys on the PHY.
-    pub fn handle_mlme_setkeys_request(
-        &mut self,
-        req: fidl_mlme::SetKeysRequest,
-    ) -> Result<(), Error> {
-        for key_desc in req.keylist {
-            self.ctx
-                .device
-                .set_key(KeyConfig::from(&key_desc))
-                .map_err(|s| Error::Status(format!("failed to set keys on PHY"), s))?;
+    pub fn handle_mlme_setkeys_req(&mut self, req: fidl_mlme::SetKeysRequest) -> Result<(), Error> {
+        if let Some(bss) = self.bss.as_mut() {
+            bss.handle_mlme_setkeys_req(&mut self.ctx, &req.keylist[..])
+        } else {
+            Err(Error::Status(format!("cannot set keys on unstarted BSS"), zx::Status::BAD_STATE))
         }
-        Ok(())
     }
 
     #[allow(deprecated)] // Allow until main message loop is in Rust.
@@ -200,9 +194,7 @@ impl Ap {
         match msg {
             fidl_mlme::MlmeRequestMessage::StartReq { req } => self.handle_mlme_start_req(req),
             fidl_mlme::MlmeRequestMessage::StopReq { req } => self.handle_mlme_stop_req(req),
-            fidl_mlme::MlmeRequestMessage::SetKeysReq { req } => {
-                self.handle_mlme_setkeys_request(req)
-            }
+            fidl_mlme::MlmeRequestMessage::SetKeysReq { req } => self.handle_mlme_setkeys_req(req),
             fidl_mlme::MlmeRequestMessage::AuthenticateResp { resp } => {
                 self.bss.as_mut().ok_or_bss_err()?.handle_mlme_auth_resp(&mut self.ctx, resp)
             }
@@ -297,12 +289,12 @@ mod tests {
         crate::{
             buffer::FakeBufferProvider,
             device::FakeDevice,
-            key::{KeyType, Protection},
+            key::{KeyConfig, KeyType, Protection},
             timer::FakeScheduler,
         },
         banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
         fidl_fuchsia_wlan_common as fidl_common,
-        wlan_common::test_utils::fake_frames::fake_wpa2_rsne,
+        wlan_common::{assert_variant, test_utils::fake_frames::fake_wpa2_rsne},
     };
     const CLIENT_ADDR: MacAddr = [1u8; 6];
     const BSSID: Bssid = Bssid([2u8; 6]);
@@ -628,7 +620,7 @@ mod tests {
     }
 
     #[test]
-    fn ap_handle_mlme_setkeys_request() {
+    fn ap_handle_mlme_setkeys_req() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -637,7 +629,19 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.handle_mlme_setkeys_request(fidl_mlme::SetKeysRequest {
+        ap.bss.replace(
+            InfraBss::new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                Some(fake_wpa2_rsne()),
+            )
+            .expect("expected InfraBss::new ok"),
+        );
+
+        ap.handle_mlme_setkeys_req(fidl_mlme::SetKeysRequest {
             keylist: vec![fidl_mlme::SetKeyDescriptor {
                 cipher_suite_oui: [1, 2, 3],
                 cipher_suite_type: 4,
@@ -648,7 +652,7 @@ mod tests {
                 rsc: 8,
             }],
         })
-        .expect("expected Ap::handle_mlme_setkeys_request OK");
+        .expect("expected Ap::handle_mlme_setkeys_req OK");
         assert_eq!(fake_device.keys.len(), 1);
         assert_eq!(
             fake_device.keys[0],
@@ -667,6 +671,72 @@ mod tests {
                 ],
                 rsc: 8,
             }
+        );
+    }
+
+    #[test]
+    fn ap_handle_mlme_setkeys_req_no_bss() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
+        assert_variant!(
+            ap.handle_mlme_setkeys_req(fidl_mlme::SetKeysRequest {
+                keylist: vec![fidl_mlme::SetKeyDescriptor {
+                    cipher_suite_oui: [1, 2, 3],
+                    cipher_suite_type: 4,
+                    key_type: fidl_mlme::KeyType::Pairwise,
+                    address: [5; 6],
+                    key_id: 6,
+                    key: vec![1, 2, 3, 4, 5, 6, 7],
+                    rsc: 8,
+                }],
+            })
+            .expect_err("expected Ap::handle_mlme_setkeys_req error"),
+            Error::Status(_, zx::Status::BAD_STATE)
+        );
+    }
+
+    #[test]
+    fn ap_handle_mlme_setkeys_req_bss_no_rsne() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ap = Ap::new(
+            fake_device.as_device(),
+            FakeBufferProvider::new(),
+            fake_scheduler.as_scheduler(),
+            BSSID,
+        );
+        ap.bss.replace(
+            InfraBss::new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::new ok"),
+        );
+
+        assert_variant!(
+            ap.handle_mlme_setkeys_req(fidl_mlme::SetKeysRequest {
+                keylist: vec![fidl_mlme::SetKeyDescriptor {
+                    cipher_suite_oui: [1, 2, 3],
+                    cipher_suite_type: 4,
+                    key_type: fidl_mlme::KeyType::Pairwise,
+                    address: [5; 6],
+                    key_id: 6,
+                    key: vec![1, 2, 3, 4, 5, 6, 7],
+                    rsc: 8,
+                }],
+            })
+            .expect_err("expected Ap::handle_mlme_setkeys_req error"),
+            Error::Status(_, zx::Status::BAD_STATE)
         );
     }
 

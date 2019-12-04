@@ -10,6 +10,7 @@ use {
             Context, Rejection, TimedEvent,
         },
         error::Error,
+        key::KeyConfig,
         timer::EventId,
     },
     banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
@@ -95,6 +96,26 @@ impl InfraBss {
         ctx.device
             .disable_beaconing()
             .map_err(|s| Error::Status(format!("failed to disable beaconing"), s))
+    }
+
+    pub fn handle_mlme_setkeys_req(
+        &mut self,
+        ctx: &mut Context,
+        keylist: &[fidl_mlme::SetKeyDescriptor],
+    ) -> Result<(), Error> {
+        if self.rsne.is_none() {
+            return Err(Error::Status(
+                format!("cannot set keys for an unprotected BSS"),
+                zx::Status::BAD_STATE,
+            ));
+        }
+
+        for key_desc in keylist {
+            ctx.device
+                .set_key(KeyConfig::from(key_desc))
+                .map_err(|s| Error::Status(format!("failed to set keys on PHY"), s))?;
+        }
+        Ok(())
     }
 
     pub fn handle_mlme_auth_resp(
@@ -339,6 +360,7 @@ mod tests {
             ap::remote_client::{ClientEvent, ClientRejection},
             buffer::FakeBufferProvider,
             device::{Device, FakeDevice},
+            key::{KeyType, Protection},
             timer::{FakeScheduler, Scheduler, Timer},
         },
         wlan_common::{assert_variant, test_utils::fake_frames::fake_wpa2_rsne},
@@ -1480,6 +1502,86 @@ mod tests {
                 // Data
                 1, 2, 3, 4, 5,
             ][..]
+        );
+    }
+
+    #[test]
+    fn handle_mlme_setkeys_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            Some(fake_wpa2_rsne()),
+        )
+        .expect("expected InfraBss::new ok");
+        bss.handle_mlme_setkeys_req(
+            &mut ctx,
+            &[fidl_mlme::SetKeyDescriptor {
+                cipher_suite_oui: [1, 2, 3],
+                cipher_suite_type: 4,
+                key_type: fidl_mlme::KeyType::Pairwise,
+                address: [5; 6],
+                key_id: 6,
+                key: vec![1, 2, 3, 4, 5, 6, 7],
+                rsc: 8,
+            }][..],
+        )
+        .expect("expected InfraBss::handle_mlme_setkeys_req OK");
+        assert_eq!(fake_device.keys.len(), 1);
+        assert_eq!(
+            fake_device.keys[0],
+            KeyConfig {
+                bssid: 0,
+                protection: Protection::RX_TX,
+                cipher_oui: [1, 2, 3],
+                cipher_type: 4,
+                key_type: KeyType::PAIRWISE,
+                peer_addr: [5; 6],
+                key_idx: 6,
+                key_len: 7,
+                key: [
+                    1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
+                ],
+                rsc: 8,
+            }
+        );
+    }
+
+    #[test]
+    fn handle_mlme_setkeys_req_no_rsne() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::new ok");
+        assert_variant!(
+            bss.handle_mlme_setkeys_req(
+                &mut ctx,
+                &[fidl_mlme::SetKeyDescriptor {
+                    cipher_suite_oui: [1, 2, 3],
+                    cipher_suite_type: 4,
+                    key_type: fidl_mlme::KeyType::Pairwise,
+                    address: [5; 6],
+                    key_id: 6,
+                    key: vec![1, 2, 3, 4, 5, 6, 7],
+                    rsc: 8,
+                }][..]
+            )
+            .expect_err("expected InfraBss::handle_mlme_setkeys_req error"),
+            Error::Status(_, zx::Status::BAD_STATE)
         );
     }
 }
