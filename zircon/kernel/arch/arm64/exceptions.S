@@ -374,17 +374,15 @@ END_DATA(arm64_exc_shared_restore_lower_el)
 // pc is in x10 and needs to go in the next available register,
 // or the stack if the regs are full.
 //
-.macro pre_args, nargs
+.macro syscall_dispatcher nargs, syscall
+.balign 16
 .if \nargs == 8
     push_regs x10, x11 // push twice to maintain alignment
+    bl  wrapper_\syscall
+    pop_regs x10, x11
 .else
     mov x\nargs, x10
-.endif
-.endm
-
-.macro post_args, nargs
-.if \nargs == 8
-    pop_regs x10, x11
+    bl  wrapper_\syscall
 .endif
     b .Lpost_syscall
 .endm
@@ -398,7 +396,7 @@ END_DATA(arm64_exc_shared_restore_lower_el)
 // x16   - contains syscall_num
 // sp    - points to base of frame (frame->r[0])
 //
-// Expected state prior to unknown_syscall and wrapper_syscall...
+// Expected state prior to branching to syscall_dispatcher macro
 //
 // x0-x7  - contains syscall arguments
 // x10    - contains userspace pc
@@ -409,16 +407,20 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     // Verify syscall number and call the unknown handler if bad.
     cmp  x16, #ZX_SYS_COUNT
     bhs  .Lunknown_syscall
-    // Jump to the right syscall wrapper.
-    // call_wrapper_table is 4096 byte aligned so just use adrp
-    adrp x12, call_wrapper_table
-    ldr  x12, [x12, x16, LSL#3]
+    // Jump to the right syscall wrapper. The syscall table is an
+    // array of 16 byte aligned routines for each syscall. Each routine
+    // marshalls some arguments, bls to the routine, and then branches
+    // back to .Lpost_syscall (see syscall_dispatcher macro above).
+    adr  x12, .Lsyscall_table
+    add  x12, x12, x16, lsl #4
     br   x12
+
 .Lunknown_syscall:
-    mov  x0, x16
-    pre_args 1
-    bl   unknown_syscall
-    post_args 1
+    mov x0, x16 // move the syscall number into the 0 arg slot
+    mov x1, x10 // pc into arg 1
+    bl  unknown_syscall
+    // fall through
+
 .Lpost_syscall:
     // Upon return from syscall, x0 = status, x1 = thread signalled
     // Move the status to frame->r[0] for return to userspace.
@@ -428,29 +430,18 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     mov  x0, sp
     bl   arch_iframe_process_pending_signals
     b    arm64_exc_shared_restore_lower_el
-END_FUNCTION(arm64_syscall_dispatcher)
 
-// Adds a label for making the syscall and adds it to the jump table.
+// Emit a small trampoline to branch to the wrapper routine for the syscall.
 .macro syscall_dispatch nargs, syscall
-    .pushsection .text.syscall-dispatch,"ax",%progbits
-    LOCAL_FUNCTION(.Lcall_\syscall\())
-        pre_args \nargs
-        bl wrapper_\syscall
-        post_args \nargs
-    END_FUNCTION(.Lcall_\syscall\())
-    .popsection
-    .pushsection .rodata.syscall-table,"a",%progbits
-        .quad .Lcall_\syscall
-    .popsection
+    syscall_dispatcher \nargs, \syscall
 .endm
 
 // Adds the label for the jump table.
 .macro start_syscall_dispatch
-    .pushsection .rodata.syscall-table,"a",%progbits
-    // align on 4096 byte boundary to save an instruction on table lookup
-    .balign 4096
-    call_wrapper_table:
-    .popsection
+    .balign 16
+    .Lsyscall_table:
 .endm
 
 #include <zircon/syscall-kernel-branches.S>
+
+END_FUNCTION(arm64_syscall_dispatcher)
