@@ -6,8 +6,13 @@ pub mod filter;
 pub mod player_event;
 mod watcher;
 
-use self::{filter::*, player_event::PlayerEvent, watcher::*};
+use self::{
+    filter::*,
+    player_event::{PlayerEvent, SessionsWatcherEvent},
+    watcher::*,
+};
 use crate::{proxies::player::Player, Result};
+use failure::Error;
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_syslog::fx_log_warn;
 use futures::{
@@ -16,9 +21,10 @@ use futures::{
     prelude::*,
     stream::{self, Stream},
     task::{Context, Poll},
+    StreamExt,
 };
 use mpmc;
-use std::{collections::HashMap, pin::Pin};
+use std::{collections::HashMap, marker::Unpin, pin::Pin};
 use streammap::StreamMap;
 
 struct WatcherClient<F> {
@@ -54,15 +60,17 @@ impl Discovery {
     fn new_watcher_client(
         &mut self,
         disconnect_signal: SessionsWatcherEventStream,
-        watcher_sink: WatcherSink,
-        player_events: mpmc::Receiver<FilterApplicant<(u64, PlayerEvent)>>,
+        watcher_sink: impl Sink<(u64, SessionsWatcherEvent), Error = Error> + Unpin,
+        player_events: impl Stream<Item = FilterApplicant<(u64, PlayerEvent)>> + Unpin,
+        filter: Filter,
     ) -> WatcherClient<impl Future<Output = Result<()>> + Unpin> {
         let id = self.next_watcher_id;
         self.next_watcher_id += 1;
 
         let queue: Vec<FilterApplicant<(u64, PlayerEvent)>> =
             self.catch_up_events.values().cloned().collect();
-        let event_stream = stream::iter(queue).chain(player_events);
+        let event_stream =
+            stream::iter(queue).chain(player_events).filter_map(watcher_filter(filter));
 
         let event_forward = event_stream.map(Ok).forward(watcher_sink);
 
@@ -100,11 +108,9 @@ impl Discovery {
                                 Ok(proxy) => {
                                     let watcher_client = self.new_watcher_client(
                                         proxy.take_event_stream(),
-                                        WatcherSink::new(
-                                            Filter::new(watch_options),
-                                            proxy
-                                        ),
-                                        sender.new_receiver()
+                                        FlowControlledProxySink::from(proxy),
+                                        sender.new_receiver(),
+                                        Filter::new(watch_options)
                                     );
                                     watchers.insert(
                                         watcher_client.id,
