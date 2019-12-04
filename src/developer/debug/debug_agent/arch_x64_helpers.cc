@@ -321,17 +321,6 @@ void SetWatchpointFlags(uint64_t* dr7, int slot, bool active, uint64_t size) {
   FXL_NOTREACHED() << "Invalid slot: " << slot;
 }
 
-WatchpointInstallationResult CreateResult(zx_status_t status,
-                                          debug_ipc::AddressRange installed_range = {},
-                                          int slot = -1) {
-  WatchpointInstallationResult result = {};
-  result.status = status;
-  result.installed_range = installed_range;
-  result.slot = slot;
-
-  return result;
-}
-
 }  // namespace
 
 // clang-format off

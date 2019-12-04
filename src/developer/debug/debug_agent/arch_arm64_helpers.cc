@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/debug_agent/arch_arm64_helpers.h"
 
+#include <zircon/hw/debug/arm64.h>
+
 #include <sstream>
 
 #include "src/developer/debug/debug_agent/arch.h"
@@ -71,6 +73,125 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* d
   debug_regs->hw_bps[slot].dbgbcr = 0;
   debug_regs->hw_bps[slot].dbgbvr = 0;
   return ZX_OK;
+}
+
+// Watchpoint Installation -------------------------------------------------------------------------
+
+namespace {
+
+uint32_t GetWatchpointLength(uint32_t dbgwcr) {
+  // Because base range addresses have to be 4 bytes aligned, having a watchpoint for smaller ranges
+  // (1, 2 or 4 bytes) could have many combinarions of the BAS register (which determines which
+  // byte will trigger an exception offseted from the base range address.
+
+  // clang-format off
+  uint32_t bas = ARM64_DBGWCR_BAS_GET(dbgwcr);
+  switch (bas) {
+    case 0x00000000: return 0;
+
+    case 0x00000001: return 1;
+    case 0x00000010: return 1;
+    case 0x00000100: return 1;
+    case 0x00001000: return 1;
+    case 0x00010000: return 1;
+    case 0x00100000: return 1;
+    case 0x01000000: return 1;
+    case 0x10000000: return 1;
+
+    case 0x00000011: return 2;
+    case 0x00001100: return 2;
+    case 0x00110000: return 2;
+    case 0x11000000: return 2;
+
+    case 0x00001111: return 4;
+    case 0x11110000: return 4;
+
+    case 0x11111111: return 8;
+    default:
+      FXL_NOTREACHED() << "Wrong bas value: 0x" << std::hex << bas;
+      return 0;
+  }
+  // clang-format on
+}
+
+uint32_t ValidateRange(const debug_ipc::AddressRange& range) {
+  constexpr uint64_t kMask = 0b11;
+
+  if (range.size() == 1) {
+    return range.begin() & ~kMask;
+  } else if (range.size() == 2) {
+    // Should be 2-byte aligned.
+    if ((range.begin() & 0b1) != 0)
+      return 0;
+    return range.begin() & ~kMask;
+  } else if (range.size() == 4) {
+    // Should be 4-byte aligned.
+    if ((range.begin() & 0b11) != 0)
+      return 0;
+    return range.begin() & ~kMask;
+  } else if (range.size() == 8) {
+    // Should be 8-byte aligned.
+    if ((range.begin() & 0b111) != 0)
+      return 0;
+    return range.begin() & ~kMask;
+  } else {
+    return 0;
+  }
+}
+
+void SetWatchpointFlags(uint32_t* dbgwcr, uint64_t base_address,
+                        const debug_ipc::AddressRange& range) {
+  if (range.size() == 1) {
+    uint32_t bas = 1u << (range.begin() - base_address);
+    ARM64_DBGWCR_BAS_SET(dbgwcr, bas);
+  } else if (range.size() == 2) {
+    uint32_t bas = 0b11 << (range.begin() - base_address);
+    ARM64_DBGWCR_BAS_SET(dbgwcr, bas);
+  } else if (range.size() == 4) {
+    uint32_t bas = 0b1111 << (range.begin() - base_address);
+    ARM64_DBGWCR_BAS_SET(dbgwcr, bas);
+  } else if (range.size() == 8) {
+    ARM64_DBGWCR_BAS_SET(dbgwcr, 0xff);
+  } else {
+    FXL_NOTREACHED() << "Invalid range size: " << range.size();
+  }
+}
+
+}  // namespace
+
+WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* regs,
+                                             const debug_ipc::AddressRange& range,
+                                             uint32_t watchpoint_count) {
+  FXL_DCHECK(watchpoint_count <= 16);
+
+  uint32_t base_address = ValidateRange(range);
+  if (base_address == 0)
+    return CreateResult(ZX_ERR_OUT_OF_RANGE);
+
+  // Search for a free slot.
+  int slot = -1;
+  for (uint32_t i = 0; i < watchpoint_count; i++) {
+    if (regs->hw_wps[i].dbgwvr != 0)
+      continue;
+
+    // If it's the same address, we need top compare length.
+    uint32_t length = GetWatchpointLength(regs->hw_wps[i].dbgwcr);
+    if (regs->hw_wps[i].dbgwvr == base_address && length == range.size())
+      return CreateResult(ZX_ERR_ALREADY_BOUND);
+
+    // Found slot.
+    slot = i;
+    break;
+  }
+
+  if (slot == -1)
+    return CreateResult(ZX_ERR_NO_RESOURCES);
+
+  // We found a slot, we bind the watchpoint.
+  regs->hw_wps[slot].dbgwvr = base_address;
+  SetWatchpointFlags(&regs->hw_wps[slot].dbgwcr, base_address, range);
+
+  return CreateResult(ZX_OK, range, slot);
 }
 
 std::string DebugRegistersToString(const zx_thread_state_debug_regs_t& regs) {

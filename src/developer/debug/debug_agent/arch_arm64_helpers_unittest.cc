@@ -4,6 +4,9 @@
 
 #include "src/developer/debug/debug_agent/arch_arm64_helpers.h"
 
+#include <zircon/hw/debug/arm64.h>
+#include <zircon/status.h>
+
 #include <optional>
 
 #include <gtest/gtest.h>
@@ -15,7 +18,6 @@
 
 namespace debug_agent {
 namespace arch {
-
 namespace {
 
 constexpr uint64_t kDbgbvrE = 1u;
@@ -52,8 +54,6 @@ constexpr uint64_t kAddress2 = 0x4567;
 constexpr uint64_t kAddress3 = 0x89ab;
 constexpr uint64_t kAddress4 = 0xcdef;
 constexpr uint64_t kAddress5 = 0xdeadbeef;
-
-}  // namespace
 
 TEST(arm64Helpers, SettingBreakpoints) {
   auto debug_regs = GetDefaultRegs();
@@ -270,7 +270,7 @@ TEST(arm64Helpers, Removing) {
   }
 }
 
-TEST(armHelpers, WriteGeneralRegs) {
+TEST(ArmHelpers, WriteGeneralRegs) {
   std::vector<debug_ipc::Register> regs;
   regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kARMv8_x0, 8));
   regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kARMv8_x3, 8));
@@ -306,7 +306,7 @@ TEST(armHelpers, WriteGeneralRegs) {
   EXPECT_EQ(out.pc, 0xbeefu);
 }
 
-TEST(armHelpers, InvalidWriteGeneralRegs) {
+TEST(ArmHelpers, InvalidWriteGeneralRegs) {
   zx_thread_state_general_regs_t out;
   std::vector<debug_ipc::Register> regs;
 
@@ -319,7 +319,7 @@ TEST(armHelpers, InvalidWriteGeneralRegs) {
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 }
 
-TEST(armHelpers, WriteVectorRegs) {
+TEST(ArmHelpers, WriteVectorRegs) {
   std::vector<debug_ipc::Register> regs;
 
   std::vector<uint8_t> v0_value;
@@ -349,14 +349,11 @@ TEST(armHelpers, WriteVectorRegs) {
   EXPECT_EQ(out.fpsr, 0x02010009u);
 }
 
-TEST(armHelpers, WriteDebugRegs) {
+TEST(ArmHelpers, WriteDebugRegs) {
   std::vector<debug_ipc::Register> regs;
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbcr0_el1,
-                    std::vector<uint8_t>{1, 2, 3, 4});
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbcr1_el1,
-                    std::vector<uint8_t>{2, 3, 4, 5});
-  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbcr15_el1,
-                    std::vector<uint8_t>{3, 4, 5, 6});
+  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbcr0_el1, std::vector<uint8_t>{1, 2, 3, 4});
+  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbcr1_el1, std::vector<uint8_t>{2, 3, 4, 5});
+  regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbcr15_el1, std::vector<uint8_t>{3, 4, 5, 6});
 
   regs.emplace_back(debug_ipc::RegisterID::kARMv8_dbgbvr0_el1,
                     std::vector<uint8_t>{4, 5, 6, 7, 8, 9, 0, 1});
@@ -379,5 +376,208 @@ TEST(armHelpers, WriteDebugRegs) {
   EXPECT_EQ(out.hw_bps[15].dbgbvr, 0x0302010009080706u);
 }
 
+// Watchpoint Tests --------------------------------------------------------------------------------
+
+bool ResultVerification(zx_thread_state_debug_regs_t* regs, uint64_t address, uint64_t size,
+                        WatchpointInstallationResult expected) {
+  WatchpointInstallationResult result = SetupWatchpoint(regs, {address, address + size}, 6);
+  if (result.status != expected.status) {
+    ADD_FAILURE() << "Status failed. Expected: " << zx_status_get_string(expected.status)
+                  << ", got: " << zx_status_get_string(result.status);
+    return false;
+  }
+
+  if (result.installed_range != expected.installed_range) {
+    ADD_FAILURE() << "Range failed. Expected: " << expected.installed_range.ToString()
+                  << ", got: " << result.installed_range.ToString();
+    return false;
+  }
+
+  if (result.slot != expected.slot) {
+    ADD_FAILURE() << "Slot failed. Expected: " << expected.slot << ", got: " << result.slot;
+    return false;
+  }
+
+  return true;
+}
+
+bool CheckSetup(zx_thread_state_debug_regs_t* regs, uint64_t address, uint64_t size,
+                WatchpointInstallationResult expected, uint32_t expected_bas = 0) {
+  // Restart the registers.
+  *regs = {};
+  if (!ResultVerification(regs, address, size, expected))
+    return false;
+
+  // If no installation was made, we don't compare against BAS.
+  if (expected.slot == -1)
+    return true;
+
+  uint32_t bas = ARM64_DBGWCR_BAS_GET(regs->hw_wps[expected.slot].dbgwcr);
+  if (bas != expected_bas) {
+    ADD_FAILURE() << "BAS check failed. Expected: 0x" << std::hex << expected_bas << ", got: 0x"
+                  << bas;
+    return false;
+  }
+
+  return true;
+}
+
+TEST(ArmHelpers_SetupWatchpoint, Ranges) {
+  zx_thread_state_debug_regs_t regs = {};
+
+  // 1-byte alignment.
+  ASSERT_TRUE(CheckSetup(&regs, 0x1000, 1, CreateResult(ZX_OK, {0x1000, 0x1001}, 0), 0b00000001));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1001, 1, CreateResult(ZX_OK, {0x1001, 0x1002}, 0), 0b00000010));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1002, 1, CreateResult(ZX_OK, {0x1002, 0x1003}, 0), 0b00000100));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1003, 1, CreateResult(ZX_OK, {0x1003, 0x1004}, 0), 0b00001000));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1004, 1, CreateResult(ZX_OK, {0x1004, 0x1005}, 0), 0b00000001));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1005, 1, CreateResult(ZX_OK, {0x1005, 0x1006}, 0), 0b00000010));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1006, 1, CreateResult(ZX_OK, {0x1006, 0x1007}, 0), 0b00000100));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1007, 1, CreateResult(ZX_OK, {0x1007, 0x1008}, 0), 0b00001000));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1008, 1, CreateResult(ZX_OK, {0x1008, 0x1009}, 0), 0b00000001));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1009, 1, CreateResult(ZX_OK, {0x1009, 0x100a}, 0), 0b00000010));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100a, 1, CreateResult(ZX_OK, {0x100a, 0x100b}, 0), 0b00000100));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100b, 1, CreateResult(ZX_OK, {0x100b, 0x100c}, 0), 0b00001000));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100c, 1, CreateResult(ZX_OK, {0x100c, 0x100d}, 0), 0b00000001));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100d, 1, CreateResult(ZX_OK, {0x100d, 0x100e}, 0), 0b00000010));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100e, 1, CreateResult(ZX_OK, {0x100e, 0x100f}, 0), 0b00000100));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100f, 1, CreateResult(ZX_OK, {0x100f, 0x1010}, 0), 0b00001000));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1010, 1, CreateResult(ZX_OK, {0x1010, 0x1011}, 0), 0b00000001));
+
+  // 2-byte alignment.
+  ASSERT_TRUE(CheckSetup(&regs, 0x1000, 2, CreateResult(ZX_OK, {0x1000, 0x1002}, 0), 0b00000011));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1001, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1002, 2, CreateResult(ZX_OK, {0x1002, 0x1004}, 0), 0b00001100));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1003, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1004, 2, CreateResult(ZX_OK, {0x1004, 0x1006}, 0), 0b00000011));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1005, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1006, 2, CreateResult(ZX_OK, {0x1006, 0x1008}, 0), 0b00001100));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1007, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1008, 2, CreateResult(ZX_OK, {0x1008, 0x100a}, 0), 0b00000011));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1009, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100a, 2, CreateResult(ZX_OK, {0x100a, 0x100c}, 0), 0b00001100));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100b, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x100c, 2, CreateResult(ZX_OK, {0x100c, 0x100e}, 0), 0b00000011));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100d, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100e, 2, CreateResult(ZX_OK, {0x100e, 0x1010}, 0), 0b00001100));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100f, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1010, 2, CreateResult(ZX_OK, {0x1010, 0x1012}, 0), 0b00000011));
+
+  // 3-byte alignment.
+  ASSERT_TRUE(CheckSetup(&regs, 0x1000, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1001, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1002, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1003, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1004, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1005, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1006, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1007, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1008, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1009, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100a, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100b, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  // 4 byte range.
+  ASSERT_TRUE(CheckSetup(&regs, 0x1000, 4, CreateResult(ZX_OK, {0x1000, 0x1004}, 0), 0x0f));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1001, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1002, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1003, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1004, 4, CreateResult(ZX_OK, {0x1004, 0x1008}, 0), 0x0f));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1005, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1006, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1007, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1008, 4, CreateResult(ZX_OK, {0x1008, 0x100c}, 0), 0x0f));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1009, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100a, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100b, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x100c, 4, CreateResult(ZX_OK, {0x100c, 0x1010}, 0), 0x0f));
+
+  // 5 byte range.
+  ASSERT_TRUE(CheckSetup(&regs, 0x1000, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1001, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1002, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1003, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1004, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1005, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1006, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1007, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1008, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1009, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100a, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100b, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100c, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100d, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100e, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100f, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  // 6 byte range.
+  ASSERT_TRUE(CheckSetup(&regs, 0x1000, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1001, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1002, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1003, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1004, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1005, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1006, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1007, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1008, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1009, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100a, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100b, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100c, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100d, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100e, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100f, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  // 7 byte range.
+  ASSERT_TRUE(CheckSetup(&regs, 0x1000, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1001, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1002, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1003, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1004, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1005, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1006, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1007, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1008, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1009, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100a, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100b, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100c, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100d, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100e, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100f, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  // 8 byte range.
+  ASSERT_TRUE(CheckSetup(&regs, 0x1000, 8, CreateResult(ZX_OK, {0x1000, 0x1008}, 0), 0xff));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1001, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1002, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1003, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1004, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1005, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1006, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1007, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+
+  ASSERT_TRUE(CheckSetup(&regs, 0x1008, 8, CreateResult(ZX_OK, {0x1008, 0x1010}, 0), 0xff));
+  ASSERT_TRUE(CheckSetup(&regs, 0x1009, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100a, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100b, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100c, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100d, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100e, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(CheckSetup(&regs, 0x100f, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+}
+
+}  // namespace
 }  // namespace arch
 }  // namespace debug_agent

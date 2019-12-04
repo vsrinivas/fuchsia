@@ -97,5 +97,15 @@ std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange&
   return debug_ipc::AddressRange(aligned_address, aligned_address + next_size);
 }
 
+WatchpointInstallationResult CreateResult(zx_status_t status,
+                                          debug_ipc::AddressRange installed_range, int slot) {
+  WatchpointInstallationResult result = {};
+  result.status = status;
+  result.installed_range = installed_range;
+  result.slot = slot;
+
+  return result;
+}
+
 }  // namespace arch
 }  // namespace debug_agent

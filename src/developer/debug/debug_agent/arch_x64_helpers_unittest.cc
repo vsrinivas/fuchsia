@@ -411,17 +411,6 @@ bool CheckLengths(const zx_thread_state_debug_regs_t& regs, std::vector<uint64_t
   return !has_errors;
 }
 
-WatchpointInstallationResult CreateResult(zx_status_t status,
-                                          debug_ipc::AddressRange installed_range = {},
-                                          int slot = -1) {
-  WatchpointInstallationResult result = {};
-  result.status = status;
-  result.installed_range = installed_range;
-  result.slot = slot;
-
-  return result;
-}
-
 bool CheckSetup(zx_thread_state_debug_regs_t* regs, uint64_t address, uint64_t size,
                 WatchpointInstallationResult expected) {
   WatchpointInstallationResult result = SetupWatchpoint(regs, address, size);

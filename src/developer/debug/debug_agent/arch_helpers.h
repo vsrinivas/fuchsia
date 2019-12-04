@@ -61,6 +61,10 @@ struct WatchpointInstallationResult {
   int slot = -1;
 };
 
+WatchpointInstallationResult CreateResult(zx_status_t status,
+                                          debug_ipc::AddressRange installed_range = {},
+                                          int slot = -1);
+
 }  // namespace arch
 }  // namespace debug_agent
 

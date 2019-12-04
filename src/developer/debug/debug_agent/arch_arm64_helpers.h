@@ -9,6 +9,7 @@
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/debug_agent/arch_arm64.h"
+#include "src/developer/debug/debug_agent/arch_helpers.h"
 #include "src/developer/debug/ipc/protocol.h"
 
 namespace debug_agent {
@@ -25,6 +26,25 @@ zx_status_t SetupHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 // If the address is not installed, no functional change will happen and
 // ZX_ERR_OUT_OF_RANGE will be returned.
 zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
+
+// Updated the state the debug registers should be if we added a watchpoint for |address|. Returns
+// wherther the operation was successful, and it if was, what register slot was updated.
+//
+// Address has to be correctly aligned according to |size|, otherwise ZX_ERR_OUT_OF_RANGE will be
+// returned. The possible values for size are:
+//
+// 1: 1 byte aligned.
+// 2: 2 byte aligned.
+// 4: 4 byte aligned.
+// 8: 8 byte aligned.
+//
+// Any other |size| values will return ZX_ERR_INVALID_ARGS.
+//
+// Returns ZX_ERR_ALREADY_BOUND if the |address|/|size| pair is already set.
+// Returns ZX_ERR_NO_RESOURCES if there are no registers left.
+WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t*,
+                                             const debug_ipc::AddressRange& range,
+                                             uint32_t watchpoint_count);
 
 // Useful function for debugging to keep around.
 std::string DebugRegistersToString(const zx_thread_state_debug_regs_t&);
