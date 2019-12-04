@@ -150,30 +150,42 @@ static void hci_build_read_wait_items(hci_t* hci) {
 
 static void hci_write_complete(void* context, zx_status_t status);
 
-static void serial_write(hci_t* hci, const void* buffer, size_t length) {
+typedef struct hci_write_ctx {
+  hci_t* hci;
+  // Owned.
+  uint8_t* buffer;
+} hci_write_ctx_t;
+
+// Takes ownership of buffer.
+static void serial_write(hci_t* hci, void* buffer, size_t length) {
   for (size_t i = 0; i < hci->wait_item_count; i++) {
     if (hci->wait_items[i].handle == hci->writeable_event) {
       // Re-arm wait for signal 0 which we trigger on write complete
       hci->wait_items[i].waitfor = ZX_USER_SIGNAL_0;
     }
   }
+  hci_write_ctx_t* op = malloc(sizeof(hci_write_ctx_t));
+  op->hci = hci;
+  op->buffer = buffer;
+
   // Clear signal 0 since we can't be written to right now.
   zx_object_signal(hci->writeable_event, ZX_USER_SIGNAL_0, 0);
-  serial_impl_async_write_async(&hci->serial, buffer, length, hci_write_complete, hci);
+  serial_impl_async_write_async(&hci->serial, buffer, length, hci_write_complete, op);
 }
 
 // Returns false if there's an error while sending the packet to the hardware or
 // if the channel peer closed its endpoint.
 static void hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* item) {
   if (item->pending & (ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED)) {
-    uint8_t buf[CMD_BUF_SIZE];
-    uint32_t length = sizeof(buf) - 1;
+    uint32_t length = (CMD_BUF_SIZE * sizeof(uint8_t)) - 1;
+    uint8_t* buf = malloc(length + 1);
     zx_status_t status = zx_channel_read(item->handle, 0, buf + 1, NULL, length, 0, &length, NULL);
     if (status < 0) {
       if (status != ZX_ERR_PEER_CLOSED) {
         zxlogf(ERROR, "hci_read_thread: failed to read from command channel %s\n",
                zx_status_get_string(status));
       }
+      free(buf);
       goto fail;
     }
 
@@ -197,12 +209,13 @@ fail:
 
 static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* item) {
   if (item->pending & (ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED)) {
-    uint8_t buf[ACL_MAX_FRAME_SIZE];
-    uint32_t length = sizeof(buf) - 1;
+    uint32_t length = (ACL_MAX_FRAME_SIZE * sizeof(uint8_t)) - 1;
+    uint8_t* buf = malloc(length + 1);
     zx_status_t status = zx_channel_read(item->handle, 0, buf + 1, NULL, length, 0, &length, NULL);
     if (status < 0) {
       zxlogf(ERROR, "hci_read_thread: failed to read from ACL channel %s\n",
              zx_status_get_string(status));
+      free(buf);
       goto fail;
     }
 
@@ -342,13 +355,17 @@ static void hci_read_complete(void* context, zx_status_t status, const void* buf
 static void hci_unbind(void* ctx);
 
 static void hci_write_complete(void* context, zx_status_t status) {
-  hci_t* hci = context;
+  hci_write_ctx_t* op = context;
+  free(op->buffer);
+
   if (status != ZX_OK) {
-    hci_unbind(hci);
+    hci_unbind(op->hci);
+    free(op);
     return;
   }
   // We can write now
-  zx_object_signal(hci->writeable_event, 0, ZX_USER_SIGNAL_0);
+  zx_object_signal(op->hci->writeable_event, 0, ZX_USER_SIGNAL_0);
+  free(op);
 }
 
 static bool hci_has_read_channels_locked(hci_t* hci) {
