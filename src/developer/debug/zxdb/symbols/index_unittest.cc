@@ -37,25 +37,25 @@ TEST(Index, IndexDump) {
   const char kExpected[] = R"(  Namespaces:
     <<empty index string>>
       Functions:
-        AnonNSFunction: {[0x1450, 0x145f)}
+        AnonNSFunction: {[0x1520, 0x152f)}
         LineLookupTest<0>: {[0x1040, 0x104f)}
         LineLookupTest<1>: {[0x1050, 0x105d)}
     my_ns
       Types:
         Base1: 0x26a
         Base2: 0x280
-        MyClass: 0x733
+        MyClass: 0x8aa
           Types:
-            Inner: 0x75e
+            Inner: 0x8d5
               Functions:
-                MyMemberTwo: {[0x1370, 0x137b)}
+                MyMemberTwo: {[0x1440, 0x144b)}
           Functions:
-            MyMemberOne: {[0x1460, 0x146f)}
+            MyMemberOne: {[0x1530, 0x153f)}
           Variables:
-            kClassStatic: 0x720
+            kClassStatic: 0x897
         Struct: 0x1f3
           Functions:
-            MyFunc: {[0x1310, 0x1323)}
+            MyFunc: {[0x1350, 0x1363)}
           Variables:
             kConstInt: 0x22d
             kConstLongDouble: 0x239
@@ -66,29 +66,37 @@ TEST(Index, IndexDump) {
         GetStruct: {[0x10a0, 0x10c5)}
         GetStructMemberPtr: {[0x10d0, 0x10e1)}
         InlinedFunction: {[0x1150, 0x115f)}, {[0x12a0, 0x12a6)}
-        NamespaceFunction: {[0x1380, 0x138b)}
+        NamespaceFunction: {[0x1450, 0x145b)}
         PassRValueRef: {[0x10f0, 0x10fa)}
       Variables:
-        kGlobal: 0x707
+        kGlobal: 0x87e
     std
       Types:
         nullptr_t: 0x186
   Types:
-    ClassInTest2: 0x873
+    ClassInTest2: 0x9ea
       Functions:
-        FunctionInTest2: {[0x1470, 0x147b)}
+        FunctionInTest2: {[0x1540, 0x154b)}
     ForInline: 0x4d4
       Functions:
-        ForInline: {[0x1350, 0x1364)}
+        ForInline: {[0x1390, 0x13a4)}
         InlinedFunction: {[0x124f, 0x125d)}
     MyTemplate<my_ns::Struct, 42>: 0x465
       Functions:
-        MyTemplate: {[0x1330, 0x1345)}
+        MyTemplate: {[0x1370, 0x1385)}
     StructWithEnums: 0x104
       Types:
         RegularEnum: 0x119
         TypedEnum: 0x152
-    __ARRAY_SIZE_TYPE__: 0x6a0
+    VirtualBase: 0x6d0
+      Functions:
+        DoIt: {[0x1410, 0x141a)}
+        VirtualBase: {[0x13f0, 0x140e)}
+    VirtualDerived: 0x68e
+      Functions:
+        DoIt: {[0x1410, 0x141a)}
+        VirtualDerived: {[0x13b0, 0x13ec)}
+    __ARRAY_SIZE_TYPE__: 0x80b
     char: 0x3d7
     int: 0xd2
     long double: 0x3cb
@@ -104,8 +112,9 @@ TEST(Index, IndexDump) {
     GetStructWithEnums: {[0x12b0, 0x12da)}
     GetTemplate: {[0x1190, 0x11d6)}
     GetUsing: {[0x12f0, 0x1309)}
+    GetVirtualDerived: {[0x1310, 0x134f)}
     My2DArray: {[0x1160, 0x118b)}
-    MyFunction: {[0x1390, 0x1446)}
+    MyFunction: {[0x1460, 0x1516)}
 )";
   EXPECT_EQ(kExpected, out.str());
 

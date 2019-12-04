@@ -14,9 +14,8 @@ platform variations.
     `libsymbol_test_so.targetso`. As of this writing, the compiled file will be something
     like: `out/x64/host_x64/test_data/zxdb/libzxdb_symbol_test.targetso`
 
-  * Copy that file to `libsymbol_test_so_stripped.targetso`
-
-  * Run `strip libsymbol_test_so_stripped.targetso`
+  * The Linux "strip" doesn't work on our binaries. Copy the stripped version from
+    `out/x64/x64-shared/libzxdb_symbol_test.so` to `libsymbol_test_so_stripped.targetso`
 
 # Large tests
 

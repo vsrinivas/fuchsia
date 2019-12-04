@@ -15,7 +15,7 @@ namespace zxdb {
 const char TestSymbolModule::kMyNamespaceName[] = "my_ns";
 const char TestSymbolModule::kMyFunctionName[] = "MyFunction";
 const int TestSymbolModule::kMyFunctionLine = 109;
-const uint64_t TestSymbolModule::kMyFunctionAddress = 0x1390u;
+const uint64_t TestSymbolModule::kMyFunctionAddress = 0x1460u;
 const size_t TestSymbolModule::kMyFunctionPrologueSize = 8;
 const char TestSymbolModule::kNamespaceFunctionName[] = "my_ns::NamespaceFunction";
 const char TestSymbolModule::kMyClassName[] = "my_ns::MyClass";
@@ -27,7 +27,7 @@ const char TestSymbolModule::kAnonNSFunctionName[] = "AnonNSFunction";
 const char TestSymbolModule::kGlobalName[] = "my_ns::kGlobal";
 const char TestSymbolModule::kClassStaticName[] = "my_ns::MyClass::kClassStatic";
 const char TestSymbolModule::kPltFunctionName[] = "__stack_chk_fail";
-const uint64_t TestSymbolModule::kPltFunctionOffset = 0x14A0;
+const uint64_t TestSymbolModule::kPltFunctionOffset = 0x1570;
 
 TestSymbolModule::TestSymbolModule() = default;
 TestSymbolModule::~TestSymbolModule() = default;
@@ -64,7 +64,7 @@ std::string TestSymbolModule::GetCheckedInTestFileName() {
 }
 
 // static
-std::string TestSymbolModule::GetCheckedInTestFileBuildID() { return "5110be4602809d9e"; }
+std::string TestSymbolModule::GetCheckedInTestFileBuildID() { return "596f4c8afa5a0a43"; }
 
 // static
 std::string TestSymbolModule::GetStrippedCheckedInTestFileName() {

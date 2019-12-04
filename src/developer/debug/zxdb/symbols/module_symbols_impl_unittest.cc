@@ -246,8 +246,7 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
   options.symbolize = true;
   std::vector<Location> addrs;
 
-  // Look up "kGlobal" which should be a variable of type "int" at some
-  // nonzero location.
+  // Look up "kGlobal" which should be a variable of type "int" at some nonzero location.
   addrs = module_symbols->ResolveInputLocation(
       symbol_context, InputLocation(TestSymbolModule::SplitName(TestSymbolModule::kGlobalName)),
       options);
@@ -260,9 +259,9 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
   ASSERT_TRUE(var_type);
   EXPECT_EQ("int", var_type->GetFullName());
 
-  // This number may change if we recompile the symbol test. That's OK, just
-  // make sure it agrees with the relative address from symbol dump.
-  EXPECT_EQ(0x2000u, addrs[0].address());
+  // This number may change if we recompile the symbol test. That's OK, just make sure it agrees
+  // with the relative address from symbol dump.
+  EXPECT_EQ(0x3000u, addrs[0].address());
 
   // Look up the class static.
   addrs = module_symbols->ResolveInputLocation(
@@ -277,9 +276,9 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
   ASSERT_TRUE(var_type);
   EXPECT_EQ("int", var_type->GetFullName());
 
-  // This number may change if we recompile the symbol test. That's OK, just
-  // make sure it agrees with the relative address from symbol dump.
-  EXPECT_EQ(0x2004u, addrs[0].address());
+  // This number may change if we recompile the symbol test. That's OK, just make sure it agrees
+  // with the relative address from symbol dump.
+  EXPECT_EQ(0x3004u, addrs[0].address());
 }
 
 TEST(ModuleSymbols, ResolvePLTEntry) {
