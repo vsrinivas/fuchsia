@@ -212,6 +212,7 @@ executable("unittest_bin") {
     "command_line_options_unittest.cc",
     "driver_output_unittest.cc",
     "packet_queue_unittest.cc",
+    "packet_unittest.cc",
     "policy_loader_unittest.cc",
     "policy_loader_unittest_data.h",
     "process_config_loader_unittest.cc",
