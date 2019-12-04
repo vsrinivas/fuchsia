@@ -30,11 +30,11 @@ namespace cloud_sync {
 enum PageUploadState {
   // No upload attempt is in progress.
   NO_COMMIT = 0,
-  // An upload attempt is in progress and after completing we should become
+  // An upload attempt is in progress or waiting to be retried and after completing we should become
   // idle.
   PROCESSING,
-  // An upload attempt is in progress and after completing we should start a new
-  // one.
+  // An upload attempt is in progress or waiting to be retried and after completing we should start
+  // a new one.
   PROCESSING_NEW_COMMIT,
 };
 
@@ -92,16 +92,18 @@ class PageUpload : public storage::CommitWatcher {
 
   // These methods manage the internal state machine.
 
-  // Registers a signal to trigger an upload attempt, and triggers it if
-  // appropriate, that is, if we don't have an upload process already in
-  // progress.
+  // Registers a signal to trigger an upload attempt, and triggers it if appropriate, that is, if we
+  // don't have an upload process already in progress.
   void NextState();
 
-  // Registers completion of an upload attempt, for example due to an error, or
-  // because it completed. This will trigger another upload attempt if
-  // appropriate, that is, if a signal to trigger an upload attempt was
-  // delivered while an earlier upload attempt was in progress.
+  // Registers completion of an upload attempt, for example due to a permanent error, or because it
+  // completed. This will trigger another upload attempt if appropriate, that is, if a signal to
+  // trigger an upload attempt was delivered while an earlier upload attempt was in progress.
   void PreviousState();
+
+  // Resumes the current upload attempt. This is only valid to call when paused because of a
+  // temporary error.
+  void Resume();
 
   // Owned by whoever owns this class.
   coroutine::CoroutineService* const coroutine_service_;

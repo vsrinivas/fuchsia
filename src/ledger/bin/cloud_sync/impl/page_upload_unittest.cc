@@ -624,5 +624,36 @@ TEST_F(PageUploadTest, UploadClockRateLimit) {
   EXPECT_EQ(status_3, ledger::Status::OK);
 }
 
+// Verifies that if we receive new commits during backoff:
+//  - the retried upload only uploads commits that existed when it was started.
+//  - a second upload starts immediately after the first (retried) upload succeeds and uploads the
+//    new commits.
+TEST_F(PageUploadTest, NewCommitsDuringBackoff) {
+  storage_.NewCommit("id", "content");
+  auto id = encryption_service_.MakeObjectIdentifier(storage_.GetObjectIdentifierFactory(),
+                                                     storage::ObjectDigest("obj_digest"));
+  storage_.unsynced_objects_to_return[id] =
+      std::make_unique<storage::fake::FakePiece>(id, "obj_data");
+
+  page_cloud_.object_status_to_return = cloud_provider::Status::NETWORK_ERROR;
+  // Wait for the upload to fail: the upload state becomes UPLOAD_TEMPORARY_ERROR.  While the upload
+  // is in backoff, we ensure that the retry will succeed, we create a new local commit and notify
+  // the page upload object.
+  SetOnNewStateCallback([this] {
+    if (states_.back() == UploadSyncState::UPLOAD_TEMPORARY_ERROR) {
+      page_cloud_.object_status_to_return = cloud_provider::Status::OK;
+      auto commit = storage_.NewCommit("id2", "content2");
+      storage_.watcher_->OnNewCommits(commit->AsList(), storage::ChangeSource::LOCAL);
+    }
+  });
+  page_upload_->StartOrRestartUpload();
+  RunLoopFor(kBackoffInterval);
+
+  // Two uploads have been done.
+  EXPECT_EQ(page_cloud_.add_commits_calls, 2u);
+  EXPECT_EQ(states_.back(), UploadSyncState::UPLOAD_IDLE);
+  ASSERT_EQ(page_cloud_.received_commits.size(), 2u);
+}
+
 }  // namespace
 }  // namespace cloud_sync
