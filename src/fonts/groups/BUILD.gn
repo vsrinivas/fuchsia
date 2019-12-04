@@ -1,0 +1,83 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/fonts/build/fonts.gni")
+
+################################################################################
+# Named groups of font `package`s.
+################################################################################
+
+font_package_group("roboto") {
+  asset_names = [
+    "Roboto-BlackItalic.ttf",
+    "Roboto-Black.ttf",
+    "Roboto-BoldItalic.ttf",
+    "Roboto-Bold.ttf",
+    "Roboto-Italic.ttf",
+    "Roboto-LightItalic.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-MediumItalic.ttf",
+    "Roboto-Medium.ttf",
+    "Roboto-Regular.ttf",
+    "Roboto-Thin.ttf",
+    "RobotoCondensed-BoldItalic.ttf",
+    "RobotoCondensed-Bold.ttf",
+    "RobotoCondensed-Italic.ttf",
+    "RobotoCondensed-LightItalic.ttf",
+    "RobotoCondensed-Light.ttf",
+    "RobotoCondensed-Regular.ttf",
+  ]
+}
+
+font_package_group("roboto-mono") {
+  asset_names = [
+    "RobotoMono-BoldItalic.ttf",
+    "RobotoMono-Bold.ttf",
+    "RobotoMono-Italic.ttf",
+    "RobotoMono-LightItalic.ttf",
+    "RobotoMono-Light.ttf",
+    "RobotoMono-MediumItalic.ttf",
+    "RobotoMono-Regular.ttf",
+    "RobotoMono-ThinItalic.ttf",
+    "RobotoMono-Thin.ttf",
+  ]
+}
+
+font_package_group("roboto-slab") {
+  asset_names = [
+    "RobotoSlab-Bold.ttf",
+    "RobotoSlab-Light.ttf",
+    "RobotoSlab-Regular.ttf",
+    "RobotoSlab-Thin.ttf",
+  ]
+}
+
+font_package_group("material-icons") {
+  asset_names = [ "MaterialIcons-Regular.ttf" ]
+}
+
+font_package_group("noto-sans") {
+  asset_names = [
+    "NotoSansCJK-Black.ttc",
+    "NotoSansCJK-Bold.ttc",
+    "NotoSansCJK-DemiLight.ttc",
+    "NotoSansCJK-Light.ttc",
+    "NotoSansCJK-Medium.ttc",
+    "NotoSansCJK-Regular.ttc",
+    "NotoSansCJK-Thin.ttc",
+  ]
+  # TODO(kpozin): Add all other Noto scripts
+}
+
+font_package_group("noto-serif") {
+  asset_names = [
+    "NotoSerifCJK-Black.ttc",
+    "NotoSerifCJK-Bold.ttc",
+    "NotoSerifCJK-ExtraLight.ttc",
+    "NotoSerifCJK-Light.ttc",
+    "NotoSerifCJK-Medium.ttc",
+    "NotoSerifCJK-Regular.ttc",
+    "NotoSerifCJK-SemiBold.ttc",
+  ]
+}

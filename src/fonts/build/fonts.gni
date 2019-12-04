@@ -1,0 +1,289 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//src/fonts/build/font_args.gni")
+import("//src/fonts/build/font_manifest.gni")
+
+################################################################################
+# Merge the contents of all the .font_pkgs.json files
+################################################################################
+
+font_pkg_entries = []
+all_font_file_paths = []
+
+foreach(font_pkgs_path, font_pkgs_paths) {
+  parsed = {
+  }
+  parsed = read_file(font_pkgs_path, "json")
+  foreach(entry, parsed.packages) {
+    # GN doesn't support real set operations and removing an item that's not
+    # already in the list is an error, so to deduplicate, we add one instance,
+    # remove all instances, and then add again.
+    font_pkg_entries += [ entry ]
+    font_pkg_entries -= [ entry ]
+    font_pkg_entries += [ entry ]
+
+    path_prefix = entry.path_prefix
+    if (path_prefix != "") {
+      path_prefix = "${path_prefix}/"
+    }
+    all_font_file_paths += [ "${fonts_dir}/${path_prefix}${entry.file_name}" ]
+  }
+}
+
+# Generate all of the `config_data` targets needed for a target product's font
+# collection.
+#
+# This can be a combination of font `package`s and local font bundles.
+#
+# Parameters
+#
+#   font_packages
+#     Optional: GN labels of font `package`s and/or `font_package_group`s that
+#     are in `universe_package_labels` for the target product.
+#     Type: list(label)
+#
+#   local_font_bundles:
+#     Optional: GN labels of `local_font_bundle`s (or `group`s thereof) for the
+#     target product. These will be included in the font server's
+#     "/config/data".
+#     Type: list(label)
+#
+#   local_asset_names:
+#     Optional: List of local font file names. These will be included in the
+#     font server's "/config/data". If `local_font_bundles` is defined,
+#     `local_asset_names` will simply be added on as another bundle.
+#     Type: list(file)
+template("font_collection") {
+  forward_variables_from(invoker,
+                         [
+                           "font_packages",
+                           "local_font_bundles",
+                           "local_asset_names",
+                         ])
+
+  if (!defined(font_packages)) {
+    font_packages = []
+  }
+
+  if (!defined(local_font_bundles)) {
+    local_font_bundles = []
+  }
+
+  if (defined(local_asset_names)) {
+    bundle_name = "_${target_name}_local_font_bundle"
+    local_font_bundle(bundle_name) {
+      asset_names = local_asset_names
+    }
+    local_font_bundles += [ ":${bundle_name}" ]
+  }
+
+  assert(font_packages + local_font_bundles != [],
+         "font_collection can't be empty")
+
+  ##############################################################################
+  # Generate font_packages.json, used by pkg_resolver to know which Fuchsia
+  # packages are font packages.
+  ##############################################################################
+  pkg_resolver_registry_path = "${target_gen_dir}/font_packages.json"
+  generated_file("font_packages.json") {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = font_packages
+    visibility = [ ":pkg_resolver_font_packages_config_data" ]
+    data_keys = [ "fuchsia_package_urls" ]
+    walk_keys = [ "font_barrier" ]
+    output_conversion = "json"
+    outputs = [
+      pkg_resolver_registry_path,
+    ]
+  }
+
+  config_data("pkg_resolver_font_packages_config_data") {
+    for_pkg = "pkg_resolver"
+    outputs = [
+      "font_packages.json",
+    ]
+    sources = [
+      pkg_resolver_registry_path,
+    ]
+  }
+
+  ##############################################################################
+  # Generate all_fonts.json, used by the manifest generator to know the
+  # list of font files available in the product.
+  ##############################################################################
+  _all_fonts_json_path = "${target_gen_dir}/all_fonts.json"
+  generated_file("all_fonts.json") {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = font_packages
+    data_keys = [ "font_file_names" ]
+    walk_keys = [ "font_barrier" ]
+    output_conversion = "json"
+    outputs = [
+      _all_fonts_json_path,
+    ]
+  }
+
+  ##############################################################################
+  # Generate local_fonts.json, used by the manifest generator to know which font
+  # files are available in the font server's /config/data directory.
+  ##############################################################################
+  _local_fonts_json_path = "${target_gen_dir}/local_fonts.json"
+  generated_file("local_fonts.json") {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = local_font_bundles
+    data_keys = [ "local_font_file_names" ]
+    walk_keys = [ "font_barrier" ]
+    output_conversion = "json"
+    outputs = [
+      _local_fonts_json_path,
+    ]
+  }
+
+  ##############################################################################
+  # Generate the .font_manifest.json file and config_data target
+  ##############################################################################
+  font_manifest("manifest_file") {
+    all_fonts_path = _all_fonts_json_path
+    local_fonts_path = _local_fonts_json_path
+    font_files = all_font_file_paths
+    deps = [
+      ":all_fonts.json",
+      ":local_fonts.json",
+    ]
+    output = "${target_out_dir}/all.font_manifest.json"
+    pretty_print = is_debug
+  }
+
+  # Will appear at "/config/data/all.font_manifest.json"
+  config_data("font_manifest_config_data") {
+    for_pkg = "fonts"
+    deps = [
+      ":manifest_file",
+    ]
+    sources = get_target_outputs(":manifest_file")
+    outputs = [
+      "all.font_manifest.json",
+    ]
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    deps = [
+             ":font_manifest_config_data",
+             ":pkg_resolver_font_packages_config_data",
+           ] + local_font_bundles
+  }
+}
+
+# Define a `group` consisting of the font `package`s for each of the given
+# `asset_names`.
+#
+# Parameters
+#
+#   asset_names
+#     Required: List of font file names, e.g. ["Roboto-Regular.ttf"], to be
+#     included in this group.
+#     Type: list(file)
+#
+template("font_package_group") {
+  forward_variables_from(invoker, [ "asset_names" ])
+  assert(defined(asset_names))
+
+  font_package_labels = []
+  not_found_asset_names = []
+
+  foreach(asset_name, asset_names) {
+    found = false
+    foreach(entry, font_pkg_entries) {
+      if (asset_name == entry.file_name) {
+        found = true
+        font_package_labels +=
+            [ "//src/fonts/packages:font-package-${entry.safe_name}" ]
+      }
+    }
+    if (!found) {
+      not_found_asset_names += [ asset_name ]
+    }
+  }
+  assert(not_found_asset_names == [],
+         "font_pkg_entries not found for ${not_found_asset_names}")
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+    deps = font_package_labels
+  }
+}
+
+# Define a `config_data` target to bundle all of the given font files into the
+# font server's "/config/data".
+#
+# Parameters
+#
+#   asset_names
+#     Required: List of font file names, e.g. [ "Roboto-Regular.ttf" ]
+#     Type: list(file)
+template("local_font_bundle") {
+  forward_variables_from(invoker, [ "asset_names" ])
+  assert(defined(asset_names))
+
+  local_asset_paths = []
+  not_found_asset_names = []
+
+  foreach(asset_name, asset_names) {
+    found = false
+    foreach(entry, font_pkg_entries) {
+      if (asset_name == entry.file_name) {
+        found = true
+        asset_path = entry.path_prefix
+        if (asset_path != "") {
+          asset_path = "${asset_path}/"
+        }
+        asset_path = "${fonts_dir}/${asset_path}${entry.file_name}"
+        local_asset_paths += [ asset_path ]
+      }
+    }
+    if (!found) {
+      not_found_asset_names += [ asset_name ]
+    }
+  }
+
+  assert(not_found_asset_names == [],
+         "font_pkg_entries not found for ${not_found_asset_names}")
+
+  config_data_label = "_${target_name}_config_data"
+  config_data(config_data_label) {
+    forward_variables_from(invoker, [ "testonly" ])
+    for_pkg = "fonts"
+    sources = local_asset_paths
+    outputs = [
+      "assets/{{source_file_part}}",
+    ]
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [
+      ":${config_data_label}",
+    ]
+    metadata = {
+      local_font_file_names = asset_names
+      font_barrier = []
+    }
+  }
+}

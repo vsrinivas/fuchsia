@@ -8,6 +8,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/fonts/build/fonts.gni")
 
 group("tests") {
   testonly = true
@@ -75,6 +76,7 @@ package("fonts") {
   ]
 
   resources = [
+    # TODO(kpozin): Remove old manifest
     {
       path = rebase_path("manifest.json")
       dest = "manifest.json"
@@ -241,4 +243,27 @@ rustc_binary("mock_font_resolver_bin") {
     "//third_party/rust_crates:lazy_static",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
+}
+
+# Group of all open-source font packages. This should be added to
+# `universe_package_labels`.
+group("open-fonts") {
+  deps = [
+    "//src/fonts/groups:material-icons",
+    "//src/fonts/groups:noto-sans",
+    "//src/fonts/groups:noto-serif",
+    "//src/fonts/groups:roboto",
+    "//src/fonts/groups:roboto-mono",
+  ]
+}
+
+local_font_bundle("open-fonts-local") {
+  asset_names = [ "RobotoMono-Regular.ttf" ]
+}
+
+# Font collection for open-source products. This should be added to
+# `base_package_labels` or `cache_package_labels`.
+font_collection("open-fonts-collection") {
+  font_packages = [ ":open-fonts" ]
+  local_font_bundles = [ ":open-fonts-local" ]
 }

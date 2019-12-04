@@ -1,0 +1,137 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//src/fonts/build/font_args.gni")
+
+# Generate a .font_manifest.json file from the inputs.
+#
+# Parameters
+#
+#   all_fonts_path
+#     Required: Path to a JSON file containing an array of all the font file
+#     names in the target product.
+#     Type: file
+#
+#   local_fonts_path
+#     Required: Path to a JSON file containing an array of the local font file
+#     names in the target product. This should be a subset of the array in
+#     `all_fonts_path`.
+#
+#   font_files
+#      Required: Paths to all of the font files that will be included in this
+#      manifest, or a superset thereof. This is different from the contents of
+#      `all_fonts_path` because it must be known at GN generation time.
+#      Type: list(file)
+#
+#   pretty_print
+#     Optional: If present and true, the .font_manifest.json file will be
+#     pretty-printed for easier human reading. This increases uncompressed file
+#     size, and therefore slightly increases the time required to parse a
+#     manifest at runtime. Due to compression, there is virtually no effect on
+#     storage size.
+#     Type: boolean
+#     Default: false
+#
+#   output
+#     Required: Path to the .font_manifest.json file that we'll be writing.
+#     Type: file
+#
+#
+# Build variables
+#
+#   fonts_dir
+#     Required: Path to the top-level directory into which all the font files
+#     were checked out of CIPD
+#     Type: directory
+#
+#   font_pkgs_paths
+#     Required: Paths to .font_pkgs.json files, containing the values needed to
+#     determine a GN package name for each font file.
+#     Type: list(file)
+#
+#   font_catalog_paths
+#     Required: Paths to .font_catalog.json files, containing  human-provided
+#     metadata about all the font families and typefaces.
+#     Type: list(file)
+template("font_manifest") {
+  forward_variables_from(invoker,
+                         [
+                           "all_fonts_path",
+                           "local_fonts_path",
+                           "font_files",
+                           "pretty_print",
+                           "output",
+                         ])
+
+  assert(defined(all_fonts_path))
+  assert(defined(local_fonts_path))
+  assert(defined(font_pkgs_paths))
+  assert(defined(font_catalog_paths))
+  assert(defined(font_files))
+  assert(defined(output))
+
+  if (!defined(pretty_print)) {
+    pretty_print = false
+  }
+
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+    tool = "//src/fonts/tools/manifest_generator:font_manifest_generator"
+    sources = [
+                all_fonts_path,
+                local_fonts_path,
+              ] + font_pkgs_paths + font_catalog_paths + font_files
+    outputs = [
+      output,
+    ]
+    deps = invoker.deps
+
+    args = []
+
+    # Most of the unit test builds are based on the "core" product and therefore
+    # don't include fonts. That case is handled further down.
+    if (font_pkgs_paths != [] && font_catalog_paths != [] && font_files != []) {
+      args += [
+        "--all-fonts",
+        rebase_path(all_fonts_path),
+      ]
+
+      args += [
+        "--local-fonts",
+        rebase_path(local_fonts_path),
+      ]
+
+      args += [
+        "--font-dir",
+        rebase_path(fonts_dir),
+      ]
+
+      args += [ "--font-pkgs" ]
+      foreach(font_pkgs_path, font_pkgs_paths) {
+        args += [ rebase_path(font_pkgs_path) ]
+      }
+
+      args += [ "--font-catalog" ]
+      foreach(font_catalog_path, font_catalog_paths) {
+        args += [ rebase_path(font_catalog_path) ]
+      }
+    } else {
+      args += [ "--empty" ]
+    }
+
+    if (pretty_print) {
+      args += [ "--pretty-print" ]
+    }
+
+    args += [
+      "--output",
+      rebase_path(output),
+    ]
+  }
+}

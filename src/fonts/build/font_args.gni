@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Set to true to include internal fonts in the build.
+  include_internal_fonts = false
+}
+
+declare_args() {
+  # Directory into which all fonts are checked out from CIPD
+  fonts_dir = "//prebuilt/third_party/fonts"
+
+  # Locations of .font_catalog.json files, which contain metadata about all of
+  # the fonts that are available to the build.
+  font_catalog_paths =
+      [ "//prebuilt/third_party/fonts/fuchsia.font_catalog.json" ]
+
+  # Locations of .font_pkgs.json files, which list the locations of font files
+  # within the workspace, as well as safe names that are derived from the fonts'
+  # file names and can be used to name Fuchsia packages.
+  font_pkgs_paths = [ "//prebuilt/third_party/fonts/fuchsia.font_pkgs.json" ]
+
+  if (include_internal_fonts) {
+    font_catalog_paths +=
+        [ "//prebuilt/third_party/fonts/internal.font_catalog.json" ]
+    font_pkgs_paths +=
+        [ "//prebuilt/third_party/fonts/internal.font_pkgs.json" ]
+  }
+
+  # Merged contents of .font_pkgs.json files. Populated in fonts.gni.
+  font_pkg_entries = []
+
+  # List of file paths to every font asset. Populated in fonts.gni.
+  all_font_file_paths = []
+}

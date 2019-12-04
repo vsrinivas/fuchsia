@@ -19,6 +19,7 @@ cache_package_labels += [
   "//src/ui/tools/tiles",
   "//garnet/bin/terminal",
   "//src/fonts",
+  "//src/fonts:open-fonts-collection",
 ]
 
 # End to end (E2E) product test runtime dependencies. Must be added to cache,
@@ -28,11 +29,14 @@ cache_package_labels += [
 # universe like the tests.
 cache_package_labels += [ "//src/tests/end_to_end/bundles:end_to_end_deps" ]
 
-# E2E Product Tests. They don't produce fuchsia packages, but host executables,
-# and must just be included somewhere in the build configuration of the product.
 universe_package_labels += [
+  # E2E Product Tests. They don't produce fuchsia packages, but host
+  # executables, and must just be included somewhere in the build configuration
+  # of the product.
   "//src/tests/end_to_end/screen_is_not_black:test",
   "//src/tests/end_to_end/sl4f:test",
   "//src/tests/end_to_end/audio_record:test",
   "//src/tests/end_to_end/perf:test",
+
+  "//src/fonts:open-fonts",
 ]

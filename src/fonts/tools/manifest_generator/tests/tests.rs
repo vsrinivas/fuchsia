@@ -34,7 +34,8 @@ fn resolve_path(suffix: impl AsRef<str>) -> Result<String, Error> {
 fn run_golden_test(
     font_catalog_paths: Vec<String>,
     font_pkgs_paths: Vec<String>,
-    font_sets_path: String,
+    all_fonts_path: String,
+    local_fonts_path: String,
     font_dir: String,
     fake_code_points: bool,
     golden_manifest_path: String,
@@ -53,7 +54,8 @@ fn run_golden_test(
         cmd.arg(path);
     }
 
-    cmd.arg("--font-sets").arg(resolve_path(font_sets_path)?);
+    cmd.arg("--all-fonts").arg(resolve_path(all_fonts_path)?);
+    cmd.arg("--local-fonts").arg(resolve_path(local_fonts_path)?);
     cmd.arg("--font-dir").arg(resolve_path(font_dir)?);
 
     if fake_code_points {
@@ -94,7 +96,8 @@ fn test_manifest_generator_goldens() -> Result<(), Error> {
             "test_data/font_manifest_generator/a.font_pkgs.json".to_string(),
             "test_data/font_manifest_generator/b.font_pkgs.json".to_string(),
         ],
-        "test_data/font_manifest_generator/product_ab.font_sets.json".to_string(),
+        "test_data/font_manifest_generator/product_ab.all_fonts.json".to_string(),
+        "test_data/font_manifest_generator/product_ab.local_fonts.json".to_string(),
         "test_data".to_string(),
         true,
         "test_data/font_manifest_generator/product_ab.font_manifest.json".to_string(),
