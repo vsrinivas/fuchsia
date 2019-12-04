@@ -41,11 +41,11 @@ To see a list of possible boards, run: <p><pre class="prettyprint">fx list-board
 When connecting your component to an additional service, you need to
 do the following:
 
-1. [Edit the `BUILD.gn`](#edit-the-buildgn)
+1. [Edit the `BUILD.gn`](#edit-the-buildgn).
 
-1. [Edit the source file containing the `main()`](#edit-the-source-file)
+1. [Edit the source file containing the `main()`](#edit-the-source-file).
 
-1. [Edit the component manifest](#edit-the-component-manifest)
+1. [Edit the component manifest](#edit-the-component-manifest).
 
 ### Edit the BUILD.gn {#edit-the-buildgn}
 
@@ -128,20 +128,21 @@ The component manifest is a JSON file with the `.cmx` file extension.
 
 The component manifest declares what services and resources your package uses.
 
-For more information, see [Component manifest](/docs/concepts/storage/component_manifest.md)
+For more information, see [Component manifest](/docs/concepts/storage/component_manifest.md).
 
-1.  Edit the component manifest, `hello_world_rust.cmx`, in your chosen
+1.  Open the component manifest, `hello_world_rust.cmx`, in your chosen
     text editor.
 
     ```
     vi ~/fuchsia/examples/hello_world/rust/meta/hello_world_rust.cmx
     ```
 
-    1.  Add a `sandbox` property JSON object with a `services` array.
-    1.  Include the `fuchsia.logger.LogSink` service within the `services`
-        array.
+1.  Add a `sandbox` property with a `services` array.
 
-    After completing this step, `hello_world_rust.cmx` should look like this:
+1.  Include the `fuchsia.logger.LogSink` service within the `services`
+    array.
+
+    At this point, `hello_world_rust.cmx` should look like this:
 
     ```
         {
@@ -155,7 +156,7 @@ For more information, see [Component manifest](/docs/concepts/storage/component_
     ```
 
 1.  Execute a build of the Fuchsia image that contains your modified component
-    Fuchsia package.
+    package.
 
     ```
     fx build
@@ -163,7 +164,7 @@ For more information, see [Component manifest](/docs/concepts/storage/component_
 
 ### Test logging {#test-logging}
 
-1.  Ensure that `fx serve` is running in a terminal window. If it is not, open
+1.  Ensure that `fx serve` is running in a shell tab. If it is not, open
     a shell tab and run `fx serve`.
 
     ```
@@ -174,7 +175,7 @@ For more information, see [Component manifest](/docs/concepts/storage/component_
     fx serve
     ```
 
-1.  In a new shell tab, navigate to your `fuchsia` directory and run `fx syslog.`
+1.  In a new shell tab, navigate to your `fuchsia` directory and run `fx syslog`.
 
     ```
     cd ~/fuchsia
@@ -196,6 +197,6 @@ For more information, see [Component manifest](/docs/concepts/storage/component_
     ```
 
 1.  Navigate to the shell tab where you ran `fx syslog`.
+
     You should be able to see your logging text, which in this example is
     `Hello log!`.
-
