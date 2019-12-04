@@ -133,7 +133,7 @@ impl ContourBuilder {
 /// For example, the following X shape would have a contour like this that only accounts for
 /// vertical concavities:
 ///
-/// ```
+/// ```text
 /// X___X         XXXXX
 /// _X_X_         _XXX_
 /// __X__   -->   __X__
@@ -143,7 +143,7 @@ impl ContourBuilder {
 ///
 /// It does however work very well with thin lines:
 ///
-/// ```
+/// ```text
 /// X____         X____
 /// _X___         _X___
 /// __X__   -->   __X__

@@ -16,6 +16,7 @@ use fuchsia_trace::{self, duration};
 use rayon::prelude::*;
 
 use crate::{
+    clip::Clip,
     layer::{Content, Layer},
     point::Point,
     raster::RasterSegments,
@@ -80,6 +81,36 @@ impl Tiles {
         &mut self.tiles[i + j * self.width]
     }
 
+    pub fn set_clip(&mut self, clip: Option<Clip>) {
+        if let Some(clip) = clip {
+            let start_i = 0.max(clip.x >> TILE_SHIFT as usize);
+            let start_j = 0.max(clip.y >> TILE_SHIFT as usize);
+
+            let end = clip.x + clip.width;
+            let mut end_i = self.width.min(end >> TILE_SHIFT as usize);
+            if end & TILE_MASK as usize != 0 {
+                end_i += 1;
+            }
+
+            let end = clip.y + clip.height;
+            let mut end_j = self.height.min(end >> TILE_SHIFT as usize);
+            if end & TILE_MASK as usize != 0 {
+                end_j += 1;
+            }
+
+            for j in 0..self.height {
+                for i in 0..self.width {
+                    self.get_mut(i, j).is_enabled =
+                        start_i <= i && i < end_i && start_j <= j && j < end_j;
+                }
+            }
+        } else {
+            for tile in &mut self.tiles {
+                tile.is_enabled = true;
+            }
+        }
+    }
+
     fn print_segment(
         &mut self,
         height: usize,
@@ -115,7 +146,7 @@ impl Tiles {
     ) {
         self.tiles
             .par_iter()
-            .filter(|tile| tile.needs_render)
+            .filter(|tile| tile.needs_render && tile.is_enabled)
             .map(|tile| Context {
                 tile,
                 index: tile.i + tile.j * tile_width,
@@ -224,6 +255,30 @@ impl Map {
     /// ```
     pub fn height(&self) -> usize {
         self.height
+    }
+
+    /// Set the map's clip. Any subsequent calls to [`Map::render`] will only apply to the [tiles']
+    /// that touch the pixel-range defined by the `clip`.
+    ///
+    /// [tiles']: crate::tile
+    /// [`Map::render`]: crate::tile::Map::render
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::ptr;
+    /// # use crate::mold::{Clip, tile::Map};
+    /// # let mut map = Map::new(1, 1);
+    /// map.set_clip(Some(Clip {
+    ///     x: 100,
+    ///     y: 100,
+    ///     width: 100,
+    ///     height: 100,
+    /// }));
+    ///
+    /// // map.render(bitmap); // This would only activate tiles within the Clip's border.
+    /// ```
+    pub fn set_clip(&mut self, clip: Option<Clip>) {
+        self.tiles.set_clip(clip);
     }
 
     /// During rendering, execute `ops` batch on *all* tiles.
@@ -782,5 +837,47 @@ pub(crate) mod tests {
         assert_eq!(map.tiles[0].layers, vec![LayerNode::Layer(0, Point::new(0, 0))]);
 
         assert_eq!(map.tiles[1].layers, vec![LayerNode::Layer(0, Point::new(0, 0))]);
+    }
+
+    fn tiles_empty(map: &Map) -> Vec<bool> {
+        map.tiles.tiles.iter().map(|tile| tile.layers.is_empty()).collect()
+    }
+
+    #[test]
+    fn clips() {
+        let mut map = Map::new(TILE_SIZE * 3, TILE_SIZE * 2);
+
+        assert_eq!(tiles_empty(&map), vec![true, true, true, true, true, true]);
+
+        map.global(0, vec![Op::ColorAccZero]);
+        map.reprint_all();
+        assert_eq!(tiles_empty(&map), vec![false, false, false, false, false, false]);
+
+        map.remove(0);
+
+        map.set_clip(Some(Clip {
+            x: TILE_SIZE / 2,
+            y: TILE_SIZE / 2,
+            width: TILE_SIZE,
+            height: TILE_SIZE,
+        }));
+        map.global(0, vec![Op::ColorAccZero]);
+        map.reprint_all();
+        assert_eq!(tiles_empty(&map), vec![false, false, true, false, false, true]);
+
+        map.set_clip(Some(Clip { x: TILE_SIZE / 2, y: TILE_SIZE / 2, width: 1, height: 1 }));
+        map.global(0, vec![Op::ColorAccZero]);
+        map.reprint_all();
+        assert_eq!(tiles_empty(&map), vec![false, true, true, true, true, true]);
+
+        map.set_clip(Some(Clip {
+            x: TILE_SIZE * 3 / 2,
+            y: TILE_SIZE * 3 / 2,
+            width: 1,
+            height: 1,
+        }));
+        map.global(0, vec![Op::ColorAccZero]);
+        map.reprint_all();
+        assert_eq!(tiles_empty(&map), vec![true, true, true, true, false, true]);
     }
 }

@@ -49,19 +49,28 @@ pub(crate) struct Tile {
     pub j: usize,
     pub layers: Vec<LayerNode>,
     pub needs_render: bool,
+    pub is_enabled: bool,
 }
 
 impl Tile {
     pub fn new(i: usize, j: usize) -> Self {
-        Self { i, j, layers: vec![], needs_render: true }
+        Self { i, j, layers: vec![], needs_render: true, is_enabled: true }
     }
 
     pub fn new_layer(&mut self, id: u32, translation: Point<i32>) {
+        if !self.is_enabled {
+            return;
+        }
+
         self.layers.push(LayerNode::Layer(id, translation));
         self.needs_render = true;
     }
 
     pub fn push_segment(&mut self, start_point: Point<i32>, segment_range: Range<usize>) {
+        if !self.is_enabled {
+            return;
+        }
+
         if let Some(LayerNode::Layer(..)) = self.layers.last() {
             self.layers.push(LayerNode::Segments(start_point, segment_range));
             return;
