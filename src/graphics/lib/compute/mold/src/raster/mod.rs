@@ -317,7 +317,7 @@ mod tests {
         let mut path2 = Path::new();
         path2.line(Point::new(1.0, 1.0), Point::new(2.0, 2.0));
 
-        let union = Raster::union([Raster::new(&path1), Raster::new(&path2)].into_iter());
+        let union = Raster::union([Raster::new(&path1), Raster::new(&path2)].iter());
 
         assert_eq!(
             union.inner.segments.iter().collect::<Vec<_>>(),
@@ -341,7 +341,7 @@ mod tests {
         path2.line(Point::new(1.0, 1.0), Point::new(2.0, 2.0));
 
         let union =
-            Raster::union_without_segments([Raster::new(&path1), Raster::new(&path2)].into_iter());
+            Raster::union_without_segments([Raster::new(&path1), Raster::new(&path2)].iter());
 
         assert_eq!(union.inner.segments.iter().collect::<Vec<_>>(), vec![]);
         assert_eq!(union.inner.contour.tiles(), vec![(0, 0)]);

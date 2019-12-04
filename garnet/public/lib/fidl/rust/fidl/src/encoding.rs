@@ -37,7 +37,7 @@ pub fn with_tls_coding_bufs<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) ->
 ///
 /// This function may not be called recursively.
 pub fn with_tls_encoded<T, E: From<Error>>(
-    val: &mut (impl Encodable),
+    val: &mut impl Encodable,
     f: impl FnOnce(&mut Vec<u8>, &mut Vec<Handle>) -> std::result::Result<T, E>,
 ) -> std::result::Result<T, E> {
     with_tls_coding_bufs(|bytes, handles| {

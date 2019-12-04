@@ -202,7 +202,7 @@ mod tests {
     fn test_charset_from_char_collection() {
         let collection = char_collect!(0..=0, 2..=2, 13..=13, 32..=126);
         let charset = CharSet::from(&collection);
-        assert!([0, 2, 13, 32, 54, 126].into_iter().all(|c| charset.contains(*c)));
-        assert!([1, 11, 19, 127, 10000].into_iter().all(|c| !charset.contains(*c)));
+        assert!([0, 2, 13, 32, 54, 126].iter().all(|c| charset.contains(*c)));
+        assert!([1, 11, 19, 127, 10000].iter().all(|c| !charset.contains(*c)));
     }
 }

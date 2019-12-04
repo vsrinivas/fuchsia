@@ -54,7 +54,7 @@ const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
 fn get_default_stream(stream_type: AudioStreamType) -> AudioStream {
     *default_audio_info()
         .streams
-        .into_iter()
+        .iter()
         .find(|x| x.stream_type == stream_type)
         .expect("contains stream")
 }

@@ -314,7 +314,7 @@ pub fn report_standards(
     sender: &mut CobaltSender,
     mut num_bss_by_standard: HashMap<Standard, usize>,
 ) {
-    NEIGHBOR_NETWORKS_STANDARD_MAPPING.into_iter().for_each(|(standard, label)| {
+    NEIGHBOR_NETWORKS_STANDARD_MAPPING.iter().for_each(|(standard, label)| {
         let count = match num_bss_by_standard.entry(standard.clone()) {
             Entry::Vacant(_) => 0 as i64,
             Entry::Occupied(e) => *e.get() as i64,

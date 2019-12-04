@@ -419,7 +419,7 @@ impl ReaderServer {
     async fn format_text(
         self,
         _text_settings: TextSettings,
-    ) -> Result<(fidl_fuchsia_mem::Buffer), Error> {
+    ) -> Result<fidl_fuchsia_mem::Buffer, Error> {
         // We must fetch the repositories in a closure to prevent the
         // repository mutex-guard from leaking into the futures.
         let inspect_repo_data = {

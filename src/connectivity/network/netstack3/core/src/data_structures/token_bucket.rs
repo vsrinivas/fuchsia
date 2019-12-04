@@ -303,7 +303,7 @@ mod tests {
         // Test with rates close to 1 (2/1 through 5/4) and rates much larger
         // than 1 (3/1 through 6/1).
         for (numer, denom) in
-            [(2, 1), (3, 2), (4, 3), (5, 4), (3, 1), (4, 1), (5, 1), (6, 1)].into_iter()
+            [(2, 1), (3, 2), (4, 3), (5, 4), (3, 1), (4, 1), (5, 1), (6, 1)].iter()
         {
             test(|mut ctx, mut bucket| {
                 // Initialize the `last_refilled` time and then drain the

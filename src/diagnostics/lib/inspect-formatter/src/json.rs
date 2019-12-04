@@ -158,7 +158,7 @@ impl<'a> Serialize for WrappedArrayBucket<'a, f64> {
             ("upper_bound", self.bucket.upper),
             ("count", self.bucket.count),
         ];
-        for (entry_key, value) in parts.into_iter() {
+        for (entry_key, value) in parts.iter() {
             if *value == std::f64::MAX || *value == std::f64::INFINITY {
                 s.serialize_entry(entry_key, "Infinity")?;
             } else if *value == std::f64::MIN || *value == std::f64::NEG_INFINITY {

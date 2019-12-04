@@ -59,7 +59,7 @@ impl OperationType {
     pub fn iterator() -> Iter<'static, OperationType> {
         static OPERATIONS: [OperationType; OperationType::operations_count()] =
             [OperationType::Write, OperationType::Open, OperationType::Exit, OperationType::Abort];
-        OPERATIONS.into_iter()
+        OPERATIONS.iter()
     }
 }
 
@@ -90,7 +90,7 @@ impl PipelineStages {
     pub fn iterator() -> Iter<'static, PipelineStages> {
         static STAGES: [PipelineStages; PipelineStages::stage_count()] =
             [PipelineStages::Generate, PipelineStages::Issue, PipelineStages::Verify];
-        STAGES.into_iter()
+        STAGES.iter()
     }
 }
 

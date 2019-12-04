@@ -8,6 +8,7 @@
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
 group("tests") {
@@ -18,32 +19,40 @@ group("tests") {
   ]
 }
 
+validator_deps = [
+  "//garnet/public/lib/fidl/rust/fidl",
+  "//garnet/public/rust/fuchsia-async",
+  "//garnet/public/rust/fuchsia-component",
+  "//garnet/public/rust/fuchsia-syslog",
+  "//garnet/public/rust/fuchsia-zircon",
+  "//src/diagnostics/inspect_validator/fidl:validate-rustc",
+  "//src/lib/argh",
+  "//src/lib/inspect/rust/fuchsia-inspect",
+  "//src/sys/lib/fuchsia_url",
+  "//third_party/rust_crates:difference",
+  "//third_party/rust_crates:failure",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:num-derive",
+  "//third_party/rust_crates:num-traits",
+  "//third_party/rust_crates:serde",
+  "//third_party/rust_crates:serde_derive",
+  "//third_party/rust_crates:serde_json",
+]
+
 rustc_binary("validator_bin") {
   name = "validator"
-  with_unit_tests = true
   edition = "2018"
+  deps = validator_deps
+}
 
-  deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//src/diagnostics/inspect_validator/fidl:validate-rustc",
-    "//src/lib/argh",
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/sys/lib/fuchsia_url",
-    "//third_party/rust_crates:difference",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:num-derive",
-    "//third_party/rust_crates:num-traits",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_derive",
-    "//third_party/rust_crates:serde_json",
-  ]
-  test_deps = [ "//garnet/public/rust/fuchsia-async" ]
+rustc_test("validator_bin_test") {
+  # TODO(tmandry): This is here to work around https://github.com/rust-lang/rust/issues/66036.
+  with_lto = "none"
+
+  edition = "2018"
+  source_root = "src/main.rs"
+  deps = validator_deps + [ "//garnet/public/rust/fuchsia-async" ]
 }
 
 package("inspect_validator") {

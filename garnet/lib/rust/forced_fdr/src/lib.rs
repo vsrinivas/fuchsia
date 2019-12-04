@@ -161,7 +161,7 @@ fn get_channel_index(channel_indices: &HashMap<String, i32>, channel: &String) -
     channel_indices.get(channel).map(|i| *i)
 }
 
-async fn trigger_fdr(fdr: &ForcedFDR) -> Result<(i32), Error> {
+async fn trigger_fdr(fdr: &ForcedFDR) -> Result<i32, Error> {
     fx_log_warn!(tag: "forced-fdr", "Triggering FDR. SSH keys will be lost\n");
     Ok(fdr.factory_reset_proxy.reset().await?)
 }

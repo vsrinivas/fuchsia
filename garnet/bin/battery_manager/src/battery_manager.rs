@@ -178,7 +178,7 @@ impl BatteryManager {
         &mut self,
         power_info: hpower::SourceInfo,
         battery_info: Option<hpower::BatteryInfo>,
-    ) -> Result<(StatusUpdateResult), failure::Error> {
+    ) -> Result<StatusUpdateResult, failure::Error> {
         let now = get_current_time();
         let old_battery_info = self.get_battery_info_copy();
 

@@ -86,6 +86,8 @@ def main():
             print "Cargo.toml file not found for %s, try running fx build." % target
             return 1
 
+    rust_extra_prebuilts = \
+        os.path.join(PREBUILT_THIRD_PARTY_DIR, "rust_extra_tools", HOST_PLATFORM, "bin")
     rust_prebuilts = os.path.join(PREBUILT_THIRD_PARTY_DIR, "rust", HOST_PLATFORM, "bin")
 
     # The third_party build records the arguments it used to invoke cargo. Use the same ones for
@@ -95,7 +97,7 @@ def main():
         open(HOST_THIRD_PARTY_DEPS_DATA, 'r'))
 
     env = {}
-    env['PATH'] = ":".join([rust_prebuilts, PATH])
+    env['PATH'] = ":".join([rust_extra_prebuilts, rust_prebuilts, PATH])
     call_args = [
         "cargo",
         "clippy",

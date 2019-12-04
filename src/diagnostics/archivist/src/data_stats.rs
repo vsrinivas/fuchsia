@@ -201,7 +201,7 @@ mod tests {
 
         for f in
             ["data/top.txt", "data/a/a.txt", "data/a/b/b.txt", "data/a/c/c.txt", "data/a/c/d/d.txt"]
-                .into_iter()
+                .iter()
         {
             File::create(tempdir.path().join(f))
                 .expect(format!("create file {}", f).as_ref())

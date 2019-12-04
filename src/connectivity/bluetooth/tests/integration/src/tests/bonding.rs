@@ -56,7 +56,7 @@ fn new_le_bond_data(id: &str, address: &str, name: &str, has_ltk: bool) -> Bondi
 async fn add_bonds(
     state: &HostDriverHarness,
     mut bonds: Vec<BondingData>,
-) -> Result<(Status), Error> {
+) -> Result<Status, Error> {
     let fut = state.aux().proxy().add_bonded_devices(&mut bonds.iter_mut()).err_into();
     fut.await
 }

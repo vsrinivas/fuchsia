@@ -1222,7 +1222,7 @@ mod tests {
             array.set(1, 2.5);
             array.set(3, -3.1);
 
-            for (i, value) in [6.9, 2.5, 0.0, -3.1, 0.0].into_iter().enumerate() {
+            for (i, value) in [6.9, 2.5, 0.0, -3.1, 0.0].iter().enumerate() {
                 assert_eq!(array_block.array_get_double_slot(i).unwrap(), *value);
             }
 

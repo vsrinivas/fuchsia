@@ -38,9 +38,8 @@ import("//build/rust/rustc_artifact.gni")
 #
 #   source_root (optional)
 #     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
-#     This defaults to `./src/main.rs` for binaries and `./src/lib.rs` for libraries,
-#     and should only be changed when absolutely necessary
-#     (such as in the case of generated code).
+#     This should usually be 'src/lib.rs/ for libraries (the default)
+#     and `src/main.rs` for binaries.
 #
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
@@ -71,9 +70,13 @@ template("rustc_test") {
                              "source_root",
                              "features",
                              "visibility",
+                             "with_lto",
                              "__unstable_netstack3_only_specialization_bypass",
                            ])
-    type = "lib"
+    if (!defined(source_root)) {
+      source_root = "src/lib.rs"
+    }
+    type = "bin"
     only_unit_tests = true
     testonly = true
   }

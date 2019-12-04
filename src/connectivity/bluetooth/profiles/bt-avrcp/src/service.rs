@@ -408,7 +408,7 @@ where
 /// Sets up public FIDL services and client handlers.
 pub fn run_services(
     sender: mpsc::Sender<PeerControllerRequest>,
-) -> Result<(impl Future<Output = Result<(), Error>>), Error> {
+) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let mut fs = ServiceFs::new();
     let sender_avrcp = sender.clone();
     let sender_test = sender.clone();
