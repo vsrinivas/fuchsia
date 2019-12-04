@@ -237,7 +237,6 @@ pub async fn do_shutdown(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), Mod
         drop(state_lock);
 
         Box::pin(shutdown_job.execute()).await?;
-
         // Now that all children have shut down, shut down the parent.
         let (was_running, nfs) = {
             let mut state = realm.lock_state().await;

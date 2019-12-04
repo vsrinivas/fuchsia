@@ -64,7 +64,7 @@ pub enum ModelError {
     OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
     #[fail(display = "insufficient resources to complete operation")]
     InsufficientResources,
-    #[fail(display = "failed to send {} to runer for component {}", operation, moniker)]
+    #[fail(display = "failed to send {} to runner for component {}", operation, moniker)]
     RunnerCommunicationError {
         moniker: AbsoluteMoniker,
         operation: String,

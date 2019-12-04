@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
+    crate::{model::testing::mocks::ControlMessage, model::testing::mocks::MockRunner, model::*},
     cm_rust::ComponentDecl,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo as echo, fidl_fuchsia_data as fdata,
@@ -11,12 +11,83 @@ use {
         DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    files_async, fuchsia_async as fasync, fuchsia_zircon as zx,
+    files_async, fuchsia_async as fasync,
+    fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::TryStreamExt,
     std::collections::HashSet,
     std::path::Path,
     std::sync::Arc,
 };
+
+pub struct ComponentInfo {
+    pub realm: Arc<Realm>,
+    channel_id: Koid,
+}
+
+impl ComponentInfo {
+    /// Given a `Realm` which has been bound, look up the resolved URL
+    /// and package into a `ComponentInfo` struct.
+    pub async fn new(realm: Arc<Realm>) -> ComponentInfo {
+        // The koid is the only unique piece of information we have about
+        // a component start request. Two start requests for the same
+        // component URL look identical to the Runner, the only difference
+        // being the Channel passed to the Runner to use for the
+        // ComponentController protocol.
+        let koid = {
+            let realm = realm.lock_execution().await;
+            let controller = realm
+                .runtime
+                .as_ref()
+                .expect("runtime is unexpectedly missing")
+                .controller
+                .as_ref()
+                .expect("controller is unexpectedly missing");
+            let basic_info = controller
+                .as_handle_ref()
+                .basic_info()
+                .expect("error getting basic info about controller channel");
+            // should be the koid of the other side of the channel
+            basic_info.related_koid
+        };
+
+        ComponentInfo { realm, channel_id: koid }
+    }
+
+    /// Checks that the component is shut down, panics if this is not true.
+    pub async fn check_is_shut_down(&self, runner: &MockRunner) {
+        // Check the list of requests for this component
+        let request_map = runner.get_request_map();
+        let unlocked_map = request_map.lock().await;
+        let request_vec = unlocked_map
+            .get(&self.channel_id)
+            .expect("request map didn't have channel id, perhaps the controller wasn't started?");
+        assert_eq!(*request_vec, vec![ControlMessage::Stop]);
+
+        let execution = self.realm.lock_execution().await;
+        assert!(execution.runtime.is_none());
+        assert!(execution.is_shut_down());
+    }
+
+    /// Checks that the component has not been shut down, panics if it has.
+    pub async fn check_not_shut_down(&self, runner: &MockRunner) {
+        // If the MockController has started, check that no stop requests have
+        // been received.
+        let request_map = runner.get_request_map();
+        let unlocked_map = request_map.lock().await;
+        if let Some(request_vec) = unlocked_map.get(&self.channel_id) {
+            assert_eq!(*request_vec, vec![]);
+        }
+
+        let execution = self.realm.lock_execution().await;
+        assert!(execution.runtime.is_some());
+        assert!(!execution.is_shut_down());
+    }
+}
+
+pub async fn execution_is_shut_down(realm: &Realm) -> bool {
+    let execution = realm.lock_execution().await;
+    execution.runtime.is_none() && execution.is_shut_down()
+}
 
 /// Returns true if the given child realm (live or deleting) exists.
 pub async fn has_child<'a>(realm: &'a Realm, moniker: &'a str) -> bool {

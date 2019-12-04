@@ -75,7 +75,7 @@ impl BuiltinEnvironment {
         model.root_realm.hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
 
         // Set up system controller.
-        let system_controller = Arc::new(SystemController::new());
+        let system_controller = Arc::new(SystemController::new(model.clone()));
         model.root_realm.hooks.install(system_controller.hooks()).await;
 
         // Set up the realm service.

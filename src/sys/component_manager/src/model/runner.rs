@@ -6,8 +6,8 @@ use {
     clonable_error::ClonableError,
     failure::{Error, Fail},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_sys2 as fsys,
-    futures::future::BoxFuture,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    futures::{future::BoxFuture, stream::TryStreamExt},
 };
 
 /// Executes a component instance.
@@ -92,10 +92,37 @@ impl Runner for NullRunner {
     fn start(
         &self,
         _start_info: fsys::ComponentStartInfo,
-        _server_end: ServerEnd<fsys::ComponentControllerMarker>,
+        server_end: ServerEnd<fsys::ComponentControllerMarker>,
     ) -> BoxFuture<Result<(), RunnerError>> {
+        spawn_null_controller_server(
+            server_end
+                .into_stream()
+                .expect("NullRunner failed to convert server channel into request stream"),
+        );
         Box::pin(async { Ok(()) })
     }
+}
+
+/// Spawn an async execution context which takes ownership of `server_end`
+/// and holds on to it until a stop or kill request is received.
+fn spawn_null_controller_server(mut request_stream: fsys::ComponentControllerRequestStream) {
+    // Listen to the ComponentController server end and exit after the first
+    // one, as this is the contract we have implemented so far. Exiting will
+    // cause our handle to the channel to drop and close the channel.
+    fasync::spawn(async move {
+        while let Ok(Some(request)) = request_stream.try_next().await {
+            match request {
+                fsys::ComponentControllerRequest::Stop { control_handle: c } => {
+                    c.shutdown();
+                    break;
+                }
+                fsys::ComponentControllerRequest::Kill { control_handle: c } => {
+                    c.shutdown();
+                    break;
+                }
+            }
+        }
+    });
 }
 
 /// A runner provided by another component.
@@ -127,5 +154,39 @@ impl Runner for RemoteRunner {
         server_end: ServerEnd<fsys::ComponentControllerMarker>,
     ) -> BoxFuture<Result<(), RunnerError>> {
         Box::pin(self.start_async(start_info, server_end))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use {
+        fidl::endpoints,
+        fidl_fuchsia_sys2 as fsys,
+        fuchsia_async::OnSignals,
+        fuchsia_zircon::{AsHandleRef, Signals},
+    };
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_null_runner() {
+        let null_runner = NullRunner {};
+        let (client, server) =
+            endpoints::create_endpoints::<fsys::ComponentControllerMarker>().unwrap();
+        null_runner.start(
+            fsys::ComponentStartInfo {
+                resolved_url: None,
+                program: None,
+                ns: None,
+                outgoing_dir: None,
+                runtime_dir: None,
+            },
+            server,
+        );
+        let proxy = client.into_proxy().expect("failed converting to proxy");
+        proxy.stop().expect("failed to send message to null runner");
+
+        OnSignals::new(&proxy.as_handle_ref(), Signals::CHANNEL_PEER_CLOSED)
+            .await
+            .expect("failed waiting for channel to close");
     }
 }
