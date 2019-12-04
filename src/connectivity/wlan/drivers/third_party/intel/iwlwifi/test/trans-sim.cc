@@ -56,6 +56,13 @@ static void iwl_trans_sim_op_mode_leave(struct iwl_trans* iwl_trans) {}
 
 static zx_status_t iwl_trans_sim_start_fw(struct iwl_trans* trans, const struct fw_img* fw,
                                           bool run_in_rfkill) {
+  // Kick off the firmware.
+  //
+  // Since we don't have a real firmware to load, there will be no notification from the firmware.
+  // Fake a RX packet's behavior so that we won't get blocked in the iwl_mvm_mac_start().
+  struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(trans->op_mode);
+  iwl_notification_notify(&mvm->notif_wait);
+
   return ZX_OK;
 }
 
@@ -264,15 +271,8 @@ static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev,
   }
 
   {
-    // Kick off the firmware.
-    //
-    // Since we don't have a real firmware to load, there will be no notification from the firmware.
-    // Fake a RX packet so that we won't get blocked in the iwl_mvm_mac_start().
-    struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(iwl_trans->op_mode);
-    iwl_notification_notify(&mvm->notif_wait);
-
-    // Hopefully everything should be ready. Go!
     *out_iwl_trans = iwl_trans;
+    struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(iwl_trans->op_mode);
     return iwl_mvm_mac_start(mvm);
   }
 

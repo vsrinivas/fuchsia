@@ -133,6 +133,13 @@ zx_status_t iwl_wait_notification(struct iwl_notif_wait_data* notif_wait,
 
   ret = sync_completion_wait(&notif_wait->notif_waitq, timeout);
 
+  // Clear the signal state.
+  //
+  // In the signaled case, the next call to sync_completion_wait() will return immediately without
+  // waiting (since sync_completion_t is still in signaled state). So clear it.
+  //
+  sync_completion_reset(&notif_wait->notif_waitq);
+
   iwl_remove_notification(notif_wait, wait_entry);
 
   if (wait_entry->aborted) {

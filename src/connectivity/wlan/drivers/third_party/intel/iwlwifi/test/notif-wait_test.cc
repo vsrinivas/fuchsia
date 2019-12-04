@@ -48,20 +48,25 @@ class NotifWaitTest : public ::zxtest::Test {
   ~NotifWaitTest() {}
 };
 
-// Helper function to create a wait_data and a wait_entry to receive fake cmd 1.
-static void helper_create_fake_cmd_1(struct iwl_notif_wait_data* wait_data,
-                                     struct iwl_notification_wait* wait_entry) {
-  iwl_notification_wait_init(wait_data);
-
-  uint16_t cmds[] = {FAKE_CMD_1};
+// Helper function to create a wait_data and a wait_entry to receive the fake cmd.
+static void helper_create_fake_cmd(struct iwl_notif_wait_data* wait_data,
+                                   struct iwl_notification_wait* wait_entry, uint16_t fake_cmd) {
+  uint16_t cmds[] = {fake_cmd};
   iwl_init_notification_wait(wait_data, wait_entry, cmds, countof(cmds), nullptr, nullptr);
+}
+
+// Helper function for test case init. This would create a wait_entry for fake cmd 1.
+static void helper_test_case_init(struct iwl_notif_wait_data* wait_data,
+                                  struct iwl_notification_wait* wait_entry) {
+  iwl_notification_wait_init(wait_data);
+  helper_create_fake_cmd(wait_data, wait_entry, FAKE_CMD_1);
 }
 
 // The normal case. Expect we can get the notification.
 TEST_F(NotifWaitTest, NormalCase) {
   struct iwl_notif_wait_data wait_data;     // A global wait data
   struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_create_fake_cmd_1(&wait_data, &wait_entry);
+  helper_test_case_init(&wait_data, &wait_entry);
 
   // Here comes a packet. This will mark the notification has been triggered.
   struct iwl_rx_packet pkt = FAKE_PKT_1;
@@ -71,11 +76,45 @@ TEST_F(NotifWaitTest, NormalCase) {
   EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
 }
 
+// Without a trigger, the second wait should time out.
+TEST_F(NotifWaitTest, SecondWaitWithoutTriggerShouldTimeOut) {
+  struct iwl_notif_wait_data wait_data;     // A global wait data
+  struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
+  helper_test_case_init(&wait_data, &wait_entry);
+
+  // The first wait. Should be successful.
+  struct iwl_rx_packet pkt = FAKE_PKT_1;
+  iwl_notification_wait_notify(&wait_data, &pkt);
+  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+
+  // The second wait should time out because it is not triggered.
+  helper_create_fake_cmd(&wait_data, &wait_entry, FAKE_CMD_1);
+  EXPECT_EQ(ZX_ERR_TIMED_OUT,
+            iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+}
+
+// Test 2 rounds of trigger/wait (same pkt). Expect both should be successful.
+TEST_F(NotifWaitTest, CanBeTriggeredAgain) {
+  struct iwl_notif_wait_data wait_data;     // A global wait data
+  struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
+  helper_test_case_init(&wait_data, &wait_entry);
+
+  // The first wait. Should be successful.
+  struct iwl_rx_packet pkt = FAKE_PKT_1;
+  iwl_notification_wait_notify(&wait_data, &pkt);
+  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+
+  // The second wait. Should be successful as well.
+  helper_create_fake_cmd(&wait_data, &wait_entry, FAKE_CMD_1);
+  iwl_notification_wait_notify(&wait_data, &pkt);
+  EXPECT_EQ(ZX_OK, iwl_wait_notification(&wait_data, &wait_entry, ZX_TIME_INFINITE_PAST));
+}
+
 // We expect one command, but only other command is notified.
 TEST_F(NotifWaitTest, TestNotInterestedCommand) {
   struct iwl_notif_wait_data wait_data;     // A global wait data
   struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_create_fake_cmd_1(&wait_data, &wait_entry);
+  helper_test_case_init(&wait_data, &wait_entry);
 
   // Here comes a packet. But not what we are interested. Expect it will be ignored.
   struct iwl_rx_packet pkt = FAKE_PKT_2;
@@ -90,7 +129,7 @@ TEST_F(NotifWaitTest, TestNotInterestedCommand) {
 TEST_F(NotifWaitTest, TestAbortion) {
   struct iwl_notif_wait_data wait_data;     // A global wait data
   struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_create_fake_cmd_1(&wait_data, &wait_entry);
+  helper_test_case_init(&wait_data, &wait_entry);
 
   // Abort all.
   iwl_abort_notification_waits(&wait_data);
@@ -103,7 +142,7 @@ TEST_F(NotifWaitTest, TestAbortion) {
 TEST_F(NotifWaitTest, TestTriggeredThenAborted) {
   struct iwl_notif_wait_data wait_data;     // A global wait data
   struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_create_fake_cmd_1(&wait_data, &wait_entry);
+  helper_test_case_init(&wait_data, &wait_entry);
 
   // Trigger
   struct iwl_rx_packet pkt = FAKE_PKT_1;
@@ -134,7 +173,7 @@ TEST_F(NotifWaitTest, TestEmptyWaitList) {
 TEST_F(NotifWaitTest, TestAbortedThenTriggered) {
   struct iwl_notif_wait_data wait_data;     // A global wait data
   struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_create_fake_cmd_1(&wait_data, &wait_entry);
+  helper_test_case_init(&wait_data, &wait_entry);
 
   // Abort
   iwl_abort_notification_waits(&wait_data);
@@ -147,7 +186,7 @@ TEST_F(NotifWaitTest, TestAbortedThenTriggered) {
 TEST_F(NotifWaitTest, TestRemove) {
   struct iwl_notif_wait_data wait_data;     // A global wait data
   struct iwl_notification_wait wait_entry;  // A local wait entry used to wait for a specific event
-  helper_create_fake_cmd_1(&wait_data, &wait_entry);
+  helper_test_case_init(&wait_data, &wait_entry);
 
   // Remove it
   iwl_remove_notification(&wait_data, &wait_entry);
