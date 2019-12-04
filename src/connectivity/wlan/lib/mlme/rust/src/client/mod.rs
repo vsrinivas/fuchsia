@@ -17,6 +17,7 @@ use {
         buffer::{BufferProvider, OutBuf},
         device::{Device, TxFlags},
         error::Error,
+        logger,
         timer::*,
         write_eth_frame,
     },
@@ -86,6 +87,9 @@ impl ClientMlme {
         scheduler: Scheduler,
         cpp_chan_sched: CppChannelScheduler,
     ) -> Self {
+        // TODO(41417): Remove this once devmgr installs a Rust logger.
+        logger::install();
+
         let timer = Timer::<TimedEvent>::new(scheduler);
         Self {
             ctx: Context {
@@ -538,7 +542,8 @@ impl Client {
         write_power_state_frame(&mut writer, self.bssid, self.iface_mac, &mut ctx.seq_mgr, state)?;
         let n = writer.bytes_written();
         let buffer = OutBuf::from(buffer, n);
-        ctx.device.send_wlan_frame(buffer, TxFlags::NONE)
+        ctx.device
+            .send_wlan_frame(buffer, TxFlags::NONE)
             .map_err(|error| Error::Status(format!("error sending power management frame"), error))
     }
 

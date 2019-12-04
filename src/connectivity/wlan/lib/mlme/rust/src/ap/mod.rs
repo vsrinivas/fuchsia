@@ -12,6 +12,7 @@ use {
         buffer::BufferProvider,
         device::Device,
         error::Error,
+        logger,
         timer::{EventId, Scheduler, Timer},
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
@@ -108,6 +109,9 @@ impl Ap {
         scheduler: Scheduler,
         bssid: Bssid,
     ) -> Self {
+        // TODO(41417): Remove this once devmgr installs a Rust logger.
+        logger::install();
+
         Self {
             ctx: Context::new(device, buf_provider, Timer::<TimedEvent>::new(scheduler), bssid),
             bss: None,

@@ -18,3 +18,5 @@ pub use rates_writer::*;
 
 mod eth_writer;
 pub use eth_writer::*;
+
+mod logger;
