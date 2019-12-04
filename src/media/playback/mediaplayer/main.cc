@@ -15,6 +15,8 @@
 
 #include <fs/pseudo_file.h>
 
+#include "lib/fidl/cpp/interface_request.h"
+#include "src/media/playback/mediaplayer/audio_consumer_impl.h"
 #include "src/media/playback/mediaplayer/player_impl.h"
 
 const std::string kIsolateUrl = "fuchsia-pkg://fuchsia.com/mediaplayer#meta/mediaplayer.cmx";
@@ -62,6 +64,15 @@ int main(int argc, const char** argv) {
               [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
         });
 
+    std::unique_ptr<media_player::SessionAudioConsumerFactoryImpl> factory;
+    component_context->outgoing()->AddPublicService<fuchsia::media::SessionAudioConsumerFactory>(
+        [component_context = component_context.get(), &factory,
+         &loop](fidl::InterfaceRequest<fuchsia::media::SessionAudioConsumerFactory> request) {
+          factory = media_player::SessionAudioConsumerFactoryImpl::Create(
+              std::move(request), component_context,
+              [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
+        });
+
     loop.Run();
   } else {
     fuchsia::sys::LauncherPtr launcher;
@@ -72,6 +83,12 @@ int main(int argc, const char** argv) {
     component_context->outgoing()->AddPublicService<fuchsia::media::playback::Player>(
         [&launcher](fidl::InterfaceRequest<fuchsia::media::playback::Player> request) {
           ConnectToIsolate<fuchsia::media::playback::Player>(std::move(request), launcher.get());
+        });
+
+    component_context->outgoing()->AddPublicService<fuchsia::media::SessionAudioConsumerFactory>(
+        [&launcher](fidl::InterfaceRequest<fuchsia::media::SessionAudioConsumerFactory> request) {
+          ConnectToIsolate<fuchsia::media::SessionAudioConsumerFactory>(std::move(request),
+                                                                        launcher.get());
         });
 
     loop.Run();

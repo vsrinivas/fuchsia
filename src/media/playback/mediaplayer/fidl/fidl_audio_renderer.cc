@@ -311,7 +311,8 @@ void FidlAudioRenderer::Prime(fit::closure callback) {
 
   if (prime_callback_) {
     FX_LOGS(WARNING) << "Prime requested when priming was already in progress.";
-    FX_DCHECK(false);
+    // This used to be a DCHECK but for the use case of AudioConsumer we should allow new sources to
+    // be attached without an end of stream occuring and clearing the prime_callback
     prime_callback_();
   }
 
