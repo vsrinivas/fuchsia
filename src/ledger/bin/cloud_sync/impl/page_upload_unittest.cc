@@ -554,6 +554,9 @@ TEST_F(PageUploadTest, UploadClock) {
 
 // Verifies that clocks uploads are buffered while waiting for the cloud response.
 TEST_F(PageUploadTest, UploadClockRateLimit) {
+  storage_.remote_id_to_commit_id[encryption_service_.EncodeCommitId("commit0")] = "commit0";
+  storage_.remote_id_to_commit_id[encryption_service_.EncodeCommitId("commit1")] = "commit1";
+  storage_.remote_id_to_commit_id[encryption_service_.EncodeCommitId("commit5")] = "commit5";
   page_upload_->StartOrRestartUpload();
   storage::Clock clock{
       {clocks::DeviceId{"device_1", 1},
@@ -601,11 +604,15 @@ TEST_F(PageUploadTest, UploadClockRateLimit) {
   // Remove the cloud entry from the clocks: it is not transmitted either way.
   std::get<storage::DeviceEntry>(golden_clock.begin()->second).cloud.reset();
   storage::Clock actual_clock;
-  EXPECT_TRUE(DecodeClock(std::move(page_cloud_.clocks[1].first), &actual_clock));
+  ledger::Status status;
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    status = DecodeClock(handler, &storage_, std::move(page_cloud_.clocks[1].first), &actual_clock);
+  }));
+  EXPECT_EQ(status, ledger::Status::OK);
   std::get<storage::DeviceEntry>(actual_clock.begin()->second).cloud.reset();
   EXPECT_EQ(actual_clock, golden_clock);
 
-  auto return_clock_pack = EncodeClock(actual_clock);
+  auto return_clock_pack = EncodeClock(&encryption_service_, actual_clock);
   page_cloud_.clocks[1].second(
       cloud_provider::Status::OK,
       std::make_unique<cloud_provider::ClockPack>(std::move(return_clock_pack)));

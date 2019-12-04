@@ -13,23 +13,27 @@
 
 namespace cloud_sync {
 namespace {
-void AddToClock(const storage::DeviceEntry& entry, cloud_provider::DeviceClock* clock) {
+void AddToClock(encryption::EncryptionService* encryption_service,
+                const storage::DeviceEntry& entry, cloud_provider::DeviceClock* clock) {
   cloud_provider::DeviceEntry device_entry;
   cloud_provider::ClockEntry clock_entry;
-  clock_entry.set_commit_id(convert::ToArray(entry.head.commit_id));
+  clock_entry.set_commit_id(
+      convert::ToArray(encryption_service->EncodeCommitId(entry.head.commit_id)));
   clock_entry.set_generation(entry.head.generation);
   device_entry.set_local_entry(std::move(clock_entry));
   clock->set_device_entry(std::move(device_entry));
 }
 
-void AddToClock(const storage::ClockTombstone& /*entry*/, cloud_provider::DeviceClock* clock) {
+void AddToClock(encryption::EncryptionService* /*encryption_service*/,
+                const storage::ClockTombstone& /*entry*/, cloud_provider::DeviceClock* clock) {
   cloud_provider::DeviceEntry device_entry;
   cloud_provider::TombstoneEntry tombstone;
   device_entry.set_tombstone_entry(std::move(tombstone));
   clock->set_device_entry(std::move(device_entry));
 }
 
-void AddToClock(const storage::ClockDeletion& entry, cloud_provider::DeviceClock* clock) {
+void AddToClock(encryption::EncryptionService* /*encryption_service*/,
+                const storage::ClockDeletion& /*entry*/, cloud_provider::DeviceClock* clock) {
   cloud_provider::DeviceEntry device_entry;
   cloud_provider::DeletionEntry deletion;
   device_entry.set_deletion_entry(std::move(deletion));
@@ -38,13 +42,15 @@ void AddToClock(const storage::ClockDeletion& entry, cloud_provider::DeviceClock
 
 }  // namespace
 
-cloud_provider::ClockPack EncodeClock(const storage::Clock& clock) {
+cloud_provider::ClockPack EncodeClock(encryption::EncryptionService* encryption_service,
+                                      const storage::Clock& clock) {
   cloud_provider::Clock clock_p;
   for (const auto& [device_id, device_clock] : clock) {
     cloud_provider::DeviceClock device_clock_p;
     device_clock_p.set_fingerprint(convert::ToArray(device_id.fingerprint));
     device_clock_p.set_counter(device_id.epoch);
-    std::visit([&device_clock_p](const auto& entry) { AddToClock(entry, &device_clock_p); },
+    std::visit([encryption_service, &device_clock_p](
+                   const auto& entry) { AddToClock(encryption_service, entry, &device_clock_p); },
                device_clock);
     clock_p.mutable_devices()->push_back(std::move(device_clock_p));
   }
@@ -53,11 +59,12 @@ cloud_provider::ClockPack EncodeClock(const storage::Clock& clock) {
   return pack;
 }
 
-bool DecodeClock(cloud_provider::ClockPack clock_pack, storage::Clock* clock) {
+ledger::Status DecodeClock(coroutine::CoroutineHandler* handler, storage::PageStorage* storage,
+                           cloud_provider::ClockPack clock_pack, storage::Clock* clock) {
   cloud_provider::Clock unpacked_clock;
   if (!ledger::DecodeFromBuffer(clock_pack.buffer, &unpacked_clock)) {
     FXL_LOG(ERROR) << "Unable to decode from buffer";
-    return false;
+    return ledger::Status::DATA_INTEGRITY_ERROR;
   }
   storage::Clock result;
   if (unpacked_clock.has_devices()) {
@@ -65,7 +72,7 @@ bool DecodeClock(cloud_provider::ClockPack clock_pack, storage::Clock* clock) {
       if (!dv.has_fingerprint() || !dv.has_counter() || !dv.has_device_entry()) {
         FXL_LOG(ERROR) << "Missing elements" << dv.has_fingerprint() << " " << dv.has_counter()
                        << " " << dv.has_device_entry();
-        return false;
+        return ledger::Status::DATA_INTEGRITY_ERROR;
       }
       clocks::DeviceId device_id;
       device_id.epoch = dv.counter();
@@ -76,8 +83,20 @@ bool DecodeClock(cloud_provider::ClockPack clock_pack, storage::Clock* clock) {
         case cloud_provider::DeviceEntry::Tag::kLocalEntry: {
           const cloud_provider::ClockEntry& entry = dv.device_entry().local_entry();
           storage::DeviceEntry device_entry;
-          device_entry.head =
-              storage::ClockEntry{convert::ToString(entry.commit_id()), entry.generation()};
+          storage::Status status;
+          storage::CommitId local_commit_id;
+          if (coroutine::SyncCall(
+                  handler,
+                  [storage, &entry](
+                      fit::function<void(storage::Status, storage::CommitId)> callback) mutable {
+                    storage->GetCommitIdFromRemoteId(convert::ExtendedStringView(entry.commit_id()),
+                                                     std::move(callback));
+                  },
+                  &status, &local_commit_id) == coroutine::ContinuationStatus::INTERRUPTED) {
+            return ledger::Status::INTERRUPTED;
+          }
+
+          device_entry.head = storage::ClockEntry{std::move(local_commit_id), entry.generation()};
           device_entry.cloud = std::make_optional(device_entry.head);
           device_clock.emplace<storage::DeviceEntry>(std::move(device_entry));
           break;
@@ -91,7 +110,7 @@ bool DecodeClock(cloud_provider::ClockPack clock_pack, storage::Clock* clock) {
           break;
         }
         case cloud_provider::DeviceEntry::Tag::kUnknown: {
-          return false;
+          return ledger::Status::DATA_INTEGRITY_ERROR;
           break;
         }
       }
@@ -99,7 +118,7 @@ bool DecodeClock(cloud_provider::ClockPack clock_pack, storage::Clock* clock) {
     }
   }
   *clock = result;
-  return true;
+  return ledger::Status::OK;
 }
 
 }  // namespace cloud_sync

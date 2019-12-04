@@ -279,7 +279,7 @@ void PageUpload::UpdateClock(storage::Clock clock, fit::function<void(ledger::St
     return;
   }
   clock_upload_in_progress_ = true;
-  auto pack = EncodeClock(clock);
+  auto pack = EncodeClock(encryption_service_, clock);
   (*page_cloud_)
       ->UpdateClock(std::move(pack), [this, callback = std::move(callback)](
                                          cloud_provider::Status status,
