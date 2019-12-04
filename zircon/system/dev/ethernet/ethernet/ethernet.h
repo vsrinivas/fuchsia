@@ -78,12 +78,14 @@ class EthDev0 : public EthDev0Type, public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERN
   void Recv(const void* data, size_t len, uint32_t flags);
   void CompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status);
 
+ protected:
+  void DestroyAllEthDev();
+
  private:
   friend class EthDev;
 
   // Resend transmitted packets for loopback.
   void TransmitEcho(const void* data, size_t len);
-  void DestroyAllEthDev();
 
   ddk::EthernetImplProtocolClient mac_;
   ethernet_info_t info_ = {};

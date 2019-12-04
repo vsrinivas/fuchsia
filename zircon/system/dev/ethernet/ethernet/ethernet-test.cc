@@ -148,15 +148,25 @@ TEST(EthernetTest, OpenTest) {
   eth->DdkRelease();
 }
 
+class EthDev0ForTest : public eth::EthDev0 {
+ public:
+  EthDev0ForTest(zx_device_t* parent) : eth::EthDev0(parent) {}
+  using eth::EthDev0::DestroyAllEthDev;
+};
+
 class EthernetDeviceTest {
  public:
   EthernetDeviceTest() : tester() {
-    edev0 = std::make_unique<eth::EthDev0>(fake_ddk::kFakeParent);
+    edev0 = std::make_unique<EthDev0ForTest>(fake_ddk::kFakeParent);
     ASSERT_OK(edev0->AddDevice());
 
     edev = fbl::MakeRefCounted<eth::EthDev>(fake_ddk::kFakeParent, edev0.get());
     zx_device_t* out;
     ASSERT_OK(edev->AddDevice(&out));
+  }
+
+  ~EthernetDeviceTest() {
+    edev0->DestroyAllEthDev();
   }
 
   void Start() {
@@ -183,7 +193,7 @@ class EthernetDeviceTest {
   zx::fifo& ReceiveFifo() { return rx_fifo_; }
 
   EthernetTester tester;
-  std::unique_ptr<eth::EthDev0> edev0;
+  std::unique_ptr<EthDev0ForTest> edev0;
   fbl::RefPtr<eth::EthDev> edev;
 
  private:
