@@ -7,6 +7,107 @@ import("c_toolchain.gni")
 import("environment_redirect.gni")
 import("variants.gni")
 
+declare_args() {
+  # List of clauses to apply other GN build arguments to specific compilation
+  # environments.  Each clause specifies matching criteria and arguments to
+  # set in such environments.  Each matching clause is applied in order; each
+  # argument it sets overrides any setting of that same argument in an earlier
+  # matching clause or in the environment() declaration.  Note that if the
+  # variant selected for a target via [`variants`](#variants) (which see) has
+  # a `toolchain_args` setting, each argument therein will override the
+  # settings here in `environment_args` clauses (within that variant
+  # toolchain).
+  #
+  # Each clause is a scope.  The several parameters listed below are the
+  # matching criteria.  All other parameters in a clause are the build
+  # arguments set when that clause matches.  Note that these form a subset of
+  # the matching criteria supported by [`variants`](#variants) selectors,
+  # except for `tags` and `exclude_tags`.  The semantics of each criterion are
+  # exactly the same here and there.
+  #
+  # For example:
+  # ```
+  #   environment_args = [ { kernel = true assert_level = 0 } ]
+  # ```
+  # sets `assert_level = 0` everywhere where `is_kernel == true`, while:
+  # ```
+  #   environment_args = [
+  #     {
+  #       kernel = false
+  #       assert_level = 0
+  #     },
+  #     {
+  #       kernel = true
+  #       assert_level = 1
+  #     },
+  #     {
+  #       environment = [ "efi" ]
+  #       assert_level = 2
+  #       opt_level = 0
+  #     },
+  #   ]
+  # ```
+  # sets `assert_level = 0` everywhere where `is_kernel == false`,
+  # sets `assert_level = 1` most places where `is_kernel == true`,
+  # but sets `assert_level = 2` and `opt_level = 0` in the "efi"
+  # environment (where `is_kernel == true` also holds, but the later
+  # clause overrides the preceding `assert_level = 1`).
+  #
+  # Clause scope parameters
+  #
+  #   * cpu
+  #     - Optional: If nonempty, match only when $current_cpu is one in the
+  #     - list.
+  #     - Type: list(string)
+  #
+  #   * os
+  #     - Optional: If nonempty, match only when $current_os is one in the
+  #     - list.
+  #     - Type: list(string)
+  #
+  #   * host
+  #     - Optional: If present, match only in host environments if true or
+  #     non-host environments if false.  This means a context in which
+  #     $is_host is true, not specifically the build host.  For example, it
+  #     would be true when cross-compiling host tools for an SDK build but
+  #     would be false when compiling code for a hypervisor guest system
+  #     that happens to be the same CPU and OS as the build host.
+  #     - Type: bool
+  #
+  #   * kernel
+  #     - Optional: If present, match only in kernel environments if true or
+  #     non-kernel environments if false.  This means a context in which
+  #     $is_kernel is true, not just the "kernel" environment itself.
+  #     For different machine architectures there may be multiple different
+  #     specialized environments that set $is_kernel, e.g. for boot loaders
+  #     and for special circumstances used within the kernel.  See also the
+  #     $tags field in $variant, described below.
+  #     - Type: bool
+  #
+  #   * environment
+  #     - Optional: If nonempty, a list of environment names that match.  This
+  #     looks at ${toolchain.environment}, which is the simple name (no
+  #     directories) in an environment label defined by environment().  Each
+  #     element can match either the whole environment name, or just the
+  #     "base" environment, which is the part of the name before a `.` if it
+  #     has one.  For example, "host" would match both "host" and "host.fuzz".
+  #     - Type: list(string)
+  #
+  #   * tags
+  #     - Optional: If nonempty, a list of tags which must be present in the
+  #     `tags` parameter to environment() for that environment to match.
+  #     - Type: list(string)
+  #     - Default: []
+  #
+  #   * exclude_tags
+  #     - Optional: If nonempty, a list of tags which must *not* be present in
+  #     the `tags` parameter to environment() for that environment to match.
+  #     - Type: list(string)
+  #     - Default: []
+  #
+  environment_args = []
+}
+
 # Define toolchains for a compilation environment.
 #
 # A compilation environment is the combination of a particular CPU, OS, and
@@ -90,6 +191,9 @@ import("variants.gni")
 #   * toolchain_args
 #     - Optional: A scope of build argument overrides for these toolchains.
 #     This is just like $toolchain_args passed to toolchain() in bare GN.
+#     Note that values set here might be overridden by user-chosen values
+#     specified in [`environment_args`](#environment_args) or in variant
+#     specs given in [`variants`](#variants).
 #
 #   * toolchain_vars
 #     - Optional: A scope imported into the $toolchain scope in these
@@ -155,6 +259,12 @@ template("environment") {
 
   # These will be seen by c_toolchain() below.
   shlib = defined(invoker.shlib) && invoker.shlib
+
+  if (defined(invoker.os)) {
+    env_os = invoker.os
+  } else {
+    env_os = "fuchsia"
+  }
 
   # The canonicalized list of selectors.  Each element is in the schema of
   # $variant elements, but canonicalized to simplify the matching code: all
@@ -513,6 +623,77 @@ template("environment") {
   }
   variant_selectors = []
 
+  env_tc_args = {
+  }
+  foreach(selector, environment_args) {
+    # An empty selector always matches, so start with the flag set.
+    # Each `if` block below applies each inclusion criterion: if it's
+    # present and it does not include this target, then clear the flag.
+    selector_matches = true
+
+    if (defined(selector.cpu) && selector.cpu != []) {
+      if (selector.cpu + [ invoker.cpu ] - [ invoker.cpu ] == selector.cpu) {
+        selector_matches = false
+      }
+    }
+    if (defined(selector.environment) && selector.environment != []) {
+      if (selector.environment + [ environment ] - [ environment ] ==
+          selector.environment &&
+          selector.environment + [ base_environment ] - [ base_environment ] ==
+          selector.environment) {
+        selector_matches = false
+      }
+    }
+    if (defined(selector.os) && selector.os != []) {
+      if (selector.os + [ env_os ] - [ env_os ] == selector.os) {
+        selector_matches = false
+      }
+    }
+    if (defined(selector.tags) && selector.tags != []) {
+      if (selector.tags + [ env_tags ] - [ env_tags ] == selector.tags) {
+        selector_matches = false
+      }
+    }
+    if (defined(selector.exclude_tags) && selector.exclude_tags != []) {
+      if (selector.exclude_tags + [ env_tags ] - [ env_tags ] !=
+          selector.exclude_tags) {
+        selector_matches = false
+      }
+    }
+    if (defined(selector.host) &&
+        selector.host != (defined(g.is_host) && g.is_host)) {
+      selector_matches = false
+    }
+    if (defined(selector.kernel) &&
+        selector.kernel != (defined(g.is_kernel) && g.is_kernel)) {
+      selector_matches = false
+    }
+
+    if (selector_matches) {
+      # Add the settings in this selector to the collected set.  The same
+      # argument in a later selector overrides that argument in an earlier one.
+      new_env_tc_args = {
+        forward_variables_from(env_tc_args, "*")
+        forward_variables_from(selector,
+                               "*",
+                               [
+                                 "cpu",
+                                 "environment",
+                                 "exclude_tags",
+                                 "host",
+                                 "kernel",
+                                 "os",
+                                 "tags",
+                               ])
+      }
+      env_tc_args = {
+      }
+      env_tc_args = new_env_tc_args
+      new_env_tc_args = {  # Clear it before the next iteration.
+      }
+    }
+  }
+
   # Define a primary toolchain, and possibly also a shlib toolchain, for each
   # variant.  If there are two, both toolchains get a ${toolchain.shlib} value
   # pointing to the shlib toolchain.  Any ${toolchain.configs} elements that
@@ -630,11 +811,7 @@ template("environment") {
 
       c_toolchain(tc.name) {
         cpu = invoker.cpu
-        if (defined(invoker.os)) {
-          os = invoker.os
-        } else {
-          os = "fuchsia"
-        }
+        os = env_os
         shlib = shlib || (defined(invoker.solink) && invoker.solink)
         toolchain_args = {
           if (defined(invoker.toolchain_args)) {
@@ -646,6 +823,17 @@ template("environment") {
                                      "toolchain",
                                    ])
           }
+
+          # environment_args overrides environment() parameters.
+          forward_variables_from(env_tc_args,
+                                 "*",
+                                 [
+                                   "current_cpu",
+                                   "current_os",
+                                   "toolchain",
+                                 ])
+
+          # variants overrides environment_args.
           if (defined(variant.toolchain_args)) {
             forward_variables_from(variant.toolchain_args,
                                    "*",
