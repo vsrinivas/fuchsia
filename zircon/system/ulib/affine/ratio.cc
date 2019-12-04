@@ -207,7 +207,7 @@ int64_t Ratio::Scale(int64_t value, uint32_t numerator, uint32_t denominator) {
   } else {
     // LIMIT == 0x8000000000000000
     //
-    // Note:  We are attempting to pass the unsigned disaance from zero into
+    // Note:  We are attempting to pass the unsigned distance from zero into
     // our ScaleUInt64 function.  In the case of negative numbers, we pass
     // the twos compliment into the scale function, and then flip the sign
     // again on the way out.
@@ -216,7 +216,7 @@ int64_t Ratio::Scale(int64_t value, uint32_t numerator, uint32_t denominator) {
     // MIN is itself for any signed integer type, and that casting this
     // value to an unsigned integer of the same size properly produces the
     // original value's distance from zero.  Clamping the limit to the
-    // disance of MIN from zero means that saturated results will likewise
+    // distance of MIN from zero means that saturated results will likewise
     // get properly flipped back to MIN during the return.
     //
     constexpr uint64_t LIMIT = static_cast<uint64_t>(std::numeric_limits<int64_t>::min());
