@@ -130,8 +130,8 @@ zx_status_t x86_set_pkg_pl1(const zx_system_powerctl_arg_t* arg, MsrAccess* msr)
   // zx_system_powerctl_arg_t is in mW and us, hence the math below
   // power unit is represented in bits [3:0] in the RAPL_POWER_UNIT MSR
   // time unit is represented in bits [19:16] in RAPL_POWER_UNIT MSR
-  uint32_t power_units = 1000 / (1 << BITS(rapl_unit, 15, 0));
-  uint32_t time_units = 1000000 / (1 << ((rapl_unit >> 16) & 0xf));
+  uint32_t power_units = 1000 / (1 << BITS_SHIFT(rapl_unit, 3, 0));
+  uint32_t time_units = 1000000 / (1 << BITS_SHIFT(rapl_unit, 19, 16));
 
   // MSR_PKG_POWER_LIMIT allows SW to define power limit from package domain
   // power limit is defined in terms of avg power over a time window
