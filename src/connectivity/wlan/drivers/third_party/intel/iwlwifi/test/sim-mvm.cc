@@ -39,7 +39,7 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd) {
           break;
 
         default:
-          IWL_ERR(cmd, "unsupported long command ID : %#x\n", cmd->id);
+          printf("unsupported long command ID : %#x\n", cmd->id);
           IWL_INSPECT_HOST_CMD(cmd);
           return ZX_ERR_NOT_SUPPORTED;
       }
@@ -52,14 +52,14 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd) {
           break;
 
         default:
-          IWL_ERR(cmd, "unsupported data path command ID : %#x\n", cmd->id);
+          printf("unsupported data path command ID : %#x\n", cmd->id);
           IWL_INSPECT_HOST_CMD(cmd);
           return ZX_ERR_NOT_SUPPORTED;
       }
       break;
 
     default:
-      IWL_ERR(cmd, "unsupported command ID : %#x\n", cmd->id);
+      printf("unsupported command ID : %#x\n", cmd->id);
       IWL_INSPECT_HOST_CMD(cmd);
       return ZX_ERR_NOT_SUPPORTED;
   }
