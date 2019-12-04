@@ -121,6 +121,15 @@ void DefaultFrameScheduler::RequestFrame() {
 void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBase*, zx_status_t) {
   FXL_DCHECK(frame_renderer_);
 
+  {
+    // Trace event to track the delta between the targeted wakeup_time_ and the actual wakeup time.
+    // It is used to detect delays (i.e. if this thread is blocked on the cpu). The intended
+    // wakeup_time_ is used to track the canonical "start" of this frame at various points during
+    // the frame's execution.
+    const zx::duration wakeup_delta = zx::time(async_now(dispatcher_)) - wakeup_time_;
+    TRACE_COUNTER("gfx", "Wakeup Time Delta", /* counter_id */ 0, "delta", wakeup_delta.get());
+  }
+
   auto presentation_time = next_presentation_time_;
   TRACE_DURATION("gfx", "FrameScheduler::MaybeRenderFrame", "presentation_time",
                  presentation_time.get());
