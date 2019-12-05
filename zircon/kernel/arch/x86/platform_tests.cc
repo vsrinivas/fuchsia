@@ -624,9 +624,11 @@ static bool test_x64_power_limits() {
   // changing the value to 24s from 28s = 0x4E in the MSR
   arg.x86_power_limit.time_window = new_time_window;
   // write it back again to see if the new function does it right
-  arch_system_powerctl(ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg, &fake_msrs);
-  uint64_t new_val = fake_msrs.read_msr(X86_MSR_PKG_POWER_LIMIT);
-  EXPECT_EQ(new_val, new_msr, "Set power limit failed");
+  auto status = arch_system_powerctl(ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg, &fake_msrs);
+  if (status != ZX_ERR_NOT_SUPPORTED) {
+    uint64_t new_val = fake_msrs.read_msr(X86_MSR_PKG_POWER_LIMIT);
+    EXPECT_EQ(new_val, new_msr, "Set power limit failed");
+  }
   END_TEST;
 }
 
