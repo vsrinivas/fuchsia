@@ -33,6 +33,7 @@ rustc_library("breakpoint_system_client") {
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
   ]
 }
 
@@ -42,6 +43,7 @@ rustc_library("test_utils") {
   source_root = "test_utils.rs"
   deps = [
     ":breakpoint_system_client",
+    "//garnet/lib/rust/files_async",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-component",
@@ -53,6 +55,7 @@ rustc_library("test_utils") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

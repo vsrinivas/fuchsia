@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error, fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_test_breakpoints as fbreak,
+    breakpoint_system_client::*, failure::Error, fidl_fidl_examples_echo as fidl_echo,
     fuchsia_async as fasync, fuchsia_component::client::*, io_util, test_utils::*,
 };
 
@@ -20,19 +20,22 @@ async fn base_resolver_test() -> Result<(), Error> {
         "fuchsia-pkg://fuchsia.com/base_resolver_test#meta/component_manager_without_loader.cmx",
         "fuchsia-boot:///#meta/root.cm",
         vec![("/boot".to_string(), pkg_channel.into())],
+        None,
     )
     .await?;
 
     // Register breakpoints and begin execution of component manager
-    let receiver = test.breakpoint_system.register(vec![fbreak::EventType::StartInstance]).await?;
+    let receiver = test.breakpoint_system.register(vec![StartInstance::TYPE]).await?;
+
+    // Begin component manager's execution
+    test.breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect(fbreak::EventType::StartInstance, vec![]).await?;
+    let invocation = receiver.expect_exact::<StartInstance>("/").await?;
     invocation.resume().await?;
 
     // Expect the echo_server component to be bound to
-    let invocation =
-        receiver.expect(fbreak::EventType::StartInstance, vec!["echo_server:0"]).await?;
+    let invocation = receiver.expect_exact::<StartInstance>("/echo_server:0").await?;
     invocation.resume().await?;
 
     // Connect to the echo service

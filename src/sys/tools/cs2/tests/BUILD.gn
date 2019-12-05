@@ -12,8 +12,8 @@ rustc_test("cs2_test_bin") {
   source_root = "cs2_test.rs"
   deps = [
     "//garnet/public/rust/fuchsia-async",
+    "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:test_utils",
-    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/tools/cs2:lib",
     "//third_party/rust_crates:failure",
   ]

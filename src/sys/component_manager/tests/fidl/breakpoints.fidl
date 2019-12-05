@@ -4,57 +4,95 @@
 
 library fuchsia.test.breakpoints;
 
-/// The maximum number of event types to register breakpoints for.
+/// The maximum number of event types that a receiver can listen to.
 /// This capacity should match the actual number of event types.
-const uint64 MAX_NUM_EVENT_TYPES = 3;
+const uint64 MAX_NUM_EVENT_TYPES_RECEIVED = 9;
 
-/// When a caller expects an Event or waits until a capability is used
-/// by a specific component, this constant determines the maximum depth
-/// (in terms of components) of that capability. This value is currently
-/// set arbitrarily.
-const uint64 MAX_COMPONENT_DEPTH = 10;
+/// The maximum string length of a component moniker.
+const uint64 MAX_MONIKER_LENGTH = 100;
 
-/// When a caller expects an Event or waits until a capability is used
-/// by a specific component, this constant determines the maximum string
-/// length of the moniker of each comprising instance.
-///
-/// For example, if a caller expects an event on a component whose path is
-/// "/<A>/<B>/<C>", then this constant determines the maximum length of
-/// <A>, <B> and <C>. This value is currently set arbitrarily.
-const uint64 MAX_MONIKER_LENGTH = 50;
-
-/// When a caller waits until a specific capability is used by a specific
-/// component, this constant determines the maximum string length of the path
-/// of that capability. This value is currently set arbitrarily.
-const uint64 MAX_CAPABILITY_PATH_LENGTH = 50;
+/// The maximum string length of the name/path of a capability.
+/// This value is currently set arbitrarily.
+const uint64 MAX_CAPABILITY_LENGTH = 50;
 
 /// These EventTypes are used for the Breakpoints protocol.
 /// They are FIDL versions of the EventType enum in hooks.rs and have
 /// the same meaning.
 enum EventType {
-    /// An instance was bound to successfully.
-    /// This instance is now running.
-    START_INSTANCE = 0;
+    /// A dynamic child was added to the parent instance.
+    /// Depending on its eagerness, this child may/may not be started yet.
+    ADD_DYNAMIC_CHILD = 1;
+
+    /// An instance was destroyed successfully. The instance is stopped and no longer
+    /// exists in the parent's realm.
+    POST_DESTROY_INSTANCE = 2;
+
+    /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
+    /// The instance still exists in the parent's realm but will soon be removed.
+    /// TODO(fxb/39417): Ensure the instance is stopped before this event.
+    PRE_DESTROY_INSTANCE = 3;
+
+    /// The root component instance's declaration was resolved successfully for the first time.
+    ROOT_COMPONENT_RESOLVED = 4;
+
+    /// A builtin capability is being requested by a component and requires routing.
+    /// The event propagation system is used to supply the capability being requested.
+    ROUTE_BUILTIN_CAPABILITY = 5;
+
+    /// A framework capability is being requested by a component and requires routing.
+    /// The event propagation system is used to supply the capability being requested.
+    ROUTE_FRAMEWORK_CAPABILITY = 6;
+
+    /// An instance was bound to. If the instance is executable, it is also started.
+    START_INSTANCE = 7;
 
     /// An instance was stopped successfully.
     /// This event must occur before PostDestroyInstance.
-    STOP_INSTANCE = 1;
+    STOP_INSTANCE = 8;
 
-    /// The component subtree rooted at this instance is about to be destroyed.
-    /// The instance may have been stopped by this point.
-    /// This event must occur before PostDestroyInstance.
-    /// TODO(fxb/39417): Ensure the instance is stopped before this event.
-    PRE_DESTROY_INSTANCE = 2;
+    /// A capability was used by an instance. An instance uses a capability when
+    /// it creates a channel and provides the server end to ComponentManager for routing.
+    USE_CAPABILITY = 9;
+};
 
-    /// The component subtree rooted at this instance has been destroyed.
-    /// All instances under this subtree have been stopped by this point.
-    POST_DESTROY_INSTANCE = 3;
+/// Encapsulates additional data/protocols for some event types.
+table EventPayload {
+    /// Payload for RouteFrameworkCapability and RouteBuiltinCapability events
+    1: RoutingPayload routing_payload;
 
-    /// A capability has been requested for use by the component.
-    /// A component uses a capability by creating a channel and providing
-    /// the server end of the channel to the component manager for routing
-    /// to a particular capability.
-    USE_CAPABILITY = 4;
+    /// Payload for UseCapability event
+    2: UseCapabilityPayload use_capability_payload;
+};
+
+/// Payload for RouteFrameworkCapability and RouteBuiltinCapability events
+table RoutingPayload {
+    /// Allows setting a capability provider for RouteFrameworkCapability
+    /// and RouteBuiltinCapability events
+    1: RoutingProtocol routing_protocol;
+
+    /// Name/Path of a capability.
+    2: string:MAX_CAPABILITY_LENGTH capability;
+};
+
+/// Payload for UseCapability event
+table UseCapabilityPayload {
+    /// Name/Path of a capability
+    1: string:MAX_CAPABILITY_LENGTH capability;
+};
+
+/// Contains all information about a single invocation of a breakpoint
+table Invocation {
+    /// Event type corresponding to the invocation
+    1: EventType event_type;
+
+    /// Moniker of instance corresponding to the invocation
+    2: string:MAX_MONIKER_LENGTH target_moniker;
+
+    /// Handler for resuming from invocation
+    3: Handler handler;
+
+    /// Optional payload for some event types
+    4: EventPayload event_payload;
 };
 
 /// Registers breakpoints in component manager.
@@ -63,38 +101,39 @@ protocol BreakpointSystem {
     /// Registers breakpoints for the given EventTypes.
     /// Returns a BreakpointInvocationReceiver which can be used
     /// to expect the registered types.
-    ///
-    /// If component manager is in debug mode, the first call to this
-    /// method implicitly starts component manager's execution.
-    Register(vector<EventType>:MAX_NUM_EVENT_TYPES event_types, request<InvocationReceiver> server_end) -> ();
+    Register(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, request<InvocationReceiver> server_end) -> ();
+
+    /// Begins component manager's execution.
+    /// This method is a no-op when invoked more than once or by
+    /// a component inside component manager.
+    StartComponentManager() -> ();
 };
 
 /// Receives invocations for registered events in component manager.
 protocol InvocationReceiver {
-    /// Blocks until the next invocation of a breakpoint occurs and verifies
-    /// that the EventType and component are as expected.
+    /// Blocks until the next invocation of a breakpoint occurs.
     ///
     /// Note: The component manager is blocked after this call and will not be
-    /// allowed to proceed until resumed explicitly via the Invocation object.
-    Expect(EventType event_type, vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component, request<Invocation> server_end) -> ();
-
-    /// Blocks until the next invocation of a breakpoint occurs and verifies
-    /// that the EventType is as expected.
-    ///
-    /// Note: The component manager is blocked after this call and will not be
-    /// allowed to proceed until resumed explicitly via the Invocation object.
-    ExpectType(EventType event_type, request<Invocation> server_end) -> ();
-
-    /// Blocks until a UseCapability invocation matching the specified component
-    /// and capability path. All other invocations are ignored.
-    ///
-    /// Note: The component manager is blocked after this call and will not be
-    /// allowed to proceed until resumed explicitly via the Invocation object.
-    WaitUntilUseCapability(vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component, string:MAX_CAPABILITY_PATH_LENGTH requested_capability_path, request<Invocation> server_end) -> ();
+    /// allowed to proceed until resumed explicitly via the Handler.
+    Next() -> (Invocation invocation);
 };
 
-/// A single invocation of a breakpoint in component manager.
-protocol Invocation {
-    /// Resume/unblock the component manager from this invocation.
+/// Every Invocation supports this basic handler to allow resumption.
+protocol Handler {
+    /// Resumes/unblocks from an invocation.
     Resume() -> ();
+};
+
+/// Allows injecting capabilities over FIDL.
+/// Used by RouteFrameworkCapability and RouteBuiltinCapability
+protocol RoutingProtocol {
+    /// Inject a CapabilityProvider in response to a routing event.
+    Route(CapabilityProvider client_end) -> ();
+};
+
+/// A FIDL-based version of a CapabilityProvider
+protocol CapabilityProvider {
+    /// Called to bind a server end of a channel to the provided framework capability.
+    /// TODO(xbhatnag): provide all arguments (flags, mode, path) to this method.
+    Open(handle<channel> server_end) -> ();
 };

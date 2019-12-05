@@ -5,11 +5,13 @@
 use {
     breakpoint_system_client::BreakpointSystemClient,
     failure::{format_err, Error, ResultExt},
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, EnvironmentControllerEvent, EnvironmentControllerProxy,
         EnvironmentMarker, EnvironmentOptions, FileDescriptor, LauncherProxy,
     },
     fidl_fuchsia_test_breakpoints::*,
+    files_async,
     fuchsia_component::client::*,
     fuchsia_runtime::HandleType,
     fuchsia_zircon as zx,
@@ -67,11 +69,6 @@ pub struct BlackBoxTest {
     /// The app that handles component manager
     pub component_manager_app: App,
 
-    /// The file that stores the output from component manager.
-    /// Since component manager itself has no output, this is usually the
-    /// output from the components started by component manager.
-    pub out_file: File,
-
     /// The breakpoints FIDL service connected to component manager.
     /// An integration test can use this service to halt tasks of component manager
     /// at various points during its execution.
@@ -88,27 +85,30 @@ pub struct BlackBoxTest {
 impl BlackBoxTest {
     /// Creates a black box test with the default component manager URL and no
     /// additional directory handles that are passed in to component manager.
+    /// The output of component manager is not redirected.
     /// At the end of this function call, a component manager has been created
     /// in a hermetic environment and its execution is halted.
     pub async fn default(root_component_url: &str) -> Result<Self, Error> {
-        Self::custom(COMPONENT_MANAGER_URL, root_component_url, vec![]).await
+        Self::custom(COMPONENT_MANAGER_URL, root_component_url, vec![], None).await
     }
 
     pub async fn custom(
         component_manager_url: &str,
         root_component_url: &str,
         dir_handles: Vec<(String, zx::Handle)>,
+        output_file_descriptor: Option<FileDescriptor>,
     ) -> Result<Self, Error> {
         // Use a random integer to identify this component manager
         let random_num = random::<u32>();
         let label = format!("test_{}", random_num);
 
         let (env, launcher) = create_isolated_environment(&label).await?;
-        let (component_manager_app, out_file) = launch_component_manager(
+        let component_manager_app = launch_component_manager(
             launcher,
             component_manager_url,
             root_component_url,
             dir_handles,
+            output_file_descriptor,
         )
         .await?;
         let component_manager_path = find_component_manager_in_hub(component_manager_url, &label);
@@ -118,7 +118,6 @@ impl BlackBoxTest {
         let test = Self {
             env,
             component_manager_app,
-            out_file,
             breakpoint_system,
             component_manager_path,
             hub_v2_path,
@@ -148,9 +147,16 @@ pub async fn launch_component_and_expect_output_with_extra_dirs(
     dir_handles: Vec<(String, zx::Handle)>,
     expected_output: String,
 ) -> Result<(), Error> {
-    let test = BlackBoxTest::custom(COMPONENT_MANAGER_URL, root_component_url, dir_handles).await?;
-    test.breakpoint_system.register(vec![]).await?;
-    read_from_pipe(test.out_file, expected_output)
+    let (file, pipe_handle) = make_pipe();
+    let test = BlackBoxTest::custom(
+        COMPONENT_MANAGER_URL,
+        root_component_url,
+        dir_handles,
+        Some(pipe_handle),
+    )
+    .await?;
+    test.breakpoint_system.start_component_manager().await?;
+    read_from_pipe(file, expected_output)
 }
 
 /// Creates an isolated environment for component manager inside this component.
@@ -210,11 +216,14 @@ async fn launch_component_manager(
     component_manager_url: &str,
     root_component_url: &str,
     dir_handles: Vec<(String, zx::Handle)>,
-) -> Result<(App, std::fs::File), Error> {
-    // Create a pipe for the stdout from component manager
-    let (file, pipe_handle) = make_pipe();
+    output_file_descriptor: Option<FileDescriptor>,
+) -> Result<App, Error> {
     let mut options = LaunchOptions::new();
-    options.set_out(pipe_handle);
+
+    // Redirect the output to the provided descriptor
+    if let Some(output_file_descriptor) = output_file_descriptor {
+        options.set_out(output_file_descriptor);
+    }
 
     // Add in any provided directory handles to component manager's namespace
     for dir in dir_handles {
@@ -243,7 +252,7 @@ async fn launch_component_manager(
         .next()
         .await;
 
-    Ok((component_manager_app, file))
+    Ok(component_manager_app)
 }
 
 /// Use the path to component manager's hub to find the Breakpoint service
@@ -364,4 +373,12 @@ fn read_from_pipe(mut f: File, expected_msg: String) -> Result<(), Error> {
         ));
     }
     Ok(())
+}
+
+/// Convenience method to lists the contents of a directory proxy as a sorted vector of strings.
+pub async fn list_directory(root_proxy: &DirectoryProxy) -> Result<Vec<String>, Error> {
+    let entries = files_async::readdir(&root_proxy).await?;
+    let mut items = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
+    items.sort();
+    Ok(items)
 }

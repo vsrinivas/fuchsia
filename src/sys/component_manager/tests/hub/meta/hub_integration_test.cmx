@@ -5,10 +5,12 @@
     "sandbox": {
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.test.hub.HubReport",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.logger.LogSink"
         ],
         "features": [
+            "hub",
             "deprecated-ambient-replace-as-executable"
         ]
     }

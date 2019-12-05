@@ -6,19 +6,17 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
-rustc_library("hub_test_hook") {
-  name = "hub_test_hook"
+rustc_library("hub_report_capability") {
+  name = "hub_report_capability"
   edition = "2018"
-  source_root = "hub_test_hook.rs"
+  source_root = "hub_report_capability.rs"
   deps = [
-    "//garnet/lib/rust/cm_rust",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//src/sys/component_manager:lib",
+    "//src/sys/component_manager/tests:breakpoint_system_client",
+    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:lazy_static",
   ]
 }
 
@@ -27,16 +25,15 @@ rustc_test("hub_integration_test_bin") {
   edition = "2018"
   source_root = "hub_integration_test.rs"
   deps = [
-    ":hub_test_hook",
+    ":hub_report_capability",
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
-    "//src/sys/component_manager:lib",
+    "//src/sys/component_manager/tests:breakpoint_system_client",
+    "//src/sys/component_manager/tests:test_utils",
+    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

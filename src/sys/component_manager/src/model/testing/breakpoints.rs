@@ -7,7 +7,12 @@ use {
         BreakpointCapabilityHook, BreakpointCapabilityProvider,
     },
     crate::model::*,
-    futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
+    failure::Error,
+    futures::{
+        channel::oneshot::Canceled, channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt,
+        FutureExt, StreamExt,
+    },
+    log::*,
     std::{
         collections::HashMap,
         sync::{Arc, Weak},
@@ -50,11 +55,11 @@ impl InvocationSender {
     }
 
     /// Sends the event to a receiver. Returns a responder which can be blocked on.
-    async fn send(&self, event: Event) -> Result<oneshot::Receiver<()>, ModelError> {
+    async fn send(&self, event: Event) -> Result<oneshot::Receiver<()>, Error> {
         let (responder_tx, responder_rx) = oneshot::channel();
         {
             let mut tx = self.tx.lock().await;
-            tx.send(Invocation { event, responder: responder_tx }).await.unwrap();
+            tx.send(Invocation { event, responder: responder_tx }).await?;
         }
         Ok(responder_rx)
     }
@@ -141,17 +146,48 @@ impl BreakpointRegistry {
 
         let mut responder_channels = vec![];
         for sender in senders {
-            let responder_channel = sender.send(event.clone()).await?;
-            responder_channels.push(responder_channel);
+            let result = sender.send(event.clone()).await;
+            match result {
+                Ok(responder_channel) => {
+                    // A future can be canceled if the receiver was dropped after
+                    // a send. We don't crash the system when this happens. It is
+                    // perfectly valid for a receiver to be dropped. That simply
+                    // means that the receiver is no longer interested in future
+                    // events. So we force each future to return a success. This
+                    // ensures that all the futures can be driven to completion.
+                    let responder_channel =
+                        responder_channel.map(|actual_result| -> Result<(), Canceled> {
+                            if let Err(error) = actual_result {
+                                warn!(
+                                    "A responder channel was canceled. This may \
+                                     mean that an InvocationReceiver  was dropped \
+                                     unintentionally. Error -> {}",
+                                    error
+                                );
+                            }
+                            Ok(())
+                        });
+                    responder_channels.push(responder_channel);
+                }
+                Err(error) => {
+                    // A send can fail if the receiver was dropped. We don't
+                    // crash the system when this happens. It is perfectly
+                    // valid for a receiver to be dropped. That simply means
+                    // that the receiver is no longer interested in future
+                    // events.
+                    warn!(
+                        "Failed to send event via InvocationSender. \
+                         This may mean that an InvocationReceiver was dropped \
+                         unintentionally. Error -> {}",
+                        error
+                    );
+                }
+            }
         }
 
         // Wait until all tasks have used the responder to unblock.
-        let results = futures::future::join_all(responder_channels).await;
+        futures::future::join_all(responder_channels).await;
 
-        // Ensure that all tasks did unblock
-        for result in results {
-            result.expect("BreakpointRegistry::send -> a task did not unblock");
-        }
         Ok(())
     }
 }
@@ -177,30 +213,30 @@ impl BreakpointSystem {
         self.registry.register(event_types).await
     }
 
-    /// This hook must be registered with all events.
-    /// However, a task will only receive events that it registered breakpoints for.
     pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![
-                EventType::AddDynamicChild,
-                EventType::PostDestroyInstance,
-                EventType::PreDestroyInstance,
-                EventType::RootComponentResolved,
-                EventType::RouteFrameworkCapability,
-                EventType::StartInstance,
-                EventType::StopInstance,
-                EventType::UseCapability,
-            ],
-            callback: Arc::downgrade(&self.hook) as Weak<dyn Hook>,
-        }]
-    }
-
-    /// This hook allows components in the tree to request the breakpoint capability.
-    pub fn capability_hooks(&self) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![EventType::RouteFrameworkCapability],
-            callback: Arc::downgrade(&self.capability_hook) as Weak<dyn Hook>,
-        }]
+        vec![
+            // This hook must be registered with all events.
+            // However, a task will only receive events that it registered breakpoints for.
+            HooksRegistration {
+                events: vec![
+                    EventType::AddDynamicChild,
+                    EventType::PostDestroyInstance,
+                    EventType::PreDestroyInstance,
+                    EventType::RootComponentResolved,
+                    EventType::RouteFrameworkCapability,
+                    EventType::RouteBuiltinCapability,
+                    EventType::StartInstance,
+                    EventType::StopInstance,
+                    EventType::UseCapability,
+                ],
+                callback: Arc::downgrade(&self.hook) as Weak<dyn Hook>,
+            },
+            // This hook provides the Breakpoint capability to components in the tree
+            HooksRegistration {
+                events: vec![EventType::RouteFrameworkCapability],
+                callback: Arc::downgrade(&self.capability_hook) as Weak<dyn Hook>,
+            },
+        ]
     }
 
     /// Creates a capability provider used for debugging purposes.

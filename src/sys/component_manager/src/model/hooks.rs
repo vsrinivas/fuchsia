@@ -27,6 +27,7 @@ pub enum EventType {
 
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
+    /// TODO(fxb/39417): Ensure the instance is stopped before this event.
     PreDestroyInstance,
 
     /// The root component instance's declaration was resolved successfully for the first time.
@@ -44,6 +45,7 @@ pub enum EventType {
     StartInstance,
 
     /// An instance was stopped successfully.
+    /// This event must occur before PostDestroyInstance.
     StopInstance,
 
     /// A capability was used by an instance. An instance uses a capability when
@@ -250,7 +252,7 @@ mod tests {
     }
 
     impl Hook for CallCounter {
-        fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+        fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
             Box::pin(async move {
                 if let EventPayload::AddDynamicChild = event.payload {
                     self.on_add_dynamic_child_async().await?;

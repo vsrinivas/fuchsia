@@ -11,7 +11,7 @@ async fn test() -> Result<(), Error> {
     )
     .await?;
 
-    test.breakpoint_system.register(vec![]).await?;
+    test.breakpoint_system.start_component_manager().await?;
 
     test.component_manager_app
         .wait_with_output()
