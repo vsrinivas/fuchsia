@@ -37,3 +37,5 @@ toc:
     path: /docs/concepts/components/elf_runner.md
 - title: "Life of a service open"
   path: /docs/concepts/components/life_of_a_service_open.md
+- title: "Black box testing with component manager"
+  path: /docs/concepts/components/black_box_testing.md

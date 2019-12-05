@@ -45,6 +45,13 @@ The platform-guaranteed set of software functionality which provides a basic
 user-facing interface for boot, first-use, authentication, escape from and
 selection of session shells, and device recovery.
 
+#### **BlackBoxTest** {#black-box-test}
+
+`BlackBoxTest` is a Rust client-side library that sets up black box integration
+tests for a v2 component.
+
+-   [Documentation](/docs/concepts/components/black_box_testing.md#blackboxtest)
+
 #### **bootfs** {#bootfs}
 
 The bootfs RAM disk contains the files needed early in the boot process when no
@@ -62,6 +69,15 @@ the same bootfs. After starting these services, it loads the third program,
 which defaults to `devmgr`.
 
 -   [Documentation](/docs/concepts/booting/bootsvc.md)
+
+#### **BreakpointSystemClient** {#breakpoint-system-client}
+
+`BreakpointSystemClient` is a Rust client-side library that connects to
+the breakpoint system in component manager. It allows setting breakpoints on
+system events in component manager. Integration tests use this library to
+verify the state of components.
+
+-   [Documentation](/docs/concepts/components/black_box_testing.md#breakpointsystemclient)
 
 #### **Bus Driver** {#bus-driver}
 
