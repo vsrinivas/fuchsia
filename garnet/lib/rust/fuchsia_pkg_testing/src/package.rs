@@ -155,10 +155,25 @@ impl Package {
     }
 
     /// Puts all the blobs for the package in blobfs.
-    pub fn write_to_blobfs(&self, blobfs: &crate::blobfs::TestBlobFs) {
-        blobfs.add_blob_from(&self.meta_far_merkle_root(), self.meta_far().unwrap()).unwrap();
+    pub fn write_to_blobfs_dir(&self, dir: &openat::Dir) {
+        use std::convert::TryInto;
+
+        fn write_blob(
+            dir: &openat::Dir,
+            merkle: &fuchsia_merkle::Hash,
+            mut source: impl std::io::Read,
+        ) -> Result<(), failure::Error> {
+            let mut bytes = vec![];
+            source.read_to_end(&mut bytes)?;
+            let mut file = dir.write_file(merkle.to_string(), 0777)?;
+            file.set_len(bytes.len().try_into().unwrap())?;
+            file.write_all(&bytes)?;
+            Ok(())
+        }
+
+        write_blob(dir, &self.meta_far_merkle_root(), self.meta_far().unwrap()).unwrap();
         for blob in self.content_blob_files() {
-            blobfs.add_blob_from(&blob.merkle, blob.file).unwrap();
+            write_blob(dir, &blob.merkle, blob.file).unwrap();
         }
     }
 

@@ -26,10 +26,11 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_inspect::reader::NodeHierarchy,
-    fuchsia_pkg_testing::{pkgfs::TestPkgFs, serve::ServedRepository, Package, PackageBuilder},
+    fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder},
     fuchsia_zircon::{self as zx, Status},
     futures::{compat::Stream01CompatExt, prelude::*},
     hyper::Body,
+    pkgfs_ramdisk::PkgfsRamdisk,
     serde_derive::Serialize,
     std::{fs::File, io::BufWriter},
     tempfile::TempDir,
@@ -44,12 +45,12 @@ mod resolve_recovers_from_http_errors;
 mod resolve_succeeds;
 
 trait PkgFs {
-    fn root_dir_client_end(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
+    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
 }
 
-impl PkgFs for TestPkgFs {
-    fn root_dir_client_end(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
-        TestPkgFs::root_dir_client_end(self)
+impl PkgFs for PkgfsRamdisk {
+    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+        PkgfsRamdisk::root_dir_handle(self)
     }
 }
 
@@ -129,7 +130,7 @@ struct Proxies {
     rewrite_engine: RewriteEngineProxy,
 }
 
-struct TestEnv<P = TestPkgFs> {
+struct TestEnv<P = PkgfsRamdisk> {
     pkgfs: P,
     env: NestedEnvironment,
     apps: Apps,
@@ -138,17 +139,21 @@ struct TestEnv<P = TestPkgFs> {
     nested_environment_label: String,
 }
 
-impl TestEnv<TestPkgFs> {
+impl TestEnv<PkgfsRamdisk> {
     fn new() -> Self {
-        Self::new_with_pkg_fs(TestPkgFs::start().expect("pkgfs to start"), true)
+        Self::new_with_pkg_fs(PkgfsRamdisk::start().expect("pkgfs to start"), true)
     }
 
     fn new_without_amber() -> Self {
-        Self::new_with_pkg_fs(TestPkgFs::start().expect("pkgfs to start"), false)
+        Self::new_with_pkg_fs(PkgfsRamdisk::start().expect("pkgfs to start"), false)
     }
 
     fn new_with_mounts(mounts: Mounts) -> Self {
-        Self::new_with_pkg_fs_and_mounts(TestPkgFs::start().expect("pkgfs to start"), mounts, true)
+        Self::new_with_pkg_fs_and_mounts(
+            PkgfsRamdisk::start().expect("pkgfs to start"),
+            mounts,
+            true,
+        )
     }
 
     async fn stop(self) {
@@ -170,7 +175,7 @@ impl<P: PkgFs> TestEnv<P> {
             AppBuilder::new("fuchsia-pkg://fuchsia.com/pkg-resolver-tests#meta/amber.cmx")
                 .add_handle_to_namespace(
                     "/pkgfs".to_owned(),
-                    pkgfs.root_dir_client_end().expect("pkgfs dir to open").into(),
+                    pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
                 );
 
         let mut pkg_cache = AppBuilder::new(
@@ -178,7 +183,7 @@ impl<P: PkgFs> TestEnv<P> {
         )
         .add_handle_to_namespace(
             "/pkgfs".to_owned(),
-            pkgfs.root_dir_client_end().expect("pkgfs dir to open").into(),
+            pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
         );
 
         let mut pkg_resolver = AppBuilder::new(
@@ -186,7 +191,7 @@ impl<P: PkgFs> TestEnv<P> {
         )
         .add_handle_to_namespace(
             "/pkgfs".to_owned(),
-            pkgfs.root_dir_client_end().expect("pkgfs dir to open").into(),
+            pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
         )
         .add_dir_or_proxy_to_namespace("/data", &mounts.pkg_resolver_data)
         .add_dir_or_proxy_to_namespace("/config/data", &mounts.pkg_resolver_config_data);

@@ -2,19 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can
 # found in the LICENSE file.
 
-group("pkg") {
-  testonly = true
-  deps = [
-    "bin",
-    "lib",
-  ]
-}
-
 group("tests") {
   testonly = true
   deps = [
-    "bin:tests",
-    "lib:tests",
-    "testing:tests",
+    "blobfs-ramdisk:tests",
+    "pkgfs-ramdisk:tests",
   ]
 }

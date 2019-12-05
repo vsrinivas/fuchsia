@@ -4,11 +4,11 @@
 
 #![cfg(test)]
 use {
+    blobfs_ramdisk::BlobfsRamdisk,
     fuchsia_async as fasync,
-    fuchsia_pkg_testing::{
-        blobfs::TestBlobFs, pkgfs::TestPkgFs, Package, PackageBuilder, VerificationError,
-    },
+    fuchsia_pkg_testing::{Package, PackageBuilder, VerificationError},
     matches::assert_matches,
+    pkgfs_ramdisk::PkgfsRamdisk,
     std::collections::HashSet,
     std::fmt::Debug,
     std::future::Future,
@@ -24,7 +24,7 @@ trait AsRootDir {
     fn as_root_dir(&self) -> openat::Dir;
 }
 
-impl AsRootDir for TestPkgFs {
+impl AsRootDir for PkgfsRamdisk {
     fn as_root_dir(&self) -> openat::Dir {
         self.root_dir().expect("getting pkgfs root dir")
     }
@@ -72,7 +72,7 @@ fn copy_file_with_len(
     Ok(())
 }
 
-fn install(pkgfs: &TestPkgFs, pkg: &Package) {
+fn install(pkgfs: &PkgfsRamdisk, pkg: &Package) {
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     copy_file_with_len(
@@ -187,8 +187,8 @@ impl<'a> SystemImageBuilder<'a> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_short_write() {
-    let pkgfs = TestPkgFs::start().expect("starting pkgfs");
-    let blobfs_root_dir = pkgfs.blobfs().as_dir().unwrap();
+    let pkgfs = PkgfsRamdisk::start().expect("starting pkgfs");
+    let blobfs_root_dir = pkgfs.blobfs().root_dir().unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     let pkg = example_package().await;
@@ -292,8 +292,8 @@ async fn test_pkgfs_short_write() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_install() {
-    let pkgfs = TestPkgFs::start().expect("starting pkgfs");
-    let blobfs_root_dir = pkgfs.blobfs().as_dir().unwrap();
+    let pkgfs = PkgfsRamdisk::start().expect("starting pkgfs");
+    let blobfs_root_dir = pkgfs.blobfs().root_dir().unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     let pkg = example_package().await;
@@ -469,8 +469,8 @@ async fn test_pkgfs_restart_install() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_install_already_done() {
-    let pkgfs = TestPkgFs::start().expect("starting pkgfs");
-    let blobfs_root_dir = pkgfs.blobfs().as_dir().unwrap();
+    let pkgfs = PkgfsRamdisk::start().expect("starting pkgfs");
+    let blobfs_root_dir = pkgfs.blobfs().root_dir().unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     let pkg = example_package().await;
@@ -608,8 +608,8 @@ async fn test_pkgfs_restart_install_already_done() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_install_failed_meta_far() {
-    let pkgfs = TestPkgFs::start().expect("starting pkgfs");
-    let blobfs_root_dir = pkgfs.blobfs().as_dir().unwrap();
+    let pkgfs = PkgfsRamdisk::start().expect("starting pkgfs");
+    let blobfs_root_dir = pkgfs.blobfs().root_dir().unwrap();
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     let pkg = example_package().await;
@@ -679,9 +679,9 @@ async fn test_pkgfs_with_empty_static_index() {
     let system_image_package =
         SystemImageBuilder { static_packages: &[], cache_packages: None }.build().await;
 
-    let blobfs = TestBlobFs::start().unwrap();
-    system_image_package.write_to_blobfs(&blobfs);
-    let pkgfs = TestPkgFs::start_with_blobfs(
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
         blobfs,
         Some(&system_image_package.meta_far_merkle_root().to_string()),
     )
@@ -708,12 +708,12 @@ async fn test_pkgfs_with_empty_static_index() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_with_system_image_meta_far_missing() {
-    let blobfs = TestBlobFs::start().unwrap();
+    let blobfs = BlobfsRamdisk::start().unwrap();
 
     // Arbitrarily pick a system_image merkle (that isn't present)
     let system_image_merkle = "22e41860aa333dec2aea3899aa764a53a6ea7c179e6c47bf3a8163d89024343e";
     let pkgfs =
-        TestPkgFs::start_with_blobfs(blobfs, Some(system_image_merkle)).expect("starting pkgfs");
+        PkgfsRamdisk::start_with_blobfs(blobfs, Some(system_image_merkle)).expect("starting pkgfs");
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
     assert_error_kind!(d.open_file("packages/system_image/0/meta"), io::ErrorKind::NotFound);
@@ -733,11 +733,11 @@ async fn test_pkgfs_with_system_image_base_package_missing() {
     let system_image_package =
         SystemImageBuilder { static_packages: &[&pkg], cache_packages: None }.build().await;
 
-    let blobfs = TestBlobFs::start().unwrap();
+    let blobfs = BlobfsRamdisk::start().unwrap();
 
-    system_image_package.write_to_blobfs(&blobfs);
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
 
-    let pkgfs = TestPkgFs::start_with_blobfs(
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
         blobfs,
         Some(&system_image_package.meta_far_merkle_root().to_string()),
     )
@@ -763,12 +763,12 @@ async fn test_pkgfs_with_system_image_base_package_missing_content_blob() {
     let system_image_package =
         SystemImageBuilder { static_packages: &[&pkg], cache_packages: None }.build().await;
 
-    let blobfs = TestBlobFs::start().unwrap();
+    let blobfs = BlobfsRamdisk::start().unwrap();
 
-    system_image_package.write_to_blobfs(&blobfs);
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     blobfs.add_blob_from(&pkg.meta_far_merkle_root(), pkg.meta_far().unwrap()).unwrap();
 
-    let pkgfs = TestPkgFs::start_with_blobfs(
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
         blobfs,
         Some(&system_image_package.meta_far_merkle_root().to_string()),
     )
@@ -809,9 +809,9 @@ async fn test_pkgfs_install_update() {
     let system_image_package =
         SystemImageBuilder { static_packages: &[], cache_packages: None }.build().await;
 
-    let blobfs = TestBlobFs::start().unwrap();
-    system_image_package.write_to_blobfs(&blobfs);
-    let pkgfs = TestPkgFs::start_with_blobfs(
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
         blobfs,
         Some(&system_image_package.meta_far_merkle_root().to_string()),
     )
@@ -855,7 +855,7 @@ async fn test_pkgfs_install_update() {
     );
 
     {
-        let blobfs_dir = pkgfs.blobfs().as_dir().unwrap();
+        let blobfs_dir = pkgfs.blobfs().root_dir().unwrap();
 
         // Old blobs still in blobfs.
         let expected_blobs = sorted(
@@ -893,7 +893,7 @@ async fn test_pkgfs_install_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pkgfs_restart_deactivates_ephemeral_packages() {
-    let pkgfs = TestPkgFs::start().expect("starting pkgfs");
+    let pkgfs = PkgfsRamdisk::start().expect("starting pkgfs");
 
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 
@@ -934,12 +934,12 @@ async fn test_pkgfs_with_cache_index() {
     let system_image_package =
         SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
 
-    let blobfs = TestBlobFs::start().unwrap();
+    let blobfs = BlobfsRamdisk::start().unwrap();
 
-    system_image_package.write_to_blobfs(&blobfs);
-    pkg.write_to_blobfs(&blobfs);
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
 
-    let pkgfs = TestPkgFs::start_with_blobfs(
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
         blobfs,
         Some(&system_image_package.meta_far_merkle_root().to_string()),
     )
@@ -967,11 +967,11 @@ async fn test_pkgfs_with_cache_index_missing_cache_meta_far() {
     let system_image_package =
         SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
 
-    let blobfs = TestBlobFs::start().unwrap();
+    let blobfs = BlobfsRamdisk::start().unwrap();
 
-    system_image_package.write_to_blobfs(&blobfs);
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
 
-    let pkgfs = TestPkgFs::start_with_blobfs(
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
         blobfs,
         Some(&system_image_package.meta_far_merkle_root().to_string()),
     )
@@ -1002,12 +1002,12 @@ async fn test_pkgfs_with_cache_index_missing_cache_content_blob() {
     let system_image_package =
         SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
 
-    let blobfs = TestBlobFs::start().unwrap();
+    let blobfs = BlobfsRamdisk::start().unwrap();
 
-    system_image_package.write_to_blobfs(&blobfs);
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
     blobfs.add_blob_from(&pkg.meta_far_merkle_root(), pkg.meta_far().unwrap()).unwrap();
 
-    let pkgfs = TestPkgFs::start_with_blobfs(
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
         blobfs,
         Some(&system_image_package.meta_far_merkle_root().to_string()),
     )
@@ -1040,10 +1040,10 @@ async fn test_pkgfs_shadowed_cache_package() {
     let system_image_package =
         SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
 
-    let blobfs = TestBlobFs::start().unwrap();
-    system_image_package.write_to_blobfs(&blobfs);
-    pkg.write_to_blobfs(&blobfs);
-    let pkgfs = TestPkgFs::start_with_blobfs(
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
         blobfs,
         Some(&system_image_package.meta_far_merkle_root().to_string()),
     )
@@ -1084,7 +1084,7 @@ async fn test_pkgfs_shadowed_cache_package() {
     );
 
     {
-        let blobfs_dir = pkgfs.blobfs().as_dir().unwrap();
+        let blobfs_dir = pkgfs.blobfs().root_dir().unwrap();
 
         // Old blobs still in blobfs.
         let expected_blobs = sorted(
@@ -1126,10 +1126,10 @@ async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
     let system_image_package =
         SystemImageBuilder { static_packages: &[], cache_packages: Some(&[&pkg]) }.build().await;
 
-    let blobfs = TestBlobFs::start().unwrap();
-    system_image_package.write_to_blobfs(&blobfs);
-    pkg.write_to_blobfs(&blobfs);
-    let pkgfs = TestPkgFs::start_with_blobfs(
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
         blobfs,
         Some(&system_image_package.meta_far_merkle_root().to_string()),
     )
@@ -1173,4 +1173,147 @@ async fn test_pkgfs_restart_reveals_shadowed_cache_package() {
     drop(d);
 
     pkgfs.stop().await.expect("stopping pkgfs");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs() {
+    let pkgfs = PkgfsRamdisk::start().unwrap();
+    let blobfs_root_dir = pkgfs.blobfs().root_dir().unwrap();
+    let d = pkgfs.root_dir().unwrap();
+
+    let pkg = PackageBuilder::new("example")
+        .add_resource_at("a/b", "Hello world!\n".as_bytes())
+        .build()
+        .await
+        .expect("build package");
+
+    // merkle root of pkg's meta.far.
+    const META_FAR_MERKLE_ROOT: &'static str =
+        "b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93";
+    assert_eq!(
+        pkg.meta_far_merkle_root(),
+        &META_FAR_MERKLE_ROOT.parse::<fuchsia_merkle::Hash>().unwrap()
+    );
+
+    // merkle root of "Hello world!\n", the single blob in pkg.
+    const CONTENT_BLOB_MERKLE_ROOT: &'static str =
+        "e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3";
+    assert_eq!(
+        pkg.meta_contents().unwrap().contents()["a/b"],
+        CONTENT_BLOB_MERKLE_ROOT.parse::<fuchsia_merkle::Hash>().unwrap()
+    );
+
+    let mut meta_far = pkg.meta_far().expect("meta.far");
+    {
+        let mut to_write = d
+            .new_file(
+                "install/pkg/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93",
+                0600,
+            )
+            .expect("create install file");
+        to_write.set_len(meta_far.metadata().unwrap().len()).expect("set_len meta.far");
+        std::io::copy(&mut meta_far, &mut to_write).expect("write meta.far");
+    }
+    assert_eq!(
+        ls_simple(
+            d.list_dir(
+                "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+            )
+            .expect("list dir")
+        )
+        .expect("list dir contents"),
+        [CONTENT_BLOB_MERKLE_ROOT]
+    );
+
+    // Full blob write
+    {
+        let mut blob_install = d
+            .new_file(
+                "install/blob/e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3",
+                0600,
+            )
+            .expect("create blob install file");
+        let blob_contents = b"Hello world!\n";
+        blob_install.set_len(blob_contents.len() as u64).expect("truncate blob");
+        blob_install.write_all(blob_contents).expect("write blob");
+    }
+
+    // Blob Needs no more packages
+    assert_eq!(
+        d.list_dir(
+            "needs/packages/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93"
+        )
+        .expect_err("check empty needs dir")
+        .kind(),
+        std::io::ErrorKind::NotFound
+    );
+
+    let mut file_contents = String::new();
+    d.open_file("packages/example/0/a/b")
+        .expect("read package file")
+        .read_to_string(&mut file_contents)
+        .expect("read package file");
+    assert_eq!(&file_contents, "Hello world!\n");
+    let mut file_contents = String::new();
+    d.open_file("versions/b5690901cd8664a742eb0a7d2a068eb0d4ff49c10a615cfa4c0044dd2eaccd93/a/b")
+        .expect("read package file")
+        .read_to_string(&mut file_contents)
+        .expect("read package file");
+    assert_eq!(&file_contents, "Hello world!\n");
+
+    assert_eq!(
+        ls_simple(blobfs_root_dir.list_dir(".").expect("list dir")).expect("list dir contents"),
+        [META_FAR_MERKLE_ROOT, CONTENT_BLOB_MERKLE_ROOT,],
+    );
+
+    drop(d);
+
+    pkgfs.stop().await.unwrap();
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pkgfs_with_system_image() {
+    let pkg = PackageBuilder::new("example")
+        .add_resource_at("a/b", "Hello world!\n".as_bytes())
+        .build()
+        .await
+        .expect("build package");
+
+    let system_image_package = PackageBuilder::new("system_image")
+        .add_resource_at(
+            "data/static_packages",
+            format!("example/0={}", pkg.meta_far_merkle_root()).as_bytes(),
+        )
+        .build()
+        .await
+        .unwrap();
+
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::start_with_blobfs(
+        blobfs,
+        Some(system_image_package.meta_far_merkle_root().to_string()),
+    )
+    .expect("starting pkgfs");
+    let d = pkgfs.root_dir().expect("getting pkgfs root dir");
+
+    let mut file_contents = String::new();
+    d.open_file("packages/example/0/a/b")
+        .expect("read package file1")
+        .read_to_string(&mut file_contents)
+        .expect("read package file2");
+    assert_eq!(&file_contents, "Hello world!\n");
+
+    let mut file_contents = String::new();
+    d.open_file(format!("versions/{}/a/b", pkg.meta_far_merkle_root()))
+        .expect("read package file3")
+        .read_to_string(&mut file_contents)
+        .expect("read package file4");
+    assert_eq!(&file_contents, "Hello world!\n");
+
+    drop(d);
+
+    pkgfs.stop().await.expect("shutting down pkgfs");
 }

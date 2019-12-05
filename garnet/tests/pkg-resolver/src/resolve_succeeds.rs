@@ -32,13 +32,13 @@ use {
     },
 };
 
-impl TestEnv<TestPkgFs> {
+impl TestEnv<PkgfsRamdisk> {
     fn add_slice_to_blobfs(&self, slice: &[u8]) {
         let merkle = MerkleTree::from_reader(slice).expect("merkle slice").root().to_string();
         let mut blob = self
             .pkgfs
             .blobfs()
-            .as_dir()
+            .root_dir()
             .expect("blobfs has root dir")
             .write_file(merkle, 0)
             .expect("create file in blobfs");
@@ -50,7 +50,7 @@ impl TestEnv<TestPkgFs> {
         let mut blob = self
             .pkgfs
             .blobfs()
-            .as_dir()
+            .root_dir()
             .expect("blobfs has root dir")
             .write_file(merkle.to_string(), 0)
             .expect("create file in blobfs");
@@ -696,7 +696,7 @@ async fn test_concurrent_blob_writes() {
     // Wait for duplicate blob to be truncated -- we know it is truncated when we get a
     // permission denied error when trying to update the blob in blobfs.
     let duplicate_blob_uri = Path::new(&duplicate_blob_merkle);
-    let blobfs_dir = env.pkgfs.blobfs().as_dir().expect("blobfs has root dir");
+    let blobfs_dir = env.pkgfs.blobfs().root_dir().expect("blobfs has root dir");
     while blobfs_dir.update_file(duplicate_blob_uri, 0).is_ok() {
         fasync::Timer::new(fasync::Time::after(fuchsia_zircon::Duration::from_millis(10))).await;
     }

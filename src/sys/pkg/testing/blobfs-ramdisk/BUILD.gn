@@ -1,0 +1,66 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("blobfs-ramdisk") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-merkle",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/storage/ramdevice-client",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:openat",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+
+  test_deps = [
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:matches",
+  ]
+}
+
+# Include blobfs in the build, which comes from Zircon
+generate_manifest("blobfs.manifest") {
+  visibility = [ ":*" ]
+  args = []
+  foreach(pattern, [ "bin/blobfs" ]) {
+    args += [ "--binary=" + pattern ]
+  }
+}
+blobfs_manifest_outputs = get_target_outputs(":blobfs.manifest")
+blobfs_manifest = blobfs_manifest_outputs[0]
+
+test_package("blobfs-ramdisk-tests") {
+  extra = [ blobfs_manifest ]
+  deps = [
+    ":blobfs-ramdisk_test",
+    ":blobfs.manifest",
+  ]
+
+  tests = [
+    {
+      name = "blobfs_ramdisk_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":blobfs-ramdisk-tests",
+  ]
+}

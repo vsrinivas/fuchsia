@@ -53,7 +53,7 @@ impl MockPkgFs {
 }
 
 impl PkgFs for MockPkgFs {
-    fn root_dir_client_end(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         let (client, server) = fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>()?;
         self.root_dir_proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server)?;
         Ok(client.into_channel().into())

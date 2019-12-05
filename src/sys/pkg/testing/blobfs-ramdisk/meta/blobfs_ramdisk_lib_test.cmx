@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/blobfs_ramdisk_lib_test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}
