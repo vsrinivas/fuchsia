@@ -95,7 +95,7 @@ The `BreakpointSystem` FIDL service is used to set breakpoints and unblock
 component manager:
 
 ```
-let receiver = test.breakpoint_system.set(vec![StopInstance::TYPE]).await?;
+let receiver = test.breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).await?;
 test.breakpoint_system.start_component_manager().await?;
 ```
 
@@ -164,7 +164,7 @@ The workflow for the `BreakpointSystemClient` library looks something like this:
 let test = BlackBoxTest::default(“fuchsia-pkg://fuchsia.com/foo#meta/root.cm”).await?;
 
 // Get a receiver by setting breakpoints
-let receiver = test.breakpoint_system.set(vec![StartInstance::TYPE]).await?;
+let receiver = test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 
 // Unblock component manager
 test.breakpoint_system.start_component_manager().await?;
@@ -187,6 +187,7 @@ functionality:
 - [Multiple receivers](#multiple-receivers)
 - [Discardable receivers](#discardable-receivers)
 - [Capability injection](#capability-injection)
+- [Event sinks](#event-sinks)
 
 #### Multiple receivers {#multiple-receivers}
 
@@ -196,9 +197,9 @@ of events:
 ```
 // StartInstance and RouteFrameworkCapability events can be interleaved,
 // so use different receivers.
-let start_receiver = breakpoint_system.set(vec![StartInstance::TYPE]).await?;
+let start_receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 let route_receiver =
-    breakpoint_system.set(vec![RouteFrameworkCapability::TYPE]).await?;
+    breakpoint_system.set_breakpoints(vec![RouteFrameworkCapability::TYPE]).await?;
 
 // Expect 5 components to start
 for _ in 1..=5 {
@@ -219,11 +220,11 @@ causing future invocations to be ignored:
 
 ```
 // Set a breakpoint on StopInstance events
-let stop_receiver = breakpoint_system.set(vec![StopInstance::TYPE]).await?;
+let stop_receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).await?;
 
 {
     // Temporarily set a breakpoint on UseCapability events
-    let use_receiver = breakpoint_system.set(vec![UseCapability::TYPE]).await?;
+    let use_receiver = breakpoint_system.set_breakpoints(vec![UseCapability::TYPE]).await?;
 
     // Expect a UseCapability event from /bar:0
     let invocation = route_receiver.expect_exact::<UseCapability>(“/bar:0”).await?;
@@ -255,7 +256,7 @@ let echo_service = EchoService::new();
 
 // Set a breakpoint on RouteFrameworkCapability events
 let receiver =
-    breakpoint_system.set(vec![RouteFrameworkCapability::TYPE]).await?;
+    breakpoint_system.set_breakpoints(vec![RouteFrameworkCapability::TYPE]).await?;
 
 // Wait until /foo:0 attempts to connect to the EchoService framework capability
 let invocation = receiver.wait_until_route_framework_capability(
@@ -269,6 +270,39 @@ invocation.inject(serve_fn).await?;
 
 // Resume from the invocation
 invocation.resume().await?;
+```
+
+#### Event sinks {#event-sinks}
+
+It is possible to soak up events of certain types and drain them at a later
+point in time:
+
+```
+let receiver = breakpoint_system.set_breakpoints(vec![PostDestroyInstance::TYPE]).await?;
+let sink = breakpoint_system.soak_events(vec![StartInstance::TYPE]).await?;
+
+// Wait for the root component to be destroyed
+let invocation = receiver.expect_exact::<PostDestroyInstance>("/").await?;
+invocation.resume().await?;
+
+// Drain events from the sink
+let events = sink.drain().await;
+
+// Verify that the 3 components were started in the correct order
+assert_eq!(events, vec![
+    DrainedEvent {
+        event_type: StartInstance::TYPE,
+        target_moniker: "/".to_string()
+    },
+    DrainedEvent {
+        event_type: StartInstance::TYPE,
+        target_moniker: "/foo:0".to_string()
+    },
+    DrainedEvent {
+        event_type: StartInstance::TYPE,
+        target_moniker: "/foo:0/bar:0".to_string()
+    }
+]);
 ```
 
 ## Debug Mode {#debug-mode}
