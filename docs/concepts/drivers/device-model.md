@@ -142,7 +142,7 @@ The ZIRCON_DRIVER_BEGIN and _END macros include the necessary compiler directive
 to put the binding program into an ELF NOTE section, allowing it to be inspected
 by the Device Coordinator without needing to fully load the driver into its process.
 The second parameter to the _BEGIN macro is a `zx_driver_ops_t` structure pointer (defined
-by `[ddk/driver.h](/zircon/system/ulib/ddk/include/ddk/driver.h)` which defines the
+by [`ddk/driver.h`](/zircon/system/ulib/ddk/include/ddk/driver.h) which defines the
 init, bind, create, and release methods.
 
 `init()` is invoked when a driver is loaded into a Device Host process and allows for
