@@ -30,13 +30,9 @@ class PacketQueueTest : public gtest::TestLoopFixture {
       FX_PLOGS(ERROR, res) << "Failed to map payload buffer";
       return nullptr;
     }
-    fuchsia::media::StreamPacket packet;
-    packet.payload_buffer_id = payload_buffer_id;
-    packet.payload_offset = 0;
-    packet.payload_size = PAGE_SIZE;
     return fbl::MakeRefCounted<Packet>(
-        std::move(vmo_mapper), dispatcher(), [this] { ++released_packet_count_; },
-        std::move(packet), FractionalFrames<uint32_t>(0), FractionalFrames<int64_t>(0));
+        std::move(vmo_mapper), 0, FractionalFrames<uint32_t>(PAGE_SIZE),
+        FractionalFrames<int64_t>(0), dispatcher(), [this] { ++released_packet_count_; });
   }
 
   size_t released_packet_count() const { return released_packet_count_; }

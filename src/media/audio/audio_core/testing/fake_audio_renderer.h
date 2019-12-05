@@ -67,7 +67,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   fbl::RefPtr<Format> format_ = nullptr;
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
   size_t buffer_offset_ = 0;
-  uint32_t next_pts_ = 0;
+  FractionalFrames<int64_t> next_pts_{0};
   std::unordered_map<AudioLink*, fbl::RefPtr<PacketQueue>> packet_queues_;
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();

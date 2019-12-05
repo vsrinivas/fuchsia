@@ -12,18 +12,17 @@
 
 namespace media::audio {
 
-Packet::Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, async_dispatcher_t* callback_dispatcher,
-               fit::closure callback, fuchsia::media::StreamPacket packet,
-               FractionalFrames<uint32_t> length, FractionalFrames<int64_t> start)
+Packet::Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, size_t vmo_offset_bytes,
+               FractionalFrames<uint32_t> length, FractionalFrames<int64_t> start,
+               async_dispatcher_t* callback_dispatcher, fit::closure callback)
     : vmo_ref_(std::move(vmo_ref)),
-      callback_(std::move(callback)),
-      packet_(packet),
+      vmo_offset_bytes_(vmo_offset_bytes),
       length_(length),
       start_(start),
-      dispatcher_(callback_dispatcher) {
+      dispatcher_(callback_dispatcher),
+      callback_(std::move(callback)) {
   TRACE_DURATION("audio", "Packet::Packet");
   TRACE_FLOW_BEGIN("audio.debug", "process_packet", nonce_);
-  FX_DCHECK(dispatcher_ != nullptr);
   FX_DCHECK(vmo_ref_ != nullptr);
 }
 

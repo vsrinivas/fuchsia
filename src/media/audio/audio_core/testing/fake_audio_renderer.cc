@@ -40,35 +40,32 @@ FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher)
 void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) {
   FX_CHECK(format_valid());
   uint32_t frame_count = format()->frames_per_ns().Scale(duration.to_nsecs());
+  size_t payload_offset = buffer_offset_;
+  size_t payload_size = format()->bytes_per_frame() * frame_count;
+  buffer_offset_ += payload_size;
 
-  fuchsia::media::StreamPacket packet;
-  packet.pts = fuchsia::media::NO_TIMESTAMP;
-  packet.payload_offset = buffer_offset_;
-  packet.payload_size = format()->bytes_per_frame() * frame_count;
-  buffer_offset_ += packet.payload_size;
-
-  FX_CHECK(packet.payload_offset + packet.payload_size <= vmo_ref_->size());
+  FX_CHECK(payload_offset + payload_size <= vmo_ref_->size());
 
   // Write the data to the packet buffer.
-  float* samples = reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(vmo_ref_->start()) +
-                                            packet.payload_offset);
+  float* samples =
+      reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(vmo_ref_->start()) + payload_offset);
   auto sample_count = frame_count * 2;
   for (uint32_t i = 0; i < sample_count; ++i) {
     samples[i] = sample;
   }
 
-  if (next_pts_ == 0) {
+  if (next_pts_ == FractionalFrames<int64_t>(0)) {
     zx::duration min_lead_time = FindMinLeadTime();
     auto now = async::Now(dispatcher_) + min_lead_time;
-    auto frac_fps = 48000 << kPtsFractionalBits;
-    auto rate = TimelineRate(frac_fps, 1000000000u);
+    auto frac_fps = FractionalFrames<int32_t>(48000);
+    auto rate = TimelineRate(frac_fps.raw_value(), zx::sec(1).to_nsecs());
     timeline_function_->Update(TimelineFunction(0, now.get(), rate));
   }
 
-  auto packet_ref = fbl::MakeRefCounted<Packet>(
-      vmo_ref_, dispatcher_, [] {}, packet, FractionalFrames<uint32_t>(frame_count),
-      FractionalFrames<int64_t>::FromRaw(next_pts_));
-  next_pts_ = packet_ref->end().raw_value();
+  auto packet_ref =
+      fbl::MakeRefCounted<Packet>(vmo_ref_, payload_offset, FractionalFrames<uint32_t>(frame_count),
+                                  next_pts_, nullptr, nullptr);
+  next_pts_ = packet_ref->end();
   for (auto& [_, packet_queue] : packet_queues_) {
     packet_queue->PushPacket(packet_ref);
   }

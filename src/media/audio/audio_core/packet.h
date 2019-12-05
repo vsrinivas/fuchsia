@@ -23,9 +23,9 @@ namespace media::audio {
 // so they could easily be causing heap fragmentation issues.
 class Packet : public fbl::RefCounted<Packet> {
  public:
-  Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, async_dispatcher_t* callback_dispatcher,
-         fit::closure callback, fuchsia::media::StreamPacket packet,
-         FractionalFrames<uint32_t> frac_frame_len, FractionalFrames<int64_t> start_frame);
+  Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, size_t vmo_offset_bytes,
+         FractionalFrames<uint32_t> frac_frame_len, FractionalFrames<int64_t> start_frame,
+         async_dispatcher_t* callback_dispatcher, fit::closure callback);
 
   ~Packet();
 
@@ -47,20 +47,17 @@ class Packet : public fbl::RefCounted<Packet> {
   FractionalFrames<int64_t> end() const { return start_ + length_; }
   FractionalFrames<uint32_t> length() const { return length_; }
 
-  void* payload() {
-    auto start = reinterpret_cast<uint8_t*>(vmo_ref_->start());
-    return (start + packet_.payload_offset);
-  }
+  void* payload() { return reinterpret_cast<uint8_t*>(vmo_ref_->start()) + vmo_offset_bytes_; }
 
  private:
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
-  fit::closure callback_;
-  fuchsia::media::StreamPacket packet_;
+  size_t vmo_offset_bytes_;
 
   FractionalFrames<uint32_t> length_;
   FractionalFrames<int64_t> start_;
 
   async_dispatcher_t* dispatcher_;
+  fit::closure callback_;
   trace_async_id_t nonce_ = TRACE_NONCE();
 };
 
