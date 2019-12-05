@@ -9,6 +9,7 @@
 
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 
@@ -314,6 +315,12 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
       return status;
     }
   }
+
+  auto cleanup = fbl::MakeAutoCall([buffers]() {
+    for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
+      zx_handle_close(buffers.buffers[i].vmo);
+    }
+  });
 
   fuchsia_camera_FrameRate rate = {.frames_per_sec_numerator = 30, .frames_per_sec_denominator = 1};
   output_stream_callback cb{};
