@@ -30,7 +30,7 @@ class SwipeRecognizerTest : public gtest::TestLoopFixture {
         }) {}
 
   bool gesture_won() const { return gesture_won_; }
-  a11y::GestureContext& gesture_context() const { return gesture_context_; }
+  const a11y::GestureContext& gesture_context() const { return gesture_context_; }
   Recognizer* recognizer() { return &recognizer_; }
 
   void SendPointerEvents(const std::vector<PointerParams>& events) {
