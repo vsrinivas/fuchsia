@@ -64,6 +64,7 @@ zx_library("blobfs") {
       "runner.cc",
     ]
     public_deps += [
+      "$zx/system/fidl/fuchsia-blobfs:llcpp.headers",
       "$zx/system/ulib/block-client:headers",
       "$zx/system/ulib/fs/metrics:metrics-cobalt.headers",
       "$zx/system/ulib/fs/metrics:metrics-composite-latency-event.headers",
@@ -71,6 +72,7 @@ zx_library("blobfs") {
     ]
     deps += [
       "$zx/system/fidl/fuchsia-blobfs:c",
+      "$zx/system/fidl/fuchsia-blobfs:llcpp",
       "$zx/system/fidl/fuchsia-io:llcpp",
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",

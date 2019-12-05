@@ -12,6 +12,7 @@
 #endif
 
 #include <fuchsia/blobfs/c/fidl.h>
+#include <fuchsia/blobfs/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 

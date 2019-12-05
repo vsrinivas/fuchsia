@@ -60,6 +60,7 @@ zx_library("minfs") {
     public_deps += [
       "$zx/system/fidl/fuchsia-hardware-block:c",
       "$zx/system/fidl/fuchsia-hardware-block-volume:c",
+      "$zx/system/fidl/fuchsia-minfs:llcpp.headers",
       "$zx/system/ulib/block-client",
       "$zx/system/ulib/fzl:headers",
       "$zx/system/ulib/zx:headers",
@@ -70,6 +71,7 @@ zx_library("minfs") {
       "$zx/system/fidl/fuchsia-io:c",
       "$zx/system/fidl/fuchsia-io:llcpp",
       "$zx/system/fidl/fuchsia-minfs:c",
+      "$zx/system/fidl/fuchsia-minfs:llcpp",
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",
       "$zx/system/ulib/async:async-default",
