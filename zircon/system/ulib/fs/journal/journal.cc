@@ -10,6 +10,7 @@
 #include <fs/transaction/writeback.h>
 
 #include "entry_view.h"
+#include "format_assertions.h"
 
 namespace fs {
 namespace {
