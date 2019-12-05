@@ -89,9 +89,16 @@ In some cases paving may fail on an Acer with some error indicating "couldn't
 find space in gpt". In these cases (as long as you don't want to keep the other
 OS, i.e. Windows, parts) run `lsblk` and identify the partition that isn't your
 USB (it shouldn't have RE in the columns). Identify the number in the first
-column for your partition (likely to be either 000 or 003). Then run
-`gpt init /dev/class/block/N` where N is the number previously identified. This
-will clear all Windows partitions from the disk. Once this is done, reboot into
+column for your partition (likely to be either 000 or 003).
+Then, run:
+
+Note: `N` is the number you just identified.
+
+```
+gpt Init /dev/class/block/N
+```
+
+This clears all Windows partitions from the disk. Once this is done, reboot into
 zedboot and paving should work.
 
 ## Changing boot target (localboot, netboot, etc) default
