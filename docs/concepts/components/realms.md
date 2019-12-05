@@ -175,7 +175,7 @@ First, `console` [exposes][expose] `/svc/console` to its containing realm
 available for any component instance in the collection to [use][use] -- it does
 not need to be routed to the dynamic instances independently.
 
-## The Realm framework service
+## The Realm framework service {#realm-framework-service}
 
 There is a [framework service][framework-services] available to every component,
 [`fuchsia.sys2.Realm`][realm.fidl]. The `Realm` service provides APIs for a
