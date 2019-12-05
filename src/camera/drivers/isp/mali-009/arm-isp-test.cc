@@ -19,6 +19,8 @@
 
 namespace camera {
 
+constexpr auto TAG = "arm-isp";
+
 zx_status_t ArmIspDeviceTester::Create(ArmIspDevice* isp, fit::callback<void()>* on_isp_unbind) {
   fbl::AllocChecker ac;
   auto isp_test_device = fbl::make_unique_checked<ArmIspDeviceTester>(&ac, isp, isp->zxdev());
@@ -311,7 +313,7 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
     fbl::AutoLock guard(&isp_lock_);
     status = StreamServer::Create(&GetBti(), &server_, &buffers, &image_format_);
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to create StreamServer";
+      FX_PLOGST(ERROR, TAG, status) << "Failed to create StreamServer";
       return status;
     }
   }
@@ -332,10 +334,10 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
     tester->ReleaseFrames(frames_to_be_released);
     if (tester->server_->GetNumClients() == 0) {
       // Stop streaming server upon losing the last client.
-      FX_LOGS(INFO) << "Last client disconnected. Stopping server.";
+      FX_LOGST(INFO, TAG) << "Last client disconnected. Stopping server.";
       zx_status_t status = tester->stream_protocol_.ops->stop(tester->stream_protocol_.ctx);
       if (status != ZX_OK) {
-        FX_PLOGS(ERROR, status) << "Failed to stop streaming";
+        FX_PLOGST(ERROR, TAG, status) << "Failed to stop streaming";
       }
       tester->server_ = nullptr;
     }
@@ -345,7 +347,7 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
 
   fbl::AutoLock guard(&isp_lock_);
   if (!isp_) {
-    FX_LOGS(ERROR) << "ISP not initialized";
+    FX_LOGST(ERROR, TAG) << "ISP not initialized";
     return ZX_ERR_BAD_STATE;
   }
 
@@ -362,14 +364,14 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
   status = isp_->IspCreateOutputStream(&buffers_for_isp, &rate, STREAM_TYPE_FULL_RESOLUTION, &cb,
                                        &stream_protocol_);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "IspCreateOutputStream failed";
+    FX_PLOGST(ERROR, TAG, status) << "IspCreateOutputStream failed";
     return status;
   }
 
   // Start streaming.
   status = stream_protocol_.ops->start(stream_protocol_.ctx);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to start streaming";
+    FX_PLOGST(ERROR, TAG, status) << "Failed to start streaming";
     return status;
   }
 
@@ -383,7 +385,7 @@ zx_status_t ArmIspDeviceTester::CreateStream(zx_handle_t stream, fidl_txn_t* txn
   if (!server_) {
     status = CreateStreamServer();
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to create stream server";
+      FX_PLOGST(ERROR, TAG, status) << "Failed to create stream server";
       return status;
     }
   }
@@ -392,7 +394,7 @@ zx_status_t ArmIspDeviceTester::CreateStream(zx_handle_t stream, fidl_txn_t* txn
   fuchsia_sysmem_BufferCollectionInfo_2 buffers{};
   status = server_->AddClient(zx::channel(stream), &buffers);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to add client";
+    FX_PLOGST(ERROR, TAG, status) << "Failed to add client";
     return status;
   }
 

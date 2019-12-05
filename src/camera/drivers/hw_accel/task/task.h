@@ -8,7 +8,6 @@
 #include <lib/fit/result.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-pool.h>
-#include <lib/syslog/global.h>
 #include <zircon/fidl.h>
 
 #include <deque>

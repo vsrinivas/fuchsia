@@ -11,18 +11,20 @@
 
 namespace camera {
 
+constexpr auto TAG = "arm-isp";
+
 zx_status_t StreamImpl::Create(zx::channel channel, async_dispatcher_t* dispatcher,
                                std::unique_ptr<StreamImpl>* stream_out) {
   auto stream = std::make_unique<StreamImpl>();
   zx_status_t status = stream->binding_.Bind(
       fidl::InterfaceRequest<fuchsia::camera2::Stream>(std::move(channel)), dispatcher);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to bind stream";
+    FX_PLOGST(ERROR, TAG, status) << "Failed to bind stream";
     return status;
   }
 
   stream->binding_.set_error_handler(
-      [](zx_status_t status) { FX_PLOGS(ERROR, status) << "Client disconnected"; });
+      [](zx_status_t status) { FX_PLOGST(ERROR, TAG, status) << "Client disconnected"; });
 
   *stream_out = std::move(stream);
   return ZX_OK;
@@ -41,7 +43,7 @@ void StreamImpl::FrameAvailable(uint32_t id) {
 
 void StreamImpl::Start() {
   if (streaming_) {
-    FX_LOGS(ERROR) << "It is invalid to call Start on a stream that is already streaming.";
+    FX_LOGST(ERROR, TAG) << "It is invalid to call Start on a stream that is already streaming.";
     binding_.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -50,7 +52,7 @@ void StreamImpl::Start() {
 
 void StreamImpl::Stop() {
   if (!streaming_) {
-    FX_LOGS(ERROR) << "It is invalid to call Stop on a stream that is stopped.";
+    FX_LOGST(ERROR, TAG) << "It is invalid to call Stop on a stream that is stopped.";
     binding_.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -60,8 +62,8 @@ void StreamImpl::Stop() {
 void StreamImpl::ReleaseFrame(uint32_t buffer_id) {
   auto it = outstanding_buffers_.find(buffer_id);
   if (it == outstanding_buffers_.end()) {
-    FX_LOGS(ERROR) << "Client attempted to release buffer " << buffer_id
-                   << " but it was not previously held.";
+    FX_LOGST(ERROR, TAG) << "Client attempted to release buffer " << buffer_id
+                         << " but it was not previously held.";
     binding_.Close(ZX_ERR_INVALID_ARGS);
     return;
   }

@@ -25,6 +25,8 @@ static const uint32_t kFramesToHold = kBufferCount - 2;
 
 namespace camera {
 
+constexpr auto TAG = "arm-isp";
+
 zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* server_out,
                                  fuchsia_sysmem_BufferCollectionInfo_2* buffers_out,
                                  fuchsia_sysmem_ImageFormat_2* format_out) {
@@ -36,7 +38,7 @@ zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* se
   // Start a loop to handle client messages.
   zx_status_t status = server->loop_.StartThread("isp-stream-server-loop");
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to start loop";
+    FX_PLOGST(ERROR, TAG, status) << "Failed to start loop";
     return status;
   }
 
@@ -56,7 +58,7 @@ zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* se
   for (uint32_t i = 0; i < buffers.buffer_count; ++i) {
     status = zx::vmo::create_contiguous(*bti, format.GetImageSize(), 0, &buffers.buffers[i].vmo);
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to create vmo";
+      FX_PLOGST(ERROR, TAG, status) << "Failed to create vmo";
       return status;
     }
     // Initialize chroma channels to 128 (grayscale).
@@ -64,13 +66,13 @@ zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* se
     status = zx::vmar::root_self()->map(0, buffers.buffers[i].vmo, 0, format.GetImageSize(),
                                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &chroma);
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Error mapping vmo";
+      FX_PLOGST(ERROR, TAG, status) << "Error mapping vmo";
       return status;
     }
     memset(reinterpret_cast<void*>(chroma), 128, format.GetImageSize());
     status = zx::vmar::root_self()->unmap(chroma, format.GetImageSize());
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Error unmapping vmo";
+      FX_PLOGST(ERROR, TAG, status) << "Error unmapping vmo";
       return status;
     }
   }
@@ -78,7 +80,7 @@ zx_status_t StreamServer::Create(zx::bti* bti, std::unique_ptr<StreamServer>* se
   server->buffers_ = std::move(buffers);
   status = server->GetBuffers(buffers_out);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Error getting writable buffers";
+    FX_PLOGST(ERROR, TAG, status) << "Error getting writable buffers";
     return status;
   }
 
@@ -93,15 +95,15 @@ zx_status_t StreamServer::AddClient(zx::channel channel,
   std::unique_ptr<camera::StreamImpl> stream;
   zx_status_t status = camera::StreamImpl::Create(std::move(channel), loop_.dispatcher(), &stream);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Error creating StreamImpl";
+    FX_PLOGST(ERROR, TAG, status) << "Error creating StreamImpl";
     return status;
   }
   status = GetBuffers(buffers_out);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Error getting read-only buffers";
+    FX_PLOGST(ERROR, TAG, status) << "Error getting read-only buffers";
     return status;
   }
-  FX_LOGS(INFO) << "Client " << next_stream_id_ << " connected.";
+  FX_LOGST(INFO, TAG) << "Client " << next_stream_id_ << " connected.";
   streams_[next_stream_id_++] = std::move(stream);
   return ZX_OK;
 }
@@ -113,7 +115,7 @@ zx_status_t StreamServer::GetBuffers(fuchsia_sysmem_BufferCollectionInfo_2* buff
     zx::vmo vmo;
     zx_status_t status = buffers_.buffers[i].vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to duplicate VMO";
+      FX_PLOGST(ERROR, TAG, status) << "Failed to duplicate VMO";
       return status;
     }
     vmos[i] = std::move(vmo);
@@ -133,7 +135,7 @@ void StreamServer::FrameAvailable(uint32_t id, std::list<uint32_t>* out_frames_t
     }
   }
   for (auto id : disconnected_client_ids) {
-    FX_LOGS(INFO) << "Client " << id << " disconnected.";
+    FX_LOGST(INFO, TAG) << "Client " << id << " disconnected.";
     streams_.erase(id);
   }
 
@@ -142,7 +144,7 @@ void StreamServer::FrameAvailable(uint32_t id, std::list<uint32_t>* out_frames_t
   for (const auto& stream : streams_) {
     const auto& buffer_ids = stream.second->GetOutstandingBuffers();
     if (buffer_ids.size() >= kFramesToHold) {
-      FX_LOGS(WARNING) << "Client " << stream.first
+      FX_LOGST(WARNING, TAG) << "Client " << stream.first
                        << " is holding too many buffer references and stalling other clients.";
     }
     for (const auto buffer_id : buffer_ids) {
@@ -160,7 +162,7 @@ void StreamServer::FrameAvailable(uint32_t id, std::list<uint32_t>* out_frames_t
 
   // If clients are collectively holding too many frames, immediately return the buffer to the ISP.
   if (read_locked_buffers_.size() >= kFramesToHold) {
-    FX_LOGS(WARNING)
+    FX_LOGST(WARNING, TAG)
         << "Clients are collectively holding too many buffers. Frames will be dropped.";
     out_frames_to_be_released->push_back(id);
     return;

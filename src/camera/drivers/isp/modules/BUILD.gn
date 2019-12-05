@@ -15,6 +15,7 @@ source_set("modules") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.camera:fuchsia.camera_c",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fit",
@@ -38,6 +39,7 @@ source_set("sensor-module") {
   ]
 
   public_deps = [
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fit",

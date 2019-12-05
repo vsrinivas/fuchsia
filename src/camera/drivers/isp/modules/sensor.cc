@@ -14,12 +14,12 @@
 
 #include "../mali-009/global_regs.h"
 #include "../mali-009/pingpong_regs.h"
-
-namespace {
-static constexpr uint8_t kDefaultSensorMode = 0;
-}
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
+
+constexpr uint8_t kDefaultSensorMode = 0;
+constexpr auto TAG = "arm-isp";
 
 zx_status_t Sensor::HwInit() {
   // Input port safe stop
@@ -27,7 +27,7 @@ zx_status_t Sensor::HwInit() {
 
   zx_status_t status = camera_sensor_.SetMode(current_sensor_mode_);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Sensor SetMode failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Sensor SetMode failed";
     return status;
   }
 
@@ -43,7 +43,7 @@ zx_status_t Sensor::HwInit() {
   // correct init sequence API. This check is to ensure that when
   // and if a different mode is added, we catch it.
   if (sensor_modes_[current_sensor_mode_].wdr_mode != CAMERASENSOR_WDR_MODE_LINEAR) {
-    FX_LOGF(ERROR, "", "%s: unsupported WDR mode %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "unsupported WDR mode";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -55,7 +55,7 @@ zx_status_t Sensor::SwInit() {
   camera_sensor_info_t info;
   zx_status_t status = GetInfo(&info);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Sensor GetInfo failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Sensor GetInfo failed";
     return status;
   }
 
@@ -123,7 +123,7 @@ zx_status_t Sensor::SwInit() {
       isp_bit_width = 5;
       break;
     default:
-      FX_LOGF(ERROR, "", "%s, unsupported  input bits\n", __func__);
+      FX_LOG(ERROR, TAG, "unsupported input bits");
       return ZX_ERR_INVALID_ARGS;
       break;
   }
@@ -150,7 +150,7 @@ zx_status_t Sensor::SwInit() {
 zx_status_t Sensor::Init() {
   zx_status_t status = camera_sensor_.Init();
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Sensor Init failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Sensor Init failed";
     return status;
   }
 
@@ -158,18 +158,18 @@ zx_status_t Sensor::Init() {
   status = camera_sensor_.GetSupportedModes(reinterpret_cast<camera_sensor_mode_t*>(&sensor_modes_),
                                             kNumModes, &actual_modes);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Sensor GetSupportedModes failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Sensor GetSupportedModes failed";
     return status;
   }
 
   if (actual_modes != kNumModes) {
-    FX_LOGF(ERROR, "", "%s: Num Modes not what expected%d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Num Modes not what expected";
     return status;
   }
 
   status = SetMode(kDefaultSensorMode);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Sensor SetMode failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Sensor SetMode failed";
     return status;
   }
   return status;
@@ -180,13 +180,13 @@ zx_status_t Sensor::SetMode(uint8_t mode) {
 
   zx_status_t status = HwInit();
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Sensor HwInit failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Sensor HwInit failed";
     return status;
   }
 
   status = SwInit();
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Sensor SwInit failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Sensor SwInit failed";
     return status;
   }
 
@@ -225,7 +225,7 @@ zx_status_t Sensor::GetInfo(camera_sensor_info_t* out_info) {
 
   zx_status_t status = camera_sensor_.GetInfo(out_info);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Sensor GetInfo failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Sensor GetInfo failed";
     return status;
   }
 
@@ -244,7 +244,7 @@ std::unique_ptr<Sensor> Sensor::Create(const ddk::MmioView& isp_mmio,
 
   zx_status_t status = sensor->Init();
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Sensor Init failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Sensor Init failed";
     return nullptr;
   }
 

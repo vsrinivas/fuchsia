@@ -9,6 +9,8 @@
 
 namespace camera {
 
+constexpr auto TAG = "camera_controller";
+
 const char* ToConfigFileName(const camera::GdcConfig& config_type) {
   switch (config_type) {
     case GdcConfig::MONITORING_360p:
@@ -34,7 +36,7 @@ const char* ToConfigFileName(const camera::GdcConfig& config_type) {
 fit::result<gdc_config_info, zx_status_t> PipelineManager::LoadGdcConfiguration(
     const camera::GdcConfig& config_type) {
   if (config_type == GdcConfig::INVALID) {
-    FX_LOGS(ERROR) << "Invalid GDC configuration type";
+    FX_LOGST(ERROR, TAG) << "Invalid GDC configuration type";
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
@@ -42,7 +44,7 @@ fit::result<gdc_config_info, zx_status_t> PipelineManager::LoadGdcConfiguration(
   size_t size;
   auto status = load_firmware(device_, ToConfigFileName(config_type), &info.config_vmo, &size);
   if (status != ZX_OK || size == 0) {
-    FX_PLOGS(ERROR, status) << "Failed to load the GDC firmware";
+    FX_PLOGST(ERROR, TAG, status) << "Failed to load the GDC firmware";
     return fit::error(status);
   }
   info.size = size;
@@ -54,7 +56,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
   auto& input_buffers_hlcpp = parent_node->output_buffer_collection();
   auto result = GetBuffers(internal_gdc_node, info);
   if (result.is_error()) {
-    FX_LOGS(ERROR) << "Failed to get buffers";
+    FX_LOGST(ERROR, TAG) << "Failed to get buffers";
     return fit::error(result.error());
   }
 
@@ -81,7 +83,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
   for (uint32_t i = 0; i < internal_gdc_node.gdc_info.config_type.size(); i++) {
     auto gdc_config = LoadGdcConfiguration(internal_gdc_node.gdc_info.config_type[i]);
     if (gdc_config.is_error()) {
-      FX_LOGS(ERROR) << "Failed to load GDC configuration";
+      FX_LOGST(ERROR, TAG) << "Failed to load GDC configuration";
       return fit::error(gdc_config.error());
     }
     config_vmos_info.push_back(gdc_config.value());
@@ -99,7 +101,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
       std::move(output_buffers_hlcpp), info->stream_config->properties.stream_type(),
       internal_gdc_node.supported_streams);
   if (!gdc_node) {
-    FX_LOGS(ERROR) << "Failed to create GDC node";
+    FX_LOGST(ERROR, TAG) << "Failed to create GDC node";
     return fit::error(ZX_ERR_NO_MEMORY);
   }
 
@@ -112,7 +114,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
                               config_vmos_info.size(), gdc_node->hw_accelerator_frame_callback(),
                               gdc_node->hw_accelerator_res_callback(), &gdc_task_index);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to initialize GDC";
+    FX_PLOGST(ERROR, TAG, status) << "Failed to initialize GDC";
     return fit::error(status);
   }
 

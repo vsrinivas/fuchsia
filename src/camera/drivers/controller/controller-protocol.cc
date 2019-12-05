@@ -11,6 +11,8 @@
 
 namespace camera {
 
+constexpr auto TAG = "camera_controller";
+
 ControllerImpl::ControllerImpl(zx_device_t* device,
                                fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
                                async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp,
@@ -18,7 +20,7 @@ ControllerImpl::ControllerImpl(zx_device_t* device,
                                fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
     : binding_(this), pipeline_manager_(device, dispatcher, isp, gdc, std::move(sysmem_allocator)) {
   binding_.set_error_handler([occ = std::move(on_connection_closed)](zx_status_t status) {
-    FX_PLOGS(ERROR, status) << "Client disconnected";
+    FX_PLOGST(ERROR, TAG, status) << "Client disconnected";
     occ();
   });
   binding_.Bind(std::move(control), dispatcher);
@@ -61,27 +63,27 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
 
   // Input Validations
   if (config_index >= configs_.size()) {
-    FX_LOGS(ERROR) << "Invalid config index " << config_index;
+    FX_LOGST(ERROR, TAG) << "Invalid config index " << config_index;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
   const auto& config = configs_[config_index];
 
   if (stream_index >= config.stream_configs.size()) {
-    FX_LOGS(ERROR) << "Invalid stream index " << stream_index;
+    FX_LOGST(ERROR, TAG) << "Invalid stream index " << stream_index;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
   const auto& stream_config = config.stream_configs[stream_index];
 
   if (image_format_index >= stream_config.image_formats.size()) {
-    FX_LOGS(ERROR) << "Invalid image format index " << image_format_index;
+    FX_LOGST(ERROR, TAG) << "Invalid image format index " << image_format_index;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
 
   if (buffer_collection.buffer_count == 0) {
-    FX_LOGS(ERROR) << "Invalid buffer count " << buffer_collection.buffer_count;
+    FX_LOGST(ERROR, TAG) << "Invalid buffer count " << buffer_collection.buffer_count;
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
@@ -90,7 +92,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   InternalConfigInfo* internal_config;
   status = GetInternalConfiguration(config_index, &internal_config);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get Internal configuration" << status;
+    FX_LOGST(ERROR, TAG) << "Unable to get Internal configuration" << status;
     return;
   }
 
@@ -98,7 +100,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   auto stream_config_node =
       GetStreamConfigNode(internal_config, stream_config.properties.stream_type());
   if (stream_config_node == nullptr) {
-    FX_LOGS(ERROR) << "Unable to get Internal stream config node";
+    FX_LOGST(ERROR, TAG) << "Unable to get Internal stream config node";
     return;
   }
 
@@ -112,7 +114,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   // Configure the stream pipeline
   status = pipeline_manager_.ConfigureStreamPipeline(&info, stream);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to create Stream Pipeline" << status;
+    FX_LOGST(ERROR, TAG) << "Unable to create Stream Pipeline" << status;
     return;
   }
 

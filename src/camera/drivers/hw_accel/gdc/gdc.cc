@@ -20,10 +20,13 @@
 #include <hw/reg.h>
 
 #include "gdc-regs.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace gdc {
 
 namespace {
+
+constexpr auto TAG = "gdc";
 
 constexpr uint32_t kHiu = 0;
 constexpr uint32_t kGdc = 1;
@@ -85,7 +88,7 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
       output_image_format_table_list, output_image_format_table_count, output_image_format_index,
       config_vmo_list, config_vmos_count, frame_callback, res_callback, bti_);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Task Creation Failed";
     return status;
   }
 
@@ -285,7 +288,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
 }
 
 int GdcDevice::FrameProcessingThread() {
-  FX_LOGF(INFO, "", "%s: start \n", __func__);
+  FX_LOG(INFO, TAG, "start");
   for (;;) {
     fbl::AutoLock al(&lock_);
     while (processing_queue_.empty() && !shutdown_) {
@@ -395,7 +398,7 @@ void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
 zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr<GdcDevice>* out) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    FX_LOGF(ERROR, "", "%s: could not get composite protocol\n", __func__);
+    FX_LOG(ERROR, TAG, "could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -403,54 +406,54 @@ zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr
   size_t actual;
   composite.GetComponents(components, COMPONENT_COUNT, &actual);
   if (actual != COMPONENT_COUNT) {
-    FX_LOGF(ERROR, "", "%s Could not get components\n", __func__);
+    FX_LOG(ERROR, TAG, "Could not get components");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(components[COMPONENT_PDEV]);
   if (!pdev.is_valid()) {
-    FX_LOGF(ERROR, "", "%s: ZX_PROTOCOL_PDEV not available\n", __func__);
+    FX_LOG(ERROR, TAG, "ZX_PROTOCOL_PDEV not available");
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> clk_mmio;
   zx_status_t status = pdev.MapMmio(kHiu, &clk_mmio);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "pdev_.MapMmio failed";
     return status;
   }
 
   std::optional<ddk::MmioBuffer> gdc_mmio;
   status = pdev.MapMmio(kGdc, &gdc_mmio);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "pdev_.MapMmio failed";
     return status;
   }
 
   zx::interrupt gdc_irq;
   status = pdev.GetInterrupt(0, &gdc_irq);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: pdev_.GetInterrupt failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "pdev_.GetInterrupt failed";
     return status;
   }
 
   zx::port port;
   status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: port create failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "port create failed";
     return status;
   }
 
   status = gdc_irq.bind(port, kPortKeyIrqMsg, 0 /*options*/);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: interrupt bind failed %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "interrupt bind failed";
     return status;
   }
 
   zx::bti bti;
   status = pdev.GetBti(0, &bti);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: could not obtain bti: %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "could not obtain bti";
     return status;
   }
 
@@ -485,7 +488,7 @@ zx_status_t GdcBind(void* ctx, zx_device_t* device) {
   std::unique_ptr<GdcDevice> gdc_device;
   zx_status_t status = gdc::GdcDevice::Setup(ctx, device, &gdc_device);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: Could not setup gdc device: %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Could not setup gdc device";
     return status;
   }
   zx_device_prop_t props[] = {
@@ -499,18 +502,18 @@ zx_status_t GdcBind(void* ctx, zx_device_t* device) {
 #if 0
     status = gdc::GdcDeviceTester::RunTests(gdc_device.get());
     if (status != ZX_OK) {
-        FX_LOGF(ERROR, "%s: Device Unit Tests Failed \n", __func__);
+        FX_LOG(ERROR, TAG, "Device Unit Tests Failed");
         return status;
     }
 #endif
 
   status = gdc_device->DdkAdd("gdc", 0, props, countof(props));
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: Could not add gdc device: %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Could not add gdc device";
     return status;
   }
 
-  FX_LOGF(INFO, "", "%s: gdc driver added\n", __func__);
+  FX_LOG(INFO, TAG, "gdc driver added");
 
   // gdc device intentionally leaked as it is now held by DevMgr.
   __UNUSED auto* dev = gdc_device.release();

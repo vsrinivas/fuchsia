@@ -16,6 +16,7 @@ executable("gdc-task") {
     "//src/camera/drivers/hw_accel/task:camera-task",
     "//src/camera/drivers/test_utils",
     "//src/devices:driver",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",

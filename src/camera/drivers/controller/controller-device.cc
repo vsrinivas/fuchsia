@@ -14,7 +14,11 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace camera {
+
+constexpr auto TAG = "camera_controller";
 
 namespace {
 enum {
@@ -54,7 +58,7 @@ zx_status_t ControllerDevice::GetChannel2(zx_handle_t handle) {
 
   auto status = sysmem_.Connect(sysmem_allocator.NewRequest().TakeChannel());
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: Could not setup sysmem allocator: %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Could not setup sysmem allocator";
     return status;
   }
 
@@ -124,17 +128,17 @@ zx_status_t ControllerDeviceBind(void* /*ctx*/, zx_device_t* device) {
   std::unique_ptr<ControllerDevice> controller_device;
   auto status = camera::ControllerDevice::Setup(device, &controller_device);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: Could not setup camera_controller_device: %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Could not setup camera_controller_device";
     return status;
   }
 
   status = controller_device->DdkAdd("camera-controller-device");
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "%s: Could not add camera_controller_device device: %d\n", __func__, status);
+    FX_PLOGST(ERROR, TAG, status) << "Could not add camera_controller_device device";
     return status;
   }
 
-  FX_LOGF(INFO, "", "%s: camera_controller_device driver added\n", __func__);
+  FX_PLOGST(INFO, TAG, status) << "camera_controller_device driver added";
 
   // controller device intentionally leaked as it is now held by DevMgr.
   __UNUSED auto* dev = controller_device.release();

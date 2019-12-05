@@ -12,6 +12,8 @@
 
 namespace camera {
 
+constexpr auto TAG = "camera_controller";
+
 const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(PipelineInfo* info,
                                                                  const InternalConfigNode& node) {
   for (const auto& child_node : node.child_nodes) {
@@ -40,7 +42,7 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManage
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   auto consumer = GetNextNodeInPipeline(info, producer);
   if (!consumer) {
-    FX_LOGS(ERROR) << "Failed to get next node";
+    FX_LOGST(ERROR, TAG) << "Failed to get next node";
     return fit::error(ZX_ERR_INTERNAL);
   }
 
@@ -57,7 +59,7 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManage
 
     auto status = memory_allocator_.AllocateSharedMemory(constraints, &buffers);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to allocate shared memory";
+      FX_LOGST(ERROR, TAG) << "Failed to allocate shared memory";
       return fit::error(status);
     }
   }
@@ -79,7 +81,7 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
 
   auto result = GetBuffers(info->node, info);
   if (result.is_error()) {
-    FX_PLOGS(ERROR, result.error()) << "Failed to get buffers";
+    FX_PLOGST(ERROR, TAG, result.error()) << "Failed to get buffers";
     return fit::error(result.error());
   }
   fuchsia::sysmem::BufferCollectionInfo_2 buffers = std::move(result.value());
@@ -93,14 +95,14 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
       info->node.type, info->node.image_formats, std::move(buffers),
       info->stream_config->properties.stream_type(), info->node.supported_streams);
   if (!processing_node) {
-    FX_LOGS(ERROR) << "Failed to create Input node";
+    FX_LOGST(ERROR, TAG) << "Failed to create Input node";
     return fit::error(ZX_ERR_NO_MEMORY);
   }
 
   // Create stream with ISP
   auto isp_stream_protocol = std::make_unique<camera::IspStreamProtocol>();
   if (!isp_stream_protocol) {
-    FX_LOGS(ERROR) << "Failed to create ISP stream protocol";
+    FX_LOGST(ERROR, TAG) << "Failed to create ISP stream protocol";
     return fit::error(ZX_ERR_INTERNAL);
   }
 
@@ -110,7 +112,7 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
       reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate), isp_stream_type,
       processing_node->isp_callback(), isp_stream_protocol->protocol());
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to create output stream on ISP";
+    FX_PLOGST(ERROR, TAG, status) << "Failed to create output stream on ISP";
     return fit::error(ZX_ERR_INTERNAL);
   }
 
@@ -126,13 +128,13 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateOutputNode(
       internal_output_node.type, parent_node, info->stream_config->properties.stream_type(),
       internal_output_node.supported_streams);
   if (!output_node) {
-    FX_LOGS(ERROR) << "Failed to create output ProcessNode";
+    FX_LOGST(ERROR, TAG) << "Failed to create output ProcessNode";
     return fit::error(ZX_ERR_NO_MEMORY);
   }
 
   auto client_stream = std::make_unique<camera::StreamImpl>(dispatcher_, output_node.get());
   if (!client_stream) {
-    FX_LOGS(ERROR) << "Failed to create StreamImpl";
+    FX_LOGST(ERROR, TAG) << "Failed to create StreamImpl";
     return fit::error(ZX_ERR_INTERNAL);
   }
 
@@ -153,21 +155,21 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGraph(
   fit::result<ProcessNode*, zx_status_t> result;
   auto next_node_internal = GetNextNodeInPipeline(info, internal_node);
   if (!next_node_internal) {
-    FX_LOGS(ERROR) << "Failed to get next node";
+    FX_LOGST(ERROR, TAG) << "Failed to get next node";
     return fit::error(ZX_ERR_INTERNAL);
   }
 
   switch (next_node_internal->type) {
     // Input Node
     case NodeType::kInputStream: {
-      FX_LOGS(ERROR) << "Child node cannot be input node";
+      FX_LOGST(ERROR, TAG) << "Child node cannot be input node";
       return fit::error(ZX_ERR_INVALID_ARGS);
     }
     // GDC
     case NodeType::kGdc: {
       result = CreateGdcNode(info, parent_node, *next_node_internal);
       if (result.is_error()) {
-        FX_LOGS(ERROR) << "Failed to configure GDC Node";
+        FX_LOGST(ERROR, TAG) << "Failed to configure GDC Node";
         // TODO(braval): Handle already configured nodes
         return result;
       }
@@ -181,7 +183,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGraph(
     case NodeType::kOutputStream: {
       result = CreateOutputNode(info, parent_node, *next_node_internal);
       if (result.is_error()) {
-        FX_LOGS(ERROR) << "Failed to configure Output Node";
+        FX_LOGST(ERROR, TAG) << "Failed to configure Output Node";
         // TODO(braval): Handle already configured nodes
         return result;
       }
@@ -200,7 +202,7 @@ PipelineManager::ConfigureStreamPipelineHelper(
   // Configure Input node
   auto input_result = CreateInputNode(info);
   if (input_result.is_error()) {
-    FX_PLOGS(ERROR, input_result.error()) << "Failed to ConfigureInputNode";
+    FX_PLOGST(ERROR, TAG, input_result.error()) << "Failed to ConfigureInputNode";
     return input_result;
   }
 
@@ -209,17 +211,17 @@ PipelineManager::ConfigureStreamPipelineHelper(
 
   auto output_node_result = CreateGraph(info, info->node, input_node);
   if (output_node_result.is_error()) {
-    FX_PLOGS(ERROR, output_node_result.error()) << "Failed to CreateGraph";
+    FX_PLOGST(ERROR, TAG, output_node_result.error()) << "Failed to CreateGraph";
     return fit::error(output_node_result.error());
   }
 
   auto output_node = output_node_result.value();
   auto status = output_node->client_stream()->Attach(stream.TakeChannel(), [this, info]() {
-    FX_LOGS(INFO) << "Stream client disconnected";
+    FX_LOGST(INFO, TAG) << "Stream client disconnected";
     OnClientStreamDisconnect(info);
   });
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to bind output stream";
+    FX_PLOGST(ERROR, TAG, status) << "Failed to bind output stream";
     return fit::error(status);
   }
   return fit::ok(std::move(input_processing_node));
@@ -249,7 +251,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
         // We will now append the requested stream to the existing graph.
         auto result = AppendToExistingGraph(info, stream);
         if (result != ZX_OK) {
-          FX_PLOGS(ERROR, result) << "AppendToExistingGraph failed";
+          FX_PLOGST(ERROR, TAG, result) << "AppendToExistingGraph failed";
           return result;
         }
         return result;
@@ -267,13 +269,13 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
       if (downscaled_resolution_stream_) {
         // If the same stream is requested again, we return failure.
         if (IsStreamAlreadyCreated(info, downscaled_resolution_stream_.get())) {
-          FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
+          FX_PLOGST(ERROR, TAG, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
           return ZX_ERR_ALREADY_BOUND;
         }
         // We will now append the requested stream to the existing graph.
         auto result = AppendToExistingGraph(info, stream);
         if (result != ZX_OK) {
-          FX_PLOGS(ERROR, result) << "AppendToExistingGraph failed";
+          FX_PLOGST(ERROR, TAG, result) << "AppendToExistingGraph failed";
           return result;
         }
         return result;
@@ -287,7 +289,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
       break;
     }
     default: {
-      FX_LOGS(ERROR) << "Invalid input stream type";
+      FX_LOGST(ERROR, TAG) << "Invalid input stream type";
       return ZX_ERR_INVALID_ARGS;
     }
   }

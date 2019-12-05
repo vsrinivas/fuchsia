@@ -13,6 +13,8 @@
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
+constexpr auto TAG = "gdc";
+
 namespace gdc {
 
 zx_status_t GdcTask::PinConfigVmos(const gdc_config_info* config_vmo_list, size_t config_vmos_count,
@@ -33,28 +35,28 @@ zx_status_t GdcTask::PinConfigVmos(const gdc_config_info* config_vmo_list, size_
     uint64_t size;
     auto status = vmo.get_size(&size);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, "%s: Unable to get VMO size\n", __func__);
+      FX_LOG(ERROR, TAG, "Unable to get VMO size");
       return status;
     }
 
     zx::vmo contig_vmo;
     status = zx::vmo::create_contiguous(bti, size, 0, &contig_vmo);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, "Unable to get create contiguous VMO\n", __func__);
+      FX_LOG(ERROR, TAG, "Unable to get create contiguous VMO");
       return status;
     }
 
     fzl::VmoMapper mapped_buffer_vmo;
     status = mapped_buffer_vmo.Map(vmo, 0, 0, ZX_VM_PERM_READ);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, "Unable to get map VMO\n", __func__);
+      FX_LOG(ERROR, TAG, "Unable to get map VMO");
       return status;
     }
 
     fzl::VmoMapper mapped_buffer_contig_vmo;
     status = mapped_buffer_contig_vmo.Map(contig_vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, "Unable to get map contig VMO\n", __func__);
+      FX_LOG(ERROR, TAG, "Unable to get map contig VMO");
       return status;
     }
 
@@ -62,11 +64,11 @@ zx_status_t GdcTask::PinConfigVmos(const gdc_config_info* config_vmo_list, size_
 
     status = pinned_config_vmos_[i].Pin(contig_vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, "%s: Failed to pin config VMO\n", __func__);
+      FX_LOG(ERROR, TAG, "Failed to pin config VMO");
       return status;
     }
     if (pinned_config_vmos_[i].region_count() != 1) {
-      FX_LOG(ERROR, "%s: buffer is not contiguous", __func__);
+      FX_LOG(ERROR, TAG, "Buffer is not contiguous");
       return ZX_ERR_NO_MEMORY;
     }
 
@@ -99,7 +101,7 @@ zx_status_t GdcTask::Init(const buffer_collection_info_2_t* input_buffer_collect
 
   zx_status_t status = PinConfigVmos(config_vmo_list, config_vmos_count, bti);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, "%s: PinConfigVmo Failed\n", __func__);
+    FX_LOG(ERROR, TAG, "PinConfigVmo Failed");
     return status;
   }
 
@@ -107,7 +109,7 @@ zx_status_t GdcTask::Init(const buffer_collection_info_2_t* input_buffer_collect
                        output_image_format_table_list, output_image_format_table_count,
                        output_image_format_index, bti, frame_callback, res_callback);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, "%s: InitBuffers Failed\n", __func__);
+    FX_LOG(ERROR, TAG, "InitBuffers Failed");
     return status;
   }
 

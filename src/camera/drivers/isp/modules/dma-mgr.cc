@@ -13,13 +13,15 @@
 
 namespace camera {
 
+constexpr auto TAG = "arm-isp";
+
 zx_status_t DmaManager::Create(const zx::bti& bti, const ddk::MmioView& isp_mmio_local,
                                DmaManager::Stream stream_type, std::unique_ptr<DmaManager>* out) {
   *out = std::make_unique<DmaManager>(stream_type, isp_mmio_local);
 
   zx_status_t status = bti.duplicate(ZX_RIGHT_SAME_RIGHTS, &(*out)->bti_);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Unable to duplicate bti for DmaManager \n", __func__);
+    FX_LOGF(ERROR, TAG, "%s: Unable to duplicate bti for DmaManager \n", __func__);
     return status;
   }
 
@@ -129,7 +131,7 @@ zx_status_t DmaManager::Configure(
   write_locked_buffers_.clear();
 
   if (current_format_->GetImageSize() > buffer_collection.vmo_size) {
-    FX_LOGF(ERROR, "", "%s: Buffer size (%lu) is less than image size (%lu)!\n", __func__,
+    FX_LOGF(ERROR, TAG, "Buffer size (%lu) is less than image size (%lu)!",
             buffer_collection.vmo_size, current_format_->GetImageSize());
     return ZX_ERR_INTERNAL;
   }
@@ -144,7 +146,7 @@ zx_status_t DmaManager::Configure(
   // Pin the buffers
   zx_status_t status = buffers_.Init(vmos, buffer_collection.buffer_count);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Unable to initialize buffers for DmaManager \n", __func__);
+    FX_LOG(ERROR, TAG, "Unable to initialize buffers for DmaManager");
     return status;
   }
   // Release the vmos so that the buffer collection could be reused.
@@ -154,7 +156,7 @@ zx_status_t DmaManager::Configure(
   status =
       buffers_.PinVmos(bti_, fzl::VmoPool::RequireContig::Yes, fzl::VmoPool::RequireLowMem::Yes);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "", "%s: Unable to pin buffers for DmaManager \n", __func__);
+    FX_LOG(ERROR, TAG, "Unable to pin buffers for DmaManager");
     return status;
   }
   frame_available_callback_ = std::move(frame_available_callback);
@@ -247,7 +249,7 @@ void DmaManager::LoadNewFrame() {
   } else {
     // If we run out of buffers, disable write and send the callback for
     // out of buffers:
-    FX_LOG(ERROR, "", "Failed to get buffer\n");
+    FX_LOG(ERROR, TAG, "Failed to get buffer");
   }
 
   // 4) Set Write_on

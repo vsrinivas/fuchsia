@@ -17,7 +17,6 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
-#include <lib/syslog/global.h>
 #include <zircon/fidl.h>
 
 #include <ddk/protocol/platform/bus.h>
