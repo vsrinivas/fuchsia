@@ -610,7 +610,11 @@ impl BlockResponseBodyOnceUriPathHandler {
 }
 
 impl UriPathHandler for BlockResponseBodyOnceUriPathHandler {
-    fn handle(&self, uri_path: &Path, mut response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+    fn handle(
+        &self,
+        uri_path: &Path,
+        mut response: Response<Body>,
+    ) -> BoxFuture<'_, Response<Body>> {
         // Only block requests for the duplicate blob
         let duplicate_blob_uri = Path::new(&self.path_to_block);
         if uri_path != duplicate_blob_uri {
@@ -877,31 +881,21 @@ async fn download_blob_experiment_dedups_concurrent_content_blob_fetches() {
     env.stop().await;
 }
 
-// Eventually this will test that it succeeds
 #[fasync::run_singlethreaded(test)]
-async fn rust_tuf_experiment_identity_fails() {
-    let env = TestEnv::new();
+async fn rust_tuf_experiment_identity() {
+    let env = TestEnv::new_without_amber();
     let pkg = Package::identity().await.unwrap();
-    let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-        .add_package(&pkg)
-        .build()
-        .await
-        .unwrap();
+    let repo = RepositoryBuilder::new().add_package(&pkg).build().await.unwrap();
     let served_repository = repo.serve(env.launcher()).await.unwrap();
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
 
-    // When RustTuf experiment is on, the resolve fails
+    // Verify we can resolve a package using rust tuf
     env.set_experiment_state(Experiment::RustTuf, true).await;
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
-    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::INTERNAL));
-
-    // When RustTuf experiment is off, the resolve succeeds
-    env.set_experiment_state(Experiment::RustTuf, false).await;
     let package = env.resolve_package(&pkg_url).await.expect("package to resolve without error");
     pkg.verify_contents(&package).await.expect("correct package contents");
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
-
     env.stop().await;
 }

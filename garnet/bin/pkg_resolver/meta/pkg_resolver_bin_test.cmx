@@ -1,8 +1,22 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.posix.socket.Provider"
+            ]
+        }
+    },
     "program": {
         "binary": "test/pkg_resolver_bin_test"
     },
     "sandbox": {
-        "features": [ "isolated-temp" ]
+        "features": [
+            "isolated-temp",
+            "root-ssl-certificates"
+        ],
+        "services": [
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.sys.Launcher"
+        ]
     }
 }

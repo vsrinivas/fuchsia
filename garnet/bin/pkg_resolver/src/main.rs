@@ -29,6 +29,7 @@ mod repository_service;
 mod resolver_service;
 mod rewrite_manager;
 mod rewrite_service;
+mod tuf_util;
 
 #[cfg(test)]
 mod test_util;
@@ -45,7 +46,8 @@ use crate::{
     rewrite_service::RewriteService,
 };
 
-const SERVER_THREADS: usize = 2;
+// FIXME: allow for multiple threads once rust_tuf repo updates
+// const SERVER_THREADS: usize = 2;
 const MAX_CONCURRENT_BLOB_FETCHES: usize = 5;
 
 const STATIC_REPO_DIR: &str = "/config/data/repositories";
@@ -119,7 +121,7 @@ fn main() -> Result<(), Error> {
         MAX_CONCURRENT_BLOB_FETCHES,
         repo_manager.read().stats(),
     );
-    futures.push(blob_fetch_queue.boxed());
+    futures.push(blob_fetch_queue.boxed_local());
 
     let resolver_cb = {
         // Capture a clone of repo and rewrite manager's Arc so the new client callback has a copy
@@ -129,7 +131,7 @@ fn main() -> Result<(), Error> {
         let cache = cache.clone();
         let blob_fetcher = blob_fetcher.clone();
         move |stream| {
-            fasync::spawn(
+            fasync::spawn_local(
                 resolver_service::run_resolver_service(
                     Arc::clone(&rewrite_manager),
                     Arc::clone(&repo_manager),
@@ -137,7 +139,7 @@ fn main() -> Result<(), Error> {
                     blob_fetcher.clone(),
                     stream,
                 )
-                .unwrap_or_else(|e| fx_log_err!("failed to spawn {:?}", e)),
+                .unwrap_or_else(|e| fx_log_err!("failed to spawn_local {:?}", e)),
             )
         }
     };
@@ -147,7 +149,7 @@ fn main() -> Result<(), Error> {
         let rewrite_manager = Arc::clone(&rewrite_manager);
         let cache = cache.clone();
         move |stream| {
-            fasync::spawn(
+            fasync::spawn_local(
                 resolver_service::run_font_resolver_service(
                     Arc::clone(&font_package_manager),
                     Arc::clone(&rewrite_manager),
@@ -156,7 +158,9 @@ fn main() -> Result<(), Error> {
                     blob_fetcher.clone(),
                     stream,
                 )
-                .unwrap_or_else(|e| fx_log_err!("Failed to spawn font_resolver_service {:?}", e)),
+                .unwrap_or_else(|e| {
+                    fx_log_err!("Failed to spawn_local font_resolver_service {:?}", e)
+                }),
             )
         }
     };
@@ -164,7 +168,7 @@ fn main() -> Result<(), Error> {
     let repo_cb = move |stream| {
         let repo_manager = Arc::clone(&repo_manager);
 
-        fasync::spawn(
+        fasync::spawn_local(
             async move {
                 let mut repo_service = RepositoryService::new(repo_manager);
                 repo_service.run(stream).await
@@ -176,7 +180,7 @@ fn main() -> Result<(), Error> {
     let rewrite_cb = move |stream| {
         let mut rewrite_service = RewriteService::new(Arc::clone(&rewrite_manager));
 
-        fasync::spawn(
+        fasync::spawn_local(
             async move { rewrite_service.handle_client(stream).await }
                 .unwrap_or_else(|e| fx_log_err!("while handling rewrite client {:?}", e)),
         )
@@ -184,7 +188,7 @@ fn main() -> Result<(), Error> {
 
     let admin_cb = move |stream| {
         let experiment_state = Arc::clone(&experiment_state);
-        fasync::spawn(async move {
+        fasync::spawn_local(async move {
             experiment::run_admin_service(experiment_state, stream)
                 .await
                 .unwrap_or_else(|e| fx_log_err!("while handling admin client {:?}", e))
@@ -203,9 +207,9 @@ fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    futures.push(fs.collect().boxed());
+    futures.push(fs.collect().boxed_local());
 
-    let () = executor.run(futures.collect(), SERVER_THREADS);
+    let () = executor.run_singlethreaded(futures.collect());
 
     Ok(())
 }

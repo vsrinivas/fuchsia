@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{queue, repository_manager::Stats},
+    crate::{queue, repository_manager::Stats, tuf_util::OpenedRepository},
     failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_amber::OpenedRepositoryProxy,
@@ -33,6 +33,7 @@ use {
             Arc,
         },
     },
+    tuf::metadata::TargetPath,
 };
 
 mod retry;
@@ -298,15 +299,38 @@ impl BlobKind {
     }
 }
 
-pub async fn cache_package<'a>(
+pub async fn cache_package_using_amber<'a>(
     repo: OpenedRepositoryProxy,
     config: &'a RepositoryConfig,
     url: &'a PkgUrl,
     cache: &'a PackageCache,
     blob_fetcher: &'a BlobFetcher,
 ) -> Result<BlobId, CacheError> {
-    let (merkle, size) = merkle_for_url(&repo, url).await.map_err(CacheError::MerkleFor)?;
+    let (merkle, size) =
+        merkle_for_url_using_amber(&repo, url).await.map_err(CacheError::MerkleFor)?;
+    cache_package(merkle, size, config, url, cache, blob_fetcher).await
+}
 
+pub async fn cache_package_using_rust_tuf<'a>(
+    repo: OpenedRepository,
+    config: &'a RepositoryConfig,
+    url: &'a PkgUrl,
+    cache: &'a PackageCache,
+    blob_fetcher: &'a BlobFetcher,
+) -> Result<BlobId, CacheError> {
+    let (merkle, size) =
+        merkle_for_url_using_rust_tuf(repo, url).await.map_err(CacheError::MerkleFor)?;
+    cache_package(merkle, size, config, url, cache, blob_fetcher).await
+}
+
+pub async fn cache_package<'a>(
+    merkle: BlobId,
+    size: u64,
+    config: &'a RepositoryConfig,
+    url: &'a PkgUrl,
+    cache: &'a PackageCache,
+    blob_fetcher: &'a BlobFetcher,
+) -> Result<BlobId, CacheError> {
     // If a merkle pin was specified, use it, but only after having verified that the name and
     // variant exist in the TUF repo.  Note that this doesn't guarantee that the merkle pinned
     // package ever actually existed in the repo or that the merkle pin refers to the named
@@ -424,6 +448,11 @@ impl MerkleForError {
             MerkleForError::UnexpectedStatus(_) => Status::INTERNAL,
             MerkleForError::ParseError(_) => Status::INTERNAL,
             MerkleForError::BlobTooLarge(_) => Status::INTERNAL,
+            MerkleForError::InvalidTargetPath(_) => Status::INTERNAL,
+            // FIXME(42326) when tuf::Error gets an HTTP error variant, this should be mapped to Status::UNAVAILABLE
+            MerkleForError::TufError(_) => Status::INTERNAL,
+            MerkleForError::NoCustomMetadata => Status::INTERNAL,
+            MerkleForError::SerdeError(_) => Status::INTERNAL,
         }
     }
 }
@@ -459,7 +488,19 @@ impl FetchError {
     }
 }
 
-async fn merkle_for_url<'a>(
+async fn merkle_for_url_using_rust_tuf<'a>(
+    repo: OpenedRepository,
+    url: &'a PkgUrl,
+) -> Result<(BlobId, u64), MerkleForError> {
+    let target_path =
+        TargetPath::new(format!("{}/{}", url.name().unwrap(), url.variant().unwrap_or("0")))
+            .map_err(MerkleForError::InvalidTargetPath)?;
+    let mut repo = repo.lock().await;
+    let res = repo.get_mut().get_merkle_at_path(&target_path).await;
+    res.map(|custom| (custom.merkle(), custom.size()))
+}
+
+async fn merkle_for_url_using_amber<'a>(
     repo: &'a OpenedRepositoryProxy,
     url: &'a PkgUrl,
 ) -> Result<(BlobId, u64), MerkleForError> {
@@ -491,11 +532,23 @@ pub enum MerkleForError {
     #[fail(display = "amber returned an unexpected status: {}", _0)]
     UnexpectedStatus(#[cause] Status),
 
+    #[fail(display = "tuf returned an unexpected error: {}", _0)]
+    TufError(#[cause] tuf::error::Error),
+
     #[fail(display = "amber returned an invalid merkle root: {}", _0)]
     ParseError(#[cause] BlobIdParseError),
 
     #[fail(display = "amber returned a blob size that was too large: {}", _0)]
     BlobTooLarge(#[cause] TryFromIntError),
+
+    #[fail(display = "the target path is not safe: {}", _0)]
+    InvalidTargetPath(#[cause] tuf::error::Error),
+
+    #[fail(display = "the target description does not have custom metadata")]
+    NoCustomMetadata,
+
+    #[fail(display = "serde value could not be converted: {}", _0)]
+    SerdeError(#[cause] serde_json::Error),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

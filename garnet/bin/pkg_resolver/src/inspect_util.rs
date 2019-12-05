@@ -95,9 +95,11 @@ impl Counter {
 
 #[cfg(test)]
 mod test_inspectable_repository_config {
-    use super::*;
-    use fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey};
-    use fuchsia_inspect::assert_inspect_tree;
+    use {
+        super::*,
+        fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey},
+        fuchsia_inspect::assert_inspect_tree,
+    };
 
     #[test]
     fn test_initialization() {
@@ -175,8 +177,7 @@ mod test_inspectable_repository_config {
 
 #[cfg(test)]
 mod test_inspectable_repo_url {
-    use super::*;
-    use fuchsia_inspect::assert_inspect_tree;
+    use {super::*, fuchsia_inspect::assert_inspect_tree};
 
     #[test]
     fn test_initialization() {

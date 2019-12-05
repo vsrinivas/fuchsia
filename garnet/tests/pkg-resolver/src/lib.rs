@@ -140,11 +140,15 @@ struct TestEnv<P = TestPkgFs> {
 
 impl TestEnv<TestPkgFs> {
     fn new() -> Self {
-        Self::new_with_pkg_fs(TestPkgFs::start().expect("pkgfs to start"))
+        Self::new_with_pkg_fs(TestPkgFs::start().expect("pkgfs to start"), true)
+    }
+
+    fn new_without_amber() -> Self {
+        Self::new_with_pkg_fs(TestPkgFs::start().expect("pkgfs to start"), false)
     }
 
     fn new_with_mounts(mounts: Mounts) -> Self {
-        Self::new_with_pkg_fs_and_mounts(TestPkgFs::start().expect("pkgfs to start"), mounts)
+        Self::new_with_pkg_fs_and_mounts(TestPkgFs::start().expect("pkgfs to start"), mounts, true)
     }
 
     async fn stop(self) {
@@ -157,11 +161,11 @@ impl TestEnv<TestPkgFs> {
 }
 
 impl<P: PkgFs> TestEnv<P> {
-    fn new_with_pkg_fs(pkgfs: P) -> Self {
-        Self::new_with_pkg_fs_and_mounts(pkgfs, Mounts::new())
+    fn new_with_pkg_fs(pkgfs: P, include_amber: bool) -> Self {
+        Self::new_with_pkg_fs_and_mounts(pkgfs, Mounts::new(), include_amber)
     }
 
-    fn new_with_pkg_fs_and_mounts(pkgfs: P, mounts: Mounts) -> Self {
+    fn new_with_pkg_fs_and_mounts(pkgfs: P, mounts: Mounts, include_amber: bool) -> Self {
         let mut amber =
             AppBuilder::new("fuchsia-pkg://fuchsia.com/pkg-resolver-tests#meta/amber.cmx")
                 .add_handle_to_namespace(
@@ -190,7 +194,6 @@ impl<P: PkgFs> TestEnv<P> {
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
             .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
-            .add_proxy_service_to::<AmberMarker, _>(amber.directory_request().unwrap().clone())
             .add_proxy_service_to::<PackageCacheMarker, _>(
                 pkg_cache.directory_request().unwrap().clone(),
             )
@@ -203,6 +206,10 @@ impl<P: PkgFs> TestEnv<P> {
             .add_proxy_service_to::<PackageResolverMarker, _>(
                 pkg_resolver.directory_request().unwrap().clone(),
             );
+
+        if include_amber {
+            fs.add_proxy_service_to::<AmberMarker, _>(amber.directory_request().unwrap().clone());
+        }
 
         let mut salt = [0; 4];
         zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");

@@ -8,6 +8,7 @@ use {
         cache::{BlobFetcher, PackageCache},
         experiment::{Experiment, Experiments},
         inspect_util::{self, InspectableRepoUrl, InspectableRepositoryConfig},
+        tuf_util::OpenedRepository,
     },
     failure::Fail,
     fidl_fuchsia_amber::{
@@ -19,6 +20,7 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     fuchsia_zircon::Status,
+    futures::future::LocalBoxFuture,
     futures::prelude::*,
     parking_lot::{Mutex, RwLock},
     std::{
@@ -31,14 +33,14 @@ use {
 };
 
 /// [RepositoryManager] controls access to all the repository configs used by the package resolver.
-#[derive(Debug)]
 pub struct RepositoryManager<A: AmberConnect> {
     experiments: Experiments,
     dynamic_configs_path: Option<PathBuf>,
     static_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
     dynamic_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
     amber: A,
-    conns: Arc<RwLock<HashMap<InspectableRepoUrl, OpenedRepositoryProxy>>>,
+    amber_conns: Arc<RwLock<HashMap<InspectableRepoUrl, OpenedRepositoryProxy>>>,
+    rust_tuf_conns: Arc<RwLock<HashMap<RepoUrl, OpenedRepository>>>,
     inspect: RepositoryManagerInspectState,
 }
 
@@ -49,7 +51,8 @@ struct RepositoryManagerInspectState {
     static_configs_node: inspect::Node,
     dynamic_configs_path_property: inspect::StringProperty,
     stats: Arc<Mutex<Stats>>,
-    conns_node: inspect::Node,
+    amber_conns_node: inspect::Node,
+    repos_node: Arc<inspect::Node>,
 }
 
 #[derive(Debug)]
@@ -153,7 +156,9 @@ impl<A: AmberConnect> RepositoryManager<A> {
         let config = config.into();
 
         // Clear any connections so we aren't talking to stale repositories.
-        if self.conns.write().remove(config.repo_url()).is_some() {
+        let connected_to_amber = self.amber_conns.write().remove(config.repo_url()).is_some();
+        let connected_to_rust_tuf = self.rust_tuf_conns.write().remove(config.repo_url()).is_some();
+        if connected_to_amber || connected_to_rust_tuf {
             fx_log_info!("closing connection to {} repo because config changed", config.repo_url());
         }
 
@@ -181,7 +186,10 @@ impl<A: AmberConnect> RepositoryManager<A> {
 
         if let Some(config) = self.dynamic_configs.remove(repo_url) {
             // Clear any connections so we aren't talking to stale repositories.
-            if self.conns.write().remove(repo_url).is_some() {
+            let connected_to_amber = self.amber_conns.write().remove(config.repo_url()).is_some();
+            let connected_to_rust_tuf =
+                self.rust_tuf_conns.write().remove(config.repo_url()).is_some();
+            if connected_to_amber || connected_to_rust_tuf {
                 fx_log_info!(
                     "closing connection to {} repo because config removed",
                     config.repo_url()
@@ -250,16 +258,111 @@ impl<A: AmberConnect> RepositoryManager<A> {
         url: &'a PkgUrl,
         cache: &'a PackageCache,
         blob_fetcher: &'a BlobFetcher,
-    ) -> impl Future<Output = Result<BlobId, Status>> + 'a {
+    ) -> LocalBoxFuture<'a, Result<BlobId, Status>> {
+        if self.experiments.get(Experiment::RustTuf) {
+            self.get_package_rust_tuf(url, cache, blob_fetcher)
+        } else {
+            self.get_package_amber(url, cache, blob_fetcher)
+        }
+    }
+
+    pub fn get_package_rust_tuf<'a>(
+        &self,
+        url: &'a PkgUrl,
+        cache: &'a PackageCache,
+        blob_fetcher: &'a BlobFetcher,
+    ) -> LocalBoxFuture<'a, Result<BlobId, Status>> {
+        // Check if we actually have a repository defined for this URL. If not, exit early
+        // with NOT_FOUND.
+        let config = if let Some(config) = self.get(url.repo()) {
+            Arc::clone(config)
+        } else {
+            return futures::future::ready(Err(Status::NOT_FOUND)).boxed_local();
+        };
+
+        let fut = connect_to_rust_tuf_client(
+            Arc::clone(&self.rust_tuf_conns),
+            Arc::clone(&config),
+            Arc::clone(&self.inspect.repos_node),
+            url.repo(),
+        );
+
+        async move {
+            let repo = fut.await?;
+            crate::cache::cache_package_using_rust_tuf(repo, &config, url, cache, blob_fetcher)
+                .await
+                .map_err(|e| {
+                    fx_log_err!("while fetching package using rust tuf: {}", e);
+                    e.to_resolve_status()
+                })
+        }
+        .boxed_local()
+    }
+
+    pub fn get_package_amber<'a>(
+        &self,
+        url: &'a PkgUrl,
+        cache: &'a PackageCache,
+        blob_fetcher: &'a BlobFetcher,
+    ) -> LocalBoxFuture<'a, Result<BlobId, Status>> {
         let res = self.connect_to_repo(url.repo());
         let experiments = self.experiments.clone();
         async move {
             let (repo, config) = res?;
-            get_package(experiments, repo, &*config, url, cache, blob_fetcher).await.map_err(|e| {
-                fx_log_err!("while fetching package: {:?}", e);
-                e
-            })
+            // While the fuchsia-pkg:// spec doesn't require a package name, we do.
+            let name = url.name().ok_or_else(|| {
+                fx_log_err!("package url is missing a package name: {}", url);
+                Err(Status::INVALID_ARGS)
+            })?;
+            if experiments.get(Experiment::DownloadBlob) {
+                crate::cache::cache_package_using_amber(repo, &config, url, cache, blob_fetcher)
+                    .await
+                    .map_err(|e| {
+                        fx_log_err!("error caching package: {}", e);
+                        e.to_resolve_status()
+                    })
+            } else {
+                let (result, result_server_end) =
+                    fidl::endpoints::create_proxy::<FetchResultMarker>().map_err(|err| {
+                        fx_log_err!("failed to create proxy: {}", err);
+                        Status::INTERNAL
+                    })?;
+                // Ask amber to cache the package.
+                repo.get_update_complete(
+                    &name,
+                    url.variant(),
+                    url.package_hash(),
+                    result_server_end,
+                )
+                .map_err(|err| {
+                    fx_log_err!("error communicating with amber: {:?}", err);
+                    Status::INTERNAL
+                })?;
+                match result.take_event_stream().into_future().await {
+                    (Some(Ok(FetchResultEvent::OnSuccess { merkle })), _) => match merkle.parse() {
+                        Ok(merkle) => Ok(merkle),
+                        Err(err) => {
+                            fx_log_err!("{:?} is not a valid merkleroot: {:?}", merkle, err);
+                            return Err(Status::INTERNAL);
+                        }
+                    },
+                    (Some(Ok(FetchResultEvent::OnError { result, message })), _) => {
+                        let status = Status::from_raw(result);
+                        fx_log_err!("error fetching package: {}: {}", status, message);
+                        return Err(status);
+                    }
+                    (Some(Err(err)), _) => {
+                        fx_log_err!("error communicating with amber: {}", err);
+                        return Err(Status::INTERNAL);
+                    }
+                    (None, _) => {
+                        fx_log_err!("amber unexpectedly closed fetch result channel");
+                        return Err(Status::INTERNAL);
+                    }
+                }
+            }
         }
+        .boxed_local()
     }
 
     fn connect_to_repo(
@@ -275,7 +378,7 @@ impl<A: AmberConnect> RepositoryManager<A> {
         };
 
         // Exit early if we've already connected to this repository.
-        if let Some(conn) = self.conns.read().get(url) {
+        if let Some(conn) = self.amber_conns.read().get(url) {
             if !conn.is_closed() {
                 return Ok((conn.clone(), config));
             }
@@ -292,7 +395,7 @@ impl<A: AmberConnect> RepositoryManager<A> {
 
         // The repo is defined, so we might actually need to connect to the device.
         {
-            let mut conns = self.conns.write();
+            let mut conns = self.amber_conns.write();
 
             // It's still possible we raced with some other connection attempt, so exit early if
             // they created a valid connection.
@@ -305,7 +408,7 @@ impl<A: AmberConnect> RepositoryManager<A> {
             conns.insert(
                 InspectableRepoUrl::new(
                     url.clone(),
-                    &self.inspect.conns_node,
+                    &self.inspect.amber_conns_node,
                     "ignored-by-watcher",
                 ),
                 repo.clone(),
@@ -335,68 +438,33 @@ impl<A: AmberConnect> RepositoryManager<A> {
     }
 }
 
-async fn get_package<'a>(
-    experiments: Experiments,
-    repo: OpenedRepositoryProxy,
-    config: &'a RepositoryConfig,
-    url: &'a PkgUrl,
-    cache: &'a PackageCache,
-    blob_fetcher: &'a BlobFetcher,
-) -> Result<BlobId, Status> {
-    // While the fuchsia-pkg:// spec doesn't require a package name, we do.
-    let name = url.name().ok_or_else(|| {
-        fx_log_err!("package url is missing a package name: {}", url);
-        Err(Status::INVALID_ARGS)
-    })?;
-
-    if experiments.get(Experiment::RustTuf) {
-        // not implemented yet
-        fx_log_err!("Experiment::RustTuf not implemented");
-        return Err(Status::INTERNAL);
+async fn connect_to_rust_tuf_client(
+    rust_tuf_conns: Arc<RwLock<HashMap<RepoUrl, OpenedRepository>>>,
+    config: Arc<RepositoryConfig>,
+    inspect_node: Arc<inspect::Node>,
+    url: &RepoUrl,
+) -> Result<OpenedRepository, Status> {
+    // Exit early if we've already connected to this repository.
+    if let Some(conn) = rust_tuf_conns.read().get(url) {
+        return Ok(conn.clone());
     }
 
-    if experiments.get(Experiment::DownloadBlob) {
-        crate::cache::cache_package(repo, config, url, cache, blob_fetcher).await.map_err(|e| {
-            fx_log_err!("error caching package: {}", e);
-            e.to_resolve_status()
-        })
-    } else {
-        let (result, result_server_end) = fidl::endpoints::create_proxy::<FetchResultMarker>()
-            .map_err(|err| {
-                fx_log_err!("failed to create proxy: {}", err);
-                Status::INTERNAL
-            })?;
+    // Create the rust tuf client. In order to minimize our time with the lock held, we'll
+    // create the client first, even if it proves to be redundant because we lost the race with
+    // another thread.
+    let mut repo = Arc::new(futures::lock::Mutex::new(crate::tuf_util::InspectableInner::new(
+        crate::tuf_util::Inner::new(&config).await.map_err(|e| {
+            fx_log_err!("Could not create tuf_util::Inner: {:?}", e);
+            Err(Status::INTERNAL)
+        })?,
+        &inspect_node,
+        url.host(),
+    )));
 
-        // Ask amber to cache the package.
-        repo.get_update_complete(&name, url.variant(), url.package_hash(), result_server_end)
-            .map_err(|err| {
-                fx_log_err!("error communicating with amber: {:?}", err);
-                Status::INTERNAL
-            })?;
-
-        match result.take_event_stream().into_future().await {
-            (Some(Ok(FetchResultEvent::OnSuccess { merkle })), _) => match merkle.parse() {
-                Ok(merkle) => Ok(merkle),
-                Err(err) => {
-                    fx_log_err!("{:?} is not a valid merkleroot: {:?}", merkle, err);
-                    return Err(Status::INTERNAL);
-                }
-            },
-            (Some(Ok(FetchResultEvent::OnError { result, message })), _) => {
-                let status = Status::from_raw(result);
-                fx_log_err!("error fetching package: {}: {}", status, message);
-                return Err(status);
-            }
-            (Some(Err(err)), _) => {
-                fx_log_err!("error communicating with amber: {}", err);
-                return Err(Status::INTERNAL);
-            }
-            (None, _) => {
-                fx_log_err!("amber unexpectedly closed fetch result channel");
-                return Err(Status::INTERNAL);
-            }
-        }
-    }
+    // It's still possible we raced with some other connection attempt
+    let mut rust_tuf_conns = rust_tuf_conns.write();
+    repo = Arc::clone(rust_tuf_conns.entry(url.clone()).or_insert(repo.clone()));
+    return Ok(repo);
 }
 
 #[derive(Debug)]
@@ -552,8 +620,9 @@ impl<A: AmberConnect + std::fmt::Debug> RepositoryManagerBuilder<A, inspect::Nod
                 .create_string("dynamic_configs_path", &format!("{:?}", self.dynamic_configs_path)),
             dynamic_configs_node: self.inspect_node.create_child("dynamic_configs"),
             static_configs_node: self.inspect_node.create_child("static_configs"),
-            conns_node: self.inspect_node.create_child("conns"),
             stats: Arc::new(Mutex::new(Stats::new(self.inspect_node.create_child("stats")))),
+            amber_conns_node: self.inspect_node.create_child("amber_conns"),
+            repos_node: Arc::new(self.inspect_node.create_child("repos")),
             node: self.inspect_node,
         };
 
@@ -569,7 +638,8 @@ impl<A: AmberConnect + std::fmt::Debug> RepositoryManagerBuilder<A, inspect::Nod
             ),
             amber: self.amber,
             experiments: self.experiments,
-            conns: Arc::new(RwLock::new(HashMap::new())),
+            amber_conns: Arc::new(RwLock::new(HashMap::new())),
+            rust_tuf_conns: Arc::new(RwLock::new(HashMap::new())),
             inspect,
         }
     }
@@ -1466,10 +1536,11 @@ mod tests {
                         update_package_url: format!("{:?}", fuchsia_config.update_package_url()),
                     }
                   },
-                  conns: {},
+                  amber_conns: {},
                   stats: {
                       mirrors: {},
                   },
+                  repos: {},
                 }
             }
         );
@@ -1494,10 +1565,11 @@ mod tests {
                   dynamic_configs_path: format!("{:?}", repomgr.dynamic_configs_path),
                   dynamic_configs: {},
                   static_configs: {},
-                  conns: {},
+                  amber_conns: {},
                   stats: {
                       mirrors: {},
                   },
+                  repos: {},
                 }
             }
         );
@@ -1522,10 +1594,11 @@ mod tests {
                   dynamic_configs_path: format!("{:?}", Some(dynamic_configs_path.clone())),
                   dynamic_configs: {},
                   static_configs: {},
-                  conns: {},
+                  amber_conns: {},
                   stats: {
                       mirrors: {},
                   },
+                  repos: {},
                 }
             }
         );
@@ -1564,7 +1637,8 @@ mod tests {
                     }
                   },
                   static_configs: {},
-                  conns: {},
+                  amber_conns: {},
+                  repos: {},
                   stats: {
                       mirrors: {},
                   },
@@ -1581,10 +1655,11 @@ mod tests {
                   dynamic_configs_path: format!("{:?}", Some(dynamic_configs_path.clone())),
                   dynamic_configs: {},
                   static_configs: {},
-                  conns: {},
+                  amber_conns: {},
                   stats: {
                       mirrors: {},
                   },
+                  repos: {},
                 }
             }
         );
