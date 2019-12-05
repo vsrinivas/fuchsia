@@ -69,7 +69,12 @@ impl UdpSocket {
         SendTo { socket: self, buf, addr }
     }
 
-    pub fn async_send_to(&self, buf: &[u8], addr: SocketAddr, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+    pub fn async_send_to(
+        &self,
+        buf: &[u8],
+        addr: SocketAddr,
+        cx: &mut Context<'_>,
+    ) -> Poll<io::Result<usize>> {
         ready!(EventedFd::poll_writable(&self.0, cx))?;
         match self.0.as_ref().send_to(buf, addr) {
             Err(e) => {
@@ -80,7 +85,7 @@ impl UdpSocket {
                     Poll::Ready(Err(e))
                 }
             }
-            Ok(_) => Poll::Ready(Ok(())),
+            Ok(size) => Poll::Ready(Ok(size)),
         }
     }
 
@@ -119,7 +124,7 @@ pub struct SendTo<'a> {
 impl<'a> Unpin for SendTo<'a> {}
 
 impl<'a> Future for SendTo<'a> {
-    type Output = io::Result<()>;
+    type Output = io::Result<usize>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         self.socket.async_send_to(self.buf, self.addr, cx)
@@ -140,7 +145,7 @@ mod tests {
         let buf = b"hello world";
         let socket = UdpSocket::bind(&addr).expect("could not create socket");
         let fut = async move {
-            socket.send_to(buf, addr).await?;
+            assert_eq!(buf.len(), socket.send_to(buf, addr).await?);
             let mut recvbuf = vec![0; 11];
             let (received, sender) = socket.recv_from(&mut *recvbuf).await?;
             assert_eq!(addr, sender);
