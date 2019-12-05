@@ -335,11 +335,6 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
   vk::DebugReportObjectTypeEXT object_type(
       static_cast<vk::DebugReportObjectTypeEXT>(object_type_in));
 
-  // TODO(SCN-704) remove this block
-  if (object_type == vk::DebugReportObjectTypeEXT::eDeviceMemory && message_code == 385878038) {
-    FXL_LOG(WARNING) << "Ignoring Vulkan Memory Type Error, see SCN-704";
-  }
-
 #define VK_DEBUG_REPORT_MESSAGE                                                                \
   pMessage << " (layer: " << pLayerPrefix << "  code: " << message_code                        \
            << "  object-type: " << vk::to_string(object_type) << "  object: " << object << ")" \
