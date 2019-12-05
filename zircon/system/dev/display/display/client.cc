@@ -2024,7 +2024,9 @@ void ClientProxy::SetOwnership(bool is_owner) {
 
     delete task;
   });
-  task->Post(controller_->loop().dispatcher());
+  if (task->Post(controller_->loop().dispatcher()) != ZX_OK) {
+    delete task;
+  }
 }
 
 void ClientProxy::OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
@@ -2048,7 +2050,9 @@ void ClientProxy::ReapplyConfig() {
 
     delete task;
   });
-  task->Post(controller_->loop().dispatcher());
+  if (task->Post(controller_->loop().dispatcher()) != ZX_OK) {
+    delete task;
+  }
 }
 
 zx_status_t ClientProxy::OnCaptureComplete() {

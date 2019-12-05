@@ -727,6 +727,9 @@ void Controller::HandleClientOwnershipChanges() {
 void Controller::OnClientDead(ClientProxy* client) {
   zxlogf(TRACE, "Client %d dead\n", client->id());
   fbl::AutoLock lock(mtx());
+  if (unbinding_) {
+    return;
+  }
   if (client == vc_client_) {
     vc_client_ = nullptr;
     vc_mode_ = fuchsia_hardware_display_VirtconMode_INACTIVE;
