@@ -183,6 +183,7 @@ fn render_fidl_interface(
         "interface_declarations": package_fidl_json.interface_declarations,
         "table_declarations": package_fidl_json.table_declarations,
         "struct_declarations": package_fidl_json.struct_declarations,
+        "type_alias_declarations": package_fidl_json.type_alias_declarations,
         "union_declarations": package_fidl_json.union_declarations,
         "xunion_declarations": package_fidl_json.xunion_declarations,
         "declaration_order": package_fidl_json.declaration_order,
@@ -288,6 +289,9 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> Result<FidlJsonPackageD
             package_fidl_json.interface_declarations.append(&mut fidl_json.interface_declarations);
             package_fidl_json.struct_declarations.append(&mut fidl_json.struct_declarations);
             package_fidl_json.table_declarations.append(&mut fidl_json.table_declarations);
+            package_fidl_json
+                .type_alias_declarations
+                .append(&mut fidl_json.type_alias_declarations);
             package_fidl_json.union_declarations.append(&mut fidl_json.union_declarations);
             package_fidl_json.xunion_declarations.append(&mut fidl_json.xunion_declarations);
             package_fidl_json.declaration_order.append(&mut fidl_json.declaration_order);
@@ -385,6 +389,7 @@ mod test {
                 enum_declarations: Vec::new(),
                 interface_declarations: Vec::new(),
                 table_declarations: Vec::new(),
+                type_alias_declarations: Vec::new(),
                 struct_declarations: Vec::new(),
                 union_declarations: Vec::new(),
                 xunion_declarations: Vec::new(),
@@ -404,6 +409,7 @@ mod test {
                 enum_declarations: Vec::new(),
                 interface_declarations: Vec::new(),
                 table_declarations: Vec::new(),
+                type_alias_declarations: Vec::new(),
                 struct_declarations: Vec::new(),
                 union_declarations: Vec::new(),
                 xunion_declarations: Vec::new(),
@@ -423,6 +429,7 @@ mod test {
                 enum_declarations: Vec::new(),
                 interface_declarations: Vec::new(),
                 table_declarations: Vec::new(),
+                type_alias_declarations: Vec::new(),
                 struct_declarations: Vec::new(),
                 union_declarations: Vec::new(),
                 xunion_declarations: Vec::new(),

@@ -33,6 +33,7 @@ pub struct FidlJson {
     pub enum_declarations: Vec<Value>,
     pub interface_declarations: Vec<Value>,
     pub table_declarations: Vec<Value>,
+    pub type_alias_declarations: Vec<Value>,
     pub struct_declarations: Vec<Value>,
     pub union_declarations: Vec<Value>,
     pub xunion_declarations: Vec<Value>,

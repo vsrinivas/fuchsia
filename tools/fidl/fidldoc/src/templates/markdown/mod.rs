@@ -66,6 +66,11 @@ impl MarkdownTemplate {
                 include_str!("partials/declarations/constants.hbs"),
                 "Failed to include constants",
             ),
+            (
+                "type_aliases",
+                include_str!("partials/declarations/type_aliases.hbs"),
+                "Failed to include type_aliases",
+            ),
         ] {
             handlebars.register_template_string(name, template).expect(expect);
         }
@@ -245,6 +250,11 @@ mod test {
                 include_str!("testdata/tables_declarations.md"),
                 include_str!("testdata/tables_declarations.json"),
                 "tables",
+            ),
+            (
+                include_str!("testdata/type_aliases_declarations.md"),
+                include_str!("testdata/type_aliases_declarations.json"),
+                "type_aliases",
             ),
             (
                 include_str!("testdata/unions_declarations.md"),

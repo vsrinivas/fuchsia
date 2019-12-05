@@ -1,0 +1,44 @@
+{
+  "version": "0.0.1",
+  "name": "fuchsia.ui.gfx",
+  "config": {
+    "title": "Fuchsia FIDLs",
+    "links": [
+      {
+        "label": "Fuchsia Developer",
+        "href": "https://fuchsia.googlesource.com"
+      }
+    ],
+    "source": {
+      "baseUrl": "https://fuchsia.googlesource.com/fuchsia/+/",
+      "package": "/",
+      "line": "#"
+    }
+  },
+  "tag": "master",
+  "type_alias_declarations": [
+    {
+      "name": "fuchsia.sys/component_url",
+      "location": {
+        "filename": "../../sdk/fidl/fuchsia.sys/types.fidl",
+        "line": 9,
+        "column": 7
+      },
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " A URL used to retrieve, launch, and load a component from a specified network\n location, or to identify a component when connecting to it.\n"
+        }
+      ],
+      "partial_type_ctor": {
+        "name": "string",
+        "args": [],
+        "nullable": false,
+        "maybe_size": {
+          "kind": "identifier",
+          "identifier": "fuchsia.sys/MAX_URL_LENGTH"
+        }
+      }
+    }
+  ]
+}

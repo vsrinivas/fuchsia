@@ -1,0 +1,19 @@
+{{#if type_alias_declarations}}
+## **TYPE ALIASES**
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr>
+    {{~ #each type_alias_declarations ~}}
+        <tr>
+            <td><a href="{{sl @root location}}">{{rpn name}}</a></td>
+            <td>
+                <code>{{~ partial_type_ctor.name ~}}</code>
+                {{~ #if partial_type_ctor.maybe_size.identifier ~}}
+                    [<code>{{~ pl partial_type_ctor.maybe_size.identifier @root.name ~}}</code>]
+                {{~ /if ~}}
+            </td>
+            <td>{{~> doc ~}}</td>
+        </tr>
+    {{~ /each ~}}
+</table>
+{{/if ~}}
