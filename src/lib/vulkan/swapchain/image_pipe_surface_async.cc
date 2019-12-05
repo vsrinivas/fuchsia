@@ -4,6 +4,7 @@
 
 #include "image_pipe_surface_async.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/trace/event.h>
 
@@ -38,8 +39,8 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   }
 
   // Duplicate tokens to pass around.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr scenic_token;
-  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), scenic_token.NewRequest());
+  auto scenic_token = std::make_unique<fuchsia::sysmem::BufferCollectionTokenSyncPtr>();
+  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), scenic_token->NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "Swapchain: Duplicate failed: %d\n", status);
     return false;
@@ -56,12 +57,12 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
     return false;
   }
 
-  // Pass |scenic_token| to Scenic to collect constraints.
-  image_pipe_->AddBufferCollection(++current_buffer_id_, std::move(scenic_token));
-  if (status != ZX_OK) {
-    fprintf(stderr, "Swapchain: AddBufferCollection failed: %d\n", status);
-    return false;
-  }
+  async::PostTask(loop_.dispatcher(), [this, scenic_token = std::move(scenic_token),
+                                       new_buffer_id = ++current_buffer_id_]() {
+    // Pass |scenic_token| to Scenic to collect constraints.
+    if (image_pipe_.is_bound())
+      image_pipe_->AddBufferCollection(new_buffer_id, scenic_token->Unbind());
+  });
 
   // Set swapchain constraints |vulkan_token|.
   VkBufferCollectionCreateInfoFUCHSIA import_info = {
@@ -192,8 +193,12 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
         .image_id = next_image_id(),
     };
     image_info_out->push_back(info);
-    std::lock_guard<std::mutex> lock(mutex_);
-    image_pipe_->AddImage(info.image_id, current_buffer_id_, i, image_format);
+    async::PostTask(loop_.dispatcher(),
+                    [this, info, current_buffer_id = current_buffer_id_, i, image_format]() {
+                      std::lock_guard<std::mutex> lock(mutex_);
+                      if (image_pipe_.is_bound())
+                        image_pipe_->AddImage(info.image_id, current_buffer_id, i, image_format);
+                    });
 
     image_id_to_buffer_id_.emplace(info.image_id, current_buffer_id_);
   }
@@ -205,7 +210,9 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   return true;
 }
 
-void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id) {
+// Disable thread safety analysis because it can't handle unique_lock.
+void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id)
+    __attribute__((no_thread_safety_analysis)) {
   std::unique_lock<std::mutex> lock(mutex_);
   for (auto iter = queue_.begin(); iter != queue_.end();) {
     if (iter->image_id == image_id) {
@@ -216,17 +223,24 @@ void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id) {
   }
   // TODO(SCN-1107) - remove this workaround
   static constexpr bool kUseWorkaround = true;
-  while (kUseWorkaround && present_pending_) {
+  while (kUseWorkaround && present_pending_ && !channel_closed_) {
     lock.unlock();
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     lock.lock();
   }
-  image_pipe_->RemoveImage(image_id);
+  async::PostTask(loop_.dispatcher(), [this, image_id]() {
+    if (image_pipe_.is_bound())
+      image_pipe_->RemoveImage(image_id);
+  });
 
   // We do not expect same image to be removed multiple times.
   auto buffer_it = buffer_counts_.find(image_id_to_buffer_id_[image_id]);
   if (--buffer_it->second == 0) {
-    image_pipe_->RemoveBufferCollection(buffer_it->first);
+    uint32_t collection_id = buffer_it->first;
+    async::PostTask(loop_.dispatcher(), [this, collection_id]() {
+      if (image_pipe_.is_bound())
+        image_pipe_->RemoveBufferCollection(collection_id);
+    });
   }
 }
 
@@ -236,7 +250,10 @@ void ImagePipeSurfaceAsync::PresentImage(uint32_t image_id, std::vector<zx::even
   TRACE_FLOW_BEGIN("gfx", "image_pipe_swapchain_to_present", image_id);
   queue_.push_back({image_id, std::move(acquire_fences), std::move(release_fences)});
   if (!present_pending_) {
-    PresentNextImageLocked();
+    async::PostTask(loop_.dispatcher(), [this]() {
+      std::lock_guard<std::mutex> lock(mutex_);
+      PresentNextImageLocked();
+    });
   }
 }
 
@@ -245,8 +262,8 @@ SupportedImageProperties& ImagePipeSurfaceAsync::GetSupportedImageProperties() {
 }
 
 void ImagePipeSurfaceAsync::PresentNextImageLocked() {
-  assert(!present_pending_);
-
+  if (present_pending_)
+    return;
   if (queue_.empty())
     return;
   TRACE_DURATION("gfx", "ImagePipeSurfaceAsync::PresentNextImageLocked");
@@ -260,14 +277,16 @@ void ImagePipeSurfaceAsync::PresentNextImageLocked() {
   auto& present = queue_.front();
   TRACE_FLOW_END("gfx", "image_pipe_swapchain_to_present", present.image_id);
   TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", present.image_id);
-  image_pipe_->PresentImage(present.image_id, presentation_time, std::move(present.acquire_fences),
-                            std::move(present.release_fences),
-                            // This callback happening in a separate thread.
-                            [this](fuchsia::images::PresentationInfo pinfo) {
-                              std::lock_guard<std::mutex> lock(mutex_);
-                              present_pending_ = false;
-                              PresentNextImageLocked();
-                            });
+  if (image_pipe_.is_bound()) {
+    image_pipe_->PresentImage(present.image_id, presentation_time,
+                              std::move(present.acquire_fences), std::move(present.release_fences),
+                              // Called on the async loop.
+                              [this](fuchsia::images::PresentationInfo pinfo) {
+                                std::lock_guard<std::mutex> lock(mutex_);
+                                present_pending_ = false;
+                                PresentNextImageLocked();
+                              });
+  }
 
   queue_.erase(queue_.begin());
   present_pending_ = true;
