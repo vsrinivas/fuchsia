@@ -6,6 +6,7 @@
 #define STORAGE_METRICS_STORAGE_METRICS_H_
 
 #include <fuchsia/storage/metrics/c/fidl.h>
+#include <fuchsia/storage/metrics/llcpp/fidl.h>
 #include <stdio.h>
 
 #include <atomic>
@@ -16,8 +17,8 @@
 
 namespace storage_metrics {
 constexpr zx_ticks_t kUninitializedMinimumLatency = std::numeric_limits<zx_ticks_t>::max();
-using CallStatFidl = fuchsia_storage_metrics_CallStat;
-using CallStatRawFidl = fuchsia_storage_metrics_CallStatRaw;
+using CallStatFidl = ::llcpp::fuchsia::storage::metrics::CallStat;
+using CallStatRawFidl = ::llcpp::fuchsia::storage::metrics::CallStatRaw;
 
 // Compares total_calls and bytes_transferred. Returns false if they don't match.
 bool RawCallStatEqual(const CallStatRawFidl& lhs, const CallStatRawFidl& rhs);
@@ -40,8 +41,14 @@ class CallStat {
   // Copies fields of fidl structure into corresponding fields of CallStat
   void CopyFromFidl(const CallStatFidl* istat);
 
+  // Copies fields of fidl structure into corresponding fields of CallStat
+  void CopyFromFidl(const fuchsia_storage_metrics_CallStat* istat);
+
   // Copies to fields of fidl structure the corresponding fields of CallStat
   void CopyToFidl(CallStatFidl* out) const;
+
+  // Copies to fields of fidl structure the corresponding fields of CallStat
+  void CopyToFidl(fuchsia_storage_metrics_CallStat* out) const;
 
   // Prints the fields of CallStat to file |stream|. If |success| is nullopt,
   // prints aggregate of successful and failed calls. If |success| is true,
@@ -81,8 +88,14 @@ class CallStat {
     // Copies fields of fidl structure into corresponding fields of CallStat
     void CopyFromRawFidl(const CallStatRawFidl* istat);
 
+    // Copies fields of fidl structure into corresponding fields of CallStat
+    void CopyFromRawFidl(const fuchsia_storage_metrics_CallStatRaw* istat);
+
     // Copies to fields of fidl structure the corresponding fields of CallStat
     void CopyToRawFidl(CallStatRawFidl* out) const;
+
+    // Copies to fields of fidl structure the corresponding fields of CallStat
+    void CopyToRawFidl(fuchsia_storage_metrics_CallStatRaw* out) const;
 
     void UpdateRawCallStat(zx_ticks_t delta_time, uint64_t bytes_transferred);
 

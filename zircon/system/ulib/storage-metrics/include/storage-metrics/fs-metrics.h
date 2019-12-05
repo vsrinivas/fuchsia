@@ -10,6 +10,7 @@
 
 #include <fbl/macros.h>
 #include <fuchsia/minfs/c/fidl.h>
+#include <fuchsia/minfs/llcpp/fidl.h>
 #include <storage-metrics/storage-metrics.h>
 
 namespace storage_metrics {
@@ -22,8 +23,12 @@ class FsMetrics : public Metrics {
   DISALLOW_COPY_ASSIGN_AND_MOVE(FsMetrics);
 
   FsMetrics() = default;
+  explicit FsMetrics(const ::llcpp::fuchsia::storage::metrics::FsMetrics* metrics);
   explicit FsMetrics(const fuchsia_storage_metrics_FsMetrics* metrics);
   ~FsMetrics() = default;
+
+  // Copies to fields of fidl structure the corresponding fields of FsMetrics.
+  void CopyToFidl(::llcpp::fuchsia::storage::metrics::FsMetrics* metrics) const;
 
   // Copies to fields of fidl structure the corresponding fields of FsMetrics.
   void CopyToFidl(fuchsia_storage_metrics_FsMetrics* metrics) const;

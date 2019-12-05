@@ -1,7 +1,6 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 zx_library("minfs") {
   host = true
   static = true
@@ -36,11 +35,10 @@ zx_library("minfs") {
     "$zx/system/ulib/fs:headers",
     "$zx/system/ulib/fs/journal:headers",
     "$zx/system/ulib/fs/transaction:headers",
-    "$zx/system/ulib/storage-metrics:headers",
-    "$zx/system/ulib/storage/operation:headers",
 
     # <minfs/bcache.h> has #include <fvm/client.h>.
     "$zx/system/ulib/fvm:headers",
+    "$zx/system/ulib/storage/operation:headers",
   ]
   deps = [
     "$zx/system/ulib/bitmap",
@@ -49,7 +47,6 @@ zx_library("minfs") {
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fs/transaction",
-    "$zx/system/ulib/storage-metrics",
     "$zx/system/ulib/storage/buffer",
     "$zx/system/ulib/storage/operation",
     "$zx/system/ulib/zircon-internal",
@@ -63,6 +60,7 @@ zx_library("minfs") {
       "$zx/system/fidl/fuchsia-minfs:llcpp.headers",
       "$zx/system/ulib/block-client",
       "$zx/system/ulib/fzl:headers",
+      "$zx/system/ulib/storage-metrics:headers",
       "$zx/system/ulib/zx:headers",
     ]
     deps += [
@@ -84,6 +82,7 @@ zx_library("minfs") {
       "$zx/system/ulib/fs/journal",
       "$zx/system/ulib/fvm",
       "$zx/system/ulib/fzl",
+      "$zx/system/ulib/storage-metrics",
       "$zx/system/ulib/storage/operation",
       "$zx/system/ulib/sync",
       "$zx/system/ulib/trace",

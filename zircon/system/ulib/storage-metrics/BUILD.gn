@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+assert(is_fuchsia, "Fuchsia-only library")
+
 zx_library("storage-metrics") {
   sdk = "source"
   sdk_headers = [ "storage-metrics/storage-metrics.h" ]
@@ -9,13 +11,22 @@ zx_library("storage-metrics") {
     "storage-metrics.cc",
   ]
   public_deps = [
+    "$zx/system/fidl/fuchsia-hardware-block:c.headers",
+    "$zx/system/fidl/fuchsia-hardware-block:llcpp.headers",
+    "$zx/system/fidl/fuchsia-minfs:c.headers",
+    "$zx/system/fidl/fuchsia-minfs:llcpp.headers",
+    "$zx/system/fidl/fuchsia-storage-metrics:c.headers",
+    "$zx/system/fidl/fuchsia-storage-metrics:llcpp.headers",
     "$zx/system/ulib/fbl:headers",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/fidl/fuchsia-hardware-block:c",
+    "$zx/system/fidl/fuchsia-hardware-block:llcpp",
     "$zx/system/fidl/fuchsia-minfs:c",
+    "$zx/system/fidl/fuchsia-minfs:llcpp",
     "$zx/system/fidl/fuchsia-storage-metrics:c",
+    "$zx/system/fidl/fuchsia-storage-metrics:llcpp",
     "$zx/system/ulib/fbl",
   ]
 }
