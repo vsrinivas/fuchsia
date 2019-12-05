@@ -168,7 +168,10 @@ impl ComponentManagerCapabilityProvider for SystemControllerCapabilityProvider {
 mod tests {
     use {
         crate::capability::ComponentManagerCapabilityProvider,
-        crate::model::{actions, testing::test_helpers::*, Binder},
+        crate::model::{
+            testing::test_helpers::{default_component_decl, ActionsTest, ComponentInfo},
+            Binder,
+        },
         crate::system_controller::SystemControllerCapabilityProvider,
         cm_rust::{ChildDecl, ComponentDecl},
         fidl::endpoints,
@@ -229,7 +232,7 @@ mod tests {
             ("c", ComponentDecl { ..default_component_decl() }),
             ("d", ComponentDecl { ..default_component_decl() }),
         ];
-        let test = actions::tests::ActionsTest::new("root", components, None).await;
+        let test = ActionsTest::new("root", components, None).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
         let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
         let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;

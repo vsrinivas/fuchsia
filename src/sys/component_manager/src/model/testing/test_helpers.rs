@@ -3,15 +3,30 @@
 // found in the LICENSE file.
 
 use {
-    crate::{model::testing::mocks::ControlMessage, model::testing::mocks::MockRunner, model::*},
-    cm_rust::ComponentDecl,
-    fidl::endpoints::ServerEnd,
+    crate::{
+        builtin_environment::BuiltinEnvironment,
+        klog,
+        model::{
+            hooks::HooksRegistration,
+            model::{ComponentManagerConfig, Model, ModelParams},
+            moniker::{AbsoluteMoniker, PartialMoniker},
+            realm::Realm,
+            resolver::ResolverRegistry,
+            testing::{
+                mocks::{ControlMessage, MockResolver, MockRunner},
+                test_hook::TestHook,
+            },
+        },
+        startup::Arguments,
+    },
+    cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
+    fidl::endpoints::{self, ServerEnd},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
         DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    files_async, fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys, files_async, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::TryStreamExt,
     std::collections::HashSet,
@@ -240,4 +255,106 @@ where
         },
     ));
     (entry, receiver)
+}
+
+/// A test harness for tests that wish to register or verify actions.
+pub struct ActionsTest {
+    pub model: Arc<Model>,
+    pub builtin_environment: Arc<BuiltinEnvironment>,
+    pub test_hook: TestHook,
+    pub realm_proxy: Option<fsys::RealmProxy>,
+    pub runner: Arc<MockRunner>,
+}
+
+impl ActionsTest {
+    pub async fn new(
+        root_component: &'static str,
+        components: Vec<(&'static str, ComponentDecl)>,
+        realm_moniker: Option<AbsoluteMoniker>,
+    ) -> Self {
+        Self::new_with_hooks(root_component, components, realm_moniker, vec![]).await
+    }
+
+    pub async fn new_with_hooks(
+        root_component: &'static str,
+        components: Vec<(&'static str, ComponentDecl)>,
+        realm_moniker: Option<AbsoluteMoniker>,
+        extra_hooks: Vec<HooksRegistration>,
+    ) -> Self {
+        // Ensure that kernel logging has been set up
+        let _ = klog::KernelLogger::init();
+
+        let mut resolver = ResolverRegistry::new();
+        let runner = Arc::new(MockRunner::new());
+
+        let mut mock_resolver = MockResolver::new();
+        for (name, decl) in &components {
+            mock_resolver.add_component(name, decl.clone());
+        }
+        resolver.register("test".to_string(), Box::new(mock_resolver));
+
+        let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
+        let model = Arc::new(Model::new(ModelParams {
+            root_component_url: format!("test:///{}", root_component),
+            root_resolver_registry: resolver,
+            elf_runner: runner.clone(),
+        }));
+        // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
+        // to start and stop in a certain lifecycle ordering. In particular, some unit
+        // tests will destroy component instances before binding to their parents.
+        let builtin_environment = Arc::new(
+            BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default())
+                .await
+                .expect("failed to set up builtin environment"),
+        );
+        let builtin_environment_inner = builtin_environment.clone();
+        let test_hook = TestHook::new();
+        model.root_realm.hooks.install(test_hook.hooks()).await;
+        model.root_realm.hooks.install(extra_hooks).await;
+
+        // Host framework service for root realm, if requested.
+        let realm_proxy = if let Some(realm_moniker) = realm_moniker {
+            let (realm_proxy, stream) =
+                endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
+            let realm = model
+                .look_up_realm(&realm_moniker)
+                .await
+                .expect(&format!("could not look up {}", realm_moniker));
+            fasync::spawn(async move {
+                builtin_environment_inner
+                    .realm_capability_host
+                    .serve(realm, stream)
+                    .await
+                    .expect("failed serving realm service");
+            });
+            Some(realm_proxy)
+        } else {
+            None
+        };
+
+        Self { model, builtin_environment, test_hook, realm_proxy, runner }
+    }
+
+    pub async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<Realm> {
+        self.model.look_up_realm(&moniker).await.expect(&format!("could not look up {}", moniker))
+    }
+
+    /// Add a dynamic child to the given collection, with the given name to the
+    /// realm that our proxy member variable corresponds to.
+    pub async fn create_dynamic_child(&self, coll: &str, name: &str) {
+        let mut collection_ref = fsys::CollectionRef { name: coll.to_string() };
+        let child_decl = ChildDecl {
+            name: name.to_string(),
+            url: format!("test:///{}", name),
+            startup: fsys::StartupMode::Lazy,
+        }
+        .native_into_fidl();
+        let res = self
+            .realm_proxy
+            .as_ref()
+            .expect("realm service not started")
+            .create_child(&mut collection_ref, child_decl)
+            .await;
+        res.expect("failed to create child").expect("failed to create child");
+    }
 }
