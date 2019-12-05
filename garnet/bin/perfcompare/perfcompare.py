@@ -200,11 +200,6 @@ class MultiBootDataset(object):
             yield SingleBootDataset(os.path.join(by_boot_dir, name))
 
 
-# TODO(fxb/35079): Inline this function into its call sites.
-def RawResultsFromDir(filename):
-    return SingleBootDataset(filename).GetProcessDatasets()
-
-
 # Takes a list of values that are collected from consecutive runs of a
 # test.  For libperftest tests, those are test runs within a process.
 #
@@ -259,15 +254,8 @@ def StatsFromBootDatasets(boot_datasets):
             for name, values in results_map.iteritems()}
 
 
-# TODO(fxb/35079): Inline this function into its call sites.
-def ResultsFromDirs(filenames):
-    return StatsFromBootDatasets([SingleBootDataset(filename)
-                                  for filename in filenames])
-
-
-# TODO(fxb/35079): Inline this function into its call sites.
-def ResultsFromDir(filename):
-    return StatsFromBootDatasets(MultiBootDataset(filename).GetBootDatasets())
+def StatsFromMultiBootDataset(multi_boot_dataset):
+    return StatsFromBootDatasets(multi_boot_dataset.GetBootDatasets())
 
 
 def FormatFactor(val_before, val_after):
@@ -305,8 +293,9 @@ def FormatTable(heading_row, rows, out_fh):
 
 
 def ComparePerf(args, out_fh):
-    results_maps = [ResultsFromDir(args.results_dir_before),
-                    ResultsFromDir(args.results_dir_after)]
+    results_maps = [
+        StatsFromMultiBootDataset(MultiBootDataset(dir_path))
+        for dir_path in [args.results_dir_before, args.results_dir_after]]
 
     # Set of all test case names, including those added or removed.
     labels = set(results_maps[0].iterkeys())
@@ -395,13 +384,15 @@ def MismatchRate(intervals):
 
 
 def ValidatePerfCompare(args, out_fh):
-    boot_count = len(args.results_dirs)
+    boot_datasets = [SingleBootDataset(filename)
+                     for filename in args.results_dirs]
+    boot_count = len(boot_datasets)
     group_size = args.group_size
     group_count = boot_count / group_size
 
     results_maps = [
-        ResultsFromDirs(
-            args.results_dirs[i * group_size : (i + 1) * group_size])
+        StatsFromBootDatasets(
+            boot_datasets[i * group_size : (i + 1) * group_size])
         for i in xrange(group_count)]
 
     # Group by test name (label).

@@ -210,16 +210,13 @@ class StatisticsTest(TempDirTestCase):
     def test_readback_of_data(self):
         data = [[[1, 2], [3, 4]],
                 [[5, 6], [7, 8]]]
-        dir_path = self.DirOfData(data)
-        self.assertEquals(len(os.listdir(os.path.join(dir_path, 'by_boot'))), 2)
-        boot_data = list(perfcompare.RawResultsFromDir(
-            os.path.join(dir_path, 'by_boot', 'boot000000')))
-        self.assertEquals(boot_data,
+        dataset = perfcompare.MultiBootDataset(self.DirOfData(data))
+        boot_datasets = list(dataset.GetBootDatasets())
+        self.assertEquals(len(boot_datasets), 2)
+        self.assertEquals(list(boot_datasets[0].GetProcessDatasets()),
                           [[self.ResultsDictForValues([1, 2])],
                            [self.ResultsDictForValues([3, 4])]])
-        boot_data = list(perfcompare.RawResultsFromDir(
-            os.path.join(dir_path, 'by_boot', 'boot000001')))
-        self.assertEquals(boot_data,
+        self.assertEquals(list(boot_datasets[1].GetProcessDatasets()),
                           [[self.ResultsDictForValues([5, 6])],
                            [self.ResultsDictForValues([7, 8])]])
 
@@ -238,15 +235,16 @@ class StatisticsTest(TempDirTestCase):
         for write_mode in ('w', 'w:gz'):
             tar_filename = self.TarFileOfDir(
                 os.path.join(dir_path, 'by_boot', 'boot000000'), write_mode)
-            boot_data = list(perfcompare.RawResultsFromDir(tar_filename))
-            self.assertEquals(boot_data,
+            boot_dataset = perfcompare.SingleBootDataset(tar_filename)
+            self.assertEquals(list(boot_dataset.GetProcessDatasets()),
                               [[self.ResultsDictForValues([1, 2])],
                                [self.ResultsDictForValues([3, 4])]])
 
     def CheckConfidenceInterval(self, data, interval_string):
         dir_path = self.DirOfData(data)
         test_name = 'example_suite: ExampleTest'
-        stats = perfcompare.ResultsFromDir(dir_path)[test_name]
+        stats = perfcompare.StatsFromMultiBootDataset(
+            perfcompare.MultiBootDataset(dir_path))[test_name]
         self.assertEquals(stats.FormatConfidenceInterval(), interval_string)
 
     # Test the CIs produced with variation at different levels of the
@@ -316,7 +314,8 @@ class PerfCompareTest(TempDirTestCase):
 
     def test_reading_results_from_dir(self):
         dir_path = self.ExampleDataDir()
-        results = perfcompare.ResultsFromDir(dir_path)
+        results = perfcompare.StatsFromMultiBootDataset(
+            perfcompare.MultiBootDataset(dir_path))
         test_name = 'fuchsia.example: ClockGetTimeExample'
         self.assertEquals(
             results[test_name].FormatConfidenceInterval(),
