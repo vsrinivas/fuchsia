@@ -381,9 +381,8 @@ if (toolchain_variant.with_shared) {
         # some targets (e.g. drivers) depend on it directly in the builder
         # toolchain.
         metadata = {
-          migrated_manifest_lines = [
-            "lib/$output_file_name=$rebased_output_file",
-          ]
+          migrated_manifest_lines =
+              [ "lib/$output_file_name=$rebased_output_file" ]
         }
       }
     }
@@ -997,7 +996,6 @@ template("variant_target") {
       deps = [
         ":${target_name}(${builder_toolchain})",
       ]
-      variant_out_dir = get_label_info(deps[0], "root_out_dir")
 
       full_output_name = target_invoker.output_name
       if (defined(target_invoker.output_extension) &&
@@ -1005,11 +1003,21 @@ template("variant_target") {
         full_output_name += ".${target_invoker.output_extension}"
       }
 
+      local_out_dir = root_out_dir
+      variant_out_dir = get_label_info(deps[0], "root_out_dir")
+      if (defined(target_invoker.output_dir)) {
+        local_out_dir = target_invoker.output_dir
+
+        # Output directories are supposed to be nested under root_out_dir.
+        relative_dir = rebase_path(local_out_dir, root_out_dir, root_build_dir)
+        variant_out_dir = "$variant_out_dir/$relative_dir"
+      }
+
       sources = [
         "$variant_out_dir/$full_output_name",
       ]
       outputs = [
-        "$root_out_dir/$full_output_name",
+        "$local_out_dir/$full_output_name",
       ]
     }
   }
