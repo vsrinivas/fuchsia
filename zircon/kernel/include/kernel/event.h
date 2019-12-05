@@ -22,17 +22,17 @@
 
 typedef struct event {
   int magic;
-  bool signaled;
+  zx_status_t result;  // INT_MAX means not signaled
   uint flags;
   wait_queue_t wait;
 } event_t;
 
 #define EVENT_FLAG_AUTOUNSIGNAL 1
 
-#define EVENT_INITIAL_VALUE(e, initial, _flags)                 \
-  {                                                             \
-    .magic = EVENT_MAGIC, .signaled = initial, .flags = _flags, \
-    .wait = WAIT_QUEUE_INITIAL_VALUE((e).wait),                 \
+#define EVENT_INITIAL_VALUE(e, initial, _flags)                                     \
+  {                                                                                 \
+    .magic = EVENT_MAGIC, .result = (initial) ? ZX_OK : INT_MAX, .flags = (_flags), \
+    .wait = WAIT_QUEUE_INITIAL_VALUE((e).wait),                                     \
   }
 
 // Rules for Events:
@@ -42,6 +42,8 @@ typedef struct event {
 // - Events without FLAG_AUTOUNSIGNAL:
 //   - Wake up any waiting threads when signaled.
 //   - Continue to do so (no threads will wait) until unsignaled.
+//   - Stores a single result value when first signaled. This result is
+//     returned to waiters and cleared when unsignaled.
 // - Events with FLAG_AUTOUNSIGNAL:
 //   - If one or more threads are waiting when signaled, one thread will
 //     be woken up and return.  The signaled state will not be set.
@@ -49,6 +51,7 @@ typedef struct event {
 //     in the signaled state until a thread attempts to wait (at which
 //     time it will unsignal atomicly and return immediately) or
 //     event_unsignal() is called.
+//   - Stores a single result value when signaled until a thread is woken.
 
 static inline void event_init(event_t* e, bool initial, uint flags) {
   *e = (event_t)EVENT_INITIAL_VALUE(*e, initial, flags);
@@ -79,7 +82,7 @@ zx_status_t event_unsignal(event_t*);
 
 static inline bool event_initialized(const event_t* e) { return e->magic == EVENT_MAGIC; }
 
-static inline bool event_signaled(const event_t* e) { return e->signaled; }
+static inline bool event_signaled(const event_t* e) { return e->result != INT_MAX; }
 
 // C++ wrapper. This should be waited on from only a single thread, but may be
 // signaled from many threads (Signal() is thread-safe).

@@ -49,7 +49,7 @@ void event_destroy(event_t* e) {
   DEBUG_ASSERT(e->magic == EVENT_MAGIC);
 
   e->magic = 0;
-  e->signaled = false;
+  e->result = INT_MAX;
   e->flags = 0;
   wait_queue_destroy(&e->wait);
 }
@@ -66,11 +66,13 @@ static zx_status_t event_wait_worker(event_t* e, const Deadline& deadline, bool 
 
   current_thread->interruptable = interruptable;
 
-  if (e->signaled) {
+  if (e->result != INT_MAX) {
+    ret = e->result;
+
     /* signaled, we're going to fall through */
     if (e->flags & EVENT_FLAG_AUTOUNSIGNAL) {
       /* autounsignal flag lets one thread fall through before unsignaling */
-      e->signaled = false;
+      e->result = INT_MAX;
     }
   } else {
     /* unsignaled, block here */
@@ -145,10 +147,11 @@ zx_status_t event_wait_with_mask(event_t* e, uint signal_mask) {
 static int event_signal_internal(event_t* e, bool reschedule, zx_status_t wait_result)
     TA_REQ(thread_lock) {
   DEBUG_ASSERT(e->magic == EVENT_MAGIC);
+  DEBUG_ASSERT(wait_result != INT_MAX);
 
   int wake_count = 0;
 
-  if (!e->signaled) {
+  if (e->result == INT_MAX) {
     if (e->flags & EVENT_FLAG_AUTOUNSIGNAL) {
       /* try to release one thread and leave unsignaled if successful */
       if ((wake_count = wait_queue_wake_one(&e->wait, reschedule, wait_result)) <= 0) {
@@ -157,11 +160,11 @@ static int event_signal_internal(event_t* e, bool reschedule, zx_status_t wait_r
          * signaled state and let the next call to event_wait
          * unsignal the event.
          */
-        e->signaled = true;
+        e->result = wait_result;
       }
     } else {
       /* release all threads and remain signaled */
-      e->signaled = true;
+      e->result = wait_result;
       wake_count = wait_queue_wake_all(&e->wait, reschedule, wait_result);
     }
   }
@@ -238,7 +241,7 @@ int event_signal_thread_locked(event_t* e) {
 zx_status_t event_unsignal(event_t* e) {
   DEBUG_ASSERT(e->magic == EVENT_MAGIC);
 
-  e->signaled = false;
+  e->result = INT_MAX;
 
   return ZX_OK;
 }
