@@ -160,9 +160,9 @@ def main():
     print('The following build file(s) will be converted:')
     for file in build_files:
         print(' - ' + os.path.relpath(file, FUCHSIA_ROOT))
-    go_ahead = raw_input('Proceed? (Y/n) ')
-    if go_ahead != 'Y':
-        print('Aborting')
+    go_ahead = raw_input('Proceed? (Y/n) ').lower().strip()
+    if go_ahead != 'y' and go_ahead != '':
+        print('User disagrees, exiting')
         return 0
 
     # Convert the build files.
