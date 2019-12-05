@@ -10,6 +10,7 @@
 
 #include <array>
 #include <optional>
+#include <pthread.h>
 #include <thread>
 
 #include <fbl/mutex.h>

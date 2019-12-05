@@ -4,6 +4,8 @@
 
 #include <block-client/cpp/block-group-registry.h>
 
+#include <pthread.h>
+
 #include <fbl/auto_lock.h>
 #include <zircon/assert.h>
 

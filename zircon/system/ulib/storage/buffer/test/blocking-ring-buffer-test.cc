@@ -5,6 +5,7 @@
 #include <storage/buffer/blocking-ring-buffer.h>
 
 #include <atomic>
+#include <sched.h>
 #include <thread>
 
 #include <storage/operation/unbuffered-operations-builder.h>
