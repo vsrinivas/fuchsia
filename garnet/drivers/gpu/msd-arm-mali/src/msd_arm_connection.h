@@ -115,7 +115,7 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   msd_connection_notification_callback_t callback_;
   void* token_ = {};
   std::shared_ptr<MsdArmAtom> outstanding_atoms_[256];
-  std::atomic<uint32_t> context_count_;
+  std::atomic<uint32_t> context_count_{0};
 };
 
 class MsdArmAbiConnection : public msd_connection_t {
