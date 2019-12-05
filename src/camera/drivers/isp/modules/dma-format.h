@@ -48,6 +48,7 @@ class DmaFormat {
   };
 
   explicit DmaFormat(const fuchsia_sysmem_ImageFormat& format);
+  explicit DmaFormat(const fuchsia_sysmem_ImageFormat_2& format);
   DmaFormat(uint32_t width, uint32_t height, PixelType pixel_format, bool flip_vertical);
 
   // Indicates whether the format produces a second plane of output.

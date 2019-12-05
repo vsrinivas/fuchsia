@@ -58,8 +58,23 @@ DmaFormat::PixelType ImageFormatToPixelType(const fuchsia_sysmem_ImageFormat& fo
   return DmaFormat::PixelType::INVALID;
 }
 
+DmaFormat::PixelType ImageFormatToPixelType(const fuchsia_sysmem_ImageFormat_2& format) {
+  switch (format.pixel_format.type) {
+    case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
+      return DmaFormat::PixelType::RGB32;
+    case fuchsia_sysmem_PixelFormatType_NV12:
+      return DmaFormat::PixelType::NV12_YUV;
+    case fuchsia_sysmem_PixelFormatType_YUY2:
+      return DmaFormat::PixelType::YUY2;
+  }
+  FX_LOG(ERROR, "", "pixel_format is incompatible with the ISP's PixelType\n");
+  return DmaFormat::PixelType::INVALID;
+}
+
 DmaFormat::DmaFormat(const fuchsia_sysmem_ImageFormat& format)
     : DmaFormat(format.width, format.height, ImageFormatToPixelType(format), false) {}
+DmaFormat::DmaFormat(const fuchsia_sysmem_ImageFormat_2& format)
+    : DmaFormat(format.coded_width, format.coded_height, ImageFormatToPixelType(format), false) {}
 
 DmaFormat::DmaFormat(uint32_t width, uint32_t height, PixelType pixel_format, bool flip_vertical)
     : width_(width),
@@ -71,7 +86,7 @@ DmaFormat::DmaFormat(uint32_t width, uint32_t height, PixelType pixel_format, bo
       secondary_plane_select_((pixel_format & 0xC0) >> kPlaneSelectShift) {
   ZX_ASSERT(pixel_format != PixelType::INVALID);
   // Disallow the NV12 and YV12 types in the constructor; they are only used
-  // internally.
+  // internally. Use NV12_YUV and YV12_YUV instead.
   ZX_ASSERT(pixel_format != PixelType::NV12);
   ZX_ASSERT(pixel_format != PixelType::YV12);
 }

@@ -7,7 +7,6 @@
 #include <lib/syslog/global.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -706,6 +705,13 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* 
                                                 const frame_rate_t* rate, stream_type_t type,
                                                 const output_stream_callback_t* stream,
                                                 output_stream_protocol_t* out_s) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ArmIspDevice::IspCreateOutputStream2(
+    const buffer_collection_info_2_t* buffer_collection, const image_format_2_t* image_format,
+    const frame_rate_t* rate, stream_type_t type, const output_stream_callback_t* stream,
+    output_stream_protocol_t* out_s) {
   ZX_ASSERT(stream && stream->frame_ready);
 
   if (!IsIspConfigInitialized()) {
@@ -740,7 +746,8 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* 
         return reinterpret_cast<ArmIspDevice*>(ctx)->ReleaseFrame(buffer_id,
                                                                   STREAM_TYPE_FULL_RESOLUTION);
       };
-      return full_resolution_dma_->Configure(*buffer_collection, frame_ready_callback);
+      return full_resolution_dma_->Configure(*buffer_collection, *image_format,
+                                             frame_ready_callback);
     case STREAM_TYPE_DOWNSCALED:
       out_s->ops->start = [](void* ctx) {
         return reinterpret_cast<ArmIspDevice*>(ctx)->StartStream(STREAM_TYPE_DOWNSCALED);
@@ -752,7 +759,7 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* 
         return reinterpret_cast<ArmIspDevice*>(ctx)->ReleaseFrame(buffer_id,
                                                                   STREAM_TYPE_DOWNSCALED);
       };
-      return downscaled_dma_->Configure(*buffer_collection, frame_ready_callback);
+      return downscaled_dma_->Configure(*buffer_collection, *image_format, frame_ready_callback);
     case STREAM_TYPE_SCALAR:
       return ZX_ERR_NOT_SUPPORTED;
     case STREAM_TYPE_INVALID:
@@ -760,13 +767,6 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* 
       return ZX_ERR_INVALID_ARGS;
   }
   return ZX_ERR_INVALID_ARGS;
-}
-
-zx_status_t ArmIspDevice::IspCreateOutputStream2(
-    const buffer_collection_info_2_t* buffer_collection, const image_format_2_t* image_format,
-    const frame_rate_t* rate, stream_type_t type, const output_stream_callback_t* stream,
-    output_stream_protocol_t* out_s) {
-  return ZX_ERR_NOT_SUPPORTED;
 }
 
 int ArmIspDevice::FrameProcessingThread() {

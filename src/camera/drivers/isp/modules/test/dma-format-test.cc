@@ -5,6 +5,7 @@
 #include "../dma-format.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/image-format/image_format.h>
 #include <stdint.h>
 
 #include <climits>  // PAGE_SIZE
@@ -92,22 +93,27 @@ TEST(DmaFormat, CreateWithoutSysmemInvalid) {
 }
 
 void TestSysmemType(fuchsia_sysmem_PixelFormatType pixel_type) {
-  fuchsia_sysmem_ImageFormat image_format = {
-      .width = kTestWidth,
-      .height = kTestHeight,
+  fuchsia_sysmem_PixelFormat pixel_format = {
+      .type = pixel_type,
+      .has_format_modifier = false,
+      .format_modifier = {.value = 0},
+  };
+  fuchsia_sysmem_ImageFormat_2 image_format = {
+      .pixel_format = pixel_format,
+      .coded_width = kTestWidth,
+      .coded_height = kTestHeight,
+      .bytes_per_row = ImageFormatStrideBytesPerWidthPixel(&pixel_format) * kTestWidth,
+      .display_width = kTestWidth,
+      .display_height = kTestHeight,
       .layers = pixel_type == fuchsia_sysmem_PixelFormatType_NV12 ? 2u : 1u,
-      .pixel_format =
-          {
-              .type = pixel_type,
-              .has_format_modifier = false,
-              .format_modifier = {.value = 0},
-          },
+
       .color_space =
           {
               .type = fuchsia_sysmem_ColorSpaceType_SRGB,
           },
-      // The planes data is not used currently:
-      .planes = {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};
+      .has_pixel_aspect_ratio = false,
+      .pixel_aspect_ratio_width = 1,
+      .pixel_aspect_ratio_height = 1};
 
   DmaFormat format(image_format);
   // Because of line and page alignment, the size should be >= width * height *

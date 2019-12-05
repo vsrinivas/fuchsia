@@ -47,6 +47,31 @@ class DmaManager {
       fuchsia_sysmem_BufferCollectionInfo buffer_collection,
       fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback);
 
+  // Initialize the format and buffers of the DMA Writer.
+  // |buffer_collection| contains the vmos to which the DMA will write.
+  // |image_format| provides the image format information that dictates
+  // the DMA's configuration.
+  // |frame_available_callback| will be called when the DMA is done writing
+  // to a buffer.
+  // A note on making multiple Configure() calls:
+  // It is possible to transition the DMA manager to another format by calling
+  // Configure() with a different buffer collection.  However, doing so will
+  // remove all knowledge of the locked status of frames of the previous
+  // BufferCollection.
+  // This has the following effects:
+  //  - Frames that are currently being written will be dropped.  Calls to
+  //  On*FrameWritten()
+  //    will only relate to frames written in the new BufferCollection.
+  //    TODO(CAM-54): Provide a way to dump the previous set of write locked
+  //    buffers.
+  //  - ReleaseFrame calls with currently used indices (relating to the old
+  //  BufferCollection)
+  //    will return errors.
+  zx_status_t Configure(
+      fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection,
+      const fuchsia_sysmem_ImageFormat_2& image_format,
+      fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback);
+
   static zx_status_t Create(const zx::bti& bti, const ddk::MmioView& isp_mmio_local,
                             Stream stream_type, std::unique_ptr<DmaManager>* out);
 

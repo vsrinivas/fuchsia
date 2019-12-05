@@ -123,25 +123,26 @@ void DmaManager::PrintStatus(ddk::MmioBuffer* mmio) {
 }
 
 zx_status_t DmaManager::Configure(
-    fuchsia_sysmem_BufferCollectionInfo buffer_collection,
+    fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection,
+    const fuchsia_sysmem_ImageFormat_2& image_format,
     fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback) {
-  current_format_ = DmaFormat(buffer_collection.format.image);
+  current_format_ = DmaFormat(image_format);
   // TODO(CAM-54): Provide a way to dump the previous set of write locked
   // buffers.
   write_locked_buffers_.clear();
 
-  if (current_format_->GetImageSize() > buffer_collection.vmo_size) {
-    FX_LOGF(ERROR, TAG, "Buffer size (%lu) is less than image size (%lu)!",
-            buffer_collection.vmo_size, current_format_->GetImageSize());
+  if (current_format_->GetImageSize() > buffer_collection.settings.buffer_settings.size_bytes) {
+    FX_LOGF(ERROR, TAG, "Buffer size (%lu) is less than image size (%lu)!\n",
+            buffer_collection.settings.buffer_settings.size_bytes, current_format_->GetImageSize());
     return ZX_ERR_INTERNAL;
   }
-  if (buffer_collection.buffer_count > countof(buffer_collection.vmos)) {
+  if (buffer_collection.buffer_count > countof(buffer_collection.buffers)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx::vmo vmos[countof(buffer_collection.vmos)];
+  zx::vmo vmos[countof(buffer_collection.buffers)];
   for (uint32_t i = 0; i < buffer_collection.buffer_count; ++i) {
-    vmos[i] = zx::vmo(buffer_collection.vmos[i]);
+    vmos[i] = zx::vmo(buffer_collection.buffers[i].vmo);
   }
   // Pin the buffers
   zx_status_t status = buffers_.Init(vmos, buffer_collection.buffer_count);
@@ -151,7 +152,7 @@ zx_status_t DmaManager::Configure(
   }
   // Release the vmos so that the buffer collection could be reused.
   for (uint32_t i = 0; i < buffer_collection.buffer_count; ++i) {
-    buffer_collection.vmos[i] = vmos[i].release();
+    buffer_collection.buffers[i].vmo = vmos[i].release();
   }
   status =
       buffers_.PinVmos(bti_, fzl::VmoPool::RequireContig::Yes, fzl::VmoPool::RequireLowMem::Yes);
@@ -161,6 +162,12 @@ zx_status_t DmaManager::Configure(
   }
   frame_available_callback_ = std::move(frame_available_callback);
   return ZX_OK;
+}
+
+zx_status_t DmaManager::Configure(
+    fuchsia_sysmem_BufferCollectionInfo buffer_collection,
+    fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback) {
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 void DmaManager::Enable() {

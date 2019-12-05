@@ -21,7 +21,6 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/camerahwaccel.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/isp.h>
 #include <fbl/mutex.h>

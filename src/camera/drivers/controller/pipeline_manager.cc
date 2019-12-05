@@ -84,11 +84,13 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
     FX_PLOGST(ERROR, TAG, result.error()) << "Failed to get buffers";
     return fit::error(result.error());
   }
-  fuchsia::sysmem::BufferCollectionInfo_2 buffers = std::move(result.value());
+  auto buffers = std::move(result.value());
 
-  // Temporary conversion since ISP protocol
-  // accepts only old bufferCollectionInfo
+  // Use a BufferCollectionHelper to manage the conversion
+  // between buffer collection representations.
   BufferCollectionHelper buffer_collection_helper(buffers);
+
+  auto image_format = ConvertHlcppImageFormat2toCType(&info->node.image_formats[0]);
 
   // Create Input Node
   auto processing_node = std::make_unique<camera::ProcessNode>(
@@ -107,8 +109,8 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
   }
 
   // TODO(braval): create FR or DS depending on what stream is requested
-  auto status = isp_.CreateOutputStream(
-      buffer_collection_helper.GetOldC(),
+  auto status = isp_.CreateOutputStream2(
+      buffer_collection_helper.GetC(), &image_format,
       reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate), isp_stream_type,
       processing_node->isp_callback(), isp_stream_protocol->protocol());
   if (status != ZX_OK) {

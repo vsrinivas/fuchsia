@@ -39,7 +39,7 @@ class DmaMgrTest : public zxtest::Test {
   static constexpr uint32_t kDownscaledHeight = 764;
   static constexpr uint32_t kDownscaledNumberOfBuffers = 8;
   static constexpr uint32_t kLocalBufferSize = (0x18e88 + 0x4000);
-
+  static constexpr uint32_t kPixelFormatType = fuchsia_sysmem_PixelFormatType_NV12;
   void SetUp() override {
     mmio_buffer_t local_mmio_buffer;
     local_mmio_buffer.vaddr = local_mmio_buffer_;
@@ -52,12 +52,18 @@ class DmaMgrTest : public zxtest::Test {
                                  DmaManager::Stream::FullResolution, &full_resolution_dma_));
     ASSERT_OK(DmaManager::Create(*zx::unowned_bti(bti_handle_), ddk::MmioView(local_mmio_buffer, 0),
                                  DmaManager::Stream::Downscaled, &downscaled_dma_));
-    zx_status_t status = CreateContiguousBufferCollectionInfo(
-        &full_resolution_buffer_collection_, bti_handle_, kFullResWidth, kFullResHeight,
-        kFullResNumberOfBuffers);
+
+    ASSERT_OK(camera::GetImageFormat(full_resolution_image_format_, kPixelFormatType, kFullResWidth,
+                                     kFullResHeight));
+    ASSERT_OK(camera::GetImageFormat(downscaled_image_format_, kPixelFormatType, kDownscaledWidth,
+                                     kDownscaledHeight));
+
+    zx_status_t status = CreateContiguousBufferCollectionInfo(full_resolution_buffer_collection_,
+                                                              full_resolution_image_format_,
+                                                              bti_handle_, kFullResNumberOfBuffers);
     ASSERT_OK(status);
-    status = CreateContiguousBufferCollectionInfo(&downscaled_buffer_collection_, bti_handle_,
-                                                  kDownscaledWidth, kDownscaledHeight,
+    status = CreateContiguousBufferCollectionInfo(downscaled_buffer_collection_,
+                                                  downscaled_image_format_, bti_handle_,
                                                   kDownscaledNumberOfBuffers);
     mmio_view_.emplace(local_mmio_buffer, 0);
     ASSERT_OK(status);
@@ -145,9 +151,10 @@ class DmaMgrTest : public zxtest::Test {
 
   void ConnectToStreams() {
     zx_status_t status = full_resolution_dma_->Configure(
-        full_resolution_buffer_collection_, fit::bind_member(this, &DmaMgrTest::FullResCallback));
+        full_resolution_buffer_collection_, full_resolution_image_format_,
+        fit::bind_member(this, &DmaMgrTest::FullResCallback));
     EXPECT_OK(status);
-    status = downscaled_dma_->Configure(downscaled_buffer_collection_,
+    status = downscaled_dma_->Configure(downscaled_buffer_collection_, downscaled_image_format_,
                                         fit::bind_member(this, &DmaMgrTest::DownScaledCallback));
     EXPECT_OK(status);
     full_resolution_dma_->Enable();
@@ -159,8 +166,8 @@ class DmaMgrTest : public zxtest::Test {
       fake_bti_destroy(bti_handle_);
     }
 
-    ASSERT_OK(DestroyContiguousBufferCollection(&full_resolution_buffer_collection_));
-    ASSERT_OK(DestroyContiguousBufferCollection(&downscaled_buffer_collection_));
+    ASSERT_OK(camera::DestroyContiguousBufferCollection(full_resolution_buffer_collection_));
+    ASSERT_OK(camera::DestroyContiguousBufferCollection(downscaled_buffer_collection_));
   }
 
   char local_mmio_buffer_[kLocalBufferSize];
@@ -168,8 +175,10 @@ class DmaMgrTest : public zxtest::Test {
   std::optional<ddk::MmioView> mmio_view_;
   std::unique_ptr<camera::DmaManager> full_resolution_dma_;
   std::unique_ptr<camera::DmaManager> downscaled_dma_;
-  fuchsia_sysmem_BufferCollectionInfo full_resolution_buffer_collection_;
-  fuchsia_sysmem_BufferCollectionInfo downscaled_buffer_collection_;
+  fuchsia_sysmem_BufferCollectionInfo_2 full_resolution_buffer_collection_;
+  fuchsia_sysmem_BufferCollectionInfo_2 downscaled_buffer_collection_;
+  fuchsia_sysmem_ImageFormat_2 full_resolution_image_format_;
+  fuchsia_sysmem_ImageFormat_2 downscaled_image_format_;
   std::vector<fuchsia_camera_FrameAvailableEvent> full_resolution_callbacks_;
   std::vector<fuchsia_camera_FrameAvailableEvent> downscaled_callbacks_;
 };
@@ -325,13 +334,13 @@ TEST_F(DmaMgrTest, MultipleConfigureCalls) {
 // Make sure callbacks can call back into the class.
 TEST_F(DmaMgrTest, CallbackReentrancy) {
   uint32_t buffer_id = kFullResNumberOfBuffers;
-  zx_status_t status =
-      full_resolution_dma_->Configure(full_resolution_buffer_collection_,
-                                      [this, &buffer_id](fuchsia_camera_FrameAvailableEvent event) {
-                                        buffer_id = event.buffer_id;
-                                        full_resolution_dma_->Disable();
-                                        ASSERT_FALSE(full_resolution_dma_->enabled());
-                                      });
+  zx_status_t status = full_resolution_dma_->Configure(
+      full_resolution_buffer_collection_, full_resolution_image_format_,
+      [this, &buffer_id](fuchsia_camera_FrameAvailableEvent event) {
+        buffer_id = event.buffer_id;
+        full_resolution_dma_->Disable();
+        ASSERT_FALSE(full_resolution_dma_->enabled());
+      });
   EXPECT_OK(status);
   full_resolution_dma_->Enable();
   ASSERT_TRUE(full_resolution_dma_->enabled());

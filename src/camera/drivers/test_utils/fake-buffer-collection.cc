@@ -16,6 +16,7 @@
 
 #include <src/camera/drivers/isp/modules/dma-format.h>
 
+#include "fbl/algorithm.h"
 #include "zircon/system/fidl/fuchsia-sysmem/gen/llcpp/include/fuchsia/sysmem/llcpp/fidl.h"
 
 namespace camera {
@@ -27,6 +28,8 @@ constexpr auto TAG = "FakeBufferCollection";
 
 // Utility to ensure log messages will appear during testing.
 bool kEnableLogsInBufferCollections = false;
+
+const uint32_t kIspLineAlignment = 128;  // Required alignment of ISP buffers
 
 void InitFakeBufferCollectionLogging() {
   if (kEnableLogsInBufferCollections) {
@@ -113,8 +116,12 @@ zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format
       .pixel_aspect_ratio_height = 1,
   };
 
-  image_format.bytes_per_row =
-      width * ImageFormatStrideBytesPerWidthPixel(&image_format.pixel_format);
+  // Round coded_width up to a multiple of 128 to meet the ISP alignment restrictions.
+  // TODO(jsasinowski) Determine if this should be handled in the buffer negotiation elsewhere.
+  // For now, plan to move the alignment to a parameter (?)
+  image_format.bytes_per_row = fbl::round_up(
+      image_format.coded_width * ImageFormatStrideBytesPerWidthPixel(&image_format.pixel_format),
+      kIspLineAlignment);
 
   return ZX_OK;
 }
