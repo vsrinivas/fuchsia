@@ -13,24 +13,28 @@ group("flutter") {
 
 group("flutter_aot") {
   public_deps = [
+    "//src/lib/icu/tzdata:icu_tzdata_for_flutter_aot_runner",
     "//topaz/runtime/flutter_runner:flutter_aot_runner",
   ]
 }
 
 group("flutter_aot_product") {
   public_deps = [
+    "//src/lib/icu/tzdata:icu_tzdata_for_flutter_aot_product_runner",
     "//topaz/runtime/flutter_runner:flutter_aot_product_runner",
   ]
 }
 
 group("flutter_jit") {
   public_deps = [
+    "//src/lib/icu/tzdata:icu_tzdata_for_flutter_jit_runner",
     "//topaz/runtime/flutter_runner:flutter_jit_runner",
   ]
 }
 
 group("flutter_jit_product") {
   public_deps = [
+    "//src/lib/icu/tzdata:icu_tzdata_for_flutter_jit_product_runner",
     "//topaz/runtime/flutter_runner:flutter_jit_product_runner",
   ]
 }

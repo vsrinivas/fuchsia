@@ -13,24 +13,28 @@ group("dart") {
 
 group("dart_aot") {
   public_deps = [
+    "//src/lib/icu/tzdata:icu_tzdata_for_dart_aot_runner",
     "//topaz/runtime/dart_runner:dart_aot_runner",
   ]
 }
 
 group("dart_aot_product") {
   public_deps = [
+    "//src/lib/icu/tzdata:icu_tzdata_for_dart_aot_product_runner",
     "//topaz/runtime/dart_runner:dart_aot_product_runner",
   ]
 }
 
 group("dart_jit") {
   public_deps = [
+    "//src/lib/icu/tzdata:icu_tzdata_for_dart_jit_runner",
     "//topaz/runtime/dart_runner:dart_jit_runner",
   ]
 }
 
 group("dart_jit_product") {
   public_deps = [
+    "//src/lib/icu/tzdata:icu_tzdata_for_dart_jit_product_runner",
     "//topaz/runtime/dart_runner:dart_jit_product_runner",
   ]
 }
