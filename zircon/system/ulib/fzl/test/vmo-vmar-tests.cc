@@ -309,6 +309,24 @@ bool vmo_map_sub_sub_vmar_test() {
 bool vmo_mapper_move_test() {
   BEGIN_TEST;
 
+  // Start by creating a sub-vmar to use during the test.  This is important for two reasons.
+  //
+  // 1) We want to make sure that VmarManagers are properly moved between
+  //    VmoMapper instances.
+  // 2) If we perform this test by mapping in the root VMAR, then there is a
+  //    (very small) risk that during the final "is-it-unmapped" test that
+  //    mappings performed for the thread created for the death-test (the stack
+  //    and TLS mappings) might alias with the location where the test VMAR
+  //    mapping had previously been.  This can cause the test to attempt to
+  //    probe a part of the address space which _should_ have been unmapped, but
+  //    succeed anyway because it ends up poking something like the thread's
+  //    stack.  By performing the mappings in a sub-vmar, we can be certain that
+  //    we have reserved a portion of the address space for our test mappings
+  //    which cannot conflict with mappings made for threads in the root VMAR.
+  RefPtr<VmarManager> sub_vmar;
+  sub_vmar = VmarManager::Create(kSubVmarTestSize);
+  ASSERT_NONNULL(sub_vmar);
+
   constexpr uint32_t ACCESS_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   void* addr;
   size_t size;
@@ -316,26 +334,31 @@ bool vmo_mapper_move_test() {
     // Create two mappers, and make sure neither has mapped anything.
     VmoMapper mapper1, mapper2;
 
+    ASSERT_NULL(mapper1.manager().get());
     ASSERT_NULL(mapper1.start());
     ASSERT_EQ(mapper1.size(), 0);
+    ASSERT_NULL(mapper2.manager().get());
     ASSERT_NULL(mapper2.start());
     ASSERT_EQ(mapper2.size(), 0);
 
     // Create and map a page in mapper 1, make sure we can probe it.
     zx_status_t res;
-    res = mapper1.CreateAndMap(ZX_PAGE_SIZE, ACCESS_FLAGS);
+    res = mapper1.CreateAndMap(ZX_PAGE_SIZE, ACCESS_FLAGS, sub_vmar);
     addr = mapper1.start();
     size = mapper1.size();
 
     ASSERT_EQ(res, ZX_OK);
+    ASSERT_EQ(sub_vmar.get(), mapper1.manager().get());
     ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
 
     // Move the mapping from mapper1 into mapper2 using assignment.  Make sure
     // the region is still mapped and has not moved in our address space.
     mapper2 = std::move(mapper1);
 
+    ASSERT_NULL(mapper1.manager().get());
     ASSERT_NULL(mapper1.start());
     ASSERT_EQ(mapper1.size(), 0);
+    ASSERT_EQ(sub_vmar.get(), mapper2.manager().get());
     ASSERT_EQ(mapper2.start(), addr);
     ASSERT_EQ(mapper2.size(), size);
     ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
@@ -343,14 +366,16 @@ bool vmo_mapper_move_test() {
     // Now do the same thing, but this time move using construction.
     VmoMapper mapper3(std::move(mapper2));
 
+    ASSERT_NULL(mapper2.manager().get());
     ASSERT_NULL(mapper2.start());
     ASSERT_EQ(mapper2.size(), 0);
+    ASSERT_EQ(sub_vmar.get(), mapper3.manager().get());
     ASSERT_EQ(mapper3.start(), addr);
     ASSERT_EQ(mapper3.size(), size);
     ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
 
     // Map a new region into mapper1, make sure it is OK.
-    res = mapper1.CreateAndMap(ZX_PAGE_SIZE, ACCESS_FLAGS);
+    res = mapper1.CreateAndMap(ZX_PAGE_SIZE, ACCESS_FLAGS, sub_vmar);
     void* second_addr = mapper1.start();
     size_t second_size = mapper1.size();
 
@@ -362,8 +387,10 @@ bool vmo_mapper_move_test() {
     // mapped and are properly moved.
     mapper1 = std::move(mapper3);
 
+    ASSERT_NULL(mapper3.manager().get());
     ASSERT_NULL(mapper3.start());
     ASSERT_EQ(mapper3.size(), 0);
+    ASSERT_EQ(sub_vmar.get(), mapper1.manager().get());
     ASSERT_EQ(mapper1.start(), addr);
     ASSERT_EQ(mapper1.size(), size);
     ASSERT_TRUE(vmo_probe::probe_verify_region(addr, size, ACCESS_FLAGS));
