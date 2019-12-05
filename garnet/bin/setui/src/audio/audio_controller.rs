@@ -36,7 +36,6 @@ fn get_streams_array_from_map(
 pub fn spawn_audio_controller(
     service_context_handle: Arc<RwLock<ServiceContext>>,
     storage: Arc<Mutex<DeviceStorage<AudioInfo>>>,
-    pair_media_and_system_agent: bool,
 ) -> futures::channel::mpsc::UnboundedSender<Command> {
     let (audio_handler_tx, mut audio_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
@@ -104,7 +103,8 @@ pub fn spawn_audio_controller(
                         *notifier_lock.write() = None;
                     }
                 },
-                Command::HandleRequest(request, responder) => {
+                Command::HandleRequest(request, responder) =>
+                {
                     #[allow(unreachable_patterns)]
                     match request {
                         SettingRequest::SetVolume(volume) => {
@@ -119,28 +119,6 @@ pub fn spawn_audio_controller(
                             };
 
                             update_volume_stream(&volume, &mut stream_volume_controls).await;
-
-                            if pair_media_and_system_agent {
-                                // Check to see if |volume| contains the media stream and not
-                                // the system agent stream. If so, then set the system agent
-                                // stream's volume to the same as the media.
-                                let media_stream =
-                                    volume.iter().find(|x| x.stream_type == AudioStreamType::Media);
-                                let contains_system_stream = volume
-                                    .iter()
-                                    .find(|x| x.stream_type == AudioStreamType::SystemAgent)
-                                    != None;
-                                if let Some(media_stream_value) = media_stream {
-                                    if !contains_system_stream {
-                                        let mut system_stream = media_stream_value.clone();
-                                        system_stream.stream_type = AudioStreamType::SystemAgent;
-                                        let streams = &vec![system_stream];
-                                        update_volume_stream(&streams, &mut stream_volume_controls)
-                                            .await;
-                                    }
-                                }
-                            }
-
                             stored_value.streams =
                                 get_streams_array_from_map(&stream_volume_controls);
                             persist_audio_info(stored_value.clone(), storage.clone()).await;

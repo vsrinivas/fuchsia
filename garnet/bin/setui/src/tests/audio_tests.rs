@@ -4,18 +4,15 @@
 
 #[cfg(test)]
 use {
-    crate::audio::{default_audio_info, spawn_audio_controller, spawn_audio_fidl_handler},
+    crate::audio::default_audio_info,
     crate::create_fidl_service,
     crate::fidl_clone::FIDLClone,
-    crate::registry::base::Registry,
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::{DeviceStorage, DeviceStorageFactory},
-    crate::registry::registry_impl::RegistryImpl,
     crate::service_context::ServiceContext,
     crate::switchboard::base::{
-        AudioInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingAction, SettingType,
+        AudioInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
     },
-    crate::switchboard::switchboard_impl::SwitchboardImpl,
     crate::tests::fakes::audio_core_service::AudioCoreService,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
@@ -23,7 +20,7 @@ use {
     fidl_fuchsia_settings::*,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync,
-    fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
+    fuchsia_component::server::ServiceFs,
     futures::lock::Mutex,
     futures::prelude::*,
     parking_lot::RwLock,
@@ -107,44 +104,6 @@ fn create_services() -> (
     service_registry.write().register_service(input_device_registry_service_handle.clone());
 
     return (service_registry, audio_core_service_handle, input_device_registry_service_handle);
-}
-
-// This function is created so that we can manipulate the |pair_media_and_system_agent| flag.
-// TODO(go/fxb/37493): Remove this function and the related tests when the hack is removed.
-fn create_audio_fidl_service<'a>(
-    mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
-    service_registry_handle: Arc<RwLock<ServiceRegistry>>,
-    storage: Arc<Mutex<DeviceStorage<AudioInfo>>>,
-    pair_media_and_system_agent: bool,
-) {
-    let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
-
-    // Creates switchboard, handed to interface implementations to send messages
-    // to handlers.
-    let (switchboard_handle, event_tx) = SwitchboardImpl::create(action_tx);
-
-    let service_context_handle = Arc::new(RwLock::new(ServiceContext::new(
-        ServiceRegistry::serve(service_registry_handle.clone()),
-    )));
-
-    // Creates registry, used to register handlers for setting types.
-    let registry_handle = RegistryImpl::create(event_tx, action_rx);
-    registry_handle
-        .write()
-        .register(
-            SettingType::Audio,
-            spawn_audio_controller(
-                service_context_handle.clone(),
-                storage,
-                pair_media_and_system_agent,
-            ),
-        )
-        .unwrap();
-
-    let switchboard_handle_clone = switchboard_handle.clone();
-    service_dir.add_fidl_service(move |stream: AudioRequestStream| {
-        spawn_audio_fidl_handler(switchboard_handle_clone.clone(), stream);
-    });
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -286,188 +245,6 @@ async fn test_bringup_without_audio_core() {
         settings.clone(),
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
-}
-
-// Test to ensure that when |pair_media_and_system_agent| is enabled, setting the media volume
-// without a system agent volume will change the system agent volume.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_audio_pair_media_system() {
-    let mut changed_system_stream = CHANGED_MEDIA_STREAM.clone();
-    changed_system_stream.stream_type = AudioStreamType::SystemAgent;
-
-    let (service_registry, audio_core_service_handle, _) = create_services();
-
-    let mut fs = ServiceFs::new();
-
-    let storage_factory = Box::new(InMemoryStorageFactory::create());
-    let store = create_storage(&storage_factory).await;
-
-    create_audio_fidl_service(fs.root_dir(), service_registry.clone(), store.clone(), true);
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
-
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(
-        settings.clone(),
-        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
-    );
-    verify_audio_stream(
-        settings.clone(),
-        AudioStreamSettings::from(get_default_stream(AudioStreamType::SystemAgent)),
-    );
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
-
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
-    verify_audio_stream(settings.clone(), AudioStreamSettings::from(changed_system_stream));
-
-    assert_eq!(
-        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::Media).unwrap()
-    );
-    assert_eq!(
-        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent).unwrap()
-    );
-
-    // Check to make sure value wrote out to store correctly.
-    let stored_streams: [AudioStream; 5];
-    {
-        let mut store_lock = store.lock().await;
-        stored_streams = store_lock.get().await.streams;
-    }
-    verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
-    verify_contains_stream(&stored_streams, &changed_system_stream);
-}
-
-// Test to ensure that when |pair_media_and_system_agent| is disabled, setting the media volume will
-// not affect the system agent volume.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_audio_pair_media_system_off() {
-    let (service_registry, audio_core_service_handle, _) = create_services();
-
-    let mut fs = ServiceFs::new();
-
-    let storage_factory = Box::new(InMemoryStorageFactory::create());
-    let store = create_storage(&storage_factory).await;
-
-    create_audio_fidl_service(fs.root_dir(), service_registry.clone(), store.clone(), false);
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
-
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(
-        settings.clone(),
-        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
-    );
-    verify_audio_stream(
-        settings.clone(),
-        AudioStreamSettings::from(get_default_stream(AudioStreamType::SystemAgent)),
-    );
-
-    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
-
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
-    verify_audio_stream(
-        settings.clone(),
-        AudioStreamSettings::from(get_default_stream(AudioStreamType::SystemAgent)),
-    );
-
-    assert_eq!(
-        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::Media).unwrap()
-    );
-
-    let default_system_stream = get_default_stream(AudioStreamType::SystemAgent);
-    assert_eq!(
-        (default_system_stream.user_volume_level, default_system_stream.user_volume_muted),
-        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent).unwrap()
-    );
-
-    // Check to make sure value wrote out to store correctly.
-    let stored_streams: [AudioStream; 5];
-    {
-        let mut store_lock = store.lock().await;
-        stored_streams = store_lock.get().await.streams;
-    }
-    verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
-    verify_contains_stream(&stored_streams, &get_default_stream(AudioStreamType::SystemAgent));
-}
-
-// Test to ensure that when |pair_media_and_system_agent| is enabled, setting the media volume
-// with the system agent volume will not set to the system agent volume to the media volume.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_audio_pair_media_system_with_system_agent_change() {
-    let (service_registry, audio_core_service_handle, _) = create_services();
-
-    let mut fs = ServiceFs::new();
-
-    let storage_factory = Box::new(InMemoryStorageFactory::create());
-    let store = create_storage(&storage_factory).await;
-
-    create_audio_fidl_service(fs.root_dir(), service_registry.clone(), store.clone(), true);
-
-    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
-    fasync::spawn(fs.collect());
-
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
-
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(
-        settings.clone(),
-        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
-    );
-    verify_audio_stream(
-        settings.clone(),
-        AudioStreamSettings::from(get_default_stream(AudioStreamType::SystemAgent)),
-    );
-
-    const CHANGED_SYSTEM_LEVEL: f32 = 0.2;
-    const CHANGED_SYSTEM_MUTED: bool = false;
-    const CHANGED_SYSTEM_STREAM: AudioStream = AudioStream {
-        stream_type: AudioStreamType::SystemAgent,
-        source: AudioSettingSource::User,
-        user_volume_level: CHANGED_SYSTEM_LEVEL,
-        user_volume_muted: CHANGED_SYSTEM_MUTED,
-    };
-    let changed_system_stream_settings = AudioStreamSettings::from(CHANGED_SYSTEM_STREAM);
-
-    set_volume(
-        &audio_proxy,
-        vec![CHANGED_MEDIA_STREAM_SETTINGS, changed_system_stream_settings.clone()],
-    )
-    .await;
-
-    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
-    verify_audio_stream(settings.clone(), changed_system_stream_settings);
-
-    assert_eq!(
-        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
-        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::Media).unwrap()
-    );
-
-    assert_eq!(
-        (CHANGED_SYSTEM_LEVEL, CHANGED_SYSTEM_MUTED),
-        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent).unwrap()
-    );
-
-    // Check to make sure value wrote out to store correctly.
-    let stored_streams: [AudioStream; 5];
-    {
-        let mut store_lock = store.lock().await;
-        stored_streams = store_lock.get().await.streams;
-    }
-    verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
-    verify_contains_stream(&stored_streams, &CHANGED_SYSTEM_STREAM);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
