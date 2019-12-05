@@ -5,8 +5,8 @@
 group("uapp") {
   testonly = true
   deps = [
-    "$zx/system/ulib/driver-info:driverinfo",
     "$zx/system/dev/test/ddk-schedule-work:ddk-schedule-work-perf",
+    "$zx/system/ulib/driver-info:driverinfo",
     "audio",
     "backlight",
     "biotime",
@@ -15,6 +15,7 @@ group("uapp") {
     "blobfs-load-generator",
     "clock",
     "clock:clkctl",
+    "cpuctl",
     "crasher",
     "dd",
     "df",
