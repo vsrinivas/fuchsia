@@ -43,11 +43,16 @@ std::unique_ptr<Value> RawType::Decode(MessageDecoder* decoder, uint64_t offset)
 std::unique_ptr<Value> StringType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   uint64_t string_length = 0;
   decoder->GetValueAt(offset, &string_length);
-  if (offset + string_length > decoder->num_bytes()) {
+  // Here, we test two conditions:
+  //  - the string is a little bit too big and there is not enough data remaining.
+  //  - the string is huge (typically max ulong) and wouldn't fit in the whole buffer.
+  //    In that case, the first condition is not triggered because adding offset to this
+  //    huge number overflows and creates a small number.
+  if ((offset + string_length > decoder->num_bytes()) || (string_length > decoder->num_bytes())) {
     decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
                         << ": Not enough data for string (missing "
                         << (offset + string_length - decoder->num_bytes()) << " bytes)\n";
-    return std::make_unique<StringValue>(this, string_length);
+    return std::make_unique<StringValue>(this, 0);
   }
   offset += sizeof(string_length);
 

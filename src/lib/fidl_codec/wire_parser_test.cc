@@ -366,6 +366,9 @@ TEST_SINGLE(String, String, s, string, "Hello World!")
 TEST_DECODE_WIRE_PATCHED(StringBadSize, String, 16, 100, "{\"s\":\"(invalid)\"}",
                          "{ s: #gre#string#rst# = #red#invalid#rst# }", "Hello World!")
 
+TEST_DECODE_WIRE_PATCHED(StringHugeSize, String, 16, ULLONG_MAX, "{\"s\":\"(invalid)\"}",
+                         "{ s: #gre#string#rst# = #red#invalid#rst# }", "Hello World!")
+
 TEST_SINGLE(BoolTrue, Bool, b, bool, true)
 TEST_SINGLE(BoolFalse, Bool, b, bool, false)
 
