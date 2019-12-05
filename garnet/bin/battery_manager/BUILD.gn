@@ -13,6 +13,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/fidl_fuchsia_power_ext",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
@@ -24,6 +25,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//zircon/system/fidl/fuchsia-hardware-power:fuchsia-hardware-power-rustc",
   ]
@@ -44,9 +46,9 @@ package("battery_manager") {
   ]
 }
 
-unittest_package("battery_manager_tests") {
+test_package("battery_manager_tests") {
   deps = [
-    ":bin_test_strip_copy",
+    ":bin_test",
   ]
 
   tests = [

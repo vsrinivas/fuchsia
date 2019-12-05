@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/battery_manager_bin_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/power"
+        ],
+        "services": [
+            "fuchsia.hardware.power.Source",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

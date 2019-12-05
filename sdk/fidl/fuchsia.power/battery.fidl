@@ -14,7 +14,7 @@ enum BatteryStatus {
     OK = 1;
     /// battery present, but not available (e.g. disabled)
     NOT_AVAILABLE = 2;
-    /// battery not present (e.g. removed)
+    /// battery not present (e.g. removed or no battery)
     NOT_PRESENT = 3;
 };
 
@@ -38,10 +38,11 @@ enum ChargeSource {
 
 /// The general status of the battery level.
 enum LevelStatus {
-    OK = 0;
-    WARNING = 1; // OEM defined signal for initial notification UI to charge
-    LOW = 2; // OEM defined at around 5% of capacity (sufficient for S1-S4)
-    CRITICAL = 3; // no longer capable of supplying power, emergency shutdown
+    UNKNOWN = 0;
+    OK = 1;
+    WARNING = 2; // OEM defined signal for initial notification UI to charge
+    LOW = 3; // OEM defined at around 5% of capacity (sufficient for S1-S4)
+    CRITICAL = 4; // no longer capable of supplying power, emergency shutdown
 };
 
 /// The general status related to the overall health of the battery.
@@ -80,7 +81,8 @@ table BatteryInfo {
     /// NONE (not charging) or UNKNOWN.
     3: ChargeSource charge_source;
 
-    /// Battery level in percentage
+    /// Battery level in percentage. Level percent is only available if
+    /// level status is known.
     4: float32 level_percent;
 
     /// Battery level as a general status, including low and critical

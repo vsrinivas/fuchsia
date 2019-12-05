@@ -8,22 +8,21 @@ mod power;
 use crate::battery_manager::BatteryManager;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_power as fpower;
+use fidl_fuchsia_power_ext::CloneExt;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info};
+use fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info, fx_vlog};
 use futures::prelude::*;
-use parking_lot::Mutex;
-use std::convert::Into;
 use std::sync::Arc;
 
 static LOG_TAG: &str = "battery_manager";
 static LOG_VERBOSITY: i32 = 1;
 
 struct BatteryManagerServer {
-    manager: Arc<Mutex<BatteryManager>>,
+    manager: Arc<BatteryManager>,
 }
 
-fn spawn_battery_manager(
+fn spawn_battery_manager_async(
     bms: BatteryManagerServer,
     mut stream: fpower::BatteryManagerRequestStream,
 ) {
@@ -32,11 +31,13 @@ fn spawn_battery_manager(
             while let Some(req) = (stream.try_next()).await? {
                 match req {
                     fpower::BatteryManagerRequest::GetBatteryInfo { responder, .. } => {
-                        let battery_manager = bms.manager.lock();
-                        fx_log_info!("BatteryManagerServer handle GetBatteryInfo request");
-                        if let Err(e) =
-                            responder.send(battery_manager.get_battery_info_copy().into())
-                        {
+                        let info = bms.manager.get_battery_info_copy();
+                        fx_vlog!(
+                            LOG_VERBOSITY,
+                            "::bms:: handle GetBatteryInfo request with info: {:?}",
+                            &info
+                        );
+                        if let Err(e) = responder.send(info.clone()) {
                             fx_log_err!("failed to respond with battery info {:?}", e);
                         }
                     }
@@ -47,17 +48,23 @@ fn spawn_battery_manager(
                             }
                             Ok(w) => {
                                 let battery_manager = bms.manager.clone();
-                                fx_log_info!(
-                                    "BatterManagerServer handle Watch request for watcher {:?}",
-                                    &w
+                                fx_vlog!(LOG_VERBOSITY, "::bms:: handle Watch request");
+
+                                battery_manager.add_watcher(w.clone()).await;
+
+                                // make sure watcher has current battery info
+                                let info = battery_manager.get_battery_info_copy();
+
+                                fx_vlog!(
+                                    LOG_VERBOSITY,
+                                    "::bms:: callback on new watcher with info {:?}",
+                                    &info
                                 );
-
-                                battery_manager.lock().add_watcher(w.clone());
-
-                                let info = { battery_manager.lock().get_battery_info_copy() };
-                                match (w.on_change_battery_info(info.clone().into())).await {
-                                    Ok(_) => {}
-                                    Err(e) => fx_log_err!("failed to add watcher: {:?}", e),
+                                match (w.on_change_battery_info(info)).await {
+                                    Ok(_) => {
+                                        fx_vlog!(LOG_VERBOSITY, "::bms:: notified new watcher");
+                                    }
+                                    Err(e) => fx_log_err!("failed to notify new watcher: {:?}", e),
                                 };
                             }
                         }
@@ -78,7 +85,7 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("unable to create executor")?;
 
-    let battery_manager = Arc::new(Mutex::new(BatteryManager::new()));
+    let battery_manager = Arc::new(BatteryManager::new());
     let battery_manager_clone = battery_manager.clone();
 
     let f = power::watch_power_device(battery_manager_clone);
@@ -89,7 +96,7 @@ fn main() -> Result<(), Error> {
 
     fs.dir("svc").add_fidl_service(move |stream| {
         let bms = BatteryManagerServer { manager: battery_manager.clone() };
-        spawn_battery_manager(bms, stream);
+        spawn_battery_manager_async(bms, stream);
     });
     fs.take_and_serve_directory_handle()?;
 
