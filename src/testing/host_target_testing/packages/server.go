@@ -134,7 +134,14 @@ func genConfig(dir string, localHostname string, repoName string, port int) (con
 	}
 
 	hostname := strings.ReplaceAll(localHostname, "%", "%25")
-	repoURL := fmt.Sprintf("http://[%s]:%d", hostname, port)
+
+	var repoURL string
+	if strings.Contains(hostname, ":") {
+		// This is an IPv6 address, use brackets for an IPv6 literal
+		repoURL = fmt.Sprintf("http://[%s]:%d", hostname, port)
+	} else {
+		repoURL = fmt.Sprintf("http://%s:%d", hostname, port)
+	}
 	configURL = fmt.Sprintf("%s/host_target_testing/config.json", repoURL)
 
 	config, err = json.Marshal(&sourceConfig{
