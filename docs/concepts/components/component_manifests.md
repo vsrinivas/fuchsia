@@ -76,8 +76,8 @@ routing, see [_Life of a service open_](life_of_a_service_open.md)
 
 The following capabilities can be routed:
 
-- `service`: A filesystem service node that can be used to open a channel to a
-  service provider.
+- `service_protocol`: A filesystem service node that can be used to open a channel to a
+  FIDL protocol.
 - `directory`: A filesystem directory.
 - `storage`: A filesystem directory that is isolated to the component using it.
 
@@ -116,10 +116,10 @@ component instance's namespace:
 
 #### Framework services {#framework-services}
 
-A *framework service* is a service provided by the component framework. Because
-the component framework itself is the provider of the service, any component may
+A *framework service* is a service protocol provided by the component framework. Because
+the component framework itself provides the service protocol, any component may
 `use` it without an explicit `offer`. Fuchsia supports the following framework
-services:
+service protocols:
 
 - [`fuchsia.sys2.Realm`](/sdk/fidl/fuchsia.sys2/realm.fidl): Allows a component
   to manage and bind to its children. Scoped to the component's realm.
@@ -233,14 +233,14 @@ instance tree:
 ![Capability routing example](capability_routing_example.png)
 
 In this example, the `echo` component instance provides an `/svc/echo` service
-in its outgoing directory. This service is routed to the `echo_tool` component
+protocol in its outgoing directory. This protocol is routed to the `echo_tool` component
 instance, which uses it. It is necessary for each component instance in the
 routing path to propagate `/svc/echo` to the next component instance.
 
 The routing sequence is:
 
-- `echo` hosts the `/svc/echo` service in its outgoing directory. Also, it
-  exposes `/svc/echo` from `self` so the service is visible to its parent,
+- `echo` hosts the `/svc/echo` service protocol in its outgoing directory. Also, it
+  exposes `/svc/echo` from `self` so the protocol is visible to its parent,
   `services`.
 - `services` exposes `/svc/echo` from its child `echo` to its parent, `shell`.
 - `system` offers `/svc/echo` from its child `services` to its other child
@@ -372,7 +372,7 @@ explained in [Routing terminology](#routing-terminology).
 `use` is an array of objects with the following properties:
 
 - A capability declaration, one of:
-    - `service`: The [source path](#capability-paths) of a service capability.
+    - `service_protocol`: The [source path](#capability-paths) of a service capability.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
     - `storage`: The [type](#storage-types) of a storage capability. A manifest
@@ -387,7 +387,7 @@ Example:
 ```
 "use": [
     {
-        "service": "/svc/fuchsia.logger.LogSink",
+        "service_protocol": "/svc/fuchsia.logger.LogSink",
     },
     {
         "directory": "/data/themes",
@@ -408,7 +408,7 @@ explained in [Routing terminology](#routing-terminology).
 `expose` is an array of objects with the following properties:
 
 - A capability declaration, one of:
-    - `service`: The [source path](#capability-paths) of a service capability.
+    - `service_protocol`: The [source path](#capability-paths) of a service capability.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
 - `from`: The source of the capability, one of:
@@ -426,7 +426,7 @@ Example:
         "from": "self",
     },
     {
-        "service": "/svc/pkg_cache",
+        "service_protocol": "/svc/pkg_cache",
         "from": "#pkg_cache",
         "as": "/svc/fuchsia.pkg.PackageCache",
     },
@@ -441,15 +441,16 @@ explained in [Routing terminology](#routing-terminology).
 `offer` is an array of objects with the following properties:
 
 - A capability declaration, one of:
-    - `service`: The [source path](#capability-paths) of a service capability.
+    - `service_protocol`: The [source path](#capability-paths) of a service
+      capability.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
     - `storage`: The [type](#storage-types) of a storage capability.
 - `from`: The source of the capability, one of:
     - `realm`: The component's containing realm (parent). This source can be
       used for all capability types.
-    - `self`: This component. This source can only be used when offering service
-      or directory capabilities.
+    - `self`: This component. This source can only be used when offer in
+      service or directory capabilities.
     - `#<child-name>`: A [reference](#references) to a child component instance.
       This source can only be used when offering service or directory
       capabilities.
@@ -467,7 +468,7 @@ Example:
 ```
 "offer": [
     {
-        "service": "/svc/fuchsia.logger.LogSink",
+        "service_protocol": "/svc/fuchsia.logger.LogSink",
         "from": "#logger",
         "to": [ "#fshost", "#pkg_cache" ],
     },

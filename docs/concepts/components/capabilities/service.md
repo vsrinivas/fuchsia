@@ -1,19 +1,19 @@
 # Service capabilities
 
 [Service capabilities][glossary-service] allow components to connect to
-[FIDL][glossary-fidl] services provided either by other components or the
+[FIDL][glossary-fidl] service protocols provided either by other components or the
 component framework itself.
 
 ## Creating service capabilities
 
-When a component has a service that is made available to other components, the
+When a component has a service protocol that is made available to other components, the
 service's path in the component's [outgoing directory][glossary-outgoing] is
 [exposed][expose] to the component's parent...
 
 ```
 {
     "expose": [{
-        "service": "/svc/fuchsia.example.ExampleService",
+        "service_protocol": "/svc/fuchsia.example.ExampleService",
         "from": "self",
     }],
 }
@@ -24,7 +24,7 @@ service's path in the component's [outgoing directory][glossary-outgoing] is
 ```
 {
     "offer": [{
-        "service": "/svc/fuchsia.example.ExampleService",
+        "service_protocol": "/svc/fuchsia.example.ExampleService",
         "from": "self",
         "to": [{
             { "dest": "#child-a" },
@@ -37,15 +37,15 @@ service's path in the component's [outgoing directory][glossary-outgoing] is
 ## Consuming service capabilities
 
 When a service capability is offered to a component from its containing realm it
-can be [used][use] to make the service accessible through the component's
+can be [used][use] to make the service protocol accessible through the component's
 [namespace][glossary-namespace].
 
 This example shows a directory named `/svc` that is included in the component's
 namespace. When the component attempts to open the
 `fuchsia.example.ExampleService` item in this directory, the component framework
 performs [capability routing][capability-routing] to find the component that
-provides this service. Then, the framework connects the newly opened channel to
-this provider.
+provides this service protocol. Then, the framework connects the newly opened
+channel to this provider.
 
 ```
 {
@@ -66,13 +66,14 @@ routing a service capability from one component to another.
 Some service capabilities are provided by the component framework, and thus can
 be [used][use] by components without their parents [offering][offer] them.
 
-For a list of these services and what they can be used for, see the [framework
-services][framework-services] section of the component manifests documentation.
+For a list of these service protocols and what they can be used for, see the
+[framework services][framework-services] section of the component manifests
+documentation.
 
 ```
 {
     "use": [{
-        "service": "/svc/fuchsia.sys2.Realm",
+        "service_protocol": "/svc/fuchsia.sys2.Realm",
         "from": "framework",
     }],
 }
@@ -80,7 +81,7 @@ services][framework-services] section of the component manifests documentation.
 
 ## Service paths
 
-The path used to refer to a given service provides a hint to clients which
+The path used to refer to a given service protocol provides a hint to clients which
 protocol the server expects clients to use, but this is entirely a convention.
 The paths can even be renamed when being [offered][offer], [exposed][expose], or
 [used][use].
@@ -97,14 +98,15 @@ the following layout:
 ```
 
 Each component in this example changes the path used to reference the service
-when passing it along in this chain, and so long as components `A` and `C` know
-which FIDL protocol to use over the channel, this will work just fine.
+protocol when passing it along in this chain, and so long as components `A`
+and `C` know which FIDL protocol to use over the channel, this will work just
+fine.
 
 ```
 A.cml:
 {
     "offer": [{
-        "service": "/svc/fidl.example.X",
+        "service_protocol": "/svc/fidl.example.X",
         "from": "self",
         "to": [{
             { "dest": "#B", "as": "/intermediary" },
