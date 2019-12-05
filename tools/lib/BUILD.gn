@@ -9,6 +9,7 @@ group("tests") {
     "//tools/lib/cache:cache_tests",
     "//tools/lib/color:color_tests",
     "//tools/lib/command:command_tests",
+    "//tools/lib/iomisc:tests",
     "//tools/lib/logger:logger_tests",
     "//tools/lib/retry:retry_tests",
     "//tools/lib/runner:runner_tests",
