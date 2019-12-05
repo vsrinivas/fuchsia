@@ -3,31 +3,38 @@
 // found in the LICENSE file.
 
 use {
+    fidl_fuchsia_mem::Buffer,
     fuchsia_vfs_pseudo_fs_mt::{
         directory::entry::DirectoryEntry,
         file::vmo::{asynchronous::NewVmo, read_only},
         pseudo_directory,
     },
-    fuchsia_zircon::{Status, Vmo, VmoChildOptions},
+    fuchsia_zircon::{Status, VmoChildOptions},
     std::sync::Arc,
 };
+
+// Any smaller would not even fit the first copy of the ext4 Super Block.
+const MIN_EXT4_SIZE: u64 = 2048;
 
 #[derive(Debug)]
 pub enum ConstructFsError {
     VmoReadError(Status),
 }
 
-pub fn construct_fs(source: Vmo) -> Result<Arc<dyn DirectoryEntry>, ConstructFsError> {
-    let size = source.get_size().map_err(ConstructFsError::VmoReadError)?;
+pub fn construct_fs(source: Buffer) -> Result<Arc<dyn DirectoryEntry>, ConstructFsError> {
+    let size = source.size;
+    if size < MIN_EXT4_SIZE {
+        ConstructFsError::VmoReadError(Status::NO_SPACE);
+    }
 
-    let source = Arc::new(source);
+    let vmo = Arc::new(source.vmo);
 
     Ok(pseudo_directory! {
         "img" => read_only(move || {
-            let source = source.clone();
+            let vmo = vmo.clone();
             async move {
                 Ok(NewVmo {
-                    vmo: source.create_child(VmoChildOptions::COPY_ON_WRITE, 0, size)?,
+                    vmo: vmo.create_child(VmoChildOptions::COPY_ON_WRITE, 0, size)?,
                     size,
                     capacity: size,
                 })
@@ -38,7 +45,7 @@ pub fn construct_fs(source: Vmo) -> Result<Arc<dyn DirectoryEntry>, ConstructFsE
 
 #[cfg(test)]
 mod tests {
-    use super::construct_fs;
+    use super::{construct_fs, MIN_EXT4_SIZE};
 
     // macros
     use fuchsia_vfs_pseudo_fs_mt::{
@@ -59,10 +66,11 @@ mod tests {
 
     #[test]
     fn list_root() {
-        let vmo = Vmo::create(10).expect("VMO is created");
+        let vmo = Vmo::create(MIN_EXT4_SIZE).expect("VMO is created");
         vmo.write(b"list root", 0).expect("VMO write() succeeds");
+        let buffer = fidl_fuchsia_mem::Buffer { vmo: vmo, size: MIN_EXT4_SIZE };
 
-        let tree = construct_fs(vmo).expect("construct_fs parses the vmo");
+        let tree = construct_fs(buffer).expect("construct_fs parses the vmo");
 
         run_server_client(OPEN_RIGHT_READABLE, tree, |root| {
             async move {

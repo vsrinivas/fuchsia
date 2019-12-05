@@ -13,5 +13,6 @@ fidl("ext4_server") {
 
   public_deps = [
     "//zircon/system/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }

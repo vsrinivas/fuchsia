@@ -7,13 +7,13 @@ use {
     failure::{Error, ResultExt},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4server::{
         Ext4Server_Request, Ext4Server_RequestStream, Ext4ServiceRequest, MountVmoResult, Success,
     },
     fuchsia_async::{self, EHandle, Executor},
     fuchsia_component::server::ServiceFs,
     fuchsia_vfs_pseudo_fs_mt::{execution_scope::ExecutionScope, path::Path},
-    fuchsia_zircon::Vmo,
     futures::{
         future::TryFutureExt,
         stream::{StreamExt, TryStreamExt},
@@ -51,7 +51,7 @@ fn construct_fs_error_to_mount_vmo_result(source: ConstructFsError) -> MountVmoR
 
 fn serve_vmo(
     scope: ExecutionScope,
-    source: Vmo,
+    source: Buffer,
     flags: u32,
     root: ServerEnd<DirectoryMarker>,
 ) -> MountVmoResult {
