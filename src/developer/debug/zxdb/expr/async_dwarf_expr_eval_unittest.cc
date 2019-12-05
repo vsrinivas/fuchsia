@@ -58,8 +58,8 @@ TEST_F(AsyncDwarfExprEvalTest, MemoryManagement) {
   constexpr uint32_t kMemoryValue = 0x12345678;
   data_provider->AddMemory(kAbsoluteAddress, {0x78, 0x56, 0x34, 0x12});
 
-  auto eval_context =
-      fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), data_provider);
+  auto eval_context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(),
+                                                           data_provider, ExprLanguage::kC);
 
   // This expression evaluates the relative address.
   std::vector<uint8_t> expr{llvm::dwarf::DW_OP_addr, kRelativeAddress, 0, 0, 0, 0, 0, 0, 0};

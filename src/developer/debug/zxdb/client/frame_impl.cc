@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -205,8 +206,20 @@ fxl::RefPtr<SymbolDataProvider> FrameImpl::GetSymbolDataProvider() const {
 }
 
 fxl::RefPtr<EvalContext> FrameImpl::GetEvalContext() const {
+  auto language_setting =
+      thread_->session()->system().settings().GetString(ClientSettings::System::kLanguage);
+
+  std::optional<ExprLanguage> language = std::nullopt;
+  if (language_setting == ClientSettings::System::kLanguage_Rust) {
+    language = ExprLanguage::kRust;
+  } else if (language_setting == ClientSettings::System::kLanguage_Cpp) {
+    language = ExprLanguage::kC;
+  } else {
+    FXL_DCHECK(language_setting == ClientSettings::System::kLanguage_Auto);
+  }
+
   if (!symbol_eval_context_)
-    symbol_eval_context_ = fxl::MakeRefCounted<ClientEvalContextImpl>(this);
+    symbol_eval_context_ = fxl::MakeRefCounted<ClientEvalContextImpl>(this, language);
   return symbol_eval_context_;
 }
 

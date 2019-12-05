@@ -21,8 +21,8 @@ class ClientEvalContextImpl : public EvalContextImpl {
   //
   // Neither the Frame nor the Target variants accept a null pointer, but the Target variant does
   // not need to have a currently running process.
-  explicit ClientEvalContextImpl(const Frame* frame);
-  explicit ClientEvalContextImpl(Target* target);
+  explicit ClientEvalContextImpl(const Frame* frame, std::optional<ExprLanguage> language);
+  explicit ClientEvalContextImpl(Target* target, std::optional<ExprLanguage> language);
 
   // EvalContext overrides.
   VectorRegisterFormat GetVectorRegisterFormat() const override;

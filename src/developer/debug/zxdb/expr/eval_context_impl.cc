@@ -91,25 +91,32 @@ ErrOrValue RegisterDataToValue(RegisterID id, VectorRegisterFormat vector_fmt,
 
 EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
                                  fxl::RefPtr<SymbolDataProvider> data_provider,
-                                 fxl::RefPtr<CodeBlock> code_block)
+                                 ExprLanguage language, fxl::RefPtr<CodeBlock> code_block)
     : process_symbols_(std::move(process_symbols)),
       data_provider_(data_provider),
       block_(std::move(code_block)),
+      language_(language),
       weak_factory_(this) {}
 
 EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
                                  fxl::RefPtr<SymbolDataProvider> data_provider,
-                                 const Location& location)
+                                 const Location& location,
+                                 std::optional<ExprLanguage> force_language)
     : process_symbols_(std::move(process_symbols)),
       data_provider_(data_provider),
       weak_factory_(this) {
-  if (!location.symbol())
-    return;
-  const CodeBlock* function = location.symbol().Get()->AsCodeBlock();
+  const CodeBlock* function = nullptr;
+  if (location.symbol())
+    function = location.symbol().Get()->AsCodeBlock();
+
   if (function) {
     block_ =
         RefPtrTo(function->GetMostSpecificChild(location.symbol_context(), location.address()));
+  }
 
+  if (force_language) {
+    language_ = *force_language;
+  } else if (function) {
     // Extract the language for the code if possible.
     if (auto unit = function->GetCompileUnit())
       language_ = DwarfLangToExprLanguage(unit->language());

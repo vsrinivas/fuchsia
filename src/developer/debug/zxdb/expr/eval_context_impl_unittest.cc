@@ -64,6 +64,7 @@ class EvalContextImplTest : public TestWithLoop {
   // be created with MakeCodeBlock().
   fxl::RefPtr<EvalContext> MakeEvalContext(fxl::RefPtr<CodeBlock> code_block = nullptr) {
     return fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(), provider(),
+                                                ExprLanguage::kC,
                                                 code_block ? code_block : MakeCodeBlock());
   }
 
@@ -349,7 +350,7 @@ TEST_F(EvalContextImplTest, ExternVariable) {
   provider()->AddMemory(kAbsoluteValAddress, {8, 7, 6, 5, 4, 3, 2, 1});
 
   auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), provider(),
-                                                      MakeCodeBlock());
+                                                      ExprLanguage::kC, MakeCodeBlock());
 
   // Resolving the extern variable should give the value that the non-extern one points to.
   ValueResult result;
@@ -585,7 +586,7 @@ TEST_F(EvalContextImplTest, GetConcreteType) {
 
   // Make a symbol context.
   auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), provider(),
-                                                      fxl::RefPtr<CodeBlock>());
+                                                      ExprLanguage::kC, fxl::RefPtr<CodeBlock>());
 
   // Resolving the const forward-defined value gives the non-const version.
   auto result_type = context->GetConcreteType(const_forward_decl.get());

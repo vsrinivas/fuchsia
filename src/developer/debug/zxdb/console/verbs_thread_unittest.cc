@@ -75,4 +75,28 @@ TEST_F(VerbsThreadTest, VectorRegisterFormat) {
       event.output.AsString());
 }
 
+TEST_F(VerbsThreadTest, LanguagePreference) {
+  MockConsole console(&session());
+
+  console.ProcessInputLine("set language c++");
+  console.GetOutputEvent();  // Eat output from the set.
+  console.ProcessInputLine("print 3 as u64");
+  auto event = console.GetOutputEvent();
+  EXPECT_EQ("Unexpected input, did you forget an operator?\n  3 as u64\n    ^",
+            event.output.AsString());
+
+  console.ProcessInputLine("set language rust");
+  console.GetOutputEvent();  // Eat output from the set.
+  console.ProcessInputLine("print 3 as u64");
+  event = console.GetOutputEvent();
+  EXPECT_EQ("3", event.output.AsString());
+
+  console.ProcessInputLine("set language auto");
+  console.GetOutputEvent();  // Eat output from the set.
+  console.ProcessInputLine("print 3 as u64");
+  event = console.GetOutputEvent();
+  EXPECT_EQ("Unexpected input, did you forget an operator?\n  3 as u64\n    ^",
+            event.output.AsString());
+}
+
 }  // namespace zxdb

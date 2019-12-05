@@ -14,17 +14,18 @@
 namespace zxdb {
 
 // Do not store the Frame pointer because it may got out of scope before this class does.
-ClientEvalContextImpl::ClientEvalContextImpl(const Frame* frame)
+ClientEvalContextImpl::ClientEvalContextImpl(const Frame* frame,
+                                             std::optional<ExprLanguage> language)
     : EvalContextImpl(frame->GetThread()->GetProcess()->GetSymbols()->GetWeakPtr(),
-                      frame->GetSymbolDataProvider(), frame->GetLocation()),
+                      frame->GetSymbolDataProvider(), frame->GetLocation(), language),
       weak_target_(frame->GetThread()->GetProcess()->GetTarget()->GetWeakPtr()) {}
 
-ClientEvalContextImpl::ClientEvalContextImpl(Target* target)
+ClientEvalContextImpl::ClientEvalContextImpl(Target* target, std::optional<ExprLanguage> language)
     : EvalContextImpl(target->GetProcess() ? target->GetProcess()->GetSymbols()->GetWeakPtr()
                                            : fxl::WeakPtr<const ProcessSymbols>(),
                       target->GetProcess() ? target->GetProcess()->GetSymbolDataProvider()
                                            : fxl::MakeRefCounted<SymbolDataProvider>(),
-                      Location()),
+                      Location(), language),
       weak_target_(target->GetWeakPtr()) {}
 
 VectorRegisterFormat ClientEvalContextImpl::GetVectorRegisterFormat() const {

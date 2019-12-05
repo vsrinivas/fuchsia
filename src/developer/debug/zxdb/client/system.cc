@@ -67,6 +67,15 @@ static const char* kSymbolCacheDescription =
   .build-id will be created under the given path, and downloaded symbols will
   be stored there.)";
 
+const char* ClientSettings::System::kLanguage = "language";
+static const char* kLanguageDescription =
+    R"(  Programming language for expressions given to commands such as print.
+  Valid values are "c++", "rust", and "auto". Most of the time you'll want to
+  set this to "auto" and let zxdb determine the language of the current unit.)";
+const char* ClientSettings::System::kLanguage_Cpp = "c++";
+const char* ClientSettings::System::kLanguage_Rust = "rust";
+const char* ClientSettings::System::kLanguage_Auto = "auto";
+
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
@@ -82,6 +91,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
   schema->AddList(ClientSettings::System::kSymbolServers, kSymbolServersDescription, {});
   schema->AddString(ClientSettings::System::kSymbolCache, kSymbolCacheDescription, "");
+  schema->AddString(ClientSettings::System::kLanguage, kLanguageDescription, "auto",
+                    {"rust", "c++", "auto"});
 
   schema->AddList(ClientSettings::Target::kBuildDirs, ClientSettings::Target::kBuildDirsDescription,
                   {});

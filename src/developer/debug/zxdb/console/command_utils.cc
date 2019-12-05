@@ -433,8 +433,19 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd) {
   if (cmd.frame())
     return cmd.frame()->GetEvalContext();
 
+  std::optional<ExprLanguage> language;
+  auto language_setting =
+      cmd.target()->session()->system().settings().GetString(ClientSettings::System::kLanguage);
+  if (language_setting == ClientSettings::System::kLanguage_Rust) {
+    language = ExprLanguage::kRust;
+  } else if (language_setting == ClientSettings::System::kLanguage_Cpp) {
+    language = ExprLanguage::kC;
+  } else {
+    FXL_DCHECK(language_setting == ClientSettings::System::kLanguage_Auto);
+  }
+
   // Target context only (it may or may not have a process).
-  return fxl::MakeRefCounted<ClientEvalContextImpl>(cmd.target());
+  return fxl::MakeRefCounted<ClientEvalContextImpl>(cmd.target(), language);
 }
 
 Err EvalCommandExpression(const Command& cmd, const char* verb,

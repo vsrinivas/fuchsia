@@ -40,8 +40,9 @@ class ResolveCollectionTest : public TestWithLoop {
     data_provider_ = fxl::MakeRefCounted<MockSymbolDataProvider>();
 
     // With the mock symbol system above, we make a real EvalContext that uses it.
-    eval_context_ = fxl::MakeRefCounted<EvalContextImpl>(process_setup_.process().GetWeakPtr(),
-                                                         data_provider_, fxl::RefPtr<CodeBlock>());
+    eval_context_ =
+        fxl::MakeRefCounted<EvalContextImpl>(process_setup_.process().GetWeakPtr(), data_provider_,
+                                             ExprLanguage::kC, fxl::RefPtr<CodeBlock>());
   }
   void TearDown() override {
     index_root_ = nullptr;

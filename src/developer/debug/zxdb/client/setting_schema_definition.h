@@ -35,6 +35,10 @@ struct ClientSettings {
     static const char* kShowStdout;
     static const char* kSymbolServers;
     static const char* kSymbolCache;
+    static const char* kLanguage;
+    static const char* kLanguage_Cpp;
+    static const char* kLanguage_Rust;
+    static const char* kLanguage_Auto;
   };
 
   struct Job {};

@@ -50,10 +50,11 @@ class EvalContextImpl : public EvalContext {
   //
   // The variant that takes a location will extract the code block from the location if possible.
   EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
-                  fxl::RefPtr<SymbolDataProvider> data_provider,
+                  fxl::RefPtr<SymbolDataProvider> data_provider, ExprLanguage language,
                   fxl::RefPtr<CodeBlock> code_block = fxl::RefPtr<CodeBlock>());
   EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
-                  fxl::RefPtr<SymbolDataProvider> data_provider, const Location& location);
+                  fxl::RefPtr<SymbolDataProvider> data_provider, const Location& location,
+                  std::optional<ExprLanguage> force_language = std::nullopt);
   ~EvalContextImpl() override;
 
   // EvalContext implementation.

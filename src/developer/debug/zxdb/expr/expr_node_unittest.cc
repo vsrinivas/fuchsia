@@ -114,7 +114,7 @@ TEST_F(ExprNodeTest, EvalIdentifier) {
 TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
   auto context = fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(),
-                                                      data_provider, nullptr);
+                                                      data_provider, ExprLanguage::kC);
 
   // Dereferencing should remove the const on the pointer but not the pointee.
   auto base_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 4, "uint32_t");
@@ -181,7 +181,7 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
 TEST_F(ExprNodeTest, DereferenceErrors) {
   auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
   auto context = fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(),
-                                                      data_provider, nullptr);
+                                                      data_provider, ExprLanguage::kC);
 
   auto base_type = MakeInt32Type();
   auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, base_type);
