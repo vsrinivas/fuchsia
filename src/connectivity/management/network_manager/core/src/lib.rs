@@ -31,9 +31,7 @@ use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_router_config::LifProperties;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-// TODO(cgibson): remove the 2 const defined below and the code that references them ones the
-// configuration support is in place. This is temporaty code to hardcode configuraition.
-const WAN_PORT: &str = "00:1f.6";
+// TODO(cgibson): Remove this when the config api supports LAN interface configuration.
 const NUMBER_OF_PORTS_IN_LAN: usize = 3;
 
 /// `DeviceState` holds the device state.
@@ -184,17 +182,27 @@ impl DeviceState {
         }
     }
 
-    async fn configure_wan(&mut self, pid: PortId) -> error::Result<()> {
-        let lif = self.create_lif(LIFType::WAN, "wan".to_string(), 1, [pid].to_vec()).await?;
-        let properties =
-            crate::lifmgr::LIFProperties { enabled: true, dhcp: true, address: None }.to_fidl_wan();
-        info!("WAN configured: pid: {:?} lif: {:?} properties: {:?} ", pid, lif, properties);
-        self.update_lif_properties(lif.id().uuid(), &properties).await?;
+    /// Restores state of global system options and services from stored configuration.
+    pub async fn setup_services(&self) -> error::Result<()> {
+        info!("Restoring system services state...");
+        self.hal.set_ip_forwarding(self.config.get_ip_forwarding_state()).await?;
+        // TODO(cgibson): Configure DHCP server.
+        // TODO(cgibson): Configure packet filters.
+        Ok(())
+    }
+
+    /// Configures a WAN uplink from stored configuration.
+    async fn configure_wan(&mut self, pid: PortId, topological_path: &str) -> error::Result<()> {
+        let wan_name = self.config.get_wan_interface_name(topological_path)?;
+        let properties = self.config.create_wan_properties(topological_path)?;
+        let lif = self.create_lif(LIFType::WAN, wan_name, None, vec![pid]).await?;
+        self.update_lif_properties(lif.id().uuid(), &properties.to_fidl_wan()).await?;
+        info!("WAN configured: pid: {:?}, lif: {:?}, properties: {:?} ", pid, lif, properties);
         Ok(())
     }
 
     async fn configure_lan(&mut self, pids: &[PortId]) -> error::Result<()> {
-        let lif = self.create_lif(LIFType::LAN, "lan".to_string(), 2, pids.to_vec()).await?;
+        let lif = self.create_lif(LIFType::LAN, "lan".to_string(), Some(2), pids.to_vec()).await?;
         let properties = crate::lifmgr::LIFProperties {
             enabled: true,
             dhcp: false,
@@ -214,11 +222,9 @@ impl DeviceState {
         pid: PortId,
         topological_path: &str,
     ) -> error::Result<()> {
-        //TODO(dpradilla): hardcoding configuration for now.
-        //Remove this once configuration can be
-        //read on start up.
-        if topological_path.contains(WAN_PORT) {
-            return self.configure_wan(pid).await;
+        if self.config.device_id_is_a_wan_uplink(topological_path) {
+            info!("Discovered a new uplink: {}", topological_path);
+            return self.configure_wan(pid, topological_path).await;
         }
         // TODO(dpradilla) Remove this temporaty code once there
         // is a way to add to an existing bridge
@@ -368,7 +374,7 @@ impl DeviceState {
         &mut self,
         lif_type: LIFType,
         name: String,
-        vlan: u16,
+        vlan: Option<u16>,
         ports: Vec<PortId>,
     ) -> error::Result<lifmgr::LIF> {
         // Verify ports exist and can be used.
@@ -377,13 +383,21 @@ impl DeviceState {
             self.release_ports(&ports);
             return Err(error::NetworkManager::LIF(error::Lif::InvalidPort));
         }
+
+        // TODO(cgibson): Once we can configure VLANs, we need to handle VLAN ID 0 vs None, since
+        // VLAN ID 0x0000 is a reserved value in dot1q. fxb/41746.
+        let vid = match vlan {
+            Some(v) => v,
+            None => 0,
+        };
+
         let mut l = lifmgr::LIF::new(
             self.version,
             lif_type,
             &name,
             PortId::from(0),
             ports.clone(),
-            vlan,
+            vid,
             Some(LIFProperties::default()),
         )
         .or_else(|e| {

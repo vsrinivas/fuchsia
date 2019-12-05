@@ -647,6 +647,18 @@ impl Config {
         false
     }
 
+    /// Returns a WAN interface's name.
+    pub fn get_wan_interface_name(&self, topo_path: &str) -> error::Result<String> {
+        if self.device_id_is_a_wan_uplink(topo_path) {
+            if let Some(intf) = self.get_interface_by_device_id(topo_path) {
+                return Ok(intf.config.name.clone());
+            }
+        }
+        Err(error::NetworkManager::CONFIG(error::Config::NotFound {
+            msg: format!("Getting WAN interface name for {} failed.", topo_path),
+        }))
+    }
+
     /// Returns a tuple of IPv4 and IPv6 [`config::IpAddress`]'s for this interface.
     ///
     /// The 'switched_vlan' configuration does not support IP addressing, so any `Interface` that
@@ -1358,7 +1370,7 @@ mod tests {
     }
 
     #[test]
-    fn test_device_id_by_wan_uplink() {
+    fn test_device_id_is_a_wan_uplink() {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
         match test_config.device_id_is_a_wan_uplink("/dev/sys/pci/test_device_id/ethernet") {
@@ -1452,6 +1464,27 @@ mod tests {
                 );
             }
             Err(e) => panic!("Got unexpected result pair: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_get_wan_interface_name() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        match test_config.get_wan_interface_name("") {
+            Err(error::NetworkManager::CONFIG(error::Config::NotFound { msg: _ })) => (),
+            Err(e) => panic!("Got unexpected 'Err' result: {}", e),
+            Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
+        }
+        match test_config.get_wan_interface_name("test_eth0") {
+            Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
+            Err(error::NetworkManager::CONFIG(error::Config::NotFound { msg: _ })) => (),
+            Err(e) => panic!("Got unexpected 'Err' result: {}", e),
+        }
+        let expected_name = "test_wan".to_string();
+        match test_config.get_wan_interface_name("test_device_id") {
+            Ok(r) => assert_eq!(r, expected_name),
+            Err(e) => panic!("Got unexpected 'Err' result: {}", e),
         }
     }
 }
