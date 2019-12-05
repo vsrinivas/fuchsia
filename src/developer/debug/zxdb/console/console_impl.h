@@ -28,17 +28,16 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
 
   // Console implementation
   void Init() override;
+  void Quit() override;
   void Output(const OutputBuffer& output) override;
   void Clear() override;
   void ModalGetOption(const line_input::ModalPromptOptions& options, OutputBuffer message,
                       const std::string& prompt,
                       line_input::ModalLineInput::ModalCompletionCallback cb) override;
-  Console::Result ProcessInputLine(const std::string& line,
-                                   CommandCallback callback = nullptr) override;
+  void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) override;
 
  private:
-  void OnLineInput(const std::string& line);
-  Result DispatchInputLine(const std::string& line, CommandCallback callback = nullptr);
+  void DispatchInputLine(const std::string& line, CommandCallback callback = nullptr);
 
   // FDWatcher implementation.
   void OnFDReady(int fd, bool read, bool write, bool err) override;

@@ -50,14 +50,31 @@ MockConsole::OutputEvent MockConsole::GetOutputEvent() {
   return ret;
 }
 
+void MockConsole::FlushOutputEvents() { output_queue_.clear(); }
+
+bool MockConsole::SendModalReply(const std::string& line) {
+  if (!last_modal_cb_)
+    return false;
+
+  // Clear callback before issuing the callback so it can issue more if necessary.
+  auto cb = std::move(last_modal_cb_);
+  cb(line);
+  return true;
+}
+
 void MockConsole::ModalGetOption(const line_input::ModalPromptOptions& options,
                                  OutputBuffer message, const std::string& prompt,
                                  line_input::ModalLineInput::ModalCompletionCallback cb) {
-  // Not implemented in the mock.
-  FXL_NOTREACHED();
+  // Only one modal prompt is supported at a time by this mock. Otherwise things will get confused
+  // when sending the mock reply.
+  FXL_DCHECK(!last_modal_cb_);
+  last_modal_cb_ = std::move(cb);
+
+  // Add the message to the output queue so tests can see what as printed for this prompt.
+  Output(message);
 }
 
-Console::Result MockConsole::ProcessInputLine(const std::string& line, CommandCallback callback) {
+void MockConsole::ProcessInputLine(const std::string& line, CommandCallback callback) {
   FXL_DCHECK(!line.empty());
 
   Command cmd;
@@ -65,18 +82,14 @@ Console::Result MockConsole::ProcessInputLine(const std::string& line, CommandCa
 
   if (err.has_error()) {
     Console::Output(err);
-    return Console::Result::kContinue;
-  }
-
-  if (cmd.verb() == Verb::kQuit) {
-    return Console::Result::kQuit;
+    return;
   }
 
   err = context_.FillOutCommand(&cmd);
 
   if (err.has_error()) {
     Console::Output(err);
-    return Console::Result::kContinue;
+    return;
   }
 
   err = DispatchCommand(&context_, cmd, std::move(callback));
@@ -89,8 +102,6 @@ Console::Result MockConsole::ProcessInputLine(const std::string& line, CommandCa
   if (err.has_error()) {
     Console::Output(err);
   }
-
-  return Console::Result::kContinue;
 }
 
 }  // namespace zxdb

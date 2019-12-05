@@ -21,6 +21,7 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/status.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -302,10 +303,43 @@ const char kQuitShortHelp[] = R"(quit / q / exit: Quits the debugger.)";
 const char kQuitHelp[] =
     R"(quit
 
-  Quits the debugger.)";
+  Quits the debugger. It will prompt for confirmation if there are running
+  processes.
+)";
 
 Err DoQuit(ConsoleContext* context, const Command& cmd) {
-  // This command is special-cased by the main loop so it shouldn't get executed.
+  int running_processes = 0;
+  for (Target* t : context->session()->system().GetTargets()) {
+    if (t->GetState() != Target::kNone)
+      running_processes++;
+  }
+
+  if (running_processes == 0) {
+    // Nothing running, quit immediately.
+    Console::get()->Quit();
+    return Err();
+  }
+
+  OutputBuffer message;
+  if (running_processes == 1) {
+    message =
+        OutputBuffer("\nAre you sure you want to quit and detach from the running process?\n");
+  } else {
+    message = OutputBuffer(
+        fxl::StringPrintf("\nAre you sure you want to quit and detach from %d running processes?\n",
+                          running_processes));
+  }
+
+  line_input::ModalPromptOptions options;
+  options.require_enter = false;
+  options.case_sensitive = false;
+  options.options.push_back("y");
+  options.options.push_back("n");
+  Console::get()->ModalGetOption(options, message, "[y/n] ", [](const std::string& answer) {
+    if (answer == "y")
+      Console::get()->Quit();
+  });
+
   return Err();
 }
 

@@ -32,37 +32,48 @@ class MockConsole : public Console {
   const OutputBuffer& output_buffer() { return output_buffer_; }
   Session* session() { return session_; }
 
-  // Gets an output event that was the result of one call to Output() or
-  // Clear() on this console. If the event's type field is Type::kOutput, there
-  // was an Output() call, and the output field contains the value it was
-  // given. If the event's type field is Type::kClear, there was a call to
-  // Clear() and the output field is invalid. If the event's type field is
-  // Type::kQuitEarly, something interrupted the loop while we were waiting for
-  // a call.
+  // Gets an output event that was the result of one call to Output() or Clear() on this console. If
+  // the event's type field is Type::kOutput, there was an Output() call, and the output field
+  // contains the value it was given. If the event's type field is Type::kClear, there was a call to
+  // Clear() and the output field is invalid. If the event's type field is Type::kQuitEarly,
+  // something interrupted the loop while we were waiting for a call.
   //
-  // If no call has happened recently, the message loop will be run until we
-  // receive a call or some outside actor causes it to quit.
+  // If no call has happened recently, the message loop will be run until we receive a call or some
+  // outside actor causes it to quit.
   OutputEvent GetOutputEvent();
 
   // Clear any pending output events. That haven't yet been retrieved by
   // GetOutputEvent();
   void FlushOutputEvents();
 
-  // Console implementation
+  // Set to true when Quit() is called.
+  bool has_quit() const { return has_quit_; }
+
+  // Completes a pending modal request with the given input. Returns true if it was called, false if
+  // there was no pending modal request (tests will want to validate this returned true).
+  //
+  // This doesn't do validity checking that the input line matches one of the options, unlike the
+  // real code path. Tests will want to be careful about sending the right type of input.
+  bool SendModalReply(const std::string& line);
+
+  // Console implementation.
   void Init() override {}
+  void Quit() override { has_quit_ = true; }
   void Clear() override;
   void Output(const OutputBuffer& output) override;
   void ModalGetOption(const line_input::ModalPromptOptions& options, OutputBuffer message,
                       const std::string& prompt,
                       line_input::ModalLineInput::ModalCompletionCallback cb) override;
-  Console::Result ProcessInputLine(const std::string& line,
-                                   CommandCallback callback = nullptr) override;
+  void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) override;
 
  private:
   Session* session_;
   std::vector<OutputEvent> output_queue_;
   OutputBuffer output_buffer_;
+  bool has_quit_ = false;
   bool waiting_for_output_ = false;
+
+  line_input::ModalLineInput::ModalCompletionCallback last_modal_cb_;
 };
 
 }  // namespace zxdb

@@ -83,7 +83,7 @@ void PreserveStdoutTermios() {}
 }  // namespace
 
 ConsoleImpl::ConsoleImpl(Session* session) : Console(session), impl_weak_factory_(this) {
-  line_input_.Init([this](const std::string& s) { OnLineInput(s); }, "[zxdb] ");
+  line_input_.Init([this](const std::string& s) { ProcessInputLine(s); }, "[zxdb] ");
 
   // Set the line input completion callback that can know about our context. OK to bind |this| since
   // we own the line_input object.
@@ -193,6 +193,11 @@ void ConsoleImpl::ModalGetOption(const line_input::ModalPromptOptions& options,
                              [this, message = std::move(message)]() { Output(message); });
 }
 
+void ConsoleImpl::Quit() {
+  line_input_.Hide();
+  debug_ipc::MessageLoop::Current()->QuitNow();
+}
+
 void ConsoleImpl::Clear() {
   // We write directly instead of using Output because WriteToStdout expects to append '\n' to
   // outputs and won't flush it explicitly otherwise.
@@ -202,15 +207,7 @@ void ConsoleImpl::Clear() {
   line_input_.Show();
 }
 
-void ConsoleImpl::OnLineInput(const std::string& line) {
-  Result result = ProcessInputLine(line);
-  if (result == Result::kQuit) {
-    line_input_.Hide();
-    return;
-  }
-}
-
-Console::Result ConsoleImpl::DispatchInputLine(const std::string& line, CommandCallback callback) {
+void ConsoleImpl::ProcessInputLine(const std::string& line, CommandCallback callback) {
   Command cmd;
   Err err;
   if (line.empty()) {
@@ -223,18 +220,14 @@ Console::Result ConsoleImpl::DispatchInputLine(const std::string& line, CommandC
   }
 
   if (err.ok()) {
-    if (cmd.verb() == Verb::kQuit) {
-      return Result::kQuit;
-    } else {
-      err = context_.FillOutCommand(&cmd);
-      if (!err.has_error()) {
-        err = DispatchCommand(&context_, cmd, std::move(callback));
+    err = context_.FillOutCommand(&cmd);
+    if (!err.has_error()) {
+      err = DispatchCommand(&context_, cmd, std::move(callback));
 
-        if (cmd.thread() && cmd.verb() != Verb::kNone) {
-          // Show the right source/disassembly for the next listing.
-          context_.SetSourceAffinityForThread(cmd.thread(),
-                                              GetVerbRecord(cmd.verb())->source_affinity);
-        }
+      if (cmd.thread() && cmd.verb() != Verb::kNone) {
+        // Show the right source/disassembly for the next listing.
+        context_.SetSourceAffinityForThread(cmd.thread(),
+                                            GetVerbRecord(cmd.verb())->source_affinity);
       }
     }
   }
@@ -244,14 +237,6 @@ Console::Result ConsoleImpl::DispatchInputLine(const std::string& line, CommandC
     out.Append(err);
     Output(out);
   }
-  return Result::kContinue;
-}
-
-Console::Result ConsoleImpl::ProcessInputLine(const std::string& line, CommandCallback callback) {
-  Result result = DispatchInputLine(line, std::move(callback));
-  if (result == Result::kQuit)
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  return result;
 }
 
 void ConsoleImpl::OnFDReady(int fd, bool readable, bool, bool) {

@@ -25,14 +25,13 @@ class ConsoleTest : public ConsoleImpl {
  public:
   ConsoleTest(Session* session) : ConsoleImpl(session) {}
 
-  Result ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) override {
+  void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) override {
     // We update the info
     calls.push_back(line);
     if (callback) {
       callback(errors_to_run[call_count]);
     }
     call_count++;
-    return Result::kContinue;
   }
 
   std::vector<std::string> calls;

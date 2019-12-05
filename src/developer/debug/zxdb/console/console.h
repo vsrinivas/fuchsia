@@ -30,7 +30,10 @@ class Console {
   fxl::WeakPtr<Console> GetWeakPtr();
 
   // Prints the first prompt to the screen. This only needs to be called once.
-  virtual void Init(){};
+  virtual void Init() {}
+
+  // Causes the message loop to exit the next time through.
+  virtual void Quit() = 0;
 
   // Prints the buffer/string to the console.
   virtual void Output(const OutputBuffer& output) = 0;
@@ -54,13 +57,8 @@ class Console {
                               const std::string& prompt,
                               line_input::ModalLineInput::ModalCompletionCallback cb) = 0;
 
-  // The result of dispatching input is either to keep running or quit the message loop to exit.
-  enum class Result { kContinue, kQuit };
-
-  // DispatchInputLine will generate the result by parsing the command. Depending on this result,
-  // this function could stop the MessageLoop. We pass the result out for callers to use and react
-  // accordingly, which can indicate whether they want the console to continue processing commands.
-  virtual Result ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) = 0;
+  // Parses and dispatches the given line of input.
+  virtual void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) = 0;
 
  protected:
   static Console* singleton_;

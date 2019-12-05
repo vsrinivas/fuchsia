@@ -5,6 +5,7 @@
 
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
@@ -94,6 +95,35 @@ TEST_F(VerbsControl, Status) {
     ASSERT_NE(msg.find("process-1"), std::string::npos);
     ASSERT_NE(msg.find("process-2"), std::string::npos);
   }
+}
+
+// Quit with no running processes should exit immediately.
+TEST_F(VerbsControl, QuitNoProcs) {
+  MockConsole console(&session());
+
+  EXPECT_FALSE(console.has_quit());
+  console.ProcessInputLine("quit");
+  EXPECT_TRUE(console.has_quit());
+}
+
+// Quit with running processes should prompt.
+TEST_F(VerbsControl, QuitRunningProcs) {
+  MockConsole console(&session());
+
+  InjectProcess(1234);
+  console.FlushOutputEvents();  // Process attaching will output some stuff.
+
+  // This should prompt instead of quitting.
+  console.ProcessInputLine("quit");
+  EXPECT_FALSE(console.has_quit());
+
+  auto output = console.GetOutputEvent();
+  ASSERT_EQ(output.type, MockConsole::OutputEvent::Type::kOutput);
+  EXPECT_EQ("\nAre you sure you want to quit and detach from the running process?\n",
+            output.output.AsString());
+
+  EXPECT_TRUE(console.SendModalReply("y"));
+  EXPECT_TRUE(console.has_quit());
 }
 
 }  // namespace
