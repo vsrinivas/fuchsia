@@ -129,6 +129,9 @@ package("ledger_tests") {
     },
     {
       name = "ledger_integration_tests"
+
+      # TODO(fxb/42434): Re-enable once test time is reduced.
+      disabled = true
       environments = basic_envs
     },
     {
