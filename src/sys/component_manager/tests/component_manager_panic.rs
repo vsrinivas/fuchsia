@@ -4,7 +4,7 @@
 
 use {failure::Error, fuchsia_async as fasync, test_utils::*};
 
-#[fasync::run_singlethreaded(test)]
+#[fasync::run_singlethreaded(test)]#[ignore]
 async fn test() -> Result<(), Error> {
     // For the root component manifest, pass in the path the component manager
     // itself, which should be completely invalid.
