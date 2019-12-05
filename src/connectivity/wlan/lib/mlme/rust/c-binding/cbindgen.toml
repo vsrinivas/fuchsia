@@ -27,9 +27,21 @@ include = ["wlan_mlme", "wlan_common", "wlan_span"]
 [export]
 # Explicitly declare types to export as cbindgen seems to have trouble
 # detecting their usage.
-include = ["Ap", "BufferProvider", "Device", "InBuf", "OutBuf", "Client",
-           "Scheduler", "EventId", "CSpan", "ClientConfig", "ClientMlme",
-           "CppChannelScheduler"]
+include = [
+    "Ap",
+    "BufferProvider",
+    "Client",
+    "ClientConfig",
+    "ClientMlme",
+    "CppChannelScheduler",
+    "CSpan",
+    "Device",
+    "EventId",
+    "InBuf",
+    "OutBuf",
+    "PowerState",
+    "Scheduler"
+]
 
 exclude = [
     # Banjo types.
@@ -47,22 +59,23 @@ exclude = [
 # explicitly declare the items which should get renamed
 "Ap" = "wlan_ap_sta_t"
 "BufferProvider" = "mlme_buffer_provider_ops_t"
-"Device" = "mlme_device_ops_t"
-"InBuf" = "mlme_in_buf_t"
-"OutBuf" = "mlme_out_buf_t"
-"SequenceManager" = "mlme_sequence_manager_t"
 "Client" = "wlan_client_sta_t"
-"Scheduler" = "wlan_scheduler_ops_t"
-"EventId" = "wlan_scheduler_event_id_t"
-"CSpan" = "wlan_span_t"
 "ClientConfig" = "wlan_client_mlme_config_t"
 "ClientMlme" = "wlan_client_mlme_t"
 "CppChannelScheduler" = "wlan_cpp_chan_sched_t"
+"CSpan" = "wlan_span_t"
+"Device" = "mlme_device_ops_t"
+"EventId" = "wlan_scheduler_event_id_t"
+"InBuf" = "mlme_in_buf_t"
+"OutBuf" = "mlme_out_buf_t"
+"PowerState" = "wlan_power_state_t"
+"Scheduler" = "wlan_scheduler_ops_t"
+"SequenceManager" = "mlme_sequence_manager_t"
 
 # Banjo types.
 "WlanAssocCtx" = "wlan_assoc_ctx_t"
-"WlanChannel" = "wlan_channel_t"
 "WlanBssConfig" = "wlan_bss_config_t"
+"WlanChannel" = "wlan_channel_t"
 
 # Other existing types.
 "KeyConfig" = "wlan_key_config_t"

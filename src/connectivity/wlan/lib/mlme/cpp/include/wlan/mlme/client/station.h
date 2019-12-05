@@ -73,9 +73,6 @@ class Station : public ClientInterface {
   static constexpr size_t kAssocBcnCountTimeout = 20;
   static constexpr size_t kAutoDeauthBcnCountTimeout = 100;
   static constexpr zx::duration kOnChannelTimeAfterSend = zx::msec(500);
-  // Maximum number of packets buffered while station is in power saving mode.
-  // TODO(NET-687): Find good BU limit.
-  static constexpr size_t kMaxPowerSavingQueueSize = 30;
 
   void Reset();
 
@@ -97,7 +94,6 @@ class Station : public ClientInterface {
   zx_status_t SendCtrlFrame(std::unique_ptr<Packet> packet);
   zx_status_t SendMgmtFrame(std::unique_ptr<Packet> packet);
   zx_status_t SendDataFrame(std::unique_ptr<Packet> packet, uint32_t flags = 0);
-  zx_status_t SetPowerManagementMode(bool ps_mode);
   zx_status_t SendPsPoll();
   zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags = 0);
   void DumpDataFrame(const DataFrameView<>&);

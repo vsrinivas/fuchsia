@@ -465,6 +465,33 @@ impl Client {
         self.state = Some(self.state.take().unwrap().on_mac_frame(self, ctx, bytes, body_aligned));
     }
 
+    // TODO(39899): The Rust crate does not yet support channel scheduling. When channel scheduling
+    //              is available, use this code to doze and awake as needed.
+    /// Sends a power management data frame to the associated AP indicating that the client has
+    /// entered the given power state. See `PowerState`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the data frame cannot be sent to the AP.
+    pub fn send_power_state_frame(
+        &mut self,
+        ctx: &mut Context,
+        state: PowerState,
+    ) -> Result<(), Error> {
+        let mut buffer = ctx.buf_provider.get_buffer(mac::FixedDataHdrFields::len(
+            mac::Addr4::ABSENT,
+            mac::QosControl::ABSENT,
+            mac::HtControl::ABSENT,
+        ))?;
+        let mut writer = BufferWriter::new(&mut buffer[..]);
+        write_power_state_frame(&mut writer, self.bssid, self.iface_mac, &mut ctx.seq_mgr, state)?;
+        let n = writer.bytes_written();
+        let buffer = OutBuf::from(buffer, n);
+        ctx.device
+            .send_wlan_frame(buffer, TxFlags::NONE)
+            .map_err(|error| Error::Status(format!("error sending power management frame"), error))
+    }
+
     /// Sends an MLME-AUTHENTICATE.confirm message to the SME with authentication type
     /// `Open System` as only open authentication is supported.
     fn send_authenticate_conf(
@@ -514,37 +541,6 @@ impl Client {
         if let Err(e) = result {
             error!("error sending MLME-DEAUTHENTICATE.indication: {}", e);
         }
-    }
-
-    // See `SetPowerManagement` in the C++ implementation.
-    // TODO(fxb/39899): The Rust crate does not yet support channel scheduling. When channel
-    //                  scheduling is available, use this code and remove the `allow(dead_code)`
-    //                  attribute. See fxr/335090.
-    /// Sends a power management data frame to the associated AP indicating that the client has
-    /// entered the given power state. See `PowerState`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the client is not associated with an AP or if the data frame cannot be
-    /// sent to the AP.
-    #[allow(dead_code)]
-    fn send_power_state_frame(
-        &mut self,
-        ctx: &mut Context,
-        state: PowerState,
-    ) -> Result<(), Error> {
-        let mut buffer = ctx.buf_provider.get_buffer(mac::FixedDataHdrFields::len(
-            mac::Addr4::ABSENT,
-            mac::QosControl::ABSENT,
-            mac::HtControl::ABSENT,
-        ))?;
-        let mut writer = BufferWriter::new(&mut buffer[..]);
-        write_power_state_frame(&mut writer, self.bssid, self.iface_mac, &mut ctx.seq_mgr, state)?;
-        let n = writer.bytes_written();
-        let buffer = OutBuf::from(buffer, n);
-        ctx.device
-            .send_wlan_frame(buffer, TxFlags::NONE)
-            .map_err(|error| Error::Status(format!("error sending power management frame"), error))
     }
 
     /// Sends an MLME-DISASSOCIATE.indication message to the joined BSS.

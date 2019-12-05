@@ -75,8 +75,9 @@ impl CtrlSubtype {
 
 /// The power management state of a station.
 ///
-/// Represents the possible power states for doze BI from table 11-3 of IEEE-802.11-2016.
+/// Represents the possible power states from IEEE-802.11-2016, 11.2.7.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(C)]
 pub struct PowerState(bool);
 
 impl PowerState {

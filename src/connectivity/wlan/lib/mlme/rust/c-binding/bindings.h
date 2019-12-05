@@ -191,6 +191,15 @@ typedef struct {
   void (*ensure_on_channel)(void *chan_sched, zx_time_t end);
 } wlan_cpp_chan_sched_t;
 
+/**
+ * The power management state of a station.
+ *
+ * Represents the possible power states from IEEE-802.11-2016, 11.2.7.
+ */
+typedef struct {
+  bool _0;
+} wlan_power_state_t;
+
 extern "C" void ap_sta_delete(wlan_ap_sta_t *sta);
 
 extern "C" int32_t ap_sta_handle_eth_frame(wlan_ap_sta_t *sta, const uint8_t (*dst_addr)[6],
@@ -254,6 +263,10 @@ extern "C" void client_sta_send_eapol_frame(wlan_client_sta_t *sta, wlan_client_
 
 extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta,
                                                    wlan_client_mlme_t *mlme);
+
+extern "C" int32_t client_sta_send_power_state_frame(wlan_client_sta_t *sta,
+                                                     wlan_client_mlme_t *mlme,
+                                                     wlan_power_state_t state);
 
 extern "C" int32_t client_sta_send_ps_poll_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
                                                  uint16_t aid);

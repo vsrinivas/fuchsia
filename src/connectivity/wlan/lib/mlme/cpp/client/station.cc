@@ -729,7 +729,8 @@ void Station::UpdateControlledPort(wlan_mlme::ControlledPortState state) {
 void Station::PreSwitchOffChannel() {
   debugfn();
   if (state_ == WlanState::kAssociated) {
-    SetPowerManagementMode(true);
+    client_sta_send_power_state_frame(rust_client_.get(), rust_mlme_,
+                                      wlan_power_state_t{._0 = true});
 
     timer_mgr_->Cancel(auto_deauth_timeout_);
     zx::duration unaccounted_time = timer_mgr_->Now() - auto_deauth_last_accounted_;
@@ -744,7 +745,8 @@ void Station::PreSwitchOffChannel() {
 void Station::BackToMainChannel() {
   debugfn();
   if (state_ == WlanState::kAssociated) {
-    SetPowerManagementMode(false);
+    client_sta_send_power_state_frame(rust_client_.get(), rust_mlme_,
+                                      wlan_power_state_t{._0 = false});
 
     zx::time now = timer_mgr_->Now();
     auto deadline = now + std::max(remaining_auto_deauth_timeout_, WLAN_TU(1u));
@@ -767,39 +769,6 @@ zx_status_t Station::SendMgmtFrame(std::unique_ptr<Packet> packet) {
 
 zx_status_t Station::SendDataFrame(std::unique_ptr<Packet> packet, uint32_t flags) {
   return SendWlan(std::move(packet), flags);
-}
-
-zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
-  if (state_ != WlanState::kAssociated) {
-    warnf("cannot adjust power management before being associated\n");
-    return ZX_OK;
-  }
-
-  auto packet = GetWlanPacket(DataFrameHeader::max_len());
-  if (packet == nullptr) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  BufferWriter w(*packet);
-  auto data_hdr = w.Write<DataFrameHeader>();
-  data_hdr->fc.set_type(FrameType::kData);
-  data_hdr->fc.set_subtype(DataSubtype::kNull);
-  data_hdr->fc.set_pwr_mgmt(ps_mode);
-  data_hdr->fc.set_to_ds(1);
-  data_hdr->addr1 = join_ctx_->bssid();
-  data_hdr->addr2 = self_addr();
-  data_hdr->addr3 = join_ctx_->bssid();
-  auto seq_mgr = client_mlme_seq_mgr(rust_mlme_);
-  auto seq_num = mlme_sequence_manager_next_sns1(seq_mgr, &data_hdr->addr1.byte);
-  data_hdr->sc.set_seq(seq_num);
-
-  packet->set_len(w.WrittenBytes());
-  auto status = SendDataFrame(std::move(packet));
-  if (status != ZX_OK) {
-    errorf("could not send power management frame to set to %d: %s\n", ps_mode,
-           zx_status_get_string(status));
-  }
-  return status;
 }
 
 zx_status_t Station::SendPsPoll() {

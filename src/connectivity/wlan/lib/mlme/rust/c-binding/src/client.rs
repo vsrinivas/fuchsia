@@ -9,7 +9,7 @@ use {
         buffer::BufferProvider,
         client::{Client, ClientConfig, ClientMlme, CppChannelScheduler},
         common::{
-            mac::{self, Bssid},
+            mac::{self, Bssid, PowerState},
             sequence::SequenceManager,
         },
         device::Device,
@@ -185,4 +185,13 @@ pub unsafe extern "C" fn client_sta_send_ps_poll_frame(
     aid: u16,
 ) -> i32 {
     sta.send_ps_poll_frame(mlme.ctx(), aid).into_raw_zx_status()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn client_sta_send_power_state_frame(
+    sta: &mut Client,
+    mlme: &mut ClientMlme,
+    state: PowerState,
+) -> i32 {
+    sta.send_power_state_frame(mlme.ctx(), state).into_raw_zx_status()
 }
