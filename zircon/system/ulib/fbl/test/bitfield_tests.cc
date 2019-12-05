@@ -112,4 +112,28 @@ TEST(BitfieldTest, AssignFromBitField) {
 constexpr TestBFuint64 cex_bf_uint64;
 static_assert(sizeof(cex_bf_uint64.m0_3bits) == sizeof(uint64_t));
 
+union Rights {
+  uint32_t raw_value = 0u;
+  fbl::BitFieldMember<uint32_t, 0, 1> read;
+  fbl::BitFieldMember<uint32_t, 1, 1> write;
+  fbl::BitFieldMember<uint32_t, 2, 1> admin;
+  fbl::BitFieldMember<uint32_t, 3, 1> execute;
+
+  constexpr Rights() {}
+
+  constexpr static Rights ReadExec() {
+    Rights rights;
+    rights.read = true;
+    rights.execute = true;
+    return rights;
+  }
+};
+
+TEST(BitfieldTest, AssignMultipleValuesThenRead) {
+  auto rights = Rights::ReadExec();
+  // (read | execute) should be (1 | 8) == 9.  gcc 8.3 produced the value 8 for this
+  // scenario when not using std::memcpy() to assign values: https://godbolt.org/z/YBBCKz
+  ASSERT_EQ(rights.raw_value, 9);
+}
+
 }  // namespace

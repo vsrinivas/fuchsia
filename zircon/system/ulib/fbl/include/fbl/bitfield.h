@@ -5,8 +5,10 @@
 #ifndef FBL_BITFIELD_H_
 #define FBL_BITFIELD_H_
 
-#include <type_traits>
 #include <zircon/assert.h>
+
+#include <cstring>
+#include <type_traits>
 
 namespace fbl {
 
@@ -59,51 +61,65 @@ namespace fbl {
 
 template <typename T, size_t Offset, size_t BitCount>
 class BitFieldMember {
-public:
-    static_assert(std::is_unsigned<T>::value, "bitfield type must be unsigned");
-    static_assert(Offset + BitCount <= (sizeof(T) * 8u), "offset or count is too large");
+ public:
+  static_assert(std::is_unsigned<T>::value, "bitfield type must be unsigned");
+  static_assert(Offset + BitCount <= (sizeof(T) * 8u), "offset or count is too large");
 
-    static constexpr T Maximum = (T(1) << BitCount) - 1;
-    static constexpr T Mask = Maximum << Offset;
+  static constexpr T Maximum = (T(1) << BitCount) - 1;
+  static constexpr T Mask = Maximum << Offset;
 
-    constexpr T maximum() const { return Maximum; }
+  constexpr T maximum() const { return Maximum; }
 
-    constexpr operator T() const {
-        return (value_ >> Offset) & Maximum;
-    }
+  constexpr operator T() const { return (value_ >> Offset) & Maximum; }
 
-    constexpr BitFieldMember& operator=(T new_value) {
-        ZX_DEBUG_ASSERT(new_value <= Maximum);
-        value_ = (value_ & ~Mask) | (new_value << Offset);
-        return *this;
-    }
+  constexpr BitFieldMember& operator=(T new_value) {
+    ZX_DEBUG_ASSERT(new_value <= Maximum);
+    // Subtle code ahead!
+    // In typical usage, the storage for type |value_| will be a member of a
+    // union and not necessarily the active union member. C++11 §9.5.1
+    // [class.union] permits "inspection" of non-active members so long as
+    // the union follows other rules which we already rely on to read the value
+    // of the bitfield and compute a new value.
+    T temp = (value_ & ~Mask) | (new_value << Offset);
+    // Now that we have a new value, we need to write it to the underlying
+    // storage. Since |value_| may not be the active union member we can't
+    // assign directly but we can std::memcpy() into the storage holding the
+    // value.  See issue 38296 for an example of direct assignment producing
+    // the wrong result.
+    std::memcpy(&value_, &temp, sizeof(T));
+    return *this;
+  }
 
-    constexpr BitFieldMember& operator=(const BitFieldMember& other) {
-        T new_value = other;
-        *this = new_value;
-        return *this;
-    }
+  constexpr BitFieldMember& operator=(const BitFieldMember& other) {
+    T new_value = other;
+    *this = new_value;
+    return *this;
+  }
 
-private:
-    T value_;
+ private:
+  T value_;
 };
 
-#define FBL_BITFIELD_DEF_START(Typename, T) \
-    union Typename { \
-        using ValueType = T; \
-        ValueType value; \
-        constexpr explicit Typename(T v = 0) : value(v) {} \
-        constexpr Typename& operator=(T v) { value = v; return *this; } \
-        constexpr operator T&() { return value; } \
-        constexpr operator T() const { return value; } \
+#define FBL_BITFIELD_DEF_START(Typename, T)                                  \
+  union Typename {                                                           \
+    static_assert(std::is_standard_layout_v<T>,                              \
+                  "Storage type in bitfield union must be standard layout"); \
+    using ValueType = T;                                                     \
+    ValueType value;                                                         \
+    constexpr explicit Typename(T v = 0) : value(v) {}                       \
+    constexpr Typename& operator=(T v) {                                     \
+      value = v;                                                             \
+      return *this;                                                          \
+    }                                                                        \
+    constexpr operator T&() { return value; }                                \
+    constexpr operator T() const { return value; }
 
-#define FBL_BITFIELD_MEMBER(MemberName, offset, bits) \
-        fbl::BitFieldMember<ValueType, offset, bits> MemberName
+#define FBL_BITFIELD_MEMBER(MemberName, offset, bits)                                     \
+  static_assert(std::is_standard_layout_v<fbl::BitFieldMember<ValueType, offset, bits>>); \
+  fbl::BitFieldMember<ValueType, offset, bits> MemberName
 
-#define FBL_BITFIELD_DEF_END() \
-    }
+#define FBL_BITFIELD_DEF_END() }
 
-}
-
+}  // namespace fbl
 
 #endif  // FBL_BITFIELD_H_
