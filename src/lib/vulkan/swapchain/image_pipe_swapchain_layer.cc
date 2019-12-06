@@ -84,10 +84,7 @@ struct PendingImageInfo {
 class ImagePipeSwapchain {
  public:
   ImagePipeSwapchain(ImagePipeSurface* surface)
-      : surface_(surface),
-        image_pipe_closed_(false),
-        is_protected_(false),
-        device_(VK_NULL_HANDLE) {}
+      : surface_(surface), is_protected_(false), device_(VK_NULL_HANDLE) {}
 
   VkResult Initialize(VkDevice device, const VkSwapchainCreateInfoKHR* pCreateInfo,
                       const VkAllocationCallbacks* pAllocator);
@@ -110,7 +107,6 @@ class ImagePipeSwapchain {
   std::vector<VkSemaphore> semaphores_;
   std::vector<uint32_t> acquired_ids_;
   std::vector<PendingImageInfo> pending_images_;
-  bool image_pipe_closed_;
   bool is_protected_;
   VkDevice device_;
 };
@@ -231,9 +227,6 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR v
 }
 
 VkResult ImagePipeSwapchain::GetSwapchainImages(uint32_t* pCount, VkImage* pSwapchainImages) {
-  if (image_pipe_closed_)
-    return VK_ERROR_DEVICE_LOST;
-
   if (pSwapchainImages == NULL) {
     *pCount = images_.size();
     return VK_SUCCESS;
@@ -258,6 +251,8 @@ static void CrashDueToOutOfImages() { abort(); }
 
 VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore semaphore,
                                               uint32_t* pImageIndex) {
+  if (surface_->IsLost())
+    return VK_ERROR_SURFACE_LOST_KHR;
   if (pending_images_.empty()) {
     // All images acquired and none presented.  We will never acquire anything.
     if (timeout_ns == 0)
@@ -323,6 +318,9 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns, VkSemaphore s
         ZX_EVENT_SIGNALED,
         timeout_ns == UINT64_MAX ? zx::time::infinite() : zx::deadline_after(zx::nsec(timeout_ns)),
         &pending);
+    if (surface_->IsLost())
+      return VK_ERROR_SURFACE_LOST_KHR;
+
     if (status == ZX_ERR_TIMED_OUT)
       return VK_TIMEOUT;
     if (status != ZX_OK) {
@@ -351,8 +349,8 @@ VKAPI_ATTR VkResult VKAPI_CALL AcquireNextImageKHR(VkDevice device, VkSwapchainK
 
 VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t waitSemaphoreCount,
                                      const VkSemaphore* pWaitSemaphores) {
-  if (image_pipe_closed_)
-    return VK_ERROR_DEVICE_LOST;
+  if (surface_->IsLost())
+    return VK_ERROR_SURFACE_LOST_KHR;
 
   VkLayerDispatchTable* pDisp =
       GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)->device_dispatch_table;

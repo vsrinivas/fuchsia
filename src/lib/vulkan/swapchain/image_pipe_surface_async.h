@@ -26,6 +26,7 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
     image_pipe_.set_error_handler([this](zx_status_t status) {
       std::lock_guard<std::mutex> lock(mutex_);
       channel_closed_ = true;
+      queue_.clear();
     });
     loop_.StartThread();
     std::vector<VkSurfaceFormatKHR> formats(
@@ -38,6 +39,7 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
 
   bool Init() override;
 
+  bool IsLost() override;
   bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
                    VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
                    fuchsia::images::ImageInfo image_info, uint32_t image_count,
@@ -52,6 +54,20 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
   SupportedImageProperties& GetSupportedImageProperties() override;
 
  private:
+  class FenceSignaler {
+   public:
+    explicit FenceSignaler(zx::event event) : event_(std::move(event)) {}
+    ~FenceSignaler() {
+      if (event_)
+        event_.signal(0, ZX_EVENT_SIGNALED);
+    }
+    const zx::event& event() { return event_; }
+    void reset() { event_.reset(); }
+
+   private:
+    zx::event event_;
+  };
+
   // Called on the async loop.
   void PresentNextImageLocked() __attribute__((requires_capability(mutex_)));
 
@@ -68,7 +84,13 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
   struct PendingPresent {
     uint32_t image_id;
     std::vector<zx::event> acquire_fences;
-    std::vector<zx::event> release_fences;
+    // These fences will automatically be signaled when they go out of scope, which could happen if
+    // the ImagePipe channel is closed. As these events are passed to the application as acquire
+    // semaphores, this prevents semaphore waits on them from hanging until the GPU driver decides
+    // to time them out.
+    // The only case where we don't automatically signal them is if the PresentImage callback is
+    // run, in which case scenic is responsible for signaling them.
+    std::vector<std::unique_ptr<FenceSignaler>> release_fences;
   };
   std::vector<PendingPresent> queue_ __attribute__((guarded_by(mutex_)));
   bool present_pending_ __attribute__((guarded_by(mutex_))) = false;

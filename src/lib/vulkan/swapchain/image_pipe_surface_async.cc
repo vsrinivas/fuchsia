@@ -210,6 +210,11 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
   return true;
 }
 
+bool ImagePipeSurfaceAsync::IsLost() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return channel_closed_;
+}
+
 // Disable thread safety analysis because it can't handle unique_lock.
 void ImagePipeSurfaceAsync::RemoveImage(uint32_t image_id)
     __attribute__((no_thread_safety_analysis)) {
@@ -248,7 +253,15 @@ void ImagePipeSurfaceAsync::PresentImage(uint32_t image_id, std::vector<zx::even
                                          std::vector<zx::event> release_fences) {
   std::lock_guard<std::mutex> lock(mutex_);
   TRACE_FLOW_BEGIN("gfx", "image_pipe_swapchain_to_present", image_id);
-  queue_.push_back({image_id, std::move(acquire_fences), std::move(release_fences)});
+
+  std::vector<std::unique_ptr<FenceSignaler>> release_fence_signalers;
+  release_fence_signalers.reserve(release_fences.size());
+  for (auto& fence : release_fences) {
+    release_fence_signalers.push_back(std::make_unique<FenceSignaler>(std::move(fence)));
+  }
+  if (channel_closed_)
+    return;
+  queue_.push_back({image_id, std::move(acquire_fences), std::move(release_fence_signalers)});
   if (!present_pending_) {
     async::PostTask(loop_.dispatcher(), [this]() {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -278,12 +291,23 @@ void ImagePipeSurfaceAsync::PresentNextImageLocked() {
   TRACE_FLOW_END("gfx", "image_pipe_swapchain_to_present", present.image_id);
   TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", present.image_id);
   if (image_pipe_.is_bound()) {
+    std::vector<zx::event> release_events;
+    release_events.reserve(present.release_fences.size());
+    for (auto& signaler : present.release_fences) {
+      zx::event event;
+      signaler->event().duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
+      release_events.push_back(std::move(event));
+    }
     image_pipe_->PresentImage(present.image_id, presentation_time,
-                              std::move(present.acquire_fences), std::move(present.release_fences),
+                              std::move(present.acquire_fences), std::move(release_events),
                               // Called on the async loop.
-                              [this](fuchsia::images::PresentationInfo pinfo) {
+                              [this, release_fences = std::move(present.release_fences)](
+                                  fuchsia::images::PresentationInfo pinfo) {
                                 std::lock_guard<std::mutex> lock(mutex_);
                                 present_pending_ = false;
+                                for (auto& fence : release_fences) {
+                                  fence->reset();
+                                }
                                 PresentNextImageLocked();
                               });
   }

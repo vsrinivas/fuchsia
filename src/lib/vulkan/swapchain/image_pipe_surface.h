@@ -46,6 +46,7 @@ class ImagePipeSurface {
 
   virtual bool GetSize(uint32_t* width_out, uint32_t* height_out) { return false; }
 
+  virtual bool IsLost() { return false; }
   virtual bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
                            VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
                            fuchsia::images::ImageInfo image_info, uint32_t image_count,
