@@ -225,6 +225,7 @@ RndisHost::RndisHost(zx_device_t* parent, uint8_t control_intf, uint8_t bulk_in_
       mac_addr_{},
       control_intf_(control_intf),
       next_request_id_(0),
+      mtu_(0),
       bulk_in_addr_(bulk_in_addr),
       bulk_out_addr_(bulk_out_addr),
       rx_endpoint_delay_(0),
@@ -379,7 +380,7 @@ zx_status_t RndisHost::InitializeDevice() {
     return ZX_ERR_IO;
   }
 
-  mtu_ = init_cmplt->max_xfer_size;
+  zxlogf(INFO, "rndishost maximum bus transfer size: %u bytes\n", init_cmplt->max_xfer_size);
   return ZX_OK;
 }
 
@@ -501,6 +502,13 @@ zx_status_t RndisHost::StartThread() {
   }
   zxlogf(INFO, "rndishost MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac_addr_[0], mac_addr_[1],
          mac_addr_[2], mac_addr_[3], mac_addr_[4], mac_addr_[5]);
+
+  status = QueryDevice(OID_GEN_MAXIMUM_FRAME_SIZE, &mtu_, sizeof(mtu_));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "rndishost could not obtain maximum frame size: %d\n", status);
+    goto fail;
+  }
+  zxlogf(INFO, "rndishost maximum frame size: %u bytes\n", mtu_);
 
   {
     // The device's packet filter is initialized to 0, which blocks all traffic. Enable network
