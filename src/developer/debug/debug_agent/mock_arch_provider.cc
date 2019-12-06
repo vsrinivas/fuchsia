@@ -6,23 +6,23 @@
 
 namespace debug_agent {
 
-zx_status_t MockArchProvider::InstallHWBreakpoint(zx::thread* thread, uint64_t address) {
+zx_status_t MockArchProvider::InstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
   bp_installs_[address]++;
   return ZX_OK;
 }
 
-zx_status_t MockArchProvider::UninstallHWBreakpoint(zx::thread* thread, uint64_t address) {
+zx_status_t MockArchProvider::UninstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
   bp_uninstalls_[address]++;
   return ZX_OK;
 }
 
 arch::WatchpointInstallationResult MockArchProvider::InstallWatchpoint(
-    zx::thread*, const debug_ipc::AddressRange& range) {
+    const zx::thread&, const debug_ipc::AddressRange& range) {
   wp_installs_[range]++;
   return arch::WatchpointInstallationResult(ZX_OK, range, 0);
 }
 
-zx_status_t MockArchProvider::UninstallWatchpoint(zx::thread*,
+zx_status_t MockArchProvider::UninstallWatchpoint(const zx::thread&,
                                                   const debug_ipc::AddressRange& range) {
   wp_uninstalls_[range]++;
   return ZX_OK;

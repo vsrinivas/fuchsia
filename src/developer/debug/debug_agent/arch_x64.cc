@@ -311,58 +311,44 @@ debug_ipc::ExceptionType ArchProvider::DecodeExceptionType(const DebuggedThread&
   return debug_ipc::DecodeException(exception_type, &info);
 }
 
-zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread* thread, uint64_t address) {
-  FXL_DCHECK(thread);
-  // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
-  zx_status_t status;
+zx_status_t ArchProvider::InstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
   zx_thread_state_debug_regs_t debug_regs;
-  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
-  if (status != ZX_OK)
+  if (zx_status_t status = ReadDebugState(thread, &debug_regs); status != ZX_OK)
     return status;
 
   DEBUG_LOG(Archx64) << "Before installing HW breakpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  status = SetupHWBreakpoint(address, &debug_regs);
-  if (status != ZX_OK)
+  if (zx_status_t status = SetupHWBreakpoint(address, &debug_regs); status != ZX_OK)
     return status;
 
   DEBUG_LOG(Archx64) << "After installing HW breakpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
+  return WriteDebugState(thread, debug_regs);
 }
 
-zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread, uint64_t address) {
-  FXL_DCHECK(thread);
-  // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
-  zx_status_t status;
+zx_status_t ArchProvider::UninstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
   zx_thread_state_debug_regs_t debug_regs;
-  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
-  if (status != ZX_OK)
+  if (zx_status_t status = ReadDebugState(thread, &debug_regs); status != ZX_OK)
     return status;
 
   DEBUG_LOG(Archx64) << "Before uninstalling HW breakpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  status = RemoveHWBreakpoint(address, &debug_regs);
-  if (status != ZX_OK)
+  if (zx_status_t status = RemoveHWBreakpoint(address, &debug_regs); status != ZX_OK)
     return status;
 
   DEBUG_LOG(Archx64) << "After uninstalling HW breakpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
+  return WriteDebugState(thread, debug_regs);
 }
 
-WatchpointInstallationResult ArchProvider::InstallWatchpoint(zx::thread* thread,
+WatchpointInstallationResult ArchProvider::InstallWatchpoint(const zx::thread& thread,
                                                              const debug_ipc::AddressRange& range) {
-  FXL_DCHECK(thread);
-
-  zx_status_t status;
   zx_thread_state_debug_regs_t debug_regs;
-  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
-  if (status != ZX_OK)
+  if (zx_status_t status = ReadDebugState(thread, &debug_regs); status != ZX_OK)
     return WatchpointInstallationResult(status);
 
   DEBUG_LOG(Archx64) << "Before installing watchpoint for range " << range.ToString() << std::endl
@@ -375,34 +361,28 @@ WatchpointInstallationResult ArchProvider::InstallWatchpoint(zx::thread* thread,
   DEBUG_LOG(Archx64) << "After installing watchpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  status = thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
-  if (status != ZX_OK)
+  if (zx_status_t status = WriteDebugState(thread, debug_regs); status != ZX_OK)
     return WatchpointInstallationResult(status);
   return result;
 }
 
-zx_status_t ArchProvider::UninstallWatchpoint(zx::thread* thread,
+zx_status_t ArchProvider::UninstallWatchpoint(const zx::thread& thread,
                                               const debug_ipc::AddressRange& range) {
-  FXL_DCHECK(thread);
-  // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
-  zx_status_t status;
   zx_thread_state_debug_regs_t debug_regs;
-  status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
-  if (status != ZX_OK)
+  if (zx_status_t status = ReadDebugState(thread, &debug_regs); status != ZX_OK)
     return status;
 
   DEBUG_LOG(Archx64) << "Before uninstalling watchpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
   // x64 doesn't support ranges.
-  status = RemoveHWBreakpoint(range.begin(), &debug_regs);
-  if (status != ZX_OK)
+  if (zx_status_t status = RemoveHWBreakpoint(range.begin(), &debug_regs); status != ZX_OK)
     return status;
 
   DEBUG_LOG(Archx64) << "After uninstalling watchpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  return thread->write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
+  return WriteDebugState(thread, debug_regs);
 }
 
 }  // namespace arch

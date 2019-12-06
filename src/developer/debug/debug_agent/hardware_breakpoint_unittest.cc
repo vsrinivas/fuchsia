@@ -14,13 +14,13 @@ namespace {
 
 class MockArchProvider : public arch::ArchProvider {
  public:
-  zx_status_t InstallHWBreakpoint(zx::thread* thread, uint64_t address) override {
-    installs_.push_back({thread->get(), address});
+  zx_status_t InstallHWBreakpoint(const zx::thread& thread, uint64_t address) override {
+    installs_.push_back({thread.get(), address});
     return ZX_OK;
   }
 
-  zx_status_t UninstallHWBreakpoint(zx::thread* thread, uint64_t address) override {
-    uninstalls_.push_back({thread->get(), address});
+  zx_status_t UninstallHWBreakpoint(const zx::thread& thread, uint64_t address) override {
+    uninstalls_.push_back({thread.get(), address});
     return ZX_OK;
   }
 

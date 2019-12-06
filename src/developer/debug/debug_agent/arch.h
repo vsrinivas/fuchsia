@@ -35,17 +35,28 @@ class ArchProvider {
 
   ::debug_ipc::Arch GetArch();
 
+  uint32_t hw_breakpoint_count() const { return hw_breakpoint_count_; }
+  void set_hw_breakpoint_count(uint32_t count) { hw_breakpoint_count_ = count; }
+
+  uint32_t watchpoint_count() const { return watchpoint_count_; }
+  void set_watchpoint_count(uint32_t count) { watchpoint_count_ = count; }
+
   // Thread Management -----------------------------------------------------------------------------
 
   // zx_thread_read_state with ZX_THREAD_STATE_GENERAL_REGS.
   virtual zx_status_t ReadGeneralState(const zx::thread& handle,
                                        zx_thread_state_general_regs* regs);
 
+  virtual zx_status_t ReadDebugState(const zx::thread& handle, zx_thread_state_debug_regs* regs);
+
   // zx_thread_write_state with ZX_THREAD_STATE_GENERAL_REGS.
   virtual zx_status_t WriteGeneralState(const zx::thread& handle,
                                         const zx_thread_state_general_regs& regs);
 
   virtual zx_status_t WriteSingleStep(const zx::thread& thread, bool single_step);
+
+  virtual zx_status_t WriteDebugState(const zx::thread& handle,
+                                      const zx_thread_state_debug_regs& regs);
 
   // Returns the address of the instruction pointer/stack pointer/base pointer
   // in the given reg structure.
@@ -107,12 +118,16 @@ class ArchProvider {
   virtual debug_ipc::ExceptionType DecodeExceptionType(const DebuggedThread&,
                                                        uint32_t exception_type);
 
-  virtual zx_status_t InstallHWBreakpoint(zx::thread*, uint64_t address);
-  virtual zx_status_t UninstallHWBreakpoint(zx::thread*, uint64_t address);
+  virtual zx_status_t InstallHWBreakpoint(const zx::thread&, uint64_t address);
+  virtual zx_status_t UninstallHWBreakpoint(const zx::thread&, uint64_t address);
 
-  virtual WatchpointInstallationResult InstallWatchpoint(zx::thread*,
+  virtual WatchpointInstallationResult InstallWatchpoint(const zx::thread&,
                                                          const debug_ipc::AddressRange&);
-  virtual zx_status_t UninstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&);
+  virtual zx_status_t UninstallWatchpoint(const zx::thread&, const debug_ipc::AddressRange&);
+
+ private:
+  uint32_t hw_breakpoint_count_ = 0;
+  uint32_t watchpoint_count_ = 0;
 };
 
 }  // namespace arch

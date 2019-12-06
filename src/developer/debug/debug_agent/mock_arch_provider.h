@@ -16,14 +16,14 @@ namespace debug_agent {
 // the code is doing within the tests.
 class MockArchProvider : public arch::ArchProvider {
  public:
-  zx_status_t InstallHWBreakpoint(zx::thread* thread, uint64_t address) override;
+  zx_status_t InstallHWBreakpoint(const zx::thread& thread, uint64_t address) override;
 
-  zx_status_t UninstallHWBreakpoint(zx::thread* thread, uint64_t address) override;
+  zx_status_t UninstallHWBreakpoint(const zx::thread& thread, uint64_t address) override;
 
-  arch::WatchpointInstallationResult InstallWatchpoint(zx::thread*,
+  arch::WatchpointInstallationResult InstallWatchpoint(const zx::thread&,
                                                        const debug_ipc::AddressRange&) override;
 
-  zx_status_t UninstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&) override;
+  zx_status_t UninstallWatchpoint(const zx::thread&, const debug_ipc::AddressRange&) override;
 
   size_t BreakpointInstallCount(uint64_t address) const;
   size_t TotalBreakpointInstallCalls() const;

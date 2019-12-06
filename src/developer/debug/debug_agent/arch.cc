@@ -31,6 +31,16 @@ zx_status_t ArchProvider::WriteSingleStep(const zx::thread& thread, bool single_
   return thread.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
 }
 
+zx_status_t ArchProvider::ReadDebugState(const zx::thread& thread,
+                                         zx_thread_state_debug_regs* regs) {
+  return thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, regs, sizeof(zx_thread_state_debug_regs));
+}
+
+zx_status_t ArchProvider::WriteDebugState(const zx::thread& thread,
+                                          const zx_thread_state_debug_regs& regs) {
+  return thread.write_state(ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(zx_thread_state_debug_regs));
+}
+
 zx_status_t ArchProvider::GetInfo(const zx::thread& thread, zx_object_info_topic_t topic,
                                   void* buffer, size_t buffer_size, size_t* actual, size_t* avail) {
   return thread.get_info(topic, buffer, buffer_size, actual, avail);

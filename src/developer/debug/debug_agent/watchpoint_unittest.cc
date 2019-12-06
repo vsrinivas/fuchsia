@@ -27,14 +27,14 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
 
 class MockArchProvider : public arch::ArchProvider {
  public:
-  arch::WatchpointInstallationResult InstallWatchpoint(zx::thread* thread,
+  arch::WatchpointInstallationResult InstallWatchpoint(const zx::thread& thread,
                                                        const AddressRange& range) override {
-    installs_.push_back({thread->get(), range});
+    installs_.push_back({thread.get(), range});
     return arch::WatchpointInstallationResult(ZX_OK, range_to_return_, slot_to_return_);
   }
 
-  zx_status_t UninstallWatchpoint(zx::thread* thread, const AddressRange& range) override {
-    uninstalls_.push_back({thread->get(), range});
+  zx_status_t UninstallWatchpoint(const zx::thread& thread, const AddressRange& range) override {
+    uninstalls_.push_back({thread.get(), range});
     return ZX_OK;
   }
 
