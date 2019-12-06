@@ -133,7 +133,6 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   // Make a disabled symbolic breakpoint.
   BreakpointSettings in;
   in.enabled = false;
-  in.scope = BreakpointSettings::Scope::kSystem;
   in.locations.emplace_back(Identifier(IdentifierComponent(kFunctionName)));
 
   // Setting the disabled settings shouldn't update the backend.
@@ -249,8 +248,7 @@ TEST_F(BreakpointImplTest, Address) {
   const uint64_t kAddress = 0x123456780;
   BreakpointSettings in;
   in.enabled = true;
-  in.scope = BreakpointSettings::Scope::kTarget;
-  in.scope_target = target;
+  in.scope = ExecutionScope(target);
   in.locations.emplace_back(kAddress);
 
   Err err = SyncSetSettings(bp, in);
@@ -277,8 +275,7 @@ TEST_F(BreakpointImplTest, Watchpoint) {
   BreakpointSettings in;
   in.enabled = true;
   in.type = debug_ipc::BreakpointType::kWatchpoint;
-  in.scope = BreakpointSettings::Scope::kTarget;
-  in.scope_target = target;
+  in.scope = ExecutionScope(target);
   in.locations.emplace_back(kAddress);
 
   Err err = SyncSetSettings(bp, in);

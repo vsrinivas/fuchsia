@@ -26,6 +26,7 @@ class Breakpoint;
 class Command;
 class ConsoleContext;
 class Err;
+class ExecutionScope;
 class Frame;
 class Function;
 struct InputLocation;
@@ -78,8 +79,12 @@ size_t CheckHexPrefix(const std::string& s);
 std::string ThreadStateToString(debug_ipc::ThreadRecord::State state,
                                 debug_ipc::ThreadRecord::BlockedReason blocked_reason);
 
-std::string BreakpointScopeToString(const ConsoleContext* context,
-                                    const BreakpointSettings& settings);
+std::string ExecutionScopeToString(const ConsoleContext* context, const ExecutionScope& scope);
+
+// Converts the command context to an execution scope. This will take the "target"/"thread" if
+// explicitly given. If no globa/target/thread context is explicitly given, defaults to the global.
+ExecutionScope ExecutionScopeForCommand(const Command& cmd);
+
 std::string BreakpointStopToString(BreakpointSettings::StopMode mode);
 const char* BreakpointEnabledToString(bool enabled);
 

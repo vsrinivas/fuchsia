@@ -50,7 +50,6 @@ TEST_F(NounsTest, BreakpointList) {
   // Set location.
   BreakpointSettings in;
   in.enabled = false;
-  in.scope = BreakpointSettings::Scope::kSystem;
   in.locations.emplace_back(Identifier(IdentifierComponent("Foo")));
   bp->SetSettings(in, [](const Err&) { debug_ipc::MessageLoop::Current()->QuitNow(); });
   loop().Run();

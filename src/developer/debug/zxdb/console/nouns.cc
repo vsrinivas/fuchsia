@@ -565,7 +565,7 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     auto matched_locs = pair.second->GetLocations();
 
     row.push_back(OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d", pair.first)));
-    row.emplace_back(BreakpointScopeToString(context, settings));
+    row.emplace_back(ExecutionScopeToString(context, settings.scope));
     row.emplace_back(BreakpointStopToString(settings.stop_mode));
     row.emplace_back(BreakpointEnabledToString(settings.enabled));
     row.emplace_back(BreakpointTypeToString(settings.type));

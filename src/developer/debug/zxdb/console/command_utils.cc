@@ -220,20 +220,32 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state,
                            debug_ipc::ThreadRecord::BlockedReasonToString(blocked_reason));
 }
 
-std::string BreakpointScopeToString(const ConsoleContext* context,
-                                    const BreakpointSettings& settings) {
-  switch (settings.scope) {
-    case BreakpointSettings::Scope::kSystem:
+std::string ExecutionScopeToString(const ConsoleContext* context, const ExecutionScope& scope) {
+  switch (scope.type()) {
+    case ExecutionScope::kSystem:
       return "Global";
-    case BreakpointSettings::Scope::kTarget:
-      return fxl::StringPrintf("pr %d", context->IdForTarget(settings.scope_target));
-    case BreakpointSettings::Scope::kThread:
-      return fxl::StringPrintf(
-          "pr %d t %d", context->IdForTarget(settings.scope_thread->GetProcess()->GetTarget()),
-          context->IdForThread(settings.scope_thread));
+    case ExecutionScope::kTarget:
+      if (scope.target())
+        return fxl::StringPrintf("pr %d", context->IdForTarget(scope.target()));
+      return "<Deleted process>";
+    case ExecutionScope::kThread:
+      if (scope.thread()) {
+        return fxl::StringPrintf("pr %d t %d", context->IdForTarget(scope.target()),
+                                 context->IdForThread(scope.thread()));
+      }
+      return "<Deleted thread>";
   }
   FXL_NOTREACHED();
   return std::string();
+}
+
+ExecutionScope ExecutionScopeForCommand(const Command& cmd) {
+  if (cmd.HasNoun(Noun::kThread))
+    return ExecutionScope(cmd.thread());  // Thread context given explicitly.
+  if (cmd.HasNoun(Noun::kProcess))
+    return ExecutionScope(cmd.target());  // Target context given explicitly.
+
+  return ExecutionScope();  // Everything else becomes global scope.
 }
 
 std::string BreakpointStopToString(BreakpointSettings::StopMode mode) {
@@ -264,7 +276,7 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
                               bool show_context) {
   BreakpointSettings settings = breakpoint->GetSettings();
 
-  std::string scope = BreakpointScopeToString(context, settings);
+  std::string scope = ExecutionScopeToString(context, settings.scope);
   std::string stop = BreakpointStopToString(settings.stop_mode);
   const char* enabled = BreakpointEnabledToString(settings.enabled);
   const char* type = BreakpointTypeToString(settings.type);

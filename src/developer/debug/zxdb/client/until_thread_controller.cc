@@ -36,9 +36,7 @@ void UntilThreadController::InitWithThread(Thread* thread, fit::callback<void(co
   SetThread(thread);
 
   BreakpointSettings settings;
-  settings.scope = BreakpointSettings::Scope::kThread;
-  settings.scope_target = GetTarget();
-  settings.scope_thread = thread;
+  settings.scope = ExecutionScope(thread);
   settings.locations = std::move(locations_);
 
   // Frame-tied triggers can't be one-shot because we need to check the stack every time it

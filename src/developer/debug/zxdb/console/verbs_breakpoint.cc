@@ -167,20 +167,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd, Breakpoi
   FXL_DCHECK(!settings.locations.empty());  // Should have filled something in.
 
   // Scope.
-  //
-  // Note the location types will all be the same if there are multiple.
-  if (cmd.HasNoun(Noun::kThread)) {
-    settings.scope = BreakpointSettings::Scope::kThread;
-    settings.scope_thread = cmd.thread();
-    settings.scope_target = cmd.target();
-  } else if (cmd.HasNoun(Noun::kProcess) ||
-             settings.locations[0].type == InputLocation::Type::kAddress) {
-    settings.scope = BreakpointSettings::Scope::kTarget;
-    settings.scope_thread = nullptr;
-    settings.scope_target = cmd.target();
-  }
-  // TODO(brettw) Now that we have a "global" noun we should use that to convert a breakpoint's
-  // context to global. That didn't exist when this code was written.
+  settings.scope = ExecutionScopeForCommand(cmd);
 
   // Commit the changes.
   if (!breakpoint) {

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/zxdb/client/execution_scope.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 
 namespace zxdb {
@@ -21,16 +22,6 @@ class Thread;
 // The defaults for the settings should be chosen to be appropriate for new breakpoints if that
 // setting is not specified.
 struct BreakpointSettings {
-  // The scope is what this breakpoint applies to.
-  enum class Scope {
-    // For session scopes, all processes attempt to resolve this breakpoint if a symbol matches. You
-    // can't have an address breakpoint applying to all processes (since addresses typically won't
-    // match between processes).
-    kSystem,
-    kTarget,
-    kThread
-  };
-
   // What to stop when this breakpoint is hit.
   enum class StopMode {
     kNone,     // Don't stop anything. Hit counts will still accumulate.
@@ -49,9 +40,10 @@ struct BreakpointSettings {
   bool enabled = true;
 
   // Which processes or threads this breakpoint applies to.
-  Scope scope = Scope::kSystem;
-  Target* scope_target = nullptr;  // Valid when scope == kTarget or kThread.
-  Thread* scope_thread = nullptr;  // Valid when scope == kThread.
+  //
+  // One normally shouldn't make an address breakpoint with "session" scope since since addresses
+  // won't match between processes.
+  ExecutionScope scope;
 
   // Where the breakpoint is set. This supports more than one location because a user input might
   // expand to multiple symbols depending on the context. In many cases there will only be one.

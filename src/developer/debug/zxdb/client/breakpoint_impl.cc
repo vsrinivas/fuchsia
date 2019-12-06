@@ -33,26 +33,6 @@ namespace {
 
 uint32_t next_breakpoint_id = 1;
 
-Err ValidateSettings(const BreakpointSettings& settings) {
-  switch (settings.scope) {
-    case BreakpointSettings::Scope::kSystem:
-      if (settings.scope_thread || settings.scope_target)
-        return Err("System scopes can't take a thread or target.");
-      break;
-    case BreakpointSettings::Scope::kTarget:
-      if (!settings.scope_target)
-        return Err(ErrType::kClientApi, "Target scopes require a target.");
-      if (settings.scope_thread)
-        return Err(ErrType::kClientApi, "Target scopes can't take a thread.");
-      break;
-    case BreakpointSettings::Scope::kThread:
-      if (!settings.scope_target || !settings.scope_thread) {
-        return Err(ErrType::kClientApi, "Thread scopes require a target and a thread.");
-      }
-  }
-  return Err();
-}
-
 debug_ipc::Stop SettingsStopToIpcStop(BreakpointSettings::StopMode mode) {
   switch (mode) {
     case BreakpointSettings::StopMode::kNone:
@@ -121,13 +101,6 @@ BreakpointSettings BreakpointImpl::GetSettings() const { return settings_; }
 
 void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
                                  fit::callback<void(const Err&)> callback) {
-  Err err = ValidateSettings(settings);
-  if (err.has_error()) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [callback = std::move(callback), err]() mutable { callback(err); });
-    return;
-  }
-
   settings_ = settings;
 
   bool changed = false;
@@ -138,10 +111,10 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
   }
 
   // Add or remove thread notifications as required.
-  if (settings_.scope_thread && !registered_as_thread_observer_) {
+  if (settings_.scope.thread() && !registered_as_thread_observer_) {
     session()->thread_observers().AddObserver(this);
     registered_as_thread_observer_ = true;
-  } else if (!settings_.scope_thread && registered_as_thread_observer_) {
+  } else if (!settings_.scope.thread() && registered_as_thread_observer_) {
     session()->thread_observers().RemoveObserver(this);
     registered_as_thread_observer_ = false;
   }
@@ -179,12 +152,10 @@ void BreakpointImpl::UpdateStats(const debug_ipc::BreakpointStats& stats) { stat
 void BreakpointImpl::BackendBreakpointRemoved() { backend_installed_ = false; }
 
 void BreakpointImpl::WillDestroyTarget(Target* target) {
-  if (target == settings_.scope_target) {
+  if (target == settings_.scope.target()) {
     // As with threads going away, when the target goes away for a target-scoped breakpoint, convert
     // to a disabled system-wide breakpoint.
-    settings_.scope = BreakpointSettings::Scope::kSystem;
-    settings_.scope_target = nullptr;
-    settings_.scope_thread = nullptr;
+    settings_.scope = ExecutionScope();
     settings_.enabled = false;
   }
 }
@@ -211,12 +182,8 @@ void BreakpointImpl::WillDestroyProcess(Process* process, ProcessObserver::Destr
 
   // When the process exits, disable breakpoints that are entirely address-based since the addresses
   // will normally change when a process is loaded.
-  if (AllLocationsAddresses()) {
-    // Should only have one process for address-based breakpoints.
-    FXL_DCHECK(procs_.size() == 1u);
-    FXL_DCHECK(process->GetTarget() == settings_.scope_target);
+  if (AllLocationsAddresses())
     settings_.enabled = false;
-  }
 
   procs_.erase(found);
 
@@ -247,19 +214,17 @@ void BreakpointImpl::DidLoadModuleSymbols(Process* process, LoadedModuleSymbols*
 }
 
 void BreakpointImpl::WillUnloadModuleSymbols(Process* process, LoadedModuleSymbols* module) {
-  // TODO(brettw) need to get the address range of this module and then remove all breakpoints in
+  // TODO(bug 42243) need to get the address range of this module and then remove all breakpoints in
   // that range.
 }
 
 void BreakpointImpl::WillDestroyThread(Thread* thread) {
-  if (settings_.scope_thread == thread) {
+  if (settings_.scope.thread() == thread) {
     // When the thread is destroyed that the breakpoint is associated with, disable the breakpoint
     // and convert to a target-scoped breakpoint. This will preserve its state without us having to
     // maintain some "defunct thread" association. The user can associate it with a new thread and
     // re-enable as desired.
-    settings_.scope = BreakpointSettings::Scope::kTarget;
-    settings_.scope_target = thread->GetProcess()->GetTarget();
-    settings_.scope_thread = nullptr;
+    settings_.scope = ExecutionScope(thread->GetProcess()->GetTarget());
     settings_.enabled = false;
 
     // Don't need more thread notifications.
@@ -303,8 +268,10 @@ void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> call
       debug_ipc::ProcessBreakpointSettings addition;
       addition.process_koid = proc.first->GetKoid();
 
-      if (settings_.scope == BreakpointSettings::Scope::kThread)
-        addition.thread_koid = settings_.scope_thread->GetKoid();
+      if (settings_.scope.type() == ExecutionScope::kThread) {
+        if (Thread* thread = settings_.scope.thread())
+          addition.thread_koid = thread->GetKoid();
+      }
 
       switch (settings_.type) {
         case debug_ipc::BreakpointType::kSoftware:
@@ -387,11 +354,11 @@ void BreakpointImpl::DidChangeLocation() { SyncBackend(); }
 
 bool BreakpointImpl::CouldApplyToProcess(Process* process) const {
   // When applied to all processes, we need all notifications.
-  if (settings_.scope == BreakpointSettings::Scope::kSystem)
+  if (settings_.scope.type() == ExecutionScope::kSystem)
     return true;
 
   // Target- and thread-specific breakpoints only watch their process.
-  return settings_.scope_target == process->GetTarget();
+  return settings_.scope.target() == process->GetTarget();
 }
 
 bool BreakpointImpl::HasEnabledLocation() const {

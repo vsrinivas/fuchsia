@@ -108,9 +108,7 @@ void InterceptingThreadObserver::AddExitBreakpoint(zxdb::Thread* thread,
     settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
     settings.type = debug_ipc::BreakpointType::kSoftware;
     settings.locations.emplace_back(address);
-    settings.scope = zxdb::BreakpointSettings::Scope::kThread;
-    settings.scope_thread = thread;
-    settings.scope_target = thread->GetProcess()->GetTarget();
+    settings.scope = zxdb::ExecutionScope(thread);
     settings.one_shot = true;
   } else {
     if (exit_breakpoints_.find(address) != exit_breakpoints_.end()) {
@@ -124,8 +122,7 @@ void InterceptingThreadObserver::AddExitBreakpoint(zxdb::Thread* thread,
     settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
     settings.type = debug_ipc::BreakpointType::kSoftware;
     settings.locations.emplace_back(address);
-    settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
-    settings.scope_target = thread->GetProcess()->GetTarget();
+    settings.scope = zxdb::ExecutionScope(thread->GetProcess()->GetTarget());
   }
 
   FXL_VLOG(2) << "Thread " << thread->GetKoid() << ": creating return value breakpoint for "
@@ -406,8 +403,7 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process) {
       settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
       settings.type = debug_ipc::BreakpointType::kSoftware;
       settings.locations.emplace_back(zxdb::Identifier(syscall->breakpoint_name()));
-      settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
-      settings.scope_target = process->GetTarget();
+      settings.scope = zxdb::ExecutionScope(process->GetTarget());
 
       zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();
 
