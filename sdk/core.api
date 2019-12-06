@@ -29,6 +29,7 @@ sdk://fidl/fuchsia.feedback
 sdk://fidl/fuchsia.fonts
 sdk://fidl/fuchsia.hardware.ethernet
 sdk://fidl/fuchsia.hardware.goldfish
+sdk://fidl/fuchsia.hardware.power.statecontrol
 sdk://fidl/fuchsia.hwinfo
 sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.inspect
