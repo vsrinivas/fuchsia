@@ -6,6 +6,7 @@
 //! a web frame.
 
 use crate::error::{ResultExt, TokenProviderError};
+use async_trait::async_trait;
 use fidl::endpoints::{create_proxy, create_request_stream};
 use fidl_fuchsia_identity_external::Error as ApiError;
 use fidl_fuchsia_ui_views::ViewToken;
@@ -14,7 +15,6 @@ use fidl_fuchsia_web::{
     NavigationEventListenerMarker, NavigationEventListenerRequest,
     NavigationEventListenerRequestStream, PageType,
 };
-use futures::future::FutureObj;
 use futures::prelude::*;
 use log::warn;
 use url::Url;
@@ -22,6 +22,7 @@ use url::Url;
 type TokenProviderResult<T> = Result<T, TokenProviderError>;
 
 /// A trait for representations of a web frame that is the only frame in a web context.
+#[async_trait]
 pub trait StandaloneWebFrame {
     /// Creates a new scenic view using the given |view_token| and loads the
     /// given |url| as a webpage in the view.  The view must be attached to
@@ -29,19 +30,12 @@ pub trait StandaloneWebFrame {
     /// |view_token|.  This method should be called prior to attaching to the
     /// Scenic graph to ensure that loading is successful prior to displaying
     /// the page to the user.
-    fn display_url<'a>(
-        &'a mut self,
-        view_token: ViewToken,
-        url: Url,
-    ) -> FutureObj<'a, TokenProviderResult<()>>;
+    async fn display_url(&mut self, view_token: ViewToken, url: Url) -> TokenProviderResult<()>;
 
     /// Waits until the frame redirects to a URL matching the scheme,
     /// domain, and path of |redirect_target|. Returns the matching URL,
     /// including any query parameters.
-    fn wait_for_redirect<'a>(
-        &'a mut self,
-        redirect_target: Url,
-    ) -> FutureObj<'a, TokenProviderResult<Url>>;
+    async fn wait_for_redirect(&mut self, redirect_target: Url) -> TokenProviderResult<Url>;
 }
 
 /// A `StandaloneWebFrame` implementation that uses the default fuchsia.web
@@ -54,35 +48,9 @@ pub struct DefaultStandaloneWebFrame {
     frame: FrameProxy,
 }
 
+#[async_trait]
 impl StandaloneWebFrame for DefaultStandaloneWebFrame {
-    fn display_url<'a>(
-        &'a mut self,
-        view_token: ViewToken,
-        url: Url,
-    ) -> FutureObj<'a, TokenProviderResult<()>> {
-        FutureObj::new(Box::new(
-            async move { Self::display_url_inner(self, view_token, url).await },
-        ))
-    }
-
-    fn wait_for_redirect<'a>(
-        &'a mut self,
-        redirect_target: Url,
-    ) -> FutureObj<'a, TokenProviderResult<Url>> {
-        FutureObj::new(Box::new(async move {
-            Self::wait_for_redirect_inner(self, redirect_target).await
-        }))
-    }
-}
-
-impl DefaultStandaloneWebFrame {
-    /// Create a new `StandaloneWebFrame`.  The context and frame passed
-    /// in should not be reused.
-    pub fn new(context: ContextProxy, frame: FrameProxy) -> Self {
-        DefaultStandaloneWebFrame { _context: context, frame }
-    }
-
-    async fn display_url_inner(
+    async fn display_url(
         &mut self,
         mut view_token: ViewToken,
         url: Url,
@@ -112,7 +80,7 @@ impl DefaultStandaloneWebFrame {
         Self::poll_until_loaded(navigation_event_stream).await
     }
 
-    async fn wait_for_redirect_inner(&mut self, redirect_target: Url) -> TokenProviderResult<Url> {
+    async fn wait_for_redirect(&mut self, redirect_target: Url) -> TokenProviderResult<Url> {
         let navigation_event_stream = self.get_navigation_event_stream()?;
 
         // pull redirect URL out from events.
@@ -121,6 +89,14 @@ impl DefaultStandaloneWebFrame {
                 == (redirect_target.scheme(), redirect_target.domain(), redirect_target.path())
         })
         .await
+    }
+}
+
+impl DefaultStandaloneWebFrame {
+    /// Create a new `StandaloneWebFrame`.  The context and frame passed
+    /// in should not be reused.
+    pub fn new(context: ContextProxy, frame: FrameProxy) -> Self {
+        DefaultStandaloneWebFrame { _context: context, frame }
     }
 
     /// Registers a navigation listener with the web frame and returns the created event
@@ -376,5 +352,75 @@ mod test {
             ApiError::Unknown
         );
         Ok(())
+    }
+}
+
+#[cfg(test)]
+pub mod mock {
+    use super::*;
+
+    /// A mock implementation of StandaloneWebFrame that always returns the responses
+    /// specified during its creation.
+    pub struct TestWebFrame {
+        display_url_response: TokenProviderResult<()>,
+        wait_for_redirect_response: TokenProviderResult<Url>,
+    }
+
+    impl TestWebFrame {
+        pub fn new(
+            display_url_response: TokenProviderResult<()>,
+            wait_for_redirect_response: TokenProviderResult<Url>,
+        ) -> Self {
+            TestWebFrame { display_url_response, wait_for_redirect_response }
+        }
+    }
+
+    #[async_trait]
+    impl StandaloneWebFrame for TestWebFrame {
+        async fn display_url(
+            &mut self,
+            _view_token: ViewToken,
+            _url: Url,
+        ) -> TokenProviderResult<()> {
+            // manual clone since TokenProviderError.cause is !Clone
+            match &self.display_url_response {
+                Ok(()) => Ok(()),
+                Err(err) => Err(TokenProviderError::new(err.api_error)),
+            }
+        }
+
+        async fn wait_for_redirect(&mut self, _redirect_target: Url) -> TokenProviderResult<Url> {
+            // manual clone since TokenProviderError.cause is !Clone
+            match &self.wait_for_redirect_response {
+                Ok(url) => Ok(url.clone()),
+                Err(err) => Err(TokenProviderError::new(err.api_error)),
+            }
+        }
+    }
+
+    mod test {
+        use super::*;
+        use fuchsia_async as fasync;
+        use fuchsia_scenic::ViewTokenPair;
+
+        #[fasync::run_until_stalled(test)]
+        async fn test_web_frame_test() {
+            let mut test_web_frame =
+                TestWebFrame::new(Ok(()), Err(TokenProviderError::new(ApiError::Internal)));
+            let ViewTokenPair { view_token, view_holder_token: _ } = ViewTokenPair::new().unwrap();
+            assert!(test_web_frame
+                .display_url(view_token, Url::parse("http://example.com").unwrap())
+                .await
+                .is_ok());
+
+            assert_eq!(
+                test_web_frame
+                    .wait_for_redirect(Url::parse("http://example.com").unwrap())
+                    .await
+                    .unwrap_err()
+                    .api_error,
+                ApiError::Internal
+            );
+        }
     }
 }

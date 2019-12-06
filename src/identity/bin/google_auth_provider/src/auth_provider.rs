@@ -479,16 +479,13 @@ mod tests {
 
     use super::*;
     use crate::error::TokenProviderError;
-    use crate::http::HttpRequest;
+    use crate::http::mock::TestHttpClient;
+    use crate::web::mock::TestWebFrame;
     use fidl::endpoints::{create_proxy_and_stream, create_request_stream};
     use fidl_fuchsia_auth::{AuthProviderMarker, AuthProviderProxy};
     use fidl_fuchsia_identity_external::Error as ApiError;
-    use fidl_fuchsia_ui_views::ViewToken;
     use fuchsia_async as fasync;
-    use futures::future::{ready, FutureObj};
     use hyper::StatusCode;
-    use std::collections::VecDeque;
-    use std::sync::Mutex;
 
     type TokenProviderResult<T> = Result<T, TokenProviderError>;
 
@@ -499,39 +496,6 @@ mod tests {
             Ok(res) => Ok(res.clone()),
             // error cause cannot be cloned so don't replicate it.
             Err(err) => Err(TokenProviderError::new(err.api_error)),
-        }
-    }
-
-    /// A mock implementation of StandaloneWebFrame that always returns the responses
-    /// specified during its creation.
-    struct TestWebFrame {
-        display_url_response: TokenProviderResult<()>,
-        wait_for_redirect_response: TokenProviderResult<Url>,
-    }
-
-    impl TestWebFrame {
-        fn new(
-            display_url_response: TokenProviderResult<()>,
-            wait_for_redirect_response: TokenProviderResult<Url>,
-        ) -> Self {
-            TestWebFrame { display_url_response, wait_for_redirect_response }
-        }
-    }
-
-    impl StandaloneWebFrame for TestWebFrame {
-        fn display_url<'a>(
-            &'a mut self,
-            _view_token: ViewToken,
-            _url: Url,
-        ) -> FutureObj<'a, TokenProviderResult<()>> {
-            FutureObj::new(Box::new(ready(clone_result(&self.display_url_response))))
-        }
-
-        fn wait_for_redirect<'a>(
-            &'a mut self,
-            _redirect_target: Url,
-        ) -> FutureObj<'a, TokenProviderResult<Url>> {
-            FutureObj::new(Box::new(ready(clone_result(&self.wait_for_redirect_response))))
         }
     }
 
@@ -559,45 +523,6 @@ mod tests {
                 clone_result(&self.display_url_response),
                 clone_result(&self.wait_for_redirect_response),
             ))
-        }
-    }
-
-    /// A mock implementation of `HttpClient`
-    struct TestHttpClient {
-        /// Response returned on `request`.
-        responses: Mutex<VecDeque<TokenProviderResult<(Option<String>, StatusCode)>>>,
-    }
-
-    impl TestHttpClient {
-        fn with_responses(
-            responses: Vec<TokenProviderResult<(Option<String>, StatusCode)>>,
-        ) -> Self {
-            TestHttpClient { responses: Mutex::new(VecDeque::from(responses)) }
-        }
-
-        /// Create a new test client that returns the given response on `request`.
-        fn with_response(body: Option<&str>, status: StatusCode) -> Self {
-            Self::with_responses(vec![Ok((body.map(str::to_string), status))])
-        }
-
-        /// Create a new test client that returns the given response on `request`.
-        fn with_error(error: ApiError) -> Self {
-            Self::with_responses(vec![Err(TokenProviderError::new(error))])
-        }
-    }
-
-    impl HttpClient for TestHttpClient {
-        fn request<'a>(
-            &'a self,
-            _http_request: HttpRequest,
-        ) -> FutureObj<'a, TokenProviderResult<(Option<String>, StatusCode)>> {
-            let response = self
-                .responses
-                .lock()
-                .unwrap()
-                .pop_front()
-                .expect("Mock received more requests than the supplied requests!");
-            FutureObj::new(Box::new(ready(response)))
         }
     }
 

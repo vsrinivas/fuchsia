@@ -5,6 +5,7 @@
 //! The http module contains utilities for making HTTP requests.
 
 use crate::error::{ResultExt, TokenProviderError};
+use async_trait::async_trait;
 use fidl_fuchsia_identity_external::Error as ApiError;
 use fidl_fuchsia_mem;
 use fidl_fuchsia_net_oldhttp::{
@@ -12,7 +13,6 @@ use fidl_fuchsia_net_oldhttp::{
 };
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::future::FutureObj;
 use futures::io::AsyncReadExt;
 use hyper::StatusCode;
 use log::warn;
@@ -96,13 +96,14 @@ impl<'a> HttpRequestBuilder<'a> {
 const RESPONSE_BUFFER_SIZE: usize = 2048;
 
 /// A trait expressing functionality for making requests over HTTP.
+#[async_trait]
 pub trait HttpClient {
     /// Asynchronously make an HTTP request.  Returns the response body if any
     /// and HTTP status code.
-    fn request<'a>(
-        &'a self,
+    async fn request(
+        &self,
         http_request: HttpRequest,
-    ) -> FutureObj<'a, TokenProviderResult<(Option<String>, StatusCode)>>;
+    ) -> TokenProviderResult<(Option<String>, StatusCode)>;
 }
 
 /// A client capable of making HTTP requests using the Fuchsia oldhttp URL
@@ -116,8 +117,12 @@ impl UrlLoaderHttpClient {
     pub fn new(url_loader: UrlLoaderProxy) -> Self {
         UrlLoaderHttpClient { url_loader }
     }
+}
 
-    async fn request_inner(
+#[async_trait]
+impl HttpClient for UrlLoaderHttpClient {
+    /// Asynchronously send an HTTP request using oldhttp URLLoader service.
+    async fn request(
         &self,
         http_request: HttpRequest,
     ) -> TokenProviderResult<(Option<String>, StatusCode)> {
@@ -151,16 +156,6 @@ impl UrlLoaderHttpClient {
             }
             None => Ok((None, status)),
         }
-    }
-}
-
-impl HttpClient for UrlLoaderHttpClient {
-    /// Asynchronously send an HTTP request using oldhttp URLLoader service.
-    fn request<'a>(
-        &'a self,
-        http_request: HttpRequest,
-    ) -> FutureObj<'a, TokenProviderResult<(Option<String>, StatusCode)>> {
-        FutureObj::new(Box::new(async move { Self::request_inner(self, http_request).await }))
     }
 }
 
@@ -316,5 +311,98 @@ mod test {
         let result = http_client.request(request).await;
         assert_eq!(result.unwrap_err().api_error, ApiError::Network);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+pub mod mock {
+    use super::*;
+    use std::collections::VecDeque;
+    use std::sync::Mutex;
+
+    /// A mock implementation of `HttpClient` that returns responses supplied at creation
+    /// time.
+    pub struct TestHttpClient {
+        /// Response returned on `request`.
+        responses: Mutex<VecDeque<TokenProviderResult<(Option<String>, StatusCode)>>>,
+    }
+
+    impl TestHttpClient {
+        /// Create a new test client that returns the given responses during calls
+        /// to `request`.
+        pub fn with_responses(
+            responses: Vec<TokenProviderResult<(Option<String>, StatusCode)>>,
+        ) -> Self {
+            TestHttpClient { responses: Mutex::new(VecDeque::from(responses)) }
+        }
+
+        /// Create a new test client that returns the given response on `request`.
+        pub fn with_response(body: Option<&str>, status: StatusCode) -> Self {
+            Self::with_responses(vec![Ok((body.map(str::to_string), status))])
+        }
+
+        /// Create a new test client that returns the given response on `request`.
+        pub fn with_error(error: ApiError) -> Self {
+            Self::with_responses(vec![Err(TokenProviderError::new(error))])
+        }
+    }
+
+    #[async_trait]
+    impl HttpClient for TestHttpClient {
+        async fn request(
+            &self,
+            _http_request: HttpRequest,
+        ) -> TokenProviderResult<(Option<String>, StatusCode)> {
+            self.responses
+                .lock()
+                .unwrap()
+                .pop_front()
+                .expect("Mock received more requests than the supplied requests!")
+        }
+    }
+
+    mod test {
+        use super::*;
+
+        fn get_http_request() -> HttpRequest {
+            HttpRequestBuilder::new("http://url", "GET").finish().unwrap()
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn test_mock_with_responses() {
+            let responses =
+                vec![Ok((None, StatusCode::OK)), Err(TokenProviderError::new(ApiError::Unknown))];
+            let test_client = TestHttpClient::with_responses(responses);
+
+            assert_eq!(
+                (None, StatusCode::OK),
+                test_client.request(get_http_request()).await.unwrap()
+            );
+
+            assert_eq!(
+                ApiError::Unknown,
+                test_client.request(get_http_request()).await.unwrap_err().api_error
+            );
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn test_mock_with_response() {
+            let test_client =
+                TestHttpClient::with_response(Some("response"), StatusCode::UNAUTHORIZED);
+
+            assert_eq!(
+                (Some("response".to_string()), StatusCode::UNAUTHORIZED),
+                test_client.request(get_http_request()).await.unwrap()
+            );
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn test_mock_with_error() {
+            let test_client = TestHttpClient::with_error(ApiError::Internal);
+            assert_eq!(
+                ApiError::Internal,
+                test_client.request(get_http_request()).await.unwrap_err().api_error
+            );
+        }
     }
 }
