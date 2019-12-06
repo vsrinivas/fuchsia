@@ -1,4 +1,4 @@
-# Linter Interface
+# FIDL linter nterface
 
 This document describes the command-line interface to the FIDL linter.
 

@@ -1,4 +1,4 @@
-# Host Side FIDL
+# Host side FIDL
 
 This document is a short summary of what's available now for host side FIDL,
 and what may be available in the future.

@@ -1,4 +1,4 @@
-# Language Specification
+# FIDL language specification
 
 This document is a specification of the Fuchsia Interface Definition Language
 (**FIDL**) syntax.

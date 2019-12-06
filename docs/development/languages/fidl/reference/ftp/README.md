@@ -1,8 +1,8 @@
-# FIDL Tuning Proposals
+# FIDL language tuning proposals
 
 Note: Documents are sorted by date reviewed.
 
-## Accepted Proposals
+## Accepted proposals
 
 FTP                   | Submitted  | Reviewed   | Title
 ----------------------|------------|------------|----------------------------------
@@ -31,7 +31,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-041](ftp-041.md) | 2019-04-08 | 2019-04-23 | Support for Unifying Services and Devices
 [FTP-043](ftp-043.md) | 2019-05-06 | 2019-05-30 | Documentation Comment Format &mdash; Mark me up, mark me down
 
-## Rejected Proposals
+## Rejected proposals
 
 FTP                   | Submitted  | Reviewed   | Title
 ----------------------|------------|------------|----------------------------------

@@ -1,4 +1,4 @@
-# Wire Format Specification
+# FIDL wire format specification
 
 This document is a specification of the Fuchsia Interface Definition Language
 (**FIDL**) message format.

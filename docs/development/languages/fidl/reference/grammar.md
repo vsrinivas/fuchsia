@@ -1,4 +1,4 @@
-# Grammar
+# FIDL grammar
 
 ## Modified BNF rules
 

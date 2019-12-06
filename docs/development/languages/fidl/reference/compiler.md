@@ -1,4 +1,4 @@
-# FIDL Compiler
+# FIDL compiler
 
 This document contains these sections:
 
@@ -173,7 +173,7 @@ Internally the two pointers are manipulated with these main methods:
 * `Skip()`. Skips over any unnecessary characters (e.g. whitespace) by
    moving both the `current_` and the `token_start_` pointers forward.
 * `Consume()`. Returns the current character and advances `current_`.
-* `Reset()`. Returns the data between `token_start_` and `current_`. Then, sets `token_start_` 
+* `Reset()`. Returns the data between `token_start_` and `current_`. Then, sets `token_start_`
    to the value of `current_`.
 
 ### Parsing {#parsing}

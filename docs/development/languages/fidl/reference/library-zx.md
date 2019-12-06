@@ -1,5 +1,5 @@
 
-# Internal library zx
+# FIDL internal library zx
 
 The `fidlc` compiler automatically generates `library zx` (internally) into
 [//zircon/tools/fidl/lib/library_zx.cc](/zircon/tools/fidl/lib/library_zx.cc).

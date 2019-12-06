@@ -1,5 +1,5 @@
 
-# FIDL JSON Internal Representation
+# FIDL JSON internal representation
 
 For all backends (except C), the FIDL compiler operates in two phases.
 A first phase parses the FIDL file(s) and produces a JSON-based Intermediate

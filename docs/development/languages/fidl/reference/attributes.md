@@ -1,4 +1,4 @@
-# FIDL Attributes
+# FIDL attributes
 
 The following FIDL attributes are supported:
 

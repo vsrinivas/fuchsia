@@ -1,4 +1,4 @@
-# Editors
+# FIDL editors
 
 Several editors have support for FIDL:
 

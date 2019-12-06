@@ -1,4 +1,4 @@
-# FIDL ABI and Source Compatibility Guide
+# FIDL ABI and source compatibility guide
 
 Date: 2019-03
 

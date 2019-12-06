@@ -1,4 +1,4 @@
-# Bindings Specification
+# FIDL bindings specification
 
 This document is a specification of requirements on the Fuchsia Interface
 Definition Language (**FIDL**) bindings.
