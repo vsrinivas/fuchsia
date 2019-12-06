@@ -74,7 +74,7 @@ template("fidl") {
 
   # TODO(ZX-3365): Hack for - compat names during soft transition.
   # Remove whole conditional block when final conversion to . names is done.
-  if (get_label_info("..", "dir") == "//zircon/public/fidl" &&
+  if (get_path_info("..", "dir") == "//zircon/public/fidl" &&
       string_replace(target_name, ".", "-") != target_name) {
     not_needed(invoker, "*")
     compat_name = string_replace(target_name, ".", "-")
