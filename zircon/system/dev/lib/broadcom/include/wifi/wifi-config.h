@@ -5,6 +5,8 @@
 #ifndef ZIRCON_SYSTEM_DEV_LIB_BROADCOM_INCLUDE_WIFI_WIFI_CONFIG_H_
 #define ZIRCON_SYSTEM_DEV_LIB_BROADCOM_INCLUDE_WIFI_WIFI_CONFIG_H_
 
+#include <stdint.h>
+
 /*******************************************************************************
  * Dongle command codes that are interpreted by firmware
  ******************************************************************************/
