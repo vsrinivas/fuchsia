@@ -117,6 +117,7 @@ source_set("magnification_pixeltests") {
     ":pixel_test",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/files",
     "//src/ui/a11y/lib/magnifier/tests/mocks:mock_magnifier",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",

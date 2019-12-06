@@ -15,6 +15,7 @@
     },
     "sandbox": {
         "features": [
+            "config-data",
             "isolated-temp",
             "vulkan"
         ],

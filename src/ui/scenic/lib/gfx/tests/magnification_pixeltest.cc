@@ -10,6 +10,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/files/file.h"
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnifier.h"
 #include "src/ui/scenic/lib/gfx/tests/pixel_test.h"
 #include "src/ui/testing/views/coordinate_test_view.h"
@@ -17,6 +18,17 @@
 namespace {
 
 constexpr char kEnvironment[] = "MagnificationPixelTest";
+
+// HACK(fxb/42459): This allows the test to feed in a clip-space transform that is semantically
+// invariant against screen rotation. The only non-identity rotation we expect to run against soon
+// is 270 degrees. This doesn't generalize well, so it should be temporary.
+bool IsScreenRotated() {
+  // This also lives in root_presenter/app.cc
+  std::string rotation_value;
+
+  return files::ReadFileToString("/config/data/display_rotation", &rotation_value) &&
+         atoi(rotation_value.c_str()) == 270;
+}
 
 // These tests leverage the coordinate test view to ensure that RootPresenter magnification APIs are
 // working properly. From coordinate_test_view.h:
@@ -92,7 +104,26 @@ TEST_F(MagnificationPixelTest, Center) {
 }
 
 TEST_F(MagnificationPixelTest, UpperLeft) {
-  SetClipSpaceTransform(1, 1, 2);
+  if (!IsScreenRotated()) {
+    SetClipSpaceTransform(1, 1, 2);
+  } else {
+    // On 270-rotated devices, the user-oriented upper left is the native lower left.
+    //
+    // (0,h)___________________________________(0,0)
+    //      |                |                |
+    //      |     BLACK      |        RED     |
+    //      |           _____|_____           |
+    //      |___________|  GREEN  |___________|
+    //      |           |_________|           |
+    //      |                |                |
+    //      |      BLUE      |     MAGENTA    |
+    //      |________________|________________|
+    // (w,h)                                   (w,0)
+    //
+    // The screenshot has rotation applied so that it matches user orientation.
+    SetClipSpaceTransform(1, -1, 2);
+  }
+
   scenic::Screenshot screenshot = TakeScreenshot();
 
   EXPECT_EQ(scenic::CoordinateTestView::kUpperLeft, screenshot.ColorAt(.25f, .25f));
