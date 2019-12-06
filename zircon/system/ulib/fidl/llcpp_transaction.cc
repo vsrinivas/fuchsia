@@ -25,6 +25,11 @@ void CompleterBase::Close(zx_status_t status) {
   DropTransaction();
 }
 
+void CompleterBase::EnableNextDispatch() {
+  EnsureHasTransaction();
+  transaction_->EnableNextDispatch();
+}
+
 CompleterBase::CompleterBase(CompleterBase&& other) noexcept
     : transaction_(other.transaction_),
       owned_(other.owned_),

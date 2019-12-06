@@ -89,6 +89,12 @@ class Transaction {
   // Should send an epitaph and then close the underlying transport e.g. channel.
   virtual void Close(zx_status_t epitaph) = 0;
 
+  // Resumes the asynchronous wait on the underlying channel. This allows at least one more
+  // dispatcher thread to enter the message handler for this binding in parallel.
+  virtual void EnableNextDispatch() {
+    ZX_ASSERT_MSG(false, "Transaction does not support explicitly resuming dispatch.");
+  }
+
   // A transaction will only be destroyed after one of three actions happens to it:
   // the Completer containing it is destroyed, the transaction is closed, or ownership is taken from
   // the transaction.
@@ -110,6 +116,12 @@ class CompleterBase {
   // Instructs the transaction to send an epitaph and then close the underlying transport.
   // |status| may be an error status, or |ZX_OK|, which indicates normal (expected) closure.
   void Close(zx_status_t status);
+
+  // Resumes the asynchronous wait on the underlying channel, enabling another dispatcher thread to
+  // enter the message handler for this binding. This must only be called from the scope of the
+  // message handler.
+  // TODO(madhaviyengar): Hide this from Completer::Async in a cleaner way.
+  virtual void EnableNextDispatch();
 
  protected:
   explicit CompleterBase(Transaction* transaction, bool owned, bool method_expects_reply)
@@ -199,6 +211,13 @@ struct Completer final {
 
     explicit Async(std::unique_ptr<Transaction> owned_transaction)
         : Base(owned_transaction.release(), true /*owned*/, kExpectingReply) {}
+
+   private:
+    // EnableNextDispatch() must only be invoked within the message handler. This is an attempt to
+    // enforce such behavior by restricting it to the fidl::Completer<T>::Sync variant.
+    void EnableNextDispatch() final {
+      ZX_ASSERT_MSG(false, "EnableNextDispatch() is only valid on a fidl::Completer<T>::Sync.");
+    }
   };
 
   // The server handler function will be given FooCompleter::Sync, an object tailor made for

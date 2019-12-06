@@ -71,23 +71,17 @@ void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync complet
   loop_.emplace(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop_->StartThread("serial-thread");
 
-  // No-op function that does nothing when channel is closing
-  // FIDL requires us to have this for some reason.
-  fidl::OnChannelErrorFn<llcpp::fuchsia::hardware::serial::NewDevice::Interface> nop(
-      [](llcpp::fuchsia::hardware::serial::NewDevice::Interface* dev, fidl::ErrorType error) {
-
-      });
-
-  // Function that is invoked when channel is closed
-  fidl::OnChannelClosedFn<llcpp::fuchsia::hardware::serial::NewDevice::Interface> close_fn(
-      [](llcpp::fuchsia::hardware::serial::NewDevice::Interface* dev) {
+  // Invoked when the channel is closed or on any binding-related error.
+  fidl::OnUnboundFn<llcpp::fuchsia::hardware::serial::NewDevice::Interface> unbound_fn(
+      [](llcpp::fuchsia::hardware::serial::NewDevice::Interface* dev, fidl::UnboundReason,
+         zx::channel) {
         static_cast<SerialDevice*>(dev)->loop_->Quit();
       });
 
   auto binding_ref =
       fidl::AsyncBind(loop_->dispatcher(), std::move(req),
                       static_cast<llcpp::fuchsia::hardware::serial::NewDevice::Interface*>(this),
-                      std::move(nop), std::move(close_fn));
+                      std::move(unbound_fn));
   if (binding_ref.is_error()) {
     loop_.reset();
     return;

@@ -18,12 +18,17 @@ namespace fidl {
 namespace internal {
 
 // An implementation of |fidl::Transaction|. Designed to work with |fidl::AsyncBind|, which allows
-// message dispatching of multiple in-flight asynchronous transactions.
+// message dispatching of multiple in-flight asynchronous transactions from a multi-threaded
+// |dispatcher|. Note that |AsyncTransaction| itself assumes that only one thread at a time will act
+// on it.
 // The channel is owned by |AsyncBinding|, not the transaction.
 class AsyncTransaction final : public Transaction {
  public:
-  explicit AsyncTransaction(zx_txid_t txid, std::weak_ptr<AsyncBinding> binding)
-      : Transaction(), txid_(txid), binding_(binding) {}
+  explicit AsyncTransaction(zx_txid_t txid, bool* binding_released, zx_status_t* resume_status)
+      : Transaction(),
+        txid_(txid),
+        binding_released_(binding_released),
+        resume_status_(resume_status) {}
 
   AsyncTransaction(AsyncTransaction&& other) noexcept : Transaction(std::move(other)) {
     if (this != &other) {
@@ -39,7 +44,11 @@ class AsyncTransaction final : public Transaction {
     return *this;
   }
 
+  virtual ~AsyncTransaction() { ZX_ASSERT(!owned_binding_); }
+
   void Reply(fidl::Message msg) final;
+
+  void EnableNextDispatch() final;
 
   void Close(zx_status_t epitaph) final;
 
@@ -48,17 +57,31 @@ class AsyncTransaction final : public Transaction {
  private:
   friend fidl::internal::AsyncBinding;
 
-  void Dispatch(fidl_msg_t msg);
+  void Dispatch(std::shared_ptr<AsyncBinding>&& binding, fidl_msg_t msg);
 
   void MoveImpl(AsyncTransaction&& other) noexcept {
     txid_ = other.txid_;
     other.txid_ = 0;
-    binding_ = std::move(other.binding_);
-    other.binding_ = std::weak_ptr<AsyncBinding>();
+    owned_binding_ = std::move(other.owned_binding_);
+    unowned_binding_ = std::move(other.unowned_binding_);
+    binding_released_ = other.binding_released_;
+    other.binding_released_ = nullptr;
+    resume_status_ = other.resume_status_;
+    other.resume_status_ = nullptr;
   }
 
   zx_txid_t txid_ = 0;
-  std::weak_ptr<AsyncBinding> binding_ = {};
+  // An AsyncTransaction may only access the AsyncBinding via one of owned_binding_ or
+  // unowned_binding_. On Dispatch(), the AsyncTransaction takes ownership of the internal reference
+  // used by the dispatcher (keep_alive_) in owned_binding_. Calls to EnableNextDispatch(), Close(),
+  // or TakeOwnership() within the scope of Dispatch() move the reference back into keep_alive_,
+  // setting unowned_binding_. Otherwise, keep_alive_ is restored from owned_binding_ prior to
+  // Dispatch() returning.
+  std::shared_ptr<AsyncBinding> owned_binding_ = {};
+  std::weak_ptr<AsyncBinding> unowned_binding_ = {};
+  bool* binding_released_ = nullptr;
+  zx_status_t* resume_status_ = nullptr;
+  bool* moved_ = nullptr;
 };
 
 }  // namespace internal

@@ -5,100 +5,122 @@
 #ifndef LIB_FIDL_ASYNC_CPP_ASYNC_BIND_INTERNAL_H_
 #define LIB_FIDL_ASYNC_CPP_ASYNC_BIND_INTERNAL_H_
 
-#include <lib/async/cpp/task.h>
-#include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
+#include <lib/async/task.h>
+#include <lib/async/wait.h>
 #include <lib/fidl-async/cpp/async_bind.h>
-#include <lib/fidl/epitaph.h>
-#include <lib/fidl/llcpp/transaction.h>
-#include <lib/fit/function.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/channel.h>
-#include <zircon/fidl.h>
+
+#include <mutex>
 
 namespace fidl {
 
 namespace internal {
 
-// Thread safety token.
-//
-// This token acts like a "no-op mutex", allowing compiler thread safety annotations
-// to be placed on code or data that should only be accessed by a particular thread.
-// Any code that acquires the token makes the claim that it is running on the (single)
-// correct thread, and hence it is safe to access the annotated data and execute the annotated code.
-struct __TA_CAPABILITY("role") Token {};
-class __TA_SCOPED_CAPABILITY ScopedToken {
- public:
-  explicit ScopedToken(const Token& token) __TA_ACQUIRE(token) {}
-  ~ScopedToken() __TA_RELEASE() {}
-};
-
 class AsyncTransaction;
 class AsyncBinding;
-struct Deleter;
 
 using TypeErasedDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
-using TypeErasedOnChannelErrorFn = fit::callback<void(void*, ErrorType)>;
-using TypeErasedOnChannelClosedFn = fit::callback<void(void*)>;
+using TypeErasedOnUnboundFn = fit::callback<void(void*, UnboundReason, zx::channel)>;
 
-// This class abstracts the binding of a channel, a single threaded dispatcher and an implementation
-// of the llcpp bindings.
 class AsyncBinding {
  public:
-  // Creates a binding that stays bounded until either it is explicitly unbound via |Unbind|,
-  // a peer close is recevied in the channel from the remote end, or all transactions generated
+  // Creates a binding that remains bound until either it is explicitly unbound via |Unbind|,
+  // a peer close is received in the channel from the remote end, or all transactions generated
   // from it are destructed and an error occurred (either Close() is called from a transaction or
   // an internal error like not being able to write to the channel occur).
   // The binding is destroyed once no more references are held, including the one returned by
   // this static method.
   static std::shared_ptr<AsyncBinding> CreateSelfManagedBinding(
       async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-      TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelErrorFn on_channel_error_fn,
-      TypeErasedOnChannelClosedFn on_channel_closed_fn);
-  ~AsyncBinding() __TA_REQUIRES(domain_token());
+      TypeErasedDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
 
-  void MessageHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                      const zx_packet_signal_t* signal) __TA_REQUIRES(domain_token());
-  zx_status_t BeginWait() __TA_EXCLUDES(domain_token()) { return callback_.Begin(dispatcher_); }
+  ~AsyncBinding();
 
-  void Unbind() __TA_EXCLUDES(domain_token());
+  zx_status_t BeginWait() __TA_EXCLUDES(lock_);
+
+  zx_status_t EnableNextDispatch() __TA_EXCLUDES(lock_);
+
+  void Unbind(std::shared_ptr<AsyncBinding>&& calling_ref) __TA_EXCLUDES(lock_) {
+    UnbindInternal(std::move(calling_ref), nullptr);
+  }
+
+  void Close(std::shared_ptr<AsyncBinding>&& calling_ref,
+             zx_status_t epitaph) __TA_EXCLUDES(lock_) {
+    UnbindInternal(std::move(calling_ref), &epitaph);
+  }
 
  protected:
   explicit AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
                         TypeErasedDispatchFn dispatch_fn,
-                        TypeErasedOnChannelErrorFn on_channel_error_fn,
-                        TypeErasedOnChannelClosedFn on_channel_closed_fn);
+                        TypeErasedOnUnboundFn on_unbound_fn);
 
  private:
   friend fidl::internal::AsyncTransaction;
   friend fidl::BindingRef;
 
-  struct Deleter {
-    void operator()(internal::AsyncBinding* binding) const {
-      if (binding->deleter_) {
-        sync_completion_signal(binding->deleter_);
-      }
-      delete binding;
-    }
+  struct UnboundTask {
+    async_task_t task;
+    TypeErasedOnUnboundFn on_unbound_fn;
+    void* intf;
+    zx::channel channel;
+    UnboundReason reason;
   };
 
-  zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
-  const Token& domain_token() const __TA_RETURN_CAPABILITY(domain_token_) { return domain_token_; }
-  void OnChannelError(zx_status_t epitaph, ErrorType error_type) __TA_REQUIRES(domain_token());
-  void Close(zx_status_t epitaph, std::shared_ptr<AsyncBinding> binding)
-      __TA_EXCLUDES(domain_token());
+  static void OnMessage(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal) {
+    static_assert(std::is_standard_layout<AsyncBinding>::value, "Need offsetof.");
+    static_assert(offsetof(AsyncBinding, wait_) == 0, "Cast async_wait_t* to AsyncBinding*.");
+    reinterpret_cast<AsyncBinding*>(wait)->MessageHandler(status, signal);
+  }
 
-  Token domain_token_ = {};
+  static void OnUnboundTask(async_dispatcher_t* dispatcher, async_task_t* task,
+                              zx_status_t status) {
+    static_assert(std::is_standard_layout<UnboundTask>::value, "Need offsetof.");
+    static_assert(offsetof(UnboundTask, task) == 0, "Cast async_task_t* to UnboundTask*.");
+    auto* unbound_task = reinterpret_cast<UnboundTask*>(task);
+    unbound_task->on_unbound_fn(unbound_task->intf, unbound_task->reason,
+                                std::move(unbound_task->channel));
+    delete unbound_task;
+  }
+
+  zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
+
+  void MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) __TA_EXCLUDES(lock_);
+
+  // Used by both Close() and Unbind().
+  void UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
+                      zx_status_t* epitaph) __TA_EXCLUDES(lock_);
+
+  // Triggered by explicit Unbind(), channel peer closed, or other channel/dispatcher error in the
+  // context of a dispatcher thread with exclusive ownership of the internal binding reference. If
+  // the binding is still bound, waits for all other references to be released, sends the epitaph
+  // (except for Unbind()), and invokes the error handler if specified.
+  void OnUnbind(zx_status_t epitaph, UnboundReason reason) __TA_EXCLUDES(lock_);
+
+  // Destroys calling_ref and waits for the release of any other outstanding references to the
+  // binding. Recovers the channel endpoint if requested.
+  zx::channel WaitForDelete(std::shared_ptr<AsyncBinding>&& calling_ref, bool get_channel);
+
+  // Invokes OnUnbind() with the appropriate arguments based on the status.
+  void OnEnableNextDispatchError(zx_status_t error);
+
+  // First member of struct so an async_wait_t* can be casted to its containing AsyncBinding*.
+  async_wait_t wait_ __TA_GUARDED(lock_);
+
   async_dispatcher_t* dispatcher_ = nullptr;
-  sync_completion_t* deleter_ = nullptr;
+  sync_completion_t* on_delete_ = nullptr;
   zx::channel channel_ = {};
   void* interface_ = nullptr;
   TypeErasedDispatchFn dispatch_fn_ = {};
-  TypeErasedOnChannelErrorFn on_channel_error_fn_ __TA_GUARDED(domain_token()) = {};
-  TypeErasedOnChannelClosedFn on_channel_closed_fn_ __TA_GUARDED(domain_token()) = {};
-  zx_status_t epitaph_ __TA_GUARDED(domain_token()) = ZX_OK;
-  async::WaitMethod<AsyncBinding, &AsyncBinding::MessageHandler> callback_{this};
-  std::atomic<bool> closing_ = false;
+  TypeErasedOnUnboundFn on_unbound_fn_ = {};
   std::shared_ptr<AsyncBinding> keep_alive_ = {};
+  zx::channel* out_channel_ = nullptr;
+
+  std::mutex lock_;
+  struct { zx_status_t status; bool send; } epitaph_ __TA_GUARDED(lock_) = {ZX_OK, false};
+  bool unbind_ __TA_GUARDED(lock_) = false;
+  bool begun_ __TA_GUARDED(lock_) = false;
 };
 
 }  // namespace internal

@@ -5,9 +5,6 @@
 #ifndef LIB_FIDL_ASYNC_CPP_ASYNC_BIND_H_
 #define LIB_FIDL_ASYNC_CPP_ASYNC_BIND_H_
 
-#include <lib/async/cpp/task.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
@@ -16,21 +13,17 @@
 
 namespace fidl {
 
-enum class ErrorType {
-  // No error.
-  kNoError,
-  // An internal error occurred in the binding.
-  kErrorInternal,
-  // An error occurred when reading the channel.
-  kErrorChannelRead,
-  // Received a PEER_CLOSED in the channel.
-  kErrorPeerClosed,
+enum class UnboundReason {
+  // The user invoked Unbind() or Close().
+  kUnbind,
+  // The channel peer was closed.
+  kPeerClosed,
+  // An unexpected channel read/write error or dispatcher error occurred.
+  kInternalError,
 };
 
 template <typename Interface>
-using OnChannelErrorFn = fit::callback<void(Interface*, ErrorType)>;
-template <typename Interface>
-using OnChannelClosedFn = fit::callback<void(Interface*)>;
+using OnUnboundFn = fit::callback<void(Interface*, UnboundReason, zx::channel)>;
 
 // Forward declarations.
 class BindingRef;
@@ -40,21 +33,19 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                Interface* impl,
-                                               OnChannelErrorFn<Interface> on_channel_error_fn,
-                                               OnChannelClosedFn<Interface> on_channel_closed_fn);
+                                               OnUnboundFn<Interface> on_unbound);
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                std::unique_ptr<Interface> impl);
+
 namespace internal {
 
 class AsyncBinding;
 using TypeErasedDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
-using TypeErasedOnChannelErrorFn = fit::callback<void(void*, ErrorType)>;
-using TypeErasedOnChannelClosedFn = fit::callback<void(void*)>;
+using TypeErasedOnUnboundFn = fit::callback<void(void*, UnboundReason, zx::channel)>;
 fit::result<BindingRef, zx_status_t> AsyncTypeErasedBind(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelErrorFn on_channel_error_fn,
-    TypeErasedOnChannelClosedFn on_channel_closed_fn);
+    TypeErasedDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound);
 
 }  // namespace internal
 
@@ -68,15 +59,13 @@ class BindingRef {
                                                                  Interface* impl) {
     return AsyncBind(dispatcher, std::move(channel), impl);
   }
-  // Same as AsyncBind(async_dispatcher_t*, zx::channel, Interface*,
-  // OnChannelErrorFn<Interface>, OnChannelClosedFn<Interface>) below.
+  // Same as AsyncBind(async_dispatcher_t*, zx::channel, Interface*, OnUnboundFn<Interface>)
+  // below.
   template <typename Interface>
   static fit::result<BindingRef, zx_status_t> CreateAsyncBinding(
       async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
-      OnChannelErrorFn<Interface> on_channel_error_fn,
-      OnChannelClosedFn<Interface> on_channel_closed_fn) {
-    return AsyncBind(dispatcher, std::move(channel), impl, std::move(on_channel_error_fn),
-                     std::move(on_channel_closed_fn));
+      OnUnboundFn<Interface> on_unbound) {
+    return AsyncBind(dispatcher, std::move(channel), impl, std::move(on_unbound));
   }
   // Same as AsyncBind(async_dispatcher_t*, zx::channel, std::unique_ptr<Interface>) below.
   template <typename Interface>
@@ -92,18 +81,31 @@ class BindingRef {
   BindingRef(const BindingRef&) = delete;
   BindingRef& operator=(const BindingRef&) = delete;
 
-  // Forces unbind without waiting for transactions to get destroyed. Once it returns the unbind
-  // is completed and the binding is destroyed. Must be called from the dispatcher thread.
-  // Once the binding is destroyed, the channel is closed, we stop waiting on messages in the
-  // dispatcher, and any in-flight transactions |Reply|/|Close| will have no effect.
+  // Triggers an asynchronous unbind operation. If specified, the OnUnboundFn<> will be invoked on
+  // a dispatcher thread, passing in the channel and the unbind reason. In an error case, the
+  // channel will have been closed.
+  //
+  // This may be called from any thread.
+  //
+  // NOTE: For a single-threaded dispatcher, if Unbind() is invoked from a dispatcher thread and
+  // outside the scope of the message handler for the same binding, the channel will have been fully
+  // unbound on return, i.e. no other threads will be able to access it. Note that the OnUnboundFn<>
+  // will still be executed asynchronously if specified.
   void Unbind();
+
+  // TODO(madhaviyengar): Re-introduce synchronous Unbind() which returns a zx::channel.
+
+  // Triggers an asynchronous unbind operation. Eventually, the epitaph will be sent over the
+  // channel which will subsequently be closed. If specified, the OnUnboundFn<> will be invoked
+  // giving the unbind reason as an argument.
+  //
+  // This may be called from any thread.
+  void Close(zx_status_t epitaph);
 
  private:
   friend fit::result<BindingRef, zx_status_t> internal::AsyncTypeErasedBind(
       async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-      internal::TypeErasedDispatchFn dispatch_fn,
-      internal::TypeErasedOnChannelErrorFn on_channel_error_fn,
-      internal::TypeErasedOnChannelClosedFn on_channel_closed_fn);
+      internal::TypeErasedDispatchFn dispatch_fn, internal::TypeErasedOnUnboundFn on_unbound);
 
   explicit BindingRef(std::shared_ptr<internal::AsyncBinding> internal_binding)
       : binding_(std::move(internal_binding)) {}
@@ -111,17 +113,17 @@ class BindingRef {
   std::shared_ptr<internal::AsyncBinding> binding_;
 };
 
-// Binds an implementation of a low-level C++ server interface to |channel| using a
-// single-threaded |dispatcher|.
-// This implementation allows for multiple in-flight asynchronous transactions.
+// Binds an implementation of a low-level C++ server interface to |channel| using a potentially
+// multi-threaded |dispatcher|. This implementation allows for multiple in-flight synchronously or
+// asynchronously handled transactions.
 //
-// This function adds an |async::WaitMethod| to the given single-threaded |dispatcher| that waits
-// asynchronously for new messages to arrive on |channel|. When a message arrives, the dispatch
-// function corresponding to the interface is called on the |dispatcher| thread.
+// This function adds an asynchronous wait to the given |dispatcher| for new messages to arrive on
+// |channel|. When a message arrives, the dispatch function corresponding to the interface is called
+// on one of the |dispatcher| threads.
 //
-// Typically, the dispatch function is generated by the low-level C++ backend
-// for FIDL interfaces. These dispatch functions decode the |fidl_msg_t| and
-// call into the implementation of the FIDL interface, via its C++ vtable.
+// Typically, the dispatch function is generated by the low-level C++ backend for FIDL interfaces.
+// These dispatch functions decode the |fidl_msg_t| and call into the implementation of the FIDL
+// interface, via its C++ vtable.
 //
 // Creation:
 // - Upon success |AsyncBind| creates a binding that owns |channel|. In this case, the binding is
@@ -131,16 +133,28 @@ class BindingRef {
 // Destruction:
 // - If the returned |BindingRef| is ignored or dropped some time during the server operation,
 //   then if some error occurs (see below) the binding will be automatically destroyed.
-// - If the returned |BindingRef| is kept, even if some error occurs (see below) the binding will
-//   be kept alive until the returned |BindingRef| is destroyed.
-// - When the binding is destroyed, it won't receive new messages in the channel, in-flight
-//   transactions |Reply|/|Close| calls will have no effect, an epitaph is sent (unless the error
-//   was a PEER_CLOSED) and the channel is closed.
-// - Destruction may be slightly delayed due to binding usage by transactions.
+// - If the returned |BindingRef| is kept but an error occurs (see below), the binding will be
+//   destroyed, though calls may still be made on the |BindingRef|.
+// - On an error, |channel| is unbound from the dispatcher, i.e. no dispatcher threads will interact
+//   with it. The server end is closed if necessary, and calls on inflight |Transaction|s will have
+//   no effect. If specified, |on_unbound| is then executed on a |dispatcher| thread allowing the
+//   user to process the error.
 //
 // Unbind:
-// - The returned |BindingRef| can be used to explicitly |Unbind| the binding.
-// - After |Unbind| returns the binding is destroyed.
+// - The |BindingRef| can be used to explicitly |Unbind| the binding and retrieve the |channel|
+//   endpoint.
+// - |Unbind| is non-blocking with respect to user code paths, i.e. if it blocks, it does so on
+//   deterministic internal code paths. As such, the user may safely synchronize around an |Unbind|
+//   call.
+// - In order to reclaim the |channel|, the user must specify an OnUnboundFn<> hook. This will be
+//   invoked after the |channel| has been unbound from the |dispatcher|. If no error occurs, the
+//   channel will be given as an argument to the hook.
+//
+// Close:
+// - |Close| is similar to |Unbind| except that it causes an epitaph message to be sent on the
+//   |channel| which is subsequently closed.
+// - If specified, the OnUnboundFn<> hook will execute after the epitaph has been sent and will be
+//   given an invalid handle for the |channel|.
 //
 // Error conditions:
 // - When an error occurs in the server implementation as part of handling a message, it may call
@@ -148,44 +162,43 @@ class BindingRef {
 // - If the client end of the channel gets closed (PEER_CLOSED).
 // - If an error occurs in the binding itself, e.g. a channel write fails.
 //
-// TODO(38456): Add support for multithreaded dispatchers.
-// TODO(40787): on_closed callback removal.
-//
+// Ordering:
+// - By default, the message dispatch function for a binding will only ever be invoked by a single
+//   |dispatcher| thread at a time.
+// - To enable more concurrency, the user may invoke |ResumeDispatch| on the
+//   |fidl::Completer<T>::Sync| from the dispatch function. This will resume the async wait on the
+//   |dispatcher| before the dispatch function returns, allowing other |dispatcher| threads to
+//   handle messages for the same binding.
+// NOTE: If a particular user does not care about ordering, they may invoke |ResumeDispatch|
+// immediately in the message handler. However, this functionality could instead be provided as a
+// default configuration. If you have such a usecase, please contact madhaviyengar@ or yifei@.
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                Interface* impl) {
-  return internal::AsyncTypeErasedBind(dispatcher, std::move(channel), impl,
-                                       &Interface::_Outer::TypeErasedDispatch, nullptr, nullptr);
+  return internal::AsyncTypeErasedBind(
+      dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch, nullptr);
 }
 
-// As above, but will invoke |on_channel_error_fn| on |impl| when either end of the |channel|
-// is being closed unless this is due to a call to |Close|, this notification allows in-flight
-// transactions to be cancelled.
-// |Unbind| calls from a |BindingRef| won't invoke |on_channel_error_fn|.
-// |on_channel_closed_fn| is called before the channel is closed as part of the binding destruction.
+// As above, but will invoke |on_unbound| on |impl| when the channel is being unbound, either due to
+// error or an explicit |Close| or |Unbind|.
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
-                                               Interface* impl,
-                                               OnChannelErrorFn<Interface> on_channel_error_fn,
-                                               OnChannelClosedFn<Interface> on_channel_closed_fn) {
+                                               Interface* impl, OnUnboundFn<Interface> on_unbound) {
   return internal::AsyncTypeErasedBind(
       dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch,
-      [fn = std::move(on_channel_error_fn)](void* impl, ErrorType type) mutable {
-        fn(static_cast<Interface*>(impl), type);
-      },
-      [fn = std::move(on_channel_closed_fn)](void* impl) mutable {
-        fn(static_cast<Interface*>(impl));
+      [fn = std::move(on_unbound)](void* impl, UnboundReason reason, zx::channel channel) mutable {
+        fn(static_cast<Interface*>(impl), reason, std::move(channel));
       });
 }
 
-// As above, but will destroy |impl| as the binding is destroyed and the |channel| closed.
+// As above, but will destroy |impl| whenever the binding is destroyed.
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                std::unique_ptr<Interface> impl) {
-  OnChannelErrorFn<Interface> on_error = [](Interface* impl, ErrorType type) {};
-  OnChannelClosedFn<Interface> on_closed = [](Interface* impl) { delete impl; };
-  return AsyncBind(dispatcher, std::move(channel), impl.release(), std::move(on_error),
-                   std::move(on_closed));
+  Interface* impl_raw = impl.get();
+  return internal::AsyncTypeErasedBind(
+      dispatcher, std::move(channel), impl_raw, &Interface::_Outer::TypeErasedDispatch,
+      [intf = std::move(impl)](void*, UnboundReason, zx::channel){});
 }
 
 }  // namespace fidl
