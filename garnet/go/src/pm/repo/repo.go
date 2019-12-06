@@ -322,10 +322,13 @@ func (r *Repo) PublishManifest(path string) ([]string, error) {
 }
 
 func (r *Repo) commitUpdates() error {
-	if err := r.SnapshotWithExpires(tuf.CompressionTypeNone, time.Now().AddDate(0, 0, 30)); err != nil {
+	// TUF-1.0 section 4.4.2 states that the expiration must be in the
+	// ISO-8601 format in the UTC timezone with no nanoseconds.
+	expires := time.Now().AddDate(0, 0, 30).UTC().Round(time.Second)
+	if err := r.SnapshotWithExpires(tuf.CompressionTypeNone, expires); err != nil {
 		return fmt.Errorf("snapshot: %s", err)
 	}
-	if err := r.TimestampWithExpires(time.Now().AddDate(0, 0, 30)); err != nil {
+	if err := r.TimestampWithExpires(expires); err != nil {
 		return fmt.Errorf("timestamp: %s", err)
 	}
 	if err := r.Commit(); err != nil {

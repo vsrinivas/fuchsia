@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"fuchsia.googlesource.com/merkle"
 )
@@ -391,10 +392,28 @@ func TestLoadExistingRepo(t *testing.T) {
 
 	// Check for rolejsons and consistent snapshots:
 	for _, rolejson := range roleJsons {
-		_, err := ioutil.ReadFile(filepath.Join(newRepoDir, "repository", rolejson))
+		bytes, err := ioutil.ReadFile(filepath.Join(newRepoDir, "repository", rolejson))
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		// Check metadata has a UTC timestamp, and no nanoseconds.
+		var meta struct {
+			Signed struct {
+				Expires time.Time `json:"expires"`
+			} `json:"signed"`
+		}
+		if err := json.Unmarshal(bytes, &meta); err != nil {
+			t.Fatal(err)
+		}
+		zone, offset := meta.Signed.Expires.Zone()
+		if zone != "UTC" || offset != 0 {
+			t.Fatalf("%s expires field is not UTC: %s", rolejson, meta.Signed.Expires)
+		}
+		if meta.Signed.Expires.Nanosecond() != 0 {
+			t.Fatalf("%s expires should not have nanoseconds: %s", rolejson, meta.Signed.Expires)
+		}
+
 		// timestamp doesn't get a consistent snapshot, as it is the entrypoint
 		if rolejson == "timestamp.json" {
 			continue
