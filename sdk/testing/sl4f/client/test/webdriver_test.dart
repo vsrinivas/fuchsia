@@ -52,6 +52,43 @@ void main(List<String> args) {
         {'https://www.test.com/path/1', 'https://www.test.com/path/2'});
   });
 
+  test('webDriversForHost refresh session', () async {
+    final openContexts = {
+      20000: 'https://www.test.com/path/1',
+      20001: 'https://www.example.com/path/1',
+    };
+    mockAvailableWebDrivers(webDriverHelper, sl4f, ssh, openContexts);
+
+    final webDrivers =
+        await webDriverConnector.webDriversForHost('www.test.com');
+    expect(webDrivers.length, 1);
+
+    // Keep port 20000 active
+    when(sl4f.request('webdriver_facade.GetDevToolsPorts'))
+        .thenAnswer((_) => Future.value({
+              'ports': [20000]
+            }));
+
+    // Expire session by throwing NoSuchWindowException.
+    when(webDrivers.single.window).thenAnswer(
+        (_) => throw NoSuchWindowException(1, 'Session not displayed'));
+
+    when(ssh.forwardPort(remotePort: anyNamed('remotePort')))
+        .thenAnswer((invocation) {
+      final remotePort = invocation.namedArguments[#remotePort];
+      return Future.value(remotePort + 10);
+    });
+
+    when(webDriverHelper.createDriver(any, any)).thenAnswer((invocation) {
+      WebDriver webDriver = MockWebDriver();
+      when(webDriver.currentUrl).thenReturn('https://www.test.com/path/2');
+      return webDriver;
+    });
+
+    final result = await webDriverConnector.webDriversForHost('www.test.com');
+    expect(result.single.currentUrl, 'https://www.test.com/path/2');
+  });
+
   test('webDriversForHost no contexts', () async {
     mockAvailableWebDrivers(webDriverHelper, sl4f, ssh, {});
     var webDrivers = await webDriverConnector.webDriversForHost('www.test.com');

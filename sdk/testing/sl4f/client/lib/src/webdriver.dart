@@ -8,7 +8,7 @@ import 'dart:io' as io;
 import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:retry/retry.dart';
-import 'package:webdriver/sync_core.dart' show WebDriver;
+import 'package:webdriver/sync_core.dart' show WebDriver, NoSuchWindowException;
 import 'package:webdriver/sync_io.dart' as sync_io;
 
 final _log = Logger('Webdriver');
@@ -96,21 +96,18 @@ class WebDriverConnector {
   ///
   /// For a returned entry, entry.key is the port, and entry.value is the
   /// WebDriver object.
-  Future<List<WebDriverSession>> _webDriverSessionsForHost(
-      String host) async {
+  Future<List<WebDriverSession>> _webDriverSessionsForHost(String host) async {
     await _updateWebDriverSessions();
-
-    return List.from(_webDriverSessions.values
-        .where((session) => Uri.parse(session.webDriver.currentUrl).host == host));
+    return List.from(_webDriverSessions.values.where(
+        (session) => Uri.parse(session.webDriver.currentUrl).host == host));
   }
 
   /// Searches for Chrome contexts based on the host of the currently displayed
   /// page, and returns `WebDriver` connections to the found contexts.
   Future<List<WebDriver>> webDriversForHost(String host) async {
     _log.info('Finding webdrivers for $host');
-    return List.from(
-        (await _webDriverSessionsForHost(host)).map((session) =>
-            session.webDriver));
+    return List.from((await _webDriverSessionsForHost(host))
+        .map((session) => session.webDriver));
   }
 
   /// Checks whether a debugging [endpoint] matches the specified [filters].
@@ -145,9 +142,8 @@ class WebDriverConnector {
   /// given host.
   Future<List<String>> webSocketDebuggerUrlsForHost(String host,
       {Map<String, dynamic> filters}) async {
-    final portsForHost =
-        (await _webDriverSessionsForHost(host)).map((session) =>
-            session.localPort);
+    final portsForHost = (await _webDriverSessionsForHost(host))
+        .map((session) => session.localPort);
 
     final devToolsUrls = <String>[];
     for (final port in portsForHost) {
@@ -195,25 +191,33 @@ class WebDriverConnector {
   Future<void> _updateWebDriverSessions() async {
     final remotePortsResult =
         await _sl4f.request('webdriver_facade.GetDevToolsPorts');
-    final remotePorts = Set.from(remotePortsResult['ports']);
 
-    // Remove port forwarding for any ports that aren't open anymore.
-    _webDriverSessions.removeWhere((remotePort, session) {
-      if (!remotePorts.contains(remotePort)) {
-        _sl4f.ssh
-            .cancelPortForward(port: session.localPort, remotePort: remotePort);
+    final ports = Set.from(remotePortsResult['ports']);
+
+    // Remove port forwarding for any ports that aren't open or shown.
+    _webDriverSessions.removeWhere((port, session) {
+      if (!ports.contains(port) || !_isSessionDisplayed(session)) {
+        _sl4f.ssh.cancelPortForward(port: session.localPort, remotePort: port);
         return true;
       }
       return false;
     });
 
     // Add new sessions for new ports.
-    for (final remotePort in remotePorts) {
-      if (!_webDriverSessions.containsKey(remotePort)) {
-        final webDriverSession = await _createWebDriverSession(remotePort);
-        _webDriverSessions.putIfAbsent(remotePort, () => webDriverSession);
-      }
+    for (final remotePort in ports) {
+      final webDriverSession = await _createWebDriverSession(remotePort);
+      _webDriverSessions.putIfAbsent(remotePort, () => webDriverSession);
     }
+  }
+
+  bool _isSessionDisplayed(WebDriverSession session) {
+    try {
+      session.webDriver.window;
+    } on NoSuchWindowException {
+      return false;
+    }
+
+    return true;
   }
 
   /// Creates a `Webdriver` connection using the specified port.  Retries
