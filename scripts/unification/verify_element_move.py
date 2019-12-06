@@ -18,7 +18,7 @@ FUCHSIA_ROOT = os.path.dirname(SCRIPTS_DIR)
 
 # The maximum number of size percentage points a binary is allowed to drop.
 # A greater amount will raise a flag.
-MAX_SIZE_DECREASE = 5
+MAX_SIZE_DECREASE = 10
 
 
 class Type(object):
