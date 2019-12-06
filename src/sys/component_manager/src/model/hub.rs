@@ -216,16 +216,23 @@ impl HubInner {
         )?;
 
         // Add an 'id' file.
-        if let Some(child_moniker) = abs_moniker.leaf() {
-            instance_controlled.add_node(
-                "id",
-                {
-                    let child_moniker = child_moniker.clone();
-                    read_only(move || Ok(child_moniker.instance().to_string().into_bytes()))
-                },
-                &abs_moniker,
-            )?;
-        }
+        // For consistency sake, the Hub assumes that the root instance also
+        // has ID 0, like any other static instance.
+        let id =
+            if let Some(child_moniker) = abs_moniker.leaf() { child_moniker.instance() } else { 0 };
+        let component_type = if id > 0 { "dynamic" } else { "static" };
+        instance_controlled.add_node(
+            "id",
+            { read_only(move || Ok(id.to_string().into_bytes())) },
+            &abs_moniker,
+        )?;
+
+        // Add a 'component_type' file.
+        instance_controlled.add_node(
+            "component_type",
+            { read_only(move || Ok(component_type.to_string().into_bytes())) },
+            &abs_moniker,
+        )?;
 
         // Add a children directory.
         let (children_controller, children_controlled) =
@@ -793,6 +800,15 @@ mod tests {
             format!("{}_resolved", root_component_url),
             read_file(&hub_proxy, "exec/resolved_url").await
         );
+
+        // Verify IDs
+        assert_eq!("0", read_file(&hub_proxy, "id").await);
+        assert_eq!("0", read_file(&hub_proxy, "children/a/id").await);
+
+        // Verify Component Type
+        assert_eq!("static", read_file(&hub_proxy, "component_type").await);
+        assert_eq!("static", read_file(&hub_proxy, "children/a/component_type").await);
+
         assert_eq!("test:///a", read_file(&hub_proxy, "children/a/url").await);
     }
 

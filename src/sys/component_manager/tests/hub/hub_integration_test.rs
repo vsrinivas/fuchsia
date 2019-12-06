@@ -322,7 +322,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     test_runner
         .verify_directory_listing(
             "children/coll:simple_instance",
-            vec!["children", "deleting", "id", "url"],
+            vec!["children", "component_type", "deleting", "id", "url"],
         )
         .await;
 
@@ -339,7 +339,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     test_runner
         .verify_directory_listing(
             "children/coll:simple_instance",
-            vec!["children", "deleting", "exec", "id", "url"],
+            vec!["children", "component_type", "deleting", "exec", "id", "url"],
         )
         .await;
 
@@ -363,7 +363,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     test_runner
         .verify_directory_listing(
             "deleting/coll:simple_instance:1",
-            vec!["children", "deleting", "exec", "id", "url"],
+            vec!["children", "component_type", "deleting", "exec", "id", "url"],
         )
         .await;
 
@@ -377,7 +377,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     test_runner
         .verify_directory_listing(
             "deleting/coll:simple_instance:1",
-            vec!["children", "deleting", "id", "url"],
+            vec!["children", "component_type", "deleting", "id", "url"],
         )
         .await;
 
@@ -396,7 +396,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
     test_runner
         .verify_directory_listing(
             "deleting/coll:simple_instance:1/deleting/child:0",
-            vec!["children", "deleting", "id", "url"],
+            vec!["children", "component_type", "deleting", "id", "url"],
         )
         .await;
 
@@ -445,7 +445,10 @@ async fn visibility_test() -> Result<(), Error> {
     // Verify that the child's hub has the directories we expect
     // i.e. no "exec" because the child has not been bound.
     test_runner
-        .verify_directory_listing("children/child", vec!["children", "deleting", "id", "url"])
+        .verify_directory_listing(
+            "children/child",
+            vec!["children", "component_type", "deleting", "id", "url"],
+        )
         .await;
 
     // Verify that the grandchild is not shown because the child is lazy

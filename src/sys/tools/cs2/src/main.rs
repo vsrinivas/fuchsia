@@ -15,6 +15,7 @@ struct Opt {
 
 fn main() {
     let opt = Opt::from_args();
-    let output = Component::new_root_component(opt.hub_v2_path).generate_output();
+    let lines = Component::new_root_component(opt.hub_v2_path).generate_output();
+    let output = lines.join("\n");
     println!("{}", output);
 }
