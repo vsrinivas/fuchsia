@@ -15,9 +15,7 @@
 #include <zircon/status.h>
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_CDECLS
 
 // Defines acceptable types for functions.
 typedef void (*zxtest_test_fn_t)(void);
@@ -84,9 +82,8 @@ size_t _zxtest_print_ptr(const void* val, char* buffer, size_t buffer_size);
 size_t _zxtest_print_hex(const void* val, size_t size, char* buffer, size_t buffer_size);
 
 void zxtest_c_clean_buffer(char** buffer);
-#ifdef __cplusplus
-}
-#endif
+
+__END_CDECLS
 
 #define _EQ(actual, expected) actual == expected
 #define _NE(actual, expected) actual != expected
@@ -201,6 +198,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 #define _RETURN_IF_FATAL_1        \
   do {                            \
     if (_ZXTEST_ABORT_IF_ERROR) { \
+      unittest_returns_early();   \
       return;                     \
     }                             \
   } while (0)

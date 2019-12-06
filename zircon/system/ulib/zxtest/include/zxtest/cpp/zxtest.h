@@ -66,6 +66,7 @@
 #define _RETURN_IF_FATAL_true     \
   do {                            \
     if (_ZXTEST_ABORT_IF_ERROR) { \
+      unittest_returns_early();   \
       return;                     \
     }                             \
   } while (0)

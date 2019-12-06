@@ -170,4 +170,11 @@
 #define sub_overflow(a, b, c) __builtin_sub_overflow(a, b, c)
 #define mul_overflow(a, b, c) __builtin_mul_overflow(a, b, c)
 
+// A workaround to help static analyzer identify assertion failures
+#if defined(__clang__)
+#define __ANALYZER_CREATE_SINK __attribute__((analyzer_noreturn))
+#else
+#define __ANALYZER_CREATE_SINK  // no-op
+#endif
+
 #endif  // SYSROOT_ZIRCON_COMPILER_H_

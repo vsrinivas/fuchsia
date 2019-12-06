@@ -85,17 +85,12 @@ static inline const char* unittest_get_message(const char* arg) { return arg; }
 static inline const char* unittest_get_message() { return "<no message>"; }
 #endif
 
-// A workaround to help static analyzer identify assertion failures
-#if defined(__clang__)
-#define ZX_ANALYZER_CREATE_SINK __attribute__((annotate("zx_create_sink")))
-#else
-#define ZX_ANALYZER_CREATE_SINK  // no-op
-#endif
 // This function will help terminate the static analyzer when it reaches
 // an assertion failure site which returns from test case function. The bugs
 // discovered by the static analyzer will be suppressed as they are expected
 // by the test cases.
-static inline void unittest_returns_early(void) ZX_ANALYZER_CREATE_SINK {}
+__ANALYZER_CREATE_SINK
+static inline void unittest_returns_early(void) {}
 
 __BEGIN_CDECLS
 
