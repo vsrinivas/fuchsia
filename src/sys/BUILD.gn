@@ -27,6 +27,7 @@ group("tests") {
     "locate:tests",
     "pkg:tests",
     "run_test_suite:tests",
+    "test_adapters:tests",
     "test_manager:tests",
     "timekeeper:tests",
     "tools/cs2:tests",

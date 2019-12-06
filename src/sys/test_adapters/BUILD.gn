@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("lib") {
+  name = "test_adapter_lib"
+  with_unit_tests = true
+  edition = "2018"
+
+  # Only for internal use.
+  visibility = [
+    "gtest/*",
+    ":*",
+  ]
+
+  deps = [
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+group("test_adapters") {
+  testonly = true
+  deps = [
+    "gtest",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "gtest:tests",
+  ]
+}
