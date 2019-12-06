@@ -22,8 +22,8 @@ PresentationContainer::PresentationContainer(
     fuchsia::modular::session::SessionShellConfig shell_config,
     fit::function<void()> on_swap_session_shell)
     : presenter_(presenter), on_swap_session_shell_(std::move(on_swap_session_shell)) {
-  presenter_->PresentView(std::move(view_holder_token),
-                          presentation_state_.presentation.NewRequest());
+  presenter_->PresentOrReplaceView(std::move(view_holder_token),
+                                   presentation_state_.presentation.NewRequest());
   AddGlobalKeyboardShortcuts(presentation_state_.presentation);
 }
 

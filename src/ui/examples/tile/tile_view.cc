@@ -37,6 +37,13 @@ void TileView::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token
   AddChildView("tile_view child(Presented view)", std::move(view_holder_token), nullptr);
 }
 
+// |fuchsia::ui::policy::Presenter|
+void TileView::PresentOrReplaceView(
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  FXL_CHECK(false) << "tile_view: clobbering presentation not supported.";
+}
+
 void TileView::ConnectViews() {
   for (const auto& url : params_.view_urls) {
     fuchsia::sys::ComponentControllerPtr controller;

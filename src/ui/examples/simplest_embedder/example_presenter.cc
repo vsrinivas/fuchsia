@@ -44,6 +44,13 @@ void ExamplePresenter::PresentView(
   ScenicSessionPresent();
 }
 
+void ExamplePresenter::PresentOrReplaceView(
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  FXL_CHECK(!presentation_) << "simplest_embedder: clobbering presentation is not supported";
+  PresentView(std::move(view_holder_token), std::move(presentation_request));
+};
+
 void ExamplePresenter::MaybeSetPresentationSize() {
   if (compositor_ && presentation_) {
     presentation_->SetSize(width_, height_);

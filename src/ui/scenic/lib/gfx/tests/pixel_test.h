@@ -83,14 +83,17 @@ class PixelTest : public sys::testing::TestWithEnvironment {
 
   // Gets a view token for presentation by |RootPresenter|. See also
   // src/ui/examples/hello_base_view
-  fuchsia::ui::views::ViewToken CreatePresentationViewToken();
+  fuchsia::ui::views::ViewToken CreatePresentationViewToken(bool clobber);
 
   // Create a |ViewContext| that allows us to present a view via
   // |RootPresenter|. See also examples/ui/hello_base_view
-  scenic::ViewContext CreatePresentationContext();
+  scenic::ViewContext CreatePresentationContext(bool clobber = false);
 
-  // Runs until the view renders its next frame.
-  void RunUntilPresent(scenic::TestView* view);
+  // Sets the next Present-callback that will be used, then waits for some event on the looper
+  // (usually OnScenicEvent) to trigger another Present, and then waits for THAT Present to have its
+  // callback return.
+  // TODO(42422): This is too unintuitive. Rewrite to be clearer.
+  void RunUntilIndirectPresent(scenic::TestView* view);
 
   // Blocking call to |scenic::Session::Present|.
   void Present(scenic::Session* session, zx::time present_time = zx::time(0));

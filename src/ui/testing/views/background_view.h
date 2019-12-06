@@ -31,6 +31,8 @@ class BackgroundView : public TestView, private fuchsia::ui::scenic::SessionList
 
   void SetHostImage(zx::vmo vmo, uint64_t size, fuchsia::images::ImageInfo info);
 
+  void SetBackgroundColor(Color color);
+
  protected:
   Session* session() { return &session_; }
   View* view() { return &view_; }
@@ -56,6 +58,7 @@ class BackgroundView : public TestView, private fuchsia::ui::scenic::SessionList
   View view_;
 
   ShapeNode background_node_;
+  Material background_material_;
   Session::PresentCallback present_callback_;
 };
 

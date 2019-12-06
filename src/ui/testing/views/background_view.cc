@@ -15,26 +15,26 @@ BackgroundView::BackgroundView(ViewContext context, const std::string& debug_nam
     : binding_(this, std::move(context.session_and_listener_request.second)),
       session_(std::move(context.session_and_listener_request.first)),
       view_(&session_, std::move(context.view_token), debug_name),
-      background_node_(&session_) {
+      background_node_(&session_),
+      background_material_(&session_) {
   binding_.set_error_handler([](zx_status_t status) {
     FXL_LOG(FATAL) << "Session listener binding: " << zx_status_get_string(status);
   });
 
   session_.Present(0, [](auto) {});
 
-  Material background_material(&session_);
-  background_material.SetColor(kBackgroundColor.r, kBackgroundColor.g, kBackgroundColor.b,
-                               kBackgroundColor.a);
-  background_node_.SetMaterial(background_material);
+  background_node_.SetMaterial(background_material_);
   view_.AddChild(background_node_);
+}
+
+void BackgroundView::SetBackgroundColor(Color color) {
+  background_material_.SetColor(color.r, color.g, color.b, color.a);
 }
 
 void BackgroundView::SetHostImage(zx::vmo vmo, uint64_t size, fuchsia::images::ImageInfo info) {
   Memory memory(&session_, std::move(vmo), size, fuchsia::images::MemoryType::HOST_MEMORY);
   Image image(&session_, memory.id(), 0, info);
-  Material background_material(&session_);
-  background_material.SetTexture(image);
-  background_node_.SetMaterial(background_material);
+  background_material_.SetTexture(image);
 }
 
 void BackgroundView::set_present_callback(Session::PresentCallback present_callback) {

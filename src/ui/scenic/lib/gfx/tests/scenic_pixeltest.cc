@@ -55,7 +55,8 @@ class ScenicPixelTest : public gfx::PixelTest {
 
 TEST_F(ScenicPixelTest, SolidColor) {
   scenic::BackgroundView view(CreatePresentationContext());
-  RunUntilPresent(&view);
+  view.SetBackgroundColor(scenic::BackgroundView::kBackgroundColor);
+  RunUntilIndirectPresent(&view);
 
   scenic::Screenshot screenshot = TakeScreenshot();
   ASSERT_FALSE(screenshot.empty());
@@ -69,6 +70,41 @@ TEST_F(ScenicPixelTest, SolidColor) {
   // This assert is written this way so that, when it fails, it prints out all
   // the unexpected colors
   EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+}
+
+TEST_F(ScenicPixelTest, PresentOrReplaceView_ShouldReplacePreviousPresentation) {
+  scenic::BackgroundView view(CreatePresentationContext());
+  view.SetBackgroundColor(scenic::BackgroundView::kBackgroundColor);
+  RunUntilIndirectPresent(&view);
+
+  {
+    scenic::Screenshot screenshot = TakeScreenshot();
+    ASSERT_FALSE(screenshot.empty());
+
+    std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
+    EXPECT_GT(histogram[scenic::BackgroundView::kBackgroundColor], 0u);
+    histogram.erase(scenic::BackgroundView::kBackgroundColor);
+    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+  }
+
+  const scenic::Color kNewBackgroundColor = {0xFF, 0x00, 0xFF, 0xFF};
+  ASSERT_FALSE(kNewBackgroundColor == scenic::BackgroundView::kBackgroundColor);
+
+  {
+    // Clobber current presentation with a new one with different background. Check that the
+    // background changes.
+    scenic::BackgroundView view2(CreatePresentationContext(/*clobber=*/true));
+    view2.SetBackgroundColor(kNewBackgroundColor);
+    RunUntilIndirectPresent(&view2);
+
+    scenic::Screenshot screenshot = TakeScreenshot();
+    ASSERT_FALSE(screenshot.empty());
+
+    std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
+    EXPECT_GT(histogram[kNewBackgroundColor], 0u);
+    histogram.erase(kNewBackgroundColor);
+    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
+  }
 }
 
 TEST_F(ScenicPixelTest, NV12Texture) {
@@ -110,7 +146,7 @@ TEST_F(ScenicPixelTest, NV12Texture) {
   }
 
   view.SetHostImage(std::move(image_vmo), image_vmo_bytes, image_info);
-  RunUntilPresent(&view);
+  RunUntilIndirectPresent(&view);
 
   scenic::Screenshot screenshot = TakeScreenshot();
   ASSERT_FALSE(screenshot.empty());
@@ -132,7 +168,7 @@ TEST_F(ScenicPixelTest, NV12Texture) {
 
 TEST_F(ScenicPixelTest, ViewCoordinates) {
   scenic::CoordinateTestView view(CreatePresentationContext());
-  RunUntilPresent(&view);
+  RunUntilIndirectPresent(&view);
 
   scenic::Screenshot screenshot = TakeScreenshot();
 
@@ -468,8 +504,7 @@ struct OpacityTestParams {
 };
 
 class ParameterizedOpacityPixelTest : public ScenicPixelTest,
-                                      public ::testing::WithParamInterface<OpacityTestParams> {
-};
+                                      public ::testing::WithParamInterface<OpacityTestParams> {};
 
 TEST_P(ParameterizedOpacityPixelTest, CheckPixels) {
   constexpr auto COMPARE_COLOR = [](const scenic::Color& color_1, const scenic::Color& color_2,
@@ -488,7 +523,7 @@ TEST_P(ParameterizedOpacityPixelTest, CheckPixels) {
   view.set_foreground_color(0x00, 0xff, 0x0f);
   view.set_foreground_opacity(test_params.opacity);
 
-  RunUntilPresent(&view);
+  RunUntilIndirectPresent(&view);
   scenic::Screenshot screenshot = TakeScreenshot();
   ASSERT_FALSE(screenshot.empty());
 
@@ -506,9 +541,10 @@ TEST_P(ParameterizedOpacityPixelTest, CheckPixels) {
 // opacity is 50% we expect a blend of the two.
 INSTANTIATE_TEST_SUITE_P(
     Opacity, ParameterizedOpacityPixelTest,
-    ::testing::Values(OpacityTestParams{.opacity = 0.0f, .expected_color = {0xff, 0x00, 0xf0, 0xff}},
-                      OpacityTestParams{.opacity = 0.5f, .expected_color = {0x80, 0x80, 0x80, 0xff}},
-                      OpacityTestParams{.opacity = 1.0f, .expected_color = {0x00, 0xff, 0x0f, 0xff}}));
+    ::testing::Values(
+        OpacityTestParams{.opacity = 0.0f, .expected_color = {0xff, 0x00, 0xf0, 0xff}},
+        OpacityTestParams{.opacity = 0.5f, .expected_color = {0x80, 0x80, 0x80, 0xff}},
+        OpacityTestParams{.opacity = 1.0f, .expected_color = {0x00, 0xff, 0x0f, 0xff}}));
 
 TEST_F(ScenicPixelTest, ViewBoundClipping) {
   auto test_session = SetUpTestSession();

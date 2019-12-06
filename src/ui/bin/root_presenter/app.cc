@@ -48,6 +48,21 @@ void App::RegisterMediaButtonsListener(
 void App::PresentView(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  PresentView(std::move(view_holder_token), std::move(presentation_request),
+              /*clobber_previous_presentation=*/false);
+}
+
+void App::PresentOrReplaceView(
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  PresentView(std::move(view_holder_token), std::move(presentation_request),
+              /*clobber_previous_presentation=*/true);
+}
+
+void App::PresentView(
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
+    bool clobber_previous_presentation) {
   InitializeServices();
 
   int32_t display_startup_rotation_adjustment = 0;
@@ -76,16 +91,40 @@ void App::PresentView(
       },
       &media_buttons_handler_);
 
-  AddPresentation(std::move(presentation));
+  SetPresentation(std::move(presentation), clobber_previous_presentation);
+}
+
+void App::SetPresentation(std::unique_ptr<Presentation> presentation, bool clobber_presentation) {
+  if (clobber_presentation && !presentations_.empty()) {
+    ReplacePresentationWith(std::move(presentation));
+  } else {
+    AddPresentation(std::move(presentation));
+  }
 }
 
 void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
+  // TODO(41929): Once we're confident no one is using multiple presentations, assert this never
+  // happens.
+  if (!presentations_.empty()) {
+    FXL_LOG(WARNING)
+        << "Using multiple presentations is deprecated. Call PresentOrReplaceView() to "
+           "force replacement of current presentation.";
+    zx::nanosleep(zx::deadline_after(zx::sec(1)));
+  }
+
   for (auto& it : devices_by_id_) {
     presentation->OnDeviceAdded(it.second.get());
   }
 
   presentations_.push_back(std::move(presentation));
   SwitchToPresentation(presentations_.size() - 1);
+}
+
+void App::ReplacePresentationWith(std::unique_ptr<Presentation> presentation) {
+  FXL_DCHECK(presentations_.size() == 1)
+      << "Can only replace presentation when there is a single instance.";
+  ShutdownPresentation(/*presentation_idx=*/0);
+  AddPresentation(std::move(presentation));
 }
 
 void App::HACK_SetRendererParams(bool enable_clipping,

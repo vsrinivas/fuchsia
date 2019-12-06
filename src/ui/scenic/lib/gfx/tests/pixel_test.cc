@@ -39,14 +39,11 @@ const std::map<std::string, std::string> kServices = {
     {"fuchsia.ui.policy.Presenter",
      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
     {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.ui.shortcut.Manager", "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx"}};
+    {"fuchsia.ui.shortcut.Manager",
+     "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx"}};
 
 // Allow these global services.
-const std::string kParentServices[] = {
-  "fuchsia.vulkan.loader.Loader",
-  "fuchsia.sysmem.Allocator"
-};
-
+const std::string kParentServices[] = {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
 
 }  // namespace
 
@@ -108,7 +105,7 @@ scenic::Screenshot PixelTest::TakeScreenshot() {
   return scenic::Screenshot(screenshot_out);
 }
 
-fuchsia::ui::views::ViewToken PixelTest::CreatePresentationViewToken() {
+fuchsia::ui::views::ViewToken PixelTest::CreatePresentationViewToken(bool clobber) {
   FX_CHECK(environment_) << "Environment has not been initialized.";
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -116,31 +113,35 @@ fuchsia::ui::views::ViewToken PixelTest::CreatePresentationViewToken() {
   auto presenter = environment_->ConnectToService<fuchsia::ui::policy::Presenter>();
   presenter.set_error_handler(
       [](zx_status_t status) { FAIL() << "presenter: " << zx_status_get_string(status); });
-  presenter->PresentView(std::move(view_holder_token), nullptr);
+  if (clobber) {
+    presenter->PresentOrReplaceView(std::move(view_holder_token), nullptr);
+  } else {
+    presenter->PresentView(std::move(view_holder_token), nullptr);
+  }
 
   return std::move(view_token);
 }
 
-scenic::ViewContext PixelTest::CreatePresentationContext() {
+scenic::ViewContext PixelTest::CreatePresentationContext(bool clobber) {
   FX_CHECK(scenic()) << "Scenic is not connected.";
 
   return {
       .session_and_listener_request = scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
-      .view_token = CreatePresentationViewToken(),
+      .view_token = CreatePresentationViewToken(clobber),
   };
 }
 
-void PixelTest::RunUntilPresent(scenic::TestView* view) {
+void PixelTest::RunUntilIndirectPresent(scenic::TestView* view) {
   // Typical sequence of events:
   // 1. We set up a view bound as a |SessionListener|.
   // 2. The view sends its initial |Present| to get itself connected, without
   //    a callback.
-  // 3. We call |RunUntilPresent| which sets a present callback on our
+  // 3. We call |RunUntilIndirectPresent| which sets a present callback on our
   //    |TestView|.
-  // 4. |RunUntilPresent| runs the message loop, which allows the view to
+  // 4. |RunUntilIndirectPresent| runs the message loop, which allows the view to
   //    receive a Scenic event telling us our metrics.
   // 5. In response, the view sets up the scene graph with the test scene.
-  // 6. The view calls |Present| with the callback set in |RunUntilPresent|.
+  // 6. The view calls |Present| with the callback set in |RunUntilIndirectPresent|.
   // 7. The still-running message loop eventually dispatches the present
   //    callback, which quits the loop.
 

@@ -39,7 +39,7 @@ class MagnificationPixelTest : public gfx::PixelTest {
   void SetUp() override {
     PixelTest::SetUp();
     view_ = std::make_unique<scenic::CoordinateTestView>(CreatePresentationContext());
-    RunUntilPresent(view_.get());
+    RunUntilIndirectPresent(view_.get());
   }
 
   // |gfx::PixelTest|

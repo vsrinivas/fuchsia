@@ -63,6 +63,17 @@ class App : public fuchsia::ui::policy::Presenter,
   void PresentView(
       fuchsia::ui::views::ViewHolderToken view_holder_token,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
+
+  // |Presenter|
+  void PresentOrReplaceView(
+      fuchsia::ui::views::ViewHolderToken view_holder_token,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
+
+  // |Presenter|
+  void PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
+                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
+                   bool clobber_previous_presentation = false);
+
   void HACK_SetRendererParams(bool enable_clipping,
                               std::vector<fuchsia::ui::gfx::RendererParam> params) override;
 
@@ -82,7 +93,9 @@ class App : public fuchsia::ui::policy::Presenter,
   // shut down; can handle other Scenic events in the future.
   void HandleScenicEvent(const fuchsia::ui::scenic::Event& event);
 
+  void SetPresentation(std::unique_ptr<Presentation> presentation, bool clobber_presentation);
   void AddPresentation(std::unique_ptr<Presentation> presentation);
+  void ReplacePresentationWith(std::unique_ptr<Presentation> presentation);
   void ShutdownPresentation(size_t presentation_idx);
   void SwitchToPresentation(size_t presentation_idx);
   void SwitchToNextPresentation();
