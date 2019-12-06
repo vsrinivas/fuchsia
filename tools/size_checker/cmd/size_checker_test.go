@@ -230,6 +230,19 @@ func Test_nodeAdd(t *testing.T) {
 	if grandchild.size != 10 {
 		t.Fatalf("the size of the bar node (root's grandchild) is %d; expect 10", grandchild.size)
 	}
+
+	// Test adding a node with .meta suffix
+	root.add("foo/update.meta", &testBlob)
+	update := root.find("foo/update")
+	if update == nil {
+		t.Fatal("update.meta is not added as the child of the root with the name 'update'")
+	}
+	if child.size != 30 {
+		t.Fatalf("the size of the foo node (root's child) is %d; expect 30", child.size)
+	}
+	if update.size != 10 {
+		t.Fatalf("the size of the update node (root's grandchild, bar's sibling) is %d; expect 10", update.size)
+	}
 }
 func Test_nodeFind(t *testing.T) {
 	tests := []struct {
@@ -279,15 +292,15 @@ func Test_processInput(t *testing.T) {
 		t.Fatalf("Failed to create build dir: %v", err)
 	}
 	defer os.RemoveAll(buildDir)
-	pkgDir := path.Join(buildDir, "foo-pkg")
-	if err := os.Mkdir(pkgDir, 0777); err != nil {
-
+	pkgDir := path.Join("obj", "foo-pkg")
+	if err := os.MkdirAll(path.Join(buildDir, pkgDir), 0777); err != nil {
+		t.Fatalf("Failed to create package dir: %v", err)
 	}
-	blobsJSONF, err := os.Create(path.Join(pkgDir, BlobsJSON))
+	blobsJSONF, err := os.Create(path.Join(buildDir, pkgDir, BlobsJSON))
 	if err != nil {
 		t.Fatalf("Failed to create %s: %v", BlobsJSON, err)
 	}
-	metaFarRelPath := path.Join("foo-pkg", MetaFar)
+	metaFarRelPath := path.Join(pkgDir, MetaFar)
 	blobs := []BlobFromJSON{
 		{
 			Merkle:     "deadbeef",
@@ -308,7 +321,7 @@ func Test_processInput(t *testing.T) {
 		t.Fatalf("Failed to write %s: %v", BlobsJSON, err)
 	}
 	blobsJSONF.Close()
-	blobManifestRelPath := "foo-pkg/blobs.manifest"
+	blobManifestRelPath := path.Join(pkgDir, "blobs.manifest")
 	blobManifestF, err := os.Create(path.Join(buildDir, blobManifestRelPath))
 	if err != nil {
 		t.Fatalf("Failed to create blob manifest file: %v", err)

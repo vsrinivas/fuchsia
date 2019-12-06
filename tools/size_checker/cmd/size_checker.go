@@ -80,6 +80,7 @@ func (root *Node) add(p string, blob *Blob) {
 	// the size of the individual blob.
 	size := blob.size / int64(len(blob.dep))
 	for _, name := range fullPath {
+		name = strings.TrimSuffix(name, ".meta")
 		nodePath = filepath.Join(nodePath, name)
 		if _, ok := curr.children[name]; !ok {
 			target := newNode(nodePath)
@@ -105,6 +106,17 @@ func (root *Node) find(p string) *Node {
 	}
 
 	return curr
+}
+
+// Returns the only child of a node. Useful for finding the root node.
+func (node *Node) getOnlyChild() (*Node, error) {
+	if len(node.children) == 1 {
+		for _, child := range node.children {
+			return child, nil
+		}
+	}
+
+	return nil, fmt.Errorf("this node does not contain a single child.")
 }
 
 // Formats a given number into human friendly string representation of bytes, rounded to 2 decimal places.
@@ -304,14 +316,17 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 	var total int64
 	var noSpace = false
 	var report strings.Builder
+	root, err := dummy.getOnlyChild()
+	if err != nil {
+		return outputSizes, err
+	}
+
 	for _, component := range input.Components {
 		var size int64
 		for _, src := range component.Src {
-			node := dummy.find(src)
-			if node == nil {
-				return map[string]int64{}, fmt.Errorf("cannot find a folder called %s", src)
+			if node := root.find(src); node != nil {
+				size += node.size
 			}
-			size += node.size
 		}
 		total += size
 		outputSizes[component.Component] = size
@@ -326,12 +341,6 @@ func processInput(input *Input, buildDir, blobList, blobSize string) (map[string
 	if s := checkLimit(assetsName, assetSize, input.AssetLimit); s != "" {
 		noSpace = true
 		report.WriteString(s + "\n")
-	}
-
-	var root *Node
-	// The dummy should only have a single child, which is the root directory.
-	for _, node := range dummy.children {
-		root = node
 	}
 
 	const coreName = "Core system+services"
