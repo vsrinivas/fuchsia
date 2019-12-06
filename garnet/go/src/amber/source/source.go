@@ -7,15 +7,12 @@ package source
 import (
 	"amber/atonce"
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -531,113 +528,6 @@ func needsInit(s tuf.LocalStore) bool {
 	return !found
 }
 
-func (f *Source) requestBlob(blob string) (*http.Response, error) {
-	blobUrl := f.GetConfig().BlobRepoUrl
-	if blobUrl == "" {
-		blobUrl = f.GetConfig().RepoUrl + "/blobs"
-	}
-	u, err := url.Parse(blobUrl)
-	if err != nil {
-		return nil, err
-	}
-	u.Path = filepath.Join(u.Path, blob)
-
-	return f.httpClient.Get(u.String())
-}
-
-func (f *Source) FetchInto(blob string, length int64, outputDir string) error {
-	dst, err := os.OpenFile(filepath.Join(outputDir, blob), os.O_CREATE|os.O_WRONLY, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	defer dst.Close()
-
-	var resp *http.Response
-
-	for i := 0; i < 2; i++ {
-		resp, err = f.requestBlob(blob)
-		// If we get an error that is temporary and is a timeout (most typically this
-		// is a header timeout due to a tcp connection that was improperly torn down),
-		// then we'll attempt the make a fresh request.
-		if e, ok := err.(interface {
-			Temporary() bool
-			Timeout() bool
-		}); ok && e.Temporary() && e.Timeout() {
-			log.Printf("timed out fetching %s", blob)
-			f.closeIdleConnections()
-			continue
-		}
-		// Otherwise the error is of a permanent kind, so it's time to bail
-		if err != nil {
-			return err
-		}
-		break
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("fetch %q failed with code %d", blob, resp.StatusCode)
-	}
-
-	if resp.ContentLength == -1 && length == -1 {
-		return fmt.Errorf("unknown content length, can not write")
-	}
-
-	var src io.Reader = resp.Body
-	gotLength := resp.ContentLength
-	if f.cfg.Config.BlobKey != nil {
-		if length > -1 && length == gotLength {
-			return fmt.Errorf("blob %q may not be encrypted: expected %d, got %d", blob, length+aes.BlockSize, length)
-		}
-
-		gotLength -= aes.BlockSize
-		block, err := aes.NewCipher(f.cfg.Config.BlobKey.Data[:])
-		if err != nil {
-			return err
-		}
-		iv := make([]byte, aes.BlockSize)
-		if _, err := io.ReadFull(src, iv); err != nil {
-			return err
-		}
-		stream := cipher.NewCTR(block, iv)
-		src = cipher.StreamReader{
-			stream,
-			src,
-		}
-	}
-
-	if gotLength > -1 && length > -1 && gotLength != length {
-		return fmt.Errorf("bad content length: %d, expected %d", gotLength, length)
-	}
-
-	if length > -1 {
-		src = io.LimitReader(src, length)
-		err = dst.Truncate(length)
-	} else {
-		src = io.LimitReader(src, gotLength)
-		err = dst.Truncate(gotLength)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	written, err := io.Copy(dst, src)
-	if err != nil {
-		return err
-	}
-
-	if gotLength > -1 && written != gotLength {
-		return fmt.Errorf("blob incomplete, only wrote %d out of %d bytes", written, gotLength)
-	}
-
-	if length > -1 && written != length {
-		return fmt.Errorf("blob incomplete, only wrote %d out of %d bytes", written, length)
-	}
-
-	return nil
-}
-
 func (f *Source) AutoWatch() {
 	if !f.Enabled() || !f.cfg.Config.Auto {
 		return
@@ -685,21 +575,4 @@ func (f *Source) watch() {
 			}
 		}()
 	}
-}
-
-type PkgfsDir struct {
-	RootDir string
-}
-
-func (p PkgfsDir) PkgInstallDir() string {
-	return filepath.Join(p.RootDir, "install/pkg")
-}
-func (p PkgfsDir) BlobInstallDir() string {
-	return filepath.Join(p.RootDir, "install/blob")
-}
-func (p PkgfsDir) PkgNeedsDir() string {
-	return filepath.Join(p.RootDir, "needs/packages")
-}
-func (p PkgfsDir) VersionsDir() string {
-	return filepath.Join(p.RootDir, "versions")
 }

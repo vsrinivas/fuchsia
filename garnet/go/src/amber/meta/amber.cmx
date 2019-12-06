@@ -10,10 +10,7 @@
             "isolated-temp"
         ],
         "pkgfs": [
-            "ctl",
-            "install",
-            "needs",
-            "versions"
+            "ctl"
         ],
         "services": [
             "fuchsia.amber.Control",
