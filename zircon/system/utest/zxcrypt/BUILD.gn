@@ -10,15 +10,10 @@ zx_test("zxcrypt") {
     "zxcrypt.cc",
   ]
 
-  # This code does #include "crypto/test/foo.h" to reuse headers from
-  # $zx/system/ulib/crypto/test.
-  include_dirs = [ "$zx/system/ulib" ]
-
   deps = [
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-ramdisk:c",
     "$zx/system/ulib/block-client",
-    "$zx/system/ulib/crypto",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/digest",
@@ -35,6 +30,7 @@ zx_test("zxcrypt") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-crypto",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcrypt:zxcrypt-fdio",

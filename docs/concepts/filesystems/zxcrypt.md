@@ -77,7 +77,7 @@ DdkIotxnQueue -+
 The "encrypter" worker encrypts the data in every I/O write request before sending it to the
 underlying block device, and the "decrypter" worker decrypts the data in every I/O read response
 coming from the underlying block device.  The
-[cipher](/zircon/system/ulib/crypto/include/crypto/cipher.h) must have a key length of at least 16 bytes,
+[cipher](/zircon/system/ulib/zircon-crypto/include/crypto/cipher.h) must have a key length of at least 16 bytes,
 be semantically secure ([IND-CCA2][ind-cca2]) and incorporate the block offset as a
 "[tweak][tweak]".  Currently, [AES256-XTS][aes-xts] is in use.
 
@@ -122,11 +122,11 @@ The superblock format is as follows, with each field described in turn:
 * [_HMAC_][hmac]: A keyed digest of the superblock up to this point (including the Reserved field).
 
 The wrap key, wrap [IV][iv], and HMAC key are all derived from a
-[KDF](/zircon/system/ulib/crypto/include/crypto/hkdf.h).  This KDF is an [RFC 5869 HKDF][hkdf], which
+[KDF](/zircon/system/ulib/zircon-crypto/include/crypto/hkdf.h).  This KDF is an [RFC 5869 HKDF][hkdf], which
 combines the key provided, the "salt" of the instance GUID and a per-use label such as "wrap" or
 "hmac".  The KDF does __NOT__ try to do any rate-limiting.  The KDF mitigates the risk of key reuse,
 as a new random instance salt will lead to new derived keys.  The
-[HMAC](/zircon/system/ulib/crypto/include/crypto/hmac.h) prevents accidental or malicious modification to
+[HMAC](/zircon/system/ulib/zircon-crypto/include/crypto/hmac.h) prevents accidental or malicious modification to
 go undetected, without leaking any useful information about the zxcrypt key.
 
 _NOTE: The KDF does __NOT__ do any [key stretching][stretch].  It is assumed that an attacker can

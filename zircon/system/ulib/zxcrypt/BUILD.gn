@@ -12,7 +12,7 @@ zx_library("zxcrypt-dev") {
 
   public_deps = [
     # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
-    "$zx/system/ulib/crypto:headers",
+    "$zx/system/ulib/zircon-crypto:zircon-crypto-static.headers",
 
     # <zxcrypt/ddk-volume.h> has #include <ddk/device.h>.
     "$zx/system/ulib/ddk:headers",
@@ -25,13 +25,13 @@ zx_library("zxcrypt-dev") {
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
     "$zx/system/banjo/ddk.protocol.block.volume",
-    "$zx/system/ulib/crypto:zircon-crypto.static",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fs-management:headers",  # only used for zxcrypt_magic
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-crypto:zircon-crypto-static",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/uboringssl",
@@ -47,7 +47,7 @@ zx_library("zxcrypt-fdio") {
   ]
   public_deps = [
     # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
-    "$zx/system/ulib/crypto:headers",
+    "$zx/system/ulib/zircon-crypto:headers",
   ]
   configs += [ "$zx_build/public/gn/config:integer-paranoia" ]
   deps = [
@@ -55,7 +55,6 @@ zx_library("zxcrypt-fdio") {
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
     "$zx/system/fidl/fuchsia-hardware-zxcrypt:c",
-    "$zx/system/ulib/crypto",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs-management:headers",  # only used for zxcrypt_magic
@@ -64,6 +63,7 @@ zx_library("zxcrypt-fdio") {
     "$zx/system/ulib/ramdevice-client:static",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-crypto",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/uboringssl",

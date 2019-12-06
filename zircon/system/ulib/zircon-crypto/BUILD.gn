@@ -1,0 +1,67 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_library("zircon-crypto") {
+  shared = true
+  sdk = true
+  sdk_headers = [
+    "crypto/aead.h",
+    "crypto/bytes.h",
+    "crypto/cipher.h",
+    "crypto/digest.h",
+    "crypto/hkdf.h",
+    "crypto/hmac.h",
+    "crypto/secret.h",
+  ]
+  sources = [
+    "aead.cc",
+    "bytes.cc",
+    "cipher.cc",
+    "digest.cc",
+    "error.cc",
+    "hkdf.cc",
+    "hmac.cc",
+    "secret.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/explicit-memory",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/third_party/ulib/uboringssl",
+  ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+}
+
+zx_library("zircon-crypto-static") {
+  static = true
+  sdk = true
+  sdk_headers = [
+    "crypto/aead.h",
+    "crypto/bytes.h",
+    "crypto/cipher.h",
+    "crypto/digest.h",
+    "crypto/hkdf.h",
+    "crypto/hmac.h",
+    "crypto/secret.h",
+  ]
+  sources = [
+    "aead.cc",
+    "bytes.cc",
+    "cipher.cc",
+    "digest.cc",
+    "error.cc",
+    "hkdf.cc",
+    "hmac.cc",
+    "secret.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/explicit-memory",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/third_party/ulib/uboringssl",
+  ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
+}

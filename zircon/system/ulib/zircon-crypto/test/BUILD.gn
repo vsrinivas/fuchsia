@@ -6,12 +6,12 @@ import("$zx/public/gn/fuzzer.gni")
 group("test") {
   testonly = true
   deps = [
-    ":crypto",
     ":hmac-fuzzer",
+    ":zircon-crypto",
   ]
 }
 
-zx_test("crypto") {
+zx_test("zircon-crypto") {
   sources = [
     "aead.cc",
     "bytes.cc",
@@ -22,11 +22,11 @@ zx_test("crypto") {
     "utils.cc",
   ]
   deps = [
-    "$zx/system/ulib/crypto",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-crypto",
     "$zx/system/ulib/zxtest",
   ]
 }
@@ -36,7 +36,7 @@ fuzzer("hmac-fuzzer") {
     "hmac-fuzzer.cc",
   ]
   deps = [
-    "$zx/system/ulib/crypto",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon-crypto",
   ]
 }
