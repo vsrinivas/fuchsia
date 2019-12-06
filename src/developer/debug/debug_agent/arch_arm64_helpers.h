@@ -46,6 +46,9 @@ WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t*,
                                              const debug_ipc::AddressRange& range,
                                              uint32_t watchpoint_count);
 
+zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs*, const debug_ipc::AddressRange& range,
+                             uint32_t watchpoint_count);
+
 // Useful function for debugging to keep around.
 std::string DebugRegistersToString(const zx_thread_state_debug_regs_t&);
 

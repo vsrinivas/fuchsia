@@ -155,6 +155,13 @@ void SetWatchpointFlags(uint32_t* dbgwcr, uint64_t base_address,
   } else {
     FXL_NOTREACHED() << "Invalid range size: " << range.size();
   }
+
+  // Set type.
+  // TODO(donosoc): Support other types. This is only write for now.
+  ARM64_DBGWCR_LSC_SET(dbgwcr, 0b10);
+
+  // Set enabled.
+  ARM64_DBGWCR_E_SET(dbgwcr, 1);
 }
 
 }  // namespace
@@ -192,6 +199,38 @@ WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* regs,
   return CreateResult(ZX_OK, range, slot);
 }
 
+zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* regs,
+                             const debug_ipc::AddressRange& range, uint32_t watchpoint_count) {
+  FXL_DCHECK(watchpoint_count <= 16);
+
+  uint32_t base_address = ValidateRange(range);
+  if (base_address == 0)
+    return ZX_ERR_OUT_OF_RANGE;
+
+  // Search for a slot that matches.
+  int slot = -1;
+  for (uint32_t i = 0; i < watchpoint_count; i++) {
+    if (regs->hw_wps[i].dbgwvr == 0)
+      continue;
+
+    // If it's the same address, we need to compare length.
+    uint32_t length = GetWatchpointLength(regs->hw_wps[i].dbgwcr);
+    if (regs->hw_wps[i].dbgwvr == base_address && length == range.size()) {
+      slot = i;
+      break;
+    }
+  }
+
+  if (slot == -1)
+    return ZX_ERR_NOT_FOUND;
+
+  // Clear the slot.
+  regs->hw_wps[slot].dbgwcr = 0;
+  regs->hw_wps[slot].dbgwvr = 0;
+
+  return ZX_OK;
+}
+
 std::string DebugRegistersToString(const zx_thread_state_debug_regs_t& regs) {
   std::stringstream ss;
   for (size_t i = 0; i < debug_ipc::kMaxArm64HWBreakpoints; i++) {
@@ -199,9 +238,8 @@ std::string DebugRegistersToString(const zx_thread_state_debug_regs_t& regs) {
     uint64_t dbgbvr = regs.hw_bps[i].dbgbvr;
 
     ss << fxl::StringPrintf(
-        "%lu. DBGBVR: 0x%lx, DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, "
-        "LBN=%d, BT=%d",
-        i, dbgbvr, ARM64_FLAG_VALUE(dbgbcr, DBGBCR, E), ARM64_FLAG_VALUE(dbgbcr, DBGBCR, PMC),
+        "%lu. DBGBVR: 0x%lx, DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d", i,
+        dbgbvr, ARM64_FLAG_VALUE(dbgbcr, DBGBCR, E), ARM64_FLAG_VALUE(dbgbcr, DBGBCR, PMC),
         ARM64_FLAG_VALUE(dbgbcr, DBGBCR, BAS), ARM64_FLAG_VALUE(dbgbcr, DBGBCR, HMC),
         ARM64_FLAG_VALUE(dbgbcr, DBGBCR, SSC), ARM64_FLAG_VALUE(dbgbcr, DBGBCR, LBN),
         ARM64_FLAG_VALUE(dbgbcr, DBGBCR, BT));

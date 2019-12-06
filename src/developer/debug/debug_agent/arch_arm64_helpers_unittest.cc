@@ -378,9 +378,12 @@ TEST(ArmHelpers, WriteDebugRegs) {
 
 // Watchpoint Tests --------------------------------------------------------------------------------
 
+constexpr uint32_t kWatchpointCount = 4;
+
 bool ResultVerification(zx_thread_state_debug_regs_t* regs, uint64_t address, uint64_t size,
                         WatchpointInstallationResult expected) {
-  WatchpointInstallationResult result = SetupWatchpoint(regs, {address, address + size}, 4);
+  WatchpointInstallationResult result =
+      SetupWatchpoint(regs, {address, address + size}, kWatchpointCount);
   if (result.status != expected.status) {
     ADD_FAILURE() << "Status failed. Expected: " << zx_status_get_string(expected.status)
                   << ", got: " << zx_status_get_string(result.status);
@@ -425,6 +428,139 @@ bool ResetCheck(zx_thread_state_debug_regs_t* regs, uint64_t address, uint64_t s
   // Restart the registers.
   *regs = {};
   return Check(regs, address, size, expected, expected_bas);
+}
+
+bool CheckAddresses(const zx_thread_state_debug_regs_t& regs, std::vector<uint64_t> addresses) {
+  for (uint32_t i = 0; i < addresses.size(); i++) {
+    if (regs.hw_wps[i].dbgwvr != addresses[i]) {
+      ADD_FAILURE() << "Reg " << i << " mismatch. Expected: 0x" << std::hex << addresses[i]
+                    << ", got: " << regs.hw_wps[i].dbgwvr;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+uint32_t CountBASBits(uint32_t bas) {
+  switch (bas) {
+    case 0b0000000:
+      return 0;
+    case 0b00000001:
+    case 0b00000010:
+    case 0b00000100:
+    case 0b00001000:
+    case 0b00010000:
+    case 0b00100000:
+    case 0b01000000:
+    case 0b10000000:
+      return 1;
+    case 0b00000011:
+    case 0b00001100:
+    case 0b00110000:
+    case 0b11000000:
+      return 2;
+    case 0b00001111:
+    case 0b11110000:
+      return 4;
+    case 0b11111111:
+      return 8;
+    default:
+      FXL_NOTREACHED() << "Invalid bas: 0x" << std::hex << bas;
+      return 0;
+  }
+}
+
+bool CheckLengths(const zx_thread_state_debug_regs_t& regs, std::vector<uint32_t> lengths) {
+  for (uint32_t i = 0; i < lengths.size(); i++) {
+    uint32_t bas = ARM64_DBGWCR_BAS_GET(regs.hw_wps[i].dbgwcr);
+    uint32_t length = CountBASBits(bas);
+
+    if (length != lengths[i]) {
+      ADD_FAILURE() << "Reg " << i << " wrong length. Expected " << lengths[i]
+                    << ", got: " << length;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool CheckEnabled(const zx_thread_state_debug_regs& regs, std::vector<uint32_t> enabled) {
+  for (uint32_t i = 0; i < enabled.size(); i++) {
+    uint32_t e = ARM64_DBGWCR_E_GET(regs.hw_wps[i].dbgwcr);
+    if (e != enabled[i]) {
+      ADD_FAILURE() << "Reg " << i << " wrong enable. Expected: " << enabled[i] << ", got: " << e;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/* constexpr uint32_t kRead = 0b01; */
+constexpr uint32_t kWrite = 0b10;
+/* constexpr uint32_t kReadWrite = 0b11; */
+
+bool CheckTypes(const zx_thread_state_debug_regs& regs, std::vector<uint32_t> types) {
+  for (uint32_t i = 0; i < types.size(); i++) {
+    uint32_t type = ARM64_DBGWCR_LSC_GET(regs.hw_wps[i].dbgwcr);
+    if (type != types[i]) {
+      ADD_FAILURE() << "Reg " << i << " wrong type. Expected: " << types[i] << ", got: " << type;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Tests -------------------------------------------------------------------------------------------
+
+TEST(ArmHelpers_SetupWatchpoint, SetupMany) {
+  zx_thread_state_debug_regs regs = {};
+
+  // Always aligned address.
+  constexpr uint64_t kAddress1 = 0x10000;
+  constexpr uint64_t kAddress2 = 0x20000;
+  constexpr uint64_t kAddress3 = 0x30000;
+  constexpr uint64_t kAddress4 = 0x40000;
+  constexpr uint64_t kAddress5 = 0x50000;
+
+  ASSERT_TRUE(Check(&regs, kAddress1, 1, CreateResult(ZX_OK, {kAddress1, kAddress1 + 1}, 0), 0x1));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 0, 0, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
+
+  ASSERT_TRUE(Check(&regs, kAddress1, 1, CreateResult(ZX_ERR_ALREADY_BOUND)));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 0, 0, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
+
+  ASSERT_TRUE(Check(&regs, kAddress2, 2, CreateResult(ZX_OK, {kAddress2, kAddress2 + 2}, 1), 0x3));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, 0}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 0, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, 0}));
+
+  ASSERT_TRUE(Check(&regs, kAddress3, 4, CreateResult(ZX_OK, {kAddress3, kAddress3 + 4}, 2), 0xf));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, 0}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, 0}));
+
+  ASSERT_TRUE(Check(&regs, kAddress4, 8, CreateResult(ZX_OK, {kAddress4, kAddress4 + 8}, 3), 0xff));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, kWrite}));
+
+  ASSERT_TRUE(Check(&regs, kAddress5, 8, CreateResult(ZX_ERR_NO_RESOURCES)));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, kWrite}));
 }
 
 TEST(ArmHelpers_SetupWatchpoint, Ranges) {
@@ -581,66 +717,6 @@ TEST(ArmHelpers_SetupWatchpoint, Ranges) {
   ASSERT_TRUE(ResetCheck(&regs, 0x100d, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
   ASSERT_TRUE(ResetCheck(&regs, 0x100e, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
   ASSERT_TRUE(ResetCheck(&regs, 0x100f, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-}
-
-// Ranges ------------------------------------------------------------------------------------------
-
-bool CheckAddresses(const zx_thread_state_debug_regs_t& regs, std::vector<uint64_t> addresses) {
-  bool failed = false;
-  for (uint32_t i = 0; i < addresses.size(); i++) {
-    if (regs.hw_wps[i].dbgwvr != addresses[i]) {
-      ADD_FAILURE() << "Reg " << i << " mismatch. Expected: 0x" << std::hex << addresses[i]
-                    << ", got: " << regs.hw_wps[i].dbgwvr;
-      failed = true;
-    }
-  }
-
-  return !failed;
-}
-
-uint32_t CountBASBits(uint32_t bas) {
-  switch (bas) {
-    case 0b0000000:
-      return 0;
-    case 0b00000001:
-    case 0b00000010:
-    case 0b00000100:
-    case 0b00001000:
-    case 0b00010000:
-    case 0b00100000:
-    case 0b01000000:
-    case 0b10000000:
-      return 1;
-    case 0b00000011:
-    case 0b00001100:
-    case 0b00110000:
-    case 0b11000000:
-      return 2;
-    case 0b00001111:
-    case 0b11110000:
-      return 4;
-    case 0b11111111:
-      return 8;
-    default:
-      FXL_NOTREACHED() << "Invalid bas: 0x" << std::hex << bas;
-      return 0;
-  }
-}
-
-bool CheckLengths(const zx_thread_state_debug_regs_t& regs, std::vector<uint32_t> lengths) {
-  bool failed = false;
-  for (uint32_t i = 0; i < lengths.size(); i++) {
-    uint32_t bas = ARM64_DBGWCR_BAS_GET(regs.hw_wps[i].dbgwcr);
-    uint32_t length = CountBASBits(bas);
-
-    if (length != lengths[i]) {
-      ADD_FAILURE() << "Reg " << i << " wrong length. Expected " << length
-                    << ", got: " << lengths[i];
-      failed = true;
-    }
-  }
-
-  return !failed;
 }
 
 TEST(ArmHelpers_SettingWatchpoints, RangeIsDifferentWatchpoint) {
