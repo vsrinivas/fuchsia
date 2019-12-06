@@ -146,13 +146,13 @@ struct StreamPacket {
     uint64 stream_segment_id = 0;
 };
 
-// `StreamPacket.flags` values.
-
 /// When used as a `StreamPacket.pts` value, indicates that the packet has no
 /// specific presentation timestamp. The effective presentation time of such a
 /// packet depends on the context in which the `StreamPacket` is used.
 const int64 NO_TIMESTAMP = 0x7fffffffffffffff;
 
+// `StreamPacket.flags` values.
+//
 /// Indicates that the packet can be understood without reference to other
 /// packets in the stream. This is typically used in compressed streams to
 /// identify packets that contain key frames.
