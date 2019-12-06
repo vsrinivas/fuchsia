@@ -184,6 +184,7 @@ mod tests {
     };
 
     #[fasync::run_singlethreaded(test)]
+    #[ignore]
     async fn test_get_merkle_at_path() {
         // Serve static repo and connect to it
         let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
@@ -210,6 +211,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    #[ignore]
     async fn test_get_merkle_at_path_fails_when_no_package() {
         let repo = Arc::new(RepositoryBuilder::new().build().await.expect("created repo"));
         let served_repository = repo.build_server().start().expect("create served repo");
@@ -227,6 +229,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    #[ignore]
     async fn test_get_merkle_at_path_fails_when_remote_repo_down() {
         // Serve static repo
         let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
@@ -279,6 +282,8 @@ mod inspectable_inner_tests {
     };
 
     #[fasync::run_singlethreaded(test)]
+    // TODO(42445) figure out why these tests are flaking
+    #[ignore]
     async fn test_initialization() {
         let inspector = inspect::Inspector::new();
         let repo = Arc::new(RepositoryBuilder::new().build().await.expect("created repo"));
@@ -304,6 +309,7 @@ mod inspectable_inner_tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    #[ignore]
     async fn test_watcher() {
         let inspector = inspect::Inspector::new();
         let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
