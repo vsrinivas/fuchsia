@@ -55,8 +55,8 @@ receive whatever `/svc` their creator decided to provide to them.
 If a process requires access to additional resources (e.g., device drivers),
 the package can request access to additional names by including the `sandbox`
 property in its  [Component Manifest](/docs/concepts/storage/component_manifest.md)
-for the package. For example, the following `meta/sandbox` file requests
-direct access to the input driver:
+for the package. For example, to request direct access the input drive,
+include the following `dev` array in your `sandbox`:
 
 ```
 {
