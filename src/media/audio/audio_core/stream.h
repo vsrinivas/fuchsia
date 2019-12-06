@@ -10,6 +10,8 @@
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/time.h>
 
+#include <optional>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -23,15 +25,42 @@ class Stream : public fbl::RefCounted<Stream> {
   Stream(Format format) : format_(format) {}
   virtual ~Stream() = default;
 
-  // When consuming audio, destinations must always pair their calls to LockPacket and UnlockPacket,
-  // even if the front of the queue was nullptr.
+  // When consuming audio, destinations must always pair their calls to LockBuffer and UnlockBuffer,
+  // even if the front of the queue was nullopt.
   //
   // Doing so ensures that sources which are attempting to flush the pending queue are forced to
   // wait if the front of the queue is involved in a mixing operation. This, in turn, guarantees
   // that audio packets are always returned to the user in the order which they were queued in
   // without forcing AudioRenderers to wait to queue new data if a mix operation is in progress.
-  virtual fbl::RefPtr<Packet> LockPacket(bool* was_flushed) = 0;
-  virtual void UnlockPacket(bool release_packet) = 0;
+  class Buffer {
+   public:
+    Buffer(FractionalFrames<int64_t> start, FractionalFrames<uint32_t> length, void* payload,
+           bool is_continuous)
+        : payload_(payload), start_(start), length_(length), is_continuous_(is_continuous) {}
+
+    FractionalFrames<int64_t> start() const { return start_; }
+    FractionalFrames<int64_t> end() const { return start_ + length_; }
+    FractionalFrames<uint32_t> length() const { return length_; }
+    void* payload() const { return payload_; }
+
+    // Indicates this packet is continuous with a packet previously returned from an immediately
+    // preceding |LockBuffer| call.
+    //
+    // Buffers may become discontinuous if, for example, and AudioRenderer is flushed and new
+    // packets are provided; these new packets will not be assumed to be continuous with the
+    // preceeding ones. Each |Stream| implementation is reponsible for reporting any discontinuity
+    // so that stream processors (ex: the mixer) may clear any intermediate state based on the
+    // continuity of the stream.
+    bool is_continuous() const { return is_continuous_; }
+
+   private:
+    void* payload_;
+    FractionalFrames<int64_t> start_;
+    FractionalFrames<uint32_t> length_;
+    bool is_continuous_;
+  };
+  virtual std::optional<Buffer> LockBuffer() = 0;
+  virtual void UnlockBuffer(bool release_buffer) = 0;
 
   // Reads the function that converts reference clock to fractional stream frames.
   virtual std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const = 0;

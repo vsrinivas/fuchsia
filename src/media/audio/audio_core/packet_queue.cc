@@ -70,26 +70,25 @@ void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   }
 }
 
-fbl::RefPtr<Packet> PacketQueue::LockPacket(bool* was_flushed) {
-  TRACE_DURATION("audio", "PacketQueue::LockPacket");
-  FX_DCHECK(was_flushed);
+std::optional<Stream::Buffer> PacketQueue::LockBuffer() {
+  TRACE_DURATION("audio", "PacketQueue::LockBuffer");
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
   FX_DCHECK(!processing_in_progress_);
   processing_in_progress_ = true;
 
-  *was_flushed = flushed_;
-  flushed_ = false;
-
   if (pending_packet_queue_.size()) {
-    return pending_packet_queue_.front();
+    auto packet = pending_packet_queue_.front();
+    bool is_continuous = !flushed_;
+    flushed_ = false;
+    return {Stream::Buffer(packet->start(), packet->length(), packet->payload(), is_continuous)};
   } else {
-    return nullptr;
+    return std::nullopt;
   }
 }
 
-void PacketQueue::UnlockPacket(bool release_packet) {
-  TRACE_DURATION("audio", "PacketQueue::UnlockPacket");
+void PacketQueue::UnlockBuffer(bool release_buffer) {
+  TRACE_DURATION("audio", "PacketQueue::UnlockBuffer");
   {
     std::lock_guard<std::mutex> locker(pending_mutex_);
     FX_DCHECK(processing_in_progress_);
@@ -118,8 +117,8 @@ void PacketQueue::UnlockPacket(bool release_packet) {
 
     // Assert that user either got no packet when they locked the queue (because queue was empty),
     // or that they got the front of the queue and that front of the queue has not changed.
-    FX_DCHECK(!release_packet || !pending_packet_queue_.empty());
-    if (release_packet) {
+    FX_DCHECK(!release_buffer || !pending_packet_queue_.empty());
+    if (release_buffer) {
       pending_packet_queue_.pop_front();
     }
   }

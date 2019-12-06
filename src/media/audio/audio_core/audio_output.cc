@@ -197,22 +197,22 @@ void AudioOutput::ForEachSource(TaskType task_type) {
     UpdateSourceTrans(*stream, &info);
 
     bool setup_done = false;
-    fbl::RefPtr<Packet> pkt_ref;
+    std::optional<Stream::Buffer> stream_buffer;
 
-    bool release_packet;
+    bool release_buffer;
     while (true) {
-      release_packet = false;
-      // Try to grab the packet queue's front. If it has been flushed since the last time we grabbed
-      // it, reset our mixer's internal filter state.
-      bool was_flushed;
-      pkt_ref = stream->LockPacket(&was_flushed);
-      if (was_flushed) {
-        mixer->Reset();
-      }
+      release_buffer = false;
+      // Try to grab the packet queue's front.
+      stream_buffer = stream->LockBuffer();
 
       // If the queue is empty, then we are done.
-      if (!pkt_ref) {
+      if (!stream_buffer) {
         break;
+      }
+
+      // If the packet is discontinuous, reset our mixer's internal filter state.
+      if (!stream_buffer->is_continuous()) {
+        mixer->Reset();
       }
 
       // If we have not set up for this renderer yet, do so. If the setup fails for any reason, stop
@@ -228,8 +228,9 @@ void AudioOutput::ForEachSource(TaskType task_type) {
 
       // Now process the packet at the front of the renderer's queue. If the packet has been
       // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
-      release_packet = (task_type == TaskType::Mix) ? ProcessMix(link->GetSource(), mixer, pkt_ref)
-                                                    : ProcessTrim(pkt_ref);
+      release_buffer = (task_type == TaskType::Mix)
+                           ? ProcessMix(link->GetSource(), mixer, *stream_buffer)
+                           : ProcessTrim(*stream_buffer);
 
       // If we have mixed enough destination frames, we are done with this mix, regardless of what
       // we should now do with the source packet.
@@ -239,17 +240,17 @@ void AudioOutput::ForEachSource(TaskType task_type) {
       }
       // If we still need to produce more destination data, but could not complete this source
       // packet (we're paused, or the packet is in the future), then we are done.
-      if (!release_packet) {
+      if (!release_buffer) {
         break;
       }
       // We did consume this entire source packet, and we should keep mixing.
-      pkt_ref = nullptr;
-      stream->UnlockPacket(release_packet);
+      stream_buffer = std::nullopt;
+      stream->UnlockBuffer(release_buffer);
     }
 
     // Unlock queue (completing packet if needed) and proceed to the next source.
-    pkt_ref = nullptr;
-    stream->UnlockPacket(release_packet);
+    stream_buffer = std::nullopt;
+    stream->UnlockBuffer(release_buffer);
 
     // Note: there is no point in doing this for Trim tasks, but it doesn't hurt anything, and it's
     // easier than adding another function to ForEachSource to run after each renderer is processed,
@@ -268,13 +269,12 @@ void AudioOutput::SetupMix(Mixer* mixer) {
 }
 
 bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,
-                             const fbl::RefPtr<Packet>& packet) {
+                             const Stream::Buffer& source_buffer) {
   TRACE_DURATION("audio", "AudioOutput::ProcessMix");
   // Bookkeeping should contain: the rechannel matrix (eventually).
 
   // Sanity check our parameters.
   FX_DCHECK(mixer);
-  FX_DCHECK(packet);
 
   // We had better have a valid job, or why are we here?
   FX_DCHECK(cur_mix_job_.buf_frames);
@@ -313,17 +313,17 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
           info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left - 1));
 
   // If packet has no frames, there's no need to mix it; it may be skipped.
-  if (packet->end() == packet->start()) {
-    AUD_VLOG_OBJ(TRACE, source.get()) << " skipping an empty packet!";
+  if (source_buffer.end() == source_buffer.start()) {
+    AUD_VLOG(TRACE) << " skipping an empty packet!";
     return true;
   }
 
-  FX_DCHECK(packet->end() >= packet->start() + 1);
+  FX_DCHECK(source_buffer.end() >= source_buffer.start() + 1);
 
   // The above two calculated values characterize our demand. Now reason about our supply. Calculate
   // the actual first and final frame times in the source packet.
-  FractionalFrames<int64_t> frac_source_for_first_packet_frame = packet->start();
-  FractionalFrames<int64_t> frac_source_for_final_packet_frame = packet->end() - 1;
+  FractionalFrames<int64_t> frac_source_for_first_packet_frame = source_buffer.start();
+  FractionalFrames<int64_t> frac_source_for_final_packet_frame = source_buffer.end() - 1;
 
   // If this source packet's final audio frame occurs before our filter's negative edge, centered at
   // our first sampling point, then this packet is entirely in the past and may be skipped.
@@ -392,11 +392,11 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
   auto frac_source_offset = FractionalFrames<int32_t>(frac_source_offset_64);
 
   // Looks like we are ready to go. Mix.
-  FX_DCHECK(packet->length() <= FractionalFrames<uint32_t>(FractionalFrames<int32_t>::Max()));
+  FX_DCHECK(source_buffer.length() <= FractionalFrames<uint32_t>(FractionalFrames<int32_t>::Max()));
 
   FX_DCHECK(frac_source_offset + mixer->pos_filter_width() >= FractionalFrames<uint32_t>(0));
   bool consumed_source = false;
-  if (frac_source_offset + mixer->pos_filter_width() < packet->length()) {
+  if (frac_source_offset + mixer->pos_filter_width() < source_buffer.length()) {
     // When calling Mix(), we communicate the resampling rate with three parameters. We augment
     // step_size with rate_modulo and denominator arguments that capture the remaining rate
     // component that cannot be expressed by a 19.13 fixed-point step_size. Note: step_size and
@@ -429,16 +429,16 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
 
     {
       int32_t raw_source_offset = frac_source_offset.raw_value();
-      consumed_source =
-          mixer->Mix(buf, dest_frames_left, &dest_offset, packet->payload(),
-                     packet->length().raw_value(), &raw_source_offset, cur_mix_job_.accumulate);
+      consumed_source = mixer->Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(),
+                                   source_buffer.length().raw_value(), &raw_source_offset,
+                                   cur_mix_job_.accumulate);
       frac_source_offset = FractionalFrames<int32_t>::FromRaw(raw_source_offset);
     }
     FX_DCHECK(dest_offset <= dest_frames_left);
     AUD_VLOG_OBJ(SPEW, this) << " consumed from " << std::hex << std::setw(8)
                              << prev_frac_source_offset.raw_value() << " to " << std::setw(8)
                              << frac_source_offset.raw_value() << ", of " << std::setw(8)
-                             << packet->length().raw_value();
+                             << source_buffer.length().raw_value();
 
     // If src is ramping, advance by delta of dest_offset
     if (ramping) {
@@ -453,7 +453,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
   }
 
   if (consumed_source) {
-    FX_DCHECK(frac_source_offset + mixer->pos_filter_width() >= packet->length());
+    FX_DCHECK(frac_source_offset + mixer->pos_filter_width() >= source_buffer.length());
   }
 
   cur_mix_job_.frames_produced += dest_offset;
@@ -479,12 +479,11 @@ void AudioOutput::SetupTrim(Mixer* mixer) {
       mixer->bookkeeping().clock_mono_to_frac_source_frames(local_now_ticks));
 }
 
-bool AudioOutput::ProcessTrim(const fbl::RefPtr<Packet>& pkt_ref) {
+bool AudioOutput::ProcessTrim(const Stream::Buffer& buffer) {
   TRACE_DURATION("audio", "AudioOutput::ProcessTrim");
-  FX_DCHECK(pkt_ref);
 
   // If the presentation end of this packet is in the future, stop trimming.
-  if (pkt_ref->end() > trim_threshold_) {
+  if (buffer.end() > trim_threshold_) {
     return false;
   }
 

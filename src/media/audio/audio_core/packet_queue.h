@@ -37,8 +37,8 @@ class PacketQueue : public Stream {
   void Flush(const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
 
   // |media::audio::Stream|
-  fbl::RefPtr<Packet> LockPacket(bool* was_flushed) override;
-  void UnlockPacket(bool release_packet) override;
+  std::optional<Stream::Buffer> LockBuffer() override;
+  void UnlockBuffer(bool release_buffer) override;
   std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const override;
 
  private:

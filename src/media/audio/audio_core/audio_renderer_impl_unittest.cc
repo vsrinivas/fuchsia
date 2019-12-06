@@ -170,19 +170,16 @@ TEST_F(AudioRendererImplTest, AllocatePacketQueueForLinks) {
     auto stream = link.stream();
     ASSERT_TRUE(stream);
 
-    {  // Expect a packet.
-      bool was_flushed = false;
-      auto pkt = stream->LockPacket(&was_flushed);
-      EXPECT_TRUE(was_flushed);
-      ASSERT_TRUE(pkt);
-      EXPECT_NE(nullptr, pkt->payload());
-      stream->UnlockPacket(true);
+    {  // Expect a buffer.
+      auto buffer = stream->LockBuffer();
+      ASSERT_TRUE(buffer);
+      EXPECT_FALSE(buffer->is_continuous());
+      EXPECT_NE(nullptr, buffer->payload());
+      stream->UnlockBuffer(true);
     }
-    {  // No more packets
-      bool was_flushed = true;
-      auto pkt = stream->LockPacket(&was_flushed);
-      EXPECT_FALSE(was_flushed);
-      ASSERT_FALSE(pkt);
+    {  // No more buffers.
+      auto buffer = stream->LockBuffer();
+      ASSERT_FALSE(buffer);
     }
   });
 }
