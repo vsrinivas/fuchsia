@@ -6,7 +6,7 @@
 
 use std::fmt::Write;
 use std::fs::File;
-use std::io;
+use std::io::{self, BufRead};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -27,6 +27,12 @@ struct Opt {
     /// the format described in //tools/bindc/README.md.
     #[structopt(short = "i", long = "include", parse(from_os_str))]
     include: Vec<PathBuf>,
+
+    /// Specifiy the bind library input files as a file. The file must contain a list of filenames
+    /// that are bind library input files that may be included by the bind program. Those files
+    /// should be in the format described in //tools/bindc/README.md.
+    #[structopt(short = "f", long = "include-file", parse(from_os_str))]
+    include_file: Option<PathBuf>,
 }
 
 fn write_bind_template(instructions: Vec<Instruction>) -> Option<String> {
@@ -56,7 +62,22 @@ fn main() {
         Box::new(io::stdout())
     };
 
-    match compiler::compile(opt.input, &opt.include) {
+    let mut includes = opt.include;
+
+    if let Some(include_file) = opt.include_file {
+        let file = File::open(include_file).unwrap();
+        let reader = io::BufReader::new(file);
+        let filenames = reader.lines().map(|line| {
+            if line.is_err() {
+                eprintln!("Failed to read include file");
+                std::process::exit(1);
+            }
+            PathBuf::from(line.unwrap())
+        });
+        includes.extend(filenames);
+    }
+
+    match compiler::compile(opt.input, &includes) {
         Ok(instructions) => match write_bind_template(instructions) {
             Some(out_string) => {
                 let r = output.write(out_string.as_bytes());
