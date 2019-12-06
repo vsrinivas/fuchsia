@@ -548,13 +548,21 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
  public:
   TypeAliasTypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter,
                         Library* library, TypeAlias* decl)
-      : TypeTemplate(std::move(name), typespace, error_reporter), decl_(decl) {}
+      : TypeTemplate(std::move(name), typespace, error_reporter), library_(library), decl_(decl) {}
 
   bool Create(const std::optional<SourceLocation>& location, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
               types::Nullability maybe_nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
+
+    if (!decl_->compiled) {
+      assert(!decl_->compiling && "TODO(fxb/35218): Improve support for recursive types.");
+
+      if (!library_->CompileDecl(decl_)) {
+        return false;
+      }
+    }
 
     const Type* arg_type = nullptr;
     if (decl_->partial_type_ctor->maybe_arg_type_ctor) {
@@ -599,6 +607,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
   }
 
  private:
+  Library* library_;
   TypeAlias* decl_;
 };
 

@@ -421,6 +421,71 @@ using alias_of_vector_nullable = vector?;
   END_TEST;
 }
 
+bool multi_file_alias_reference() {
+  BEGIN_TEST;
+
+  TestLibrary library("first.fidl", R"FIDL(
+library example;
+
+struct Protein {
+    AminoAcids amino_acids;
+};
+)FIDL");
+
+  library.AddSource("second.fidl", R"FIDL(
+library example;
+
+using AminoAcids = vector<uint64>:32;
+)FIDL");
+
+  ASSERT_TRUE(library.Compile());
+  END_TEST;
+}
+
+bool multi_file_nullable_alias_reference() {
+  BEGIN_TEST;
+
+  TestLibrary library("first.fidl", R"FIDL(
+library example;
+
+struct Protein {
+    AminoAcids? amino_acids;
+};
+)FIDL");
+
+  library.AddSource("second.fidl", R"FIDL(
+library example;
+
+using AminoAcids = vector<uint64>:32;
+)FIDL");
+
+  ASSERT_TRUE(library.Compile());
+  END_TEST;
+}
+
+bool invalid_recursive_alias() {
+  BEGIN_TEST;
+
+  TestLibrary library("first.fidl", R"FIDL(
+library example;
+
+using TheAlias = TheStruct;
+
+struct TheStruct {
+    vector<TheAlias> many_mini_me;
+};
+)FIDL");
+
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(1, errors.size());
+
+  // TODO(fxb/35218): once recursive type handling is improved, the error message should be more
+  // granular and should be asserted here.
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(type_alias_tests)
@@ -443,4 +508,8 @@ RUN_TEST(vector_nullable_on_use)
 RUN_TEST(invalid_cannot_parametrize_twice)
 RUN_TEST(invalid_cannot_bound_twice)
 RUN_TEST(invalid_cannot_null_twice)
+
+RUN_TEST(multi_file_alias_reference)
+RUN_TEST(multi_file_nullable_alias_reference)
+RUN_TEST(invalid_recursive_alias)
 END_TEST_CASE(type_alias_tests)

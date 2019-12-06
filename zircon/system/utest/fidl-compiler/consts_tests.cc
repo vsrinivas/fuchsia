@@ -734,6 +734,27 @@ bool BadConstTestAssignTypeName() {
   END_TEST;
 }
 
+bool GoodMultiFileConstReference() {
+  BEGIN_TEST;
+
+  TestLibrary library("first.fidl", R"FIDL(
+library example;
+
+struct Protein {
+    vector<uint64>:SMALL_SIZE amino_acids;
+};
+)FIDL");
+
+  library.AddSource("second.fidl", R"FIDL(
+library example;
+
+const uint32 SMALL_SIZE = 4;
+)FIDL");
+
+  ASSERT_TRUE(library.Compile());
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(consts_tests)
@@ -792,5 +813,7 @@ RUN_TEST(BadMaxBoundTestAssignToConst)
 RUN_TEST(BadMaxBoundTestLibraryQualified)
 
 RUN_TEST(BadConstTestAssignTypeName)
+
+RUN_TEST(GoodMultiFileConstReference)
 
 END_TEST_CASE(consts_tests)
