@@ -45,9 +45,10 @@ class Ringbuffer : public InstructionWriter {
 
   bool GetGpuAddress(uint64_t* addr_out);
 
- private:
+ protected:
   uint32_t* vaddr() { return vaddr_; }
 
+ private:
   std::shared_ptr<typename GpuMapping::BufferType> buffer_;
   std::unique_ptr<GpuMapping> gpu_mapping_;
   uint64_t size_;

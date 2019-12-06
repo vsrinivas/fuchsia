@@ -9,6 +9,17 @@
 
 #include "gpu_mapping.h"
 
-using Ringbuffer = magma::Ringbuffer<GpuMapping>;
+class Ringbuffer : public magma::Ringbuffer<GpuMapping> {
+ public:
+  Ringbuffer(std::unique_ptr<MsdVslBuffer>&& buffer, uint32_t start_offset)
+      : magma::Ringbuffer<GpuMapping>(std::move(buffer), start_offset) {}
+
+  // Replaces the value stored in the ringbuffer at offset |dwords_before_tail| with |value|.
+  // Returns false if |dwords_before_tail| is zero, or does not point to a currently stored
+  // value in the ringbuffer.
+  bool Overwrite32(uint32_t dwords_before_tail, uint32_t value);
+
+  friend class RingbufferTest;
+};
 
 #endif  // RINGBUFFER_H

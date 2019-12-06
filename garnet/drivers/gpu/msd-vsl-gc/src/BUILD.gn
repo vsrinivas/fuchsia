@@ -24,6 +24,7 @@ source_set("src") {
     "msd_vsl_semaphore.h",
     "page_table_arrays.cc",
     "page_table_arrays.h",
+    "ringbuffer.cc",
     "ringbuffer.h",
   ]
   public_deps = [
