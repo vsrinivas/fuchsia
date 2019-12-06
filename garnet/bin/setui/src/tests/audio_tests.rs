@@ -11,7 +11,7 @@ use {
     crate::registry::device_storage::{DeviceStorage, DeviceStorageFactory},
     crate::service_context::ServiceContext,
     crate::switchboard::base::{
-        AudioInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
+        AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
     },
     crate::tests::fakes::audio_core_service::AudioCoreService,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
@@ -252,4 +252,85 @@ async fn test_audio_info_copy() {
     let audio_info = default_audio_info();
     let copy_audio_info = audio_info;
     assert_eq!(audio_info, copy_audio_info);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_persisted_values_applied_at_start() {
+    let (service_registry, audio_core_service_handle, _) = create_services();
+
+    let storage_factory = Box::new(InMemoryStorageFactory::create());
+    let store = create_storage(&storage_factory).await;
+
+    let test_audio_info = AudioInfo {
+        streams: [
+            AudioStream {
+                stream_type: AudioStreamType::Background,
+                source: AudioSettingSource::User,
+                user_volume_level: 0.5,
+                user_volume_muted: true,
+            },
+            AudioStream {
+                stream_type: AudioStreamType::Media,
+                source: AudioSettingSource::User,
+                user_volume_level: 0.6,
+                user_volume_muted: true,
+            },
+            AudioStream {
+                stream_type: AudioStreamType::Interruption,
+                source: AudioSettingSource::System,
+                user_volume_level: 0.3,
+                user_volume_muted: false,
+            },
+            AudioStream {
+                stream_type: AudioStreamType::SystemAgent,
+                source: AudioSettingSource::User,
+                user_volume_level: 0.7,
+                user_volume_muted: true,
+            },
+            AudioStream {
+                stream_type: AudioStreamType::Communication,
+                source: AudioSettingSource::User,
+                user_volume_level: 0.8,
+                user_volume_muted: false,
+            },
+        ],
+        input: AudioInputInfo { mic_mute: true },
+    };
+
+    // Write values in the store.
+    {
+        let mut store_lock = store.lock().await;
+        store_lock.write(&test_audio_info, false).await.expect("write audio info in store");
+    }
+
+    let mut fs = ServiceFs::new();
+
+    create_fidl_service(
+        fs.root_dir(),
+        [SettingType::Audio].iter().cloned().collect(),
+        Arc::new(RwLock::new(ServiceContext::new(ServiceRegistry::serve(
+            service_registry.clone(),
+        )))),
+        storage_factory,
+    );
+
+    let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+    fasync::spawn(fs.collect());
+
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+
+    // Check that the stored values were returned from watch() and applied to the audio core
+    // service.
+    for stream in test_audio_info.streams.iter() {
+        verify_audio_stream(settings.clone(), AudioStreamSettings::from(*stream));
+        assert_eq!(
+            (stream.user_volume_level, stream.user_volume_muted),
+            audio_core_service_handle
+                .read()
+                .get_level_and_mute(AudioRenderUsage::from(stream.stream_type))
+                .unwrap()
+        );
+    }
 }

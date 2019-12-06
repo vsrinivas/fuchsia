@@ -26,7 +26,7 @@ impl StreamVolumeControl {
     pub fn create(audio_service: &fidl_fuchsia_media::AudioCoreProxy, stream: AudioStream) -> Self {
         StreamVolumeControl {
             stored_stream: stream,
-            proxy: bind_volume_control(&audio_service, stream.stream_type),
+            proxy: bind_volume_control(&audio_service, stream.stream_type, stream),
             audio_service: audio_service.clone(),
         }
     }
@@ -37,7 +37,8 @@ impl StreamVolumeControl {
         // If |proxy| is set to None, then try to create and bind a new VolumeControl. If it
         // fails, log an error and don't set the volume.
         if self.proxy.is_none() {
-            self.proxy = bind_volume_control(&self.audio_service, stream.stream_type);
+            self.proxy =
+                bind_volume_control(&self.audio_service, stream.stream_type, self.stored_stream);
             if self.proxy.is_none() {
                 fx_log_err!("failed to bind volume control");
                 return;
@@ -65,6 +66,7 @@ impl StreamVolumeControl {
 fn bind_volume_control(
     audio_service: &fidl_fuchsia_media::AudioCoreProxy,
     stream_type: AudioStreamType,
+    stored_stream: AudioStream,
 ) -> Option<VolumeControlProxy> {
     let (vol_control_proxy, server_end) = create_proxy().unwrap();
     let mut usage = Usage::RenderUsage(AudioRenderUsage::from(stream_type));
@@ -73,6 +75,15 @@ fn bind_volume_control(
         fx_log_err!("failed to bind volume control for usage, {}", err);
         return None;
     }
+
+    // Once the volume control is bound, apply the persisted audio settings to it.
+    vol_control_proxy.set_volume(stored_stream.user_volume_level).unwrap_or_else(move |e| {
+        fx_log_err!("failed to set the volume level, {}", e);
+    });
+
+    vol_control_proxy.set_mute(stored_stream.user_volume_muted).unwrap_or_else(move |e| {
+        fx_log_err!("failed to mute the volume, {}", e);
+    });
 
     // TODO(fxb/37777): Update |stored_stream| in StreamVolumeControl and send a notification
     // when we receive an update.
