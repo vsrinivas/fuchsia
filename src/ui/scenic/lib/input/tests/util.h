@@ -64,7 +64,7 @@ struct ResourceGraph {
 
 // Test fixture for exercising the input subsystem.
 class InputSystemTest : public scenic_impl::test::ScenicTest {
- protected:
+ public:
   // Sensible 5x5x1 view bounds for a |scenic::ViewHolder| for a test view configured using
   // |SetUpTestView|.
   static constexpr fuchsia::ui::gfx::ViewProperties k5x5x1 = {.bounding_box = {.max = {5, 5, 1}}};

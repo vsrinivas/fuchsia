@@ -19,9 +19,18 @@ group("tests") {
   testonly = true
 
   public_deps = [
+    ":fuzzers",
     ":scenic_tests",
     "lib/gfx/tests:mock_pose_buffer_provider",
     "lib/gfx/tests/rotated_square_test",
+  ]
+}
+
+group("fuzzers") {
+  testonly = true
+  public_deps = [
+    "lib/input/tests:fuzztests",
+    "lib/scheduling/tests:fuzztests",
   ]
 }
 

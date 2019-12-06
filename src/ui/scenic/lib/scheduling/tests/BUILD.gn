@@ -5,7 +5,6 @@
 group("tests") {
   testonly = true
   public_deps = [
-    ":fuzztests",
     ":unittests",
   ]
 }

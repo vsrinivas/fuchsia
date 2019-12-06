@@ -23,6 +23,7 @@ class ScenicTest : public ::gtest::TestLoopFixture, public EventReporter {
   ScenicTest() : weak_factory_(this) {}
   ~ScenicTest() override = default;
 
+  Scenic* scenic() { return scenic_.get(); }
   std::unique_ptr<::scenic::Session> CreateSession();
 
  protected:
@@ -31,8 +32,6 @@ class ScenicTest : public ::gtest::TestLoopFixture, public EventReporter {
 
   // ::testing::Test virtual method.
   void TearDown() override;
-
-  Scenic* scenic() { return scenic_.get(); }
 
   // Subclasses may override this to install any systems required by the test;
   // none are installed by default.

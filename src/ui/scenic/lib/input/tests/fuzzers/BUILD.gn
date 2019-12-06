@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/package.gni")
+
+fuzzer("input_fuzzer") {
+  sources = [
+    "input_fuzztest.cc",
+  ]
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/ui/scenic/cpp",
+    "//src/ui/scenic/lib/input/tests:util",
+  ]
+}
+
+fuzzers_package("input_fuzzers") {
+  fuzzers = [ ":input_fuzzer" ]
+}
