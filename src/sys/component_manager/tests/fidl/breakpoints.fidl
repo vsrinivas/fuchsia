@@ -98,10 +98,10 @@ table Invocation {
 /// Registers breakpoints in component manager.
 [Discoverable]
 protocol BreakpointSystem {
-    /// Registers breakpoints for the given EventTypes.
+    /// Sets breakpoints on the given EventTypes.
     /// Returns a BreakpointInvocationReceiver which can be used
     /// to expect the registered types.
-    Register(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, request<InvocationReceiver> server_end) -> ();
+    SetBreakpoints(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, request<InvocationReceiver> server_end) -> ();
 
     /// Begins component manager's execution.
     /// This method is a no-op when invoked more than once or by
@@ -128,7 +128,7 @@ protocol Handler {
 /// Used by RouteFrameworkCapability and RouteBuiltinCapability
 protocol RoutingProtocol {
     /// Inject a CapabilityProvider in response to a routing event.
-    Route(CapabilityProvider client_end) -> ();
+    SetProvider(CapabilityProvider client_end) -> ();
 };
 
 /// A FIDL-based version of a CapabilityProvider

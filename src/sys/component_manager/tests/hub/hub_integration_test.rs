@@ -40,14 +40,17 @@ impl TestRunner {
             // These receivers are registered separately because the events do not happen
             // in predictable orders. There is a possibility for the RouteFrameworkCapability event
             // to be interleaved between the StartInstance events.
-            let start_receiver = test.breakpoint_system.register(vec![StartInstance::TYPE]).await?;
-            let route_receiver =
-                test.breakpoint_system.register(vec![RouteFrameworkCapability::TYPE]).await?;
+            let start_receiver =
+                test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+            let route_receiver = test
+                .breakpoint_system
+                .set_breakpoints(vec![RouteFrameworkCapability::TYPE])
+                .await?;
 
             // Register for events which are required by this test runner.
             // TODO(xbhatnag): There may be problems here if event_types contains
             // StartInstance or RouteFrameworkCapability
-            let receiver = test.breakpoint_system.register(event_types).await?;
+            let receiver = test.breakpoint_system.set_breakpoints(event_types).await?;
 
             // Unblock component manager
             test.breakpoint_system.start_component_manager().await?;
@@ -64,7 +67,7 @@ impl TestRunner {
             let invocation = route_receiver
                 .wait_until_route_framework_capability(reporter_moniker, HUB_REPORT_SERVICE)
                 .await?;
-            invocation.route(hub_report_capability.serve_capability_provider_async()).await?;
+            invocation.inject(hub_report_capability.serve_async()).await?;
             invocation.resume().await?;
 
             // Return the receiver to be used later

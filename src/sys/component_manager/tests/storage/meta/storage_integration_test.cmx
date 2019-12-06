@@ -3,13 +3,15 @@
         "binary": "test/storage_integration_test"
     },
     "sandbox": {
+        "features": [
+            "hub",
+            "deprecated-ambient-replace-as-executable"
+        ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.logger.LogSink",
-            "fuchsia.sys.Loader"
-        ],
-        "features": [
-            "deprecated-ambient-replace-as-executable"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

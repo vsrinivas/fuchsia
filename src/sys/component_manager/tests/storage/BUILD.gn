@@ -17,9 +17,28 @@ rustc_test("storage_integration_test_bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/sys/component_manager:lib",
+    "//src/sys/component_manager/tests:breakpoint_system_client",
+    "//src/sys/component_manager/tests:test_utils",
+    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+rustc_binary("storage_realm_coll_bin") {
+  name = "storage_realm_coll"
+  edition = "2018"
+  source_root = "storage_realm_coll.rs"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:failure",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -45,6 +64,7 @@ rustc_binary("storage_user_bin") {
 test_package("storage_integration_test") {
   deps = [
     ":storage_integration_test_bin",
+    ":storage_realm_coll_bin",
     ":storage_user_bin",
     "//src/sys/component_manager/tests/memfs",
   ]
@@ -62,6 +82,10 @@ test_package("storage_integration_test") {
       path = rebase_path("meta/storage_realm.cml")
       dest = "storage_realm.cm"
     },
+    {
+      path = rebase_path("meta/storage_realm_coll.cml")
+      dest = "storage_realm_coll.cm"
+    },
   ]
 
   binaries = [
@@ -70,6 +94,9 @@ test_package("storage_integration_test") {
     },
     {
       name = "storage_user"
+    },
+    {
+      name = "storage_realm_coll"
     },
   ]
 

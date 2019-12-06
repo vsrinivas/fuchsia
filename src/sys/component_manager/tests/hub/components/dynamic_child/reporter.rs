@@ -70,7 +70,11 @@ async fn main() -> Result<(), Error> {
 
     // Register breakpoints for relevant events
     let receiver = breakpoint_system
-        .register(vec![StopInstance::TYPE, PreDestroyInstance::TYPE, PostDestroyInstance::TYPE])
+        .set_breakpoints(vec![
+            StopInstance::TYPE,
+            PreDestroyInstance::TYPE,
+            PostDestroyInstance::TYPE,
+        ])
         .await?;
 
     // Delete the dynamic child

@@ -3,23 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    component_manager_lib::{
-        builtin_environment::BuiltinEnvironment,
-        model::{
-            hooks::*,
-            moniker::AbsoluteMoniker,
-            testing::{breakpoints::*, test_helpers, test_hook::TestHook},
-            Binder, ComponentManagerConfig, Model,
-        },
-        startup,
-    },
+    breakpoint_system_client::*,
     failure::{Error, ResultExt},
-    fidl::endpoints,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl::endpoints::ServerEnd,
+    fidl::Channel,
+    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    futures::StreamExt,
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
     std::path::PathBuf,
+    test_utils::*,
 };
 
 lazy_static! {
@@ -36,42 +30,36 @@ impl Logger {
     fn init(&self) {}
 }
 
-// TODO: This is a white box test so that we can use hooks. Really this should be a black box test,
-// but we need to implement stopping and/or external hooks for that to be possible.
-
 #[fasync::run_singlethreaded(test)]
 async fn storage() -> Result<(), Error> {
     LOGGER.init();
 
-    // Set up model and hooks.
-    let root_component_url =
-        "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm.cm".to_string();
-    let args = startup::Arguments {
-        use_builtin_process_launcher: false,
-        use_builtin_vmex: false,
-        root_component_url,
-        debug: false,
-    };
-    let model = startup::model_setup(&args).await?;
-    let _builtin_environment =
-        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
+    let test = BlackBoxTest::default(
+        "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm.cm",
+    )
+    .await?;
 
-    let root_moniker = AbsoluteMoniker::root();
-    model.bind(&root_moniker).await.context("could not bind to root realm")?;
+    let receiver = test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 
-    let m = AbsoluteMoniker::from(vec!["storage_user:0"]);
-    let storage_user_realm =
-        model.look_up_realm(&m).await.context("could not look up storage_user realm")?;
-    let (exposed_proxy, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>()?;
-    model
-        .bind(&storage_user_realm.abs_moniker)
-        .await
-        .context("could not bind")?
-        .open_exposed(server_end.into_channel())
-        .await
-        .context("could not open exposed directory of storage user realm")?;
+    test.breakpoint_system.start_component_manager().await?;
 
-    use_storage(&model, exposed_proxy, "storage_user:0").await?;
+    // Expect the root component to be bound to
+    let invocation = receiver.expect_exact::<StartInstance>("/").await?;
+    invocation.resume().await?;
+
+    // Expect the 2 children to be bound to
+    let invocation = receiver.expect_type::<StartInstance>().await?;
+    invocation.resume().await?;
+
+    let invocation = receiver.expect_type::<StartInstance>().await?;
+    invocation.resume().await?;
+
+    let memfs_path = test
+        .component_manager_path
+        .join("out/hub/children/memfs/exec/out/svc/fuchsia.io.Directory");
+    let data_path = test.component_manager_path.join("out/hub/children/storage_user/exec/out/data");
+
+    check_storage(memfs_path, data_path, "storage_user:0").await?;
     Ok(())
 }
 
@@ -79,111 +67,95 @@ async fn storage() -> Result<(), Error> {
 async fn storage_from_collection() -> Result<(), Error> {
     LOGGER.init();
 
-    // Set up model and hooks.
-    let root_component_url =
-        "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm.cm".to_string();
-    let args = startup::Arguments {
-        use_builtin_process_launcher: false,
-        use_builtin_vmex: false,
-        root_component_url,
-        debug: false,
-    };
-    let model = startup::model_setup(&args).await?;
-    let builtin_environment =
-        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
+    let test = BlackBoxTest::default(
+        "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm_coll.cm",
+    )
+    .await?;
 
-    let test_hook = TestHook::new();
+    let receiver = test
+        .breakpoint_system
+        .set_breakpoints(vec![StartInstance::TYPE, PostDestroyInstance::TYPE])
+        .await?;
+    let bind_receiver =
+        test.breakpoint_system.set_breakpoints(vec![RouteFrameworkCapability::TYPE]).await?;
 
-    let breakpoint_system = BreakpointSystem::new();
-    let breakpoint_receiver =
-        breakpoint_system.register(vec![EventType::PostDestroyInstance]).await;
+    test.breakpoint_system.start_component_manager().await?;
 
-    model.root_realm.hooks.install(test_hook.hooks()).await;
-    model.root_realm.hooks.install(breakpoint_system.hooks()).await;
-    let root_moniker = AbsoluteMoniker::root();
-    model.bind(&root_moniker).await.context("could not bind to root realm")?;
+    // Expect the root component to be started
+    let invocation = receiver.expect_exact::<StartInstance>("/").await?;
+    invocation.resume().await?;
 
-    println!("creating and binding to child \"storage_user\"");
+    // The root component connects to the Realm service to start the dynamic child
+    let invocation =
+        bind_receiver.wait_until_route_framework_capability("/", "/svc/fuchsia.sys2.Realm").await?;
+    invocation.resume().await?;
 
-    let (realm_proxy, stream) = endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
-    {
-        let realm = model.root_realm.clone();
-        fasync::spawn(async move {
-            builtin_environment
-                .realm_capability_host
-                .serve(realm, stream)
-                .await
-                .expect("failed serving realm service");
-        });
-    }
+    // Expect 2 children to be started - one static and one dynamic
+    // Order is irrelevant
+    let invocation = receiver.expect_type::<StartInstance>().await?;
+    invocation.resume().await?;
 
-    {
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let child_decl = fsys::ChildDecl {
-            name: Some("storage_user".to_string()),
-            url: Some(
-                "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_user.cm"
-                    .to_string(),
-            ),
-            startup: Some(fsys::StartupMode::Lazy),
-        };
-        let _ = realm_proxy
-            .create_child(&mut collection_ref, child_decl)
-            .await
-            .context("failed to create child")?
-            .expect("failed to create child");
-    }
-    let exposed_proxy = {
-        let (exposed_proxy, server_end) =
-            endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        let mut child_ref = fsys::ChildRef {
-            name: "storage_user".to_string(),
-            collection: Some("coll".to_string()),
-        };
-        realm_proxy
-            .bind_child(&mut child_ref, server_end)
-            .await
-            .context("failed to bind to child")?
-            .expect("failed to bind to child");
-        exposed_proxy
-    };
+    let invocation = receiver.expect_type::<StartInstance>().await?;
+    invocation.resume().await?;
 
-    let memfs_proxy = use_storage(&model, exposed_proxy, "coll:storage_user:1").await?;
+    // With all children started, do the test
+    let memfs_path = test
+        .component_manager_path
+        .join("out/hub/children/memfs/exec/out/svc/fuchsia.io.Directory");
+    let data_path =
+        test.component_manager_path.join("out/hub/children/coll:storage_user/exec/out/data");
 
-    println!("destroying storage_user");
-    let mut child_ref =
-        fsys::ChildRef { name: "storage_user".to_string(), collection: Some("coll".to_string()) };
-    realm_proxy
-        .destroy_child(&mut child_ref)
-        .await
-        .context("failed to destroy child")?
-        .expect("failed to destroy child");
+    check_storage(memfs_path.clone(), data_path, "coll:storage_user:1").await?;
 
-    let invocation = breakpoint_receiver
-        .wait_until(EventType::PostDestroyInstance, vec!["coll:storage_user:1"].into())
-        .await;
+    // The root component connects to the Trigger service to start the dynamic child
+    let invocation = bind_receiver
+        .wait_until_route_framework_capability("/", "/svc/fidl.test.components.Trigger")
+        .await?;
+    invocation.inject(serve_trigger_capability_async()).await?;
+    invocation.resume().await?;
+
+    // Expect the dynamic child to be destroyed
+    let invocation = receiver.expect_exact::<PostDestroyInstance>("/coll:storage_user:1").await?;
 
     println!("checking that storage was destroyed");
-    assert_eq!(test_helpers::list_directory(&memfs_proxy).await, Vec::<String>::new());
+    let memfs_proxy = io_util::open_directory_in_namespace(
+        memfs_path.to_str().unwrap(),
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+    )
+    .context("failed to open storage")?;
+    assert_eq!(list_directory(&memfs_proxy).await?, Vec::<String>::new());
 
-    invocation.resume();
+    invocation.resume().await?;
 
     Ok(())
 }
 
-async fn use_storage(
-    model: &Model,
-    exposed_proxy: fio::DirectoryProxy,
-    user_moniker: &str,
-) -> Result<fio::DirectoryProxy, Error> {
-    let child_data_proxy = io_util::open_directory(
-        &exposed_proxy,
-        &PathBuf::from("data"),
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-    )
-    .context("failed to open storage")?;
+fn serve_trigger_capability_async() -> Box<dyn Fn(Channel) + Send> {
+    Box::new(|channel| {
+        let mut stream = ServerEnd::<ftest::TriggerMarker>::new(channel)
+            .into_stream()
+            .expect("could not convert channel into stream");
+        fasync::spawn(async move {
+            while let Some(Ok(ftest::TriggerRequest::Run { responder })) = stream.next().await {
+                responder.send().unwrap();
+            }
+        })
+    })
+}
 
-    println!("successfully bound to child \"storage_user\"");
+async fn check_storage(
+    memfs_path: PathBuf,
+    data_path: PathBuf,
+    user_moniker: &str,
+) -> Result<(), Error> {
+    let memfs_path = memfs_path.to_str().expect("unexpected chars");
+    let data_path = data_path.to_str().expect("unexpected chars");
+
+    let child_data_proxy =
+        io_util::open_directory_in_namespace(data_path, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
+            .context("failed to open storage")?;
+
+    println!("successfully opened \"storage_user\" exposed data directory");
 
     let file_name = "hippo";
     let file_contents = "hippos_are_neat";
@@ -194,31 +166,20 @@ async fn use_storage(
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
     )
     .context("failed to open file in storage")?;
-    let (s, _) = file
-        .write(&mut file_contents.as_bytes().to_vec().into_iter())
-        .await
-        .context("failed to write to file")?;
+    let (s, _) =
+        file.write(&mut file_contents.as_bytes().to_vec().into_iter()).await.unwrap_or_else(|_| {
+            println!("ERROR! Looping indefinitely");
+            loop {}
+        });
     assert_eq!(zx::Status::OK, zx::Status::from_raw(s), "writing to the file failed");
 
-    println!("successfully wrote to file \"hippo\" in child's outgoing directory");
+    println!("successfully wrote to file \"hippo\" in exposed data directory");
 
-    let (memfs_proxy, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>()?;
-    let m = AbsoluteMoniker::from(vec!["memfs:0"]);
-    let memfs_realm = model.look_up_realm(&m).await.context("could not look up memfs realm")?;
-    model
-        .bind(&memfs_realm.abs_moniker)
-        .await
-        .context("could not bind")?
-        .open_exposed(server_end.into_channel())
-        .await
-        .context("could not open exposed directory of root realm")?;
-    let memfs_proxy = io_util::open_directory(
-        &memfs_proxy,
-        &PathBuf::from("memfs"),
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-    )?;
+    let memfs_proxy =
+        io_util::open_directory_in_namespace(memfs_path, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
+            .context("failed to open storage")?;
 
-    println!("successfully bound to child \"memfs\"");
+    println!("successfully opened \"memfs\" exposed directory");
 
     let file_proxy = io_util::open_file(
         &memfs_proxy,
@@ -231,5 +192,5 @@ async fn use_storage(
 
     println!("successfully read back contents of file from memfs directly");
     assert_eq!(read_contents, file_contents, "file contents did not match what was written");
-    Ok(memfs_proxy)
+    Ok(())
 }

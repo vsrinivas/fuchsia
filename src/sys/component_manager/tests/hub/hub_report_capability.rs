@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd},
+    fidl::endpoints::ServerEnd,
     fidl::Channel,
-    fidl_fuchsia_test_breakpoints as fbreak, fidl_fuchsia_test_hub as fhub,
-    fuchsia_async as fasync,
+    fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::{collections::HashMap, sync::Arc},
 };
@@ -78,28 +77,21 @@ impl HubReportCapability {
         return event;
     }
 
-    /// Serves the server end of the CapabilityProvider FIDL protocol asynchronously.
-    /// When a CapabilityProvider::Open call is made, the HubReport protocol will be served.
-    pub fn serve_capability_provider_async(&self) -> ClientEnd<fbreak::CapabilityProviderMarker> {
-        let (client_end, mut stream) =
-            create_request_stream::<fbreak::CapabilityProviderMarker>().unwrap();
+    /// Serves the server end of the HubReport FIDL protocol asynchronously.
+    pub fn serve_async(&self) -> Box<dyn Fn(Channel) + Send> {
         let observers = self.observers.clone();
         let channel_close_tx = self.channel_close_tx.clone();
-        fasync::spawn(async move {
-            if let Some(Ok(fbreak::CapabilityProviderRequest::Open { server_end, responder })) =
-                stream.next().await
-            {
-                fasync::spawn(async move {
-                    Self::serve_hub_report(observers, channel_close_tx, server_end).await;
-                });
-                responder.send().expect("Could not send response to CapabilityProvider Open");
-            }
-        });
-        client_end
+        Box::new(move |channel| {
+            let observers = observers.clone();
+            let channel_close_tx = channel_close_tx.clone();
+            fasync::spawn(async move {
+                Self::serve(observers, channel_close_tx, channel).await;
+            })
+        })
     }
 
     /// Serves HubReport FIDL requests over the provided channel
-    pub async fn serve_hub_report(
+    async fn serve(
         observers: Arc<Mutex<HashMap<String, HubReportChannel>>>,
         mut channel_close_tx: mpsc::Sender<()>,
         server_end: Channel,

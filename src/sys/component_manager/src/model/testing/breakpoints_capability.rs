@@ -146,7 +146,11 @@ async fn serve_system(
 ) {
     while let Some(Ok(request)) = stream.next().await {
         match request {
-            fbreak::BreakpointSystemRequest::Register { event_types, server_end, responder } => {
+            fbreak::BreakpointSystemRequest::SetBreakpoints {
+                event_types,
+                server_end,
+                responder,
+            } => {
                 serve_receiver_async(&breakpoint_registry, event_types, server_end).await;
 
                 // Unblock the component
@@ -278,7 +282,7 @@ async fn serve_routing_protocol(
     capability_provider: Arc<Mutex<Option<Box<dyn ComponentManagerCapabilityProvider>>>>,
     mut stream: fbreak::RoutingProtocolRequestStream,
 ) {
-    while let Some(Ok(fbreak::RoutingProtocolRequest::Route { client_end, responder })) =
+    while let Some(Ok(fbreak::RoutingProtocolRequest::SetProvider { client_end, responder })) =
         stream.next().await
     {
         // Create the external capability provider and set it

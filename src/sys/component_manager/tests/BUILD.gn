@@ -30,6 +30,7 @@ rustc_library("breakpoint_system_client") {
   source_root = "breakpoint_system_client.rs"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",

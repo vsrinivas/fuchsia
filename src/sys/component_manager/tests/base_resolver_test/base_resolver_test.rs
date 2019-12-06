@@ -25,7 +25,7 @@ async fn base_resolver_test() -> Result<(), Error> {
     .await?;
 
     // Register breakpoints and begin execution of component manager
-    let receiver = test.breakpoint_system.register(vec![StartInstance::TYPE]).await?;
+    let receiver = test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 
     // Begin component manager's execution
     test.breakpoint_system.start_component_manager().await?;

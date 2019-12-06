@@ -12,7 +12,7 @@ fn launch_cs2(hub_v2_path: PathBuf) -> Vec<String> {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn empty_component() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/empty.cm").await?;
-    let receiver = test.breakpoint_system.register(vec![StartInstance::TYPE]).await?;
+    let receiver = test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 
     test.breakpoint_system.start_component_manager().await?;
 
@@ -38,7 +38,7 @@ async fn empty_component() -> Result<(), Error> {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn tree() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/root.cm").await?;
-    let receiver = test.breakpoint_system.register(vec![StartInstance::TYPE]).await?;
+    let receiver = test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 
     test.breakpoint_system.start_component_manager().await?;
 

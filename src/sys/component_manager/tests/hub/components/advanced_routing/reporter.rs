@@ -30,7 +30,7 @@ async fn main() -> Result<(), Error> {
     hub_report.report_directory_contents("/hub/used/svc").await?;
 
     let breakpoint_system = BreakpointSystemClient::new()?;
-    let receiver = breakpoint_system.register(vec![UseCapability::TYPE]).await?;
+    let receiver = breakpoint_system.set_breakpoints(vec![UseCapability::TYPE]).await?;
 
     // Connect to the Echo capability.
     connect_to_service::<fecho::EchoMarker>().context("error connecting to Echo service")?;

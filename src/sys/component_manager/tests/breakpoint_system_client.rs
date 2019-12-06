@@ -4,10 +4,12 @@
 
 use {
     failure::{err_msg, Error, ResultExt},
-    fidl::endpoints::{create_proxy, ClientEnd},
-    fidl_fuchsia_test_breakpoints as fbreak,
+    fidl::endpoints::{create_proxy, create_request_stream, ClientEnd},
+    fidl::Channel,
+    fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync,
     fuchsia_component::client::*,
     futures::future::BoxFuture,
+    futures::StreamExt,
 };
 
 /// A wrapper over the BreakpointSystem FIDL proxy.
@@ -31,13 +33,13 @@ impl BreakpointSystemClient {
         Self { proxy }
     }
 
-    pub async fn register(
+    pub async fn set_breakpoints(
         &self,
         event_types: Vec<fbreak::EventType>,
     ) -> Result<InvocationReceiverClient, Error> {
         let (proxy, server_end) = create_proxy::<fbreak::InvocationReceiverMarker>()?;
         self.proxy
-            .register(&mut event_types.into_iter(), server_end)
+            .set_breakpoints(&mut event_types.into_iter(), server_end)
             .await
             .context("could not register breakpoints")?;
         Ok(InvocationReceiverClient::new(proxy))
@@ -180,12 +182,46 @@ impl Handler for fbreak::Invocation {
 pub trait RoutingProtocol {
     fn protocol_proxy(&self) -> fbreak::RoutingProtocolProxy;
 
-    fn route<'a>(
+    #[must_use = "futures do nothing unless you await on them!"]
+    fn set_provider<'a>(
         &self,
         client_end: ClientEnd<fbreak::CapabilityProviderMarker>,
     ) -> BoxFuture<'a, Result<(), fidl::Error>> {
         let proxy = self.protocol_proxy();
-        Box::pin(async move { proxy.route(client_end).await })
+        Box::pin(async move { proxy.set_provider(client_end).await })
+    }
+
+    /// Creates a capability provider on behalf of the client.
+    /// When an Open request is received, runs the closure provided.
+    #[must_use = "futures do nothing unless you await on them!"]
+    fn inject<'a>(
+        &self,
+        serving_fn: Box<dyn Fn(Channel) + Send>,
+    ) -> BoxFuture<'a, Result<(), fidl::Error>> {
+        // Serve the CapabilityProvider protocol
+        let (client_end, mut capability_stream) =
+            create_request_stream::<fbreak::CapabilityProviderMarker>()
+                .expect("Could not create request stream for CapabilityProvider");
+
+        // For all open requests, run the serving_fn
+        fasync::spawn(async move {
+            while let Some(Ok(fbreak::CapabilityProviderRequest::Open { server_end, responder })) =
+                capability_stream.next().await
+            {
+                // Begin serving the capability. It is assumed this function
+                // serves the capability asynchronously. If that is not the case,
+                // component manager will not be unblocked from the open request
+                // and the system will hang.
+                serving_fn(server_end);
+
+                // Unblock component manager from the open request
+                responder.send().expect("Could not respond to CapabilityProvider::Open");
+            }
+        });
+
+        // Send the client end of the CapabilityProvider protocol
+        let proxy = self.protocol_proxy();
+        Box::pin(async move { proxy.set_provider(client_end).await })
     }
 }
 
