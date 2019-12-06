@@ -37,46 +37,6 @@ impl From<fidl_fuchsia_auth::AuthToken> for OAuthToken {
     }
 }
 
-/// Representation of a single Firebase token including its expiry time.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FirebaseAuthToken {
-    id_token: String,
-    local_id: Option<String>,
-    email: Option<String>,
-    expiry_time: Time,
-}
-
-impl CacheToken for FirebaseAuthToken {
-    fn expiry_time(&self) -> &Time {
-        &self.expiry_time
-    }
-}
-
-impl From<fidl_fuchsia_auth::FirebaseToken> for FirebaseAuthToken {
-    fn from(firebase_token: fidl_fuchsia_auth::FirebaseToken) -> FirebaseAuthToken {
-        FirebaseAuthToken {
-            id_token: firebase_token.id_token,
-            local_id: firebase_token.local_id,
-            email: firebase_token.email,
-            expiry_time: get_current_time()
-                + Duration::from_seconds(firebase_token.expires_in as i64),
-        }
-    }
-}
-
-impl FirebaseAuthToken {
-    /// Returns a new FIDL `FirebaseToken` using data cloned from our
-    /// internal representation.
-    pub fn to_fidl(&self) -> fidl_fuchsia_auth::FirebaseToken {
-        fidl_fuchsia_auth::FirebaseToken {
-            id_token: self.id_token.clone(),
-            local_id: self.local_id.clone(),
-            email: self.email.clone(),
-            expires_in: expires_in_sec(self.expiry_time),
-        }
-    }
-}
-
 /// Key for storing OAuth access tokens in the token cache.
 #[derive(Debug, PartialEq, Eq)]
 pub struct AccessTokenKey {
@@ -180,48 +140,6 @@ impl IdTokenKey {
     }
 }
 
-/// Key for storing Firebase tokens in the token cache.
-#[derive(Debug, PartialEq, Eq)]
-pub struct FirebaseTokenKey {
-    auth_provider_type: String,
-    user_profile_id: String,
-    api_key: String,
-}
-
-impl CacheKey for FirebaseTokenKey {
-    fn auth_provider_type(&self) -> &str {
-        &self.auth_provider_type
-    }
-
-    fn user_profile_id(&self) -> &str {
-        &self.user_profile_id
-    }
-
-    fn subkey(&self) -> &str {
-        &self.api_key
-    }
-}
-
-impl KeyFor for FirebaseTokenKey {
-    type TokenType = FirebaseAuthToken;
-}
-
-impl FirebaseTokenKey {
-    /// Creates a new Firebase token key.
-    pub fn new(
-        auth_provider_type: String,
-        user_profile_id: String,
-        api_key: String,
-    ) -> Result<FirebaseTokenKey, Error> {
-        validate_provider_and_id(&auth_provider_type, &user_profile_id)?;
-        Ok(FirebaseTokenKey {
-            auth_provider_type: auth_provider_type,
-            user_profile_id: user_profile_id,
-            api_key: api_key,
-        })
-    }
-}
-
 /// Validates that the given auth_provider_type and user_profile_id are
 /// nonempty.
 fn validate_provider_and_id(auth_provider_type: &str, user_profile_id: &str) -> Result<(), Error> {
@@ -239,17 +157,6 @@ fn get_current_time() -> Time {
     Time::get(ClockId::UTC)
 }
 
-/// Calculates the seconds to expiration given an expiration time.
-fn expires_in_sec(expiry_time: Time) -> u64 {
-    let remaining_duration = expiry_time - get_current_time();
-    let remaining_secs = remaining_duration.into_seconds();
-    if remaining_secs < 0 {
-        0
-    } else {
-        remaining_secs as u64
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -257,15 +164,11 @@ mod tests {
 
     const LONG_EXPIRY: Duration = Duration::from_seconds(3000);
     const TEST_ACCESS_TOKEN: &str = "access token";
-    const TEST_FIREBASE_ID_TOKEN: &str = "firebase token";
-    const TEST_FIREBASE_LOCAL_ID: &str = "firebase local id";
-    const TEST_EMAIL: &str = "user@test.com";
     const TEST_AUTH_PROVIDER_TYPE: &str = "test-provider";
     const TEST_USER_PROFILE_ID: &str = "test-user-123";
     const TEST_SCOPE_1: &str = "scope-1";
     const TEST_SCOPE_2: &str = "scope-2";
     const TEST_AUDIENCE: &str = "audience";
-    const TEST_FIREBASE_API: &str = "firebase-api";
 
     #[test]
     fn test_oauth_from_fidl() {
@@ -285,51 +188,6 @@ mod tests {
 
         // Also verify our implementation of the Deref trait
         assert_eq!(&*native_type, TEST_ACCESS_TOKEN);
-    }
-
-    #[test]
-    fn test_firebase_from_fidl() {
-        let fidl_type = fidl_fuchsia_auth::FirebaseToken {
-            id_token: TEST_FIREBASE_ID_TOKEN.to_string(),
-            local_id: Some(TEST_FIREBASE_LOCAL_ID.to_string()),
-            email: Some(TEST_EMAIL.to_string()),
-            expires_in: LONG_EXPIRY.into_seconds() as u64,
-        };
-
-        let time_before_conversion = get_current_time();
-        let native_type = FirebaseAuthToken::from(fidl_type);
-        let time_after_conversion = get_current_time();
-
-        assert_eq!(&native_type.id_token, TEST_FIREBASE_ID_TOKEN);
-        assert_eq!(native_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
-        assert_eq!(native_type.email, Some(TEST_EMAIL.to_string()));
-        assert!(native_type.expiry_time >= time_before_conversion + LONG_EXPIRY);
-        assert!(native_type.expiry_time <= time_after_conversion + LONG_EXPIRY);
-    }
-
-    #[test]
-    fn test_firebase_to_fidl() {
-        let time_before_conversion = get_current_time();
-        let native_type = FirebaseAuthToken {
-            id_token: TEST_FIREBASE_ID_TOKEN.to_string(),
-            local_id: Some(TEST_FIREBASE_LOCAL_ID.to_string()),
-            email: Some(TEST_EMAIL.to_string()),
-            expiry_time: time_before_conversion + LONG_EXPIRY,
-        };
-
-        let fidl_type = native_type.to_fidl();
-        let elapsed_time_during_conversion = get_current_time() - time_before_conversion;
-
-        assert_eq!(&fidl_type.id_token, TEST_FIREBASE_ID_TOKEN);
-        assert_eq!(fidl_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
-        assert_eq!(fidl_type.email, Some(TEST_EMAIL.to_string()));
-        assert!(fidl_type.expires_in <= LONG_EXPIRY.into_seconds() as u64);
-        assert!(
-            fidl_type.expires_in
-                >= (LONG_EXPIRY.into_seconds() - elapsed_time_during_conversion.into_seconds())
-                    as u64
-                    - 1
-        );
     }
 
     #[test]
@@ -422,37 +280,6 @@ mod tests {
             TEST_AUTH_PROVIDER_TYPE.to_string(),
             "".to_string(),
             TEST_AUDIENCE.to_string()
-        )
-        .is_err());
-    }
-
-    #[test]
-    fn test_create_firebase_token_key() {
-        assert_eq!(
-            FirebaseTokenKey::new(
-                TEST_AUTH_PROVIDER_TYPE.to_string(),
-                TEST_USER_PROFILE_ID.to_string(),
-                TEST_FIREBASE_API.to_string()
-            )
-            .unwrap(),
-            FirebaseTokenKey {
-                auth_provider_type: TEST_AUTH_PROVIDER_TYPE.to_string(),
-                user_profile_id: TEST_USER_PROFILE_ID.to_string(),
-                api_key: TEST_FIREBASE_API.to_string()
-            }
-        );
-
-        // Verify empty auth provider and user profile id cases fail.
-        assert!(FirebaseTokenKey::new(
-            "".to_string(),
-            TEST_USER_PROFILE_ID.to_string(),
-            TEST_FIREBASE_API.to_string()
-        )
-        .is_err());
-        assert!(FirebaseTokenKey::new(
-            TEST_AUTH_PROVIDER_TYPE.to_string(),
-            "".to_string(),
-            TEST_FIREBASE_API.to_string()
         )
         .is_err());
     }

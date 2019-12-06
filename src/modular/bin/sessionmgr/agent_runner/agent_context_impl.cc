@@ -259,18 +259,6 @@ void AgentContextImpl::GetIdToken(fuchsia::auth::AppConfig app_config, std::stri
                              std::move(callback));
 }
 
-void AgentContextImpl::GetFirebaseToken(fuchsia::auth::AppConfig app_config,
-                                        std::string user_profile_id, std::string audience,
-                                        std::string firebase_api_key,
-                                        GetFirebaseTokenCallback callback) {
-  FXL_CHECK(token_manager_);
-
-  FXL_DLOG(INFO) << "AgentContextImpl::GetFirebaseToken() invoked for user:" << user_profile_id;
-  token_manager_->GetFirebaseToken(std::move(app_config), std::move(user_profile_id),
-                                   std::move(audience), std::move(firebase_api_key),
-                                   std::move(callback));
-}
-
 void AgentContextImpl::DeleteAllTokens(fuchsia::auth::AppConfig app_config,
                                        std::string user_profile_id, bool force,
                                        DeleteAllTokensCallback callback) {

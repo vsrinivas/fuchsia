@@ -100,11 +100,6 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
                   fidl::StringPtr audience, GetIdTokenCallback callback) override;
 
   // |fuchsia::auth::TokenManager|
-  void GetFirebaseToken(fuchsia::auth::AppConfig app_config, std::string user_profile_id,
-                        std::string audience, std::string firebase_api_key,
-                        GetFirebaseTokenCallback callback) override;
-
-  // |fuchsia::auth::TokenManager|
   void DeleteAllTokens(fuchsia::auth::AppConfig app_config, std::string user_profile_id, bool force,
                        DeleteAllTokensCallback callback) override;
 

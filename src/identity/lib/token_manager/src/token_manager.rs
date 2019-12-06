@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::tokens::{AccessTokenKey, FirebaseAuthToken, FirebaseTokenKey, IdTokenKey, OAuthToken};
+use crate::tokens::{AccessTokenKey, IdTokenKey, OAuthToken};
 use crate::{AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError};
 use failure::format_err;
 use fidl;
@@ -11,12 +11,11 @@ use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{
     AppConfig, AuthProviderProxy, AuthProviderStatus, AuthenticationUiContextMarker, Status,
     TokenManagerAuthorizeResponder, TokenManagerDeleteAllTokensResponder,
-    TokenManagerGetAccessTokenResponder, TokenManagerGetFirebaseTokenResponder,
-    TokenManagerGetIdTokenResponder, TokenManagerListProfileIdsResponder, TokenManagerRequest,
-    TokenManagerRequestStream, UserProfileInfo,
+    TokenManagerGetAccessTokenResponder, TokenManagerGetIdTokenResponder,
+    TokenManagerListProfileIdsResponder, TokenManagerRequest, TokenManagerRequestStream,
+    UserProfileInfo,
 };
 use futures::prelude::*;
-use futures::try_join;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
 use log::{error, info, warn};
 use parking_lot::Mutex;
@@ -144,16 +143,6 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
                 responder,
             } => responder
                 .send_result(self.get_id_token(app_config, user_profile_id, audience).await),
-            TokenManagerRequest::GetFirebaseToken {
-                app_config,
-                user_profile_id,
-                audience,
-                firebase_api_key,
-                responder,
-            } => responder.send_result(
-                self.get_firebase_token(app_config, user_profile_id, audience, firebase_api_key)
-                    .await,
-            ),
             TokenManagerRequest::DeleteAllTokens {
                 app_config,
                 user_profile_id,
@@ -309,45 +298,6 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
 
         let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
         let native_token = Arc::new(OAuthToken::from(*provider_token));
-        self.token_cache.lock().put(cache_key, Arc::clone(&native_token));
-        Ok(native_token)
-    }
-
-    /// Implements the FIDL TokenManager.GetFirebaseToken method.
-    async fn get_firebase_token(
-        &self,
-        app_config: AppConfig,
-        user_profile_id: String,
-        audience: String,
-        api_key: String,
-    ) -> TokenManagerResult<Arc<FirebaseAuthToken>> {
-        let cache_key = FirebaseTokenKey::new(
-            app_config.auth_provider_type.clone(),
-            user_profile_id.clone(),
-            api_key.clone(),
-        )
-        .token_manager_status(Status::InvalidRequest)?;
-
-        // Attempt to read the token from cache.
-        if let Some(cached_token) = self.token_cache.lock().get(&cache_key) {
-            return Ok(cached_token);
-        }
-
-        // If no cached entry was found use ourselves to fetch or mint an ID token then use that
-        // to mint a new firebase token, which we also cache.
-        let auth_provider_type = app_config.auth_provider_type.clone();
-        let id_token_future = self.get_id_token(app_config, user_profile_id, Some(audience));
-        let proxy_future = self.get_auth_provider_proxy(&auth_provider_type);
-        let (id_token, auth_provider_proxy) = try_join!(id_token_future, proxy_future)?;
-        let (status, provider_token) = auth_provider_proxy
-            .get_app_firebase_token(&*id_token, &api_key)
-            .await
-            .map_err(|err| {
-                self.discard_auth_provider_proxy(&auth_provider_type);
-                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-            })?;
-        let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
-        let native_token = Arc::new(FirebaseAuthToken::from(*provider_token));
         self.token_cache.lock().put(cache_key, Arc::clone(&native_token));
         Ok(native_token)
     }
@@ -538,20 +488,6 @@ impl Responder for TokenManagerGetIdTokenResponder {
     }
 }
 
-impl Responder for TokenManagerGetFirebaseTokenResponder {
-    type Data = Arc<FirebaseAuthToken>;
-    const METHOD_NAME: &'static str = "GetFirebaseToken";
-
-    fn send_raw(
-        self,
-        status: Status,
-        data: Option<Arc<FirebaseAuthToken>>,
-    ) -> Result<(), fidl::Error> {
-        let mut fidl_data = data.map(|v| v.to_fidl());
-        self.send(status, fidl_data.as_mut().map(|v| OutOfLine(v)))
-    }
-}
-
 impl Responder for TokenManagerDeleteAllTokensResponder {
     type Data = ();
     const METHOD_NAME: &'static str = "DeleteAllTokens";
@@ -581,7 +517,7 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_auth::{
         AuthProviderRequest, AuthProviderStatus, AuthToken, AuthenticationContextProviderMarker,
-        FirebaseToken, TokenManagerMarker, TokenManagerProxy, TokenType,
+        TokenManagerMarker, TokenManagerProxy, TokenType,
     };
     use fuchsia_async as fasync;
     use futures::channel::oneshot;
@@ -713,28 +649,6 @@ mod tests {
         Ok(())
     }
 
-    /// Expect a GetAppFirebaseToken request, configurable with an id_token. Generates a response.
-    fn expect_get_firebase_token(
-        request: AuthProviderRequest,
-        token: &str,
-    ) -> Result<(), fidl::Error> {
-        match request {
-            AuthProviderRequest::GetAppFirebaseToken { id_token, firebase_api_key, responder } => {
-                assert_eq!(id_token, token);
-                assert_eq!(firebase_api_key, "FIREBASE_API_KEY");
-                let mut firebase_token = FirebaseToken {
-                    id_token: format!("{}_FIREBASE", token),
-                    local_id: None,
-                    email: None,
-                    expires_in: 3600,
-                };
-                responder.send(AuthProviderStatus::Ok, Some(OutOfLine(&mut firebase_token)))?;
-            }
-            _ => panic!("Unexpected message received"),
-        }
-        Ok(())
-    }
-
     /// Expect a RevokeAppOrPersistentCredential request, configurable with a token. Responds Ok.
     fn expect_revoke_cred(request: AuthProviderRequest, token: &str) -> Result<(), fidl::Error> {
         match request {
@@ -793,18 +707,6 @@ mod tests {
     ) -> Result<(Status, Option<String>), fidl::Error> {
         let mut app_config = create_app_config(auth_provider_type);
         tm_proxy.get_id_token(&mut app_config, user_profile_id, Some("AUDIENCE")).await
-    }
-
-    /// Wrapper for TokenManager::GetFirebaseToken
-    async fn get_firebase_token_simple<'a>(
-        tm_proxy: &'a TokenManagerProxy,
-        auth_provider_type: &'a str,
-        user_profile_id: &'a str,
-    ) -> Result<(Status, Option<Box<FirebaseToken>>), fidl::Error> {
-        let mut app_config = create_app_config(auth_provider_type);
-        tm_proxy
-            .get_firebase_token(&mut app_config, user_profile_id, "AUDIENCE", "FIREBASE_API_KEY")
-            .await
     }
 
     /// Wrapper for TokenManager::DeleteAllTokens
@@ -969,8 +871,8 @@ mod tests {
         assert!(tm_result.is_ok());
     }
 
-    /// Check that we can get an access, id and firebase token, both by exchanging the refresh token
-    /// and by using the cache to retrieve the same value (without calling the auth provider).
+    /// Check that we can get access and id tokens, both by exchanging the refresh token and by
+    /// using the cache to retrieve the same value (without calling the auth provider).
     #[fasync::run_until_stalled(test)]
     async fn get_tokens() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
@@ -985,10 +887,6 @@ mod tests {
                     stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
                 )?;
-                expect_get_firebase_token(
-                    stream.try_next().await?.expect("End of stream"),
-                    "RICHARD_CREDENTIAL_ID",
-                )?;
                 Ok(assert!(stream.try_next().await?.is_none()))
             }
         });
@@ -997,8 +895,8 @@ mod tests {
         let client_fut = async move {
             assert_eq!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0, Status::Ok);
 
-            // Check that "_CREDENTIAL" was added by the authorize call and that "_ACCESS", "_ID" or
-            // "_FIREBASE", respectively, was added by the token exchange calls. In the second
+            // Check that "_CREDENTIAL" was added by the authorize call and that "_ACCESS" or "_ID"
+            // respectively, was added by the token exchange calls. In the second
             // iteration, make the same calls, but this time they should be delivered from cache.
             for _ in 0..2 {
                 assert_eq!(
@@ -1008,13 +906,6 @@ mod tests {
                 assert_eq!(
                     get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                     (Status::Ok, Some("RICHARD_CREDENTIAL_ID".to_string()))
-                );
-                let (status, firebase_token) =
-                    get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?;
-                assert_eq!(status, Status::Ok);
-                assert_eq!(
-                    firebase_token.expect("firebase token is empty").id_token,
-                    "RICHARD_CREDENTIAL_ID_FIREBASE"
                 );
             }
 
@@ -1057,10 +948,6 @@ mod tests {
                     stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
                 )?;
-                expect_get_firebase_token(
-                    stream.try_next().await?.expect("End of stream"),
-                    "RICHARD_CREDENTIAL_ID",
-                )?;
                 expect_revoke_cred(
                     stream.try_next().await?.expect("End of stream"),
                     "RICHARD_CREDENTIAL",
@@ -1074,17 +961,13 @@ mod tests {
             assert_eq!(authorize_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0, Status::Ok);
             assert_eq!(authorize_simple(&tm_proxy, "pied-piper", "DINESH").await?.0, Status::Ok);
 
-            // Put an access token, an id token and firebase token in the cache
+            // Put an access token and an id token in the cache
             assert_eq!(
                 get_access_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0,
                 Status::Ok
             );
             assert_eq!(
                 get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0,
-                Status::Ok
-            );
-            assert_eq!(
-                get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?.0,
                 Status::Ok
             );
 
@@ -1111,10 +994,6 @@ mod tests {
             );
             assert_eq!(
                 get_id_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
-                (Status::UserNotFound, None)
-            );
-            assert_eq!(
-                get_firebase_token_simple(&tm_proxy, "pied-piper", "RICHARD").await?,
                 (Status::UserNotFound, None)
             );
 

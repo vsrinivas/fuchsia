@@ -5,8 +5,8 @@
 //! TokenManager manages a set of service provider credentials.
 //!
 //! Supported credential types include long-lived OAuth refresh tokens and short-lived OAuth
-//! access tokens and Firebase tokens derived from these. Long-lived tokens are stored in a
-//! database and short-lived credentials are cached where possible.
+//! access tokens derived from these. Long-lived tokens are stored in a database and short-lived
+//! credentials are cached where possible.
 //!
 //! A client of the TokenManager must provide the path for the credential database and suppliers
 //! for AuthProviders and AuthenticationUiContexts.

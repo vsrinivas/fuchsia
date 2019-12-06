@@ -53,7 +53,6 @@ fuchsia::auth::AppConfig MakeDevAppConfig(const std::string& auth_provider_type)
 }
 
 using fuchsia::auth::AppConfig;
-using fuchsia::auth::FirebaseTokenPtr;
 using fuchsia::auth::Status;
 using fuchsia::auth::TokenManagerFactory;
 using fuchsia::auth::UserProfileInfoPtr;
@@ -200,57 +199,6 @@ TEST_F(DevTokenManagerAppTest, GetIdToken) {
   RunLoopUntil([&] { return call_complete; });
 }
 
-TEST_F(DevTokenManagerAppTest, GetFirebaseToken) {
-  RegisterUser(dev_app_config_);
-  bool call_complete = false;
-  ASSERT_TRUE(user_profile_id_.has_value());
-  token_mgr_->GetFirebaseToken(
-      dev_app_config_, user_profile_id_.value(), "firebase_test_api_key", "",
-      [&](Status status, FirebaseTokenPtr firebase_token) {
-        EXPECT_EQ(Status::OK, status);
-        EXPECT_NE(std::string::npos, firebase_token->id_token.find(":fbt_"));
-        ASSERT_TRUE(firebase_token->email.has_value());
-        EXPECT_NE(std::string::npos, firebase_token->email->find("@firebase.example.com"));
-        ASSERT_TRUE(firebase_token->local_id.has_value());
-        EXPECT_NE(std::string::npos, firebase_token->local_id->find("local_id_"));
-        call_complete = true;
-      });
-  RunLoopUntil([&] { return call_complete; });
-}
-
-TEST_F(DevTokenManagerAppTest, GetFirebaseTokenFromCache) {
-  FirebaseTokenPtr firebase_token;
-  FirebaseTokenPtr other_firebase_token;
-  FirebaseTokenPtr cached_firebase_token;
-
-  RegisterUser(dev_app_config_);
-
-  bool last_call_complete = false;
-  ASSERT_TRUE(user_profile_id_.has_value());
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_.value(), "", "key1",
-                               [&](Status status, FirebaseTokenPtr token) {
-                                 EXPECT_EQ(Status::OK, status);
-                                 firebase_token = std::move(token);
-                               });
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_.value(), "", "key2",
-                               [&](Status status, FirebaseTokenPtr token) {
-                                 EXPECT_EQ(Status::OK, status);
-                                 other_firebase_token = std::move(token);
-                               });
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_.value(), "", "key1",
-                               [&](Status status, FirebaseTokenPtr token) {
-                                 EXPECT_EQ(Status::OK, status);
-                                 cached_firebase_token = std::move(token);
-                                 last_call_complete = true;
-                               });
-
-  RunLoopUntil([&] { return last_call_complete; });
-  EXPECT_NE(firebase_token->id_token, other_firebase_token->id_token);
-  EXPECT_EQ(firebase_token->id_token, cached_firebase_token->id_token);
-  EXPECT_EQ(firebase_token->email, cached_firebase_token->email);
-  EXPECT_EQ(firebase_token->local_id, cached_firebase_token->local_id);
-}
-
 TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   RegisterUser(dev_app_config_);
   bool last_call_complete = false;
@@ -269,12 +217,6 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
                                EXPECT_TRUE(access_token.has_value());
                              });
 
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_.value(), "", "",
-                               [&](Status status, FirebaseTokenPtr firebase_token) {
-                                 EXPECT_EQ(Status::OK, status);
-                                 EXPECT_NE(nullptr, firebase_token);
-                               });
-
   token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_.value(), kForce,
                               [&](Status status) { EXPECT_EQ(Status::OK, status); });
 
@@ -286,13 +228,8 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   token_mgr_->GetAccessToken(dev_app_config_, user_profile_id_.value(), std::move(scopes),
                              [&](Status status, fidl::StringPtr access_token) {
                                EXPECT_EQ(Status::USER_NOT_FOUND, status);
+                               last_call_complete = true;
                              });
-
-  token_mgr_->GetFirebaseToken(dev_app_config_, user_profile_id_.value(), "", "",
-                               [&](Status status, FirebaseTokenPtr firebase_token) {
-                                 EXPECT_EQ(Status::USER_NOT_FOUND, status);
-                                 last_call_complete = true;
-                               });
 
   RunLoopUntil([&] { return last_call_complete; });
 }
