@@ -117,7 +117,7 @@ struct iwl_rx_packet {
    */
   __le32 len_n_flags;
   struct iwl_cmd_header hdr;
-  uint8_t data[];
+  uint8_t data[0];
 } __packed;
 
 // The length including pkt->hdr and pkt->data[] (but not including len_n_flags).

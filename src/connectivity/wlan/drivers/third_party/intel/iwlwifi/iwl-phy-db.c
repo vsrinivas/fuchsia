@@ -40,33 +40,6 @@
 
 #define CHANNEL_NUM_SIZE 4 /* num of channels in calib_ch size */
 
-struct iwl_phy_db_entry {
-  uint16_t size;
-  uint8_t* data;
-};
-
-/**
- * struct iwl_phy_db - stores phy configuration and calibration data.
- *
- * @cfg: phy configuration.
- * @calib_nch: non channel specific calibration data.
- * @calib_ch: channel specific calibration data.
- * @n_group_papd: number of entries in papd channel group.
- * @calib_ch_group_papd: calibration data related to papd channel group.
- * @n_group_txp: number of entries in tx power channel group.
- * @calib_ch_group_txp: calibration data related to tx power chanel group.
- */
-struct iwl_phy_db {
-  struct iwl_phy_db_entry cfg;
-  struct iwl_phy_db_entry calib_nch;
-  int n_group_papd;
-  struct iwl_phy_db_entry* calib_ch_group_papd;
-  int n_group_txp;
-  struct iwl_phy_db_entry* calib_ch_group_txp;
-
-  struct iwl_trans* trans;
-};
-
 #define PHY_DB_CMD 0x6c
 
 /* for parsing of tx power channel group data that comes from the firmware*/
@@ -95,9 +68,9 @@ struct iwl_phy_db* iwl_phy_db_init(struct iwl_trans* trans) {
  * get phy db section: returns a pointer to a phy db section specified by
  * type and channel group id.
  */
-static struct iwl_phy_db_entry* iwl_phy_db_get_section(struct iwl_phy_db* phy_db,
-                                                       enum iwl_phy_db_section_type type,
-                                                       uint16_t chg_id) {
+struct iwl_phy_db_entry* iwl_phy_db_get_section(struct iwl_phy_db* phy_db,
+                                                enum iwl_phy_db_section_type type,
+                                                uint16_t chg_id) {
   if (!phy_db || type >= IWL_PHY_DB_MAX) {
     return NULL;
   }
@@ -158,61 +131,65 @@ void iwl_phy_db_free(struct iwl_phy_db* phy_db) {
   kfree(phy_db);
 }
 
-// Used to parse the notification packet from the firmware, then populate to mvm->phy_db.
+// Parse the notification packet from the firmware, then populate to mvm->phy_db.
+//
 zx_status_t iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt) {
-#if 0  // NEEDS_PORTING
-    struct iwl_calib_res_notif_phy_db* phy_db_notif = (struct iwl_calib_res_notif_phy_db*)pkt->data;
-    enum iwl_phy_db_section_type type = le16_to_cpu(phy_db_notif->type);
-    uint16_t size = le16_to_cpu(phy_db_notif->length);
-    struct iwl_phy_db_entry* entry;
-    uint16_t chg_id = 0;
+  struct iwl_calib_res_notif_phy_db* phy_db_notif = (struct iwl_calib_res_notif_phy_db*)pkt->data;
+  enum iwl_phy_db_section_type type = le16_to_cpu(phy_db_notif->type);
+  uint16_t size = le16_to_cpu(phy_db_notif->length);
+  struct iwl_phy_db_entry* entry;
+  uint16_t chg_id = 0;
 
-    if (!phy_db) { return -EINVAL; }
+  if (!phy_db) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    if (type == IWL_PHY_DB_CALIB_CHG_PAPD) {
-        chg_id = le16_to_cpup((__le16*)phy_db_notif->data);
-        if (phy_db && !phy_db->calib_ch_group_papd) {
-            /*
-             * Firmware sends the largest index first, so we can use
-             * it to know how much we should allocate.
-             */
-            phy_db->calib_ch_group_papd =
-                kcalloc(chg_id + 1, sizeof(struct iwl_phy_db_entry), GFP_ATOMIC);
-            if (!phy_db->calib_ch_group_papd) { return -ENOMEM; }
-            phy_db->n_group_papd = chg_id + 1;
-        }
-    } else if (type == IWL_PHY_DB_CALIB_CHG_TXP) {
-        chg_id = le16_to_cpup((__le16*)phy_db_notif->data);
-        if (phy_db && !phy_db->calib_ch_group_txp) {
-            /*
-             * Firmware sends the largest index first, so we can use
-             * it to know how much we should allocate.
-             */
-            phy_db->calib_ch_group_txp =
-                kcalloc(chg_id + 1, sizeof(struct iwl_phy_db_entry), GFP_ATOMIC);
-            if (!phy_db->calib_ch_group_txp) { return -ENOMEM; }
-            phy_db->n_group_txp = chg_id + 1;
-        }
+  if (type == IWL_PHY_DB_CALIB_CHG_PAPD) {
+    chg_id = le16_to_cpup((__le16*)phy_db_notif->data);
+    if (!phy_db->calib_ch_group_papd) {
+      /*
+       * Firmware sends the largest index first, so we can use
+       * it to know how much we should allocate.
+       */
+      phy_db->calib_ch_group_papd = calloc(chg_id + 1, sizeof(struct iwl_phy_db_entry));
+      if (!phy_db->calib_ch_group_papd) {
+        return ZX_ERR_NO_MEMORY;
+      }
+      phy_db->n_group_papd = chg_id + 1;
     }
-
-    entry = iwl_phy_db_get_section(phy_db, type, chg_id);
-    if (!entry) { return -EINVAL; }
-
-    kfree(entry->data);
-    entry->data = kmemdup(phy_db_notif->data, size, GFP_ATOMIC);
-    if (!entry->data) {
-        entry->size = 0;
-        return -ENOMEM;
+  } else if (type == IWL_PHY_DB_CALIB_CHG_TXP) {
+    chg_id = le16_to_cpup((__le16*)phy_db_notif->data);
+    if (!phy_db->calib_ch_group_txp) {
+      /*
+       * Firmware sends the largest index first, so we can use
+       * it to know how much we should allocate.
+       */
+      phy_db->calib_ch_group_txp = calloc(chg_id + 1, sizeof(struct iwl_phy_db_entry));
+      if (!phy_db->calib_ch_group_txp) {
+        return ZX_ERR_NO_MEMORY;
+      }
+      phy_db->n_group_txp = chg_id + 1;
     }
+  }
 
-    entry->size = size;
+  entry = iwl_phy_db_get_section(phy_db, type, chg_id);
+  if (!entry) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    IWL_DEBUG_INFO(phy_db->trans, "%s(%d): [PHYDB]SET: Type %d , Size: %d\n", __func__, __LINE__,
-                   type, size);
+  free(entry->data);
+  entry->data = kmemdup(phy_db_notif->data, size);
+  if (!entry->data) {
+    entry->size = 0;
+    return ZX_ERR_NO_MEMORY;
+  }
 
-#endif  // NEEDS_PORTING
-  printf("%s():%d needs porting\n", __func__, __LINE__);
-  return ZX_ERR_NOT_SUPPORTED;
+  entry->size = size;
+
+  IWL_DEBUG_INFO(phy_db->trans, "%s(%d): [PHYDB]SET: Type %d , Size: %d\n", __func__, __LINE__,
+                 type, size);
+
+  return ZX_OK;
 }
 
 static int is_valid_channel(uint16_t ch_id) {

@@ -47,7 +47,37 @@ enum iwl_phy_db_section_type {
   IWL_PHY_DB_MAX,
 };
 
+struct iwl_phy_db_entry {
+  uint16_t size;
+  uint8_t* data;
+};
+
+/**
+ * struct iwl_phy_db - stores phy configuration and calibration data.
+ *
+ * @cfg: phy configuration.
+ * @calib_nch: non channel specific calibration data.
+ * @calib_ch: channel specific calibration data.
+ * @n_group_papd: number of entries in papd channel group.
+ * @calib_ch_group_papd: calibration data related to papd channel group.
+ * @n_group_txp: number of entries in tx power channel group.
+ * @calib_ch_group_txp: calibration data related to tx power chanel group.
+ */
+struct iwl_phy_db {
+  struct iwl_phy_db_entry cfg;
+  struct iwl_phy_db_entry calib_nch;
+  int n_group_papd;
+  struct iwl_phy_db_entry* calib_ch_group_papd;
+  int n_group_txp;
+  struct iwl_phy_db_entry* calib_ch_group_txp;
+
+  struct iwl_trans* trans;
+};
+
 struct iwl_phy_db* iwl_phy_db_init(struct iwl_trans* trans);
+
+struct iwl_phy_db_entry* iwl_phy_db_get_section(struct iwl_phy_db* phy_db,
+                                                enum iwl_phy_db_section_type type, uint16_t chg_id);
 
 void iwl_phy_db_free(struct iwl_phy_db* phy_db);
 

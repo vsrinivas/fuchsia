@@ -148,7 +148,7 @@ struct iwl_cmd_header_wide {
 struct iwl_calib_res_notif_phy_db {
   __le16 type;
   __le16 length;
-  uint8_t data[];
+  uint8_t data[0];
 } __packed;
 
 /**
