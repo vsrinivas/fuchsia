@@ -1,0 +1,40 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.power.statecontrol;
+
+using zx;
+
+/// All available suspend flags.
+// TODO(fxb/42257): When all clients start using the system power state
+// these flags can be removed.
+const uint32 SUSPEND_FLAG_REBOOT = 0xdcdc0100;
+const uint32 SUSPEND_FLAG_REBOOT_BOOTLOADER = 0xdcdc0101;
+const uint32 SUSPEND_FLAG_REBOOT_RECOVERY = 0xdcdc0102;
+const uint32 SUSPEND_FLAG_POWEROFF = 0xdcdc0200;
+const uint32 SUSPEND_FLAG_MEXEC = 0xdcdc0300;
+const uint32 SUSPEND_FLAG_SUSPEND_RAM = 0xdcdc0400;
+
+// TODO(ravoorir): When the system power states are properly defined,
+// remove the suspend flags. For now, treat each suspend flag as a system
+// power state.
+enum SystemPowerState : uint8 {
+    FULLY_ON = 1;
+    REBOOT = 2;
+    REBOOT_BOOTLOADER = 3;
+    REBOOT_RECOVERY = 4;
+    POWEROFF = 5;
+    MEXEC = 6;
+    SUSPEND_RAM = 7;
+};
+const uint32 MAX_SYSTEM_POWER_STATES = 7;
+
+/// Provides administration services for the device manager service and the device tree it controls.
+[Discoverable]
+protocol Admin {
+    /// Ask all devices to enter into the system power state indicated by 'state'.
+    /// The devices will get into a low power state, that corresponds to the system
+    /// power state 'state'.
+    Suspend(SystemPowerState state) -> () error zx.status;
+};

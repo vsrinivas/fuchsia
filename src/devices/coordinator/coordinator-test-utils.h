@@ -5,8 +5,8 @@
 #ifndef SRC_DRIVER_FRAMEWORK_COORDINATOR_TEST_H_
 #define SRC_DRIVER_FRAMEWORK_COORDINATOR_TEST_H_
 
-#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/driver/test/c/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>

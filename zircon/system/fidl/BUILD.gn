@@ -45,6 +45,7 @@ group("fidl") {
     "fuchsia-hardware-midi",
     "fuchsia-hardware-nand",
     "fuchsia-hardware-power",
+    "fuchsia-hardware-power-statecontrol",
     "fuchsia-hardware-pty",
     "fuchsia-hardware-ramdisk",
     "fuchsia-hardware-rtc",

@@ -4,6 +4,8 @@
 
 #include "multiple-device-test.h"
 
+#include <string>
+
 TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
@@ -117,14 +119,20 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
 
   zx::channel channel, channel_remote;
   ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
-
-  const char* service = "svc/" fuchsia_device_manager_Administrator_Name;
-  ASSERT_OK(fdio_service_connect_at(services.get(), service, channel_remote.release()));
+  std::string svc_dir = "/svc/";
+  std::string service = svc_dir + llcpp::fuchsia::hardware::power::statecontrol::Admin::Name;
+  ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
 
   bool callback_executed = false;
   DoSuspend(DEVICE_SUSPEND_FLAG_MEXEC, [&](uint32_t flags) {
+    auto response = llcpp::fuchsia::hardware::power::statecontrol::Admin::Call::Suspend(
+        zx::unowned_channel(channel.get()),
+        llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+    ASSERT_OK(response.status());
     zx_status_t call_status = ZX_OK;
-    ASSERT_OK(fuchsia_device_manager_AdministratorSuspend(channel.get(), flags, &call_status));
+    if (response->result.is_err()) {
+      call_status = response->result.err();
+    }
     ASSERT_OK(call_status);
     callback_executed = true;
   });
@@ -164,13 +172,20 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
   zx::channel channel, channel_remote;
   ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
 
-  const char* service = "svc/" fuchsia_device_manager_Administrator_Name;
-  ASSERT_OK(fdio_service_connect_at(services.get(), service, channel_remote.release()));
+  std::string svc_dir = "/svc/";
+  std::string service = svc_dir + llcpp::fuchsia::hardware::power::statecontrol::Admin::Name;
+  ASSERT_OK(fdio_service_connect_at(services.get(), service.c_str(), channel_remote.release()));
 
   bool callback_executed = false;
   DoSuspend(DEVICE_SUSPEND_FLAG_MEXEC, [&](uint32_t flags) {
+    auto response = llcpp::fuchsia::hardware::power::statecontrol::Admin::Call::Suspend(
+        zx::unowned(channel),
+        llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState::MEXEC);
+    ASSERT_OK(response.status());
     zx_status_t call_status = ZX_OK;
-    ASSERT_OK(fuchsia_device_manager_AdministratorSuspend(channel.get(), flags, &call_status));
+    if (response->result.is_err()) {
+      call_status = response->result.err();
+    }
     ASSERT_EQ(call_status, ZX_ERR_TIMED_OUT);
     callback_executed = true;
   });

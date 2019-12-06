@@ -18,6 +18,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl-async/bind.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -53,6 +54,7 @@
 #include "fdio.h"
 #include "fidl.h"
 #include "fidl_txn.h"
+#include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
 #include "lib/zx/time.h"
 #include "log.h"
 #include "vmo-writer.h"
@@ -100,6 +102,8 @@ void suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
 }  // namespace
 
 namespace devmgr {
+
+namespace power_fidl = llcpp::fuchsia::hardware::power;
 
 const char* kComponentDriverPath = "/boot/driver/component.so";
 
@@ -547,11 +551,10 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
   }
 
   fbl::RefPtr<Device> dev;
-  zx_status_t status =
-      Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
-                     std::move(args_str), protocol_id, std::move(props), std::move(coordinator),
-                     std::move(device_controller), invisible, do_init, std::move(client_remote),
-                     &dev);
+  zx_status_t status = Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
+                                      std::move(args_str), protocol_id, std::move(props),
+                                      std::move(coordinator), std::move(device_controller),
+                                      invisible, do_init, std::move(client_remote), &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -1252,7 +1255,7 @@ static void dump_suspend_task_dependencies(const SuspendTask& task, int depth = 
   fflush(stdout);
 }
 
-void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> callback) {
+void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> callback) {
   // TODO(ravoorir) : Change later to queue the suspend when resume is in progress.
   // Similarly, when Suspend is in progress, resume should be queued. When a resume is
   // in queue, and another suspend request comes in, we should nullify the resume that
@@ -1273,10 +1276,10 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
   if (InSuspend()) {
     return;
   }
-
   suspend_context() = std::move(ctx);
+  auto callback_info = fbl::MakeRefCounted<SuspendCallbackInfo>(std::move(callback));
 
-  auto completion = [this, callback](zx_status_t status) {
+  auto completion = [this, callback_info](zx_status_t status) {
     auto& ctx = suspend_context();
     if (status != ZX_OK) {
       // TODO: unroll suspend
@@ -1284,10 +1287,12 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
       // problem and should show as a bug
       log(ERROR, "devcoordinator: failed to suspend: %s\n", zx_status_get_string(status));
       ctx.set_flags(devmgr::SuspendContext::Flags::kRunning);
-      callback(status);
+      if (callback_info->callback) {
+        callback_info->callback(status);
+        callback_info->callback = nullptr;
+      }
       return;
     }
-
     if (ctx.sflags() != DEVICE_SUSPEND_FLAG_MEXEC) {
       // should never get here on x86
       // on arm, if the platform driver does not implement
@@ -1296,9 +1301,12 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
       // if we get here the system did not suspend successfully
       ctx.set_flags(devmgr::SuspendContext::Flags::kRunning);
     }
-    callback(status);
-  };
 
+    if (callback_info->callback) {
+      callback_info->callback(ZX_OK);
+      callback_info->callback = nullptr;
+    }
+  };
   // We don't need to suspend anything except sys_device and it's children,
   // since we do not run suspend hooks for children of test or misc
   auto task = SuspendTask::Create(sys_device(), ctx.sflags(), std::move(completion));
@@ -1306,7 +1314,7 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
 
   auto status = async::PostDelayedTask(
       dispatcher(),
-      [this, callback] {
+      [this, callback_info = std::move(callback_info)] {
         if (!InSuspend()) {
           return;  // Suspend failed to complete.
         }
@@ -1317,7 +1325,10 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
         if (suspend_fallback()) {
           ::suspend_fallback(root_resource(), ctx.sflags());
           // Unless in test env, we should not reach here.
-          callback(ZX_ERR_TIMED_OUT);
+          if (callback_info->callback) {
+            callback_info->callback(ZX_ERR_TIMED_OUT);
+            callback_info->callback = nullptr;
+          }
         }
       },
       zx::sec(30));
@@ -1378,10 +1389,10 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
         }
         log(ERROR, "devcoordinator: SYSTEM RESUME TIMED OUT\n");
         callback(ZX_ERR_TIMED_OUT);
-        // TODO(ravoorir): Figure out what is the best strategy of
-        // for recovery here. Should we put back all devices in
-        // suspend? In future, this could be more interactive with
-        // the UI.
+        // TODO(ravoorir): Figure out what is the best strategy
+        // of for recovery here. Should we put back all devices
+        // in suspend? In future, this could be more interactive
+        // with the UI.
       },
       config_.resume_timeout);
   if (status != ZX_OK) {
@@ -1668,6 +1679,49 @@ void Coordinator::BindDrivers() {
 
 void Coordinator::UseFallbackDrivers() { drivers_.splice(drivers_.end(), fallback_drivers_); }
 
+// TODO(fxb/42257): Temporary helper to convert state to flags.
+// Will be removed eventually.
+uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
+    power_fidl::statecontrol::SystemPowerState state) {
+  switch (state) {
+    case power_fidl::statecontrol::SystemPowerState::FULLY_ON:
+      return 0;
+    case power_fidl::statecontrol::SystemPowerState::REBOOT:
+      return power_fidl::statecontrol::SUSPEND_FLAG_REBOOT;
+    case power_fidl::statecontrol::SystemPowerState::REBOOT_BOOTLOADER:
+      return power_fidl::statecontrol::SUSPEND_FLAG_REBOOT_BOOTLOADER;
+    case power_fidl::statecontrol::SystemPowerState::REBOOT_RECOVERY:
+      return power_fidl::statecontrol::SUSPEND_FLAG_REBOOT_RECOVERY;
+    case power_fidl::statecontrol::SystemPowerState::POWEROFF:
+      return power_fidl::statecontrol::SUSPEND_FLAG_POWEROFF;
+    case power_fidl::statecontrol::SystemPowerState::MEXEC:
+      return power_fidl::statecontrol::SUSPEND_FLAG_MEXEC;
+    case power_fidl::statecontrol::SystemPowerState::SUSPEND_RAM:
+      return power_fidl::statecontrol::SUSPEND_FLAG_SUSPEND_RAM;
+    default:
+      return 0;
+  }
+}
+
+void Coordinator::Suspend(
+    power_fidl::statecontrol::SystemPowerState state,
+    power_fidl::statecontrol::Admin::Interface::SuspendCompleter::Sync completer) {
+  auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    power_fidl::statecontrol::Admin_Suspend_Result result;
+    power_fidl::statecontrol::Admin_Suspend_Response response;
+    if (status != ZX_OK) {
+      result.set_err(&status);
+    } else {
+      result.set_response(&response);
+    }
+    completer.Reply(std::move(result));
+  };
+
+  Suspend(
+      SuspendContext(SuspendContext::Flags::kSuspend, GetSuspendFlagsFromSystemPowerState(state)),
+      std::move(callback));
+}
+
 void Coordinator::InitOutgoingServices() {
   const auto& svc_dir = outgoing_services_.svc_dir();
 
@@ -1698,9 +1752,20 @@ void Coordinator::InitOutgoingServices() {
       printf("Failed to bind to client channel: %d \n", status);
     }
     return status;
-  };  // namespace devmgr
+  };
   svc_dir->AddEntry(fuchsia_device_manager_Administrator_Name,
                     fbl::MakeRefCounted<fs::Service>(admin));
+
+  const auto admin2 = [this](zx::channel request) {
+    auto status = fidl::Bind(this->config_.dispatcher, std::move(request), this);
+    if (status != ZX_OK) {
+      printf("Failed to bind to client channel: %d \n", status);
+    }
+    return status;
+  };
+
+  svc_dir->AddEntry(power_fidl::statecontrol::Admin::Name,
+                    fbl::MakeRefCounted<fs::Service>(admin2));
 
   const auto debug = [this](zx::channel request) {
     static constexpr fuchsia_device_manager_DebugDumper_ops_t kOps = {

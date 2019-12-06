@@ -7,6 +7,7 @@
 
 #include <lib/async/cpp/wait.h>
 #include <lib/svc/outgoing.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
@@ -27,7 +28,9 @@
 #include "devhost.h"
 #include "device.h"
 #include "driver.h"
+#include "fbl/auto_lock.h"
 #include "fuchsia/device/manager/llcpp/fidl.h"
+#include "fuchsia/hardware/power/statecontrol/llcpp/fidl.h"
 #include "init-task.h"
 #include "metadata.h"
 #include "resume-task.h"
@@ -178,8 +181,14 @@ struct CoordinatorConfig {
 
 using LoaderServiceConnector = fit::function<zx_status_t(zx::channel*)>;
 using ResumeCallback = std::function<void(zx_status_t)>;
+using SuspendCallback = fit::function<void(zx_status_t)>;
 
-class Coordinator {
+struct SuspendCallbackInfo : public fbl::RefCounted<SuspendCallbackInfo> {
+  SuspendCallbackInfo(SuspendCallback callback) : callback(std::move(callback)) {}
+  SuspendCallback callback;
+};
+
+class Coordinator : public llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface {
  public:
   Coordinator(const Coordinator&) = delete;
   Coordinator& operator=(const Coordinator&) = delete;
@@ -354,6 +363,12 @@ class Coordinator {
   SuspendContext suspend_context_;
   ResumeContext resume_context_;
 
+  // Power state control interface
+  void Suspend(
+      llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState state,
+      llcpp::fuchsia::hardware::power::statecontrol::Admin::Interface::SuspendCompleter::Sync
+          completer);
+
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                   const zx_packet_signal_t* signal);
   async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
@@ -370,8 +385,10 @@ class Coordinator {
   void DumpDrivers(VmoWriter* vmo) const;
 
   void BuildSuspendList();
-  void Suspend(SuspendContext ctx, std::function<void(zx_status_t)> callback);
+  void Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> callback);
   void Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback);
+  uint32_t GetSuspendFlagsFromSystemPowerState(
+      llcpp::fuchsia::hardware::power::statecontrol::SystemPowerState state);
 
   std::unique_ptr<Driver> ValidateDriver(std::unique_ptr<Driver> drv);
 

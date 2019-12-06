@@ -5,6 +5,7 @@
 #include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/device/cpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/hardware/pty/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/paver/cpp/fidl.h>
@@ -33,6 +34,7 @@ std::vector<std::string> RootRealmServices() {
       fuchsia::boot::WriteOnlyLog::Name_,
       fuchsia::device::NameProvider::Name_,
       fuchsia::device::manager::Administrator::Name_,
+      fuchsia::hardware::power::statecontrol::Admin::Name_,
       fuchsia::device::manager::DebugDumper::Name_,
       fuchsia::hardware::pty::Device::Name_,
       fuchsia::kernel::Counter::Name_,

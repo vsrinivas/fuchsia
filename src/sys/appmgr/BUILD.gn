@@ -113,6 +113,7 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//zircon/system/fidl/fuchsia-boot",
     "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol",
     "//zircon/system/fidl/fuchsia-hardware-pty",
     "//zircon/system/fidl/fuchsia-kernel",
     "//zircon/system/fidl/fuchsia-paver",
@@ -159,6 +160,7 @@ executable("unittest_bin") {
     "//third_party/googletest:gmock",
     "//zircon/public/lib/memfs",
     "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol",
     "//zircon/system/fidl/fuchsia-kernel",
   ]
 }
