@@ -20,32 +20,6 @@ constexpr uint32_t kWidth = 1080;
 constexpr uint32_t kHeight = 764;
 constexpr uint32_t kNumberOfBuffers = 8;
 
-TEST(CreateContiguousBufferCollectionInfo, CreatesCollection) {
-  zx_handle_t bti_handle;
-  ASSERT_EQ(fake_bti_create(&bti_handle), ZX_OK);
-
-  fuchsia_sysmem_BufferCollectionInfo buffer_collection;
-  ASSERT_EQ(CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth, kHeight,
-                                                 kNumberOfBuffers),
-            ZX_OK);
-
-  // Check it made the buffer collection like we want:
-  EXPECT_EQ(buffer_collection.buffer_count, kNumberOfBuffers);
-  EXPECT_EQ(buffer_collection.format.image.width, kWidth);
-  EXPECT_EQ(buffer_collection.format.image.height, kHeight);
-  for (uint32_t i = 0; i < countof(buffer_collection.vmos); ++i) {
-    if (i < kNumberOfBuffers) {
-      EXPECT_FALSE(buffer_collection.vmos[i] == ZX_HANDLE_INVALID);
-    } else {
-      EXPECT_TRUE(buffer_collection.vmos[i] == ZX_HANDLE_INVALID);
-    }
-  }
-
-  // Clean up
-  EXPECT_EQ(DestroyContiguousBufferCollection(&buffer_collection), ZX_OK);
-  fake_bti_destroy(bti_handle);
-}
-
 TEST(CreateContiguousBufferCollectionInfo2, CreatesCollection2) {
   zx_handle_t bti_handle;
   ASSERT_EQ(fake_bti_create(&bti_handle), ZX_OK);
@@ -74,17 +48,6 @@ TEST(CreateContiguousBufferCollectionInfo2, CreatesCollection2) {
   // Clean up
   EXPECT_EQ(DestroyContiguousBufferCollection(buffer_collection), ZX_OK);
   fake_bti_destroy(bti_handle);
-}
-
-TEST(CreateContiguousBufferCollectionInfo, FailsOnBadHandle) {
-  zx_handle_t bti_handle = ZX_HANDLE_INVALID;
-  fuchsia_sysmem_BufferCollectionInfo buffer_collection;
-  EXPECT_EQ(camera::CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth,
-                                                         kHeight, kNumberOfBuffers),
-            ZX_ERR_INVALID_ARGS);
-
-  // Clean up
-  EXPECT_EQ(DestroyContiguousBufferCollection(&buffer_collection), ZX_OK);
 }
 
 TEST(CreateContiguousBufferCollectionInfo2, FailsOnBadHandle) {

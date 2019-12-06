@@ -35,18 +35,6 @@ protocol OutputStream {
 
 [Layout = "ddk-protocol"]
 protocol Isp {
-
-    // The driver returns the Stream protocol for this particular stream.
-    // |buffer_collection| : Hold the format and pool of VMOs that the ISP will
-    //                       produce
-    // |stream| : The protocol which calls a function when the ISP is done
-    //            writing to a buffer.
-    // @Returns: |status| : indicates if the stream was created.
-    // @Returns: |st| : Protocol over which the flow of frames is controlled.
-    CreateOutputStream(zircon.device.sysmem.BufferCollectionInfo buffer_collection,
-                      zircon.device.camera.FrameRate rate, StreamType type,
-                      OutputStreamCallback stream) -> (zx.status s, OutputStream st);
-
     // The driver returns the Stream protocol for this particular stream.
     // |buffer_collection| : Hold the format and pool of VMOs that the ISP will
     //                       produce

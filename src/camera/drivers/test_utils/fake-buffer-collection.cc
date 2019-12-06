@@ -26,59 +26,7 @@ constexpr auto TAG = "FakeBufferCollection";
 // TODO(41499): Track creation & destruction of buffer collections for programmatic
 //      checks of leaks.
 
-// Utility to ensure log messages will appear during testing.
-bool kEnableLogsInBufferCollections = false;
-
 const uint32_t kIspLineAlignment = 128;  // Required alignment of ISP buffers
-
-void InitFakeBufferCollectionLogging() {
-  if (kEnableLogsInBufferCollections) {
-    fx_log_init();
-  }
-}
-
-zx_status_t CreateContiguousBufferCollectionInfo(
-    fuchsia_sysmem_BufferCollectionInfo* buffer_collection, zx_handle_t bti_handle, uint32_t width,
-    uint32_t height, uint32_t num_buffers) {
-  // Initialize all the vmo handles to invalid.
-  for (unsigned int& vmo : buffer_collection->vmos) {
-    vmo = ZX_HANDLE_INVALID;
-  }
-
-  if (bti_handle == ZX_HANDLE_INVALID || num_buffers >= countof(buffer_collection->vmos)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  buffer_collection->format.image = {.width = width,
-                                     .height = height,
-                                     .layers = 2u,
-                                     .pixel_format =
-                                         {
-                                             .type = fuchsia_sysmem_PixelFormatType_NV12,
-                                             .has_format_modifier = false,
-                                             .format_modifier = {.value = 0},
-                                         },
-                                     .color_space =
-                                         {
-                                             .type = fuchsia_sysmem_ColorSpaceType_SRGB,
-                                         },
-                                     // The planes data is not used currently:
-                                     .planes = {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};
-  buffer_collection->buffer_count = num_buffers;
-  // Get the image size for the vmo:
-  DmaFormat full_res_format(buffer_collection->format.image);
-  buffer_collection->vmo_size = full_res_format.GetImageSize();
-  zx_status_t status;
-  for (uint32_t i = 0; i < buffer_collection->buffer_count; ++i) {
-    status = zx_vmo_create_contiguous(bti_handle, buffer_collection->vmo_size, 0,
-                                      &buffer_collection->vmos[i]);
-    if (status != ZX_OK) {
-      FX_LOG(ERROR, TAG, "Failed to allocate Buffer Collection");
-      return status;
-    }
-  }
-  return ZX_OK;
-}
 
 static void GetFakeBufferSettings(buffer_collection_info_2_t& buffer_collection, size_t vmo_size) {
   buffer_collection.settings.buffer_settings.size_bytes = vmo_size;
@@ -129,8 +77,6 @@ zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format
 zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buffer_collection,
                                                  const image_format_2_t& image_format,
                                                  zx_handle_t bti_handle, uint32_t num_buffers) {
-  InitFakeBufferCollectionLogging();
-
   // Initialize all the vmo handles to invalid.
   for (auto& buffer : buffer_collection.buffers) {
     buffer.vmo = ZX_HANDLE_INVALID;
@@ -154,23 +100,6 @@ zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buf
   }
 
   return ZX_OK;
-}
-
-zx_status_t DestroyContiguousBufferCollection(
-    fuchsia_sysmem_BufferCollectionInfo* buffer_collection) {
-  auto result = ZX_OK;
-
-  // Release all the vmo handles.
-  for (auto& vmo : buffer_collection->vmos) {
-    auto status = zx_handle_close(vmo);
-    if (status != ZX_OK) {
-      FX_LOG(WARNING, TAG, "Error destroying a vmo.");
-      result = status;
-    }
-    vmo = ZX_HANDLE_INVALID;
-  }
-
-  return result;
 }
 
 zx_status_t DestroyContiguousBufferCollection(

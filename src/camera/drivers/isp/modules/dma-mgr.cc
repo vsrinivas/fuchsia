@@ -164,12 +164,6 @@ zx_status_t DmaManager::Configure(
   return ZX_OK;
 }
 
-zx_status_t DmaManager::Configure(
-    fuchsia_sysmem_BufferCollectionInfo buffer_collection,
-    fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 void DmaManager::Enable() {
   ZX_ASSERT(frame_available_callback_ != nullptr);
   enabled_ = true;

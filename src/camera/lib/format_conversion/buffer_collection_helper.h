@@ -18,18 +18,13 @@ class BufferCollectionHelper {
  public:
   explicit BufferCollectionHelper(
       const fuchsia::sysmem::BufferCollectionInfo_2& hlcpp_buffer_collection) {
-    ConvertToOldCTypeBufferCollectionInfo(hlcpp_buffer_collection, &old_c_buffer_collection_);
     ConvertToCTypeBufferCollectionInfo2(hlcpp_buffer_collection, &c_buffer_collection_);
   }
-
-  // TODO(braval): Remove this when we completely move to new buffer collection type
-  fuchsia_sysmem_BufferCollectionInfo* GetOldC() { return &old_c_buffer_collection_; }
 
   fuchsia_sysmem_BufferCollectionInfo_2* GetC() { return &c_buffer_collection_; }
 
  private:
   fuchsia_sysmem_BufferCollectionInfo_2 c_buffer_collection_;
-  fuchsia_sysmem_BufferCollectionInfo old_c_buffer_collection_;
 };
 
 }  // namespace camera

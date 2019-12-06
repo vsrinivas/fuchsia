@@ -30,30 +30,6 @@ fuchsia_sysmem_ImageFormat_2 ConvertHlcppImageFormat2toCType(
   };
 }
 
-void ConvertToOldCTypeBufferCollectionInfo(
-    const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection,
-    fuchsia_sysmem_BufferCollectionInfo* old_buffer_collection) {
-  old_buffer_collection->buffer_count = buffer_collection.buffer_count;
-  old_buffer_collection->format.image.width =
-      buffer_collection.settings.image_format_constraints.max_coded_width;
-  old_buffer_collection->format.image.height =
-      buffer_collection.settings.image_format_constraints.max_coded_height;
-  old_buffer_collection->format.image.layers =
-      buffer_collection.settings.image_format_constraints.layers;
-  old_buffer_collection->format.image.pixel_format =
-      *reinterpret_cast<const fuchsia_sysmem_PixelFormat*>(
-          &buffer_collection.settings.image_format_constraints.pixel_format);
-  old_buffer_collection->format.image.color_space =
-      *reinterpret_cast<const fuchsia_sysmem_ColorSpace*>(
-          &buffer_collection.settings.image_format_constraints.color_space);
-  old_buffer_collection->format.image.planes[0].bytes_per_row =
-      buffer_collection.settings.image_format_constraints.max_bytes_per_row;
-  for (uint32_t i = 0; i < buffer_collection.buffer_count; ++i) {
-    old_buffer_collection->vmos[i] = buffer_collection.buffers[i].vmo.get();
-  }
-  old_buffer_collection->vmo_size = buffer_collection.settings.buffer_settings.size_bytes;
-}
-
 void ConvertToCTypeBufferCollectionInfo2(
     const fuchsia::sysmem::BufferCollectionInfo_2& hlcpp_buffer_collection,
     fuchsia_sysmem_BufferCollectionInfo_2* buffer_collection) {

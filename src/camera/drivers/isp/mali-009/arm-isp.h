@@ -92,24 +92,6 @@ class ArmIspDevice : public IspDeviceType,
   // response interface between the camera controller and the ISP.
   // |buffer_collection| : Hold the format and pool of VMOs that the ISP will
   //                       produce
-  // |stream| : The protocol which calls a function when the ISP is done
-  //            writing to a buffer.
-  // |rate|  : The frame rate of the output
-  // |type|  : The stream type (full resolution or downscaled)
-  // |out_s| : (output) Protocol over which the flow of frames is controlled.
-  // @Return : indicates if the stream was created.
-  zx_status_t IspCreateOutputStream(const buffer_collection_info_t* buffer_collection,
-                                    const frame_rate_t* rate, stream_type_t type,
-                                    const output_stream_callback_t* stream,
-                                    output_stream_protocol_t* out_s);
-
-  // +++++++++   ZX_PROTOCOL_ISP +++++++++++++++++++++++
-  // This is the interface that is used by the Camera Controller
-  // to set the format for the ISP output streams, provide buffers
-  // for the frames that the ISP writes to, and establishes a control and
-  // response interface between the camera controller and the ISP.
-  // |buffer_collection| : Hold the format and pool of VMOs that the ISP will
-  //                       produce
   // |image_format| : The format of images in the stream
   // |rate|  : The frame rate of the output
   // |type|  : The stream type (full resolution or downscaled)

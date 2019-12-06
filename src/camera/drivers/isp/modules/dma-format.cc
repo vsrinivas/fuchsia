@@ -44,20 +44,6 @@ uint32_t DmaFormat::GetBytesPerPixel() const {
 
 bool DmaFormat::HasSecondaryChannel() const { return secondary_plane_select_ > 0; }
 
-// TODO(garratt): add more type compatibility to sysmem.
-DmaFormat::PixelType ImageFormatToPixelType(const fuchsia_sysmem_ImageFormat& format) {
-  switch (format.pixel_format.type) {
-    case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
-      return DmaFormat::PixelType::RGB32;
-    case fuchsia_sysmem_PixelFormatType_NV12:
-      return DmaFormat::PixelType::NV12_YUV;
-    case fuchsia_sysmem_PixelFormatType_YUY2:
-      return DmaFormat::PixelType::YUY2;
-  }
-  FX_LOG(ERROR, TAG, "pixel_format is incompatible with the ISP's PixelType");
-  return DmaFormat::PixelType::INVALID;
-}
-
 DmaFormat::PixelType ImageFormatToPixelType(const fuchsia_sysmem_ImageFormat_2& format) {
   switch (format.pixel_format.type) {
     case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
@@ -67,12 +53,10 @@ DmaFormat::PixelType ImageFormatToPixelType(const fuchsia_sysmem_ImageFormat_2& 
     case fuchsia_sysmem_PixelFormatType_YUY2:
       return DmaFormat::PixelType::YUY2;
   }
-  FX_LOG(ERROR, "", "pixel_format is incompatible with the ISP's PixelType\n");
+  FX_LOG(ERROR, TAG, "pixel_format is incompatible with the ISP's PixelType\n");
   return DmaFormat::PixelType::INVALID;
 }
 
-DmaFormat::DmaFormat(const fuchsia_sysmem_ImageFormat& format)
-    : DmaFormat(format.width, format.height, ImageFormatToPixelType(format), false) {}
 DmaFormat::DmaFormat(const fuchsia_sysmem_ImageFormat_2& format)
     : DmaFormat(format.coded_width, format.coded_height, ImageFormatToPixelType(format), false) {}
 

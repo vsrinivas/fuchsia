@@ -13,7 +13,6 @@
 class FakeIsp {
  public:
   FakeIsp() {
-    isp_protocol_ops_.create_output_stream = IspCreateOutputStream;
     isp_protocol_ops_.create_output_stream2 = IspCreateOutputStream2;
     isp_protocol_.ctx = this;
     isp_protocol_.ops = &isp_protocol_ops_;
@@ -29,17 +28,6 @@ class FakeIsp {
   zx_status_t Stop() { return ZX_OK; }
 
   // |ZX_PROTOCOL_ISP|
-  zx_status_t IspCreateOutputStream(const buffer_collection_info_t* buffer_collection,
-                                    const frame_rate_t* rate, stream_type_t type,
-                                    const output_stream_callback_t* stream,
-                                    output_stream_protocol_t* out_s) {
-    callback_ = stream;
-    out_s->ctx = this;
-    out_s->ops->start = Start;
-    out_s->ops->stop = Stop;
-    return ZX_OK;
-  }
-
   zx_status_t IspCreateOutputStream2(const buffer_collection_info_2_t* buffer_collection,
                                      const image_format_2_t* image_format, const frame_rate_t* rate,
                                      stream_type_t type, const output_stream_callback_t* stream,
@@ -52,15 +40,6 @@ class FakeIsp {
   }
 
  private:
-  static zx_status_t IspCreateOutputStream(void* ctx,
-                                           const buffer_collection_info_t* buffer_collection,
-                                           const frame_rate_t* rate, stream_type_t type,
-                                           const output_stream_callback_t* stream,
-                                           output_stream_protocol_t* out_st) {
-    return static_cast<FakeIsp*>(ctx)->IspCreateOutputStream(buffer_collection, rate, type, stream,
-                                                             out_st);
-  }
-
   static zx_status_t IspCreateOutputStream2(void* ctx,
                                             const buffer_collection_info_2_t* buffer_collection,
                                             const image_format_2_t* image_format,
