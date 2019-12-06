@@ -16,11 +16,19 @@ SCRIPTS_DIR = os.path.dirname(SCRIPT_DIR)
 FUCHSIA_ROOT = os.path.dirname(SCRIPTS_DIR)
 FX = os.path.join(SCRIPTS_DIR, 'fx')
 
+
+class Type(object):
+    DRIVER = 'zx_driver'
+    EXECUTABLE = 'zx_executable'
+    TEST = 'zx_test'
+    TEST_DRIVER = 'zx_test_driver'
+
+
 BINARY_TYPES = {
-    'zx_driver': 'driver_module',
-    'zx_executable': 'executable',
-    'zx_test': 'test',
-    'zx_test_driver': 'driver_module',
+    Type.DRIVER: 'driver_module',
+    Type.EXECUTABLE: 'executable',
+    Type.TEST: 'test',
+    Type.TEST_DRIVER: 'driver_module',
 }
 
 
@@ -42,6 +50,7 @@ def transform_build_file(build):
     # First pass: identify contents of the build file.
     binaries = []
     has_test_binaries = False
+    has_drivers = False
     binary_types = BINARY_TYPES.keys()
     unclear_types = ['library']
     n_lines = 0
@@ -54,8 +63,10 @@ def transform_build_file(build):
                 type, name = match.groups()
                 if type in binary_types:
                     binaries.append(name)
-                    if type == 'zx_test':
+                    if type == Type.TEST:
                         has_test_binaries = True
+                    if type == Type.DRIVER or type == Type.TEST_DRIVER:
+                        has_drivers = True
                 if type in unclear_types:
                     print('Warning: target ' + name + ' of type ' + type + ' '
                           'needs to be manually converted.')
@@ -95,27 +106,29 @@ def transform_build_file(build):
             sys.stdout.write('\n')
             sys.stdout.write('assert(!defined(zx) || zx != "/", "This file can only be used in the Fuchsia GN build.")\n')
             sys.stdout.write('\n')
+            if has_drivers:
+                sys.stdout.write('import("//build/config/fuchsia/rules.gni")\n')
             if has_test_binaries:
                 sys.stdout.write('import("//build/test.gni")\n')
             sys.stdout.write('import("//build/unification/images/migrated_manifest.gni")\n')
             sys.stdout.write('\n')
 
         # Add extra parameters to tests.
-        if starting_type == 'zx_test':
+        if starting_type == Type.TEST:
             sys.stdout.write('  # Dependent manifests unfortunately cannot be marked as `testonly`.\n')
             sys.stdout.write('  # Remove when converting this file to proper GN build idioms.\n')
             sys.stdout.write('  testonly = false\n')
 
-        if starting_type == 'zx_test_driver':
+        if starting_type == Type.TEST_DRIVER:
             sys.stdout.write('  test = true\n')
 
-        if starting_type in ['zx_driver', 'zx_test_driver']:
+        if starting_type in [Type.DRIVER, Type.TEST_DRIVER]:
             sys.stdout.write('  defines = [ "_ALL_SOURCE" ]\n')
             sys.stdout.write('  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]\n')
             sys.stdout.write('  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]\n')
             sys.stdout.write('  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]\n')
 
-        if starting_type in ['zx_executable', 'zx_test']:
+        if starting_type in [Type.EXECUTABLE, Type.TEST]:
             sys.stdout.write('  configs += [ "//build/unification/config:zircon-migrated" ]\n')
 
 
