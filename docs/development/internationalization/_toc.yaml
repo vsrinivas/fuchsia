@@ -10,3 +10,5 @@ toc:
   path: /docs/development/internationalization/icu_data.md
 - title: "Localizing mods"
   path: /docs/development/internationalization/localizing_mods.md
+- title: "Profile Preferences"
+  path: /docs/development/internationalization/fuchsia_intl.md
