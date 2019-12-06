@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:async/async.dart';
 import 'package:path/path.dart' as p;
 import 'package:fxtest/fxtest.dart';
 import 'package:mockito/mockito.dart';
@@ -5,6 +7,26 @@ import 'package:test/test.dart';
 
 // Mock this because it checks environment variables
 class MockEnvReader extends Mock implements EnvReader {}
+
+// Mock this because it creates processes
+class FakeTestRunner extends Fake implements TestRunner {
+  final int exitCode;
+
+  FakeTestRunner(this.exitCode);
+  FakeTestRunner.passing() : exitCode = 0;
+  FakeTestRunner.failing() : exitCode = 2;
+
+  @override
+  Future<ProcessResult> run(
+    String command,
+    List<String> args, {
+    String workingDirectory,
+  }) async {
+    return Future.value(
+      ProcessResult(1, 0, args.join(' '), workingDirectory.toString()),
+    );
+  }
+}
 
 void main() {
   // out of test, out of fxtest, out of scripts
@@ -109,8 +131,8 @@ void main() {
         eventEmitter: _ignoreEvents,
         testFlags: testFlags,
       );
-      expect(parsedManifest.testRunners, hasLength(1));
-      expect(parsedManifest.testRunners[0].testDefinition.name, '//host/test');
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.testBundles[0].testDefinition.name, '//host/test');
     });
 
     test('when the -d flag is passed', () {
@@ -122,8 +144,8 @@ void main() {
         eventEmitter: _ignoreEvents,
         testFlags: testFlags,
       );
-      expect(parsedManifest.testRunners, hasLength(1));
-      expect(parsedManifest.testRunners[0].testDefinition.name, 'device test');
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
     });
 
     test('when no flags are passed', () {
@@ -134,7 +156,7 @@ void main() {
         eventEmitter: _ignoreEvents,
         testFlags: testFlags,
       );
-      expect(parsedManifest.testRunners, hasLength(2));
+      expect(parsedManifest.testBundles, hasLength(2));
     });
 
     test('when packageUrl `name` is matched', () {
@@ -145,8 +167,8 @@ void main() {
         eventEmitter: _ignoreEvents,
         testFlags: testFlags,
       );
-      expect(parsedManifest.testRunners, hasLength(1));
-      expect(parsedManifest.testRunners[0].testDefinition.name, 'device test');
+      expect(parsedManifest.testBundles, hasLength(1));
+      expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
     });
 
     test('when packageUrl `name` is matched but discriminating flag prevents',
@@ -158,7 +180,7 @@ void main() {
         eventEmitter: _ignoreEvents,
         testFlags: testFlags,
       );
-      expect(parsedManifest.testRunners, hasLength(0));
+      expect(parsedManifest.testBundles, hasLength(0));
     });
 
     test('when . is passed from the build dir', () {
@@ -180,15 +202,15 @@ void main() {
         testFlags: testFlags,
       );
 
-      expect(parsedManifest.testRunners, hasLength(1));
+      expect(parsedManifest.testBundles, hasLength(1));
       expect(
-        parsedManifest.testRunners[0].testDefinition.name,
+        parsedManifest.testBundles[0].testDefinition.name,
         'awesome host test',
       );
     });
 
     test('when . is passed from the build dir and there\'s device tests', () {
-      TestFlags testFlags = TestFlags(testNames: ['.']);
+      TestFlags testFlags = TestFlags.all(['.']);
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([
@@ -206,7 +228,7 @@ void main() {
         testFlags: testFlags,
       );
 
-      expect(parsedManifest.testRunners, hasLength(0));
+      expect(parsedManifest.testBundles, hasLength(0));
     });
   });
 
@@ -401,6 +423,51 @@ void main() {
         fuchsiaLocator: fuchsiaLocator,
       );
       expect(collector.collect(), ['.']);
+    });
+  });
+
+  group('arguments are passed through correctly', () {
+    void _ignoreEvents(TestEvent _) {}
+    TestsManifestReader tr = TestsManifestReader();
+    List<TestDefinition> testDefinitions = [
+      TestDefinition(
+        buildDir: buildDir,
+        os: 'fuchsia',
+        packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#test.cmx',
+        name: 'device test',
+      ),
+      TestDefinition(
+        buildDir: buildDir,
+        os: 'linux',
+        path: '/asdf',
+        name: 'example test',
+      ),
+    ];
+
+    test('when there are pass-thru commands', () async {
+      var testFlags = TestFlags(
+        testNames: ['example test'],
+        passThroughTokens: ['--xyz'],
+      );
+      ParsedManifest manifest = tr.aggregateTests(
+        buildDir: '/custom',
+        eventEmitter: _ignoreEvents,
+        testDefinitions: testDefinitions,
+        testFlags: testFlags,
+        testRunner: FakeTestRunner.passing(),
+      );
+      expect(manifest.testBundles, hasLength(1));
+      var stream = StreamQueue(manifest.testBundles[0].run());
+
+      TestEvent event = await stream.next;
+      expect(event, isA<TestStarted>());
+      event = await stream.next;
+      expect(event, isA<TestResult>());
+      TestResult resultEvent = event;
+
+      // [FakeTestRunner] passes args through to its stdout, so we can check
+      // that the args were in fact passed through by evaluating that
+      expect(resultEvent.message, '--xyz');
     });
   });
 }

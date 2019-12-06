@@ -12,6 +12,9 @@ class _FlagsMixin {
   /// The maximum number of tests to run. If 0, all tests will be executed.
   final int limit;
   final bool allOutput;
+
+  /// Extra tokens to be passed through to individual tests.
+  final List<String> passThroughTokens;
   final bool simpleOutput;
   final bool shouldOnlyRunDeviceTests;
   final bool shouldOnlyRunHostTests;
@@ -25,6 +28,7 @@ class _FlagsMixin {
     this.isVerbose = false,
     this.limit = 0,
     this.allOutput = false,
+    this.passThroughTokens = const [],
     this.simpleOutput = false,
     this.shouldOnlyRunDeviceTests = false,
     this.shouldOnlyRunHostTests = false,
@@ -41,6 +45,7 @@ class _FlagsMixin {
   allOutput: $allOutput,
   limit: $limit
   isVerbose: $isVerbose
+  passThroughTokens: $passThroughTokens,
   simpleOutput: $simpleOutput,
   shouldOnlyRunDeviceTests: $shouldOnlyRunDeviceTests
   shouldOnlyRunHostTests: $shouldOnlyRunHostTests
@@ -83,27 +88,29 @@ class TestFlags extends _FlagsMixin {
     dryRun,
     isVerbose,
     limit,
-    allOutput = false,
-    simpleOutput = false,
-    shouldFailFast = false,
-    shouldOnlyRunDeviceTests = false,
-    shouldOnlyRunHostTests = false,
-    shouldPrintSkipped = false,
-    shouldRandomizeTestOrder = false,
-    shouldSilenceUnsupported = false,
+    allOutput,
+    passThroughTokens,
+    simpleOutput,
+    shouldFailFast,
+    shouldOnlyRunDeviceTests,
+    shouldOnlyRunHostTests,
+    shouldPrintSkipped,
+    shouldRandomizeTestOrder,
+    shouldSilenceUnsupported,
     warnSlowerThan,
   }) : super(
-          dryRun: dryRun,
-          isVerbose: isVerbose,
+          dryRun: dryRun ?? false,
+          isVerbose: isVerbose ?? false,
           limit: limit,
-          allOutput: allOutput,
-          simpleOutput: simpleOutput,
-          shouldFailFast: shouldFailFast,
-          shouldOnlyRunDeviceTests: shouldOnlyRunDeviceTests,
-          shouldOnlyRunHostTests: shouldOnlyRunHostTests,
-          shouldPrintSkipped: shouldPrintSkipped,
-          shouldRandomizeTestOrder: shouldRandomizeTestOrder,
-          shouldSilenceUnsupported: shouldSilenceUnsupported,
+          allOutput: allOutput ?? false,
+          passThroughTokens: passThroughTokens ?? <String>[],
+          simpleOutput: simpleOutput ?? false,
+          shouldFailFast: shouldFailFast ?? false,
+          shouldOnlyRunDeviceTests: shouldOnlyRunDeviceTests ?? false,
+          shouldOnlyRunHostTests: shouldOnlyRunHostTests ?? false,
+          shouldPrintSkipped: shouldPrintSkipped ?? false,
+          shouldRandomizeTestOrder: shouldRandomizeTestOrder ?? false,
+          shouldSilenceUnsupported: shouldSilenceUnsupported ?? false,
           warnSlowerThan: warnSlowerThan,
         );
 
@@ -169,6 +176,7 @@ class TestFlags extends _FlagsMixin {
         limit: 0,
         isVerbose: isVerbose,
         allOutput: allOutput,
+        passThroughTokens: passThroughTokens,
         simpleOutput: simpleOutput,
         shouldFailFast: shouldFailFast,
         shouldOnlyRunDeviceTests: shouldOnlyRunDeviceTests,
@@ -187,6 +195,7 @@ class TestFlags extends _FlagsMixin {
         isVerbose: isVerbose,
         limit: 0,
         allOutput: allOutput,
+        passThroughTokens: passThroughTokens,
         simpleOutput: simpleOutput,
         shouldFailFast: shouldFailFast,
         shouldOnlyRunDeviceTests: shouldOnlyRunDeviceTests,
@@ -211,6 +220,7 @@ class PermutatedTestFlags extends _FlagsMixin {
     isVerbose,
     limit,
     allOutput,
+    passThroughTokens,
     simpleOutput,
     shouldFailFast,
     shouldOnlyRunDeviceTests,
@@ -224,6 +234,7 @@ class PermutatedTestFlags extends _FlagsMixin {
           isVerbose: isVerbose,
           limit: limit,
           allOutput: allOutput,
+          passThroughTokens: passThroughTokens,
           simpleOutput: simpleOutput,
           shouldFailFast: shouldFailFast,
           shouldOnlyRunDeviceTests: shouldOnlyRunDeviceTests,

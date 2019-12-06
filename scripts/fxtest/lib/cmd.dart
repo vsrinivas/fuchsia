@@ -75,7 +75,7 @@ class FuchsiaTestCommand {
       testDefinitions: testDefinitions,
       testFlags: testFlags,
     );
-    manifestReader.reportOnTestRunners(
+    manifestReader.reportOnTestBundles(
       userFriendlyBuildDir: fuchsiaLocator.userFriendlyBuildDir,
       eventEmitter: emitEvent,
       parsedManifest: parsedManifest,
@@ -84,7 +84,7 @@ class FuchsiaTestCommand {
     var exitCode = 0;
 
     try {
-      await _runTests(parsedManifest.testRunners).forEach((event) {
+      await _runTests(parsedManifest.testBundles).forEach((event) {
         emitEvent(event);
         if (event is TestResult && !event.isSuccess) {
           exitCode = 2;
@@ -97,14 +97,14 @@ class FuchsiaTestCommand {
     return exitCode;
   }
 
-  Stream<TestEvent> _runTests(List<TestRunner> testRunners) async* {
+  Stream<TestEvent> _runTests(List<TestBundle> testBundles) async* {
     // Let the output formatter know that we're done parsing and
     // emitting preliminary events
     yield BeginningTests();
 
     var count = 0;
-    for (TestRunner testRunner in testRunners) {
-      yield* testRunner.run();
+    for (TestBundle testBundle in testBundles) {
+      yield* testBundle.run();
 
       count += 1;
       if (testFlags.limit > 0 && count >= testFlags.limit) {

@@ -93,6 +93,15 @@ Future<void> main(List<String> args) async {
             'development cycle, as "unsupported"\ntests are likely a problem '
             'with this command, not the tests.')
     ..addFlag('verbose', abbr: 'v', defaultsTo: false, negatable: false);
+
+  List<String> passThroughTokens = [];
+  if (args.contains('--')) {
+    // Starting at the <position of '--' + 1> to avoid capturing '--' itself
+    passThroughTokens = args.sublist(args.indexOf('--') + 1);
+    // ignore: parameter_assignments
+    args = args.sublist(0, args.indexOf('--'));
+  }
+
   ArgResults argResults;
   try {
     argResults = parser.parse(args);
@@ -128,6 +137,7 @@ Future<void> main(List<String> args) async {
     dryRun: argResults['dry'],
     isVerbose: argResults['verbose'] || argResults['output'],
     limit: int.parse(argResults['limit'] ?? '0'),
+    passThroughTokens: passThroughTokens,
     simpleOutput: !argResults['simple'],
     shouldFailFast: argResults['fail'],
     shouldOnlyRunDeviceTests: argResults['device'],

@@ -16,7 +16,7 @@ class ParsedManifest {
   final List<TestDefinition> testDefinitions;
 
   /// The runnable wrappers that encapsulate a Fuchsia test.
-  final List<TestRunner> testRunners;
+  final List<TestBundle> testBundles;
 
   /// Number of test entries in the manifest that would indicate duplicate work.
   final int numDuplicateTests;
@@ -27,7 +27,7 @@ class ParsedManifest {
 
   ParsedManifest({
     @required this.testDefinitions,
-    @required this.testRunners,
+    @required this.testBundles,
     this.numDuplicateTests,
     this.numUnparsedTests,
   });
@@ -77,14 +77,15 @@ class TestsManifestReader {
   }
 
   /// Loops over the provided list of [TestDefinition]s and, based on the
-  /// results of all registered [Checker]s, returns a list of [TestRunner]s.
+  /// results of all registered [Checker]s, returns a list of [TestBundle]s.
   ParsedManifest aggregateTests({
     @required List<TestDefinition> testDefinitions,
     @required void Function(TestEvent) eventEmitter,
     @required TestFlags testFlags,
     @required String buildDir,
+    TestRunner testRunner,
   }) {
-    List<TestRunner> testRunners = [];
+    List<TestBundle> testBundles = [];
     Set<String> seenPackages = {};
     int numDuplicateTests = 0;
     int numUnparsedTests = 0;
@@ -148,12 +149,16 @@ class TestsManifestReader {
 
             // Now that we know we're seeing this `packageName` for the first
             // time, we can add it to the queue
-            testRunners.add(TestRunner(
-              testDefinition,
-              workingDirectory: buildDir,
-              isDryRun: testFlags.dryRun,
-              raiseOnFailure: testFlags.shouldFailFast,
-            ));
+            testBundles.add(
+              TestBundle(
+                testDefinition,
+                extraFlags: testFlags.passThroughTokens,
+                isDryRun: testFlags.dryRun,
+                raiseOnFailure: testFlags.shouldFailFast,
+                workingDirectory: buildDir,
+                testRunner: testRunner,
+              ),
+            );
 
             // Setting this flag breaks out of the Tier 2 (PermutatedTestFlags)
             // loop
@@ -170,18 +175,18 @@ class TestsManifestReader {
     }
 
     if (testFlags.shouldRandomizeTestOrder) {
-      testRunners.shuffle();
+      testBundles.shuffle();
     }
 
     return ParsedManifest(
       numDuplicateTests: numDuplicateTests,
       numUnparsedTests: numUnparsedTests,
       testDefinitions: testDefinitions,
-      testRunners: testRunners,
+      testBundles: testBundles,
     );
   }
 
-  void reportOnTestRunners({
+  void reportOnTestBundles({
     @required ParsedManifest parsedManifest,
     @required TestFlags testFlags,
     @required void Function(TestEvent) eventEmitter,
@@ -211,11 +216,11 @@ class TestsManifestReader {
     ));
 
     int numTests = testFlags.limit == 0
-        ? parsedManifest.testRunners.length
+        ? parsedManifest.testBundles.length
         : testFlags.limit;
     eventEmitter(TestInfo(
       'Will run $numTests '
-      '${parsedManifest.testRunners.length != 1 ? "tests" : "test"}',
+      '${parsedManifest.testBundles.length != 1 ? "tests" : "test"}',
     ));
   }
 }

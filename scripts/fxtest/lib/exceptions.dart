@@ -20,3 +20,11 @@ class UnparsedTestException implements Exception {
   @override
   String toString() => message;
 }
+
+class UnrunnableTestException implements Exception {
+  final String message;
+  UnrunnableTestException(this.message);
+
+  @override
+  String toString() => message;
+}
