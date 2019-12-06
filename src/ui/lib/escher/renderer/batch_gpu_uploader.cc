@@ -32,7 +32,18 @@ BatchGpuUploader::Writer::~Writer() { FXL_DCHECK(!command_buffer_ && !buffer_); 
 void BatchGpuUploader::Writer::WriteBuffer(const BufferPtr& target, vk::BufferCopy region) {
   TRACE_DURATION("gfx", "escher::BatchGpuUploader::Writer::WriteBuffer");
 
+  // Set up pipeline flags and access flags for synchronization. See class
+  // comments for details.
+  constexpr auto kPipelineFlag = vk::PipelineStageFlagBits::eTransfer;
+  const auto kAccessFlagOutside =
+      vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eTransferWrite;
+  const auto kAccessFlagInside = vk::AccessFlagBits::eTransferWrite;
+
+  command_buffer_->BufferBarrier(buffer_, kPipelineFlag, kAccessFlagOutside, kPipelineFlag,
+                                 kAccessFlagInside);
   command_buffer_->vk().copyBuffer(buffer_->vk(), target->vk(), 1, &region);
+  command_buffer_->BufferBarrier(buffer_, kPipelineFlag, kAccessFlagInside, kPipelineFlag,
+                                 kAccessFlagOutside);
   command_buffer_->KeepAlive(target);
 }
 
@@ -40,14 +51,21 @@ void BatchGpuUploader::Writer::WriteImage(const ImagePtr& target, vk::BufferImag
                                           vk::ImageLayout final_layout) {
   TRACE_DURATION("gfx", "escher::BatchGpuUploader::Writer::WriteImage");
 
-  command_buffer_->TransitionImageLayout(target, vk::ImageLayout::eUndefined,
-                                         vk::ImageLayout::eTransferDstOptimal);
+  // Set up pipeline flags and access flags for synchronization. See class
+  // comments for details.
+  constexpr auto kPipelineFlag = vk::PipelineStageFlagBits::eTransfer;
+  const auto kAccessFlagOutside =
+      vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eTransferWrite;
+  const auto kAccessFlagInside = vk::AccessFlagBits::eTransferWrite;
+
+  command_buffer_->ImageBarrier(target, target->layout(), vk::ImageLayout::eTransferDstOptimal,
+                                kPipelineFlag, kAccessFlagOutside, kPipelineFlag,
+                                kAccessFlagInside);
   command_buffer_->vk().copyBufferToImage(buffer_->vk(), target->vk(),
                                           vk::ImageLayout::eTransferDstOptimal, 1, &region);
-  if (final_layout != vk::ImageLayout::eTransferDstOptimal) {
-    command_buffer_->TransitionImageLayout(target, vk::ImageLayout::eTransferDstOptimal,
-                                           final_layout);
-  }
+  command_buffer_->ImageBarrier(target, vk::ImageLayout::eTransferDstOptimal, final_layout,
+                                kPipelineFlag, kAccessFlagInside, kPipelineFlag,
+                                kAccessFlagOutside);
 
   command_buffer_->KeepAlive(target);
 }

@@ -125,6 +125,13 @@ void BatchGpuDownloader::ScheduleReadImage(const ImagePtr& source, vk::BufferIma
 void BatchGpuDownloader::CopyBuffersAndImagesToTargetBuffer(BufferPtr target_buffer) {
   TRACE_DURATION("gfx", "BatchGpuDownloader::CopyBuffersAndImagesToTargetBuffer");
 
+  // Set up pipeline flags and access flags for synchronization. See class
+  // comments for details.
+  constexpr auto kPipelineFlag = vk::PipelineStageFlagBits::eTransfer;
+  const auto kAccessFlagOutside =
+      vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eTransferWrite;
+  const auto kAccessFlagInside = vk::AccessFlagBits::eTransferRead;
+
   for (const auto& copy_info_record : copy_info_records_) {
     switch (copy_info_record.type) {
       case CopyType::COPY_IMAGE: {
@@ -137,20 +144,26 @@ void BatchGpuDownloader::CopyBuffersAndImagesToTargetBuffer(BufferPtr target_buf
                                  ? source->layout()
                                  : vk::ImageLayout::eShaderReadOnlyOptimal;
 
-        command_buffer_->TransitionImageLayout(source, source_layout,
-                                               vk::ImageLayout::eTransferSrcOptimal);
+        command_buffer_->ImageBarrier(source, source->layout(),
+                                      vk::ImageLayout::eTransferSrcOptimal, kPipelineFlag,
+                                      kAccessFlagOutside, kPipelineFlag, kAccessFlagInside);
         command_buffer_->vk().copyImageToBuffer(source->vk(), vk::ImageLayout::eTransferSrcOptimal,
                                                 target_buffer->vk(), 1, &image_copy_info->region);
-        command_buffer_->TransitionImageLayout(source, vk::ImageLayout::eTransferSrcOptimal,
-                                               target_layout);
+        command_buffer_->ImageBarrier(source, vk::ImageLayout::eTransferSrcOptimal, target_layout,
+                                      kPipelineFlag, kAccessFlagInside, kPipelineFlag,
+                                      kAccessFlagOutside);
         break;
       }
       case CopyType::COPY_BUFFER: {
         const auto* buffer_copy_info = std::get_if<BufferCopyInfo>(&copy_info_record.copy_info);
         FXL_DCHECK(buffer_copy_info);
 
+        command_buffer_->BufferBarrier(buffer_copy_info->source, kPipelineFlag, kAccessFlagOutside,
+                                       kPipelineFlag, kAccessFlagInside);
         command_buffer_->vk().copyBuffer(buffer_copy_info->source->vk(), target_buffer->vk(), 1,
                                          &buffer_copy_info->region);
+        command_buffer_->BufferBarrier(buffer_copy_info->source, kPipelineFlag, kAccessFlagInside,
+                                       kPipelineFlag, kAccessFlagOutside);
         break;
       }
     }

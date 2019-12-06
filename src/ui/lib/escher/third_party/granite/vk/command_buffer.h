@@ -144,6 +144,12 @@ class CommandBuffer : public Reffable {
   void EndRenderPass();
 
   // Wraps vkCmdPipelineBarrier(), using a barrier consisting of a single
+  // VkBufferMemoryBarrier.  Keeps |buffer| alive while command buffer is pending.
+  void BufferBarrier(const BufferPtr& buffer, vk::PipelineStageFlags src_stages,
+                     vk::AccessFlags src_access, vk::PipelineStageFlags dst_stages,
+                     vk::AccessFlags dst_access);
+
+  // Wraps vkCmdPipelineBarrier(), using a barrier consisting of a single
   // VkImageMemoryBarrier.  Keeps |image| alive while command buffer is pending.
   void ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layout, vk::ImageLayout new_layout,
                     vk::PipelineStageFlags src_stages, vk::AccessFlags src_access,

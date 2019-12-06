@@ -184,6 +184,64 @@ VK_TEST_F(BatchGpuUploaderTest, WriteImage) {
   EXPECT_TRUE(batch_upload_done);
 }
 
+// This unit tests if we can upload to the same image multiple times and if
+// the image layout can be set correctly every time we upload the image.
+VK_TEST_F(BatchGpuUploaderTest, ChangeLayout) {
+  auto escher = test::GetEscher()->GetWeakPtr();
+  const size_t image_size = sizeof(uint8_t) * 4;
+
+  // Create a 1x1 RGBA (8-bit channels) image to write to.
+  ImageFactoryAdapter image_factory(escher->gpu_allocator(), escher->resource_recycler());
+  ImagePtr image = image_utils::NewImage(&image_factory, vk::Format::eR8G8B8A8Unorm, 1, 1);
+  vk::BufferImageCopy region;
+  region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+  region.imageSubresource.mipLevel = 0;
+  region.imageSubresource.baseArrayLayer = 0;
+  region.imageSubresource.layerCount = 1;
+  region.imageExtent.width = 1;
+  region.imageExtent.height = 1;
+  region.imageExtent.depth = 1;
+  region.bufferOffset = 0;
+
+  // Do write.
+  auto uploader = BatchGpuUploader::New(escher);
+  auto writer = uploader->AcquireWriter(image_size);
+  constexpr vk::ImageLayout kTargetImageLayout = vk::ImageLayout::eGeneral;
+  uint8_t pixel_1[] = {150, 88, 121, 255};
+  memcpy(writer->host_ptr(), pixel_1, sizeof(pixel_1));
+  writer->WriteImage(image, region, kTargetImageLayout);
+  // Posting and submitting should succeed.
+  uploader->PostWriter(std::move(writer));
+
+  // Submit the work.
+  bool batch_upload_done = false;
+  uploader->Submit([&batch_upload_done]() { batch_upload_done = true; });
+  escher->vk_device().waitIdle();
+  EXPECT_TRUE(image->layout() == kTargetImageLayout);
+  EXPECT_TRUE(escher->Cleanup());
+  EXPECT_TRUE(batch_upload_done);
+
+  // Write the image again and change the image layout to another layout.
+  auto uploader_2 = BatchGpuUploader::New(escher);
+  auto writer_2 = uploader_2->AcquireWriter(image_size);
+  constexpr vk::ImageLayout kTargetImageLayout_2 = vk::ImageLayout::eShaderReadOnlyOptimal;
+  uint8_t pixel_2[] = {130, 120, 110, 255};
+  memcpy(writer_2->host_ptr(), pixel_2, sizeof(pixel_2));
+  writer_2->WriteImage(image, region, kTargetImageLayout_2);
+  // Posting and submitting should succeed.
+  uploader_2->PostWriter(std::move(writer_2));
+
+  // Submit the work.
+  bool batch_upload_done_2 = false;
+  uploader_2->Submit([&batch_upload_done_2]() { batch_upload_done_2 = true; });
+  escher->vk_device().waitIdle();
+
+  // Verify that the image layout was set correctly.
+  EXPECT_TRUE(image->layout() == kTargetImageLayout_2);
+  EXPECT_TRUE(escher->Cleanup());
+  EXPECT_TRUE(batch_upload_done_2);
+}
+
 VK_TEST_F(BatchGpuUploaderTest, WriterNotPostedFails) {
   auto escher = test::GetEscher()->GetWeakPtr();
   auto uploader = BatchGpuUploader::New(escher);

@@ -205,11 +205,33 @@ bool CommandBuffer::IsInRenderPass() {
   return static_cast<bool>(pipeline_state_.render_pass());
 }
 
+void CommandBuffer::BufferBarrier(const BufferPtr& buffer, vk::PipelineStageFlags src_stages,
+                                  vk::AccessFlags src_access, vk::PipelineStageFlags dst_stages,
+                                  vk::AccessFlags dst_access) {
+  impl_->KeepAlive(buffer.get());
+
+  vk::BufferMemoryBarrier barrier;
+  barrier.srcAccessMask = src_access;
+  barrier.dstAccessMask = dst_access;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.buffer = buffer->vk();
+  barrier.offset = 0U;
+  barrier.size = VK_WHOLE_SIZE;
+
+  vk().pipelineBarrier(src_stages, dst_stages, {}, {}, {std::move(barrier)}, {});
+}
+
 void CommandBuffer::ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layout,
                                  vk::ImageLayout new_layout, vk::PipelineStageFlags src_stages,
                                  vk::AccessFlags src_access, vk::PipelineStageFlags dst_stages,
                                  vk::AccessFlags dst_access) {
+  // Render passes may also cause image layout transitions.  We haven't worked
+  // through all of the corner cases with respect to our per-image layout
+  // tracking.  Therefore, since we don't currently need image barriers during
+  // render passes, we disallow them.
   FXL_DCHECK(!IsInRenderPass());
+
   FXL_DCHECK(!image->is_transient());
   FXL_DCHECK(image->layout() == old_layout || old_layout == vk::ImageLayout::eUndefined ||
              old_layout == vk::ImageLayout::ePreinitialized);
