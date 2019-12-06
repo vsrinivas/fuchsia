@@ -20,14 +20,18 @@ namespace media::audio::test {
 // Base Class for testing simple playback and capture with loopback.
 class AudioLoopbackTest : public media::audio::test::HermeticAudioTest {
  protected:
-  static constexpr int32_t kSampleRate = 8000;
+  static constexpr int32_t kSampleRate = 48000;  // used for playback and capture
   static constexpr int kChannelCount = 1;
-  static constexpr int kSampleSeconds = 1;
-  static constexpr int16_t kInitialCaptureData = 0x7fff;
+
   static constexpr unsigned int kMaxNumRenderers = 16;
+  static constexpr int kPlaybackSeconds = 1;
   static constexpr int16_t kPlaybackData[] = {0x1000, 0xfff,   -0x2345, -0x0123, 0x100,   0xff,
                                               -0x234, -0x04b7, 0x0310,  0x0def,  -0x0101, -0x2020,
                                               0x1357, 0x1324,  0x0135,  0x0132};
+
+  static constexpr int16_t kInitialCaptureData = 0x7fff;
+  static constexpr zx_duration_t kWaitForRenderersDuration = ZX_MSEC(200);
+  static constexpr uint kNumSamplesToCapture = 1000;
 
   static void SetUpTestSuite();
   static void TearDownTestSuite();
@@ -36,6 +40,7 @@ class AudioLoopbackTest : public media::audio::test::HermeticAudioTest {
   void TearDown() override;
 
   void SetUpVirtualAudioOutput();
+  void SetVirtualAudioOutputDeviceGain();
 
   void SetUpRenderer(unsigned int index, int16_t data);
   void CleanUpRenderer(unsigned int index);
@@ -109,6 +114,8 @@ void AudioLoopbackTest::SetUp() {
       });
 
   environment()->ConnectToService(audio_sync_.NewRequest());
+
+  SetVirtualAudioOutputDeviceGain();
 }
 
 void AudioLoopbackTest::TearDown() {
@@ -126,6 +133,7 @@ void AudioLoopbackTest::TearDown() {
       });
   audio_dev_enum_.events().OnDeviceAdded = nullptr;
   audio_dev_enum_.events().OnDefaultDeviceChanged = nullptr;
+  audio_dev_enum_.events().OnDeviceGainChanged = nullptr;
 
   // Remove our virtual audio output device
   if (virtual_audio_output_sync_.is_bound()) {
@@ -209,6 +217,40 @@ void AudioLoopbackTest::SetUpVirtualAudioOutput() {
          "the default.";
 }
 
+// Once the virtual audio output device is in place, set its device gain to unity (0 dB). We must do
+// this even though the device is virtual, because currently we implement device gain in software.
+void AudioLoopbackTest::SetVirtualAudioOutputDeviceGain() {
+  audio_dev_enum_.events().OnDeviceGainChanged = nullptr;
+  audio_dev_enum_->SetDeviceGain(virtual_audio_output_token_,
+                                 fuchsia::media::AudioGainInfo{
+                                     .gain_db = 0.0,
+                                     .flags = 0,
+                                 },
+                                 fuchsia::media::SetAudioGainFlag_GainValid);
+
+  fuchsia::media::AudioGainInfo gain_info{
+      .gain_db = -160.0f,
+      .flags = -1u,
+  };
+  while (gain_info.gain_db != 0.0f &&
+         (gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute) != 0u) {
+    uint64_t gain_adjusted_token = 0;
+    audio_dev_enum_->GetDeviceGain(
+        virtual_audio_output_token_,
+        [&gain_adjusted_token, &gain_info](auto token, auto new_gain_info) {
+          gain_info = new_gain_info;
+          gain_adjusted_token = token;
+        });
+
+    RunLoopUntil([this, &gain_adjusted_token]() {
+      return gain_adjusted_token == virtual_audio_output_token_;
+    });
+  }
+
+  EXPECT_EQ(gain_info.gain_db, 0.0f);
+  EXPECT_EQ(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute, 0u);
+}
+
 // SetUpRenderer
 //
 // For loopback tests, setup the first audio_renderer interface.
@@ -234,46 +276,28 @@ void AudioLoopbackTest::SetUpRenderer(unsigned int index, int16_t data) {
   playback_sample_size_[index] = sizeof(int16_t);
 
   playback_size_[index] =
-      format.frames_per_second * format.channels * playback_sample_size_[index] * kSampleSeconds;
+      format.frames_per_second * format.channels * playback_sample_size_[index] * kPlaybackSeconds;
 
   zx_status_t status = payload_buffer_[index].CreateAndMap(
       playback_size_[index], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &payload_vmo,
       ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
-  ASSERT_EQ(status, ZX_OK) << "Renderer VmoMapper:::CreateAndMap(" << index << ") failed - "
+  ASSERT_EQ(status, ZX_OK) << "Renderer VmoMapper::CreateAndMap(" << index << ") failed - "
                            << status;
 
   buffer = reinterpret_cast<int16_t*>(payload_buffer_[index].start());
-  for (int32_t i = 0; i < kSampleRate * kSampleSeconds; i++)
+  for (int32_t i = 0; i < kSampleRate * kPlaybackSeconds; ++i) {
     buffer[i] = data;
+  }
 
   audio_renderer_[index]->SetPcmStreamType(format);
   audio_renderer_[index]->AddPayloadBuffer(0, std::move(payload_vmo));
-
-  // TODO(41973): Move into device setup.
-  audio_dev_enum_->SetDeviceGain(virtual_audio_output_token_,
-                                 fuchsia::media::AudioGainInfo{
-                                     .gain_db = 0.0,
-                                     .flags = 0,
-                                 },
-                                 fuchsia::media::SetAudioGainFlag_GainValid);
-
-  uint64_t gain_adjusted_token = 0;
-  fuchsia::media::AudioGainInfo gain_info;
-  audio_dev_enum_->GetDeviceGain(virtual_audio_output_token_, [&gain_adjusted_token, &gain_info](
-                                                                  auto token, auto new_gain_info) {
-    gain_info = new_gain_info;
-    gain_adjusted_token = token;
-  });
-  RunLoopUntil([this, &gain_adjusted_token]() {
-    return gain_adjusted_token == virtual_audio_output_token_;
-  });
 
   // All audio renderers, by default, are set to 0 dB unity gain (passthru).
 }
 
 // CleanUpRenderer
 //
-// Flush the output and free the vmo that was used by Renderer1.
+// Flush the output and free the vmo that was used by this Renderer.
 void AudioLoopbackTest::CleanUpRenderer(unsigned int index) {
   FX_CHECK(index < kMaxNumRenderers) << "Renderer index too high";
 
@@ -302,7 +326,7 @@ void AudioLoopbackTest::SetUpCapturer(int16_t data) {
   format.frames_per_second = kSampleRate;
 
   capture_sample_size_ = sizeof(int16_t);
-  capture_frames_ = format.frames_per_second * kSampleSeconds;
+  capture_frames_ = format.frames_per_second * kPlaybackSeconds;
   capture_size_ = capture_frames_ * format.channels * capture_sample_size_;
 
   // ZX_VM_PERM_WRITE taken here as we pre-fill the buffer to catch cases where we get back a packet
@@ -310,11 +334,12 @@ void AudioLoopbackTest::SetUpCapturer(int16_t data) {
   zx_status_t status = capture_buffer_.CreateAndMap(
       capture_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &capture_vmo,
       ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
-  ASSERT_EQ(status, ZX_OK) << "Capturer VmoMapper:::CreateAndMap failed - " << status;
+  ASSERT_EQ(status, ZX_OK) << "Capturer VmoMapper::CreateAndMap failed - " << status;
 
   buffer = reinterpret_cast<int16_t*>(capture_buffer_.start());
-  for (int32_t i = 0; i < kSampleRate * kSampleSeconds; i++)
+  for (int32_t i = 0; i < kSampleRate * kPlaybackSeconds; ++i) {
     buffer[i] = data;
+  }
 
   audio_capturer_->SetPcmStreamType(format);
   audio_capturer_->AddPayloadBuffer(0, std::move(capture_vmo));
@@ -329,20 +354,44 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
   // SetUp loopback capture
   SetUpCapturer(kInitialCaptureData);
 
+  // Add a callback for when we get our captured packet.
+  // We do this before our sequence of "start all the renderers, then start capturing".
+  fuchsia::media::StreamPacket capture_packet;
+  bool received_first_packet = false;
+
+  audio_capturer_.events().OnPacketProduced = CompletionCallback(
+      [this, &capture_packet, &received_first_packet](fuchsia::media::StreamPacket packet) {
+        // We only care about the first packet of captured samples
+        if (received_first_packet) {
+          FX_LOGS(WARNING) << "Ignoring subsequent packet: pts " << packet.pts << ", start "
+                           << packet.payload_offset << ", size " << packet.payload_size
+                           << ", flags 0x" << std::hex << packet.flags;
+        } else if (packet.payload_size == 0) {
+          FX_LOGS(WARNING) << "Ignoring empty packet: pts " << packet.pts << ", start "
+                           << packet.payload_offset << ", size " << packet.payload_size
+                           << ", flags 0x" << std::hex << packet.flags;
+        } else {
+          received_first_packet = true;
+          capture_packet = std::move(packet);
+          audio_capturer_->StopAsyncCaptureNoReply();
+        }
+      });
+
   zx_duration_t sleep_duration = 0;
   int16_t expected_val = 0;
 
-  // SetUp playback streams
+  // SetUp playback streams, including determining the needed lead time and submitting packets.
   for (auto renderer_num = 0u; renderer_num < num_renderers; ++renderer_num) {
     SetUpRenderer(renderer_num, kPlaybackData[renderer_num]);
     expected_val += kPlaybackData[renderer_num];
 
-    // Get the minimum duration after submitting a packet to when we can start capturing what we
-    // sent on the loopback interface.  This assumes that the latency will be the same for both
-    // playback streams.  This happens to be true for this test as we create the renderers with the
-    // same parameters, but is not a safe assumption for the general users of this API to make.
-    audio_renderer_[renderer_num]->GetMinLeadTime(CompletionCallback(
-        [&sleep_duration](zx_duration_t t) { sleep_duration = std::max(sleep_duration, t); }));
+    // Get our expected duration, from a packet submittal to when we can start capturing what we
+    // sent on the loopback interface. After our Use the largest 'min_lead_time' across all of our
+    // renderers.
+    audio_renderer_[renderer_num]->GetMinLeadTime(
+        CompletionCallback([&sleep_duration](zx_duration_t min_lead_time) {
+          sleep_duration = std::max(sleep_duration, min_lead_time);
+        }));
     ExpectCallback();
 
     packet[renderer_num].payload_offset = 0;
@@ -351,16 +400,14 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
     audio_renderer_[renderer_num]->SendPacketNoReply(packet[renderer_num]);
   }
 
-  // TODO(fxb/42050): Revert to 5ms.
-  sleep_duration += ZX_MSEC(15);  // Give a little wiggle room.
+  sleep_duration += kWaitForRenderersDuration;
 
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
-  // Start playing right now, so that after we've delayed at least 1 leadtime, we should have mixed
-  // audio available for capture.  Our playback is sized to be much much larger than our capture to
-  // prevent test flakes.
-  auto play_at = zx::clock::get_monotonic().get();
+  // Start playing now, so that after at least 1 leadtime, mixed audio is available to capture.
+  // Playback is sized much much larger than our capture to prevent test flakes.
+  auto play_at = zx::clock::get_monotonic().get() + sleep_duration + ZX_MSEC(1);
 
   // Only get the callback for one renderer -- arbitrarily, renderer 0.
   audio_renderer_[0]->Play(play_at, 0,
@@ -370,8 +417,6 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
                              media_time_received = media_time;
                            }));
   ExpectCallback();
-
-  // We expect that media_time 0 played back at some point after the 'zero' time on the system.
   EXPECT_EQ(media_time_received, 0);
   EXPECT_GT(ref_time_received, 0);
 
@@ -380,32 +425,32 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
     audio_renderer_[renderer_num]->PlayNoReply(ref_time_received, media_time_received);
   }
 
-  // Add a callback for when we get our captured packet.
-  fuchsia::media::StreamPacket captured;
-  audio_capturer_.events().OnPacketProduced =
-      CompletionCallback([this, &captured](fuchsia::media::StreamPacket packet) {
-        // We only care about the first set of captured samples
-        if (captured.payload_size == 0) {
-          captured = packet;
-          audio_capturer_->StopAsyncCaptureNoReply();
-        }
-      });
+  // We expect that media_time 0 played back at some point after the 'zero' time on the system.
 
   // Give the playback some time to get mixed.
   zx_nanosleep(zx_deadline_after(sleep_duration));
 
-  // Capture 10 samples of audio.
-  audio_capturer_->StartAsyncCapture(10);
+  // Capture kNumSamplesToCapture samples of audio.
+  audio_capturer_->StartAsyncCapture(kNumSamplesToCapture);
+
   ExpectCallback();
+  EXPECT_TRUE(received_first_packet);
 
-  // Check that we got 10 samples as we expected.
-  EXPECT_EQ(captured.payload_size / capture_sample_size_, 10U);
+  // Check that we got kNumSamplesToCapture samples as we expected.
+  EXPECT_EQ(capture_packet.payload_size / capture_sample_size_, kNumSamplesToCapture);
 
+  auto previous_val = expected_val;
   // Check that all of the samples contain the expected data.
   auto* capture = reinterpret_cast<int16_t*>(capture_buffer_.start());
-  for (size_t i = 0; i < (captured.payload_size / capture_sample_size_); i++) {
-    size_t index = (captured.payload_offset + i) % capture_frames_;
-    EXPECT_EQ(capture[index], expected_val);
+  for (size_t i = 0; i < kNumSamplesToCapture; ++i) {
+    if (capture[capture_packet.payload_offset + i] != previous_val) {
+      previous_val = capture[capture_packet.payload_offset + i];
+      std::cout << "At [" << capture_packet.payload_offset + i << "], wanted " << expected_val
+                << ", got " << capture[capture_packet.payload_offset + i];
+
+      EXPECT_EQ(capture[capture_packet.payload_offset + i], expected_val)
+          << capture_packet.payload_offset + i;
+    }
   }
 
   for (auto renderer_num = 0u; renderer_num < num_renderers; ++renderer_num) {
@@ -418,14 +463,14 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
 
 // SingleStream
 //
-// Creates a single output stream and a loopback capture and verifies it gets back what it puts in.
+// Create one output stream and one loopback capture, and verify we receive what we sent out.
 TEST_F(AudioLoopbackTest, SingleStream) { TestLoopback(1); }
 
 // ManyStreams
 //
-// Verifies loopback capture of 16 output streams.
-// TODO(fxb/42050): This test sometimes times out on CQ/CI bots due to the support for the FIDL v1
-// wire-format transition. We should re-enable this test after the FIDL v1 transition is complete.
+// Verify loopback capture of the output mix of 16 renderer streams.
+// TODO(fxb/42050): Re-enable this test after the FIDL v1 wire-format transition is complete.
+// This test case sometimes times out on CQ/CI bots because of the FIDL v1 transition.
 TEST_F(AudioLoopbackTest, DISABLED_ManyStreams) { TestLoopback(16); }
 
 }  // namespace media::audio::test
