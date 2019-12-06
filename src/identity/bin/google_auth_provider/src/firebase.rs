@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use crate::constants::FIREBASE_TOKEN_URI;
-use crate::error::{AuthProviderError, ResultExt};
+use crate::error::{ResultExt, TokenProviderError};
 use crate::http::{HttpRequest, HttpRequestBuilder};
 use crate::openid::IdToken;
 
-use fidl_fuchsia_auth::{AuthProviderStatus, FirebaseToken};
+use fidl_fuchsia_auth::FirebaseToken;
+use fidl_fuchsia_identity_external::Error as ApiError;
 use hyper::StatusCode;
 use log::warn;
 use serde_derive::{Deserialize, Serialize};
@@ -15,7 +16,7 @@ use serde_json::{from_str, to_string};
 use std::str::FromStr;
 use url::{form_urlencoded, Url};
 
-type AuthProviderResult<T> = Result<T, AuthProviderError>;
+type TokenProviderResult<T> = Result<T, TokenProviderError>;
 
 /// Representation of the JSON body for a Firebase token request.
 #[derive(Serialize)]
@@ -52,10 +53,10 @@ struct FirebaseErrorResponse {
 pub fn build_firebase_token_request(
     id_token: IdToken,
     firebase_api_key: String,
-) -> AuthProviderResult<HttpRequest> {
+) -> TokenProviderResult<HttpRequest> {
     let params = vec![("key", firebase_api_key.as_str())];
     let url = Url::parse_with_params(FIREBASE_TOKEN_URI.as_str(), &params)
-        .auth_provider_status(AuthProviderStatus::InternalError)?;
+        .token_provider_error(ApiError::Internal)?;
 
     let token_request_body = FirebaseTokenRequestBody {
         post_body: form_urlencoded::Serializer::new(String::new())
@@ -67,8 +68,7 @@ pub fn build_firebase_token_request(
         request_uri: "http://localhost".to_string(),
     };
 
-    let request_body =
-        to_string(&token_request_body).auth_provider_status(AuthProviderStatus::InternalError)?;
+    let request_body = to_string(&token_request_body).token_provider_error(ApiError::Internal)?;
 
     HttpRequestBuilder::new(url.as_str(), "POST")
         .with_header("key", firebase_api_key.as_str())
@@ -82,14 +82,14 @@ pub fn build_firebase_token_request(
 pub fn parse_firebase_token_response(
     response_body: Option<String>,
     status: StatusCode,
-) -> AuthProviderResult<FirebaseToken> {
+) -> TokenProviderResult<FirebaseToken> {
     match (response_body.as_ref(), status) {
         (Some(response), StatusCode::OK) => {
             let FirebaseTokenResponse { id_token, email, local_id, expires_in_sec } =
                 from_str::<FirebaseTokenResponse>(&response)
-                    .auth_provider_status(AuthProviderStatus::OauthServerError)?;
-            let parsed_expiry_seconds = u64::from_str(&expires_in_sec)
-                .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+                    .token_provider_error(ApiError::Server)?;
+            let parsed_expiry_seconds =
+                u64::from_str(&expires_in_sec).token_provider_error(ApiError::Server)?;
             Ok(FirebaseToken {
                 id_token,
                 email: Some(email),
@@ -99,11 +99,11 @@ pub fn parse_firebase_token_response(
         }
         (Some(response), status) if status.is_client_error() => {
             let FirebaseErrorResponse { message } = from_str::<FirebaseErrorResponse>(&response)
-                .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+                .token_provider_error(ApiError::Server)?;
             warn!("Got unexpected error while retrieving Firebase token: {}", message);
-            Err(AuthProviderError::new(AuthProviderStatus::OauthServerError))
+            Err(TokenProviderError::new(ApiError::Server))
         }
-        _ => Err(AuthProviderError::new(AuthProviderStatus::OauthServerError)),
+        _ => Err(TokenProviderError::new(ApiError::Server)),
     }
 }
 
@@ -132,15 +132,15 @@ mod test {
         // Client error
         let response_body = "{\"message\": \"invalid API key\"}".to_string();
         let result = parse_firebase_token_response(Some(response_body), StatusCode::BAD_REQUEST);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Server error
         let result = parse_firebase_token_response(None, StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Malformed response
         let response_body = "\\malformed\\".to_string();
         let result = parse_firebase_token_response(Some(response_body), StatusCode::OK);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
     }
 }

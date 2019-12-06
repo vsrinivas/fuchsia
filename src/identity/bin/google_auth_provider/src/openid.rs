@@ -6,17 +6,18 @@
 //! responses.
 
 use crate::constants::USER_INFO_URI;
-use crate::error::{AuthProviderError, ResultExt};
+use crate::error::{ResultExt, TokenProviderError};
 use crate::http::{HttpRequest, HttpRequestBuilder};
 use crate::oauth::{self, AccessToken, RefreshToken};
 
-use fidl_fuchsia_auth::{AuthProviderStatus, UserProfileInfo};
+use fidl_fuchsia_auth::UserProfileInfo;
+use fidl_fuchsia_identity_external::Error as ApiError;
 use hyper::StatusCode;
 use log::warn;
 use serde_derive::Deserialize;
 use serde_json::from_str;
 
-type AuthProviderResult<T> = Result<T, AuthProviderError>;
+type TokenProviderResult<T> = Result<T, TokenProviderError>;
 #[derive(Debug, PartialEq)]
 pub struct IdToken(pub String);
 
@@ -43,7 +44,7 @@ struct OpenIdErrorResponse {
 }
 
 /// Construct an `HttpRequest` for an OpenID user info request.
-pub fn build_user_info_request(access_token: AccessToken) -> AuthProviderResult<HttpRequest> {
+pub fn build_user_info_request(access_token: AccessToken) -> TokenProviderResult<HttpRequest> {
     HttpRequestBuilder::new(USER_INFO_URI.as_str(), "GET")
         .with_header("Authorization", format!("Bearer {}", access_token.0))
         .finish()
@@ -53,7 +54,7 @@ pub fn build_user_info_request(access_token: AccessToken) -> AuthProviderResult<
 pub fn build_id_token_request(
     refresh_token: RefreshToken,
     audience: Option<String>,
-) -> AuthProviderResult<HttpRequest> {
+) -> TokenProviderResult<HttpRequest> {
     // OpenID standard dictates that id_token is returned as part of an Oauth
     // access token response.  Thus, the request is really just an Oauth request.
     oauth::build_request_with_refresh_token(refresh_token, vec![], audience)
@@ -63,21 +64,21 @@ pub fn build_id_token_request(
 pub fn parse_user_info_response(
     response_body: Option<String>,
     status_code: StatusCode,
-) -> AuthProviderResult<UserProfileInfo> {
+) -> TokenProviderResult<UserProfileInfo> {
     match (response_body.as_ref(), status_code) {
         (Some(response), StatusCode::OK) => {
             let OpenIdUserInfoResponse { sub, name, profile, picture } =
                 serde_json::from_str::<OpenIdUserInfoResponse>(&response)
-                    .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+                    .token_provider_error(ApiError::Server)?;
             Ok(UserProfileInfo { id: sub, display_name: name, url: profile, image_url: picture })
         }
         (Some(response), status) if status.is_client_error() => {
             let error_response = from_str::<OpenIdErrorResponse>(&response)
-                .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+                .token_provider_error(ApiError::Server)?;
             warn!("Got unexpected error code for OpenId user info: {}", error_response.error);
-            Err(AuthProviderError::new(AuthProviderStatus::OauthServerError))
+            Err(TokenProviderError::new(ApiError::Server))
         }
-        _ => Err(AuthProviderError::new(AuthProviderStatus::OauthServerError)),
+        _ => Err(TokenProviderError::new(ApiError::Server)),
     }
 }
 
@@ -85,21 +86,21 @@ pub fn parse_user_info_response(
 pub fn parse_id_token_response(
     response_body: Option<String>,
     status_code: StatusCode,
-) -> AuthProviderResult<(IdToken, u64)> {
+) -> TokenProviderResult<(IdToken, u64)> {
     match (response_body.as_ref(), status_code) {
         (Some(response), StatusCode::OK) => {
             let OpenIdTokenResponse { id_token, expires_in } =
                 serde_json::from_str::<OpenIdTokenResponse>(&response)
-                    .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+                    .token_provider_error(ApiError::Server)?;
             Ok((IdToken(id_token), expires_in))
         }
         (Some(response), status) if status.is_client_error() => {
             let error_response = from_str::<OpenIdErrorResponse>(&response)
-                .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+                .token_provider_error(ApiError::Server)?;
             warn!("Got unexpected error code while retrieving ID token: {}", error_response.error);
-            Err(AuthProviderError::new(AuthProviderStatus::OauthServerError))
+            Err(TokenProviderError::new(ApiError::Server))
         }
-        _ => Err(AuthProviderError::new(AuthProviderStatus::OauthServerError)),
+        _ => Err(TokenProviderError::new(ApiError::Server)),
     }
 }
 
@@ -146,16 +147,16 @@ mod test {
         // Bad token case
         let invalid_http_result = String::from("{\"error\": \"invalid_token\"}");
         let result = parse_user_info_response(Some(invalid_http_result), StatusCode::UNAUTHORIZED);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Server error case
         let result = parse_user_info_response(None, StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Malformed response case
         let invalid_http_result = String::from("\\\\malformed\\\\");
         let result = parse_user_info_response(Some(invalid_http_result), StatusCode::OK);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
     }
 
     #[test]
@@ -172,15 +173,15 @@ mod test {
         // Bad token case
         let invalid_http_result = "{\"error\": \"invalid_token\"}".to_string();
         let result = parse_id_token_response(Some(invalid_http_result), StatusCode::UNAUTHORIZED);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Server error case
         let result = parse_id_token_response(None, StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Malformed response case
         let invalid_http_result = "\\\\malformed\\\\".to_string();
         let result = parse_id_token_response(Some(invalid_http_result), StatusCode::OK);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
     }
 }

@@ -8,11 +8,11 @@
 use crate::constants::{
     FUCHSIA_CLIENT_ID, OAUTH_REVOCATION_URI, OAUTH_TOKEN_EXCHANGE_URI, REDIRECT_URI,
 };
-use crate::error::{AuthProviderError, ResultExt};
+use crate::error::{ResultExt, TokenProviderError};
 use crate::http::{HttpRequest, HttpRequestBuilder};
 
 use failure::format_err;
-use fidl_fuchsia_auth::AuthProviderStatus;
+use fidl_fuchsia_identity_external::Error as ApiError;
 use hyper::StatusCode;
 use log::warn;
 use serde_derive::Deserialize;
@@ -21,7 +21,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use url::{form_urlencoded, Url};
 
-type AuthProviderResult<T> = Result<T, AuthProviderError>;
+type TokenProviderResult<T> = Result<T, TokenProviderError>;
 #[derive(Debug, PartialEq)]
 pub struct AuthCode(pub String);
 #[derive(Debug, PartialEq)]
@@ -51,7 +51,7 @@ struct OAuthErrorResponse {
 }
 
 /// Construct an Oauth access token request using an authorization code.
-pub fn build_request_with_auth_code(auth_code: AuthCode) -> AuthProviderResult<HttpRequest> {
+pub fn build_request_with_auth_code(auth_code: AuthCode) -> TokenProviderResult<HttpRequest> {
     let request_body = form_urlencoded::Serializer::new(String::new())
         .append_pair("code", auth_code.0.as_str())
         .append_pair("redirect_uri", REDIRECT_URI.as_str())
@@ -71,7 +71,7 @@ pub fn build_request_with_refresh_token(
     refresh_token: RefreshToken,
     scopes: Vec<String>,
     client_id: Option<String>,
-) -> AuthProviderResult<HttpRequest> {
+) -> TokenProviderResult<HttpRequest> {
     let request_body = form_urlencoded::Serializer::new(String::new())
         .append_pair("refresh_token", refresh_token.0.as_str())
         .append_pair("client_id", client_id.as_ref().map_or(FUCHSIA_CLIENT_ID, String::as_str))
@@ -87,7 +87,7 @@ pub fn build_request_with_refresh_token(
 
 /// Construct an Oauth token revocation request.  `credential` may be either
 /// an access token or refresh token.
-pub fn build_revocation_request(credential: String) -> AuthProviderResult<HttpRequest> {
+pub fn build_revocation_request(credential: String) -> TokenProviderResult<HttpRequest> {
     let request_body =
         form_urlencoded::Serializer::new(String::new()).append_pair("token", &credential).finish();
 
@@ -102,26 +102,26 @@ pub fn build_revocation_request(credential: String) -> AuthProviderResult<HttpRe
 pub fn parse_response_with_refresh_token(
     response_body: Option<String>,
     status: StatusCode,
-) -> AuthProviderResult<(RefreshToken, AccessToken)> {
+) -> TokenProviderResult<(RefreshToken, AccessToken)> {
     match (response_body.as_ref(), status) {
         (Some(response), StatusCode::OK) => {
             let response = from_str::<AccessTokenResponseWithRefreshToken>(&response)
-                .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+                .token_provider_error(ApiError::Server)?;
             Ok((RefreshToken(response.refresh_token), AccessToken(response.access_token)))
         }
         (Some(response), status) if status.is_client_error() => {
-            let error_response = from_str::<OAuthErrorResponse>(&response)
-                .auth_provider_status(AuthProviderStatus::OauthServerError)?;
-            let status = match error_response.error.as_str() {
-                "invalid_grant" => AuthProviderStatus::ReauthRequired,
+            let error_response =
+                from_str::<OAuthErrorResponse>(&response).token_provider_error(ApiError::Server)?;
+            let error = match error_response.error.as_str() {
+                "invalid_grant" => ApiError::InvalidToken,
                 error_code => {
                     warn!("Got unexpected error code during auth code exchange: {}", error_code);
-                    AuthProviderStatus::OauthServerError
+                    ApiError::Server
                 }
             };
-            Err(AuthProviderError::new(status))
+            Err(TokenProviderError::new(error))
         }
-        _ => Err(AuthProviderError::new(AuthProviderStatus::OauthServerError)),
+        _ => Err(TokenProviderError::new(ApiError::Server)),
     }
 }
 
@@ -130,26 +130,26 @@ pub fn parse_response_with_refresh_token(
 pub fn parse_response_without_refresh_token(
     response_body: Option<String>,
     status: StatusCode,
-) -> AuthProviderResult<(AccessToken, u64)> {
+) -> TokenProviderResult<(AccessToken, u64)> {
     match (response_body.as_ref(), status) {
         (Some(response), StatusCode::OK) => {
             let response = from_str::<AccessTokenResponseWithoutRefreshToken>(&response)
-                .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+                .token_provider_error(ApiError::Server)?;
             Ok((AccessToken(response.access_token), response.expires_in))
         }
         (Some(response), status) if status.is_client_error() => {
-            let response = from_str::<OAuthErrorResponse>(&response)
-                .auth_provider_status(AuthProviderStatus::OauthServerError)?;
-            let status = match response.error.as_str() {
-                "invalid_grant" => AuthProviderStatus::ReauthRequired,
+            let response =
+                from_str::<OAuthErrorResponse>(&response).token_provider_error(ApiError::Server)?;
+            let error = match response.error.as_str() {
+                "invalid_grant" => ApiError::InvalidToken,
                 error_code => {
                     warn!("Got unexpected error code from access token request: {}", error_code);
-                    AuthProviderStatus::OauthServerError
+                    ApiError::Server
                 }
             };
-            Err(AuthProviderError::new(status))
+            Err(TokenProviderError::new(error))
         }
-        _ => Err(AuthProviderError::new(AuthProviderStatus::OauthServerError)),
+        _ => Err(TokenProviderError::new(ApiError::Server)),
     }
 }
 
@@ -157,26 +157,26 @@ pub fn parse_response_without_refresh_token(
 pub fn parse_revocation_response(
     response_body: Option<String>,
     status: StatusCode,
-) -> AuthProviderResult<()> {
+) -> TokenProviderResult<()> {
     match (response_body.as_ref(), status) {
         (_, StatusCode::OK) => Ok(()),
         (Some(response), status) if status.is_client_error() => {
-            let response = from_str::<OAuthErrorResponse>(&response)
-                .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+            let response =
+                from_str::<OAuthErrorResponse>(&response).token_provider_error(ApiError::Server)?;
             warn!("Got unexpected error code during token revocation: {}", response.error);
-            Err(AuthProviderError::new(AuthProviderStatus::OauthServerError))
+            Err(TokenProviderError::new(ApiError::Server))
         }
-        _ => Err(AuthProviderError::new(AuthProviderStatus::OauthServerError)),
+        _ => Err(TokenProviderError::new(ApiError::Server)),
     }
 }
 
 /// Parses an auth code out of a redirect URL reached through an OAuth
 /// authorization flow.
-pub fn parse_auth_code_from_redirect(url: Url) -> AuthProviderResult<AuthCode> {
+pub fn parse_auth_code_from_redirect(url: Url) -> TokenProviderResult<AuthCode> {
     if (url.scheme(), url.domain(), url.path())
         != (REDIRECT_URI.scheme(), REDIRECT_URI.domain(), REDIRECT_URI.path())
     {
-        return Err(AuthProviderError::new(AuthProviderStatus::InternalError)
+        return Err(TokenProviderError::new(ApiError::Internal)
             .with_cause(format_err!("Redirected to unexpected URL")));
     }
 
@@ -185,15 +185,15 @@ pub fn parse_auth_code_from_redirect(url: Url) -> AuthProviderResult<AuthCode> {
     if let Some(auth_code) = params.get("code") {
         Ok(AuthCode(auth_code.as_ref().to_string()))
     } else if let Some(error_code) = params.get("error") {
-        let error_status = match error_code.as_ref() {
-            "access_denied" => AuthProviderStatus::UserCancelled,
-            "server_error" => AuthProviderStatus::OauthServerError,
-            "temporarily_unavailable" => AuthProviderStatus::OauthServerError,
-            _ => AuthProviderStatus::UnknownError,
+        let error = match error_code.as_ref() {
+            "access_denied" => ApiError::Aborted,
+            "server_error" => ApiError::Server,
+            "temporarily_unavailable" => ApiError::Server,
+            _ => ApiError::Unknown,
         };
-        Err(AuthProviderError::new(error_status))
+        Err(TokenProviderError::new(error))
     } else {
-        Err(AuthProviderError::new(AuthProviderStatus::UnknownError)
+        Err(TokenProviderError::new(ApiError::Unknown)
             .with_cause(format_err!("Authorize redirect contained neither code nor error")))
     }
 }
@@ -229,21 +229,21 @@ mod test {
         let response =
             "{\"error\": \"invalid_grant\", \"error_description\": \"ouch\"}".to_string();
         let result = parse_response_with_refresh_token(Some(response), StatusCode::BAD_REQUEST);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::ReauthRequired);
+        assert_eq!(result.unwrap_err().api_error, ApiError::InvalidToken);
 
         // Server side error
         let result = parse_response_with_refresh_token(None, StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Invalid client error
         let response = "{\"error\": \"invalid_client\"}".to_string();
         let result = parse_response_with_refresh_token(Some(response), StatusCode::UNAUTHORIZED);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Malformed response
         let response = "{\"a malformed response\"}".to_string();
         let result = parse_response_with_refresh_token(Some(response), StatusCode::OK);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
     }
 
     #[test]
@@ -262,21 +262,21 @@ mod test {
         let response =
             "{\"error\": \"invalid_grant\", \"error_description\": \"expired\"}".to_string();
         let result = parse_response_without_refresh_token(Some(response), StatusCode::BAD_REQUEST);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::ReauthRequired);
+        assert_eq!(result.unwrap_err().api_error, ApiError::InvalidToken);
 
         // Server side error
         let result = parse_response_without_refresh_token(None, StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Invalid client error
         let response = "{\"error\": \"invalid_client\"}".to_string();
         let result = parse_response_without_refresh_token(Some(response), StatusCode::UNAUTHORIZED);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Malformed response
         let response = "{\"a malformed response\"}".to_string();
         let result = parse_response_without_refresh_token(Some(response), StatusCode::OK);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
     }
 
     #[test]
@@ -288,12 +288,12 @@ mod test {
     fn test_parse_revocation_response_failures() {
         // Server side error
         let result = parse_revocation_response(None, StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
 
         // Malformed response
         let response = "bad response".to_string();
         let result = parse_revocation_response(Some(response), StatusCode::BAD_REQUEST);
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::OauthServerError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Server);
     }
 
     #[test]
@@ -308,28 +308,28 @@ mod test {
         // Access denied case
         let canceled_url = url_with_query(&REDIRECT_URI, "error=access_denied");
         assert_eq!(
-            AuthProviderStatus::UserCancelled,
-            parse_auth_code_from_redirect(canceled_url).unwrap_err().status
+            ApiError::Aborted,
+            parse_auth_code_from_redirect(canceled_url).unwrap_err().api_error
         );
 
         // Unexpected redirect
         let error_url = Url::parse("ftp://incorrect/some-page").unwrap();
         assert_eq!(
-            AuthProviderStatus::InternalError,
-            parse_auth_code_from_redirect(error_url).unwrap_err().status
+            ApiError::Internal,
+            parse_auth_code_from_redirect(error_url).unwrap_err().api_error
         );
 
         // Unknown error
         let invalid_url = url_with_query(&REDIRECT_URI, "error=invalid_request");
         assert_eq!(
-            AuthProviderStatus::UnknownError,
-            parse_auth_code_from_redirect(invalid_url).unwrap_err().status
+            ApiError::Unknown,
+            parse_auth_code_from_redirect(invalid_url).unwrap_err().api_error
         );
 
         // No code or error in url.
         assert_eq!(
-            AuthProviderStatus::UnknownError,
-            parse_auth_code_from_redirect(REDIRECT_URI.clone()).unwrap_err().status
+            ApiError::Unknown,
+            parse_auth_code_from_redirect(REDIRECT_URI.clone()).unwrap_err().api_error
         );
     }
 }

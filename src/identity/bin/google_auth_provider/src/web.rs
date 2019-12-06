@@ -5,9 +5,9 @@
 //! This module provides methods for controlling and responding to events from
 //! a web frame.
 
-use crate::error::{AuthProviderError, ResultExt};
+use crate::error::{ResultExt, TokenProviderError};
 use fidl::endpoints::{create_proxy, create_request_stream};
-use fidl_fuchsia_auth::AuthProviderStatus;
+use fidl_fuchsia_identity_external::Error as ApiError;
 use fidl_fuchsia_ui_views::ViewToken;
 use fidl_fuchsia_web::{
     ContextProxy, FrameProxy, LoadUrlParams, NavigationControllerMarker,
@@ -19,7 +19,7 @@ use futures::prelude::*;
 use log::warn;
 use url::Url;
 
-type AuthProviderResult<T> = Result<T, AuthProviderError>;
+type TokenProviderResult<T> = Result<T, TokenProviderError>;
 
 /// A trait for representations of a web frame that is the only frame in a web context.
 pub trait StandaloneWebFrame {
@@ -33,7 +33,7 @@ pub trait StandaloneWebFrame {
         &'a mut self,
         view_token: ViewToken,
         url: Url,
-    ) -> FutureObj<'a, AuthProviderResult<()>>;
+    ) -> FutureObj<'a, TokenProviderResult<()>>;
 
     /// Waits until the frame redirects to a URL matching the scheme,
     /// domain, and path of |redirect_target|. Returns the matching URL,
@@ -41,7 +41,7 @@ pub trait StandaloneWebFrame {
     fn wait_for_redirect<'a>(
         &'a mut self,
         redirect_target: Url,
-    ) -> FutureObj<'a, AuthProviderResult<Url>>;
+    ) -> FutureObj<'a, TokenProviderResult<Url>>;
 }
 
 /// A `StandaloneWebFrame` implementation that uses the default fuchsia.web
@@ -59,7 +59,7 @@ impl StandaloneWebFrame for DefaultStandaloneWebFrame {
         &'a mut self,
         view_token: ViewToken,
         url: Url,
-    ) -> FutureObj<'a, AuthProviderResult<()>> {
+    ) -> FutureObj<'a, TokenProviderResult<()>> {
         FutureObj::new(Box::new(
             async move { Self::display_url_inner(self, view_token, url).await },
         ))
@@ -68,15 +68,13 @@ impl StandaloneWebFrame for DefaultStandaloneWebFrame {
     fn wait_for_redirect<'a>(
         &'a mut self,
         redirect_target: Url,
-    ) -> FutureObj<'a, AuthProviderResult<Url>> {
+    ) -> FutureObj<'a, TokenProviderResult<Url>> {
         FutureObj::new(Box::new(async move {
             Self::wait_for_redirect_inner(self, redirect_target).await
         }))
     }
 }
 
-// TODO(satsukiu): return resource errors instead of UnknownError once a
-// distinct errortype exists
 impl DefaultStandaloneWebFrame {
     /// Create a new `StandaloneWebFrame`.  The context and frame passed
     /// in should not be reused.
@@ -88,13 +86,13 @@ impl DefaultStandaloneWebFrame {
         &mut self,
         mut view_token: ViewToken,
         url: Url,
-    ) -> AuthProviderResult<()> {
+    ) -> TokenProviderResult<()> {
         let (navigation_controller_proxy, navigation_controller_server_end) =
             create_proxy::<NavigationControllerMarker>()
-                .auth_provider_status(AuthProviderStatus::UnknownError)?;
+                .token_provider_error(ApiError::Resource)?;
         self.frame
             .get_navigation_controller(navigation_controller_server_end)
-            .auth_provider_status(AuthProviderStatus::UnknownError)?;
+            .token_provider_error(ApiError::Resource)?;
 
         navigation_controller_proxy
             .load_url(
@@ -107,16 +105,14 @@ impl DefaultStandaloneWebFrame {
                 },
             )
             .await
-            .auth_provider_status(AuthProviderStatus::UnknownError)??;
-        self.frame
-            .create_view(&mut view_token)
-            .auth_provider_status(AuthProviderStatus::UnknownError)?;
+            .token_provider_error(ApiError::Resource)??;
+        self.frame.create_view(&mut view_token).token_provider_error(ApiError::Resource)?;
 
         let navigation_event_stream = self.get_navigation_event_stream()?;
         Self::poll_until_loaded(navigation_event_stream).await
     }
 
-    async fn wait_for_redirect_inner(&mut self, redirect_target: Url) -> AuthProviderResult<Url> {
+    async fn wait_for_redirect_inner(&mut self, redirect_target: Url) -> TokenProviderResult<Url> {
         let navigation_event_stream = self.get_navigation_event_stream()?;
 
         // pull redirect URL out from events.
@@ -127,17 +123,17 @@ impl DefaultStandaloneWebFrame {
         .await
     }
 
-    /// Registers a navigation listener with the Chrome frame and returns the created event
+    /// Registers a navigation listener with the web frame and returns the created event
     /// stream.
     fn get_navigation_event_stream(
         &self,
-    ) -> AuthProviderResult<NavigationEventListenerRequestStream> {
+    ) -> TokenProviderResult<NavigationEventListenerRequestStream> {
         let (navigation_event_client, navigation_event_stream) =
             create_request_stream::<NavigationEventListenerMarker>()
-                .auth_provider_status(AuthProviderStatus::UnknownError)?;
+                .token_provider_error(ApiError::Resource)?;
         self.frame
             .set_navigation_event_listener(Some(navigation_event_client))
-            .auth_provider_status(AuthProviderStatus::UnknownError)?;
+            .token_provider_error(ApiError::Resource)?;
         Ok(navigation_event_stream)
     }
 
@@ -146,20 +142,18 @@ impl DefaultStandaloneWebFrame {
     async fn poll_for_url_navigation_event<F>(
         mut request_stream: NavigationEventListenerRequestStream,
         url_match_fn: F,
-    ) -> AuthProviderResult<Url>
+    ) -> TokenProviderResult<Url>
     where
         F: Fn(&Url) -> bool,
     {
         // Any errors encountered with the stream here may be a result of the
         // overlay being canceled externally.
-        while let Some(request) = request_stream
-            .try_next()
-            .await
-            .auth_provider_status(AuthProviderStatus::UnknownError)?
+        while let Some(request) =
+            request_stream.try_next().await.token_provider_error(ApiError::Resource)?
         {
             let NavigationEventListenerRequest::OnNavigationStateChanged { change, responder } =
                 request;
-            responder.send().auth_provider_status(AuthProviderStatus::UnknownError)?;
+            responder.send().token_provider_error(ApiError::Resource)?;
             match change.url.map(|raw_url| Url::parse(raw_url.as_str())) {
                 Some(Ok(url)) => {
                     if url_match_fn(&url) {
@@ -168,35 +162,31 @@ impl DefaultStandaloneWebFrame {
                 }
                 Some(Err(err)) => {
                     warn!("Browser redirected to malformed URL: {:?}", &err);
-                    return Err(
-                        AuthProviderError::new(AuthProviderStatus::UnknownError).with_cause(err)
-                    );
+                    return Err(TokenProviderError::new(ApiError::Unknown).with_cause(err));
                 }
                 None => (),
             }
         }
-        Err(AuthProviderError::new(AuthProviderStatus::UnknownError))
+        Err(TokenProviderError::new(ApiError::Unknown))
     }
 
     /// Completes when the frame has finished loading or some error has occurred.
     async fn poll_until_loaded(
         mut request_stream: NavigationEventListenerRequestStream,
-    ) -> AuthProviderResult<()> {
+    ) -> TokenProviderResult<()> {
         // Verify that the page has loaded and is not an error page.  Since
         // this information may be delivered through two different events,
         // we need to keep track of the known state and search through events
         // until both points are found.
         let mut known_page_type: Option<PageType> = None;
         let mut main_document_loaded = false;
-        while let Some(request) = request_stream
-            .try_next()
-            .await
-            .auth_provider_status(AuthProviderStatus::UnknownError)?
+        while let Some(request) =
+            request_stream.try_next().await.token_provider_error(ApiError::Resource)?
         {
             // update known state.
             let NavigationEventListenerRequest::OnNavigationStateChanged { change, responder } =
                 request;
-            responder.send().auth_provider_status(AuthProviderStatus::UnknownError)?;
+            responder.send().token_provider_error(ApiError::Resource)?;
 
             if let Some(is_main_document_loaded) = change.is_main_document_loaded {
                 main_document_loaded = is_main_document_loaded;
@@ -210,12 +200,12 @@ impl DefaultStandaloneWebFrame {
                 (Some(PageType::Normal), true) => return Ok(()),
                 (Some(PageType::Normal), false) => (),
                 (Some(PageType::Error), _) => {
-                    return Err(AuthProviderError::new(AuthProviderStatus::NetworkError))
+                    return Err(TokenProviderError::new(ApiError::Network))
                 }
                 (None, _) => (),
             }
         }
-        Err(AuthProviderError::new(AuthProviderStatus::UnknownError))
+        Err(TokenProviderError::new(ApiError::Unknown))
     }
 }
 
@@ -366,8 +356,8 @@ mod test {
         let web_frame = create_frame_with_events(events)?;
         let stream = web_frame.get_navigation_event_stream()?;
         assert_eq!(
-            DefaultStandaloneWebFrame::poll_until_loaded(stream).await.unwrap_err().status,
-            AuthProviderStatus::NetworkError
+            DefaultStandaloneWebFrame::poll_until_loaded(stream).await.unwrap_err().api_error,
+            ApiError::Network
         );
         Ok(())
     }
@@ -382,8 +372,8 @@ mod test {
         let web_frame = create_frame_with_events(events)?;
         let stream = web_frame.get_navigation_event_stream()?;
         assert_eq!(
-            DefaultStandaloneWebFrame::poll_until_loaded(stream).await.unwrap_err().status,
-            AuthProviderStatus::UnknownError
+            DefaultStandaloneWebFrame::poll_until_loaded(stream).await.unwrap_err().api_error,
+            ApiError::Unknown
         );
         Ok(())
     }

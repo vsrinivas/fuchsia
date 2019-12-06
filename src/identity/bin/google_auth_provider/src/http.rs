@@ -4,8 +4,8 @@
 
 //! The http module contains utilities for making HTTP requests.
 
-use crate::error::{AuthProviderError, ResultExt};
-use fidl_fuchsia_auth::AuthProviderStatus;
+use crate::error::{ResultExt, TokenProviderError};
+use fidl_fuchsia_identity_external::Error as ApiError;
 use fidl_fuchsia_mem;
 use fidl_fuchsia_net_oldhttp::{
     CacheMode, HttpHeader, ResponseBodyMode, UrlBody, UrlLoaderProxy, UrlRequest, UrlResponse,
@@ -17,7 +17,7 @@ use futures::io::AsyncReadExt;
 use hyper::StatusCode;
 use log::warn;
 
-type AuthProviderResult<T> = Result<T, AuthProviderError>;
+type TokenProviderResult<T> = Result<T, TokenProviderError>;
 
 /// Representation of an HTTP request.
 pub struct HttpRequest(UrlRequest);
@@ -65,13 +65,12 @@ impl<'a> HttpRequestBuilder<'a> {
     }
 
     /// Build an HttpRequest.
-    pub fn finish(self) -> AuthProviderResult<HttpRequest> {
+    pub fn finish(self) -> TokenProviderResult<HttpRequest> {
         let url_body = match self.body {
             Some(body_str) => {
                 let vmo = zx::Vmo::create(body_str.as_bytes().len() as u64)
-                    .auth_provider_status(AuthProviderStatus::UnknownError)?;
-                vmo.write(&body_str.as_bytes(), 0)
-                    .auth_provider_status(AuthProviderStatus::UnknownError)?;
+                    .token_provider_error(ApiError::Unknown)?;
+                vmo.write(&body_str.as_bytes(), 0).token_provider_error(ApiError::Unknown)?;
                 Some(Box::new(UrlBody::Buffer(fidl_fuchsia_mem::Buffer {
                     vmo,
                     size: body_str.as_bytes().len() as u64,
@@ -103,7 +102,7 @@ pub trait HttpClient {
     fn request<'a>(
         &'a self,
         http_request: HttpRequest,
-    ) -> FutureObj<'a, AuthProviderResult<(Option<String>, StatusCode)>>;
+    ) -> FutureObj<'a, TokenProviderResult<(Option<String>, StatusCode)>>;
 }
 
 /// A client capable of making HTTP requests using the Fuchsia oldhttp URL
@@ -121,37 +120,34 @@ impl UrlLoaderHttpClient {
     async fn request_inner(
         &self,
         http_request: HttpRequest,
-    ) -> AuthProviderResult<(Option<String>, StatusCode)> {
+    ) -> TokenProviderResult<(Option<String>, StatusCode)> {
         let mut request = http_request.0;
 
-        let UrlResponse { error, body: response_body, status_code, .. } = self
-            .url_loader
-            .start(&mut request)
-            .await
-            .auth_provider_status(AuthProviderStatus::UnknownError)?;
+        let UrlResponse { error, body: response_body, status_code, .. } =
+            self.url_loader.start(&mut request).await.token_provider_error(ApiError::Unknown)?;
         if error.is_some() {
-            return Err(AuthProviderError::new(AuthProviderStatus::NetworkError));
+            return Err(TokenProviderError::new(ApiError::Network));
         }
 
-        let status = StatusCode::from_u16(status_code as u16)
-            .auth_provider_status(AuthProviderStatus::OauthServerError)?;
+        let status =
+            StatusCode::from_u16(status_code as u16).token_provider_error(ApiError::Server)?;
 
         match response_body.map(|x| *x) {
             Some(UrlBody::Stream(sock)) => {
-                let mut socket = fasync::Socket::from_socket(sock)
-                    .auth_provider_status(AuthProviderStatus::UnknownError)?;
+                let mut socket =
+                    fasync::Socket::from_socket(sock).token_provider_error(ApiError::Unknown)?;
                 let mut response_body = Vec::<u8>::with_capacity(RESPONSE_BUFFER_SIZE);
                 socket
                     .read_to_end(&mut response_body)
                     .await
-                    .auth_provider_status(AuthProviderStatus::UnknownError)?;
-                let response_str = String::from_utf8(response_body)
-                    .auth_provider_status(AuthProviderStatus::UnknownError)?;
+                    .token_provider_error(ApiError::Unknown)?;
+                let response_str =
+                    String::from_utf8(response_body).token_provider_error(ApiError::Unknown)?;
                 Ok((Some(response_str), status))
             }
             Some(UrlBody::Buffer(_)) => {
                 warn!("URL loader response unexpectedly contained a buffer instead of a stream");
-                Err(AuthProviderError::new(AuthProviderStatus::UnknownError))
+                Err(TokenProviderError::new(ApiError::Unknown))
             }
             None => Ok((None, status)),
         }
@@ -163,7 +159,7 @@ impl HttpClient for UrlLoaderHttpClient {
     fn request<'a>(
         &'a self,
         http_request: HttpRequest,
-    ) -> FutureObj<'a, AuthProviderResult<(Option<String>, StatusCode)>> {
+    ) -> FutureObj<'a, TokenProviderResult<(Option<String>, StatusCode)>> {
         FutureObj::new(Box::new(async move { Self::request_inner(self, http_request).await }))
     }
 }
@@ -318,7 +314,7 @@ mod test {
         let http_client = UrlLoaderHttpClient::new(url_loader_with_response("", 0, Some(0)));
         let request = HttpRequestBuilder::new(TEST_URL.as_str(), "GET").finish()?;
         let result = http_client.request(request).await;
-        assert_eq!(result.unwrap_err().status, AuthProviderStatus::NetworkError);
+        assert_eq!(result.unwrap_err().api_error, ApiError::Network);
         Ok(())
     }
 }
