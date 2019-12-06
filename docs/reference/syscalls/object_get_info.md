@@ -578,9 +578,9 @@ Additional errors:
 
 *handle* type: **Process** other than your own, with **ZX_RIGHT_READ**
 
-*buffer* type: `zx_info_vmos_t[n]`
+*buffer* type: `zx_info_vmo_t[n]`
 
-The `zx_info_vmos_t` array is list of all VMOs pointed to by the target process.
+The `zx_info_vmo_t` array is list of all VMOs pointed to by the target process.
 Some VMOs are mapped, some are pointed to by handles, and some are both.
 
 Note: The same VMO may appear multiple times due to multiple mappings or
