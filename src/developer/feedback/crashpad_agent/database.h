@@ -14,6 +14,7 @@
 
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
 #include "src/developer/feedback/crashpad_agent/upload_report.h"
+#include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
@@ -26,7 +27,7 @@ extern const uint64_t kCrashpadDatabaseMaxSizeInKb;
 class Database {
  public:
   static std::unique_ptr<Database> TryCreate(
-      InspectManager* inspect_manager,
+      InspectManager* inspect_manager, std::shared_ptr<Cobalt> cobalt,
       uint64_t max_crashpad_database_size_in_kb = kCrashpadDatabaseMaxSizeInKb);
 
   // Make a new report in |database_|.
@@ -80,7 +81,8 @@ class Database {
   };
 
   Database(std::unique_ptr<crashpad::CrashReportDatabase> database,
-           uint64_t max_crashpad_database_size_in_kb, InspectManager* inspect_manager);
+           uint64_t max_crashpad_database_size_in_kb, InspectManager* inspect_manager,
+           std::shared_ptr<Cobalt> cobalt);
 
   // Removes |local_report_id| from |additional_data_|.
   void CleanUp(const crashpad::UUID& local_report_id);
@@ -88,6 +90,7 @@ class Database {
   std::unique_ptr<crashpad::CrashReportDatabase> database_;
   const uint64_t max_crashpad_database_size_in_kb_;
   InspectManager* inspect_manager_;
+  std::shared_ptr<Cobalt> cobalt_;
   std::unordered_map<crashpad::UUID, AdditionalData, UUIDHasher> additional_data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Database);

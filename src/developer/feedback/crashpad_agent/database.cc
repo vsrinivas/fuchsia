@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "src/developer/feedback/crashpad_agent/constants.h"
+#include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
 #include "src/developer/feedback/crashpad_agent/report_util.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/fxl/logging.h"
@@ -18,15 +19,19 @@
 
 namespace feedback {
 
+using cobalt_registry::kCrashMetricId;
 using crashpad::FileReader;
 using crashpad::UUID;
+
 using CrashSkippedReason = crashpad::Metrics::CrashSkippedReason;
 using OperationStatus = crashpad::CrashReportDatabase::OperationStatus;
+using CrashState = cobalt_registry::CrashMetricDimensionState;
 
 constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
 constexpr uint64_t kCrashpadDatabaseMaxSizeInKb = 5120u;
 
 std::unique_ptr<Database> Database::TryCreate(InspectManager* inspect_manager,
+                                              std::shared_ptr<Cobalt> cobalt,
                                               const uint64_t max_crashpad_database_size_in_kb) {
   if (!files::IsDirectory(kCrashpadDatabasePath)) {
     files::CreateDirectory(kCrashpadDatabasePath);
@@ -41,15 +46,19 @@ std::unique_ptr<Database> Database::TryCreate(InspectManager* inspect_manager,
   }
 
   return std::unique_ptr<Database>(new Database(std::move(crashpad_database),
-                                                max_crashpad_database_size_in_kb, inspect_manager));
+                                                max_crashpad_database_size_in_kb, inspect_manager,
+                                                std::move(cobalt)));
 }
 
 Database::Database(std::unique_ptr<crashpad::CrashReportDatabase> database,
-                   uint64_t max_crashpad_database_size_in_kb, InspectManager* inspect_manager)
+                   uint64_t max_crashpad_database_size_in_kb, InspectManager* inspect_manager,
+                   std::shared_ptr<Cobalt> cobalt)
     : database_(std::move(database)),
       max_crashpad_database_size_in_kb_(max_crashpad_database_size_in_kb),
-      inspect_manager_(inspect_manager) {
+      inspect_manager_(inspect_manager),
+      cobalt_(std::move(cobalt)) {
   FXL_DCHECK(database_);
+  FXL_DCHECK(cobalt_);
   inspect_manager_->ExposeDatabase(max_crashpad_database_size_in_kb_);
 }
 
@@ -120,6 +129,7 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
   const UUID local_report_id = upload_report->GetUUID();
 
   inspect_manager_->MarkReportAsUploaded(local_report_id.ToString(), server_report_id);
+  cobalt_->Log(kCrashMetricId, CrashState::Uploaded);
 
   // We need to clean up before finalizing the report in the crashpad database as the operation may
   // fail.
@@ -145,6 +155,7 @@ bool Database::Archive(const crashpad::UUID& local_report_id) {
   CleanUp(local_report_id);
 
   inspect_manager_->MarkReportAsArchived(local_report_id.ToString());
+  cobalt_->Log(kCrashMetricId, CrashState::Archived);
 
   if (const auto status =
           database_->SkipReportUpload(local_report_id, CrashSkippedReason::kUploadFailed);
@@ -192,6 +203,7 @@ size_t Database::GarbageCollect() {
 
     for (const auto& uuid : clean_up) {
       inspect_manager_->MarkReportAsGarbageCollected(uuid.ToString());
+      cobalt_->Log(kCrashMetricId, CrashState::GarbageCollected);
       CleanUp(uuid);
     }
   }

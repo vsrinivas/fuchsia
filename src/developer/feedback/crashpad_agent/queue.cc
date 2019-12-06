@@ -20,8 +20,9 @@ using crashpad::UUID;
 using UploadPolicy = feedback::Settings::UploadPolicy;
 
 std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher, CrashServer* crash_server,
-                                        InspectManager* inspect_manager) {
-  auto database = Database::TryCreate(inspect_manager);
+                                        InspectManager* inspect_manager,
+                                        std::shared_ptr<Cobalt> cobalt) {
+  auto database = Database::TryCreate(inspect_manager, std::move(cobalt));
   if (!database) {
     return nullptr;
   }

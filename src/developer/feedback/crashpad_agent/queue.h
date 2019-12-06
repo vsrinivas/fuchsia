@@ -23,7 +23,8 @@ namespace feedback {
 class Queue {
  public:
   static std::unique_ptr<Queue> TryCreate(async_dispatcher_t* dispatcher, CrashServer* crash_server,
-                                          InspectManager* inspect_manager);
+                                          InspectManager* inspect_manager,
+                                          std::shared_ptr<Cobalt> cobalt);
 
   // Allow the queue's functionality to change based on the upload policy.
   void WatchSettings(feedback::Settings* settings);

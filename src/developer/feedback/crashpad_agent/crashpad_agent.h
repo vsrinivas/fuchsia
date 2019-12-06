@@ -22,6 +22,7 @@
 #include "src/developer/feedback/crashpad_agent/privacy_settings_ptr.h"
 #include "src/developer/feedback/crashpad_agent/queue.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
+#include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -49,7 +50,7 @@ class CrashpadAgent : public fuchsia::feedback::CrashReporter {
 
  private:
   CrashpadAgent(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                Config config, std::unique_ptr<Queue> queue_,
+                Config config, std::unique_ptr<Queue> queue_, std::shared_ptr<Cobalt> cobalt,
                 std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager);
 
   async_dispatcher_t* dispatcher_;
@@ -59,6 +60,7 @@ class CrashpadAgent : public fuchsia::feedback::CrashReporter {
   const std::unique_ptr<Queue> queue_;
   const std::unique_ptr<CrashServer> crash_server_;
   InspectManager* inspect_manager_;
+  std::shared_ptr<Cobalt> cobalt_;
   Settings settings_;
   PrivacySettingsWatcher privacy_settings_watcher_;
 

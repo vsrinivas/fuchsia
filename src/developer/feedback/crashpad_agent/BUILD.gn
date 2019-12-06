@@ -4,6 +4,7 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
+import("//third_party/cobalt/metrics_registry.gni")
 
 # We use a template to keep the real and fake packages in sync.
 template("crashpad_agent_package") {
@@ -101,6 +102,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/feedback/utils:cobalt",
     "//src/developer/feedback/utils:inspect_node_manager",
     "//src/developer/feedback/utils:time",
     "//src/lib/fxl",
@@ -117,6 +119,7 @@ source_set("src") {
 
   deps = [
     ":constants",
+    ":metrics_registry",
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",
@@ -133,6 +136,15 @@ source_set("constants") {
   ]
 
   visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
+}
+
+metrics_registry("metrics_registry") {
+  # This must match the name of our Cobalt project as specified in:
+  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
+  project_name = "feedback"
+  namespace = "cobalt_registry"
+  generate_cc = true
+  generate_binarypb = false
 }
 
 config_data("production_config") {

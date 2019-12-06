@@ -11,6 +11,9 @@
 #include <lib/timekeeper/test_clock.h>
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
+#include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -21,6 +24,7 @@
 namespace feedback {
 namespace {
 
+using cobalt_registry::kCrashMetricId;
 using crashpad::UUID;
 using inspect::testing::ChildrenMatch;
 using inspect::testing::NameMatches;
@@ -36,6 +40,8 @@ using testing::Key;
 using testing::Not;
 using testing::Pair;
 using testing::UnorderedElementsAreArray;
+
+using CrashState = cobalt_registry::CrashMetricDimensionState;
 
 constexpr zx::time_utc kTime((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
 constexpr char kTimeStr[] = "1970-01-01 07:14:52 GMT";
@@ -79,13 +85,15 @@ std::string GenerateString(const uint64_t string_size_in_kb) {
   return str;
 }
 
-class DatabaseTest : public ::testing::Test {
+class DatabaseTest : public UnitTestFixture {
  public:
   void SetUp() override {
     clock_ = std::make_unique<timekeeper::TestClock>();
     inspector_ = std::make_unique<inspect::Inspector>();
     inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
+    cobalt_ = std::make_shared<Cobalt>(services());
 
+    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
     SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb);
   }
 
@@ -95,12 +103,21 @@ class DatabaseTest : public ::testing::Test {
 
  protected:
   void SetUpDatabase(const uint64_t max_size_in_kb) {
-    auto new_database = Database::TryCreate(inspect_manager_.get(), max_size_in_kb);
-    FXL_CHECK(new_database) << "Error creating database";
+    auto new_database = Database::TryCreate(inspect_manager_.get(), cobalt_, max_size_in_kb);
+    ASSERT_TRUE(new_database) << "Error creating database";
     database_ = std::move(new_database);
     attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
     completed_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadCompletedDir);
     pending_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadPendingDir);
+  }
+
+  void SetUpCobaltLoggerFactory(
+      std::unique_ptr<StubCobaltLoggerFactoryBase> cobalt_logger_factory) {
+    cobalt_logger_factory_ = std::move(cobalt_logger_factory);
+    if (cobalt_logger_factory_) {
+      InjectServiceProvider(cobalt_logger_factory_.get());
+    }
+    RunLoopUntilIdle();
   }
 
   std::vector<std::string> GetAttachmentsDirContents() {
@@ -112,6 +129,12 @@ class DatabaseTest : public ::testing::Test {
   }
 
   std::vector<std::string> GetPendingDirContents() { return GetDirectoryContents(pending_dir_); }
+
+  void CheckLastCobaltCrashState(const CrashState crash_state) {
+    RunLoopUntilIdle();
+    EXPECT_EQ(kCrashMetricId, cobalt_logger_factory_->LastMetricId());
+    EXPECT_EQ(crash_state, cobalt_logger_factory_->LastEventCode());
+  }
 
   std::string GetMetadataFilepath(const UUID& local_report_id) {
     return AddExtension(local_report_id.ToString(), kMetadataExtension);
@@ -174,10 +197,12 @@ class DatabaseTest : public ::testing::Test {
  protected:
   std::unique_ptr<timekeeper::TestClock> clock_;
   std::unique_ptr<InspectManager> inspect_manager_;
+  std::shared_ptr<Cobalt> cobalt_;
   std::string attachments_dir_;
 
  private:
   std::unique_ptr<inspect::Inspector> inspector_;
+  std::unique_ptr<StubCobaltLoggerFactoryBase> cobalt_logger_factory_;
   std::string completed_dir_;
   std::string pending_dir_;
 
@@ -197,6 +222,7 @@ TEST_F(DatabaseTest, Check_DatabaseIsEmpty_OnPruneDatabaseWithZeroSize) {
 
   // Check that garbage collection occurs correctly.
   EXPECT_EQ(database_->GarbageCollect(), 1u);
+  CheckLastCobaltCrashState(CrashState::GarbageCollected);
 
   EXPECT_TRUE(GetAttachmentsDirContents().empty());
   EXPECT_TRUE(GetPendingDirContents().empty());
@@ -234,6 +260,7 @@ TEST_F(DatabaseTest, Check_DatabaseHasOnlyOneReport_OnPruneDatabaseWithSizeForOn
 
   // Check that garbage collection occurs correctly.
   EXPECT_EQ(database_->GarbageCollect(), 1u);
+  CheckLastCobaltCrashState(CrashState::GarbageCollected);
 
   // We cannot expect the set of attachments, the completed reports, and the pending reports to be
   // different than the first set as the real-time clock could go back in time between the
@@ -312,6 +339,7 @@ TEST_F(DatabaseTest, Check_ReportInCompleted_MarkAsUploaded) {
 
   // Mark a report as uploaded and check that it's in completed/.
   ASSERT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
+  CheckLastCobaltCrashState(CrashState::Uploaded);
 
   EXPECT_THAT(GetCompletedDirContents(), UnorderedElementsAreArray({
                                              GetMetadataFilepath(local_report_id),
@@ -326,6 +354,7 @@ TEST_F(DatabaseTest, Check_ReportInCompleted_Archive) {
 
   // Archive a report and check it's in completed/.
   ASSERT_TRUE(database_->Archive(local_report_id));
+  CheckLastCobaltCrashState(CrashState::Archived);
 
   EXPECT_THAT(GetCompletedDirContents(), UnorderedElementsAreArray({
                                              GetMetadataFilepath(local_report_id),
@@ -344,6 +373,7 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterMarkAsCompleted) {
 
   // Mark a report as uploaded and check that it's in completed/.
   ASSERT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
+  CheckLastCobaltCrashState(CrashState::Uploaded);
 
   EXPECT_EQ(database_->GetUploadReport(local_report_id), nullptr);
 }
@@ -355,6 +385,7 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterArchive) {
       /*attachments=*/{{kAttachmentKey, kAttachmentValue}}, &local_report_id);
 
   ASSERT_TRUE(database_->Archive(local_report_id));
+  CheckLastCobaltCrashState(CrashState::Archived);
 
   EXPECT_EQ(database_->GetUploadReport(local_report_id), nullptr);
 }
@@ -391,6 +422,7 @@ TEST_F(DatabaseTest, Attempt_GetUploadReport_AfterReportIsPruned) {
 
   // Check that garbage collection occurs correctly.
   EXPECT_EQ(database_->GarbageCollect(), 1u);
+  CheckLastCobaltCrashState(CrashState::GarbageCollected);
 
   // Get the |UUID| of the pruned report and attempt to get a report for it.
   ASSERT_THAT(GetAttachmentsDirContents(),
@@ -434,6 +466,7 @@ TEST_F(DatabaseTest, Attempt_Archive_AfterReportIsPruned) {
 
   // Check that garbage collection occurs correctly.
   EXPECT_EQ(database_->GarbageCollect(), 1u);
+  CheckLastCobaltCrashState(CrashState::GarbageCollected);
 
   // Determine the |UUID| of the pruned report and attempt to archive it.
   ASSERT_THAT(GetAttachmentsDirContents(),
@@ -443,10 +476,10 @@ TEST_F(DatabaseTest, Attempt_Archive_AfterReportIsPruned) {
                            ? local_report_id_2
                            : local_report_id_1;
   EXPECT_FALSE(database_->Archive(pruned_report));
+  CheckLastCobaltCrashState(CrashState::Archived);
 }
 
 TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
-  SetUp();
   clock_->Set(kTime);
 
   // Add a crash report.
@@ -462,6 +495,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
 
   // Mark the report as uploaded and check the Inspect tree.
   EXPECT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
+  CheckLastCobaltCrashState(CrashState::Uploaded);
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(AllOf(
                   NodeMatches(NameMatches("reports")),
@@ -481,7 +515,6 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
 }
 
 TEST_F(DatabaseTest, Check_InspectTree_ReportArchived) {
-  SetUp();
   clock_->Set(kTime);
 
   // Add a crash report.
@@ -493,6 +526,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportArchived) {
 
   // Archive the report and check the Inspect tree.
   EXPECT_TRUE(database_->Archive(local_report_id));
+  CheckLastCobaltCrashState(CrashState::Archived);
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(
@@ -522,6 +556,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
 
   // Check that garbage collection occurs correctly and check the Inspect tree.
   EXPECT_EQ(database_->GarbageCollect(), 1u);
+  CheckLastCobaltCrashState(CrashState::GarbageCollected);
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(

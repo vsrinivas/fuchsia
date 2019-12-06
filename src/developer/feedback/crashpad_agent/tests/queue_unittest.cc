@@ -4,14 +4,16 @@
 
 #include "src/developer/feedback/crashpad_agent/queue.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/timekeeper/test_clock.h>
+
+#include <memory>
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -71,7 +73,7 @@ std::map<std::string, std::string> MakeAnnotations() {
   return {{kAnnotationKey, kAnnotationValue}};
 }
 
-class QueueTest : public gtest::TestLoopFixture {
+class QueueTest : public UnitTestFixture {
  public:
   void TearDown() override {
     ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
@@ -89,7 +91,8 @@ class QueueTest : public gtest::TestLoopFixture {
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     inspector_ = std::make_unique<inspect::Inspector>();
     inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
-    queue_ = Queue::TryCreate(dispatcher(), crash_server_.get(), inspect_manager_.get());
+    cobalt_ = std::make_shared<Cobalt>(services());
+    queue_ = Queue::TryCreate(dispatcher(), crash_server_.get(), inspect_manager_.get(), cobalt_);
 
     ASSERT_TRUE(queue_);
 
@@ -225,6 +228,7 @@ class QueueTest : public gtest::TestLoopFixture {
   std::unique_ptr<StubCrashServer> crash_server_;
   std::unique_ptr<inspect::Inspector> inspector_;
   std::unique_ptr<InspectManager> inspect_manager_;
+  std::shared_ptr<Cobalt> cobalt_;
 };
 
 TEST_F(QueueTest, Check_EmptyQueue_OnZeroAdds) {

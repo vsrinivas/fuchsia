@@ -13,6 +13,7 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.DataProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",

@@ -18,6 +18,7 @@ group("tests") {
     "//third_party/crashpad:crashpad_test",
 
     # Packages for the components that we are injecting in the integration tests.
+    "//src/cobalt/bin/testing/mock_cobalt",
     "//src/developer/feedback/crashpad_agent",
     "//src/developer/feedback/crashpad_agent:fake_crashpad_agent_invalid_override_config",
     "//src/developer/feedback/crashpad_agent:fake_crashpad_agent_valid_override_config",
@@ -180,9 +181,11 @@ executable("crashpad_agent_unittest") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:constants",
+    "//src/developer/feedback/crashpad_agent:metrics_registry",
     "//src/developer/feedback/crashpad_agent:src",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/crashpad/util",
@@ -201,12 +204,16 @@ executable("crashpad_agent_integration_test") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.cobalt.test",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/crashpad_agent:metrics_registry",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/system/fidl/fuchsia-mem",
   ]
 }
@@ -223,8 +230,11 @@ executable("database_unittest") {
   deps = [
     "//garnet/public/lib/timekeeper:testing",
     "//sdk/lib/inspect/testing/cpp",
+    "//src/developer/feedback/crashpad_agent:metrics_registry",
     "//src/developer/feedback/crashpad_agent:src",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
     "//src/lib/fsl:fsl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -290,6 +300,7 @@ executable("queue_unittest") {
     "//src/developer/feedback/crashpad_agent:constants",
     "//src/developer/feedback/crashpad_agent:src",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
     "//src/lib/fsl:fsl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

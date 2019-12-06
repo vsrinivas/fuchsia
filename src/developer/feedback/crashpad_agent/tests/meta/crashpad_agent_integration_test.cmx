@@ -2,6 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.cobalt.LoggerFactory":  "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
+                "fuchsia.cobalt.test.LoggerQuerier":  "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/crashpad_agent#meta/crashpad_agent.cmx",
                 "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
                 "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
@@ -14,6 +16,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.cobalt.test.LoggerQuerier",
             "fuchsia.feedback.CrashReporter"
         ]
     }

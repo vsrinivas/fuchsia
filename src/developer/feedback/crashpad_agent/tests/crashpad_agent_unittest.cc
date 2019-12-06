@@ -28,10 +28,12 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/database.h"
+#include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -44,6 +46,7 @@
 namespace feedback {
 namespace {
 
+using cobalt_registry::kCrashMetricId;
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::CrashReport;
@@ -63,6 +66,8 @@ using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::Not;
 using testing::UnorderedElementsAreArray;
+
+using CrashState = cobalt_registry::CrashMetricDimensionState;
 
 constexpr bool kUploadSuccessful = true;
 constexpr bool kUploadFailed = false;
@@ -154,6 +159,16 @@ class CrashpadAgentTest : public UnitTestFixture {
     }
   }
 
+  // Sets up the underlying cobalt logger factory and registers it in the
+  // |service_directory_provider_|.
+  void SetUpCobaltLoggerFactory(
+      std::unique_ptr<StubCobaltLoggerFactoryBase> cobalt_logger_factory) {
+    cobalt_logger_factory_ = std::move(cobalt_logger_factory);
+    if (cobalt_logger_factory_) {
+      InjectServiceProvider(cobalt_logger_factory_.get());
+    }
+  }
+
   // Checks that in the local Crashpad database there is:
   //   * only one set of attachments
   //   * the set of attachment filenames matches the concatenation of
@@ -236,6 +251,11 @@ class CrashpadAgentTest : public UnitTestFixture {
     for (const auto& key : expected_attachment_keys) {
       EXPECT_THAT(crash_server_->latest_attachment_keys(), testing::Contains(key));
     }
+  }
+
+  void CheckLastCobaltCrashState(const CrashState crash_state) {
+    EXPECT_EQ(kCrashMetricId, cobalt_logger_factory_->LastMetricId());
+    EXPECT_EQ(crash_state, cobalt_logger_factory_->LastEventCode());
   }
 
   // Checks that the crash server is still expecting at least one more request.
@@ -347,6 +367,12 @@ class CrashpadAgentTest : public UnitTestFixture {
     return FileOneCrashReport(std::move(report));
   }
 
+  // Files one empty crash report.
+  fit::result<void, zx_status_t> FileOneEmptyCrashReport() {
+    CrashReport report;
+    return FileOneCrashReport(std::move(report));
+  }
+
   void SetPrivacySettings(std::optional<bool> user_data_sharing_consent) {
     ASSERT_TRUE(privacy_settings_);
 
@@ -399,6 +425,7 @@ class CrashpadAgentTest : public UnitTestFixture {
  private:
   std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider_;
   std::unique_ptr<FakePrivacySettings> privacy_settings_;
+  std::unique_ptr<StubCobaltLoggerFactoryBase> cobalt_logger_factory_;
   StubCrashServer* crash_server_;
   std::string attachments_dir_;
   std::unique_ptr<inspect::Inspector> inspector_;
@@ -550,13 +577,7 @@ TEST_F(CrashpadAgentTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
 
 TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
   SetUpAgentDefaultConfig();
-  CrashReport report;
-
-  fit::result<void, zx_status_t> out_result;
-  agent_->File(std::move(report), [&out_result](fit::result<void, zx_status_t> result) {
-    out_result = std::move(result);
-  });
-  ASSERT_TRUE(out_result.is_error());
+  EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
 }
 
 TEST_F(CrashpadAgentTest, Upload_OnUserAlreadyOptedInDataSharing) {
@@ -726,6 +747,20 @@ TEST_F(CrashpadAgentTest, Check_OneFeedbackDataProviderConnectionPerAnalysis) {
 
   EXPECT_EQ(total_num_feedback_data_provider_bindings(), num_calls);
   EXPECT_EQ(current_num_feedback_data_provider_bindings(), 0u);
+}
+
+TEST_F(CrashpadAgentTest, Check_CobaltAfterSuccessfulUpload) {
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  EXPECT_TRUE(FileOneCrashReport().is_ok());
+  CheckLastCobaltCrashState(CrashState::Uploaded);
+}
+
+TEST_F(CrashpadAgentTest, Check_CobaltAfterInvalidInputCrashReport) {
+  SetUpAgentDefaultConfig();
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
+  CheckLastCobaltCrashState(CrashState::Dropped);
 }
 
 TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
