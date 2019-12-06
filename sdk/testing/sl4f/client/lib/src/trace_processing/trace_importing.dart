@@ -191,10 +191,10 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
   // Maintains in progress flow sequences.
   final Map<_FlowKey, FlowEvent> liveFlows = {};
 
-  // A helper lambda to add duration events to the trace model and do the
-  // appropriate duration/flow graph setup.  It is used for both begin/end pairs
-  // and complete events.
-  void addDuration(
+  // A helper lambda to add duration events to the appropriate duration stack
+  // and do the appropriate duration/flow graph setup.  It is used for both
+  // begin/end pairs and complete events.
+  void addToDurationStack(
       DurationEvent durationEvent, List<DurationEvent> durationStack) {
     durationStack.add(durationEvent);
     if (durationStack.length > 1) {
@@ -203,7 +203,6 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
       top.parent = topParent;
       topParent.childDurations.add(durationEvent);
     }
-    resultEvents.add(durationEvent);
   }
 
   if (!(rootObject.containsKey('traceEvents') &&
@@ -258,11 +257,12 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
             'Expected $traceEvent to have field "dur" of type double');
       }
       durationEvent.duration = TimeDelta.fromMicroseconds(traceEvent['dur']);
-      addDuration(durationEvent, durationStack);
+      addToDurationStack(durationEvent, durationStack);
+      resultEvents.add(durationEvent);
     } else if (phase == 'B') {
       final durationEvent = DurationEvent();
       _fromJsonCommon(durationEvent, traceEvent);
-      addDuration(durationEvent, durationStack);
+      addToDurationStack(durationEvent, durationStack);
     } else if (phase == 'E') {
       if (durationStack.isNotEmpty) {
         final popped = durationStack.removeLast();
@@ -270,6 +270,7 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
                 TimeDelta.fromMicroseconds(traceEvent['ts'])) -
             popped.start;
         popped.args = _combineArgs(popped.args, traceEvent['args']);
+        resultEvents.add(popped);
       }
     } else if (phase == 'fuchsia_synthetic_end') {
       assert(durationStack.isNotEmpty);

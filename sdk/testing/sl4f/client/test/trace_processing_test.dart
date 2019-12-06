@@ -282,6 +282,29 @@ void main(List<String> args) {
     _checkModelsEqual(testModel, testModelFromJsonString);
   });
 
+  test('Dangling begin event', () async {
+    final model = createModelFromJsonString('''
+{
+  "displayTimeUnit": "ns",
+  "traceEvents": [
+    {
+      "cat": "category",
+      "name": "name",
+      "ts": 0.0,
+      "ph": "B",
+      "tid": 0,
+      "pid": 0
+    }
+  ],
+  "systemTraceEvents": {
+    "events": [],
+    "type": "fuchsia"
+  }
+}
+''');
+    expect(getAllEvents(model), isEmpty);
+  });
+
   test('Filter events', () async {
     final events = [
       DurationEvent()
