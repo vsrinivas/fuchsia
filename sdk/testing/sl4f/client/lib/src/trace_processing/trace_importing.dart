@@ -445,7 +445,7 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
   }
   if (systemTraceEvents['type'] != 'fuchsia') {
     throw FormatException(
-        'Expceted $systemTraceEvents to have field "type" equal to value "fuchsia"');
+        'Expected $systemTraceEvents to have field "type" equal to value "fuchsia"');
   }
 
   final systemTraceEventsEvents = systemTraceEvents['events'];
