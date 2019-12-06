@@ -14,7 +14,6 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon_status as zx_status;
 #[allow(unused_imports)]
 use fidl::{
-	encoding::OutOfLine,
 	fidl_bits,
 	fidl_enum,
 	fidl_empty_struct,

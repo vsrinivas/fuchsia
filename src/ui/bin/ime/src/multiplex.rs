@@ -178,10 +178,7 @@ fn forward_edit(msg: &mut txt::TextFieldRequest, proxy: &txt::TextFieldProxy) ->
             ref mut highlight_range,
             ..
         } => {
-            proxy.set_composition(
-                composition_range,
-                highlight_range.as_mut().map(|r| fidl::encoding::OutOfLine(&mut **r)),
-            )?;
+            proxy.set_composition(composition_range, highlight_range.as_deref_mut())?;
         }
         txt::TextFieldRequest::ClearComposition { .. } => {
             proxy.clear_composition()?;

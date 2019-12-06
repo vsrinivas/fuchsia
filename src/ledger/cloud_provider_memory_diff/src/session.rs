@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::encoding::OutOfLine;
 use fidl_fuchsia_ledger_cloud::{
     CloudProviderRequest, CloudProviderRequestStream, DeviceSetRequest, DeviceSetRequestStream,
     DeviceSetWatcherProxy, PageCloudRequest, PageCloudRequestStream, PageCloudWatcherProxy, Status,
@@ -276,8 +275,8 @@ impl PageSession {
                         let mut pack = Commit::serialize_pack(commits);
                         // This must live until the end of the call.
                         let mut position = position.map(Token::into);
-                        let position = position.as_mut().map(OutOfLine);
-                        responder.send(Status::Ok, Some(OutOfLine(&mut pack)), position)
+                        let position = position.as_mut();
+                        responder.send(Status::Ok, Some(&mut pack), position)
                     }
                 }
             }
@@ -293,8 +292,9 @@ impl PageSession {
             PageCloudRequest::GetObject { id, responder } => {
                 match page.get_object(&ObjectId(id.clone())) {
                     Err(e) => responder.send(e.report(), None),
-                    Ok(obj) => responder
-                        .send(Status::Ok, Some(OutOfLine(&mut write_buffer(obj.data.as_slice())))),
+                    Ok(obj) => {
+                        responder.send(Status::Ok, Some(&mut write_buffer(obj.data.as_slice())))
+                    }
                 }
             }
             PageCloudRequest::SetWatcher {
@@ -325,7 +325,7 @@ impl PageSession {
                     Err(e) => responder.send(e.report(), None),
                     Ok(diff) => {
                         let mut pack = Diff::serialize_pack(diff);
-                        responder.send(Status::Ok, Some(OutOfLine(&mut pack)))
+                        responder.send(Status::Ok, Some(&mut pack))
                     }
                 }
             }
@@ -638,7 +638,7 @@ mod tests {
             assert_eq!(status, Status::NetworkError);
             // Query B fails.
             let mut token = Token::into(Token(4));
-            let (status, _, _) = proxy.get_commits(Some(OutOfLine(&mut token))).await.unwrap();
+            let (status, _, _) = proxy.get_commits(Some(&mut token)).await.unwrap();
             assert_eq!(status, Status::NetworkError);
             // Query A succeeds on the third try.
             let (status, _, _) = proxy.get_commits(None).await.unwrap();

@@ -4,7 +4,7 @@
 
 use {
     failure::{err_msg, Error},
-    fidl::{encoding::OutOfLine, endpoints::RequestStream},
+    fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth_control::{self as control, ControlRequest, ControlRequestStream},
     fuchsia_bluetooth::{bt_fidl_status, types::PeerId},
     fuchsia_syslog::fx_log_warn,
@@ -119,7 +119,7 @@ async fn handler(
         }
         ControlRequest::GetActiveAdapterInfo { responder } => {
             let adap = hd.get_active_adapter_info();
-            responder.send(adap.map(control::AdapterInfo::from).as_mut().map(OutOfLine))
+            responder.send(adap.map(control::AdapterInfo::from).as_mut())
         }
         ControlRequest::RequestDiscovery { discovery, responder } => {
             let mut resp = if discovery {

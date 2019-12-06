@@ -54,8 +54,7 @@ fn describe_dir(flags: u32, stream: &DirectoryRequestStream) {
     let ch = stream.control_handle();
     if flags & OPEN_FLAG_DESCRIBE != 0 {
         let mut ni = fidl_fuchsia_io::NodeInfo::Directory(DirectoryObject);
-        ch.send_on_open_(Status::OK.into_raw(), Some(fidl_fuchsia_io::OutOfLineUnion(&mut ni)))
-            .expect("send_on_open");
+        ch.send_on_open_(Status::OK.into_raw(), Some(&mut ni)).expect("send_on_open");
     }
 }
 

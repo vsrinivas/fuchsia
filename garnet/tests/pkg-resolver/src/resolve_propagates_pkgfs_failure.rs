@@ -9,7 +9,7 @@ use {
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::{
         FileControlHandle, FileMarker, FileObject, FileRequest, FileRequestStream, NodeInfo,
-        NodeMarker, OutOfLineUnion, DIRENT_TYPE_FILE, INO_UNKNOWN,
+        NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN,
     },
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::RepositoryBuilder,
@@ -138,11 +138,8 @@ async fn handle_file_stream_fail_truncate(
     mut stream: FileRequestStream,
     ch: FileControlHandle,
 ) {
-    ch.send_on_open_(
-        Status::OK.into_raw(),
-        Some(OutOfLineUnion(&mut NodeInfo::File(FileObject { event: None }))),
-    )
-    .expect("send on open");
+    ch.send_on_open_(Status::OK.into_raw(), Some(&mut NodeInfo::File(FileObject { event: None })))
+        .expect("send on open");
     while let Some(req) = stream.next().await {
         handle_file_req_fail_truncate(call_count.clone(), req.expect("file request unpack")).await;
     }
@@ -153,11 +150,8 @@ async fn handle_file_stream_fail_write(
     mut stream: FileRequestStream,
     ch: FileControlHandle,
 ) {
-    ch.send_on_open_(
-        Status::OK.into_raw(),
-        Some(OutOfLineUnion(&mut NodeInfo::File(FileObject { event: None }))),
-    )
-    .expect("send on open");
+    ch.send_on_open_(Status::OK.into_raw(), Some(&mut NodeInfo::File(FileObject { event: None })))
+        .expect("send on open");
     while let Some(req) = stream.next().await {
         handle_file_req_fail_write(call_count.clone(), req.expect("file request unpack")).await;
     }
@@ -168,11 +162,8 @@ async fn handle_file_stream_success(
     mut stream: FileRequestStream,
     ch: FileControlHandle,
 ) {
-    ch.send_on_open_(
-        Status::OK.into_raw(),
-        Some(OutOfLineUnion(&mut NodeInfo::File(FileObject { event: None }))),
-    )
-    .expect("send on open");
+    ch.send_on_open_(Status::OK.into_raw(), Some(&mut NodeInfo::File(FileObject { event: None })))
+        .expect("send on open");
     while let Some(req) = stream.next().await {
         handle_file_req_success(req.expect("file request unpack")).await;
     }

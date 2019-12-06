@@ -4,7 +4,6 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl::encoding::OutOfLine,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_modular::{
         EntityRequest, EntityRequestStream, EntityResolverRequest, EntityResolverRequestStream,
@@ -95,10 +94,7 @@ impl FakeEntityServer {
                             let data = self.entity.data.as_bytes();
                             let vmo = zx::Vmo::create(data.len() as u64)?;
                             vmo.write(&data, 0)?;
-                            responder.send(Some(OutOfLine(&mut Buffer {
-                                vmo,
-                                size: data.len() as u64,
-                            })))?;
+                            responder.send(Some(&mut Buffer { vmo, size: data.len() as u64 }))?;
                         }
                         EntityRequest::WriteData { responder, .. } => {
                             responder.send(EntityWriteStatus::ReadOnly)?;

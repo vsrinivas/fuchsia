@@ -4,7 +4,6 @@
 
 use {
     failure::{Error, Fail, ResultExt},
-    fidl::encoding::OutOfLine,
     fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy, ScanFilter},
     fuchsia_async::{
         self as fasync,
@@ -123,7 +122,7 @@ fn do_scan(
 
     let fut = Right(
         central
-            .start_scan(filter.as_mut().map(OutOfLine))
+            .start_scan(filter.as_mut())
             .map_err(|e| e.context("failed to initiate scan").into())
             .and_then(|status| {
                 future::ready(match status.error {

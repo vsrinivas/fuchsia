@@ -47,10 +47,10 @@ use network_manager_core::{
 
 macro_rules! router_error {
     ($code:ident, $desc:expr) => {
-        Some(fidl::encoding::OutOfLine(&mut fidl_fuchsia_router_config::Error {
+        Some(&mut fidl_fuchsia_router_config::Error {
             code: fidl_fuchsia_router_config::ErrorCode::$code,
             description: $desc,
-        }))
+        })
     };
 }
 
@@ -156,8 +156,8 @@ impl EventLoop {
                     )
                     .await;
                 match r {
-                    Ok(mut id) => responder.send(Some(fidl::encoding::OutOfLine(&mut id)), None),
-                    Err(mut e) => responder.send(None, Some(fidl::encoding::OutOfLine(&mut e))),
+                    Ok(mut id) => responder.send(Some(&mut id), None),
+                    Err(mut e) => responder.send(None, Some(&mut e)),
                 }
             }
             RouterAdminRequest::CreateLan { name, vlan, ports, responder } => {
@@ -170,20 +170,20 @@ impl EventLoop {
                     )
                     .await;
                 match r {
-                    Ok(mut id) => responder.send(Some(fidl::encoding::OutOfLine(&mut id)), None),
-                    Err(mut e) => responder.send(None, Some(fidl::encoding::OutOfLine(&mut e))),
+                    Ok(mut id) => responder.send(Some(&mut id), None),
+                    Err(mut e) => responder.send(None, Some(&mut e)),
                 }
             }
             RouterAdminRequest::RemoveWan { wan_id, responder } => {
                 let mut r = self.fidl_delete_lif(wan_id).await;
-                responder.send(r.as_mut().map(fidl::encoding::OutOfLine)).or_else(|e| {
+                responder.send(r.as_mut()).or_else(|e| {
                     error!("Error sending response: {:?}", e);
                     Err(e)
                 })
             }
             RouterAdminRequest::RemoveLan { lan_id, responder } => {
                 let mut r = self.fidl_delete_lif(lan_id).await;
-                responder.send(r.as_mut().map(fidl::encoding::OutOfLine)).or_else(|e| {
+                responder.send(r.as_mut()).or_else(|e| {
                     error!("Error sending response: {:?}", e);
                     Err(e)
                 })
@@ -246,10 +246,7 @@ impl EventLoop {
                     .await
                 {
                     Ok(i) => responder.send(
-                        Some(fidl::encoding::OutOfLine(&mut Id {
-                            uuid: i.uuid().to_ne_bytes(),
-                            version: i.version(),
-                        })),
+                        Some(&mut Id { uuid: i.uuid().to_ne_bytes(), version: i.version() }),
                         None,
                     ),
                     Err(e) => responder.send(None, internal_error!(e.to_string())),

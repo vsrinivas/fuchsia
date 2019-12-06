@@ -854,7 +854,7 @@ mod tests {
         if let Some(mac) = fake_mac_addr {
             let mut response = fake_iface_query_response(mac);
             responder
-                .send(ZX_OK, Some(fidl::encoding::OutOfLine(&mut response)))
+                .send(ZX_OK, Some(&mut response))
                 .expect("sending fake response with mac address");
         } else {
             responder.send(ZX_ERR_NOT_FOUND, None).expect("sending fake response with none")

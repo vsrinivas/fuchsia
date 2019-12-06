@@ -6,7 +6,6 @@ use crate::tokens::{AccessTokenKey, IdTokenKey, OAuthToken};
 use crate::{AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError};
 use failure::format_err;
 use fidl;
-use fidl::encoding::OutOfLine;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{
     AppConfig, AuthProviderProxy, AuthProviderStatus, AuthenticationUiContextMarker, Status,
@@ -466,7 +465,7 @@ impl Responder for TokenManagerAuthorizeResponder {
         if status == Status::Ok {
             info!("Success authorizing new account");
         }
-        self.send(status, data.as_mut().map(|v| OutOfLine(v)))
+        self.send(status, data.as_mut())
     }
 }
 
@@ -513,7 +512,6 @@ impl Responder for TokenManagerListProfileIdsResponder {
 mod tests {
     use super::*;
     use crate::fake_auth_provider_supplier::FakeAuthProviderSupplier;
-    use fidl::encoding::OutOfLine;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_auth::{
         AuthProviderRequest, AuthProviderStatus, AuthToken, AuthenticationContextProviderMarker,
@@ -601,7 +599,7 @@ mod tests {
                 responder.send(
                     AuthProviderStatus::Ok,
                     Some(&format!("{}_CREDENTIAL", user_id)),
-                    Some(OutOfLine(&mut user_profile_info)),
+                    Some(&mut user_profile_info),
                 )?;
             }
             _ => panic!("Unexpected message received"),
@@ -624,7 +622,7 @@ mod tests {
                     token: format!("{}_ACCESS", token),
                     expires_in: 3600,
                 };
-                responder.send(AuthProviderStatus::Ok, Some(OutOfLine(&mut auth_token)))?;
+                responder.send(AuthProviderStatus::Ok, Some(&mut auth_token))?;
             }
             _ => panic!("Unexpected message received"),
         }
@@ -642,7 +640,7 @@ mod tests {
                     token: format!("{}_ID", token),
                     expires_in: 3600,
                 };
-                responder.send(AuthProviderStatus::Ok, Some(OutOfLine(&mut auth_token)))?;
+                responder.send(AuthProviderStatus::Ok, Some(&mut auth_token))?;
             }
             _ => panic!("Unexpected message received"),
         }

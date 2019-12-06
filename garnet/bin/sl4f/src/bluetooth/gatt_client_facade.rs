@@ -4,7 +4,6 @@
 
 use failure::{bail, Error, ResultExt};
 use fidl;
-use fidl::encoding::OutOfLine;
 use fidl::endpoints;
 use fidl_fuchsia_bluetooth_gatt::{Characteristic, RemoteServiceProxy};
 use fidl_fuchsia_bluetooth_gatt::{ClientProxy, ServiceInfo};
@@ -73,7 +72,7 @@ impl GattClientFacade {
 
         match &self.inner.read().central {
             Some(c) => {
-                let status = c.start_scan(filter.as_mut().map(OutOfLine)).await?;
+                let status = c.start_scan(filter.as_mut()).await?;
                 match status.error {
                     Some(e) => bail!("Failed to start scan: {}", Sl4fError::from(*e)),
                     None => Ok(()),

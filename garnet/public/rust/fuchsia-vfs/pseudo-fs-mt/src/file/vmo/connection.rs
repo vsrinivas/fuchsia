@@ -16,15 +16,12 @@ use crate::{
 
 use {
     failure::Error,
-    fidl::{
-        encoding::OutOfLine,
-        endpoints::{RequestStream, ServerEnd},
-    },
+    fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_io::{
         FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker,
-        OutOfLineUnion, SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT,
+        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::{
@@ -225,9 +222,7 @@ impl FileConnection {
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::File(FileObject { event: None });
-            match control_handle
-                .send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info)))
-            {
+            match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return,
             }
@@ -474,9 +469,7 @@ impl FileConnection {
             FileRequest::GetBuffer { flags, responder } => {
                 self.handle_get_buffer(flags, |status, buffer| match buffer {
                     None => responder.send(status.into_raw(), None),
-                    Some(mut buffer) => {
-                        responder.send(status.into_raw(), Some(OutOfLine(&mut buffer)))
-                    }
+                    Some(mut buffer) => responder.send(status.into_raw(), Some(&mut buffer)),
                 })
                 .await?;
             }

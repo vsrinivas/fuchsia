@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    fidl::encoding::OutOfLine,
     fidl_fuchsia_net_policy::{ObserverRequest, ObserverRequestStream},
     fidl_fuchsia_net_stack::StackProxy,
     fuchsia_syslog::fx_log_err,
@@ -38,7 +37,7 @@ pub async fn serve_fidl_requests(
                             fx_log_err!("{} nics have the same name {}", ifaces.len(), name);
                             (None, zx::sys::ZX_ERR_INTERNAL)
                         };
-                        responder.send(result.as_mut().map(OutOfLine), status)
+                        responder.send(result.as_mut(), status)
                     }
                 }
             }

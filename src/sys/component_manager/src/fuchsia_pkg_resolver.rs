@@ -91,7 +91,6 @@ mod tests {
     use {
         super::*,
         cm_fidl_translator,
-        fidl::encoding::OutOfLine,
         fidl::endpoints::{self, ServerEnd},
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_sys::{LoaderMarker, LoaderRequest, Package},
@@ -112,7 +111,7 @@ mod tests {
                     stream.try_next().await.expect("failed to read request")
                 {
                     let mut package = loader.load_url(&url);
-                    let package = package.as_mut().map(OutOfLine);
+                    let package = package.as_mut();
                     responder.send(package).expect("responder failed");
                 }
             });

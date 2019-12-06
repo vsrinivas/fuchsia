@@ -21,7 +21,6 @@ use crate::openid::{
 use crate::web::StandaloneWebFrame;
 use failure::Error;
 use fidl;
-use fidl::encoding::OutOfLine;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{
     AssertionJwtParams, AttestationJwtParams, AttestationSignerMarker, AuthChallenge,
@@ -373,11 +372,9 @@ impl Responder for AuthProviderGetPersistentCredentialResponder {
     ) -> Result<(), fidl::Error> {
         match data {
             None => self.send(status, None, None),
-            Some((refresh_token, mut user_profile_info)) => self.send(
-                status,
-                Some(refresh_token.as_str()),
-                Some(OutOfLine(&mut user_profile_info)),
-            ),
+            Some((refresh_token, mut user_profile_info)) => {
+                self.send(status, Some(refresh_token.as_str()), Some(&mut user_profile_info))
+            }
         }
     }
 }
@@ -391,7 +388,7 @@ impl Responder for AuthProviderGetAppAccessTokenResponder {
         status: AuthProviderStatus,
         mut data: Option<AuthToken>,
     ) -> Result<(), fidl::Error> {
-        self.send(status, data.as_mut().map(OutOfLine))
+        self.send(status, data.as_mut())
     }
 }
 
@@ -404,7 +401,7 @@ impl Responder for AuthProviderGetAppIdTokenResponder {
         status: AuthProviderStatus,
         mut data: Option<AuthToken>,
     ) -> Result<(), fidl::Error> {
-        self.send(status, data.as_mut().map(OutOfLine))
+        self.send(status, data.as_mut())
     }
 }
 
@@ -417,7 +414,7 @@ impl Responder for AuthProviderGetAppFirebaseTokenResponder {
         status: AuthProviderStatus,
         mut data: Option<FirebaseToken>,
     ) -> Result<(), fidl::Error> {
-        self.send(status, data.as_mut().map(OutOfLine))
+        self.send(status, data.as_mut())
     }
 }
 
@@ -445,9 +442,9 @@ impl Responder for AuthProviderGetPersistentCredentialFromAttestationJwtResponde
                 .send(
                     status,
                     Some(credential.as_str()),
-                    Some(OutOfLine(&mut auth_token)),
-                    Some(OutOfLine(&mut auth_challenge)),
-                    Some(OutOfLine(&mut user_profile_info)),
+                    Some(&mut auth_token),
+                    Some(&mut auth_challenge),
+                    Some(&mut user_profile_info),
                 ),
         }
     }
@@ -467,8 +464,8 @@ impl Responder for AuthProviderGetAppAccessTokenFromAssertionJwtResponder {
             Some((credential, mut auth_token, mut auth_challenge)) => self.send(
                 status,
                 Some(credential.as_str()),
-                Some(OutOfLine(&mut auth_token)),
-                Some(OutOfLine(&mut auth_challenge)),
+                Some(&mut auth_token),
+                Some(&mut auth_challenge),
             ),
         }
     }

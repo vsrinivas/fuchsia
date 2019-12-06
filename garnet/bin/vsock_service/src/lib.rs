@@ -14,7 +14,7 @@ pub use self::service::Vsock;
 mod tests {
     use {
         super::*,
-        fidl::{encoding::OutOfLine, endpoints},
+        fidl::endpoints,
         fidl_fuchsia_hardware_vsock::{
             CallbacksProxy, DeviceMarker, DeviceRequest, DeviceRequestStream,
         },
@@ -142,7 +142,7 @@ mod tests {
 
         let (_, responder) =
             unwrap_msg!(AcceptorRequest::Accept{addr, responder} from acceptor_client);
-        responder.send(Some(OutOfLine(&mut con)))?;
+        responder.send(Some(&mut con))?;
 
         // expect a response
         let (_, _server_data_socket, responder) =

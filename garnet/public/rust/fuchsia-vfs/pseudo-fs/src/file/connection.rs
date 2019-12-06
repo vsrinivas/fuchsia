@@ -8,10 +8,10 @@ use crate::{common::send_on_open_with_error, file::common::new_connection_valida
 
 use {
     failure::Error,
-    fidl::{encoding::OutOfLine, endpoints::ServerEnd},
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
-        NodeMarker, OutOfLineUnion, SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
+        NodeMarker, SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_mem,
@@ -211,9 +211,7 @@ impl FileConnection {
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::File(FileObject { event: None });
-            match control_handle
-                .send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info)))
-            {
+            match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return None,
             }
@@ -314,7 +312,7 @@ impl FileConnection {
             }
             FileRequest::GetBuffer { flags, responder } => {
                 self.handle_get_buffer(flags, |status, mut buffer| {
-                    responder.send(status.into_raw(), buffer.as_mut().map(OutOfLine))
+                    responder.send(status.into_raw(), buffer.as_mut())
                 })?;
             }
             _ => {}

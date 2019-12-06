@@ -9,7 +9,6 @@ use {
     },
     cm_rust::CapabilityPath,
     failure::{Error, Fail},
-    fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleInfoError},
@@ -140,10 +139,7 @@ impl ProcessLauncher {
                                 vdso_base: built.vdso_base as u64,
                                 base: built.elf_base as u64,
                             };
-                            responder.send(
-                                zx::Status::OK.into_raw(),
-                                Some(OutOfLine(&mut process_data)),
-                            )?;
+                            responder.send(zx::Status::OK.into_raw(), Some(&mut process_data))?;
                         }
                         Err(err) => {
                             warn!(

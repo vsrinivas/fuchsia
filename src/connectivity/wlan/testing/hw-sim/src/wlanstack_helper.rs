@@ -44,7 +44,6 @@ pub async fn get_ap_sme(wlan_service: &DeviceServiceProxy, iface_id: u16) -> ApS
 mod tests {
     use {
         super::*,
-        fidl::encoding::OutOfLine,
         fidl_fuchsia_wlan_device::MacRole::*,
         fidl_fuchsia_wlan_device_service::{
             DeviceServiceMarker, DeviceServiceRequest::*, IfaceListItem, ListIfacesResponse,
@@ -96,9 +95,7 @@ mod tests {
                 Some(Ok(QueryIface{iface_id, responder})) => (iface_id, responder));
             assert_eq!(id, query_resp.id);
             // The fake response is sent.
-            responder
-                .send(ZX_OK, Some(OutOfLine(&mut query_resp)))
-                .expect("sending query iface response");
+            responder.send(ZX_OK, Some(&mut query_resp)).expect("sending query iface response");
         }
 
         match expected_id {

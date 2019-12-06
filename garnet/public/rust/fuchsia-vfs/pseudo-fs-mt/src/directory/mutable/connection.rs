@@ -25,8 +25,8 @@ use {
     failure::Error,
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryObject, DirectoryRequest, NodeInfo, NodeMarker, OutOfLineUnion,
-        OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryObject, DirectoryRequest, NodeInfo, NodeMarker, OPEN_FLAG_CREATE,
+        OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
@@ -118,9 +118,7 @@ where
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::Directory(DirectoryObject);
-            match control_handle
-                .send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info)))
-            {
+            match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return,
             }

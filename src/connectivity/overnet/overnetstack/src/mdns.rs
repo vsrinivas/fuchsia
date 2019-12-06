@@ -59,7 +59,7 @@ async fn publish_inner(node_id: NodeId, port: u16) -> Result<(), Error> {
             srv_ttl: fidl_fuchsia_net_mdns::DEFAULT_SRV_TTL,
             txt_ttl: fidl_fuchsia_net_mdns::DEFAULT_TXT_TTL,
         };
-        let ok_response = fidl::encoding::OutOfLine(&mut ok_publication);
+        let ok_response = &mut ok_publication;
         let response = |ok| {
             if ok {
                 Some(ok_response)

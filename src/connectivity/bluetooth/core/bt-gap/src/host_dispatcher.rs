@@ -4,10 +4,7 @@
 
 use {
     failure::{err_msg, Error},
-    fidl::{
-        encoding::OutOfLine,
-        endpoints::{self, ServerEnd},
-    },
+    fidl::endpoints::{self, ServerEnd},
     fidl_fuchsia_bluetooth::{Appearance, Error as FidlError, ErrorCode},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
@@ -286,8 +283,7 @@ impl HostDispatcherState {
         if let Some(adapter_info) = self.get_active_adapter_info() {
             let mut adapter_info = control::AdapterInfo::from(adapter_info);
             self.notify_event_listeners(|listener| {
-                let _res =
-                    listener.send_on_active_adapter_changed(Some(OutOfLine(&mut adapter_info)));
+                let _res = listener.send_on_active_adapter_changed(Some(&mut adapter_info));
             })
         }
     }

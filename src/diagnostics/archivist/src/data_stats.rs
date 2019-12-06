@@ -309,21 +309,19 @@ mod tests {
                         responder
                             .send(
                                 0,
-                                Some(fidl::encoding::OutOfLine(
-                                    &mut fidl_fuchsia_io::FilesystemInfo {
-                                        total_bytes: 800,
-                                        used_bytes: 200,
-                                        total_nodes: 0,
-                                        used_nodes: 0,
-                                        free_shared_pool_bytes: 200,
-                                        fs_id: 0,
-                                        block_size: 4096,
-                                        max_filename_size: 128,
-                                        fs_type: 0,
-                                        padding: 0,
-                                        name: ['a' as i8; 32],
-                                    },
-                                )),
+                                Some(&mut fidl_fuchsia_io::FilesystemInfo {
+                                    total_bytes: 800,
+                                    used_bytes: 200,
+                                    total_nodes: 0,
+                                    used_nodes: 0,
+                                    free_shared_pool_bytes: 200,
+                                    fs_id: 0,
+                                    block_size: 4096,
+                                    max_filename_size: 128,
+                                    fs_type: 0,
+                                    padding: 0,
+                                    name: ['a' as i8; 32],
+                                }),
                             )
                             .expect("failed to send response");
                     }

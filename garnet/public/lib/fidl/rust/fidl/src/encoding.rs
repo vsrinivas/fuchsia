@@ -1530,11 +1530,6 @@ pub trait Autonull: Encodable + Decodable {
     fn naturally_nullable(context: &Context) -> bool;
 }
 
-/// A wrapper for FIDL types that will cause them to be encoded
-/// or decoded from the out-of-line buffer rather than inline.
-// TODO(fxb/42304): Remove this.
-pub struct OutOfLine<'a, T>(pub &'a mut T);
-
 impl<T: Autonull> Layout for Option<&mut T> {
     fn inline_align(context: &Context) -> usize {
         if T::naturally_nullable(context) {
@@ -1575,23 +1570,6 @@ impl<T: Autonull> Encodable for Option<&mut T> {
                 None => ALLOC_ABSENT_U64.encode(encoder),
             }
         }
-    }
-}
-
-// TODO(fxb/42304): Remove this.
-impl<T: Autonull> Layout for Option<OutOfLine<'_, T>> {
-    fn inline_align(context: &Context) -> usize {
-        <Option<&mut T> as Layout>::inline_align(context)
-    }
-    fn inline_size(context: &Context) -> usize {
-        <Option<&mut T> as Layout>::inline_size(context)
-    }
-}
-
-// TODO(fxb/42304): Remove this.
-impl<T: Autonull> Encodable for Option<OutOfLine<'_, T>> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        self.as_mut().map(|x| -> &mut T { x.0 }).encode(encoder)
     }
 }
 

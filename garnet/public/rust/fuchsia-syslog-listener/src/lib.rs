@@ -8,7 +8,6 @@
 
 use failure::{Error, ResultExt};
 
-use fidl::encoding::OutOfLine;
 use fuchsia_component::client::connect_to_service;
 use futures::TryStreamExt;
 // Include the generated FIDL bindings for the `Logger` service.
@@ -60,7 +59,7 @@ pub async fn run_log_listener<'a>(
     let logger = connect_to_service::<LogMarker>()?;
     let (listener_ptr, listener_stream) = fidl::endpoints::create_request_stream()?;
 
-    let options = options.map(OutOfLine);
+    let options = options;
     if dump_logs {
         logger.dump_logs(listener_ptr, options).context("failed to register log dumper")?;
     } else {

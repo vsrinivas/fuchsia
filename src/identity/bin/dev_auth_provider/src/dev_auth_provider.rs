@@ -7,7 +7,6 @@ use crate::common::{
     USER_PROFILE_INFO_DISPLAY_NAME, USER_PROFILE_INFO_ID_DOMAIN, USER_PROFILE_INFO_IMAGE_URL,
     USER_PROFILE_INFO_URL,
 };
-use fidl::encoding::OutOfLine;
 use fidl::Error;
 use fidl_fuchsia_auth::{
     AuthProviderGetAppAccessTokenFromAssertionJwtResponder, AuthProviderGetAppAccessTokenResponder,
@@ -90,7 +89,7 @@ impl AuthProvider {
         responder.send(
             AuthProviderStatus::Ok,
             credential.as_ref().map(|s| &**s),
-            user_profile_info.as_mut().map(OutOfLine),
+            user_profile_info.as_mut(),
         )
     }
 
@@ -111,7 +110,7 @@ impl AuthProvider {
             expires_in: TOKEN_LIFETIME_SECONDS,
         });
 
-        responder.send(AuthProviderStatus::Ok, auth_token.as_mut().map(OutOfLine))
+        responder.send(AuthProviderStatus::Ok, auth_token.as_mut())
     }
 
     /// Implementation of the `GetAppIdToken` method for the `AuthProvider` fidl
@@ -126,7 +125,7 @@ impl AuthProvider {
             expires_in: TOKEN_LIFETIME_SECONDS,
         });
 
-        responder.send(AuthProviderStatus::Ok, auth_token.as_mut().map(OutOfLine))
+        responder.send(AuthProviderStatus::Ok, auth_token.as_mut())
     }
 
     /// Implementation of the `GetAppFirebaseToken` method for the `AuthProvider`
@@ -142,7 +141,7 @@ impl AuthProvider {
             expires_in: TOKEN_LIFETIME_SECONDS,
         });
 
-        responder.send(AuthProviderStatus::Ok, firebase_token.as_mut().map(OutOfLine))
+        responder.send(AuthProviderStatus::Ok, firebase_token.as_mut())
     }
 
     /// Implementation of the `RevokeAppOrPersistentCredential` method for the

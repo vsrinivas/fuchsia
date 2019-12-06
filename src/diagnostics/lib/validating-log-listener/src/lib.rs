@@ -3,7 +3,6 @@
 #![warn(missing_docs)]
 
 use {
-    fidl::encoding::OutOfLine,
     fidl_fuchsia_logger::{
         LogFilterOptions, LogListenerMarker, LogListenerRequest, LogListenerRequestStream,
         LogMessage, LogProxy,
@@ -78,7 +77,7 @@ impl ValidatingListener {
     ) {
         let (client_end, stream) =
             fidl::endpoints::create_request_stream::<LogListenerMarker>().unwrap();
-        let filter_options = filter_options.as_mut().map(OutOfLine);
+        let filter_options = filter_options.as_mut();
 
         if dump_logs {
             proxy.dump_logs(client_end, filter_options).expect("failed to register listener");

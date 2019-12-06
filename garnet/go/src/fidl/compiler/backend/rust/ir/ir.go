@@ -629,30 +629,10 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 			// so no need to borrow
 			borrowed = false
 			fallthrough
-		case types.ConstDeclType, types.StructDeclType, types.XUnionDeclType:
+		case types.ConstDeclType, types.StructDeclType, types.UnionDeclType, types.XUnionDeclType:
 			if val.Nullable {
 				if borrowed {
-					// TODO(fxb/42304): Replace with "Option<&mut %s>".
-					r = fmt.Sprintf("Option<fidl::encoding::OutOfLine<'_, %s>>", t)
-				} else {
-					r = fmt.Sprintf("Option<Box<%s>>", t)
-				}
-			} else {
-				if borrowed {
-					r = fmt.Sprintf("&mut %s", t)
-				} else {
-					r = t
-				}
-			}
-		// TODO(fxb/42304): Combine this into the case above.
-		case types.UnionDeclType:
-			if val.Nullable {
-				if borrowed {
-					wrapper := c.compileCompoundIdentifier(types.CompoundIdentifier{
-						Library: types.ParseCompoundIdentifier(val.Identifier).Library,
-						Name:    "OutOfLineUnion",
-					})
-					r = fmt.Sprintf("Option<%s<'_, %s>>", wrapper, t)
+					r = fmt.Sprintf("Option<&mut %s>", t)
 				} else {
 					r = fmt.Sprintf("Option<Box<%s>>", t)
 				}

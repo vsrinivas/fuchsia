@@ -231,7 +231,7 @@ pub mod testing {
                         }
                         stored_key = Some(key);
 
-                        responder.send(stored_value.as_mut().map(OutOfLineUnion)).unwrap();
+                        responder.send(stored_value.as_mut()).unwrap();
                     }
                     StoreAccessorRequest::SetValue { key, val, control_handle: _ } => {
                         stats_clone.write().record(StashAction::Set);
@@ -297,7 +297,7 @@ mod tests {
                         let mut response =
                             Value::Stringval(serde_json::to_string(&value_to_get).unwrap());
 
-                        responder.send(Some(&mut response).map(OutOfLineUnion)).unwrap();
+                        responder.send(Some(&mut response)).unwrap();
                     }
                     _ => {}
                 }
@@ -321,7 +321,7 @@ mod tests {
                 #[allow(unreachable_patterns)]
                 match req {
                     StoreAccessorRequest::GetValue { key: _, responder } => {
-                        responder.send(None.map(OutOfLineUnion)).unwrap();
+                        responder.send(None).unwrap();
                     }
                     _ => {}
                 }
@@ -347,7 +347,7 @@ mod tests {
                 match req {
                     StoreAccessorRequest::GetValue { key: _, responder } => {
                         let mut response = Value::Stringval("invalid value".to_string());
-                        responder.send(Some(&mut response).map(OutOfLineUnion)).unwrap();
+                        responder.send(Some(&mut response)).unwrap();
                     }
                     _ => {}
                 }

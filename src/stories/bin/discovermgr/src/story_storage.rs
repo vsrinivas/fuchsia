@@ -5,7 +5,6 @@
 use {
     crate::{constants::TITLE_KEY, utils},
     failure::{Error, ResultExt},
-    fidl::encoding::OutOfLine,
     fidl_fuchsia_app_discover::StoryDiscoverError,
     fidl_fuchsia_ledger::{
         Entry, Error as LedgerError, LedgerMarker, PageMarker, PageProxy, PageSnapshotMarker,
@@ -204,7 +203,7 @@ impl LedgerStorage {
         // keep reading until token is none
         {
             results = snapshot
-                .get_keys(&mut "".bytes(), Some(OutOfLine(&mut unwrap_token)))
+                .get_keys(&mut "".bytes(), Some(&mut unwrap_token))
                 .await
                 .map_err(|_| StoryDiscoverError::Storage)?;
             keys.append(&mut results.0);
@@ -264,7 +263,7 @@ impl StoryStorage for LedgerStorage {
             // keep reading until token is none
             {
                 results = snapshot
-                    .get_entries(&mut "".bytes(), Some(OutOfLine(&mut unwrap_token)))
+                    .get_entries(&mut "".bytes(), Some(&mut unwrap_token))
                     .await
                     .map_err(|_| StoryDiscoverError::Storage)?;
                 entries.append(&mut results.0);

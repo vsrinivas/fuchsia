@@ -8,11 +8,15 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryObject, DirectoryRequestStream, NodeInfo, NodeMarker,
-        OutOfLineUnion, OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_DESCRIBE,
     },
     fuchsia_zircon::Status,
     futures::stream::{Stream, StreamExt, StreamFuture},
-    std::{default::Default, pin::Pin, task::{Context, Poll}},
+    std::{
+        default::Default,
+        pin::Pin,
+        task::{Context, Poll},
+    },
 };
 
 /// Represents a FIDL connection to a directory.  A single directory may contain multiple
@@ -76,9 +80,7 @@ where
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::Directory(DirectoryObject);
-            match control_handle
-                .send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info)))
-            {
+            match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return None,
             }

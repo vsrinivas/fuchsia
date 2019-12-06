@@ -16,11 +16,7 @@ use {
         typeface::{Collection as TypefaceCollection, TypefaceInfoAndCharSet},
     },
     failure::{self, format_err, AsFail, Error, ResultExt},
-    fidl::{
-        self,
-        encoding::{Decodable, OutOfLine},
-        endpoints::ServerEnd,
-    },
+    fidl::{self, encoding::Decodable, endpoints::ServerEnd},
     fidl_fuchsia_fonts::{self as fonts, CacheMissPolicy},
     fidl_fuchsia_fonts_experimental as fonts_exp,
     fidl_fuchsia_fonts_ext::{
@@ -405,22 +401,20 @@ impl FontService {
             GetFont { request, responder } => {
                 let request = request.into_typeface_request();
                 let mut response = self.match_request(request).await?.into_font_response();
-                Ok(responder.send(response.as_mut().map(OutOfLine))?)
+                Ok(responder.send(response.as_mut())?)
             }
             // TODO(I18N-12): Remove when all clients have migrated to GetFontFamilyInfo
             GetFamilyInfo { family, responder } => {
                 let mut font_info =
                     self.get_family_info(fonts::FamilyName { name: family }).into_family_info();
-                Ok(responder.send(font_info.as_mut().map(OutOfLine))?)
+                Ok(responder.send(font_info.as_mut())?)
             }
             GetTypeface { request, responder } => {
                 let response = self.match_request(request).await?;
-                // TODO(kpozin): OutOfLine?
                 Ok(responder.send(response)?)
             }
             GetFontFamilyInfo { family, responder } => {
                 let family_info = self.get_family_info(family);
-                // TODO(kpozin): OutOfLine?
                 Ok(responder.send(family_info)?)
             }
             // TODO(34897): Implement font event dispatch

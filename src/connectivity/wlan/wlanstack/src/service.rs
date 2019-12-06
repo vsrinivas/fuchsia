@@ -4,7 +4,6 @@
 
 use core::sync::atomic::AtomicUsize;
 use failure::ResultExt;
-use fidl::encoding::OutOfLine;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_wlan_common::DriverFeature;
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
@@ -64,7 +63,7 @@ pub async fn serve_device_requests(
             DeviceServiceRequest::QueryPhy { req, responder } => {
                 let result = query_phy(&phys, req.phy_id).await;
                 let (status, mut response) = into_status_and_opt(result);
-                responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
+                responder.send(status.into_raw(), response.as_mut())
             }
             DeviceServiceRequest::ListIfaces { responder } => {
                 responder.send(&mut list_ifaces(&ifaces))
@@ -72,7 +71,7 @@ pub async fn serve_device_requests(
             DeviceServiceRequest::QueryIface { iface_id, responder } => {
                 let result = query_iface(&ifaces, iface_id);
                 let (status, mut response) = into_status_and_opt(result);
-                responder.send(status.into_raw(), response.as_mut().map(OutOfLine))
+                responder.send(status.into_raw(), response.as_mut())
             }
             DeviceServiceRequest::CreateIface { req, responder } => {
                 match create_iface(&iface_counter, &phys, req).await {
@@ -80,7 +79,7 @@ pub async fn serve_device_requests(
                         info!("iface #{} started ({:?})", new_iface.id, new_iface.phy_ownership);
                         let iface_id = new_iface.id;
                         let resp = fidl_svc::CreateIfaceResponse { iface_id };
-                        responder.send(zx::sys::ZX_OK, Some(resp).as_mut().map(OutOfLine))?;
+                        responder.send(zx::sys::ZX_OK, Some(resp).as_mut())?;
 
                         let inspect_tree = inspect_tree.clone();
                         let iface_tree_holder = inspect_tree.create_iface_child(iface_id);
@@ -130,7 +129,7 @@ pub async fn serve_device_requests(
                 match get_iface_stats(&ifaces, iface_id).await {
                     Ok(stats_ref) => {
                         let mut stats = stats_ref.lock();
-                        responder.send(zx::sys::ZX_OK, Some(OutOfLine(&mut stats)))
+                        responder.send(zx::sys::ZX_OK, Some(&mut stats))
                     }
                     Err(status) => responder.send(status.into_raw(), None),
                 }
@@ -141,7 +140,7 @@ pub async fn serve_device_requests(
             }
             DeviceServiceRequest::GetMinstrelStats { iface_id, peer_addr, responder } => {
                 let (status, mut peer) = get_minstrel_stats(&ifaces, iface_id, peer_addr).await;
-                responder.send(status.into_raw(), peer.as_mut().map(|x| OutOfLine(x.as_mut())))
+                responder.send(status.into_raw(), peer.as_deref_mut())
             }
             DeviceServiceRequest::WatchDevices { watcher, control_handle: _ } => {
                 watcher_service

@@ -96,10 +96,7 @@ impl ImeState {
     pub fn forward_event(&mut self, ev: uii::KeyboardEvent) {
         let mut state = idx::text_state_byte_to_codeunit(clone_state(&self.text_state));
         self.client
-            .did_update_state(
-                &mut state,
-                Some(uii::OutOfLineUnion(&mut uii::InputEvent::Keyboard(ev))),
-            )
+            .did_update_state(&mut state, Some(&mut uii::InputEvent::Keyboard(ev)))
             .unwrap_or_else(|e| fx_log_warn!("error sending state update to ImeClient: {:?}", e));
     }
 

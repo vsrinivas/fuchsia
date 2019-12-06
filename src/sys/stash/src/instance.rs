@@ -7,8 +7,7 @@ use fuchsia_async as fasync;
 use failure::{err_msg, Error};
 use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_stash::{
-    FlushError, OutOfLineUnion, StoreAccessorMarker, StoreAccessorRequest,
-    StoreAccessorRequestStream,
+    FlushError, StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
 };
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
@@ -62,7 +61,7 @@ impl Instance {
                     match req {
                         StoreAccessorRequest::GetValue { key, responder } => {
                             let mut res = acc.get_value(&key).await?;
-                            responder.send(res.as_mut().map(OutOfLineUnion))?;
+                            responder.send(res.as_mut())?;
                         }
                         StoreAccessorRequest::SetValue { key, val, .. } => {
                             acc.set_value(key, val).await?

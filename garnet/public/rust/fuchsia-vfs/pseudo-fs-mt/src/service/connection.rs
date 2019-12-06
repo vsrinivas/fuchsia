@@ -14,9 +14,8 @@ use {
     failure::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileMarker, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker,
-        OutOfLineUnion, Service, INO_UNKNOWN, MODE_TYPE_SERVICE, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE,
+        FileMarker, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker, Service,
+        INO_UNKNOWN, MODE_TYPE_SERVICE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
     },
     fuchsia_zircon::{
         sys::{ZX_ERR_ACCESS_DENIED, ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -92,9 +91,7 @@ impl Connection {
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::Service(Service {});
-            match control_handle
-                .send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info)))
-            {
+            match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return,
             }

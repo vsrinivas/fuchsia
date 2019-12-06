@@ -14,7 +14,6 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon_status as zx_status;
 #[allow(unused_imports)]
 use fidl::{
-	encoding::OutOfLine,
 	fidl_bits,
 	fidl_enum,
 	fidl_empty_struct,
@@ -24,10 +23,6 @@ use fidl::{
 	fidl_xunion,
 };
 
-pub type OutOfLineUnion<'a, T> = OutOfLine<'a, T>;
-pub fn OutOfLineUnion<'a, T>(x: &'a mut T) -> OutOfLine<'a, T> {
-	OutOfLine(x)
-}
 
 fidl_union! {
   #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
