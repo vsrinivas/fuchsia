@@ -52,7 +52,6 @@ fidl("fuchsia.modular") {
     "story/story_state.fidl",
     "story/story_visibility_state.fidl",
     "surface/surface.fidl",
-    "user_intelligence/user_intelligence_provider.fidl",
   ]
 
   public_deps = [

@@ -27,7 +27,7 @@
 #include "src/modular/bin/sessionmgr/argv_injecting_launcher.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
-#include "src/modular/bin/sessionmgr/user_intelligence_provider_impl.h"
+#include "src/modular/bin/sessionmgr/startup_agent_launcher.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
@@ -213,13 +213,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   std::unique_ptr<SessionCtl> session_ctl_;
 
-  // These component contexts are supplied to:
-  // - |modular resolver_service_| so it can resolve entity references
-  std::unique_ptr<
-      fidl::BindingSet<fuchsia::modular::ComponentContext, std::unique_ptr<ComponentContextImpl>>>
-      maxwell_component_context_bindings_;
-
-  std::unique_ptr<UserIntelligenceProviderImpl> user_intelligence_provider_impl_;
+  std::unique_ptr<StartupAgentLauncher> startup_agent_launcher_;
 
   std::unique_ptr<modular::LocalModuleResolver> local_module_resolver_;
 

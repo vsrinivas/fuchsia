@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/modular/bin/sessionmgr/user_intelligence_provider_impl.h"
+#include "src/modular/bin/sessionmgr/startup_agent_launcher.h"
 
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/svc/cpp/service_namespace.h>
 #include <zircon/status.h>
@@ -28,15 +27,15 @@ static constexpr char kInternalAgentRunnerRequestorUrl[] = "builtin://modular";
 }  // namespace
 
 template <class Interface>
-UserIntelligenceProviderImpl::SessionAgentData::DeferredInterfaceRequest::DeferredInterfaceRequest(
+StartupAgentLauncher::SessionAgentData::DeferredInterfaceRequest::DeferredInterfaceRequest(
     fidl::InterfaceRequest<Interface> request)
     : name(Interface::Name_), channel(request.TakeChannel()) {}
 
-UserIntelligenceProviderImpl::SessionAgentData::SessionAgentData()
+StartupAgentLauncher::SessionAgentData::SessionAgentData()
     : restart(kSessionAgentRetryLimit) {}
 
 template <class Interface>
-void UserIntelligenceProviderImpl::SessionAgentData::ConnectOrQueueServiceRequest(
+void StartupAgentLauncher::SessionAgentData::ConnectOrQueueServiceRequest(
     fidl::InterfaceRequest<Interface> request) {
   if (services) {
     connect::ConnectToService(services.get(), std::move(request));
@@ -45,7 +44,7 @@ void UserIntelligenceProviderImpl::SessionAgentData::ConnectOrQueueServiceReques
   }
 }
 
-UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
+StartupAgentLauncher::StartupAgentLauncher(
     fidl::InterfaceRequestHandler<fuchsia::modular::FocusProvider> focus_provider_connector,
     fidl::InterfaceRequestHandler<fuchsia::modular::PuppetMaster> puppet_master_connector,
     fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> intl_property_provider_connector,
@@ -55,7 +54,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
       intl_property_provider_connector_(std::move(intl_property_provider_connector)),
       is_terminating_cb_(std::move(is_terminating_cb)){};
 
-void UserIntelligenceProviderImpl::StartAgents(AgentRunner* agent_runner,
+void StartupAgentLauncher::StartAgents(AgentRunner* agent_runner,
                                                std::vector<std::string> session_agents,
                                                std::vector<std::string> startup_agents) {
   FXL_LOG(INFO) << "Starting session_agents:";
@@ -71,16 +70,15 @@ void UserIntelligenceProviderImpl::StartAgents(AgentRunner* agent_runner,
   }
 }
 
-void UserIntelligenceProviderImpl::GetServicesForAgent(std::string url,
-                                                       GetServicesForAgentCallback callback) {
+fuchsia::sys::ServiceList StartupAgentLauncher::GetServicesForAgent(std::string agent_url) {
   fuchsia::sys::ServiceList service_list;
   agent_namespaces_.emplace_back(service_list.provider.NewRequest());
   auto* agent_host = &agent_namespaces_.back();
-  service_list.names = AddAgentServices(url, agent_host);
-  callback(std::move(service_list));
+  service_list.names = AddAgentServices(agent_url, agent_host);
+  return service_list;
 }
 
-void UserIntelligenceProviderImpl::StartAgent(AgentRunner* agent_runner, const std::string& url) {
+void StartupAgentLauncher::StartAgent(AgentRunner* agent_runner, const std::string& url) {
   fuchsia::modular::AgentControllerPtr controller;
   fuchsia::sys::ServiceProviderPtr services;
   agent_runner->ConnectToAgent(kInternalAgentRunnerRequestorUrl, url, services.NewRequest(),
@@ -88,7 +86,7 @@ void UserIntelligenceProviderImpl::StartAgent(AgentRunner* agent_runner, const s
   agent_controllers_.push_back(std::move(controller));
 }
 
-void UserIntelligenceProviderImpl::StartSessionAgent(AgentRunner* agent_runner,
+void StartupAgentLauncher::StartSessionAgent(AgentRunner* agent_runner,
                                                      const std::string& url) {
   SessionAgentData* const agent_data = &session_agents_[url];
 
@@ -131,7 +129,7 @@ void UserIntelligenceProviderImpl::StartSessionAgent(AgentRunner* agent_runner,
 
     if (is_terminating_cb_ != nullptr && is_terminating_cb_()) {
       FXL_LOG(INFO) << "Not restarting " << url
-                    << " because UserIntelligenceProviderImpl is terminating.";
+                    << " because StartupAgentLauncher is terminating.";
     } else {
       if (agent_data.restart.ShouldRetry()) {
         FXL_LOG(INFO) << "Restarting " << url << "...";
@@ -149,7 +147,7 @@ void UserIntelligenceProviderImpl::StartSessionAgent(AgentRunner* agent_runner,
   });
 }
 
-std::vector<std::string> UserIntelligenceProviderImpl::AddAgentServices(
+std::vector<std::string> StartupAgentLauncher::AddAgentServices(
     const std::string& url, component::ServiceNamespace* agent_host) {
   std::vector<std::string> service_names;
 

@@ -15,6 +15,7 @@
 #include <string>
 
 #include "src/lib/fxl/macros.h"
+#include "src/modular/bin/sessionmgr/agent_services_factory.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
@@ -29,7 +30,7 @@ struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
   fuchsia::sys::Launcher* const launcher;
   fuchsia::auth::TokenManager* const token_manager;
-  fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider;
+  AgentServicesFactory* const agent_services_factory;
   // If sessionmgr_context is nullptr, ignore (do not attempt to forward services).
   sys::ComponentContext* const sessionmgr_context;
 };
@@ -44,7 +45,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
  public:
   // Starts the agent specified in |agent_config| and provides it:
   //  1) AgentContext service
-  //  2) A set of services from UserIntelligenceProvider for this agent's url.
+  //  2) A set of services from |info.agent_services_factory| for this agent's url.
   explicit AgentContextImpl(const AgentContextInfo& info, fuchsia::modular::AppConfig agent_config,
                             inspect::Node agent_node);
   ~AgentContextImpl() override;
@@ -134,7 +135,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
 
   fuchsia::auth::TokenManager* const token_manager_;                              // Not owned.
   EntityProviderRunner* const entity_provider_runner_;                            // Not owned.
-  fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider_;  // Not owned.
+  AgentServicesFactory* const agent_services_factory_;                            // Not owned.
 
   inspect::Node agent_node_;
 

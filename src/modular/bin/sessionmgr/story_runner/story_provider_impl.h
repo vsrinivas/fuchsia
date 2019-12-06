@@ -54,7 +54,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
                     const ComponentContextInfo& component_context_info,
                     fuchsia::modular::FocusProviderPtr focus_provider,
-                    fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
+                    AgentServicesFactory* agent_services_factory,
                     fuchsia::app::discover::DiscoverRegistry* discover_registry,
                     fuchsia::modular::ModuleResolver* module_resolver,
                     EntityProviderRunner* entity_provider_runner,
@@ -87,8 +87,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   const ComponentContextInfo& component_context_info() { return component_context_info_; }
 
   // Called by StoryControllerImpl.
-  fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider() {
-    return user_intelligence_provider_;
+  AgentServicesFactory* agent_services_factory() {
+    return agent_services_factory_;
   }
 
   // Called by StoryControllerImpl.
@@ -273,7 +273,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   const ComponentContextInfo component_context_info_;
 
-  fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider_;  // Not owned.
+  AgentServicesFactory* const agent_services_factory_;                            // Not owned.
   fuchsia::app::discover::DiscoverRegistry* const discover_registry_;             // Not owned.
   fuchsia::modular::ModuleResolver* const module_resolver_;                       // Not owned.
   EntityProviderRunner* const entity_provider_runner_;                            // Not owned.

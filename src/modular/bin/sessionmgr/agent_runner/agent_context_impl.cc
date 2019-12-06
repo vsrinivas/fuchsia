@@ -47,22 +47,21 @@ class AgentContextImpl::InitializeCall : public Operation<> {
 
     FlowToken flow{this};
 
-    // No user intelligence provider is available during testing. We want to
+    // No agent services factory is available during testing. We want to
     // keep going without it.
-    if (!agent_context_impl_->user_intelligence_provider_) {
+    if (!agent_context_impl_->agent_services_factory_) {
       auto service_list = fuchsia::sys::ServiceList::New();
       Continue(std::move(service_list), flow);
       return;
     }
 
-    agent_context_impl_->user_intelligence_provider_->GetServicesForAgent(
-        agent_context_impl_->url_, [this, flow](fuchsia::sys::ServiceList agent_service_list) {
-          auto service_list = fuchsia::sys::ServiceList::New();
-          service_list->names = std::move(agent_service_list.names);
-          agent_context_impl_->service_provider_impl_.SetDefaultServiceProvider(
-              agent_service_list.provider.Bind());
-          Continue(std::move(service_list), flow);
-        });
+    auto agent_service_list = agent_context_impl_->agent_services_factory_->GetServicesForAgent(
+        agent_context_impl_->url_);
+    auto service_list = fuchsia::sys::ServiceList::New();
+    service_list->names = std::move(agent_service_list.names);
+    agent_context_impl_->service_provider_impl_.SetDefaultServiceProvider(
+        agent_service_list.provider.Bind());
+    Continue(std::move(service_list), flow);
   }
 
   void Continue(fuchsia::sys::ServiceListPtr service_list, FlowToken flow) {
@@ -162,7 +161,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       component_context_impl_(info.component_context_info, kAgentComponentNamespace, url_, url_),
       token_manager_(info.token_manager),
       entity_provider_runner_(info.component_context_info.entity_provider_runner),
-      user_intelligence_provider_(info.user_intelligence_provider),
+      agent_services_factory_(info.agent_services_factory),
       agent_node_(std::move(agent_node)) {
   service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {

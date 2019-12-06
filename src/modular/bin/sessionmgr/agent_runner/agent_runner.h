@@ -20,6 +20,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_service_index.h"
+#include "src/modular/bin/sessionmgr/agent_services_factory.h"
 #include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
@@ -38,8 +39,9 @@ class EntityProviderRunner;
 // for some test environments that construct AgentRunner outside of a Sessionmgr.
 class AgentRunner {
  public:
-  AgentRunner(fuchsia::sys::Launcher* launcher, fuchsia::auth::TokenManager* token_manager,
-              fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
+  AgentRunner(fuchsia::sys::Launcher* launcher,
+              fuchsia::auth::TokenManager* token_manager,
+              AgentServicesFactory* agent_services_factory,
               EntityProviderRunner* entity_provider_runner, inspect::Node* session_inspect_node,
               std::unique_ptr<AgentServiceIndex> agent_service_index = nullptr,
               sys::ComponentContext* const sessionmgr_context = nullptr);
@@ -141,7 +143,7 @@ class AgentRunner {
 
   fuchsia::sys::Launcher* const launcher_;
   fuchsia::auth::TokenManager* const token_manager_;
-  fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider_;
+  AgentServicesFactory* const agent_services_factory_;
   EntityProviderRunner* const entity_provider_runner_;
 
   // When this is marked true, no new new tasks will be scheduled.

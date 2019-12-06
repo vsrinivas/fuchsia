@@ -341,7 +341,7 @@ void SessionmgrImpl::InitializeIntlPropertyProvider() {
 void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
                                        fuchsia::modular::AppConfig story_shell_config,
                                        bool use_session_shell_for_story_shell_factory) {
-  user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
+  startup_agent_launcher_.reset(new StartupAgentLauncher(
       [this](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
         if (terminating_) {
           return;
@@ -361,7 +361,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
         sessionmgr_context_->svc()->Connect<fuchsia::intl::PropertyProvider>(std::move(request));
       },
       [this]() { return terminating_; }));
-  AtEnd(Reset(&user_intelligence_provider_impl_));
+  AtEnd(Reset(&startup_agent_launcher_));
 
   entity_provider_runner_ =
       std::make_unique<EntityProviderRunner>(static_cast<EntityProviderLauncher*>(this));
@@ -391,14 +391,14 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   agent_runner_launcher_ = std::make_unique<ArgvInjectingLauncher>(
       sessionmgr_context_->svc()->Connect<fuchsia::sys::Launcher>(), argv_map);
   agent_runner_.reset(new AgentRunner(agent_runner_launcher_.get(), agent_token_manager_.get(),
-                                      user_intelligence_provider_impl_.get(),
+                                      startup_agent_launcher_.get(),
                                       entity_provider_runner_.get(), &inspect_root_node_,
                                       std::move(agent_service_index), sessionmgr_context_));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
   ComponentContextInfo component_context_info{agent_runner_.get(), entity_provider_runner_.get()};
 
-  user_intelligence_provider_impl_->StartAgents(agent_runner_.get(), config_.session_agents(),
+  startup_agent_launcher_->StartAgents(agent_runner_.get(), config_.session_agents(),
                                                 config_.startup_agents());
 
   local_module_resolver_ = std::make_unique<LocalModuleResolver>();
@@ -439,7 +439,7 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   story_provider_impl_.reset(new StoryProviderImpl(
       session_environment_.get(), LoadDeviceID(session_id_), session_storage_.get(),
       std::move(story_shell_config), std::move(story_shell_factory_ptr), component_context_info,
-      std::move(focus_provider_story_provider), user_intelligence_provider_impl_.get(),
+      std::move(focus_provider_story_provider), startup_agent_launcher_.get(),
       discover_registry_service_.get(),
       static_cast<fuchsia::modular::ModuleResolver*>(local_module_resolver_.get()),
       entity_provider_runner_.get(), module_facet_reader_.get(), presentation_provider_impl_.get(),

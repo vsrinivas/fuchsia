@@ -35,6 +35,5 @@
   "fidl/fuchsia.modular/story/story_shell_factory.fidl": "23fe9c32b4bcfc794ce32c1d890cdff5",
   "fidl/fuchsia.modular/story/story_state.fidl": "e76164e4aab96201a244e5ba979dcada",
   "fidl/fuchsia.modular/story/story_visibility_state.fidl": "843f5de3bd99588b32e94eb0cda2242c",
-  "fidl/fuchsia.modular/surface/surface.fidl": "ed54e678c1a007dcfdbc21249116c3a1",
-  "fidl/fuchsia.modular/user_intelligence/user_intelligence_provider.fidl": "f2332b5ce5584729d6fcb8c589e28072"
+  "fidl/fuchsia.modular/surface/surface.fidl": "ed54e678c1a007dcfdbc21249116c3a1"
 }

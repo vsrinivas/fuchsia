@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MODULAR_BIN_SESSIONMGR_USER_INTELLIGENCE_PROVIDER_IMPL_H_
-#define SRC_MODULAR_BIN_SESSIONMGR_USER_INTELLIGENCE_PROVIDER_IMPL_H_
+#ifndef SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_IMPL_H_
+#define SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_IMPL_H_
 
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
@@ -18,26 +18,28 @@
 #include <vector>
 
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
+#include "src/modular/bin/sessionmgr/agent_services_factory.h"
+
 #include "src/modular/bin/sessionmgr/rate_limited_retry.h"
 
 namespace modular {
 
-class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligenceProvider {
+class StartupAgentLauncher : public AgentServicesFactory {
  public:
   // |context| is not owned and must outlive this instance.
-  UserIntelligenceProviderImpl(
+  StartupAgentLauncher(
       fidl::InterfaceRequestHandler<fuchsia::modular::FocusProvider> focus_provider_connector,
       fidl::InterfaceRequestHandler<fuchsia::modular::PuppetMaster> puppet_master_connector,
       fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> intl_property_provider,
       fit::function<bool()> is_terminating_cb);
 
-  ~UserIntelligenceProviderImpl() override = default;
+  ~StartupAgentLauncher() override = default;
 
   void StartAgents(AgentRunner* agent_runner, std::vector<std::string> session_agents,
                    std::vector<std::string> startup_agents);
 
-  // |UserIntelligenceProvider
-  void GetServicesForAgent(std::string url, GetServicesForAgentCallback callback) override;
+  // |AgentServicesFactory|
+  fuchsia::sys::ServiceList GetServicesForAgent(std::string agent_url) override;
 
  private:
   struct SessionAgentData {
@@ -105,4 +107,4 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
 
 }  // namespace modular
 
-#endif  // SRC_MODULAR_BIN_SESSIONMGR_USER_INTELLIGENCE_PROVIDER_IMPL_H_
+#endif  // SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_IMPL_H_

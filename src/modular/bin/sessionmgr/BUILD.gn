@@ -41,7 +41,7 @@ source_set("sessionmgr_lib") {
   ]
 
   public_deps = [
-    ":user_intelligence_provider",
+    ":startup_agent_launcher",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.ledger",
@@ -65,6 +65,7 @@ source_set("sessionmgr_lib") {
     ":focus",
     ":presentation_provider",
     ":session_ctl",
+    ":startup_agent_launcher",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:types",
@@ -207,10 +208,20 @@ source_set("presentation_provider") {
   ]
 }
 
-source_set("user_intelligence_provider") {
+source_set("agent_services_factory") {
   sources = [
-    "user_intelligence_provider_impl.cc",
-    "user_intelligence_provider_impl.h",
+    "agent_services_factory.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.sys",
+  ]
+}
+
+source_set("startup_agent_launcher") {
+  sources = [
+    "startup_agent_launcher.cc",
+    "startup_agent_launcher.h",
   ]
 
   public_deps = [
@@ -219,6 +230,7 @@ source_set("user_intelligence_provider") {
   ]
 
   deps = [
+    ":agent_services_factory",
     ":focus",
     ":rate_limited_retry",
     "agent_runner",

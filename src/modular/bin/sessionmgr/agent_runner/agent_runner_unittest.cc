@@ -138,8 +138,6 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
     gtest::RealLoopFixture::SetUp();
 
     entity_provider_runner_ = std::make_unique<modular::EntityProviderRunner>(nullptr);
-    // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
-    // order for agent creation to be synchronous, which these tests assume.
   }
 
   void TearDown() override {
@@ -153,7 +151,8 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
   modular::AgentRunner* agent_runner() {
     if (agent_runner_ == nullptr) {
       agent_runner_ = std::make_unique<modular::AgentRunner>(
-          &launcher_, token_manager_.get(), nullptr, entity_provider_runner_.get(), &node_,
+          &launcher_, token_manager_.get(), /*agent_services_factory=*/nullptr,
+          entity_provider_runner_.get(), &node_,
           std::make_unique<modular::MapAgentServiceIndex>(std::move(agent_service_index_)));
     }
     return agent_runner_.get();

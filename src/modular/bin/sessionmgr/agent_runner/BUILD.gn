@@ -18,6 +18,7 @@ source_set("agent_runner") {
     ":public",
     "//peridot/lib/ledger_client:page_client",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/modular/bin/sessionmgr:agent_services_factory",
   ]
 
   deps = [
@@ -26,8 +27,8 @@ source_set("agent_runner") {
     "//peridot/lib/ledger_client:types",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.ledger",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -97,6 +98,7 @@ source_set("public") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/ledger/bin/fidl",
     "//src/lib/fxl",
+    "//src/modular/bin/sessionmgr:agent_services_factory",
     "//src/modular/bin/sessionmgr/entity_provider_runner",
     "//src/modular/lib/async/cpp:operation",
   ]

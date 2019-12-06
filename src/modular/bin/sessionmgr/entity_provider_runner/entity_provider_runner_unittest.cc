@@ -40,10 +40,9 @@ class EntityProviderRunnerTest : public gtest::RealLoopFixture, modular::EntityP
 
     entity_provider_runner_ = std::make_unique<modular::EntityProviderRunner>(
         static_cast<modular::EntityProviderLauncher*>(this));
-    // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
-    // order for agent creation to be synchronous, which these tests assume.
     agent_runner_ = std::make_unique<modular::AgentRunner>(
-        &launcher_, token_manager_.get(), nullptr, entity_provider_runner_.get(), &node_);
+        &launcher_, token_manager_.get(), /*agent_services_factory=*/nullptr,
+        entity_provider_runner_.get(), &node_);
   }
 
   void TearDown() override {
