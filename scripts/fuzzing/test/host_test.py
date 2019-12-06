@@ -97,7 +97,7 @@ class TestHost(unittest.TestCase):
         # No guarantee of contents; just ensure it parses without crashing.
         if os.path.exists(json_file):
             host.set_fuzzers_json(json_file)
-        # Construct and parse both fuchisa and zircon style fuzzer metadata.
+        # Construct and parse both fuchsia and zircon style fuzzer metadata.
         data = [
             {
                 'fuzz_host': False,

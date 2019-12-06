@@ -3,7 +3,7 @@
 This is the code for the frontend of the Fuchsia debugger. This frontend runs
 on the developer's host computer (Linux or Mac) and talks via IPC (code in
 [../ipc](../ipc)) to the debug agent (code in [../debug_agent](../debug_agent))
-running on the Fucsia target.
+running on the Fuchsia target.
 
 ### User documentation
 

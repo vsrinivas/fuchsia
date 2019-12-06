@@ -44,7 +44,7 @@ use specialize_ip_macro::specialize_ip_address;
 /// Utilities to allow running benchmarks as tests.
 ///
 /// Our benchmarks rely on the unstable `test` feature, which is disallowed in
-/// Fuchisa's build system. In order to ensure that our benchmarks are always
+/// Fuchsia's build system. In order to ensure that our benchmarks are always
 /// compiled and tested, this module provides mocks that allow us to run our
 /// benchmarks as normal tests when the `benchmark` feature is disabled.
 ///

@@ -25,7 +25,7 @@
 
 #include "src/lib/fxl/logging.h"
 
-// This file implements a minimal fuschsia::ui::scenic::Scenic implementation.
+// This file implements a minimal fuchsia::ui::scenic::Scenic implementation.
 //
 // It is:
 //
