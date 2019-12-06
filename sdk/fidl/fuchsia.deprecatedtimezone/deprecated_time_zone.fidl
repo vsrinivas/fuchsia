@@ -4,9 +4,13 @@
 
 library fuchsia.deprecatedtimezone;
 
-// TODO(US-384): Update protocol for more stuctured data: timezone names,
-// standard timezone codenames, and DST start/end information
-// (see go/garnet-time).
+// NOTE: this FIDL protocol is deprecated and slated for removal.  Please do
+// not add new uses that depend on it.  Use instead the following functionality:
+//
+// - For `GetTimezoneOffsetMinutes` and `GetTimezoneId`, get the timezone name
+//   from `fuchsia.intl.ProfileProvider`, and use the ICU library to compute
+//   the offset.
+// - For `SetTimezone` and `Watch`, please use `fuchsia.settings.Intl`.
 //
 // For more information on the ICU timezone ID format, see:
 // http://userguide.icu-project.org/datetime
