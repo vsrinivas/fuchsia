@@ -63,6 +63,17 @@ class OS {
 class Capture {
  public:
   static zx_status_t GetCaptureState(CaptureState* state);
+
+  // Initialize a Capture instance. Be sure to call GetCapture prior to passing
+  // the Capture instance to other systems (such as a Digest).
+  //
+  // Tip: This may require services (in your .cmx file) for
+  //   fuchsia.boot.RootJobForInspect and fuchsia.kernel.Stats, e.g.:
+  //   "sandbox": {
+  //       "services": [
+  //           "fuchsia.boot.RootJobForInspect",
+  //           "fuchsia.kernel.Stats",
+  //           ...
   static zx_status_t GetCapture(Capture* capture, const CaptureState& state, CaptureLevel level);
 
   zx_time_t time() const { return time_; };
