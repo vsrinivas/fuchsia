@@ -83,6 +83,107 @@ fn validate_string_pattern(string_pattern: &String) -> Result<(), Error> {
     }
 }
 
+/// Validates all PathSelectorNodes within `path_selection_vector`.
+/// PathSelectorNodes:
+///     1) Require that all elements of the vector are valid per
+///        Selectors::validate_string_pattern specification.
+///     2) Require a non-empty vector.
+fn validate_path_selection_vector(
+    path_selection_vector: &Vec<StringSelector>,
+) -> Result<(), Error> {
+    for path_selection_node in path_selection_vector {
+        match path_selection_node {
+            StringSelector::StringPattern(pattern) => match validate_string_pattern(pattern) {
+                Ok(_) => {}
+                Err(e) => {
+                    return Err(e);
+                }
+            },
+            StringSelector::ExactMatch(_) => {
+                //TODO(4601): What do we need to validate against exact matches?
+            }
+            _ => {
+                return Err(format_err!(
+                    "PathSelectionNodes must be string patterns or pattern matches"
+                ))
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Validates a TreeSelector:
+/// TreeSelectors:
+///    1) Require a present node_path selector field.
+///    2) Require that all entries within the node_path are valid per
+///       Selectors::validate_node_path specification.
+///    3) Require that the target_properties field, if it is present,
+///       is valid per Selectors::validate_string_pattern specification.
+pub fn validate_tree_selector(tree_selector: &TreeSelector) -> Result<(), Error> {
+    match &tree_selector.node_path {
+        Some(node_path) => {
+            if node_path.is_empty() {
+                return Err(format_err!("Tree selectors must have non-empty node_path vector."));
+            }
+            validate_path_selection_vector(node_path)?;
+        }
+
+        None => {
+            return Err(format_err!(
+                "Missing node_path selectors are not valid syntax. You must provide a matcher
+ describing the path from a hierarchies *root* to the node(s) of interest."
+            ));
+        }
+    }
+
+    match &tree_selector.target_properties {
+        Some(target_properties) => match target_properties {
+            StringSelector::StringPattern(pattern) => match validate_string_pattern(pattern) {
+                Ok(_) => {}
+                Err(e) => {
+                    return Err(e);
+                }
+            },
+            StringSelector::ExactMatch(_) => {
+                // TODO(4601): What do we need to validate for exact match strings?
+            }
+            _ => {
+                return Err(format_err!(
+                    "target_properties must be either string patterns or exact matches."
+                ))
+            }
+        },
+        None => {
+            return Err(format_err!(
+                "Empty target properties are not valid syntax. You must provide a matcher
+ describing the propert(y|ies) you wish to retrieve from the nodes you have selected."
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+/// Validates a ComponentSelector:
+/// ComponentSelectors:
+///    1) Require a present component_moniker field.
+///    2) Require that all entries within the component_moniker vector are valid per
+///       Selectors::validate_node_path specification.
+pub fn validate_component_selector(component_selector: &ComponentSelector) -> Result<(), Error> {
+    match &component_selector.moniker_segments {
+        Some(moniker) => {
+            if moniker.is_empty() {
+                return Err(format_err!(
+                    "Component selectors must have non-empty moniker segment vector."
+                ));
+            }
+
+            return validate_path_selection_vector(moniker);
+        }
+        None => return Err(format_err!("Component selectors must have a moniker_segment.")),
+    }
+}
+
 /// Parse a string into a FIDL StringSelector structure.
 fn convert_string_to_string_selector(string_to_convert: &String) -> Result<StringSelector, Error> {
     validate_string_pattern(string_to_convert)?;
@@ -165,13 +266,9 @@ pub fn parse_component_selector(
         .map(|node_string| convert_string_to_string_selector(node_string))
         .collect::<Result<Vec<StringSelector>, Error>>()?;
 
-    match path_node_vector.as_slice() {
-        [] => {
-            return Err(format_err!("ComponentSelector must have atleast one path node.",));
-        }
-        _ => component_selector.moniker_segments = Some(path_node_vector),
-    }
+    validate_path_selection_vector(&path_node_vector)?;
 
+    component_selector.moniker_segments = Some(path_node_vector);
     return Ok(component_selector);
 }
 
@@ -197,6 +294,7 @@ pub fn parse_tree_selector(
     tree_selector.target_properties =
         Some(convert_string_to_string_selector(unparsed_property_selector)?);
 
+    validate_tree_selector(&tree_selector)?;
     return Ok(tree_selector);
 }
 
@@ -462,21 +560,12 @@ mod tests {
             (r#"a/b"#.to_string(), "c**".to_string()),
             // Node path cant have globs.
             ("a/**".to_string(), "c".to_string()),
+            ("".to_string(), "c".to_string()),
         ];
         for (test_nodepath, test_targetproperty) in test_vector {
             let tree_selector_result = parse_tree_selector(&test_nodepath, &test_targetproperty);
             assert!(tree_selector_result.is_err());
         }
-    }
-
-    #[test]
-    fn missing_nodepath_tree_selector_test() {
-        let tree_selector_result = parse_tree_selector(&"".to_string(), &"c".to_string()).unwrap();
-        assert_eq!(tree_selector_result.node_path, None);
-        assert_eq!(
-            tree_selector_result.target_properties,
-            Some(StringSelector::StringPattern("c".to_string()))
-        );
     }
 
     #[test]
@@ -608,6 +697,113 @@ mod tests {
             let target_properties = tree_selector.target_properties.unwrap();
             let selector_regex = convert_property_selector_to_regex(&target_properties).unwrap();
             assert!(!selector_regex.is_match(string_to_match));
+        }
+    }
+
+    lazy_static! {
+        static ref SHARED_PASSING_TEST_CASES: Vec<(Vec<&'static str>, &'static str)> = {
+            vec![
+                (vec![r#"abc"#, r#"def"#, r#"g"#], r#"bob"#),
+                (vec![r#"\**"#], r#"\**"#),
+                (vec![r#"\/"#], r#"\/"#),
+                (vec![r#"\:"#], r#"\:"#),
+                (vec![r#"asda\\\:"#], r#"a"#),
+                (vec![r#"asda*"#], r#"a"#),
+            ]
+        };
+        static ref SHARED_FAILING_TEST_CASES: Vec<(Vec<&'static str>, &'static str)> = {
+            vec![
+                // Globs aren't allowed in path nodes.
+                (vec![r#"**"#], r#"a"#),
+                // Slashes aren't allowed in path nodes.
+                (vec![r#"/"#], r#"a"#),
+                // Colons aren't allowed in path nodes.
+                (vec![r#":"#], r#"a"#),
+                // Checking that path nodes ending with offlimits
+                // chars are still identified.
+                (vec![r#"asdasd:"#], r#"a"#),
+                (vec![r#"a**"#], r#"a"#),
+                // Checking that path nodes starting with offlimits
+                // chars are still identified.
+                (vec![r#":asdasd"#], r#"a"#),
+                (vec![r#"**a"#], r#"a"#),
+                // Neither moniker segments nor node paths
+                // are allowed to be empty.
+                (vec![], r#"bob"#),
+            ]
+        };
+    }
+
+    #[test]
+    fn tree_selector_validator_test() {
+        let unique_failing_test_cases = vec![
+            // All failing validators due to property selectors are
+            // unique since the component validator doesnt look at them.
+            (vec![r#"a"#], r#"**"#),
+            (vec![r#"a"#], r#"/"#),
+        ];
+
+        fn create_tree_selector(node_path: &Vec<&str>, property: &str) -> TreeSelector {
+            let mut tree_selector = TreeSelector::empty();
+            tree_selector.node_path = Some(
+                node_path
+                    .iter()
+                    .map(|path_node_str| StringSelector::StringPattern(path_node_str.to_string()))
+                    .collect::<Vec<StringSelector>>(),
+            );
+            tree_selector.target_properties =
+                Some(StringSelector::StringPattern(property.to_string()));
+            tree_selector
+        }
+
+        for (node_path, property) in SHARED_PASSING_TEST_CASES.iter() {
+            let tree_selector = create_tree_selector(node_path, property);
+            assert!(validate_tree_selector(&tree_selector).is_ok());
+        }
+
+        for (node_path, property) in SHARED_FAILING_TEST_CASES.iter() {
+            let tree_selector = create_tree_selector(node_path, property);
+            assert!(
+                validate_tree_selector(&tree_selector).is_err(),
+                format!("Failed to validate tree selector: {:?}", tree_selector)
+            );
+        }
+
+        for (node_path, property) in unique_failing_test_cases.iter() {
+            let tree_selector = create_tree_selector(node_path, property);
+            assert!(
+                validate_tree_selector(&tree_selector).is_err(),
+                format!("Failed to validate tree selector: {:?}", tree_selector)
+            );
+        }
+    }
+
+    #[test]
+    fn component_selector_validator_test() {
+        fn create_component_selector(component_moniker: &Vec<&str>) -> ComponentSelector {
+            let mut component_selector = ComponentSelector::empty();
+            component_selector.moniker_segments = Some(
+                component_moniker
+                    .into_iter()
+                    .map(|path_node_str| StringSelector::StringPattern(path_node_str.to_string()))
+                    .collect::<Vec<StringSelector>>(),
+            );
+            component_selector
+        }
+
+        for (component_moniker, _) in SHARED_PASSING_TEST_CASES.iter() {
+            let component_selector = create_component_selector(component_moniker);
+
+            assert!(validate_component_selector(&component_selector).is_ok());
+        }
+
+        for (component_moniker, _) in SHARED_FAILING_TEST_CASES.iter() {
+            let component_selector = create_component_selector(component_moniker);
+
+            assert!(
+                validate_component_selector(&component_selector).is_err(),
+                format!("Failed to validate component selector: {:?}", component_selector)
+            );
         }
     }
 }
