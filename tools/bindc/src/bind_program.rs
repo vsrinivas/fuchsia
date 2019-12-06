@@ -48,6 +48,7 @@ pub enum Statement {
     ConditionStatement(Condition),
     Accept { identifier: CompoundIdentifier, values: Vec<Value> },
     If { blocks: Vec<(Condition, Vec<Statement>)>, else_block: Vec<Statement> },
+    Abort,
 }
 
 // TODO(fxb/35146): Improve error reporting here.
@@ -139,8 +140,15 @@ fn accept(input: &str) -> IResult<&str, Statement, BindParserError> {
     )(input)
 }
 
+fn abort(input: &str) -> IResult<&str, Statement, BindParserError> {
+    let keyword_abort = ws(map_err(tag("abort"), BindParserError::AbortKeyword));
+    let terminator = ws(map_err(tag(";"), BindParserError::Semicolon));
+    let (input, _) = terminated(keyword_abort, terminator)(input)?;
+    Ok((input, Statement::Abort))
+}
+
 fn statement(input: &str) -> IResult<&str, Statement, BindParserError> {
-    alt((condition_statement, if_statement, accept))(input)
+    alt((condition_statement, if_statement, accept, abort))(input)
 }
 
 fn program(input: &str) -> IResult<&str, Ast, BindParserError> {
@@ -508,6 +516,42 @@ mod test {
         }
     }
 
+    mod aborts {
+        use super::*;
+
+        #[test]
+        fn simple() {
+            assert_eq!(abort("abort;"), Ok(("", Statement::Abort)));
+        }
+
+        #[test]
+        fn invalid() {
+            // Must have abort keyword.
+            assert_eq!(
+                abort("a;"),
+                Err(nom::Err::Error(BindParserError::AbortKeyword("a;".to_string())))
+            );
+            assert_eq!(
+                abort(";"),
+                Err(nom::Err::Error(BindParserError::AbortKeyword(";".to_string())))
+            );
+
+            // Must have semicolon.
+            assert_eq!(
+                abort("abort"),
+                Err(nom::Err::Error(BindParserError::Semicolon("".to_string())))
+            );
+        }
+
+        #[test]
+        fn empty() {
+            assert_eq!(
+                abort(""),
+                Err(nom::Err::Error(BindParserError::AbortKeyword("".to_string())))
+            );
+        }
+    }
+
     mod programs {
         use super::*;
 
@@ -569,14 +613,14 @@ mod test {
             // TODO(fxb/35146): Improve the error type that is returned here.
             assert_eq!(
                 program("x == 1"),
-                Err(nom::Err::Error(BindParserError::AcceptKeyword("x == 1".to_string())))
+                Err(nom::Err::Error(BindParserError::AbortKeyword("x == 1".to_string())))
             );
         }
 
         #[test]
         fn multiple_statements() {
             assert_eq!(
-                program("x == 1; accept y { true } if z == 2 { a != 3; } else { a == 3; }"),
+                program("x == 1; accept y { true } abort; if z == 2 { a != 3; } else { a == 3; }"),
                 Ok((
                     "",
                     Ast {
@@ -591,6 +635,7 @@ mod test {
                                 identifier: make_identifier!["y"],
                                 values: vec![Value::BoolLiteral(true)],
                             },
+                            Statement::Abort,
                             Statement::If {
                                 blocks: vec![(
                                     Condition {

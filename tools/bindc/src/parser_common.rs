@@ -77,6 +77,7 @@ pub enum BindParserError {
     ConditionOp(String),
     ConditionValue(String),
     AcceptKeyword(String),
+    AbortKeyword(String),
     NoStatements(String),
     UnterminatedComment,
     Unknown(String, ErrorKind),

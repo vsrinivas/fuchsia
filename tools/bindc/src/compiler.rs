@@ -526,6 +526,9 @@ impl<'a> Compiler<'a> {
                     // condition and accept statements.
                     self.instructions.push(SymbolicInstruction::Label(final_label_id));
                 }
+                Statement::Abort => {
+                    self.instructions.push(SymbolicInstruction::UnconditionalAbort);
+                }
             }
         }
         Ok(())

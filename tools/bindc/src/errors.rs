@@ -98,6 +98,9 @@ impl From<BindParserError> for UserError {
             BindParserError::AcceptKeyword(span) => {
                 UserError::new("E020", "Expected 'accept' keyword.", Some(span))
             }
+            BindParserError::AbortKeyword(span) => {
+                UserError::new("E024", "Expected 'abort' keyword.", Some(span))
+            }
             BindParserError::NoStatements(span) => UserError::new(
                 "E021",
                 "Bind programs must contain at least one statement.",
