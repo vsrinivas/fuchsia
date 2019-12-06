@@ -3,11 +3,6 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <threads.h>
-#include <unistd.h>
-
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/exception.h>
@@ -16,7 +11,10 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vmar.h>
-
+#include <stdint.h>
+#include <stdio.h>
+#include <threads.h>
+#include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
@@ -99,86 +97,120 @@ TEST(JobPolicyTest, AbsThenRel) {
                            static_cast<uint32_t>(fbl::count_of(more))));
 }
 
-void InvalidCalls(uint32_t options) {
+void InvalidCalls(uint32_t options, uint32_t flags) {
   {
     // Null policy pointer.
     auto job = MakeJob();
-    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC, nullptr, 0u), ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC, nullptr, 1u), ZX_ERR_INVALID_ARGS);
-    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC, nullptr, 5u), ZX_ERR_INVALID_ARGS);
+    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, nullptr, 0u), ZX_ERR_INVALID_ARGS);
+    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, nullptr, 1u), ZX_ERR_INVALID_ARGS);
+    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, nullptr, 5u), ZX_ERR_INVALID_ARGS);
 
-    zx_policy_basic_v1_t policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL}};
-    EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC, policy, 1u));
-    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC, policy, 33u), ZX_ERR_INVALID_ARGS);
+    zx_policy_basic_v2_t policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, flags}};
+    EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy, 1u));
+    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy, 33u), ZX_ERR_INVALID_ARGS);
   }
 
   {
     // Count is 0.
     auto job = MakeJob();
-    zx_policy_basic_v1_t policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL}};
-    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC, policy, 0u), ZX_ERR_INVALID_ARGS);
+    zx_policy_basic_v2_t policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, flags}};
+    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy, 0u), ZX_ERR_INVALID_ARGS);
 
-    EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC, policy, 1u));
+    EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy, 1u));
   }
 
   {
     // Too many.
     auto job = MakeJob();
-    zx_policy_basic_v1_t policy[16]{};
+    zx_policy_basic_v2_t policy[16]{};
     for (unsigned i = 0; i < fbl::count_of(policy); ++i) {
-      policy[i] = {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL};
+      policy[i] = {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, flags};
     }
-    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC, policy, fbl::count_of(policy)),
+    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy, fbl::count_of(policy)),
               ZX_ERR_OUT_OF_RANGE);
 
-    EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC, policy, 1u));
+    EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy, 1u));
   }
 
   {
     // Invalid condition value.
     auto job = MakeJob();
-    zx_policy_basic_v1_t policy[] = {{100001u, ZX_POL_ACTION_KILL}};
-    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC, policy,
+    zx_policy_basic_v2_t policy[] = {{100001u, ZX_POL_ACTION_KILL, flags}};
+    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy,
                              static_cast<uint32_t>(fbl::count_of(policy))),
               ZX_ERR_INVALID_ARGS);
 
-    zx_policy_basic_v1_t good_policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL}};
-    EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC, good_policy, 1u));
+    zx_policy_basic_v2_t good_policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, flags}};
+    EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC_V2, good_policy, 1u));
   }
 
   {
     // Invalid action value.
     auto job = MakeJob();
-    zx_policy_basic_v1_t policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL + 1}};
-    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC, policy,
+    zx_policy_basic_v2_t policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL + 1, flags}};
+    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC_V2, policy,
                              static_cast<uint32_t>(fbl::count_of(policy))),
               ZX_ERR_NOT_SUPPORTED);
 
-    zx_policy_basic_v1_t good_policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL}};
-    EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC, good_policy, 1u));
+    zx_policy_basic_v2_t good_policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, flags}};
+    EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC_V2, good_policy, 1u));
   }
 }
 
-TEST(JobPolicyTest, InvalidCallsAbs) { InvalidCalls(ZX_JOB_POL_ABSOLUTE); }
+TEST(JobPolicyTest, InvalidCallsAbsV2) { InvalidCalls(ZX_JOB_POL_ABSOLUTE, ZX_POL_OVERRIDE_ALLOW); }
+TEST(JobPolicyTest, InvalidCallsRelV2) { InvalidCalls(ZX_JOB_POL_RELATIVE, ZX_POL_OVERRIDE_ALLOW); }
 
-TEST(JobPolicyTest, InvalidCallsRel) { InvalidCalls(ZX_JOB_POL_RELATIVE); }
+TEST(JobPolicyTest, InvalidCallsAbsV1) { InvalidCalls(ZX_JOB_POL_ABSOLUTE, ZX_POL_OVERRIDE_DENY); }
+TEST(JobPolicyTest, InvalidCallsRelV1) { InvalidCalls(ZX_JOB_POL_RELATIVE, ZX_POL_OVERRIDE_DENY); }
 
-// Checks that executing the given mini-process.h command (|minip_cmd|) produces the given result
-// (|expect|) when the given policy is in force.
-void CheckInvokingPolicy(zx_policy_basic_v1_t* pol, uint32_t pol_count, uint32_t minip_cmd,
-                         zx_status_t expect) {
+void CheckInvokingPolicyHelper(zx_policy_basic_v2_t* pol, uint32_t pol_count, uint32_t minip_cmd,
+                               zx_status_t expect_cmd_status) {
   auto job = MakeJob();
-  ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, pol, pol_count));
+  ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, pol, pol_count));
 
   zx_handle_t ctrl;
   auto proc = MakeTestProcess(job, nullptr, &ctrl);
   ASSERT_TRUE(proc.is_valid());
   ASSERT_NE(ctrl, ZX_HANDLE_INVALID);
   zx_handle_t obj;
-  EXPECT_EQ(mini_process_cmd(ctrl, minip_cmd, &obj), expect);
-  EXPECT_EQ(mini_process_cmd(ctrl, MINIP_CMD_EXIT_NORMAL, nullptr), ZX_ERR_PEER_CLOSED);
+  EXPECT_EQ(mini_process_cmd(ctrl, minip_cmd, &obj), expect_cmd_status);
+  if (expect_cmd_status == ZX_ERR_PEER_CLOSED) {
+    // We expected the process to be terminated. Verify that it was due to policy.
+    ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
+    zx_info_process_t proc_info;
+    ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
+    ASSERT_TRUE(proc_info.exited);
+    ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_POLICY_KILL);
+  } else {
+    // The process executed the command and is still running. Ask it to exit.
+    EXPECT_EQ(mini_process_cmd(ctrl, MINIP_CMD_EXIT_NORMAL, nullptr), ZX_ERR_PEER_CLOSED);
+  }
 
   zx_handle_close(ctrl);
+}
+
+// Checks that executing the given mini-process.h command (|minip_cmd|) produces the given result
+// (|expect_cmd_status|) when the given policy is in force.
+void CheckInvokingPolicy(zx_policy_basic_v1_t* pol, uint32_t pol_count, uint32_t minip_cmd,
+                         zx_status_t expect_cmd_status) {
+  ASSERT_LE(pol_count, 3u);
+  zx_policy_basic_v2_t actual_pol[3] = {};
+
+  for (uint32_t ix = 0; ix != pol_count; ++ix) {
+    actual_pol[ix].condition = pol[ix].condition;
+    actual_pol[ix].action = pol[ix].policy;
+    actual_pol[ix].flags = ZX_POL_OVERRIDE_DENY;
+  }
+  // Launch check with ZX_POL_OVERRIDE_DENY and with ZX_POL_OVERRIDE_ALLOW. The outcome
+  // should be the same.
+
+  CheckInvokingPolicyHelper(actual_pol, pol_count, minip_cmd, expect_cmd_status);
+
+  for (uint32_t ix = 0; ix != pol_count; ++ix) {
+    actual_pol[ix].flags = ZX_POL_OVERRIDE_ALLOW;
+  }
+
+  CheckInvokingPolicyHelper(actual_pol, pol_count, minip_cmd, expect_cmd_status);
 }
 
 TEST(JobPolicyTest, EnforceDenyEvent) {
@@ -239,33 +271,10 @@ TEST(JobPolicyTest, EnforceDenyAny) {
                       MINIP_CMD_CREATE_CHANNEL, ZX_ERR_ACCESS_DENIED);
 }
 
-// Check that executing the given mini-process.h command (|minip_cmd|) kills the process when the
-// given policy |pol| is in effect.
-void CheckInvokingPolicyKill(zx_policy_basic_v1_t* pol, uint32_t count, uint32_t minip_cmd) {
-  auto job = MakeJob();
-  ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, pol, count));
-
-  zx_handle_t ctrl;
-  auto proc = MakeTestProcess(job, nullptr, &ctrl);
-  ASSERT_TRUE(proc.is_valid());
-  ASSERT_NE(ctrl, ZX_HANDLE_INVALID);
-
-  zx_handle_t obj;
-  ASSERT_EQ(mini_process_cmd(ctrl, minip_cmd, &obj), ZX_ERR_PEER_CLOSED);
-  ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
-
-  zx_info_process_t proc_info;
-  ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  ASSERT_TRUE(proc_info.exited);
-  ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_POLICY_KILL);
-
-  zx_handle_close(ctrl);
-}
-
 TEST(JobPolicyTest, EnforceKillEvent) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_EVENT, ZX_POL_ACTION_KILL}};
-  CheckInvokingPolicyKill(policy, static_cast<uint32_t>(fbl::count_of(policy)),
-                          MINIP_CMD_CREATE_EVENT);
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
+                      ZX_ERR_PEER_CLOSED);
 }
 
 TEST(JobPolicyTest, EnforceAllowAny) {
@@ -306,10 +315,11 @@ uint64_t get_syscall_result(zx_thread_state_general_regs_t* regs) { return regs-
 // mini-process.h command produces the given result when the given policy
 // is in force.  In addition, it tests that a debug channel exception gets
 // generated.
-void CheckInvokingPolicyWithException(const zx_policy_basic_v1_t* policy, uint32_t policy_count,
-                                      uint32_t minip_cmd, zx_status_t expected_syscall_result) {
+void CheckInvokingPolicyWithExceptionHelper(const zx_policy_basic_v2_t* policy,
+                                            uint32_t policy_count, uint32_t minip_cmd,
+                                            zx_status_t expect_cmd_status) {
   auto job = MakeJob();
-  ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, policy, policy_count));
+  ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy, policy_count));
 
   zx_handle_t ctrl;
   zx::thread thread;
@@ -360,7 +370,7 @@ void CheckInvokingPolicyWithException(const zx_policy_basic_v1_t* policy, uint32
   // Check that we can read the thread's register state.
   zx_thread_state_general_regs_t regs;
   ASSERT_OK(zx_thread_read_state(thread.get(), ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)));
-  ASSERT_EQ(get_syscall_result(&regs), (uint64_t)expected_syscall_result);
+  ASSERT_EQ(get_syscall_result(&regs), (uint64_t)expect_cmd_status);
   // TODO(mseaborn): Check the values of other registers.  We could check
   // that rip/pc is within the VDSO, which will require figuring out
   // where the VDSO is mapped.  We could check that unwinding the stack
@@ -377,14 +387,38 @@ void CheckInvokingPolicyWithException(const zx_policy_basic_v1_t* policy, uint32
 
   // Check that we receive a reply message from the resumed thread.
   zx_handle_t obj;
-  EXPECT_EQ(mini_process_cmd_read_reply(ctrl, &obj), expected_syscall_result);
-  if (expected_syscall_result == ZX_OK)
+  EXPECT_EQ(mini_process_cmd_read_reply(ctrl, &obj), expect_cmd_status);
+  if (expect_cmd_status == ZX_OK)
     EXPECT_OK(zx_handle_close(obj));
 
   // Clean up: Tell the subprocess to exit.
   EXPECT_EQ(mini_process_cmd(ctrl, MINIP_CMD_EXIT_NORMAL, nullptr), ZX_ERR_PEER_CLOSED);
 
   zx_handle_close(ctrl);
+}
+
+// Checks that executing the given mini-process.h command (|minip_cmd|) produces the given result
+// (|expect_cmd_status|) when the given policy is in force.
+void CheckInvokingPolicyWithException(zx_policy_basic_v1_t* pol, uint32_t pol_count,
+                                      uint32_t minip_cmd, zx_status_t expect_cmd_status) {
+  ASSERT_LE(pol_count, 3u);
+  zx_policy_basic_v2_t actual_pol[3] = {};
+
+  for (uint32_t ix = 0; ix != pol_count; ++ix) {
+    actual_pol[ix].condition = pol[ix].condition;
+    actual_pol[ix].action = pol[ix].policy;
+    actual_pol[ix].flags = ZX_POL_OVERRIDE_DENY;
+  }
+  // Launch check with ZX_POL_OVERRIDE_DENY and with ZX_POL_OVERRIDE_ALLOW. The outcome
+  // should be the same.
+
+  CheckInvokingPolicyWithExceptionHelper(actual_pol, pol_count, minip_cmd, expect_cmd_status);
+
+  for (uint32_t ix = 0; ix != pol_count; ++ix) {
+    actual_pol[ix].flags = ZX_POL_OVERRIDE_ALLOW;
+  }
+
+  CheckInvokingPolicyWithExceptionHelper(actual_pol, pol_count, minip_cmd, expect_cmd_status);
 }
 
 TEST(JobPolicyTest, TestExceptionOnNewEventAndDeny) {

@@ -4,8 +4,7 @@
 
 zx_test("policy") {
   sources = [
-    "job-policy-v1.cc",
-    "job-policy-v2.cc",
+    "job-policy.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

@@ -57,6 +57,26 @@ static bool add_basic_policy_no_widening() {
   END_TEST;
 }
 
+static bool add_basic_policy_allow_widening() {
+  BEGIN_TEST;
+
+  auto p = JobPolicy::CreateRootPolicy();
+
+  // Start with deny all, but allowing override.
+  zx_policy_basic_v2_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_ALLOW};
+  ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
+  ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT));
+
+  // Allow event creation.
+  policy = {ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW, ZX_POL_OVERRIDE_DENY};
+  ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
+  // Test that it in fact, allows for event, but denies for VMO.
+  ASSERT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(ZX_POL_NEW_EVENT));
+  ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_VMO));
+
+  END_TEST;
+}
+
 // Verify that AddBasicPolicy prevents "widening" of policy using NEW_ANY.
 static bool add_basic_policy_no_widening_with_any() {
   BEGIN_TEST;
@@ -89,11 +109,31 @@ static bool add_basic_policy_no_widening_with_any() {
   END_TEST;
 }
 
-static bool add_basic_policy_absolute() {
+static bool add_basic_policy_allow_widening_with_any() {
   BEGIN_TEST;
 
   auto p = JobPolicy::CreateRootPolicy();
 
+  // Start with deny event creation.
+  zx_policy_basic_v2_t policy{ZX_POL_NEW_EVENT, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_ALLOW};
+  ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
+  ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT));
+
+  // Change it to allow any.
+  policy = {ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW, ZX_POL_OVERRIDE_DENY};
+  ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
+
+  // Verify event can now be created.
+  ASSERT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(ZX_POL_NEW_EVENT));
+
+  END_TEST;
+}
+
+static bool add_basic_policy_absolute() {
+  BEGIN_TEST;
+
+  auto p = JobPolicy::CreateRootPolicy();
+  // TODO(cpu). Don't allow this. It is proably a logic bug in the caller.
   zx_policy_basic_v2_t repeated[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
                                    {ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
 
@@ -112,7 +152,7 @@ static bool add_basic_policy_relative() {
   BEGIN_TEST;
 
   auto p = JobPolicy::CreateRootPolicy();
-
+  // TODO(cpu). Don't allow this. It is proably a logic bug in the caller.
   zx_policy_basic_v2_t repeated[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
                                    {ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
 
@@ -129,14 +169,13 @@ static bool add_basic_policy_relative() {
 }
 
 // Test that AddBasicPolicy does not modify JobPolicy when it fails.
-static bool add_basic_policy_unmodified_on_error() {
+static bool add_basic_policy_unmodified_on_error(uint32_t flags) {
   BEGIN_TEST;
 
   auto p = JobPolicy::CreateRootPolicy();
 
-  zx_policy_basic_v2_t policy[2]{
-      {ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY},
-      {ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_KILL, ZX_POL_OVERRIDE_DENY}};
+  zx_policy_basic_v2_t policy[2]{{ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW_EXCEPTION, flags},
+                                 {ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_KILL, flags}};
 
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, policy, fbl::count_of(policy)));
   ASSERT_EQ(ZX_POL_ACTION_ALLOW_EXCEPTION, p.QueryBasicPolicy(ZX_POL_NEW_VMO));
@@ -144,23 +183,32 @@ static bool add_basic_policy_unmodified_on_error() {
 
   const JobPolicy orig = p;
 
-  zx_policy_basic_v2_t new_policy{ZX_POL_NEW_ANY, UINT32_MAX, ZX_POL_OVERRIDE_DENY};
+  zx_policy_basic_v2_t new_policy{ZX_POL_NEW_ANY, UINT32_MAX, flags};
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &new_policy, 1));
   ASSERT_TRUE(orig == p);
 
-  new_policy = {ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW, ZX_POL_OVERRIDE_DENY};
-  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &new_policy, 1));
-  ASSERT_TRUE(orig == p);
+  if (flags == ZX_POL_OVERRIDE_DENY) {
+    new_policy = {ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW, flags};
+    ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &new_policy, 1));
+    ASSERT_TRUE(orig == p);
+  }
 
   END_TEST;
 }
 
-static bool add_basic_policy_deny_any_new() {
+static bool add_basic_policy_unmodified_on_error_no_override() {
+  return add_basic_policy_unmodified_on_error(ZX_POL_OVERRIDE_DENY);
+}
+
+static bool add_basic_policy_unmodified_on_error_with_override() {
+  return add_basic_policy_unmodified_on_error(ZX_POL_OVERRIDE_ALLOW);
+}
+
+static bool add_basic_policy_deny_any_new(uint32_t flags) {
   BEGIN_TEST;
 
   auto p = JobPolicy::CreateRootPolicy();
-
-  zx_policy_basic_v2_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY};
+  zx_policy_basic_v2_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, flags};
 
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_VMO));
@@ -180,6 +228,14 @@ static bool add_basic_policy_deny_any_new() {
   ASSERT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(ZX_POL_AMBIENT_MARK_VMO_EXEC));
 
   END_TEST;
+}
+
+static bool add_basic_policy_deny_any_new_no_override() {
+  return add_basic_policy_deny_any_new(ZX_POL_OVERRIDE_DENY);
+}
+
+static bool add_basic_policy_deny_any_new_with_override() {
+  return add_basic_policy_deny_any_new(ZX_POL_OVERRIDE_ALLOW);
 }
 
 static bool set_get_timer_slack() {
@@ -215,11 +271,17 @@ static bool increment_counters() {
 UNITTEST_START_TESTCASE(job_policy_tests)
 UNITTEST("initial_state", initial_state)
 UNITTEST("add_basic_policy_no_widening", add_basic_policy_no_widening)
+UNITTEST("add_basic_policy_allow_widening", add_basic_policy_allow_widening)
 UNITTEST("add_basic_policy_no_widening_with_any", add_basic_policy_no_widening_with_any)
+UNITTEST("add_basic_policy_allow_widening_with_any", add_basic_policy_allow_widening_with_any)
 UNITTEST("add_basic_policy_absolute", add_basic_policy_absolute)
 UNITTEST("add_basic_policy_relative", add_basic_policy_relative)
-UNITTEST("add_basic_policy_unmodified_on_error", add_basic_policy_unmodified_on_error)
-UNITTEST("add_basic_policy_deny_any_new", add_basic_policy_deny_any_new)
+UNITTEST("add_basic_policy_unmodified_on_error_no_override",
+         add_basic_policy_unmodified_on_error_no_override)
+UNITTEST("add_basic_policy_unmodified_on_error_with_override",
+         add_basic_policy_unmodified_on_error_with_override)
+UNITTEST("add_basic_policy_deny_any_new_no_override", add_basic_policy_deny_any_new_no_override)
+UNITTEST("add_basic_policy_deny_any_new_with_override", add_basic_policy_deny_any_new_with_override)
 UNITTEST("set_get_timer_slack", set_get_timer_slack)
 UNITTEST("increment_counters", increment_counters)
 UNITTEST_END_TESTCASE(job_policy_tests, "job_policy", "JobPolicy tests")

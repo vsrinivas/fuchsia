@@ -92,18 +92,47 @@ TEST(JobTest, PolicyInvalidTopicTest) {
                 ZX_ERR_INVALID_ARGS);
 }
 
-TEST(JobTest, PolicyBasicTest) {
+TEST(JobTest, PolicyBasicOverrideDenyTest) {
   zx::job job_child;
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job_child));
 
-  zx_policy_basic_t policy[] = {
-      {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL},
-      {ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_ALLOW_EXCEPTION},
-      {ZX_POL_NEW_FIFO, ZX_POL_ACTION_DENY},
+  zx_policy_basic_v2_t policy[] = {
+      {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, ZX_POL_OVERRIDE_DENY},
+      {ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY},
+      {ZX_POL_NEW_FIFO, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
   };
 
-  ASSERT_OK(
-      job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, policy, fbl::count_of(policy)));
+  // Set policy that does not allow overrides. Setting the exact same policy succeeds.
+  ASSERT_OK(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, policy,
+                                 fbl::count_of(policy)));
+  ASSERT_OK(job_child.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy,
+                                 fbl::count_of(policy)));
+
+  // Changing a set policy should fail.
+  policy[0].action = ZX_POL_ACTION_ALLOW;
+  ASSERT_STATUS(
+      job_child.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy, fbl::count_of(policy)),
+      ZX_ERR_ALREADY_EXISTS);
+}
+
+TEST(JobTest, PolicyBasicOverrideAllowTest) {
+  zx::job job_child;
+  ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job_child));
+
+  zx_policy_basic_v2_t policy[] = {
+      {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, ZX_POL_OVERRIDE_ALLOW},
+      {ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_ALLOW},
+      {ZX_POL_NEW_FIFO, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_ALLOW},
+  };
+
+  // Set policy that does not allow overrides. Setting the exact same policy succeeds.
+  ASSERT_OK(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, policy,
+                                 fbl::count_of(policy)));
+
+  // Changing a set policy should succeed.
+  policy[0].action = ZX_POL_ACTION_ALLOW;
+  ASSERT_OK(job_child.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy,
+                                 fbl::count_of(policy)));
 }
 
 TEST(JobTest, PolicyTimerSlackInvalidOptionsTest) {
@@ -146,8 +175,8 @@ TEST(JobTest, PolicyTimerSlackInvalidPolicyTest) {
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job_child));
 
   // Null.
-  ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, nullptr, 1),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, nullptr, 1),
+                ZX_ERR_INVALID_ARGS);
 
   // Negative amount.
   zx_policy_timer_slack policy = {-ZX_MSEC(10), ZX_TIMER_SLACK_LATE, {}};
