@@ -9,6 +9,7 @@ use {
     futures::{future::BoxFuture, lock::Mutex},
     std::{
         collections::HashMap,
+        fmt,
         sync::{Arc, Weak},
     },
 };
@@ -71,12 +72,6 @@ pub struct HooksRegistration {
 }
 
 #[derive(Clone)]
-pub struct Event {
-    pub target_realm: Arc<Realm>,
-    pub payload: EventPayload,
-}
-
-#[derive(Clone)]
 pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
     AddDynamicChild,
@@ -108,9 +103,9 @@ pub enum EventPayload {
     },
 }
 
-impl Event {
+impl EventPayload {
     pub fn type_(&self) -> EventType {
-        match self.payload {
+        match self {
             EventPayload::AddDynamicChild => EventType::AddDynamicChild,
             EventPayload::PostDestroyInstance => EventType::PostDestroyInstance,
             EventPayload::PreDestroyInstance => EventType::PreDestroyInstance,
@@ -122,6 +117,36 @@ impl Event {
             EventPayload::UseCapability { .. } => EventType::UseCapability,
         }
     }
+}
+
+impl fmt::Debug for EventPayload {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let mut formatter = fmt.debug_struct("EventPayload");
+        formatter.field("type", &self.type_());
+        match self {
+            EventPayload::AddDynamicChild
+            | EventPayload::PostDestroyInstance
+            | EventPayload::PreDestroyInstance
+            | EventPayload::RootComponentResolved
+            | EventPayload::StopInstance => formatter.finish(),
+            EventPayload::RouteBuiltinCapability { capability, .. } => {
+                formatter.field("capability", &capability).finish()
+            }
+            EventPayload::RouteFrameworkCapability { capability, .. } => {
+                formatter.field("capability", &capability).finish()
+            }
+            EventPayload::StartInstance { component_decl, .. } => {
+                formatter.field("component_decl", &component_decl).finish()
+            }
+            EventPayload::UseCapability { use_ } => formatter.field("use_decl", &use_).finish(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Event {
+    pub target_realm: Arc<Realm>,
+    pub payload: EventPayload,
 }
 
 /// This is a collection of hooks to component manager events.
@@ -161,7 +186,7 @@ impl Hooks {
                 // dispatch time but comparing weak references is not yet supported.
                 let mut strong_hooks: Vec<ByAddr<dyn Hook>> = vec![];
                 let mut inner = self.inner.lock().await;
-                if let Some(hooks) = inner.hooks.get_mut(&event.type_()) {
+                if let Some(hooks) = inner.hooks.get_mut(&event.payload.type_()) {
                     hooks.retain(|hook| match hook.upgrade() {
                         Some(hook) => {
                             let hook = ByAddr::new(hook);

@@ -90,7 +90,7 @@ impl InvocationReceiver {
     ) -> Invocation {
         loop {
             let invocation = self.receive().await;
-            let actual_event_type = invocation.event.type_();
+            let actual_event_type = invocation.event.payload.type_();
             let actual_moniker = invocation.event.target_realm.abs_moniker.clone();
             if expected_moniker == actual_moniker && expected_event_type == actual_event_type {
                 return invocation;
@@ -136,7 +136,7 @@ impl BreakpointRegistry {
         // Neither task can make progress.
         let senders = {
             let sender_map = self.sender_map.lock().await;
-            if let Some(senders) = sender_map.get(&event.type_()) {
+            if let Some(senders) = sender_map.get(&event.payload.type_()) {
                 senders.clone()
             } else {
                 // There were no senders for this event. Do nothing.

@@ -2,9 +2,9 @@ use {
     crate::model::*,
     cm_rust::{
         self, CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-        ExposeServiceProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, OfferDecl,
-        OfferDirectoryDecl, OfferServiceProtocolDecl, OfferRunnerDecl, OfferServiceDecl, OfferTarget,
-        RunnerDecl, StorageDecl, UseDecl, UseDirectoryDecl, UseServiceProtocolDecl,
+        ExposeRunnerDecl, ExposeServiceDecl, ExposeServiceProtocolDecl, OfferDecl,
+        OfferDirectoryDecl, OfferRunnerDecl, OfferServiceDecl, OfferServiceProtocolDecl,
+        OfferTarget, RunnerDecl, StorageDecl, UseDecl, UseDirectoryDecl, UseServiceProtocolDecl,
     },
     fidl_fuchsia_sys2 as fsys,
     std::collections::HashSet,

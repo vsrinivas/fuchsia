@@ -670,7 +670,9 @@ async fn walk_expose_chain<'a>(
             )))?;
         let (source, target) = match expose {
             ExposeDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
-            ExposeDecl::ServiceProtocol(ls) => (ExposeSource::ServiceProtocol(&ls.source), &ls.target),
+            ExposeDecl::ServiceProtocol(ls) => {
+                (ExposeSource::ServiceProtocol(&ls.source), &ls.target)
+            }
             ExposeDecl::Directory(d) => (ExposeSource::Directory(&d.source), &d.target),
             ExposeDecl::Runner(r) => (ExposeSource::Runner(&r.source), &r.target),
         };
