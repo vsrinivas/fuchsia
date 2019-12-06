@@ -59,7 +59,7 @@ pub struct default_values {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct arrays {
     pub b_0: [bool; 1 as usize],
     pub i8_0: [i8; 1 as usize],

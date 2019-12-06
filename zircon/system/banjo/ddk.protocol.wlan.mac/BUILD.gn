@@ -16,4 +16,3 @@ banjo_library("ddk.protocol.wlan.mac") {
     "$zx/system/banjo/wlan.protocol.info",
   ]
 }
-

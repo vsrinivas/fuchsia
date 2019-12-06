@@ -6,7 +6,8 @@ use {
     crate::ast::{self, BanjoAst, Constant},
     crate::backends::util::to_c_name,
     crate::backends::Backend,
-    failure::{format_err, Error},
+    failure::{bail, format_err, Error},
+    std::collections::HashSet,
     std::io,
 };
 
@@ -22,7 +23,11 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
     }
 }
 
-fn can_derive_partialeq(ast: &ast::BanjoAst, ty: &ast::Ty) -> bool {
+fn can_derive_partialeq(
+    ast: &ast::BanjoAst,
+    ty: &ast::Ty,
+    parents: &mut HashSet<ast::Ident>,
+) -> bool {
     match ty {
         ast::Ty::Bool
         | ast::Ty::Int8
@@ -41,7 +46,7 @@ fn can_derive_partialeq(ast: &ast::BanjoAst, ty: &ast::Ty) -> bool {
         | ast::Ty::Enum { .. } => {
             return true;
         }
-        ast::Ty::Vector { ref ty, size: _, nullable: _ } => can_derive_partialeq(ast, ty),
+        ast::Ty::Vector { ref ty, size: _, nullable: _ } => can_derive_partialeq(ast, ty, parents),
         ast::Ty::Str { size: _, .. } => {
             return true;
         }
@@ -51,30 +56,58 @@ fn can_derive_partialeq(ast: &ast::BanjoAst, ty: &ast::Ty) -> bool {
         ast::Ty::Struct => {
             unreachable!();
         }
-        ast::Ty::Array { ty, size } => {
-            // rust can derive less than 32
-            // return 33 which is larger if it's an ident. TODO(bwb) lookup ident value
-            if size.0.parse::<u32>().unwrap_or(33) <= 32 {
-                can_derive_partialeq(&ast, ty)
-            } else {
-                false
-            }
-        }
-        ast::Ty::Identifier { id, .. } => {
-            if id.is_base_type() {
+        ast::Ty::Array { ty, size } => match resolve_constant_uint(ast, size) {
+            Ok(size) if size <= 32 => can_derive_partialeq(ast, ty, parents),
+            _ => false,
+        },
+        ast::Ty::Identifier { id: type_id, .. } => {
+            if type_id.is_base_type() {
                 return true;
             }
-            match ast.id_to_decl(id).unwrap() {
-                ast::Decl::Union { .. } => return false,
-                _ => return true,
+            match ast
+                .id_to_decl(type_id)
+                .expect(&format!("can't find declaration for ident {:?}", type_id))
+            {
+                ast::Decl::Struct { fields, .. } => {
+                    for field in fields {
+                        if let ast::Ty::Identifier { id, .. } = &field.ty {
+                            // Circular reference. Skip the check on this field to prevent stack
+                            // overflow. It's still possible to derive PartialEq as long as other
+                            // fields do not prevent the derive.
+                            if id == type_id || parents.contains(id) {
+                                continue;
+                            }
+                        }
+                        parents.insert(type_id.clone());
+                        if !can_derive_partialeq(ast, &field.ty, parents) {
+                            return false;
+                        }
+                        parents.remove(type_id);
+                    }
+                    true
+                }
+                // enum.rs template always derive PartialEq
+                ast::Decl::Enum { .. } => true,
+                ast::Decl::Constant { ty, .. } => can_derive_partialeq(ast, ty, parents),
+                ast::Decl::Alias(_, id) => {
+                    let alias_ty = ast.id_to_type(&id);
+                    can_derive_partialeq(ast, &alias_ty, parents)
+                }
+                // Union is never PartialEq.
+                ast::Decl::Union { .. } => false,
+                // Resource is not generated right now. Just return `false` for now to be
+                // conservative, but consider revisiting this case when they are generated.
+                ast::Decl::Resource { .. } => false,
+                // Protocol will never be generated.
+                ast::Decl::Protocol { .. } => true,
             }
-        },
+        }
         ast::Ty::Handle { .. } => true,
     }
 }
 
 // This is not the same as partialeq because we derive opaque Debugs for unions
-fn can_derive_debug(ast: &ast::BanjoAst, ty: &ast::Ty) -> bool {
+fn can_derive_debug(ast: &ast::BanjoAst, ty: &ast::Ty, parents: &mut HashSet<ast::Ident>) -> bool {
     match ty {
         ast::Ty::Bool
         | ast::Ty::Int8
@@ -93,7 +126,7 @@ fn can_derive_debug(ast: &ast::BanjoAst, ty: &ast::Ty) -> bool {
         | ast::Ty::Enum { .. } => {
             return true;
         }
-        ast::Ty::Vector { ref ty, size: _, nullable: _ } => can_derive_debug(ast, ty),
+        ast::Ty::Vector { ref ty, size: _, nullable: _ } => can_derive_debug(ast, ty, parents),
         ast::Ty::Str { size: _, .. } => {
             return true;
         }
@@ -103,24 +136,62 @@ fn can_derive_debug(ast: &ast::BanjoAst, ty: &ast::Ty) -> bool {
         ast::Ty::Struct => {
             unreachable!();
         }
-        ast::Ty::Array { ty, size } => {
-            // rust can derive less than 32
-            // return 33 which is larger if it's an ident. TODO(bwb) lookup ident value
-            if size.0.parse::<u32>().unwrap_or(33) <= 32 {
-                can_derive_debug(&ast, ty)
-            } else {
-                false
-            }
-        }
-        ast::Ty::Identifier { id, .. } => {
-            if id.is_base_type() {
+        ast::Ty::Array { ty, size } => match resolve_constant_uint(ast, size) {
+            Ok(size) if size <= 32 => can_derive_debug(ast, ty, parents),
+            _ => false,
+        },
+        ast::Ty::Identifier { id: type_id, .. } => {
+            if type_id.is_base_type() {
                 return true;
             }
-            match ast.id_to_decl(id).unwrap() {
-                _ => return true,
+            match ast
+                .id_to_decl(type_id)
+                .expect(&format!("can't find declaration for ident {:?}", type_id))
+            {
+                ast::Decl::Struct { fields, .. } => {
+                    for field in fields {
+                        if let ast::Ty::Identifier { id, .. } = &field.ty {
+                            // Circular reference. Skip the check on this field to prevent stack
+                            // overflow. It's still possible to derive Debug as long as other
+                            // fields do not prevent the derive.
+                            if id == type_id || parents.contains(id) {
+                                continue;
+                            }
+                        }
+                        parents.insert(type_id.clone());
+                        if !can_derive_debug(ast, &field.ty, parents) {
+                            return false;
+                        }
+                        parents.remove(type_id);
+                    }
+                    true
+                }
+                // union.rs template manually implements Debug.
+                // enum.rs template always derive Debug
+                ast::Decl::Union { .. } | ast::Decl::Enum { .. } => true,
+                ast::Decl::Constant { ty, .. } => can_derive_debug(ast, ty, parents),
+                ast::Decl::Alias(_, id) => {
+                    let alias_type = ast.id_to_type(&id);
+                    can_derive_debug(ast, &alias_type, parents)
+                }
+                // Resource is not generated right now. Just return `false` for now to be
+                // conservative, but consider revisiting this case when they are generated.
+                ast::Decl::Resource { .. } => false,
+                // Protocol will never be generated.
+                ast::Decl::Protocol { .. } => true,
             }
-        },
+        }
         ast::Ty::Handle { .. } => true,
+    }
+}
+
+fn resolve_constant_uint(ast: &ast::BanjoAst, constant: &ast::Constant) -> Result<u64, Error> {
+    match constant.0.parse::<u64>() {
+        Ok(uint) => Ok(uint),
+        Err(_) => match ast.id_to_decl(&ast::Ident::new_raw(&constant.0)) {
+            Ok(ast::Decl::Constant { value, .. }) => resolve_constant_uint(ast, &value),
+            _ => bail!("Cannot resolve name {:?} to a uint", constant.0),
+        },
     }
 }
 
@@ -238,7 +309,11 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
         Ok(accum.join("\n"))
     }
 
-    fn codegen_struct_decl(&self, namespace: DeclIter<'_>, ast: &BanjoAst) -> Result<String, Error> {
+    fn codegen_struct_decl(
+        &self,
+        namespace: DeclIter<'_>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
         let mut accum = Vec::new();
         for decl in namespace {
             if let ast::Decl::Struct { ref name, ref fields, ref attributes } = *decl {
@@ -251,11 +326,16 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                     };
                 let mut partial_eq = true;
                 let mut debug = true;
+                let mut parents = HashSet::new();
                 for field in fields {
-                    if !can_derive_debug(ast, &field.ty) {
+                    parents.clear();
+                    parents.insert(name.clone());
+                    if !can_derive_debug(ast, &field.ty, &mut parents) {
                         debug = false;
                     }
-                    if !can_derive_partialeq(ast, &field.ty) {
+                    parents.clear();
+                    parents.insert(name.clone());
+                    if !can_derive_partialeq(ast, &field.ty, &mut parents) {
                         partial_eq = false;
                     }
                     field_str.push(format!(

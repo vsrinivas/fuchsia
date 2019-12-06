@@ -25,6 +25,7 @@ do
   dependencies=""
   zx="--omit-zx"
   type_only=false
+  rust_only=false
   if [ "$filename" = "callback" ] || [ "$filename" = "simple" ] || [ "$filename" = "interface" ] \
     || [ "$filename" = "protocol-base" ] ; then
     zx=""
@@ -42,11 +43,17 @@ do
     type_only=true
   fi
 
+  if [ "$filename" = "rust-derive" ]; then
+    rust_only=true
+  fi
+
   echo "Regenerating $filename"
-  $BANJO_BIN --backend C $zx --output "$C_FILES/$filename.h" $dependencies --files $f
-  if [ $type_only = false ]; then
-    $BANJO_BIN --backend cpp $zx --output "$CPP_FILES/$filename.h" $dependencies --files $f
-    $BANJO_BIN --backend cpp_i $zx --output "$CPP_FILES/$filename-internal.h" $dependencies --files $f
+  if [ $rust_only = false ]; then
+    $BANJO_BIN --backend C $zx --output "$C_FILES/$filename.h" $dependencies --files $f
+    if [ $type_only = false ]; then
+      $BANJO_BIN --backend cpp $zx --output "$CPP_FILES/$filename.h" $dependencies --files $f
+      $BANJO_BIN --backend cpp_i $zx --output "$CPP_FILES/$filename-internal.h" $dependencies --files $f
+    fi
   fi
   $BANJO_BIN --backend rust $zx --output "$RUST_FILES/$filename.rs" $dependencies --files $f
 done
