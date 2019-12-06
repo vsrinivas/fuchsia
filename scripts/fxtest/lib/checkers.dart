@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:fxtest/fxtest.dart';
+import 'package:path/path.dart' as p;
 
 /// A filter on compatibility between various `fx test ...` invocations
 /// and flavors of desired behavior.
@@ -107,6 +108,22 @@ class NoArgumentsChecker extends Checker {
 /// path in the build output.
 class PathMatchChecker extends Checker {
   @override
-  bool _testPassesNameCheck(String testName, TestDefinition testDefinition) =>
-      testDefinition.path != null && testDefinition.path.startsWith(testName);
+  bool _testPassesNameCheck(String testName, TestDefinition testDefinition) {
+    if (testDefinition.path == null) return false;
+
+    // A dot here signifies that the user ran `fx test .` *from the build
+    // directory itself*, which means that all host test paths, which are
+    // relative from that directory, must obviously pass.
+    // Related to this is that host test paths are written as relative paths,
+    // (e.g., no leading slash) and on-device tests are written as absolute
+    // paths (often starting with "/pkgfs").
+    // So in closing, here we want to match all paths that are relative (and
+    // by extension, host tests nested inside the build directory).
+    if (testName == '.' && !testDefinition.path.startsWith(p.separator)) {
+      return true;
+    }
+
+    // Otherwise, do the standard
+    return testDefinition.path.startsWith(testName);
+  }
 }

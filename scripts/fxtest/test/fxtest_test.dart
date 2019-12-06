@@ -1,6 +1,10 @@
 import 'package:path/path.dart' as p;
 import 'package:fxtest/fxtest.dart';
+import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
+
+// Mock this because it checks environment variables
+class MockEnvReader extends Mock implements EnvReader {}
 
 void main() {
   // out of test, out of fxtest, out of scripts
@@ -156,6 +160,54 @@ void main() {
       );
       expect(parsedManifest.testRunners, hasLength(0));
     });
+
+    test('when . is passed from the build dir', () {
+      TestFlags testFlags = TestFlags.host(['.']);
+      // Copy the list
+      var tds = testDefinitions.sublist(0)
+        ..addAll([
+          TestDefinition(
+            os: 'linux',
+            name: 'awesome host test',
+            path: 'host_x64/test',
+            buildDir: buildDir,
+          ),
+        ]);
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        testDefinitions: tds,
+        buildDir: buildDir,
+        eventEmitter: _ignoreEvents,
+        testFlags: testFlags,
+      );
+
+      expect(parsedManifest.testRunners, hasLength(1));
+      expect(
+        parsedManifest.testRunners[0].testDefinition.name,
+        'awesome host test',
+      );
+    });
+
+    test('when . is passed from the build dir and there\'s device tests', () {
+      TestFlags testFlags = TestFlags(testNames: ['.']);
+      // Copy the list
+      var tds = testDefinitions.sublist(0)
+        ..addAll([
+          TestDefinition(
+            os: 'fuchsia',
+            name: 'awesome device test',
+            path: '/pkgfs/stuff',
+            buildDir: buildDir,
+          ),
+        ]);
+      ParsedManifest parsedManifest = tr.aggregateTests(
+        testDefinitions: tds,
+        buildDir: buildDir,
+        eventEmitter: _ignoreEvents,
+        testFlags: testFlags,
+      );
+
+      expect(parsedManifest.testRunners, hasLength(0));
+    });
   });
 
   group('fuchsia-package URLs are correctly parsed', () {
@@ -236,6 +288,119 @@ void main() {
       expect(packageUrl.packageVariant, null);
       expect(packageUrl.hash, null);
       expect(packageUrl.resourcePath, '');
+    });
+  });
+
+  group('fuchsia directories are located correctly', () {
+    test('when the build directory is inside the checkout', () {
+      var envReader = MockEnvReader();
+      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
+      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+          .thenReturn('/root/path/fuchsia/out/default');
+      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      expect(fuchsiaLocator.fuchsiaDir, '/root/path/fuchsia');
+      expect(fuchsiaLocator.buildDir, '/root/path/fuchsia/out/default');
+      expect(fuchsiaLocator.relativeBuildDir, '/out/default');
+      expect(fuchsiaLocator.userFriendlyBuildDir, '//out/default');
+    });
+
+    test('when the cwd is requested from the build dir itself', () {
+      var envReader = MockEnvReader();
+      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
+      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+          .thenReturn('/root/path/fuchsia/out/default');
+      when(envReader.getCwd()).thenReturn('/root/path/fuchsia/out/default');
+      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      expect(fuchsiaLocator.relativeCwd, '.');
+    });
+
+    test('when the cwd is requested from within the build dir', () {
+      var envReader = MockEnvReader();
+      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
+      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+          .thenReturn('/root/path/fuchsia/out/default');
+      when(envReader.getCwd())
+          .thenReturn('/root/path/fuchsia/out/default/host_x64');
+      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      expect(fuchsiaLocator.relativeCwd, 'host_x64');
+    });
+
+    test(
+        'when the cwd is requested from within the tree but not within '
+        'the build dir', () {
+      var envReader = MockEnvReader();
+      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
+      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+          .thenReturn('/root/path/fuchsia/out/default');
+      when(envReader.getCwd()).thenReturn('/root/path/fuchsia/tools');
+      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      expect(fuchsiaLocator.relativeCwd, '/root/path/fuchsia/tools');
+    });
+
+    test('when fuchsia tree directory path does not contain "fuchsia"', () {
+      var envReader = MockEnvReader();
+      when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/dev');
+      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+          .thenReturn('/root/path/dev/out/default');
+      when(envReader.getCwd()).thenReturn('/root/path/dev/out/default');
+      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      expect(fuchsiaLocator.relativeCwd, '.');
+    });
+  });
+
+  group('test name arguments are parsed correctly', () {
+    test('when a dot is passed to stand in as the current directory', () {
+      var envReader = MockEnvReader();
+      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+          .thenReturn('/root/path/fuchsia/out/default');
+      when(envReader.getCwd())
+          .thenReturn('/root/path/fuchsia/out/default/host_x64/gen');
+      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      var collector = TestNamesCollector(
+        [
+          ['.'],
+        ],
+        fuchsiaLocator: fuchsiaLocator,
+      );
+      expect(collector.collect(), ['host_x64/gen']);
+    });
+    test('when a duplicate is passed in', () {
+      var collector = TestNamesCollector([
+        ['asdf'],
+        ['asdf', 'xyz']
+      ]);
+      expect(collector.collect(), ['asdf', 'xyz']);
+    });
+    test('when a dot and duplicate are passed in', () {
+      var envReader = MockEnvReader();
+      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+          .thenReturn('/root/path/fuchsia/out/default');
+      when(envReader.getCwd())
+          .thenReturn('/root/path/fuchsia/out/default/host_x64');
+      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      var collector = TestNamesCollector(
+        [
+          ['asdf'],
+          ['asdf', '.']
+        ],
+        fuchsiaLocator: fuchsiaLocator,
+      );
+      expect(collector.collect(), ['asdf', 'host_x64']);
+    });
+
+    test('when a dot is passed from the build directory', () {
+      var envReader = MockEnvReader();
+      when(envReader.getEnv('FUCHSIA_BUILD_DIR'))
+          .thenReturn('/root/path/fuchsia/out/default');
+      when(envReader.getCwd()).thenReturn('/root/path/fuchsia/out/default');
+      var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+      var collector = TestNamesCollector(
+        [
+          ['.']
+        ],
+        fuchsiaLocator: fuchsiaLocator,
+      );
+      expect(collector.collect(), ['.']);
     });
   });
 }

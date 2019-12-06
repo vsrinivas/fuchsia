@@ -185,6 +185,7 @@ class TestsManifestReader {
     @required ParsedManifest parsedManifest,
     @required TestFlags testFlags,
     @required void Function(TestEvent) eventEmitter,
+    @required String userFriendlyBuildDir,
   }) {
     String duplicates = '';
     if (parsedManifest.numDuplicateTests > 0) {
@@ -202,7 +203,7 @@ class TestsManifestReader {
       ));
     }
 
-    String manifestName = wrapWith('//out/default/tests.json', [green]);
+    String manifestName = wrapWith('$userFriendlyBuildDir/tests.json', [green]);
     eventEmitter(TestInfo(
       'Found ${parsedManifest.testDefinitions.length} total '
       '${parsedManifest.testDefinitions.length != 1 ? "tests" : "test"} in '

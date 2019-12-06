@@ -37,6 +37,7 @@ dart_test("fxtest_tests") {
 
   deps = [
     ":fxtest_dart_library",
+    "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
   ]
 }

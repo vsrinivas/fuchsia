@@ -86,7 +86,7 @@ class TestDefinition {
   @override
   String toString() => '''<TestDefinition
   cpu: $cpu
-  command: ${command.join(" ")}
+  command: ${(command ?? []).join(" ")}
   deps_file: $depsFile
   label: $label
   package_url: $packageUrl

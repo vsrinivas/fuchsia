@@ -1,10 +1,13 @@
 export 'checkers.dart';
 export 'cmd.dart';
+export 'env_reader.dart';
 export 'exceptions.dart';
+export 'fuchsia_locator.dart';
 export 'output_buffer.dart';
 export 'output_formatter.dart';
 export 'test_definition.dart';
 export 'test_event.dart';
 export 'test_flags.dart';
+export 'test_names_collector.dart';
 export 'test_runner.dart';
 export 'tests_manifest_reader.dart';

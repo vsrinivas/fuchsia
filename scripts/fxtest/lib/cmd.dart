@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:meta/meta.dart';
@@ -37,13 +36,20 @@ import 'package:meta/meta.dart';
 class FuchsiaTestCommand {
   // ignore: close_sinks
   final _eventStreamController = StreamController<TestEvent>();
+
+  /// Bundle of configuration options for this invocation.
   final TestFlags testFlags;
 
+  /// Absolute path of the active Fuchsia build.
+  final FuchsiaLocator fuchsiaLocator;
+
+  /// Translator between [TestEvent] instances and output for the user.
   final OutputFormatter outputFormatter;
 
   FuchsiaTestCommand({
-    @required this.testFlags,
+    @required this.fuchsiaLocator,
     @required this.outputFormatter,
+    @required this.testFlags,
   });
 
   Stream<TestEvent> get stream => _eventStreamController.stream;
@@ -60,19 +66,20 @@ class FuchsiaTestCommand {
 
     manifestReader ??= TestsManifestReader();
     List<TestDefinition> testDefinitions = await manifestReader.loadTestsJson(
-      buildDir: Platform.environment['FUCHSIA_BUILD_DIR'],
+      buildDir: fuchsiaLocator.buildDir,
       manifestFileName: 'tests.json',
     );
     ParsedManifest parsedManifest = manifestReader.aggregateTests(
-      testDefinitions: testDefinitions,
-      buildDir: Platform.environment['FUCHSIA_BUILD_DIR'],
+      buildDir: fuchsiaLocator.buildDir,
       eventEmitter: emitEvent,
+      testDefinitions: testDefinitions,
       testFlags: testFlags,
     );
     manifestReader.reportOnTestRunners(
+      userFriendlyBuildDir: fuchsiaLocator.userFriendlyBuildDir,
+      eventEmitter: emitEvent,
       parsedManifest: parsedManifest,
       testFlags: testFlags,
-      eventEmitter: emitEvent,
     );
     var exitCode = 0;
 

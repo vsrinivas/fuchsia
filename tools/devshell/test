@@ -27,8 +27,6 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
-cd "${FUCHSIA_BUILD_DIR}"
-
 exec "${PREBUILT_DART_DIR}/bin/dart" \
   --packages="${FUCHSIA_DIR}/scripts/fxtest/fxtest.packages" \
   "${FUCHSIA_DIR}/scripts/fxtest/bin/main.dart" "$@"

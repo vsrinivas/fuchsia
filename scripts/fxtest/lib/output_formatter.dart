@@ -8,6 +8,7 @@ import 'package:io/ansi.dart';
 abstract class OutputFormatter {
   final bool verbose;
   final bool shouldColorizeOutput;
+  final bool shouldShowPassedTestsOutput;
   final Duration slowTestThreshold;
   final List<TestInfo> _infoEvents;
   final List<TestStarted> _testStartedEvents;
@@ -18,6 +19,7 @@ abstract class OutputFormatter {
   OutputFormatter({
     this.verbose,
     this.shouldColorizeOutput = true,
+    this.shouldShowPassedTestsOutput = false,
     this.slowTestThreshold,
     OutputBuffer buffer,
   })  : _testResultEvents = [],
@@ -125,23 +127,24 @@ abstract class OutputFormatter {
 /// Aims to print something like this:
 /// ```txt
 ///  $ fx test --limit 2 -v
-///    Found 2 total tests in //out/default/tests.json
+///    Found N total tests in //out/default/tests.json
 ///    Will run 2 tests
 ///
-///     > fx run-test test_1_name √
-///     > fx run-test test_2_name √
+///     > √ fx run-test test_1_name
+///     > √ fx run-test test_2_name
 ///
 ///    🎉  Ran 2 tests with 0 failures 🎉
 /// ```
 class VerboseOutputFormatter extends OutputFormatter {
   VerboseOutputFormatter({
-    verbose,
     shouldColorizeOutput = true,
+    shouldShowPassedTestsOutput,
     slowTestThreshold,
     OutputBuffer buffer,
   }) : super(
-          verbose: verbose,
+          verbose: true,
           shouldColorizeOutput: shouldColorizeOutput,
+          shouldShowPassedTestsOutput: shouldShowPassedTestsOutput,
           slowTestThreshold: slowTestThreshold,
           buffer: buffer,
         );
@@ -186,6 +189,12 @@ class VerboseOutputFormatter extends OutputFormatter {
             : '';
 
     _buffer.updateLines(['$emoji $testName$runtime']);
+
+    // `stdout` content is included in the message for a failed test, so we
+    // would be duplicating that for failed tests
+    if (shouldShowPassedTestsOutput && event.isSuccess) {
+      _buffer.addLines(event.message.split('\n'));
+    }
   }
 
   @override
@@ -200,7 +209,7 @@ class VerboseOutputFormatter extends OutputFormatter {
 /// Aims to print something like this:
 /// ```txt
 ///  $ fx test --limit 2
-///    Found 2 total tests in //out/default/tests.json
+///    Found N total tests in //out/default/tests.json
 ///    Will run 2 tests
 ///
 ///     ..
@@ -211,13 +220,12 @@ class CondensedOutputFormatter extends OutputFormatter {
   final List<TestInfo> _hiddenInfo;
 
   CondensedOutputFormatter({
-    verbose,
     shouldColorizeOutput = true,
     slowTestThreshold,
     OutputBuffer buffer,
   })  : _hiddenInfo = [],
         super(
-          verbose: verbose,
+          verbose: false,
           shouldColorizeOutput: shouldColorizeOutput,
           slowTestThreshold: slowTestThreshold,
           buffer: buffer,

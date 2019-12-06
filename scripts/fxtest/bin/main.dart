@@ -30,6 +30,8 @@ void usage(ArgParser parser) {
 
 /// CLI-flavored wrapper for [FuchsiaTestCommand]
 Future<void> main(List<String> args) async {
+  var fuchsiaLocator = FuchsiaLocator();
+
   final parser = ArgParser()
     ..addMultiOption('testNames', abbr: 't')
     ..addFlag('help', abbr: 'h', defaultsTo: false, negatable: false)
@@ -45,7 +47,8 @@ Future<void> main(List<String> args) async {
     ..addFlag('printtests',
         defaultsTo: false,
         negatable: false,
-        help: 'If true, prints the contents of `//out/default/tests.json`')
+        help: 'If true, prints the contents of '
+            '`${fuchsiaLocator.userFriendlyBuildDir}/tests.json`')
     ..addFlag('random',
         abbr: 'r',
         defaultsTo: false,
@@ -76,6 +79,11 @@ Future<void> main(List<String> args) async {
         defaultsTo: false,
         negatable: false,
         help: 'If true, removes any color or decoration from output')
+    ..addFlag('output',
+        abbr: 'o',
+        defaultsTo: false,
+        negatable: false,
+        help: 'If true, also displays the output from passing tests')
     ..addFlag('silenceunsupported',
         abbr: 'u',
         defaultsTo: false,
@@ -101,22 +109,24 @@ Future<void> main(List<String> args) async {
   }
 
   if (argResults['printtests']) {
-    ProcessResult result = await Process.run('cat', ['tests.json'],
-        workingDirectory: Platform.environment['FUCHSIA_BUILD_DIR']);
+    ProcessResult result = await Process.run(
+      'cat',
+      ['tests.json'],
+      workingDirectory: fuchsiaLocator.buildDir,
+    );
     stdout.write(result.stdout);
     return;
   }
 
-  // Combine all requested test patterns, whether specified as extra arguments
-  // or with the `-t` flag
-  final Set<String> testNames = {
-    ...(argResults['testNames'].cast<Iterable<String>>()),
-    ...argResults.rest,
-  };
+  var testNamesCollector = TestNamesCollector([
+    argResults['testNames'],
+    argResults.rest,
+  ]);
 
   var testFlags = TestFlags(
+    allOutput: argResults['output'],
     dryRun: argResults['dry'],
-    isVerbose: argResults['verbose'],
+    isVerbose: argResults['verbose'] || argResults['output'],
     limit: int.parse(argResults['limit'] ?? '0'),
     simpleOutput: !argResults['simple'],
     shouldFailFast: argResults['fail'],
@@ -125,7 +135,7 @@ Future<void> main(List<String> args) async {
     shouldPrintSkipped: argResults['skipped'],
     shouldRandomizeTestOrder: argResults['random'],
     shouldSilenceUnsupported: argResults['silenceunsupported'],
-    testNames: testNames.toList(),
+    testNames: testNamesCollector.collect(),
     warnSlowerThan: int.parse(argResults['warnslow'] ?? '0'),
   );
 
@@ -136,13 +146,17 @@ Future<void> main(List<String> args) async {
       ? VerboseOutputFormatter(
           slowTestThreshold: slowTestThreshold,
           shouldColorizeOutput: testFlags.simpleOutput,
+          shouldShowPassedTestsOutput: testFlags.allOutput,
         )
       : CondensedOutputFormatter(
           slowTestThreshold: slowTestThreshold,
           shouldColorizeOutput: testFlags.simpleOutput,
         );
-  var cmd =
-      FuchsiaTestCommand(testFlags: testFlags, outputFormatter: formatter);
+  var cmd = FuchsiaTestCommand(
+    fuchsiaLocator: fuchsiaLocator,
+    outputFormatter: formatter,
+    testFlags: testFlags,
+  );
 
   try {
     exitCode = await cmd.runTestSuite();

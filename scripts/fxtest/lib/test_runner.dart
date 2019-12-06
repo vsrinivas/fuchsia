@@ -137,8 +137,15 @@ class TestRunner {
   }
 
   String _formatError(String cmd, ProcessResult result) {
+    List<String> resultStdout = result.stdout != ''
+        ? [...result.stdout.split('\n'), '\n']
+            .where((var val) => val != '')
+            .cast<String>()
+            .toList()
+        : [];
     return [
       wrapWith('> $cmd', [red]),
+      ...resultStdout,
       result.stderr,
     ].join('\n');
   }

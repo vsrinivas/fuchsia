@@ -11,6 +11,7 @@ class _FlagsMixin {
 
   /// The maximum number of tests to run. If 0, all tests will be executed.
   final int limit;
+  final bool allOutput;
   final bool simpleOutput;
   final bool shouldOnlyRunDeviceTests;
   final bool shouldOnlyRunHostTests;
@@ -23,6 +24,7 @@ class _FlagsMixin {
     this.dryRun = false,
     this.isVerbose = false,
     this.limit = 0,
+    this.allOutput = false,
     this.simpleOutput = false,
     this.shouldOnlyRunDeviceTests = false,
     this.shouldOnlyRunHostTests = false,
@@ -36,6 +38,7 @@ class _FlagsMixin {
   @override
   String toString() => '''<TestFlags
   dryRun: $dryRun
+  allOutput: $allOutput,
   limit: $limit
   isVerbose: $isVerbose
   simpleOutput: $simpleOutput,
@@ -80,18 +83,20 @@ class TestFlags extends _FlagsMixin {
     dryRun,
     isVerbose,
     limit,
-    simpleOutput,
-    shouldFailFast,
-    shouldOnlyRunDeviceTests,
-    shouldOnlyRunHostTests,
-    shouldPrintSkipped,
-    shouldRandomizeTestOrder,
-    shouldSilenceUnsupported,
+    allOutput = false,
+    simpleOutput = false,
+    shouldFailFast = false,
+    shouldOnlyRunDeviceTests = false,
+    shouldOnlyRunHostTests = false,
+    shouldPrintSkipped = false,
+    shouldRandomizeTestOrder = false,
+    shouldSilenceUnsupported = false,
     warnSlowerThan,
   }) : super(
           dryRun: dryRun,
           isVerbose: isVerbose,
           limit: limit,
+          allOutput: allOutput,
           simpleOutput: simpleOutput,
           shouldFailFast: shouldFailFast,
           shouldOnlyRunDeviceTests: shouldOnlyRunDeviceTests,
@@ -108,6 +113,7 @@ class TestFlags extends _FlagsMixin {
       dryRun: false,
       limit: 0,
       isVerbose: false,
+      allOutput: false,
       shouldOnlyRunDeviceTests: false,
       shouldOnlyRunHostTests: false,
       shouldFailFast: false,
@@ -124,6 +130,7 @@ class TestFlags extends _FlagsMixin {
       dryRun: false,
       limit: 0,
       isVerbose: false,
+      allOutput: false,
       simpleOutput: true,
       shouldOnlyRunDeviceTests: false,
       shouldOnlyRunHostTests: true,
@@ -141,6 +148,7 @@ class TestFlags extends _FlagsMixin {
       dryRun: false,
       limit: 0,
       isVerbose: false,
+      allOutput: false,
       simpleOutput: true,
       shouldOnlyRunDeviceTests: true,
       shouldOnlyRunHostTests: false,
@@ -160,6 +168,7 @@ class TestFlags extends _FlagsMixin {
         dryRun: dryRun,
         limit: 0,
         isVerbose: isVerbose,
+        allOutput: allOutput,
         simpleOutput: simpleOutput,
         shouldFailFast: shouldFailFast,
         shouldOnlyRunDeviceTests: shouldOnlyRunDeviceTests,
@@ -177,6 +186,7 @@ class TestFlags extends _FlagsMixin {
         dryRun: dryRun,
         isVerbose: isVerbose,
         limit: 0,
+        allOutput: allOutput,
         simpleOutput: simpleOutput,
         shouldFailFast: shouldFailFast,
         shouldOnlyRunDeviceTests: shouldOnlyRunDeviceTests,
@@ -200,6 +210,7 @@ class PermutatedTestFlags extends _FlagsMixin {
     dryRun,
     isVerbose,
     limit,
+    allOutput,
     simpleOutput,
     shouldFailFast,
     shouldOnlyRunDeviceTests,
@@ -212,6 +223,7 @@ class PermutatedTestFlags extends _FlagsMixin {
           dryRun: dryRun,
           isVerbose: isVerbose,
           limit: limit,
+          allOutput: allOutput,
           simpleOutput: simpleOutput,
           shouldFailFast: shouldFailFast,
           shouldOnlyRunDeviceTests: shouldOnlyRunDeviceTests,
