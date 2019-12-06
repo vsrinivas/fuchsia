@@ -1,5 +1,4 @@
-C++ style guide
-===============
+# C++ style guide
 
 The Fuchsia project follows the public [Google C++ style guide][google-guide], with a
 few exceptions.
@@ -11,7 +10,7 @@ with these guidelines.
 
 ### Exceptions
 
-#### Line Length
+#### Line length
 
 Fuchsia uses 100 columns instead of 80.
 
@@ -52,7 +51,7 @@ if (x == kFoo)
   return new Foo;
 ```
 
-#### Namespace Names
+#### Namespace names
 
 * Nested namespaces are forbidden, with the following exceptions:
   - `internal` (when required to hide implementation details of templated code)
@@ -74,28 +73,28 @@ Rationale: [Tip of the Week #130: Namespace Naming][totw-130]
 
 #### Includes
 
-1. If the header being included is a system, global, or library header (see
-   [Naming C/C++ objects](naming.md) for precise definitions), use
-   `<angle brackets>` and the complete name of the header. These headers are
-   considered "C library headers" for the purposes of the Google C++ Style
-   Guide:
+* If the header being included is a system, global, or library header (see
+  [Naming C/C++ objects](naming.md) for precise definitions), use
+  `<angle brackets>` and the complete name of the header. These headers are
+  considered "C library headers" for the purposes of the Google C++ Style
+  Guide:
 
-```cpp
-#include <zircon/syscalls.h>           # System header
-#include <fuchsia/io/cpp/fidl.h>       # Global header
-#include <lib/fdio/fd.h>               # Library header
-```
+  ```cpp
+  #include <zircon/syscalls.h>           # System header
+  #include <fuchsia/io/cpp/fidl.h>       # Global header
+  #include <lib/fdio/fd.h>               # Library header
+  ```
 
-2. If the header being included is a implementation header, use `"quotes"` and
-   use the full path to the header from the root of the source tree. These
-   headers are considered "your project's headers" for the purposes of the
-   Google C++ Style Guide:
+* If the header being included is a implementation header, use `"quotes"` and
+  use the full path to the header from the root of the source tree. These
+  headers are considered "your project's headers" for the purposes of the
+  Google C++ Style Guide:
 
-```cpp
-#include "src/ledger/bin/filesystem/detached_path.h"
-```
+  ```cpp
+  #include "src/ledger/bin/filesystem/detached_path.h"
+  ```
 
-3. Third-party headers can be included using the root-relative path (e.g.
+* Third-party headers can be included using the root-relative path (e.g.
   `#include "third_party/skia/include/core/SkPaint.h"`) or using their canonical header
   names (e.g. `#include <gtest/gtest.h>`).
 
