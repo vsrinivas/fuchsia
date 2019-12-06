@@ -57,7 +57,6 @@ impl TryFrom<u8> for Command {
 
 /// A single CTAPHID packet either received over or to be sent over a `Connection`.
 /// The CTAPHID protocol is defined in https://fidoalliance.org/specs/fido-v2.0-ps-20190130/
-#[allow(dead_code)]
 #[derive(PartialEq, Clone)]
 pub enum Packet {
     /// An initialization packet sent as the first in a sequence.
@@ -82,33 +81,38 @@ pub enum Packet {
     },
 }
 
-#[allow(dead_code)]
 impl Packet {
     /// Creates a new initialization packet.
-    pub fn initialization(
+    pub fn initialization<T: Into<Bytes>>(
         channel: u32,
         command: Command,
         message_length: u16,
-        payload: Bytes,
+        payload: T,
     ) -> Result<Self, Error> {
-        if payload.as_ref().len() > MAX_PACKET_LENGTH - INIT_HEADER_LENGTH {
+        let payload_bytes = payload.into();
+        if payload_bytes.len() > MAX_PACKET_LENGTH - INIT_HEADER_LENGTH {
             return Err(format_err!("Initialization packet payload exceeded max length"));
-        } else if payload.as_ref().len() > message_length as usize {
+        } else if payload_bytes.len() > message_length as usize {
             return Err(format_err!("Initialization packet data larger than message length"));
         }
-        Ok(Self::Initialization { channel, command, message_length, payload })
+        Ok(Self::Initialization { channel, command, message_length, payload: payload_bytes })
     }
 
     /// Creates a new continuation packet.
-    pub fn continuation(channel: u32, sequence: u8, payload: Bytes) -> Result<Self, Error> {
-        if payload.as_ref().len() > MAX_PACKET_LENGTH - CONT_HEADER_LENGTH {
+    pub fn continuation<T: Into<Bytes>>(
+        channel: u32,
+        sequence: u8,
+        payload: T,
+    ) -> Result<Self, Error> {
+        let payload_bytes = payload.into();
+        if payload_bytes.len() > MAX_PACKET_LENGTH - CONT_HEADER_LENGTH {
             return Err(format_err!("Continuation packet payload exceeded max length"));
-        } else if payload.as_ref().len() == 0 {
+        } else if payload_bytes.len() == 0 {
             return Err(format_err!("Continuation packet did not contain any data"));
         } else if sequence & 0x80 != 0 {
             return Err(format_err!("Continuation packet has sequence number with MSB set"));
         }
-        Ok(Self::Continuation { channel, sequence, payload })
+        Ok(Self::Continuation { channel, sequence, payload: payload_bytes })
     }
 
     /// Create a new packet using the supplied data if it is valid, or return an informative
@@ -126,7 +130,7 @@ impl Packet {
                 /*channel*/ buf.get_u32_be(),
                 /*command*/ Command::try_from(buf.get_u8() & 0x7F)?,
                 /*message length*/ buf.get_u16_be(),
-                /*payload*/ Bytes::from(buf.bytes()),
+                /*payload*/ buf.bytes(),
             )
         } else {
             // Continuation packet.
@@ -137,7 +141,7 @@ impl Packet {
             Packet::continuation(
                 /*channel*/ buf.get_u32_be(),
                 /*sequence*/ buf.get_u8(),
-                /*payload*/ Bytes::from(buf.bytes()),
+                /*payload*/ buf.bytes(),
             )
         }
     }
@@ -249,7 +253,7 @@ mod tests {
     fn test_empty_initialization_packet() -> Result<(), Error> {
         // Lock = 0x04
         do_conversion_test(
-            Packet::initialization(TEST_CHANNEL, Command::Lock, 0, Bytes::from(vec![]))?,
+            Packet::initialization(TEST_CHANNEL, Command::Lock, 0, vec![])?,
             "InitPacket/Lock ch=89abcdef msg_len=0 payload=[]",
             "[89, ab, cd, ef, 84, 00, 00]",
         )
@@ -264,7 +268,7 @@ mod tests {
                 TEST_CHANNEL,
                 Command::Wink,
                 0x1122,
-                Bytes::from(vec![0x44, 0x55, 0x66, 0x77]),
+                vec![0x44, 0x55, 0x66, 0x77],
             )?,
             "InitPacket/Wink ch=89abcdef msg_len=4386 payload=[44, 55, 66, 77]",
             "[89, ab, cd, ef, 88, 11, 22, 44, 55, 66, 77]",
@@ -275,7 +279,7 @@ mod tests {
     fn test_non_empty_continuation_packet() -> Result<(), Error> {
         // Sequence = 99 decimal = 63 hex
         do_conversion_test(
-            Packet::continuation(TEST_CHANNEL, 99, Bytes::from(vec![0xfe, 0xed, 0xcd]))?,
+            Packet::continuation(TEST_CHANNEL, 99, vec![0xfe, 0xed, 0xcd])?,
             "ContPacket ch=89abcdef seq=99 payload=[fe, ed, cd]",
             "[89, ab, cd, ef, 63, fe, ed, cd]",
         )
@@ -284,25 +288,18 @@ mod tests {
     #[test]
     fn test_invalid_initialization_packet() -> Result<(), Error> {
         // Payload longer than the max packet size should fail.
-        assert!(Packet::initialization(
-            TEST_CHANNEL,
-            TEST_COMMAND,
-            20000,
-            Bytes::from(vec![0; 10000])
-        )
-        .is_err());
+        assert!(Packet::initialization(TEST_CHANNEL, TEST_COMMAND, 20000, vec![0; 10000]).is_err());
         // Message length smaller than the payload of its first packet should fail.
-        assert!(Packet::initialization(TEST_CHANNEL, TEST_COMMAND, 28, Bytes::from(vec![0; 30]))
-            .is_err());
+        assert!(Packet::initialization(TEST_CHANNEL, TEST_COMMAND, 28, vec![0; 30]).is_err());
         Ok(())
     }
 
     #[test]
     fn test_invalid_continuation_packet() -> Result<(), Error> {
         // Sequence number with the MSB set should fail.
-        assert!(Packet::continuation(TEST_CHANNEL, 0x88, Bytes::from(vec![1])).is_err());
+        assert!(Packet::continuation(TEST_CHANNEL, 0x88, vec![1]).is_err());
         // Continuation packet with no data should fail.
-        assert!(Packet::continuation(TEST_CHANNEL, TEST_SEQUENCE_NUM, Bytes::from(vec![])).is_err());
+        assert!(Packet::continuation(TEST_CHANNEL, TEST_SEQUENCE_NUM, vec![]).is_err());
         Ok(())
     }
 

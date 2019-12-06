@@ -71,7 +71,7 @@ impl Device<FidlConnection> {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl CtapDevice for Device<FidlConnection> {
     async fn devices() -> Result<Vec<Self>, Error> {
         let mut output = Vec::new();
@@ -140,7 +140,8 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_fidl_error() -> Result<(), Error> {
-        let con = FakeConnection::failing();
+        let mut con = FakeConnection::new(&BAD_REPORT_DESCRIPTOR);
+        con.fail();
         Device::new_from_connection(TEST_PATH.to_string(), con)
             .await
             .expect_err("Should have failed to create device");

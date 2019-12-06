@@ -15,6 +15,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:failure",

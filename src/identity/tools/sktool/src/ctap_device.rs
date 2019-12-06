@@ -6,7 +6,9 @@ use async_trait::async_trait;
 use failure::Error;
 
 /// Common trait implemented by the different transport mechanisms for CTAP devices.
-#[async_trait]
+/// Note: the ?Send is necessary to allow implementations to make FIDL calls becasuse the auto
+/// generated FIDL bindings don't require threadsafe inputs.
+#[async_trait(?Send)]
 pub trait CtapDevice: Sized {
     /// Returns all known CTAP devices on this transport mechanism.
     async fn devices() -> Result<Vec<Self>, Error>;
