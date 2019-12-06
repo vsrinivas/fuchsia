@@ -8,13 +8,15 @@ group("audio") {
   testonly = true
   deps = [
     ":tests",
-    "audio",
-    "audio_core",
-    "drivers",
-    "lib",
-    "tools",
-    "vim2_media_config",
-    "virtual_audio_service",
+    "//src/media/audio/audio",
+    "//src/media/audio/audio_core",
+    "//src/media/audio/config",
+    "//src/media/audio/drivers",
+    "//src/media/audio/examples",
+    "//src/media/audio/lib",
+    "//src/media/audio/tools",
+    "//src/media/audio/vim2_media_config",
+    "//src/media/audio/virtual_audio_service",
   ]
 }
 
@@ -24,20 +26,12 @@ fuzzers_package("audio_fuzzers") {
 
 group("tests") {
   testonly = true
-
   deps = [
     ":audio_fuzzers",
-    "audio:tests",
-    "audio_core:tests",
-    "drivers:tests",
-    "lib:tests",
-    "lib/audio_test_devmgr",
-  ]
-}
-
-group("examples") {
-  testonly = true
-  deps = [
-    "//src/media/audio/examples",
+    "//src/media/audio/audio:tests",
+    "//src/media/audio/audio_core:tests",
+    "//src/media/audio/drivers:tests",
+    "//src/media/audio/lib:tests",
+    "//src/media/audio/lib/audio_test_devmgr",
   ]
 }

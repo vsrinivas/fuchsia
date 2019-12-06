@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("audio") {
+group("services") {
   testonly = true
   deps = [
     "//src/media/audio/audio",
@@ -10,18 +10,66 @@ group("audio") {
   ]
 }
 
-group("tests") {
+group("virtual_audio_service") {
   testonly = true
   deps = [
-    ":audio",
-    "//src/media/audio:tests",
     "//src/media/audio/virtual_audio_service",
   ]
 }
 
-group("audio_config") {
+group("tools") {
+  testonly = true
+  deps = [
+    "//src/media/audio/tools/signal_generator",
+    "//src/media/audio/tools/virtual_audio_util",
+    "//src/media/audio/tools/vol",
+    "//src/media/audio/tools/wav_recorder",
+  ]
+}
+
+group("examples") {
+  testonly = true
+  deps = [
+    "//src/media/audio/examples/fx",
+    "//src/media/audio/examples/simple_sine",
+    "//src/media/audio/examples/sync_sine",
+    "//src/media/audio/examples/tones",
+  ]
+}
+
+group("config") {
   testonly = true
   deps = [
     "//src/media/audio/config",
+  ]
+}
+
+group("vim2_media_config") {
+  testonly = true
+  deps = [
+    "//src/media/audio/vim2_media_config",
+  ]
+}
+
+group("virtual_audio_config") {
+  testonly = true
+  public_deps = [
+    "//src/media/audio/virtual_audio_service:virtual_audio_config",
+  ]
+}
+
+group("virtual_audio_driver") {
+  testonly = true
+  public_deps = [
+    "//src/media/audio/drivers/virtual_audio",
+  ]
+}
+
+# We use this instead of :config, because an external repro removes it from a list. Using :config
+# instead would break that repo.
+group("audio_config") {
+  testonly = true
+  deps = [
+    ":config",
   ]
 }

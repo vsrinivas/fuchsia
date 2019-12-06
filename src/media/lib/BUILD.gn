@@ -5,14 +5,16 @@
 group("lib") {
   testonly = true
   deps = [
-    "ffmpeg",
-    "mpsc_queue",
+    ":tests",
+    "//src/media/lib/ffmpeg",
+    "//src/media/lib/mpsc_queue",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "mpsc_queue:tests",
+    "//src/media/lib/codec_impl:tests",
+    "//src/media/lib/mpsc_queue:tests",
   ]
 }

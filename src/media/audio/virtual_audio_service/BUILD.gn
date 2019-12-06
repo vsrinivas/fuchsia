@@ -8,7 +8,6 @@ import("//build/package.gni")
 group("service") {
   testonly = true
   deps = [
-    ":virtual_audio_bin",
     ":virtual_audio_config",
     ":virtual_audio_service",
   ]

@@ -19,16 +19,6 @@ group("scenic") {
   ]
 }
 
-group("audio") {
-  testonly = true
-  public_deps = [
-    "//src/media/audio/tools/signal_generator",
-    "//src/media/audio/tools/virtual_audio_util",
-    "//src/media/audio/tools/vol",
-    "//src/media/audio/tools/wav_recorder",
-  ]
-}
-
 group("system_monitor") {
   testonly = true
   public_deps = [
@@ -49,7 +39,6 @@ group("fidl_tools") {
 group("all") {
   testonly = true
   public_deps = [
-    ":audio",
     ":banjo_toolchain",
     ":bluetooth",
     ":boringssl",
@@ -60,7 +49,6 @@ group("all") {
     ":fidlmerge",
     ":iperf",
     ":magma",
-    ":mediasession",
     ":netstack",
     ":runmany",
     ":scenic",
@@ -147,13 +135,6 @@ group("banjo_toolchain") {
   testonly = true
   public_deps = [
     "//src/devices/tools/banjo:banjo_bin",
-  ]
-}
-
-group("mediasession") {
-  testonly = true
-  public_deps = [
-    "//src/media/sessions:tools",
   ]
 }
 

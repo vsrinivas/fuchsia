@@ -8,25 +8,27 @@ group("tools") {
   public_deps = [
     "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:iquery",
-    "//garnet/packages/prod:media_codec_all",
-    "//garnet/packages/prod:mediaplayer",
-    "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:setui_client",
     "//garnet/packages/prod:tiles",
     "//garnet/packages/products:devtools",
     "//garnet/packages/testing:run_test_component",
-    "//src/modular/bin/sessionctl",
     "//src/chromium",
     "//src/connectivity/network/mdns/bundles:utils",
     "//src/dart",
+
     # We don't include the AOT flutter tools due to ABI stability.
     # SDK customers should download the AOT tools directly from
     # the flutter respository or use JIT instead.
     "//src/flutter:flutter_jit",
     "//src/flutter:flutter_jit_product",
     "//src/fonts",
-    "//src/media/audio/bundles:audio",
+    "//src/media/audio/bundles:services",
+    "//src/media/bundles:tools",
+    "//src/media/codec/bundles:services",
+    "//src/media/playback/bundles:services",
+    "//src/media/sessions/bundles:services",
+    "//src/modular/bin/sessionctl",
     "//src/modular/bundles:framework",
     "//src/modular/bundles:tools",
   ]

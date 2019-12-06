@@ -16,6 +16,7 @@ group("test") {
     #TODO(41917): re-enable ":audio_device_tests",
     ":audio_fidl_tests",
     ":audio_pipeline_tests",
+    "//src/media/audio/virtual_audio_service:service",
   ]
 }
 

@@ -2,18 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("playback") {
+group("services") {
   testonly = true
   deps = [
-    ":tests",
-    "//src/media/playback/examples",
     "//src/media/playback/mediaplayer",
   ]
 }
 
-group("tests") {
+group("tools") {
+  testonly = true
+  deps = []
+}
+
+group("examples") {
   testonly = true
   deps = [
-    "//src/media/playback/mediaplayer:tests",
+    "//src/media/playback/examples",
   ]
+}
+
+group("config") {
+  testonly = true
+  deps = []
 }

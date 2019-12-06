@@ -9,6 +9,7 @@ group("test") {
   testonly = true
   deps = [
     ":audio_loopback_tests",
+    "//src/media/audio/virtual_audio_service:service",
   ]
 }
 

@@ -18,7 +18,10 @@ package("use_media_decoder") {
 
   deps = [
     "use_media_decoder",
-    "//garnet/packages/prod:media_codec_all",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_aac",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
+    "//src/media/codec:codec_runner_sw_sbc",
   ]
 
   binaries = [
@@ -45,7 +48,8 @@ package("use_h264_decoder_test") {
 
   deps = [
     "//garnet/examples/media/use_media_decoder:use_h264_decoder_test",
-    "//garnet/packages/prod:media_codec_sw_ffmpeg",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_ffmpeg",
   ]
 
   meta = [
@@ -83,7 +87,7 @@ package("use_h264_decoder_secure_output_test") {
 
   deps = [
     "//garnet/examples/media/use_media_decoder:use_h264_decoder_secure_output_test",
-    "//garnet/packages/prod:media_codec_factory",
+    "//src/media/codec:codec_factory",
   ]
 
   meta = [
@@ -120,7 +124,7 @@ package("use_h264_decoder_secure_input_output_test") {
 
   deps = [
     "//garnet/examples/media/use_media_decoder:use_h264_decoder_secure_input_output_test",
-    "//garnet/packages/prod:media_codec_factory",
+    "//src/media/codec:codec_factory",
   ]
 
   meta = [
@@ -158,7 +162,8 @@ package("use_aac_decoder_test") {
 
   deps = [
     "//garnet/examples/media/use_media_decoder:use_aac_decoder_test",
-    "//garnet/packages/prod:media_codec_sw_aac",
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_runner_sw_aac",
   ]
 
   tests = [
@@ -188,7 +193,7 @@ package("use_vp9_decoder_test") {
 
   deps = [
     "//garnet/examples/media/use_media_decoder:use_vp9_decoder_test",
-    "//garnet/packages/prod:media_codec_factory",
+    "//src/media/codec:codec_factory",
   ]
 
   meta = [
@@ -231,7 +236,7 @@ package("use_vp9_decoder_secure_output_test") {
 
   deps = [
     "//garnet/examples/media/use_media_decoder:use_vp9_decoder_secure_output_test",
-    "//garnet/packages/prod:media_codec_factory",
+    "//src/media/codec:codec_factory",
   ]
 
   meta = [
@@ -268,7 +273,7 @@ template("vp9_file_decoder_conformance_test") {
 
     deps = [
       "//garnet/examples/media/use_media_decoder:vp9_decoder_conformance_test",
-      "//garnet/packages/prod:media_codec_factory",
+      "//src/media/codec:codec_factory",
     ]
 
     meta = [
@@ -314,7 +319,7 @@ package("vp9_decoder_conformance_http") {
 
   deps = [
     "//garnet/examples/media/use_media_decoder:vp9_decoder_conformance_test",
-    "//garnet/packages/prod:media_codec_factory",
+    "//src/media/codec:codec_factory",
   ]
 
   meta = [

@@ -3,15 +3,17 @@
 # found in the LICENSE file.
 
 group("stream_processors") {
+  testonly = true
   deps = [
-    "fuchsia-stream-processors",
+    ":tests",
+    "//src/media/stream_processors/fuchsia-stream-processors",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "fuchsia-stream-processors:fuchsia-stream-processors-tests",
-    "test",
+    "//src/media/stream_processors/fuchsia-stream-processors:fuchsia-stream-processors-tests",
+    "//src/media/stream_processors/test",
   ]
 }

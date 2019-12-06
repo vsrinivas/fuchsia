@@ -6,30 +6,24 @@ group("media") {
   testonly = true
   deps = [
     ":tests",
-    "audio",
-    "lib",
-    "playback",
-    "sessions",
-    "stream_processors",
+    "//src/media/audio",
+    "//src/media/codec",
+    "//src/media/lib",
+    "//src/media/playback",
+    "//src/media/sessions",
+    "//src/media/stream_processors",
   ]
 }
 
 group("tests") {
   testonly = true
-
   deps = [
-    "audio:tests",
-    "lib:tests",
-    "sessions:tests",
-    "stream_processors:tests",
-  ]
-}
-
-group("examples") {
-  testonly = true
-  deps = [
-    "audio:examples",
-    "playback:examples",
-    "sessions:examples",
+    "//sdk/lib/media/cpp:media_lib_timeline_tests",
+    "//src/media/audio:tests",
+    "//src/media/codec:tests",
+    "//src/media/lib:tests",
+    "//src/media/playback:tests",
+    "//src/media/sessions:tests",
+    "//src/media/stream_processors:tests",
   ]
 }
