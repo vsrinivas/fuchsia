@@ -226,12 +226,12 @@ func (fc *FileCache) cullFiles() {
 	numFiles := uint64(len(files))
 	if numFiles <= fc.cfg.Size {
 		// Update our count and return. One might be concerned
-    // that this store might overwrite previous adds or that the collection
-    // of operations do not look kosher or linerize in someway. This is not
-    // an issue here as 'curSize' is just an estimate and all actors are
-    // just trying to ensure that at any given time this value is as close
-    // to the right value as possible. The value is just an estimate to
-    // control how often a we try and collect garbage.
+		// that this store might overwrite previous adds or that the collection
+		// of operations do not look kosher or linerize in someway. This is not
+		// an issue here as 'curSize' is just an estimate and all actors are
+		// just trying to ensure that at any given time this value is as close
+		// to the right value as possible. The value is just an estimate to
+		// control how often a we try and collect garbage.
 		atomic.StoreUint64(&fc.curSize, numFiles)
 		return
 	}

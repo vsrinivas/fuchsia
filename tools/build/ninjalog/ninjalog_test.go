@@ -26,43 +26,43 @@ var (
 `
 
 	stepsTestCase = []Step{
-		Step{
+		{
 			Start:   76 * time.Millisecond,
 			End:     187 * time.Millisecond,
 			Out:     "resources/inspector/devtools_extension_api.js",
 			CmdHash: "75430546595be7c2",
 		},
-		Step{
+		{
 			Start:   80 * time.Millisecond,
 			End:     284 * time.Millisecond,
 			Out:     "gen/autofill_regex_constants.cc",
 			CmdHash: "fa33c8d7ce1d8791",
 		},
-		Step{
+		{
 			Start:   78 * time.Millisecond,
 			End:     286 * time.Millisecond,
 			Out:     "gen/angle/commit_id.py",
 			CmdHash: "4ede38e2c1617d8c",
 		},
-		Step{
+		{
 			Start:   79 * time.Millisecond,
 			End:     287 * time.Millisecond,
 			Out:     "gen/angle/copy_compiler_dll.bat",
 			CmdHash: "9fb635ad5d2c1109",
 		},
-		Step{
+		{
 			Start:   141 * time.Millisecond,
 			End:     287 * time.Millisecond,
 			Out:     "PepperFlash/manifest.json",
 			CmdHash: "324f0a0b77c37ef",
 		},
-		Step{
+		{
 			Start:   142 * time.Millisecond,
 			End:     288 * time.Millisecond,
 			Out:     "PepperFlash/libpepflashplayer.so",
 			CmdHash: "1e2c2b7845a4d4fe",
 		},
-		Step{
+		{
 			Start:   287 * time.Millisecond,
 			End:     290 * time.Millisecond,
 			Out:     "obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
@@ -71,43 +71,43 @@ var (
 	}
 
 	stepsSorted = []Step{
-		Step{
+		{
 			Start:   76 * time.Millisecond,
 			End:     187 * time.Millisecond,
 			Out:     "resources/inspector/devtools_extension_api.js",
 			CmdHash: "75430546595be7c2",
 		},
-		Step{
+		{
 			Start:   78 * time.Millisecond,
 			End:     286 * time.Millisecond,
 			Out:     "gen/angle/commit_id.py",
 			CmdHash: "4ede38e2c1617d8c",
 		},
-		Step{
+		{
 			Start:   79 * time.Millisecond,
 			End:     287 * time.Millisecond,
 			Out:     "gen/angle/copy_compiler_dll.bat",
 			CmdHash: "9fb635ad5d2c1109",
 		},
-		Step{
+		{
 			Start:   80 * time.Millisecond,
 			End:     284 * time.Millisecond,
 			Out:     "gen/autofill_regex_constants.cc",
 			CmdHash: "fa33c8d7ce1d8791",
 		},
-		Step{
+		{
 			Start:   141 * time.Millisecond,
 			End:     287 * time.Millisecond,
 			Out:     "PepperFlash/manifest.json",
 			CmdHash: "324f0a0b77c37ef",
 		},
-		Step{
+		{
 			Start:   142 * time.Millisecond,
 			End:     288 * time.Millisecond,
 			Out:     "PepperFlash/libpepflashplayer.so",
 			CmdHash: "1e2c2b7845a4d4fe",
 		},
-		Step{
+		{
 			Start:   287 * time.Millisecond,
 			End:     290 * time.Millisecond,
 			Out:     "obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
@@ -145,17 +145,17 @@ func TestStepsSort(t *testing.T) {
 
 func TestStepsReverse(t *testing.T) {
 	steps := []Step{
-		Step{Out: "0"},
-		Step{Out: "1"},
-		Step{Out: "2"},
-		Step{Out: "3"},
+		{Out: "0"},
+		{Out: "1"},
+		{Out: "2"},
+		{Out: "3"},
 	}
 	Steps(steps).Reverse()
 	want := []Step{
-		Step{Out: "3"},
-		Step{Out: "2"},
-		Step{Out: "1"},
-		Step{Out: "0"},
+		{Out: "3"},
+		{Out: "2"},
+		{Out: "1"},
+		{Out: "0"},
 	}
 	if !reflect.DeepEqual(steps, want) {
 		t.Errorf("steps.Reverse=%v; want=%v", steps, want)
@@ -352,60 +352,60 @@ func TestFlow(t *testing.T) {
 	flow := Flow(steps)
 
 	want := [][]Step{
-		[]Step{
-			Step{
+		{
+			{
 				Start:   76 * time.Millisecond,
 				End:     187 * time.Millisecond,
 				Out:     "resources/inspector/devtools_extension_api.js",
 				CmdHash: "75430546595be7c2",
 			},
-			Step{
+			{
 				Start:   187 * time.Millisecond,
 				End:     21304 * time.Millisecond,
 				Out:     "obj/third_party/pdfium/core/src/fpdfdoc/fpdfdoc.doc_formfield.o",
 				CmdHash: "2ac7111aa1ae86af",
 			},
 		},
-		[]Step{
-			Step{
+		{
+			{
 				Start:   78 * time.Millisecond,
 				End:     286 * time.Millisecond,
 				Out:     "gen/angle/commit_id.py",
 				CmdHash: "4ede38e2c1617d8c",
 			},
-			Step{
+			{
 				Start:   287 * time.Millisecond,
 				End:     290 * time.Millisecond,
 				Out:     "obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
 				CmdHash: "b211d373de72f455",
 			},
 		},
-		[]Step{
-			Step{
+		{
+			{
 				Start:   79 * time.Millisecond,
 				End:     287 * time.Millisecond,
 				Out:     "gen/angle/copy_compiler_dll.bat",
 				CmdHash: "9fb635ad5d2c1109",
 			},
 		},
-		[]Step{
-			Step{
+		{
+			{
 				Start:   80 * time.Millisecond,
 				End:     284 * time.Millisecond,
 				Out:     "gen/autofill_regex_constants.cc",
 				CmdHash: "fa33c8d7ce1d8791",
 			},
 		},
-		[]Step{
-			Step{
+		{
+			{
 				Start:   141 * time.Millisecond,
 				End:     287 * time.Millisecond,
 				Out:     "PepperFlash/manifest.json",
 				CmdHash: "324f0a0b77c37ef",
 			},
 		},
-		[]Step{
-			Step{
+		{
+			{
 				Start:   142 * time.Millisecond,
 				End:     288 * time.Millisecond,
 				Out:     "PepperFlash/libpepflashplayer.so",
@@ -421,25 +421,25 @@ func TestFlow(t *testing.T) {
 
 func TestWeightedTime(t *testing.T) {
 	steps := []Step{
-		Step{
+		{
 			Start:   0 * time.Millisecond,
 			End:     3 * time.Millisecond,
 			Out:     "target-a",
 			CmdHash: "hash-target-a",
 		},
-		Step{
+		{
 			Start:   2 * time.Millisecond,
 			End:     5 * time.Millisecond,
 			Out:     "target-b",
 			CmdHash: "hash-target-b",
 		},
-		Step{
+		{
 			Start:   2 * time.Millisecond,
 			End:     8 * time.Millisecond,
 			Out:     "target-c",
 			CmdHash: "hash-target-c",
 		},
-		Step{
+		{
 			Start:   2 * time.Millisecond,
 			End:     3 * time.Millisecond,
 			Out:     "target-d",

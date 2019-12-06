@@ -267,7 +267,7 @@ func Test_processInput(t *testing.T) {
 		CoreLimit:  json.Number("1"),
 		AssetExt:   []string{".txt"},
 		Components: []Component{
-			Component{
+			{
 				Component: "foo",
 				Limit:     json.Number("1"),
 				Src:       []string{"foo-pkg"},
@@ -289,12 +289,12 @@ func Test_processInput(t *testing.T) {
 	}
 	metaFarRelPath := path.Join("foo-pkg", MetaFar)
 	blobs := []BlobFromJSON{
-		BlobFromJSON{
+		{
 			Merkle:     "deadbeef",
 			Path:       "meta/",
 			SourcePath: metaFarRelPath,
 		},
-		BlobFromJSON{
+		{
 			Merkle:     "abc123",
 			Path:       fooSrcRelPath,
 			SourcePath: fooSrcRelPath,

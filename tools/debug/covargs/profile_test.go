@@ -35,7 +35,7 @@ var testRepository = repository{
 }
 
 var testDumps = map[string]symbolize.DumpEntry{
-	"llvm-profile.1234": symbolize.DumpEntry{
+	"llvm-profile.1234": {
 		Modules: []symbolize.Module{
 			{Name: "foo", Build: "12ef5c50b3ed3599c07c02d4509311be", Id: 0},
 			{Name: "libc.so", Build: "5bf6a28a259b95b4f20ffbcea0cbb149", Id: 1},
@@ -45,7 +45,7 @@ var testDumps = map[string]symbolize.DumpEntry{
 		Type:     "llvm-profile",
 		Name:     "llvm-profile.1234",
 	},
-	"llvm-profile.5678": symbolize.DumpEntry{
+	"llvm-profile.5678": {
 		Modules: []symbolize.Module{
 			{Name: "bar", Build: "e242ed3bffccdf271b7fbaf34ed72d08", Id: 0},
 			{Name: "libc.so", Build: "5bf6a28a259b95b4f20ffbcea0cbb149", Id: 1},
@@ -57,7 +57,7 @@ var testDumps = map[string]symbolize.DumpEntry{
 }
 
 var testSummary = map[string][]runtests.DataSink{
-	"llvm-profile": []runtests.DataSink{
+	"llvm-profile": {
 		{Name: "llvm-profile.1234", File: "build/llvm-profile.4321"},
 		{Name: "llvm-profile.5678", File: "build/llvm-profile.8765"},
 	},
