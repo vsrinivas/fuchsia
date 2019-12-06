@@ -35,7 +35,7 @@ void Debug::PrintHexDump(uint32_t flag, const void* data, size_t length) {
       char* next = buffer;
       size_t line_width = std::min(kValuesPerLine, new_length - i);
       for (size_t j = 0; j < line_width; ++j) {
-        next += sprintf(next, "%02x ", bytes[i + j]);
+        next += sprintf(next, "%02x ", static_cast<int>(bytes[i + j]) & 0xFF);
       }
       driver_printf(flag, "%04zx: %s\n", i, buffer);
     }
