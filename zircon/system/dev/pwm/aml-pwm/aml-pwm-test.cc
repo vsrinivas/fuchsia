@@ -99,6 +99,17 @@ class AmlPwmDeviceTest : public zxtest::Test {
       return;
     }
 
+    // TODO (rdzhuang): uncomment in fxr/344891
+    // (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+    // (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
+    // (*mock_mmio1_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+    // (*mock_mmio1_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
+    // (*mock_mmio2_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+    // (*mock_mmio2_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
+    // (*mock_mmio3_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+    // (*mock_mmio3_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
+    // (*mock_mmio4_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+    // (*mock_mmio4_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
     ddk::MmioBuffer mmio0(mock_mmio0_->GetMmioBuffer());
     ddk::MmioBuffer mmio1(mock_mmio1_->GetMmioBuffer());
     ddk::MmioBuffer mmio2(mock_mmio2_->GetMmioBuffer());
@@ -145,7 +156,7 @@ TEST_F(AmlPwmDeviceTest, GetConfigTest) {
       .mode_config_buffer = &mode_cfg,
       .mode_config_size = sizeof(mode_cfg),
   };
-  EXPECT_NOT_OK(pwm_->PwmImplGetConfig(0, &cfg));
+  EXPECT_OK(pwm_->PwmImplGetConfig(0, &cfg));
 
   cfg.mode_config_buffer = nullptr;
   EXPECT_NOT_OK(pwm_->PwmImplGetConfig(0, &cfg));
@@ -182,18 +193,134 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
     EXPECT_NOT_OK(pwm_->PwmImplSetConfig(10, &fail_cfg));  // Fail
   }
 
-  mode_config test{
-      .mode = 0,
+  // OFF
+  mode_config off{
+      .mode = OFF,
       .regular = {},
   };
-  pwm_config test_cfg{
+  pwm_config off_cfg{
       .polarity = false,
       .period_ns = 1250,
       .duty_cycle = 100.0,
-      .mode_config_buffer = &test,
-      .mode_config_size = sizeof(test),
+      .mode_config_buffer = &off,
+      .mode_config_size = sizeof(off),
   };
-  EXPECT_NOT_OK(pwm_->PwmImplSetConfig(0, &test_cfg));  // Fail
+  EXPECT_OK(pwm_->PwmImplSetConfig(0, &off_cfg));
+
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x01000000).ExpectWrite(0x01000001);  // SetMode
+  (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFBFFFFFF);  // Invert
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x00000000).ExpectWrite(0x10000000);  // EnableConst
+  (*mock_mmio0_)[0 * 4].ExpectRead(0xA39D9259).ExpectWrite(0x001E0000);  // SetDutyCycle
+  mode_config on{
+      .mode = ON,
+      .regular = {},
+  };
+  pwm_config on_cfg{
+      .polarity = false,
+      .period_ns = 1250,
+      .duty_cycle = 100.0,
+      .mode_config_buffer = &on,
+      .mode_config_size = sizeof(on),
+  };
+  EXPECT_OK(pwm_->PwmImplSetConfig(0, &on_cfg));  // turn on
+
+  (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+  EXPECT_OK(pwm_->PwmImplSetConfig(0, &off_cfg));
+  EXPECT_OK(pwm_->PwmImplSetConfig(0, &off_cfg));  // same configs
+
+  // ON
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x01000000).ExpectWrite(0x00000002);  // SetMode
+  (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xF7FFFFFF);  // Invert
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x00000000).ExpectWrite(0x20000000);  // EnableConst
+  (*mock_mmio0_)[1 * 4].ExpectRead(0xA39D9259).ExpectWrite(0x001E0000);  // SetDutyCycle
+  EXPECT_OK(pwm_->PwmImplSetConfig(1, &on_cfg));
+
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x00000000).ExpectWrite(0x08000000);  // Invert
+  (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xDFFFFFFF);  // EnableConst
+  (*mock_mmio0_)[1 * 4].ExpectRead(0xA39D9259).ExpectWrite(0x00060010);  // SetDutyCycle
+  on_cfg.polarity = true;
+  on_cfg.period_ns = 1000;
+  on_cfg.duty_cycle = 30.0;
+  EXPECT_OK(pwm_->PwmImplSetConfig(1, &on_cfg));  // Change Duty Cycle
+
+  (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
+  EXPECT_OK(pwm_->PwmImplSetConfig(1, &off_cfg));                        // Change Mode
+
+  // DELTA_SIGMA
+  (*mock_mmio1_)[2 * 4].ExpectRead(0x02000000).ExpectWrite(0x00000004);  // SetMode
+  (*mock_mmio1_)[3 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFF0064);  // SetDSSetting
+  (*mock_mmio1_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFBFFFFFF);  // Invert
+  (*mock_mmio1_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xEFFFFFFF);  // EnableConst
+  (*mock_mmio1_)[0 * 4].ExpectRead(0xA39D9259).ExpectWrite(0x00060010);  // SetDutyCycle
+  mode_config ds{
+      .mode = DELTA_SIGMA,
+      .delta_sigma =
+          {
+              .delta = 100,
+          },
+  };
+  pwm_config ds_cfg{
+      .polarity = false,
+      .period_ns = 1000,
+      .duty_cycle = 30.0,
+      .mode_config_buffer = &ds,
+      .mode_config_size = sizeof(ds),
+  };
+  EXPECT_OK(pwm_->PwmImplSetConfig(2, &ds_cfg));
+
+  // TWO_TIMER
+  (*mock_mmio3_)[2 * 4].ExpectRead(0x00000000).ExpectWrite(0x01000002);  // SetMode
+  (*mock_mmio3_)[6 * 4].ExpectRead(0xA39D9259).ExpectWrite(0x00130003);  // SetDutyCycle2
+  (*mock_mmio3_)[4 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFF0302);  // SetTimers
+  (*mock_mmio3_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xF7FFFFFF);  // Invert
+  (*mock_mmio3_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xDFFFFFFF);  // EnableConst
+  (*mock_mmio3_)[1 * 4].ExpectRead(0xA39D9259).ExpectWrite(0x00060010);  // SetDutyCycle
+  mode_config timer2{
+      .mode = TWO_TIMER,
+      .two_timer =
+          {
+              .duty_cycle2 = 80.0,
+              .timer1 = 3,
+              .timer2 = 2,
+          },
+  };
+  pwm_config timer2_cfg{
+      .polarity = false,
+      .period_ns = 1000,
+      .duty_cycle = 30.0,
+      .mode_config_buffer = &timer2,
+      .mode_config_size = sizeof(timer2),
+  };
+  EXPECT_OK(pwm_->PwmImplSetConfig(7, &timer2_cfg));
+}
+
+TEST_F(AmlPwmDeviceTest, SetConfigFailTest) {
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x01000000).ExpectWrite(0x01000001);  // SetMode
+  (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFBFFFFFF);  // Invert
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x00000000).ExpectWrite(0x10000000);  // EnableConst
+  (*mock_mmio0_)[0 * 4].ExpectRead(0xA39D9259).ExpectWrite(0x001E0000);  // SetDutyCycle
+  mode_config on{
+      .mode = ON,
+      .regular = {},
+  };
+  pwm_config on_cfg{
+      .polarity = false,
+      .period_ns = 1250,
+      .duty_cycle = 100.0,
+      .mode_config_buffer = &on,
+      .mode_config_size = sizeof(on),
+  };
+  EXPECT_OK(pwm_->PwmImplSetConfig(0, &on_cfg));  // Success
+
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x00000000).ExpectWrite(0x04000000);  // Invert
+  (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xEFFFFFFF);  // EnableConst
+                                                                         // Fail
+  (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFBFFFFFF);  // Invert
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x00000000).ExpectWrite(0x10000000);  // EnableConst
+  (*mock_mmio0_)[0 * 4].ExpectRead(0xA39D9259).ExpectWrite(0x001E0000);  // SetDutyCycle
+  on_cfg.polarity = true;
+  on_cfg.duty_cycle = 120.0;
+  EXPECT_NOT_OK(pwm_->PwmImplSetConfig(0, &on_cfg));  // Fail
 }
 
 TEST_F(AmlPwmDeviceTest, EnableTest) {

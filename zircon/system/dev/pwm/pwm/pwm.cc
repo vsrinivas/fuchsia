@@ -75,7 +75,9 @@ zx_status_t PwmDevice::PwmGetConfig(pwm_config_t* out_config) {
   return pwm_.GetConfig(id_.id, out_config);
 }
 
-zx_status_t PwmDevice::PwmSetConfig(const pwm_config_t* config) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t PwmDevice::PwmSetConfig(const pwm_config_t* config) {
+  return pwm_.SetConfig(id_.id, config);
+}
 
 zx_status_t PwmDevice::PwmEnable() { return pwm_.Enable(id_.id); }
 
