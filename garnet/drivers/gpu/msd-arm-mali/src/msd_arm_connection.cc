@@ -285,8 +285,13 @@ bool MsdArmConnection::RemoveMapping(uint64_t gpu_va) {
   if (it == gpu_mappings_.end())
     return DRETF(false, "Mapping not found");
 
-  address_space_->Clear(it->second->gpu_va(), it->second->size());
+  recently_removed_mappings_.push_front(
+      std::make_pair<uint64_t>(it->second->gpu_va(), it->second->size()));
+  while (recently_removed_mappings_.size() > kMaxStoredRemovedMappings) {
+    recently_removed_mappings_.pop_back();
+  }
 
+  address_space_->Clear(it->second->gpu_va(), it->second->size());
   gpu_mappings_.erase(gpu_va);
   return true;
 }
@@ -387,11 +392,31 @@ bool MsdArmConnection::PageInMemory(uint64_t address) {
   --it;
   GpuMapping& mapping = *it->second.get();
   DASSERT(address >= mapping.gpu_va());
-  if (address >= mapping.gpu_va() + mapping.size())
+  if (address >= mapping.gpu_va() + mapping.size()) {
+    MAGMA_LOG(WARNING,
+              "Address 0x%lx is unmapped. Closest lower mapping is at 0x%lx, size 0x%lx (offset "
+              "would be 0x%lx), flags 0x%lx",
+              address, mapping.gpu_va(), mapping.size(), address - mapping.gpu_va(),
+              mapping.flags());
+    uint32_t i = 0;
+    for (auto x : recently_removed_mappings_) {
+      if (address >= x.first && address < x.first + x.second) {
+        MAGMA_LOG(WARNING, "Found in part of mapping 0x%lx length 0x%lx found at index %d", x.first,
+                  x.second, i);
+      }
+      i++;
+    }
     return false;
-  if (!(mapping.flags() & MAGMA_GPU_MAP_FLAG_GROWABLE))
-    return DRETF(false, "Buffer mapping not growable, gpu VA 0x%lx, size 0x%lx, flags: 0x%lx",
-                 mapping.gpu_va(), mapping.size(), mapping.flags());
+  }
+  if (!(mapping.flags() & MAGMA_GPU_MAP_FLAG_GROWABLE)) {
+    MAGMA_LOG(WARNING,
+              "Address 0x%lx at offset 0x%lx in non-growable mapping at 0x%lx, size 0x%lx, pinned "
+              "page size 0x%lx, flags 0x%lx",
+              address, address - mapping.gpu_va(), mapping.gpu_va(), mapping.size(),
+              mapping.pinned_page_count() * PAGE_SIZE, mapping.flags());
+    return false;
+  }
+
   auto buffer = mapping.buffer().lock();
   DASSERT(buffer);
 

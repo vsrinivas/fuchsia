@@ -106,6 +106,11 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   // Map GPU va to a mapping.
   __TA_GUARDED(address_lock_) std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
 
+  // Store a list of a small number of mappings to help debug issues when references to freed
+  // memory.
+  static constexpr uint32_t kMaxStoredRemovedMappings = 64;
+  std::deque<std::pair</*gpu_va=*/uint64_t, /*len=*/uint64_t>> recently_removed_mappings_;
+
   Owner* owner_;
 
   // Modified and accessed only from device thread.
