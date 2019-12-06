@@ -22,10 +22,8 @@ stanza to the bottom of your <build_dir>/args.gn.
 universe_package_labels += [ "//bundles:tools" ]
 ```
 
-To run fidlcat, you must boot with networking enabled.
-
-For QEMU networking support, you need to setup your system with a TUN/TAP
-interface. Then, run:
+To run `fidlcat`, you must boot with networking enabled. If you're running an
+emulator:
 
 ```sh
 fx emu -N
