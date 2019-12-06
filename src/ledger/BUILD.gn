@@ -122,6 +122,12 @@ package("ledger_tests") {
     },
   ]
 
+  # Disable tests in arm64-debug builds until fxb/42434 is resolved.
+  integration_envs = [ nuc_env ]
+  if (target_cpu != "arm64" || !is_debug) {
+    integration_envs += [ qemu_env ]
+  }
+
   tests = [
     {
       name = "ledger_unittests"
@@ -129,14 +135,11 @@ package("ledger_tests") {
     },
     {
       name = "ledger_integration_tests"
-
-      # TODO(fxb/42434): Re-enable once test time is reduced.
-      disabled = true
-      environments = basic_envs
+      environments = integration_envs
     },
     {
       name = "ledger_integration_tests_diff_compatibility"
-      environments = basic_envs
+      environments = integration_envs
     },
     {
       name = "ledger_e2e_local"
