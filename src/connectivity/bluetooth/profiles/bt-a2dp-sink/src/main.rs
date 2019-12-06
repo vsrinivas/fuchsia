@@ -22,25 +22,11 @@ use {
         channel::mpsc::{self as mpsc, Receiver, Sender},
         select, FutureExt, StreamExt,
     },
-    lazy_static::lazy_static,
     parking_lot::Mutex,
     std::{collections::hash_map, collections::HashMap, sync::Arc},
 };
 
 use crate::inspect_types::StreamingInspectData;
-
-lazy_static! {
-    /// COBALT_SENDER must only be accessed from within an async context;
-    static ref COBALT_SENDER: CobaltSender = {
-        let (sender, reporter) = CobaltConnector::default().serve(ConnectionType::project_name("bluetooth"));
-        fasync::spawn(reporter);
-        sender
-    };
-}
-
-pub(crate) fn get_cobalt_logger() -> CobaltSender {
-    COBALT_SENDER.clone()
-}
 
 mod avdtp_controller;
 mod connected_peers;
@@ -202,7 +188,11 @@ impl Stream {
     }
 
     /// Attempt to start the media decoding task.
-    fn start(&mut self, inspect: StreamingInspectData) -> avdtp::Result<()> {
+    fn start(
+        &mut self,
+        inspect: StreamingInspectData,
+        cobalt_sender: CobaltSender,
+    ) -> avdtp::Result<()> {
         let start_res = self.endpoint.start();
         if start_res.is_err() || self.suspend_sender.is_some() {
             fx_log_info!("Start when streaming: {:?} {:?}", start_res, self.suspend_sender);
@@ -217,6 +207,7 @@ impl Stream {
             self.sample_freq(),
             receive,
             inspect,
+            cobalt_sender,
         ));
         Ok(())
     }
@@ -382,6 +373,7 @@ async fn decode_media_stream(
     sample_rate: u32,
     mut end_signal: Receiver<()>,
     mut inspect: StreamingInspectData,
+    cobalt_sender: CobaltSender,
 ) -> () {
     let mut player = match player::Player::new(encoding.clone(), sample_rate).await {
         Ok(v) => v,
@@ -443,11 +435,21 @@ async fn decode_media_stream(
         }
     }
     let end_time = zx::Time::get(zx::ClockId::Monotonic);
-    // TODO (BT-818): determine codec metric dimension from encoding instead of hard-coding to sbc
-    get_cobalt_logger().log_elapsed_time(
-        metrics::A2DP_NUMBER_OF_SECONDS_STREAMED_METRIC_ID,
-        metrics::A2dpNumberOfSecondsStreamedMetricDimensionCodec::Sbc as u32,
-        (end_time - start_time).into_seconds(),
+
+    report_stream_metrics(cobalt_sender, &encoding, (end_time - start_time).into_seconds());
+}
+
+fn report_stream_metrics(mut cobalt_sender: CobaltSender, encoding: &str, duration_seconds: i64) {
+    let codec = match encoding.as_ref() {
+        AUDIO_ENCODING_SBC => metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Sbc,
+        AUDIO_ENCODING_AACLATM => metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Aac,
+        _ => metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Unknown,
+    };
+
+    cobalt_sender.log_elapsed_time(
+        metrics::A2DP_STREAM_DURATION_IN_SECONDS_METRIC_ID,
+        codec as u32,
+        duration_seconds,
     );
 }
 
@@ -469,6 +471,13 @@ async fn main() -> Result<(), Error> {
     }
     fasync::spawn(fs.collect::<()>());
 
+    let cobalt_logger: CobaltSender = {
+        let (sender, reporter) =
+            CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
+        fasync::spawn(reporter);
+        sender
+    };
+
     let mut stream_inspect =
         ManagedNode::new(inspect.root().create_child("local stream endpoints"));
     let streams = Streams::build(&mut stream_inspect).await?;
@@ -477,7 +486,7 @@ async fn main() -> Result<(), Error> {
         return Err(format_err!("Can't play media - no codecs found or media player missing"));
     }
 
-    let mut peers = connected_peers::ConnectedPeers::new(streams);
+    let mut peers = connected_peers::ConnectedPeers::new(streams, cobalt_logger.clone());
 
     let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()?;
 
@@ -530,7 +539,16 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_cobalt::CobaltEvent;
+    use fidl_fuchsia_cobalt::EventPayload;
+    use futures::channel::mpsc;
     use matches::assert_matches;
+
+    fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
+        const BUFFER_SIZE: usize = 100;
+        let (sender, receiver) = mpsc::channel(BUFFER_SIZE);
+        (CobaltSender::new(sender), receiver)
+    }
 
     #[test]
     /// Test that the Streams specialized hashmap works as expected, storing
@@ -676,5 +694,28 @@ mod tests {
         let streams = exec.run_singlethreaded(&mut streams_fut);
 
         assert!(streams.is_err(), "Stream building should fail when it can't reach MediaPlayer");
+    }
+
+    #[test]
+    /// Test that cobalt metrics are sent after stream ends
+    fn test_cobalt_metrics() {
+        let (send, mut recv) = fake_cobalt_sender();
+        const TEST_DURATION: i64 = 1;
+
+        report_stream_metrics(send, AUDIO_ENCODING_AACLATM, TEST_DURATION);
+
+        let event = recv.try_next().expect("no stream error").expect("event present");
+
+        assert_eq!(
+            event,
+            CobaltEvent {
+                metric_id: metrics::A2DP_STREAM_DURATION_IN_SECONDS_METRIC_ID,
+                event_codes: vec![
+                    metrics::A2dpStreamDurationInSecondsMetricDimensionCodec::Aac as u32
+                ],
+                component: None,
+                payload: EventPayload::ElapsedMicros(TEST_DURATION),
+            }
+        );
     }
 }

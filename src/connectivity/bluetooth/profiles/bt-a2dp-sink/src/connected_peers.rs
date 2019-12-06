@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::ProfileDescriptor,
     fuchsia_async as fasync,
     fuchsia_bluetooth::{detachable_map::DetachableMap, types::PeerId},
+    fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
@@ -18,7 +19,7 @@ use {
     },
 };
 
-use crate::{get_cobalt_logger, peer, Streams};
+use crate::{peer, Streams};
 
 fn codectype_to_availability_metric(
     codec_type: avdtp::MediaCodecType,
@@ -42,9 +43,9 @@ fn codectype_to_availability_metric(
 fn spawn_stream_discovery(peer: &peer::Peer) {
     let collect_fut = peer.collect_capabilities();
     let remote_capabilities_inspect = peer.remote_capabilities_inspect();
+    let mut cobalt = peer.cobalt_logger();
 
     let discover_fut = async move {
-        let mut cobalt = get_cobalt_logger();
         // Store deduplicated set of codec event codes for logging.
         let mut codec_event_codes = HashSet::new();
 
@@ -88,11 +89,18 @@ pub struct ConnectedPeers {
     descriptors: HashMap<PeerId, Option<ProfileDescriptor>>,
     /// The set of streams that are made available to peers.
     streams: Streams,
+    /// Cobalt logger to use and hand out to peers
+    cobalt_sender: CobaltSender,
 }
 
 impl ConnectedPeers {
-    pub(crate) fn new(streams: Streams) -> Self {
-        Self { connected: DetachableMap::new(), descriptors: HashMap::new(), streams }
+    pub(crate) fn new(streams: Streams, cobalt_sender: CobaltSender) -> Self {
+        Self {
+            connected: DetachableMap::new(),
+            descriptors: HashMap::new(),
+            streams,
+            cobalt_sender,
+        }
     }
 
     pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<RwLock<peer::Peer>>> {
@@ -127,7 +135,13 @@ impl ConnectedPeers {
                     }
                 };
                 let inspect = inspect.root().create_child(format!("peer {}", id));
-                let mut peer = peer::Peer::create(id, avdtp_peer, self.streams.clone(), inspect);
+                let mut peer = peer::Peer::create(
+                    id,
+                    avdtp_peer,
+                    self.streams.clone(),
+                    inspect,
+                    self.cobalt_sender.clone(),
+                );
 
                 // Start remote discovery if profile information exists for the device_id
                 match self.descriptors.entry(id) {
@@ -163,8 +177,16 @@ mod tests {
 
     use bt_avdtp::Request;
     use fidl_fuchsia_bluetooth_bredr::ServiceClassProfileIdentifier;
+    use fidl_fuchsia_cobalt::CobaltEvent;
+    use futures::channel::mpsc;
     use futures::{self, task::Poll, StreamExt};
     use std::convert::TryFrom;
+
+    fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
+        const BUFFER_SIZE: usize = 100;
+        let (sender, receiver) = mpsc::channel(BUFFER_SIZE);
+        (CobaltSender::new(sender), receiver)
+    }
 
     fn run_to_stalled(exec: &mut fasync::Executor) {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
@@ -208,8 +230,9 @@ mod tests {
     fn connected_peers_connect_creates_peer() {
         let mut exec = fasync::Executor::new().expect("executor should build");
         let id = PeerId(1);
+        let (cobalt_sender, _) = fake_cobalt_sender();
 
-        let mut peers = ConnectedPeers::new(Streams::new());
+        let mut peers = ConnectedPeers::new(Streams::new(), cobalt_sender);
 
         let inspect = inspect::Inspector::new();
 
@@ -240,8 +263,9 @@ mod tests {
     fn connected_peers_found_connected_peer_starts_discovery() {
         let mut exec = fasync::Executor::new().expect("executor should build");
         let id = PeerId(1);
+        let (cobalt_sender, _) = fake_cobalt_sender();
 
-        let mut peers = ConnectedPeers::new(Streams::new());
+        let mut peers = ConnectedPeers::new(Streams::new(), cobalt_sender);
 
         let inspect = inspect::Inspector::new();
 
@@ -264,8 +288,9 @@ mod tests {
     fn connected_peers_connected_found_peer_starts_discovery() {
         let mut exec = fasync::Executor::new().expect("executor should build");
         let id = PeerId(1);
+        let (cobalt_sender, _) = fake_cobalt_sender();
 
-        let mut peers = ConnectedPeers::new(Streams::new());
+        let mut peers = ConnectedPeers::new(Streams::new(), cobalt_sender);
 
         let inspect = inspect::Inspector::new();
 
@@ -288,8 +313,9 @@ mod tests {
     fn connected_peers_peer_disconnect_removes_peer() {
         let mut exec = fasync::Executor::new().expect("executor should build");
         let id = PeerId(1);
+        let (cobalt_sender, _) = fake_cobalt_sender();
 
-        let mut peers = ConnectedPeers::new(Streams::new());
+        let mut peers = ConnectedPeers::new(Streams::new(), cobalt_sender);
 
         let inspect = inspect::Inspector::new();
 
@@ -310,8 +336,9 @@ mod tests {
     fn connected_peers_reconnect_works() {
         let mut exec = fasync::Executor::new().expect("executor should build");
         let id = PeerId(1);
+        let (cobalt_sender, _) = fake_cobalt_sender();
 
-        let mut peers = ConnectedPeers::new(Streams::new());
+        let mut peers = ConnectedPeers::new(Streams::new(), cobalt_sender);
 
         let inspect = inspect::Inspector::new();
 

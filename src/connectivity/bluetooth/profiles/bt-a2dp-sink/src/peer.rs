@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::ProfileDescriptor,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
+    fuchsia_cobalt::CobaltSender,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
@@ -35,10 +36,16 @@ impl Peer {
     /// Make a new Peer which is connected to the peer `id` using the AVDTP `peer`.
     /// The `streams` are the local endpoints available to the peer.
     /// The `inspect` is the inspect node associated with the peer.
-    pub fn create(id: PeerId, peer: avdtp::Peer, streams: Streams, inspect: inspect::Node) -> Self {
+    pub fn create(
+        id: PeerId,
+        peer: avdtp::Peer,
+        streams: Streams,
+        inspect: inspect::Node,
+        cobalt_sender: CobaltSender,
+    ) -> Self {
         let res = Self {
             id,
-            inner: Arc::new(Mutex::new(PeerInner::new(peer, streams, inspect))),
+            inner: Arc::new(Mutex::new(PeerInner::new(peer, streams, inspect, cobalt_sender))),
             descriptor: None,
         };
         res.start_requests_task();
@@ -65,6 +72,11 @@ impl Peer {
     pub fn remote_capabilities_inspect(&self) -> RemoteCapabilitiesInspect {
         let lock = self.inner.lock();
         lock.inspect.remote_capabilities_inspect()
+    }
+
+    pub fn cobalt_logger(&self) -> CobaltSender {
+        let lock = self.inner.lock();
+        lock.cobalt_sender.clone()
     }
 
     /// Perform Discovery and then Capability detection to discover the capabilities of the
@@ -184,10 +196,17 @@ struct PeerInner {
     /// Wakers that are to be woken when the peer disconnects.  If None, the peers have been woken
     /// and this peer is disconnected.
     closed_wakers: Option<Vec<Waker>>,
+    /// The cobalt logger for this peer
+    cobalt_sender: CobaltSender,
 }
 
 impl PeerInner {
-    fn new(peer: avdtp::Peer, mut streams: Streams, inspect: inspect::Node) -> Self {
+    fn new(
+        peer: avdtp::Peer,
+        mut streams: Streams,
+        inspect: inspect::Node,
+        cobalt_sender: CobaltSender,
+    ) -> Self {
         // Setup inspect nodes for the remote peer and for each of the streams that it holds
         let mut inspect = RemotePeerInspect::new(inspect);
         for (id, stream) in streams.iter_mut() {
@@ -203,6 +222,7 @@ impl PeerInner {
             local: streams,
             inspect,
             closed_wakers: Some(Vec::new()),
+            cobalt_sender,
         }
     }
 
@@ -316,9 +336,10 @@ impl PeerInner {
             avdtp::Request::Start { responder, stream_ids } => {
                 for seid in stream_ids {
                     let inspect = &mut self.inspect;
+                    let cobalt_sender = self.cobalt_sender.clone();
                     let res = self.local.get_mut(&seid).and_then(|stream| {
                         let inspect = inspect.create_streaming_inspect_data(&seid);
-                        stream.start(inspect).or(Err(avdtp::ErrorCode::BadState))
+                        stream.start(inspect, cobalt_sender).or(Err(avdtp::ErrorCode::BadState))
                     });
                     if let Err(code) = res {
                         return responder.reject(&seid, code);
@@ -361,11 +382,20 @@ mod tests {
 
     use super::*;
     use fidl_fuchsia_bluetooth_bredr::ServiceClassProfileIdentifier;
+    use fidl_fuchsia_cobalt::CobaltEvent;
+    use futures::channel::mpsc;
     use futures::pin_mut;
+
+    fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
+        const BUFFER_SIZE: usize = 100;
+        let (sender, receiver) = mpsc::channel(BUFFER_SIZE);
+        (CobaltSender::new(sender), receiver)
+    }
 
     #[test]
     fn test_disconnected() {
         let mut exec = fasync::Executor::new().expect("executor should build");
+        let (cobalt_sender, _) = fake_cobalt_sender();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
@@ -375,7 +405,7 @@ mod tests {
         let inspect = inspect::Inspector::new();
         let inspect = inspect.root().create_child(format!("peer {}", id));
 
-        let peer = Peer::create(id, avdtp, Streams::new(), inspect);
+        let peer = Peer::create(id, avdtp, Streams::new(), inspect, cobalt_sender);
 
         let closed_fut = peer.closed();
 
