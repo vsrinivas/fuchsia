@@ -197,7 +197,7 @@ impl NodeStateCallback for ListPeersResponse {
             })
             .collect();
         peers.shuffle(&mut rand::thread_rng());
-        log::info!("Respond to list_peers: {:?}", peers);
+        log::trace!("Respond to list_peers: {:?}", peers);
         {
             let list_peers_state = &mut *self.list_peers_state.borrow_mut();
             assert!(list_peers_state.in_query);
@@ -514,9 +514,9 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         provider: ClientEnd<ServiceProviderMarker>,
     ) -> Result<(), Error> {
         let this = &mut *self.inner.borrow_mut();
-        log::info!("Request register_service '{}'", service_name);
+        log::trace!("Request register_service '{}'", service_name);
         if this.service_map.insert(service_name.clone(), provider.into_proxy()?).is_none() {
-            log::info!("Publish new service '{}'", service_name);
+            log::trace!("Publish new service '{}'", service_name);
             // This is a new service
             let services: Vec<String> = this.service_map.keys().cloned().collect();
             if let Err(e) = this.router.publish_node_description(services.clone()) {
@@ -538,7 +538,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     ) -> Result<(), Error> {
         let this = &mut *self.inner.borrow_mut();
         let is_local = node_id == this.router.node_id();
-        log::info!(
+        log::trace!(
             "Request connect_to_service '{}' on {:?}{}",
             service_name,
             node_id,
@@ -921,7 +921,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         stream_id: StreamId<PhysLinkId<Runtime::LinkId>>,
     ) {
         if let Err(e) = self.channel_reader_inner(chan, stream_id).await {
-            log::warn!("Channel reader failed: {:?}", e);
+            log::trace!("Channel reader failed: {:?}", e);
         }
     }
 }

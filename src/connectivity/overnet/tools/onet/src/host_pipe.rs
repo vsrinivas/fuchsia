@@ -3,34 +3,32 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    failure::{Error, ResultExt},
     fidl_fuchsia_overnet::MeshControllerProxyInterface,
     futures::{future::try_join, prelude::*},
+    parking_lot::Mutex,
     std::io::{Read, Write},
+    std::sync::Arc,
 };
 
 async fn copy_stdin_to_socket(
     mut tx_socket: futures::io::WriteHalf<fidl::AsyncSocket>,
 ) -> Result<(), Error> {
     let (mut tx_stdin, mut rx_stdin) = futures::channel::mpsc::channel::<Vec<u8>>(2);
-    std::thread::spawn(move || -> Result<(), Error> {
-        let mut buf = [0u8; 1024];
-        let mut stdin = std::io::stdin();
-        loop {
-            let n = match stdin.read(&mut buf) {
-                Ok(x) => x,
-                Err(e) => {
-                    log::warn!("Error reading: {}", e);
-                    panic!();
+    std::thread::Builder::new()
+        .spawn(move || -> Result<(), Error> {
+            let mut buf = [0u8; 1024];
+            let mut stdin = std::io::stdin();
+            loop {
+                let n = stdin.read(&mut buf)?;
+                if n == 0 {
+                    return Ok(());
                 }
-            };
-            let buf = &buf[..n];
-            if n == 0 {
-                return Ok(());
+                let buf = &buf[..n];
+                futures::executor::block_on(tx_stdin.send(buf.to_vec()))?;
             }
-            futures::executor::block_on(tx_stdin.send(buf.to_vec()))?;
-        }
-    });
+        })
+        .context("Spawning blocking thread")?;
     while let Some(buf) = rx_stdin.next().await {
         tx_socket.write(buf.as_slice()).await?;
     }
@@ -40,22 +38,26 @@ async fn copy_stdin_to_socket(
 async fn copy_socket_to_stdout(
     mut rx_socket: futures::io::ReadHalf<fidl::AsyncSocket>,
 ) -> Result<(), Error> {
-    let (mut tx_stdout, mut rx_stdout) = futures::channel::mpsc::channel::<Vec<u8>>(2);
-    std::thread::spawn(move || -> Result<(), Error> {
-        let mut stdout = std::io::stdout();
-        while let Some(buf) = futures::executor::block_on(rx_stdout.next()) {
-            let mut buf = buf.as_slice();
-            loop {
-                let n = stdout.write(buf)?;
-                if n == buf.len() {
-                    stdout.flush()?;
-                    break;
+    let (mut tx_stdout, rx_stdout) = futures::channel::mpsc::channel::<Vec<u8>>(2);
+    let rx_stdout = Arc::new(Mutex::new(rx_stdout));
+    std::thread::Builder::new()
+        .spawn(move || -> Result<(), Error> {
+            let mut stdout = std::io::stdout();
+            let mut rx_stdout = rx_stdout.lock();
+            while let Some(buf) = futures::executor::block_on(rx_stdout.next()) {
+                let mut buf = buf.as_slice();
+                loop {
+                    let n = stdout.write(buf)?;
+                    if n == buf.len() {
+                        stdout.flush()?;
+                        break;
+                    }
+                    buf = &buf[n..];
                 }
-                buf = &buf[n..];
             }
-        }
-        Ok(())
-    });
+            Ok(())
+        })
+        .context("Spawning blocking thread")?;
     let mut buf = [0u8; 1024];
     loop {
         let n = rx_socket.read(&mut buf).await?;

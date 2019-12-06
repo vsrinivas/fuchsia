@@ -10,6 +10,7 @@ use {
     fidl::Handle,
     fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
     fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
+    fuchsia_zircon_status as zx_status,
     futures::prelude::*,
     overnet_core::{
         LinkId, Node, NodeId, NodeOptions, NodeRuntime, RouterTime, SendHandle, StreamDeframer,
@@ -19,7 +20,6 @@ use {
     std::cell::RefCell,
     std::rc::Rc,
     std::sync::Arc,
-    std::time::Duration,
     tokio::{io::AsyncRead, runtime::current_thread},
 };
 
@@ -55,11 +55,16 @@ impl Drop for Overnet {
 }
 
 impl Overnet {
-    fn new() -> Overnet {
+    fn new() -> Result<Overnet, Error> {
         let (tx, rx) = futures::channel::mpsc::unbounded();
-        let thread = Some(std::thread::spawn(move || run_overnet(rx)));
+        let rx = Arc::new(Mutex::new(rx));
+        let thread = Some(
+            std::thread::Builder::new()
+                .spawn(move || run_overnet(rx))
+                .context("Spawning overnet thread")?,
+        );
         let tx = Mutex::new(tx);
-        Overnet { tx, thread }
+        Ok(Overnet { tx, thread })
     }
 
     fn send(&self, cmd: OvernetCommand) {
@@ -254,13 +259,14 @@ async fn process_incoming(
     }
 }
 
+/// Retry a future until it succeeds or retries run out.
 async fn retry_with_backoff<T, E, F>(
-    mut backoff: Duration,
+    mut backoff: std::time::Duration,
     mut remaining_retries: u8,
     f: impl Fn() -> F,
 ) -> Result<T, E>
 where
-    F: Future<Output = Result<T, E>>,
+    F: futures::Future<Output = Result<T, E>>,
     E: std::fmt::Debug,
 {
     while remaining_retries > 1 {
@@ -365,8 +371,9 @@ async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
 }
 
 async fn run_overnet_inner(
-    mut rx: futures::channel::mpsc::UnboundedReceiver<OvernetCommand>,
+    rx: Arc<Mutex<futures::channel::mpsc::UnboundedReceiver<OvernetCommand>>>,
 ) -> Result<(), Error> {
+    let mut rx = rx.lock();
     let node =
         retry_with_backoff(std::time::Duration::from_millis(100), 5, run_overnet_prelude).await?;
 
@@ -396,7 +403,7 @@ async fn run_overnet_inner(
     }
 }
 
-fn run_overnet(rx: futures::channel::mpsc::UnboundedReceiver<OvernetCommand>) {
+fn run_overnet(rx: Arc<Mutex<futures::channel::mpsc::UnboundedReceiver<OvernetCommand>>>) {
     current_thread::Runtime::new()
         .unwrap()
         .block_on(
@@ -405,9 +412,9 @@ fn run_overnet(rx: futures::channel::mpsc::UnboundedReceiver<OvernetCommand>) {
                     log::warn!("Main loop failed: {}", e);
                 }
             }
-                .unit_error()
-                .boxed_local()
-                .compat(),
+            .unit_error()
+            .boxed_local()
+            .compat(),
         )
         .unwrap();
 }
@@ -452,9 +459,7 @@ impl ServiceConsumerProxyInterface for ServiceConsumer {
     fn list_peers(&self) -> Self::ListPeersResponseFut {
         let (sender, receiver) = futures::channel::oneshot::channel();
         self.0.send(OvernetCommand::ListPeers(sender));
-        // Returning an error from the receiver means that the sender disappeared without
-        // sending a response, a condition we explicitly disallow.
-        receiver.map_err(|_| unreachable!())
+        receiver.map_err(|_| fidl::Error::ClientRead(zx_status::Status::PEER_CLOSED))
     }
 
     fn connect_to_service(
@@ -473,7 +478,7 @@ impl ServiceConsumerProxyInterface for ServiceConsumer {
 }
 
 lazy_static::lazy_static! {
-    static ref OVERNET: Arc<Overnet> = Arc::new( Overnet::new());
+    static ref OVERNET: Arc<Overnet> = Arc::new(Overnet::new().unwrap());
 }
 
 pub fn connect_as_service_consumer() -> Result<impl ServiceConsumerProxyInterface, Error> {

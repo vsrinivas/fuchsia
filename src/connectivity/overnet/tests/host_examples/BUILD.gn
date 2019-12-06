@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 
 copy("copy_test_commands") {
@@ -41,13 +41,16 @@ copy("copy_test_commands") {
   ]
 }
 
-rustc_library("lib") {
-  name = "overnet_host_examples_test"
+rustc_binary("bin") {
+  name = "overnet_host_examples"
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//src/connectivity/overnet/lib/hoist",
+    "//src/lib/argh",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:timebomb",
   ]
   non_rust_deps = [ ":copy_test_commands" ]
   test_environments = [
@@ -59,6 +62,7 @@ rustc_library("lib") {
 group("tests") {
   testonly = true
   deps = [
-    ":lib_test_strip($host_toolchain)",
+    ":bin_test_strip($host_toolchain)",
+    ":bin_strip($host_toolchain)"
   ]
 }

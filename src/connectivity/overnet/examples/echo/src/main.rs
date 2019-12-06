@@ -111,7 +111,7 @@ fn spawn_echo_server(chan: fidl::AsyncChannel, quiet: bool) {
             }
             Ok(())
         }
-        .unwrap_or_else(|e: failure::Error| log::trace!("{:?}", e)),
+        .unwrap_or_else(|e: failure::Error| log::trace!("ERROR: {:?}", e)),
     );
 }
 

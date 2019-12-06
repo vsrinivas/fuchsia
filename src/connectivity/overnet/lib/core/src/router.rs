@@ -1558,13 +1558,13 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
     {
         while let Some(link_id) = self.queues.pong_links.pop() {
             if let Err(e) = self.pong_link(&mut send_to, link_id, buf) {
-                log::warn!("Pong link failed: {:?}", e);
+                log::trace!("Pong link failed: {:?}", e);
             }
         }
 
         while let Some(link_id) = self.queues.ping_links.pop() {
             if let Err(e) = self.ping_link(&mut send_to, link_id, buf) {
-                log::warn!("Ping link failed: {:?}", e);
+                log::trace!("Ping link failed: {:?}", e);
             }
         }
     }
@@ -1895,7 +1895,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             Ok((routing_label, packet)) => {
                 if packet.len() > 0 {
                     if let Err(e) = self.endpoints.queue_recv(link_id, routing_label, packet) {
-                        log::warn!("Error receiving packet from link {:?}: {:?}", link_id, e);
+                        log::trace!("Error receiving packet from link {:?}: {:?}", link_id, e);
                     }
                 }
             }
@@ -2018,7 +2018,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
 
         while let Some(peer_id) = self.endpoints.write_peers.pop() {
             if let Err(e) = self.flush_sends_to_peer(&mut send_to, peer_id, &mut buf) {
-                log::warn!("Send to peer failed: {:?}", e);
+                log::trace!("Send to peer failed: {:?}", e);
                 if let Some(peer) = self.endpoints.peers.get_mut(peer_id) {
                     if let Some(link_id) = peer.current_link.take() {
                         self.drop_link(link_id);
