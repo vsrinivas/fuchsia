@@ -3,8 +3,12 @@
 # found in the LICENSE file.
 
 zx_library("zxcrypt-dev") {
-  shared = true
   static = true
+  sdk = true
+  sdk_headers = [
+    "zxcrypt/ddk-volume.h",
+    "zxcrypt/volume.h",
+  ]
   sources = [
     "ddk-volume.cc",
     "volume.cc",
@@ -41,6 +45,11 @@ zx_library("zxcrypt-dev") {
 
 zx_library("zxcrypt-fdio") {
   shared = true
+  sdk = true
+  sdk_headers = [
+    "zxcrypt/fdio-volume.h",
+    "zxcrypt/volume.h",
+  ]
   sources = [
     "fdio-volume.cc",
     "volume.cc",
