@@ -99,8 +99,9 @@ bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t
       addr - vmar_base, length,
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC,
       &child_vmar, &child_addr);
+  // This may happen often if there happens to be another allocation already there, so don't DRET
   if (status != ZX_OK)
-    return DRETF(false, "Failed to create vmar, status %d", status);
+    return false;
   DASSERT(child_addr == addr);
 
   uintptr_t ptr;

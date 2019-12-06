@@ -232,8 +232,9 @@ magma_status_t magma_map_specific(magma_connection_t connection, magma_buffer_t 
                                   uint64_t addr, uint64_t offset, uint64_t length) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
+  // This may happen often if there happens to be another allocation already there, so don't DRET
   if (!platform_buffer->MapAtCpuAddr(addr, offset, length))
-    return DRET(MAGMA_STATUS_MEMORY_ERROR);
+    return MAGMA_STATUS_MEMORY_ERROR;
 
   return MAGMA_STATUS_OK;
 }
