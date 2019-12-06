@@ -19,8 +19,8 @@ namespace shell {
 extern "C" const uint8_t qjsc_repl[];
 extern "C" const uint32_t qjsc_repl_size;
 
-extern "C" const uint8_t qjsc_repl_cc[];
-extern "C" const uint32_t qjsc_repl_cc_size;
+extern "C" const uint8_t qjsc_repl_init[];
+extern "C" const uint32_t qjsc_repl_init_size;
 
 int ConsoleMain(int argc, const char **argv) {
   CommandLineOptions options;
@@ -67,7 +67,7 @@ int ConsoleMain(int argc, const char **argv) {
         ctx.DumpError();
         return 1;
       }
-      js_std_eval_binary(ctx_ptr, qjsc_repl_cc, qjsc_repl_cc_size, 0);
+      js_std_eval_binary(ctx_ptr, qjsc_repl_init, qjsc_repl_init_size, 0);
     }
   } else {
     const char *command = options.command_string->c_str();

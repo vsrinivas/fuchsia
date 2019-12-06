@@ -3,21 +3,33 @@
 // found in the LICENSE file.
 #include "repl.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/memfs/memfs.h>
+#include <stdlib.h>
+#include <zircon/syscalls.h>
+
 #include <array>
+#include <fstream>
 #include <queue>
 #include <string>
 
 #include "gtest/gtest.h"
 #include "li.h"
 #include "runtime.h"
+#include "src/lib/line_input/line_input.h"
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
+
+extern "C" const uint8_t qjsc_repl_init[];
+extern "C" const uint32_t qjsc_repl_init_size;
 
 namespace shell::repl {
 
 class TestRepl : public Repl {
  public:
-  TestRepl(JSContext* ctx, const std::string& prompt, bool ev) : Repl(ctx, prompt), eval(ev) {}
+  TestRepl(JSContext* ctx, const std::string& prompt, bool ev, bool pr)
+      : Repl(ctx, prompt, [this](const std::string& s) { HandleLine(s); }), eval_(ev), print_(pr) {}
 
   std::queue<std::string> GetListFullLines() {
     std::queue<std::string> res(full_lines_);
@@ -39,29 +51,50 @@ class TestRepl : public Repl {
 
   std::string PublicOpenSymbols(std::string& cmd) { return OpenSymbols(cmd); }
 
+  void Write(const char* output) {
+    if (print_)
+      Repl::Write(output);
+    else
+      output_.push(output);
+  }
+
  protected:
   void HandleLine(const std::string& line) {
     full_lines_.push(line);
     Repl::HandleLine(line);
   }
 
-  const char* EvalCmd(std::string& cmd) {
+  void EvalCmd(std::string& cmd) {
     full_cmds_.push(cmd);
-    if (eval) {
-      output_.push(Repl::EvalCmd(cmd));
-      return output_.back();
+    if (eval_) {
+      Repl::EvalCmd(cmd);
+    } else {
+      ShowPrompt();  // no evaluation, which makes this call
     }
-    return nullptr;  // no JS evaluation here
   }
 
  private:
   std::queue<std::string> full_lines_;
   std::queue<std::string> full_cmds_;
-  bool eval = false;
+  bool eval_ = false;
+  bool print_ = false;
   std::queue<const char*> output_;
 };
 
 TEST(Repl, Sanity) {
+  // set up a file to output to
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+  ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/test_tmp2"));
+  constexpr const char* name = "/test_tmp2/tmp.XXXXXX";
+  std::unique_ptr<char[]> buffer(new char[strlen(name) + 1]);
+  strcpy(buffer.get(), name);
+  int cfd = mkstemp(buffer.get());
+  ASSERT_NE(cfd, -1);
+  std::string filename = buffer.get();
+  FILE* output_fd = fdopen(cfd, "rw+");
+
+  // set up the repl
   shell::Runtime rt;
   ASSERT_NE(rt.Get(), nullptr);
   shell::Context ctx(&rt);
@@ -71,26 +104,40 @@ TEST(Repl, Sanity) {
   JSContext* ctx_ptr = ctx.Get();
   js_std_add_helpers(ctx_ptr, 0, nullptr);
   ASSERT_NE(shell::li::LiModuleInit(ctx_ptr, "li_internal"), nullptr);
-  TestRepl repl(ctx_ptr, "li >", true);
+  js_std_eval_binary(ctx_ptr, qjsc_repl_init, qjsc_repl_init_size, 0);
 
-  std::string test_string = "print(3)\n";
-  repl.FeedInput(reinterpret_cast<unsigned char*>(test_string.data()), test_string.size());
-  std::queue<std::string> res_lines = repl.GetListFullLines();
-  std::queue<std::string> res_cmds = repl.GetListFullCmds();
-  EXPECT_EQ(res_lines.size(), 1);
-  EXPECT_EQ(res_cmds.size(), 1);
-  EXPECT_STREQ(res_lines.front().c_str(), test_string.substr(0, test_string.size() - 1).c_str());
-  EXPECT_STREQ(res_cmds.front().c_str(), test_string.substr(0, test_string.size() - 1).c_str());
+  // uninstall repl read handler and get a pointer to the repl
+  std::string script = "os.setReadHandler(std.in.fileno(), null); repl.repl;";
+  JSValue res =
+      JS_Eval(ctx_ptr, script.c_str(), script.length(), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+  repl::Repl* repl = li::GetRepl(ctx_ptr, res);
 
-  std::queue<const char*> resOutput = repl.GetListOutputs();
-  EXPECT_EQ(resOutput.size(), 1);
-  const char* expected = "undefined";
-  EXPECT_STREQ(resOutput.front(), expected);
+  repl->ChangeOutput(output_fd);
+
+  std::string test_string = "print(4);\n";
+  repl->FeedInput(reinterpret_cast<unsigned char*>(test_string.data()), test_string.size());
+
+  fflush(output_fd);
+  std::ifstream in(filename.c_str());
+  std::string actual((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+  std::string expected("undefined\n");
+  ASSERT_STREQ(expected.c_str(), actual.c_str());
+
+  std::string test_string2 =
+      "ccc = new Promise(function(resolve, reject){os.setTimeout(() => resolve('d'), 1);});\n";
+  repl->FeedInput(reinterpret_cast<unsigned char*>(test_string2.data()), test_string2.size());
+  js_std_loop(ctx_ptr);
+
+  fflush(output_fd);
+  std::ifstream in2(filename.c_str());
+  std::string actual2((std::istreambuf_iterator<char>(in2)), std::istreambuf_iterator<char>());
+  std::string expected2("undefined\nd\n");
+  ASSERT_STREQ(expected2.c_str(), actual2.c_str());
 }
 
 TEST(Repl, SpecialCharacters) {
   JSContext* ctx_ptr = 0;
-  TestRepl repl(ctx_ptr, "li >", false);
+  TestRepl repl(ctx_ptr, "li >", false, false);
 
   std::string test_string = "pr\x1b[Dint(3)\n";
   std::string expected = "pint(3)r";
@@ -105,7 +152,7 @@ TEST(Repl, SpecialCharacters) {
 
 TEST(Repl, MultipleLines) {
   JSContext* ctx_ptr = 0;
-  TestRepl repl(ctx_ptr, "li >", false);
+  TestRepl repl(ctx_ptr, "li >", false, false);
 
   constexpr int kNumLines = 4;
   std::array<std::string, kNumLines> test_string1 = {"function (\n", "a){\n", "\tprint(a)\n",

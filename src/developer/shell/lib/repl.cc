@@ -16,18 +16,47 @@ Repl::Repl(JSContext* ctx, const std::string& prompt)
     : li_([this](const std::string& s) { HandleLine(s); }, prompt),
       ctx_(ctx),
       output_fd_(stdout),
-      exit_shell_cmd_(false) {
+      exit_shell_cmd_(false),
+      running_(false) {
+  Write("Type \\h for help\n");
+  li_.Show();
+}
+
+Repl::Repl(JSContext* ctx, const std::string& prompt, fit::function<void(const std::string&)> cb)
+    : li_(std::move(cb), prompt),
+      ctx_(ctx),
+      output_fd_(stdout),
+      exit_shell_cmd_(false),
+      running_(false) {
+  Write("Type \\h for help\n");
   li_.Show();
 }
 
 void Repl::Write(const char* output) { fprintf(output_fd_, "%s", output); }
+void Repl::ChangeOutput(FILE* fd) { output_fd_ = fd; }
+
+void Repl::ShowPrompt() {
+  running_ = false;
+  li_.Show();
+}
+
+const char* Repl::GetCmd() { return cur_cmd_.c_str(); }
 
 bool Repl::FeedInput(uint8_t* bytes, size_t num_bytes) {
-  bool exit_shell = false;
+  if (running_) {
+    if (num_bytes >= 1 &&
+        bytes[0] == 26) {  // shell cmd 'c' to show the prompt in spite of running_
+      ShowPrompt();
+    }
+    return false;
+  }
   for (size_t i = 0; i < num_bytes; i++) {
     li_.OnInput((char)bytes[i]);
-    if (exit_shell) {
+    if (exit_shell_cmd_) {
       return true;
+    }
+    if (running_) {  // cmd is still running, we discard the rest of the input
+      return false;
     }
   }
   return false;
@@ -35,6 +64,7 @@ bool Repl::FeedInput(uint8_t* bytes, size_t num_bytes) {
 
 void Repl::HandleLine(const std::string& line) {
   li_.Hide();
+  running_ = true;
   std::string cmd = mexpr_ + line;
   std::string shell_cmd = GetAndExecuteShellCmd(cmd);
   if (shell_cmd == "\\q") {
@@ -42,26 +72,27 @@ void Repl::HandleLine(const std::string& line) {
   } else if (shell_cmd != "") {
     mexpr_ = "";
     exit_shell_cmd_ = false;
+    ShowPrompt();
   } else {
     std::string open_symbols = OpenSymbols(cmd);
     if (open_symbols.empty()) {
       mexpr_ = "";
-      const char* output = EvalCmd(cmd);
-      if (output) {
-        Write(output);
-        Write("\n");
-      }
+      EvalCmd(cmd);
     } else {
       mexpr_ = cmd;
+      ShowPrompt();
     }
     exit_shell_cmd_ = false;
   }
-  li_.Show();
 }
 
 std::string Repl::GetAndExecuteShellCmd(std::string cmd) {
   if (cmd.substr(0, 2) == "\\h") {
-    Write("\\q\texit\n\\h\tthis help\n");
+    std::string help_msg =
+        "\\q\texit\n"
+        "\\h\tthis help\n"
+        "Ctrl-Z\tmake the (hidden) prompt show up when a previous command aborted with an error\n";
+    Write(help_msg.c_str());
     return cmd.substr(0, 2);
   }
   if (cmd.substr(0, 2) == "\\q") {
@@ -70,14 +101,14 @@ std::string Repl::GetAndExecuteShellCmd(std::string cmd) {
   return "";
 }
 
-const char* Repl::EvalCmd(std::string& cmd) {
-  JSValue result = JS_Eval(ctx_, cmd.c_str(), cmd.length(), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
-  const char* output = JS_ToCString(ctx_, result);
-  if (JS_IsException(result)) {
+void Repl::EvalCmd(std::string& cmd) {
+  cur_cmd_ = cmd;  // saving the cmd in the Repl class instance, to be executed through a JS call
+  std::string script = "repl.evalScriptAwaitsPromise()";
+  JSValue res = JS_Eval(ctx_, script.c_str(), script.length(), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+  if (JS_IsException(res)) {  // the script above was at fault, that's bad
     js_std_dump_error(ctx_);
-    return nullptr;
+    ShowPrompt();
   }
-  return output;
 }
 
 bool match(char a, char b) {

@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 #include "li.h"
 
-#include "repl.h"
+#include <stdio.h>
+
 #include "src/lib/line_input/line_input.h"
 #include "third_party/quickjs/list.h"
 
@@ -20,6 +21,9 @@ JSClassDef js_repl_class = {
 
 // Expects no arguments
 JSValue NewRepl(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+  if (argc != 0) {
+    return JS_EXCEPTION;
+  }
   repl::Repl *repl = new repl::Repl(ctx, "li > ");
   JSValue obj = JS_NewObjectClass(ctx, js_repl_class_id);
   if (JS_IsException(obj)) {
@@ -29,8 +33,18 @@ JSValue NewRepl(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *a
   return obj;
 }
 
-// Expects 3 arguments: a repl::Repl object, a byte buffer and
-// the number of relevant bytes in the byte buffer
+// Expects 1 argument: a repl::Repl object
+JSValue CloseRepl(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+  if (argc != 1) {
+    return JS_EXCEPTION;
+  }
+  repl::Repl *repl = reinterpret_cast<repl::Repl *>(JS_GetOpaque(argv[0], js_repl_class_id));
+  delete repl;
+  return JS_NewBool(ctx, true);
+}
+
+// Expects 3 arguments: a repl::Repl object, a byte buffer and the number of relevant bytes
+// in the byte buffer
 JSValue OnInput(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
   if (argc != 3) {
     return JS_EXCEPTION;
@@ -50,18 +64,52 @@ JSValue OnInput(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *a
 }
 
 // Expects 1 argument: a repl::Repl object
-JSValue CloseRepl(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+// evaluates repl->cmd_, and returns an array [error_in_script (boolean), script_result]
+JSValue GetAndEvalCmd(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
   if (argc != 1) {
     return JS_EXCEPTION;
   }
   repl::Repl *repl = reinterpret_cast<repl::Repl *>(JS_GetOpaque(argv[0], js_repl_class_id));
-  delete repl;
+  const char *cmd = repl->GetCmd();
+  JSValue script_result = JS_Eval(ctx, cmd, strlen(cmd), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+  bool error_in_script = false;
+  if (JS_IsException(script_result)) {
+    js_std_dump_error(ctx);
+    error_in_script = true;
+  }
+  JSValue result = JS_NewArray(ctx);
+  JS_SetPropertyUint32(ctx, result, 0, JS_NewBool(ctx, error_in_script));
+  JS_SetPropertyUint32(ctx, result, 1, script_result);
+  return result;
+}
+
+// Expects 2 argument: a repl::Repl object and a JS object, the result of a script evaluation
+// (that is not an error)
+JSValue ShowOutput(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+  if (argc != 2) {
+    return JS_EXCEPTION;
+  }
+  repl::Repl *repl = reinterpret_cast<repl::Repl *>(JS_GetOpaque(argv[0], js_repl_class_id));
+  const char *output = JS_ToCString(ctx, argv[1]);
+  repl->Write(output);
+  repl->Write("\n");
   return JS_NewBool(ctx, true);
 }
 
-const JSCFunctionListEntry js_li_funcs[] = {JS_CFUNC_DEF("createRepl", 1, NewRepl),
-                                            JS_CFUNC_DEF("onInput", 3, OnInput),
-                                            JS_CFUNC_DEF("closeRepl", 1, CloseRepl)};
+// Expects 1 argument: a repl::Repl object
+JSValue ShowPrompt(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+  if (argc != 1) {
+    return JS_EXCEPTION;
+  }
+  repl::Repl *repl = reinterpret_cast<repl::Repl *>(JS_GetOpaque(argv[0], js_repl_class_id));
+  repl->ShowPrompt();
+  return JS_NewBool(ctx, true);
+}
+
+const JSCFunctionListEntry js_li_funcs[] = {
+    JS_CFUNC_DEF("createRepl", 0, NewRepl),    JS_CFUNC_DEF("onInput", 3, OnInput),
+    JS_CFUNC_DEF("closeRepl", 1, CloseRepl),   JS_CFUNC_DEF("getAndEvalCmd", 1, GetAndEvalCmd),
+    JS_CFUNC_DEF("showPrompt", 1, ShowPrompt), JS_CFUNC_DEF("showOutput", 2, ShowOutput)};
 
 int LiRunOnInit(JSContext *ctx, JSModuleDef *m) {
   /* Repl Input class */
@@ -81,6 +129,13 @@ JSModuleDef *LiModuleInit(JSContext *ctx, const char *module_name) {
   JS_AddModuleExportList(ctx, m, js_li_funcs, countof(js_li_funcs));
   return m;
 }
+
+// Expects one argument: the repl as a JSValue
+repl::Repl *GetRepl(JSContext *ctx, JSValueConst repl_js) {
+  repl::Repl *repl = reinterpret_cast<repl::Repl *>(JS_GetOpaque(repl_js, js_repl_class_id));
+  return repl;
+}
+
 }  // namespace li
 
 }  // namespace shell

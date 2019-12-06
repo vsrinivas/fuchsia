@@ -23,6 +23,7 @@ static_library("lib") {
 
   public_deps = [
     ":fidl",
+    ":repl_init",
     ":zx",
     "//src/lib/fidl_codec",
     "//src/lib/fxl",
@@ -68,8 +69,8 @@ action("js_libs") {
          rebase_path(sources, root_build_dir)
 }
 
-compiled_js("repl_cc") {
-  source = "repl_cc.js"
+compiled_js("repl_init") {
+  source = "repl_init.js"
   module = true
   extra_args = [
     "-M",

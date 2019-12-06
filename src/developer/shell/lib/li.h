@@ -4,11 +4,13 @@
 #ifndef SRC_DEVELOPER_SHELL_LIB_LI_H_
 #define SRC_DEVELOPER_SHELL_LIB_LI_H_
 
+#include "repl.h"
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
 
 namespace shell::li {
 
+repl::Repl *GetRepl(JSContext *ctx, JSValueConst repl_js);
 JSModuleDef *LiModuleInit(JSContext *ctx, const char *module_name);
 
 }  // namespace shell::li
