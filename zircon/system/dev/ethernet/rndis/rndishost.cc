@@ -51,29 +51,39 @@ static bool command_succeeded(const void* buf, uint32_t type, size_t length) {
   return true;
 }
 
-zx_status_t RndisHost::Command(void* buf) {
-  rndis_header* header = static_cast<rndis_header*>(buf);
-  uint32_t sent_request_id = next_request_id_++;
-  header->request_id = sent_request_id;
+zx_status_t RndisHost::SendControlCommand(void* command) {
+  rndis_header* header = static_cast<rndis_header*>(command);
+  header->request_id = next_request_id_++;
 
-  zx_status_t status;
-  status = usb_.ControlOut(USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                           USB_CDC_SEND_ENCAPSULATED_COMMAND, 0, control_intf_,
-                           RNDIS_CONTROL_TIMEOUT, buf, header->msg_length);
+  return usb_.ControlOut(USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                         USB_CDC_SEND_ENCAPSULATED_COMMAND, 0, control_intf_, RNDIS_CONTROL_TIMEOUT,
+                         command, header->msg_length);
+}
 
+zx_status_t RndisHost::ReceiveControlMessage(uint32_t request_id) {
+  size_t len_read = 0;
+  zx_status_t status =
+      usb_.ControlIn(USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                     USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, control_intf_, RNDIS_CONTROL_TIMEOUT,
+                     control_receive_buffer_, sizeof(control_receive_buffer_), &len_read);
+  if (len_read == 0) {
+    zxlogf(ERROR, "rndishost received a zero-length response on the control channel\n");
+    return ZX_ERR_IO_REFUSED;
+  }
+  const auto* header = reinterpret_cast<rndis_header*>(control_receive_buffer_);
+  if (header->request_id != request_id) {
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+  return status;
+}
+
+zx_status_t RndisHost::Command(void* command) {
+  zx_status_t status = SendControlCommand(command);
   if (status != ZX_OK) {
     return status;
   }
-
-  status = usb_.ControlIn(USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                          USB_CDC_GET_ENCAPSULATED_RESPONSE, 0, control_intf_,
-                          RNDIS_CONTROL_TIMEOUT, buf, RNDIS_BUFFER_SIZE, nullptr);
-
-  if (header->request_id != sent_request_id) {
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-
-  return status;
+  const uint32_t request_id = static_cast<rndis_header*>(command)->request_id;
+  return ReceiveControlMessage(request_id);
 }
 
 void RndisHost::Recv(usb_request_t* request) {
@@ -316,25 +326,23 @@ zx_status_t RndisHost::EthernetImplSetParam(uint32_t param, int32_t value, const
 void RndisHost::EthernetImplGetBti(zx::bti* out_bti) {}
 
 zx_status_t RndisHost::StartThread() {
-  void* buf = malloc(RNDIS_BUFFER_SIZE);
-  memset(buf, 0, RNDIS_BUFFER_SIZE);
-
   // Send an initialization message to the device.
-  rndis_init* init = static_cast<rndis_init*>(buf);
-  init->msg_type = RNDIS_INITIALIZE_MSG;
-  init->msg_length = sizeof(rndis_init);
-  init->major_version = RNDIS_MAJOR_VERSION;
-  init->minor_version = RNDIS_MINOR_VERSION;
-  init->max_xfer_size = RNDIS_MAX_XFER_SIZE;
+  rndis_init init{};
+  init.msg_type = RNDIS_INITIALIZE_MSG;
+  init.msg_length = sizeof(init);
+  init.major_version = RNDIS_MAJOR_VERSION;
+  init.minor_version = RNDIS_MINOR_VERSION;
+  init.max_xfer_size = RNDIS_MAX_XFER_SIZE;
 
-  zx_status_t status = Command(buf);
+  zx_status_t status = Command(&init);
   if (status < 0) {
     zxlogf(ERROR, "rndishost bad status on initial message. %d\n", status);
     goto fail;
   }
   {
-    rndis_init_complete* init_cmplt = static_cast<rndis_init_complete*>(buf);
-    if (!command_succeeded(buf, RNDIS_INITIALIZE_CMPLT, sizeof(*init_cmplt))) {
+    rndis_init_complete* init_cmplt =
+        reinterpret_cast<rndis_init_complete*>(control_receive_buffer_);
+    if (!command_succeeded(control_receive_buffer_, RNDIS_INITIALIZE_CMPLT, sizeof(*init_cmplt))) {
       zxlogf(ERROR, "rndishost initialization failed.\n");
       status = ZX_ERR_IO;
       goto fail;
@@ -344,14 +352,13 @@ zx_status_t RndisHost::StartThread() {
 
   {
     // Query the device for a MAC address.
-    memset(buf, 0, RNDIS_BUFFER_SIZE);
-    rndis_query* query = static_cast<rndis_query*>(buf);
-    query->msg_type = RNDIS_QUERY_MSG;
-    query->msg_length = sizeof(rndis_query) + 48;
-    query->oid = OID_802_3_PERMANENT_ADDRESS;
-    query->info_buffer_length = 48;
-    query->info_buffer_offset = RNDIS_QUERY_BUFFER_OFFSET;
-    status = Command(buf);
+    rndis_query query{};
+    query.msg_type = RNDIS_QUERY_MSG;
+    query.msg_length = sizeof(query);
+    query.oid = OID_802_3_PERMANENT_ADDRESS;
+    query.info_buffer_length = 0;
+    query.info_buffer_offset = 0;
+    status = Command(&query);
     if (status < 0) {
       zxlogf(ERROR, "Couldn't get device physical address\n");
       goto fail;
@@ -359,38 +366,36 @@ zx_status_t RndisHost::StartThread() {
   }
 
   {
-    rndis_query_complete* mac_query_cmplt = static_cast<rndis_query_complete*>(buf);
-    if (!command_succeeded(buf, RNDIS_QUERY_CMPLT,
+    rndis_query_complete* mac_query_cmplt =
+        reinterpret_cast<rndis_query_complete*>(control_receive_buffer_);
+    if (!command_succeeded(control_receive_buffer_, RNDIS_QUERY_CMPLT,
                            sizeof(*mac_query_cmplt) + mac_query_cmplt->info_buffer_length)) {
       zxlogf(ERROR, "rndishost MAC query failed.\n");
       status = ZX_ERR_IO;
       goto fail;
     }
-    uint8_t* mac_addr = static_cast<uint8_t*>(buf) + 8 + mac_query_cmplt->info_buffer_offset;
+    uint8_t* mac_addr = control_receive_buffer_ + 8 + mac_query_cmplt->info_buffer_offset;
     memcpy(mac_addr_, mac_addr, sizeof(mac_addr_));
     zxlogf(INFO, "rndishost MAC address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac_addr_[0],
            mac_addr_[1], mac_addr_[2], mac_addr_[3], mac_addr_[4], mac_addr_[5]);
   }
   {
-    // Enable data transfers
-    memset(buf, 0, RNDIS_BUFFER_SIZE);
-    rndis_set* set = static_cast<rndis_set*>(buf);
-    set->msg_type = RNDIS_SET_MSG;
-    set->msg_length = sizeof(rndis_set) + 4;  // 4 bytes for the filter
-    set->oid = OID_GEN_CURRENT_PACKET_FILTER;
-    set->info_buffer_length = 4;
-    // Offset should begin at oid, so subtract 8 bytes for msg_type and msg_length.
-    set->info_buffer_offset = sizeof(rndis_set) - 8;
-    uint8_t* filter = static_cast<uint8_t*>(buf) + sizeof(rndis_set);
+    rndis_set set{};
+    set.msg_type = RNDIS_SET_MSG;
+    set.msg_length = sizeof(set);
+    set.oid = OID_GEN_CURRENT_PACKET_FILTER;
+    set.info_buffer_length = RNDIS_SET_INFO_BUFFER_LENGTH;
+    set.info_buffer_offset = offsetof(rndis_set, info_buffer) - offsetof(rndis_set, oid);
+    uint8_t* filter = set.info_buffer;
     *filter = RNDIS_PACKET_TYPE_DIRECTED | RNDIS_PACKET_TYPE_BROADCAST |
               RNDIS_PACKET_TYPE_ALL_MULTICAST | RNDIS_PACKET_TYPE_PROMISCUOUS;
-    status = Command(buf);
+    status = Command(&set);
     if (status < 0) {
       zxlogf(ERROR, "Couldn't set the packet filter.\n");
       goto fail;
     }
 
-    if (!command_succeeded(buf, RNDIS_SET_CMPLT, sizeof(rndis_set_complete))) {
+    if (!command_succeeded(control_receive_buffer_, RNDIS_SET_CMPLT, sizeof(rndis_set_complete))) {
       zxlogf(ERROR, "rndishost set filter failed.\n");
       status = ZX_ERR_IO;
       goto fail;
@@ -412,13 +417,11 @@ zx_status_t RndisHost::StartThread() {
     }
   }
 
-  free(buf);
-
   DdkMakeVisible();
+  zxlogf(INFO, "rndishost ready\n");
   return ZX_OK;
 
 fail:
-  free(buf);
   DdkAsyncRemove();
   return status;
 }

@@ -62,9 +62,12 @@
 #define RNDIS_PACKET_TYPE_FUNCTIONAL      0x00004000
 #define RNDIS_PACKET_TYPE_MAC_FRAME       0x00008000
 
+#define RNDIS_SET_INFO_BUFFER_LENGTH      0x00000014
+
 #define RNDIS_BUFFER_SIZE 1024
 #define RNDIS_QUERY_BUFFER_OFFSET 20
 #define RNDIS_CONTROL_TIMEOUT ZX_SEC(5)
+#define RNDIS_CONTROL_BUFFER_SIZE 1024
 
 // clang-format on
 
@@ -133,6 +136,7 @@ typedef struct {
   uint32_t info_buffer_length;
   uint32_t info_buffer_offset;
   uint32_t reserved;
+  uint8_t info_buffer[RNDIS_SET_INFO_BUFFER_LENGTH];
 } __PACKED rndis_set;
 
 typedef struct {
@@ -193,7 +197,15 @@ class RndisHost : public RndisHostType,
 
   void Recv(usb_request_t* request);
 
-  zx_status_t Command(void* buf);
+  // Send a control message to the client device and wait for its response.
+  // If successful, the response is stored in control_receive_buffer_.
+  zx_status_t Command(void* command);
+
+  // Send a control message to the client device.
+  zx_status_t SendControlCommand(void* command);
+  // Receive a control message from the client device with the matching request number.
+  // If successful, the received message is stored in control_receive_buffer_.
+  zx_status_t ReceiveControlMessage(uint32_t request_id);
 
   usb::UsbDevice usb_;
 
@@ -219,6 +231,8 @@ class RndisHost : public RndisHostType,
   size_t parent_req_size_;
 
   fbl::Mutex mutex_;
+
+  uint8_t control_receive_buffer_[RNDIS_CONTROL_BUFFER_SIZE];
 };
 
 #endif  // ZIRCON_SYSTEM_DEV_ETHERNET_RNDIS_RNDISHOST_H_
