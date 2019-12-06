@@ -69,6 +69,12 @@ std::vector<T> Zip(const std::vector<std::vector<T>>& vv) {
 
 constexpr size_t kDefaultMoves = 10;
 
+// Some tests require us to verify local coordinates (e.g. in a GestureContext). To avoid
+// verbosity, rather than taking local coordinates as additional arguments to the test
+// methods below, we will simply apply a trivial scaling transform to ndc coordinates
+// to obtain local coordinates.
+constexpr float kTestNDCToLocalMultiplier = 50;
+
 std::vector<PointerParams> DownEvents(PointerId pointer_id, const glm::vec2& coordinate);
 std::vector<PointerParams> UpEvents(PointerId pointer_id, const glm::vec2& coordinate);
 std::vector<PointerParams> TapEvents(PointerId pointer_id, const glm::vec2& coordinate);
@@ -84,6 +90,8 @@ std::vector<PointerParams> DragEvents(PointerId pointer_id, const glm::vec2& sta
 
 fuchsia::ui::input::accessibility::PointerEvent ToPointerEvent(const PointerParams& params,
                                                                uint64_t event_time);
+
+::fuchsia::math::PointF ToLocalCoordinates(const glm::vec2& ndc);
 
 }  // namespace accessibility_test
 

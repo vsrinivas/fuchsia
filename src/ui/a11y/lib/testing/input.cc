@@ -56,8 +56,13 @@ fuchsia::ui::input::accessibility::PointerEvent ToPointerEvent(const PointerPara
   event.set_type(fuchsia::ui::input::PointerEventType::TOUCH);
   event.set_phase(params.phase);
   event.set_ndc_point({params.coordinate.x, params.coordinate.y});
+  event.set_local_point(ToLocalCoordinates(params.coordinate));
 
   return event;
+}
+
+::fuchsia::math::PointF ToLocalCoordinates(const glm::vec2& ndc) {
+  return {ndc.x * kTestNDCToLocalMultiplier, ndc.y * kTestNDCToLocalMultiplier};
 }
 
 }  // namespace accessibility_test
