@@ -5,6 +5,7 @@
 zx_test("fs-management") {
   test_group = "fs"
   sources = [
+    "admin.cc",
     "fs-management.cc",
   ]
   deps = [

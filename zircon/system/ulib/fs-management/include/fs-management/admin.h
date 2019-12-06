@@ -19,6 +19,24 @@ __BEGIN_CDECLS
 #define PATH_VOLUME "/volume"
 #define PATH_DEV_BLOCK "/dev/class/block"
 
+typedef struct init_options {
+  bool readonly;
+  bool verbose_mount;
+  bool collect_metrics;
+  // Ensures that requests to the mountpoint will be propagated to the underlying FS
+  bool wait_until_ready;
+  // Enable journaling on the file system (if supported).
+  bool enable_journal;
+  // Enable paging on the file system (if supported).
+  bool enable_pager;
+  // Provide a launch callback function pointer for configuring how the underlying filesystem
+  // process is launched.
+  LaunchCallback callback;
+} init_options_t;
+
+__EXPORT
+extern const init_options_t default_init_options;
+
 typedef struct mkfs_options {
   uint32_t fvm_data_slices;
   bool verbose;
@@ -46,6 +64,31 @@ zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
 // Check and repair a device with a requested disk format.
 zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t* options,
                  LaunchCallback cb);
+
+// Initialize the filesystem present on |device_handle|, returning a connection to the outgoing
+// directory in |out_export_root|. The outgoing directory implements |fuchsia.io/Directory| and
+// contains handles to services exported by the filesystem.
+//
+// The outgoing directory has the following layout -
+//     |/root| - the data root of the filesystem
+//
+// Specific filesystems may have additional entries in the outgoing directory for
+// filesystem-specific operations.
+//
+// |device_handle| is always consumed.
+zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const init_options_t* options,
+                    zx_handle_t* out_export_root);
+
+// Register the filesystem outgoing directory with the fshost registry service. This optional step
+// allows filesystem services to be accessed by sufficiently priviledged processes.
+//
+// |export_root| is never consumed.
+zx_status_t fs_register(zx_handle_t export_root);
+
+// Get a connection to the root of the filesystem, given a filesystem outgoing directory.
+//
+// |export_root| is never consumed.
+zx_status_t fs_root_handle(zx_handle_t export_root, zx_handle_t* out_root);
 
 __END_CDECLS
 

@@ -13,6 +13,7 @@ zx_library("fs-management") {
   ]
   shared = true
   sources = [
+    "admin.cc",
     "fsck.cc",
     "fvm.cc",
     "launch.cc",
@@ -24,10 +25,12 @@ zx_library("fs-management") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:llcpp",
+    "$zx/system/fidl/fuchsia-fshost:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
     "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fs",
