@@ -221,6 +221,23 @@ struct MockDevice : public DeviceInterface {
     return ret;
   }
 
+  template <typename T>
+  MlmeMsg<T> NextMsgFromSmeChannel(uint64_t ordinal = MlmeMsg<T>::kNoOrdinal) {
+    zx_signals_t observed;
+    sme_.wait_one(ZX_CHANNEL_READABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(), &observed);
+    ZX_ASSERT(observed & ZX_CHANNEL_READABLE);
+
+    uint32_t read = 0;
+    uint8_t buf[ZX_CHANNEL_MAX_MSG_BYTES];
+
+    zx_status_t status = sme_.read(0, buf, nullptr, ZX_CHANNEL_MAX_MSG_BYTES, 0, &read, nullptr);
+    ZX_ASSERT(status == ZX_OK);
+
+    auto msg = MlmeMsg<T>::Decode(fbl::Span{buf, read}, ordinal);
+    ZX_ASSERT(msg.has_value());
+    return std::move(msg).value();
+  }
+
   std::vector<std::vector<uint8_t>> GetEthPackets() {
     std::vector<std::vector<uint8_t>> tmp;
     tmp.swap(eth_queue);

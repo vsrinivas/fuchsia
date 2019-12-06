@@ -23,7 +23,7 @@ enum class ObjectSubtype : uint8_t {
 
 enum class ObjectTarget : uint8_t {
   kClientMlme = 0,
-  kBss = 2,
+  kApMlme = 2,
   kMinstrel = 3,
   kHwmp = 4,
 };

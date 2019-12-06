@@ -85,8 +85,7 @@ pub enum TimedEvent {
 }
 
 pub struct Ap {
-    // TODO(37891): Make this private once we no longer need to depend on this in C bindings.
-    pub ctx: Context,
+    ctx: Context,
     bss: Option<InfraBss>,
 }
 
@@ -169,6 +168,7 @@ impl Ap {
 
         self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCodes::Success)?;
 
+        info!("MLME-START.request: OK");
         Ok(())
     }
 
@@ -179,6 +179,7 @@ impl Ap {
         } else {
             info!("MLME-STOP.request: BSS not started");
         }
+        info!("MLME-STOP.request: OK");
         Ok(())
     }
 

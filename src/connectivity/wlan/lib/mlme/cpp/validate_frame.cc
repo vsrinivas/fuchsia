@@ -143,7 +143,7 @@ static constexpr AllowedElement kAssocReqElements[] = {
 
 // IEEE Std 802.11-2016, 9.3.3.7
 static constexpr AllowedElement kAssocRespElements[] = {
-    Required(kSuppRates),
+    kSuppRates,
     kExtSuppRates,
     kEdcaParamSet,
     kRcpi,

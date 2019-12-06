@@ -8,6 +8,7 @@
 
 #include <wlan/common/logging.h>
 #include <wlan/mlme/ap/ap_mlme.h>
+#include <wlan/mlme/rust_utils.h>
 #include <wlan/mlme/service.h>
 #include <wlan/protocol/mac.h>
 
@@ -15,120 +16,145 @@ namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
-ApMlme::ApMlme(DeviceInterface* device) : device_(device) {}
-
-ApMlme::~ApMlme() {
-  // Ensure the BSS is correctly stopped and terminated when destroying the
-  // MLME.
-  if (bss_ != nullptr && bss_->IsStarted()) {
-    bss_->Stop();
-  }
+#define MLME(m) static_cast<ApMlme*>(m)
+ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_sta_delete) {
+  auto rust_device = mlme_device_ops_t{
+      .device = static_cast<void*>(this),
+      .deliver_eth_frame = [](void* mlme, const uint8_t* data, size_t len) -> zx_status_t {
+        return MLME(mlme)->device_->DeliverEthernet({data, len});
+      },
+      .send_wlan_frame = [](void* mlme, mlme_out_buf_t buf, uint32_t flags) -> zx_status_t {
+        return MLME(mlme)->device_->SendWlan(FromRustOutBuf(buf), flags);
+      },
+      .get_sme_channel = [](void* mlme) -> zx_handle_t {
+        return MLME(mlme)->device_->GetSmeChannelRef();
+      },
+      .set_wlan_channel = [](void* mlme, wlan_channel_t chan) -> zx_status_t {
+        return MLME(mlme)->device_->SetChannel(chan);
+      },
+      .get_wlan_channel = [](void* mlme) -> wlan_channel_t {
+        return MLME(mlme)->device_->GetState()->channel();
+      },
+      .set_key = [](void* mlme, wlan_key_config_t* key) -> zx_status_t {
+        return MLME(mlme)->device_->SetKey(key);
+      },
+      .configure_bss = [](void* mlme, wlan_bss_config_t* cfg) -> zx_status_t {
+        return MLME(mlme)->device_->ConfigureBss(cfg);
+      },
+      .enable_beaconing = [](void* mlme, const uint8_t* beacon_tmpl_data, size_t beacon_tmpl_len,
+                             size_t tim_ele_offset, uint16_t beacon_interval) -> zx_status_t {
+        wlan_bcn_config_t bcn_cfg = {
+            .tmpl =
+                {
+                    .packet_head =
+                        {
+                            .data_buffer = beacon_tmpl_data,
+                            .data_size = beacon_tmpl_len,
+                        },
+                },
+            .tim_ele_offset = tim_ele_offset,
+            .beacon_interval = beacon_interval,
+        };
+        return MLME(mlme)->device_->EnableBeaconing(&bcn_cfg);
+      },
+      .disable_beaconing = [](void* mlme) -> zx_status_t {
+        return MLME(mlme)->device_->EnableBeaconing(nullptr);
+      },
+      .set_link_status = [](void* mlme, uint8_t status) -> zx_status_t {
+        (void) mlme;
+        (void) status;
+        return ZX_ERR_NOT_SUPPORTED;
+      },
+      .configure_assoc = [](void* mlme, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
+        return MLME(mlme)->device_->ConfigureAssoc(assoc_ctx);
+      },
+      .clear_assoc = [](void* mlme, const uint8_t (*addr)[6]) -> zx_status_t {
+        return MLME(mlme)->device_->ClearAssoc(common::MacAddr(*addr));
+      },
+  };
+  wlan_scheduler_ops_t scheduler = {
+      .cookie = this,
+      .now = [](void* cookie) -> zx_time_t { return MLME(cookie)->timer_mgr_->Now().get(); },
+      .schedule = [](void* cookie, int64_t deadline) -> wlan_scheduler_event_id_t {
+        TimeoutId id = {};
+        MLME(cookie)->timer_mgr_->Schedule(zx::time(deadline), {}, &id);
+        return {._0 = id.raw()};
+      },
+      .cancel =
+          [](void* cookie, wlan_scheduler_event_id_t id) {
+            MLME(cookie)->timer_mgr_->Cancel(TimeoutId(id._0));
+          },
+  };
+  rust_ap_ =
+      NewApStation(rust_device, rust_buffer_provider, scheduler, device_->GetState()->address());
 }
 
 zx_status_t ApMlme::Init() {
   debugfn();
+
+  ObjectId timer_id;
+  timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+  timer_id.set_target(to_enum_type(ObjectTarget::kApMlme));
+  std::unique_ptr<Timer> timer;
+  if (zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+      status != ZX_OK) {
+    errorf("Could not create ap timer: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  timer_mgr_ = std::make_unique<TimerManager<std::tuple<>>>(std::move(timer));
+
   return ZX_OK;
 }
 
 zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
   debugfn();
-
-  switch (id.target()) {
-    case to_enum_type(ObjectTarget::kBss): {
-      return bss_->HandleTimeout();
-    }
-    default:
-      ZX_DEBUG_ASSERT(false);
-      break;
+  if (id.target() != to_enum_type(ObjectTarget::kApMlme)) {
+    ZX_DEBUG_ASSERT(false);
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
-  return ZX_OK;
+  return timer_mgr_->HandleTimeout([&](auto now, auto target, auto timeout_id) {
+    ap_sta_timeout_fired(rust_ap_.get(), wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
+  });
 }
 
 zx_status_t ApMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
-  return ZX_ERR_NOT_SUPPORTED;
+  debugfn();
+  return ap_sta_handle_mlme_msg(rust_ap_.get(), AsWlanSpan(msg));
 }
 
 zx_status_t ApMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
-  if (auto start_req = msg.As<wlan_mlme::StartRequest>()) {
-    return HandleMlmeStartReq(*start_req);
-  } else if (auto stop_req = msg.As<wlan_mlme::StopRequest>()) {
-    return HandleMlmeStopReq(*stop_req);
-  }
-  return bss_->HandleMlmeMsg(msg);
+  debugfn();
+
+  // We don't handle MLME messages at this level.
+  (void)msg;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t ApMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
-  if (bss_ != nullptr) {
-    bss_->HandleAnyFrame(std::move(pkt));
+  switch (pkt->peer()) {
+    case Packet::Peer::kEthernet: {
+      if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
+        return ap_sta_handle_eth_frame(rust_ap_.get(), &eth_frame.hdr()->dest.byte,
+                                       &eth_frame.hdr()->src.byte, eth_frame.hdr()->ether_type(),
+                                       AsWlanSpan(eth_frame.body_data()));
+      }
+      break;
+    }
+    case Packet::Peer::kWlan:
+      return ap_sta_handle_mac_frame(rust_ap_.get(),
+                                     wlan_span_t{.data = pkt->data(), .size = pkt->len()}, false);
+    default:
+      errorf("unknown Packet peer: %u\n", pkt->peer());
+      break;
   }
-  return ZX_OK;
-}
-
-zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& req) {
-  debugfn();
-
-  // Only one BSS can be started at a time.
-  if (bss_ != nullptr) {
-    debugf("BSS %s already running but received MLME-START.request\n",
-           device_->GetState()->address().ToString().c_str());
-    return service::SendStartConfirm(device_,
-                                     wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED);
-  }
-
-  ObjectId timer_id;
-  timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-  timer_id.set_target(to_enum_type(ObjectTarget::kBss));
-  std::unique_ptr<Timer> timer;
-  zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
-  if (status != ZX_OK) {
-    errorf("Could not create bss timer: %s\n", zx_status_get_string(status));
-    return service::SendStartConfirm(device_, wlan_mlme::StartResultCodes::INTERNAL_ERROR);
-  }
-
-  // Configure BSS in driver.
-  auto& bssid = device_->GetState()->address();
-  wlan_bss_config_t cfg{
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-      .remote = false,
-  };
-  bssid.CopyTo(cfg.bssid);
-  device_->ConfigureBss(&cfg);
-
-  // Create and start BSS.
-  auto bcn_sender = std::make_unique<BeaconSender>(device_);
-  bss_.reset(new InfraBss(device_, std::move(bcn_sender), bssid, std::move(timer)));
-  bss_->Start(req);
-
-  return service::SendStartConfirm(device_, wlan_mlme::StartResultCodes::SUCCESS);
-}
-
-zx_status_t ApMlme::HandleMlmeStopReq(const MlmeMsg<wlan_mlme::StopRequest>& req) {
-  debugfn();
-
-  if (bss_ == nullptr) {
-    errorf("received MLME-STOP.request but no BSS is running on device: %s\n",
-           device_->GetState()->address().ToString().c_str());
-    return ZX_OK;
-  }
-
-  // Stop and destroy BSS.
-  bss_->Stop();
-  bss_.reset();
-
   return ZX_OK;
 }
 
 void ApMlme::HwIndication(uint32_t ind) {
-  if (ind == WLAN_INDICATION_PRE_TBTT) {
-    bss_->OnPreTbtt();
-  } else if (ind == WLAN_INDICATION_BCN_TX_COMPLETE) {
-    bss_->OnBcnTxComplete();
-  }
+  // TODO(37891): Support this.
+  // WLAN_INDICATION_PRE_TBTT
+  // WLAN_INDICATION_BCN_TX_COMPLETE
 }
-
-HtConfig ApMlme::Ht() const { return bss_->Ht(); }
-
-const fbl::Span<const SupportedRate> ApMlme::Rates() const { return bss_->Rates(); }
 
 }  // namespace wlan

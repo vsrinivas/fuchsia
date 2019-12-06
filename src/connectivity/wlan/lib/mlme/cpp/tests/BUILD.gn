@@ -60,7 +60,6 @@ executable("ap_mlme_tests") {
 
   sources = [
     "ap_mlme_unittest.cc",
-    "beacon_sender_unittest.cc",
   ]
 
   deps = [

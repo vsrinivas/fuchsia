@@ -21,10 +21,6 @@ source_set("mlme") {
 
   public = [
     "include/wlan/mlme/ap/ap_mlme.h",
-    "include/wlan/mlme/ap/beacon_sender.h",
-    "include/wlan/mlme/ap/infra_bss.h",
-    "include/wlan/mlme/ap/remote_client.h",
-    "include/wlan/mlme/ap/remote_client_interface.h",
     "include/wlan/mlme/ap/tim.h",
     "include/wlan/mlme/assoc_context.h",
     "include/wlan/mlme/client/bss.h",
@@ -56,9 +52,6 @@ source_set("mlme") {
 
   sources = [
     "ap/ap_mlme.cc",
-    "ap/beacon_sender.cc",
-    "ap/infra_bss.cc",
-    "ap/remote_client.cc",
     "ap/tim.cc",
     "assoc_context.cc",
     "beacon.cc",

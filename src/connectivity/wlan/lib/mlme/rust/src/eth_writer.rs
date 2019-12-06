@@ -23,7 +23,6 @@ pub fn write_eth_frame<B: Appendable>(
         sa: src_addr,
         ether_type: BigEndianU16::from_native(protocol_id),
     })?;
-
     buf.append_bytes(body)?;
     Ok(())
 }

@@ -5,10 +5,8 @@
 use {
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::error,
-    wlan_common::mac::{AuthAlgorithmNumber, Bssid},
-    wlan_mlme::{
-        ap::Ap, buffer::BufferProvider, common::mac, device::Device, error::ResultExt, timer::*,
-    },
+    wlan_common::mac::Bssid,
+    wlan_mlme::{ap::Ap, buffer::BufferProvider, device::Device, error::ResultExt, timer::*},
     wlan_span::CSpan,
 };
 
@@ -20,17 +18,6 @@ pub extern "C" fn ap_sta_new(
     bssid: &[u8; 6],
 ) -> *mut Ap {
     Box::into_raw(Box::new(Ap::new(device, buf_provider, scheduler, Bssid(*bssid))))
-}
-
-#[no_mangle]
-pub extern "C" fn ap_sta_send_open_auth_frame(
-    sta: &mut Ap,
-    client_addr: &[u8; 6],
-    status_code: u16,
-) -> i32 {
-    sta.ctx
-        .send_auth_frame(*client_addr, AuthAlgorithmNumber::OPEN, 2, mac::StatusCode(status_code))
-        .into_raw_zx_status()
 }
 
 #[no_mangle]

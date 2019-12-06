@@ -113,9 +113,8 @@ struct WlantapMacImpl : WlantapMac {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
-    if (bcn_cfg != nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
+    // This is the test driver, so we can just pretend beaconing was enabled.
+    (void)bcn_cfg;
     return ZX_OK;
   }
 
@@ -124,9 +123,8 @@ struct WlantapMacImpl : WlantapMac {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
-    if (pkt != nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
+    // This is the test driver, so we can just pretend the beacon was configured.
+    (void)pkt;
     return ZX_OK;
   }
 
@@ -145,9 +143,8 @@ struct WlantapMacImpl : WlantapMac {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
-    if (assoc_ctx != 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+    // This is the test driver, so we can just pretend the association was configured.
+    (void)assoc_ctx;
     // TODO(NET-1270): Evalute the use and implement
     return ZX_OK;
   }

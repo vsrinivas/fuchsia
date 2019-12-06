@@ -12,10 +12,10 @@
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/write_element.h>
-#include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/ps_cfg.h>
 #include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
 
@@ -125,7 +125,9 @@ MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
   req->beacon_period = kBeaconPeriodTu;
   req->dtim_period = kDtimPeriodTu;
   req->channel = kBssChannel.primary;
+  req->rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c};
   req->mesh_id.resize(0);
+  req->phy = wlan_common::PHY::ERP;
   if (protected_ap) {
     req->rsne.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
   }
@@ -201,6 +203,7 @@ MlmeMsg<wlan_mlme::AssociateResponse> CreateAssocResponse(
   std::memcpy(resp->peer_sta_address.data(), client_addr.byte, common::kMacAddrLen);
   resp->result_code = result_code;
   resp->association_id = aid;
+  resp->rates = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c};
 
   return {std::move(*resp), fuchsia::wlan::mlme::internal::kMLME_AssociateResp_GenOrdinal};
 }
@@ -241,7 +244,7 @@ MlmeMsg<wlan_mlme::SetControlledPortRequest> CreateSetCtrlPortRequest(
   std::memcpy(req->peer_sta_address.data(), peer_addr.byte, sizeof(peer_addr));
   req->state = state;
 
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_SetKeysReq_GenOrdinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_SetControlledPort_GenOrdinal};
 }
 
 std::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {

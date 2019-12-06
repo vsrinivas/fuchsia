@@ -14,6 +14,7 @@ rustc_library("wlan-mlme") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/zerocopy",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",

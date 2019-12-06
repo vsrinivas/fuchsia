@@ -118,9 +118,7 @@ impl ClientRejection {
             | Self::SmeSendError(..)
             | Self::WlanSendError(..)
             | Self::EthSendError(..) => log::Level::Error,
-            Self::NotAssociated | Self::ControlledPortClosed | Self::Unsupported => {
-                log::Level::Warn
-            }
+            Self::ControlledPortClosed | Self::Unsupported => log::Level::Warn,
             _ => log::Level::Trace,
         }
     }
@@ -398,7 +396,7 @@ impl RemoteClient {
                     // Safe: This is not read by the driver.
                     vht_op: unsafe { std::mem::zeroed::<WlanVhtOp>() },
                 })
-                .map_err(|s| Error::Status(format!("falied to configure association"), s))?;
+                .map_err(|s| Error::Status(format!("failed to configure association"), s))?;
         }
 
         match result_code {
