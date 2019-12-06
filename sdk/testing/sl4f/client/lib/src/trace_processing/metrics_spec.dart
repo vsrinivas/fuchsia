@@ -37,20 +37,18 @@ class MetricsSpecSet {
 
 typedef MetricsProcessor = List<TestCaseResults> Function(Model, MetricsSpec);
 
-// TODO: In the future we could refactor the metrics registry into something
-// more dynamic, if there's a need for it.
-List<TestCaseResults> processWithDefaultMetricsRegistry(
-    Model model, MetricsSpec metricsSpec) {
-  const mapping = {
-    'flutter_frame_stats': flutterFrameStatsMetricsProcessor,
-    'scenic_frame_stats': scenicFrameStatsMetricsProcessor,
-    'drm_fps': drmFpsMetricsProcessor,
-    'cpu': cpuMetricsProcessor,
-    'memory': memoryMetricsProcessor,
-    'temperature': temperatureMetricsProcessor,
-  };
+const defaultMetricsRegistry = {
+  'cpu': cpuMetricsProcessor,
+  'drm_fps': drmFpsMetricsProcessor,
+  'flutter_frame_stats': flutterFrameStatsMetricsProcessor,
+  'memory': memoryMetricsProcessor,
+  'scenic_frame_stats': scenicFrameStatsMetricsProcessor,
+  'temperature': temperatureMetricsProcessor,
+};
 
-  final processor = mapping[metricsSpec.name];
+List<TestCaseResults> processMetrics(Model model, MetricsSpec metricsSpec,
+    {Map<String, MetricsProcessor> registry = defaultMetricsRegistry}) {
+  final processor = registry[metricsSpec.name];
   if (processor == null) {
     throw ArgumentError('Unknown metricsSpec "${metricsSpec.name}"');
   }

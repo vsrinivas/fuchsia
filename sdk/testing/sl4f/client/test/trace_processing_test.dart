@@ -444,4 +444,28 @@ void main(List<String> args) {
     expect(results[3].values[0], _closeTo(49152));
     expect(results[3].values[1], _closeTo(49152));
   });
+
+  test('Custom registry', () async {
+    List<TestCaseResults> testProcessor(Model _model, MetricsSpec _spec) {
+      return [
+        TestCaseResults(
+          'test',
+          Unit.count,
+          [1234, 5678],
+        )
+      ];
+    }
+
+    Map<String, MetricsProcessor> emptyRegistry = {};
+    Map<String, MetricsProcessor> testRegistry = {
+      'test': testProcessor,
+    };
+    final model = Model();
+    final metricsSpec = MetricsSpec(name: 'test');
+    expect(() => processMetrics(model, metricsSpec, registry: emptyRegistry),
+        throwsA(TypeMatcher<ArgumentError>()));
+    final results = processMetrics(model, metricsSpec, registry: testRegistry);
+    expect(results[0].values[0], _closeTo(1234.00));
+    expect(results[0].values[1], _closeTo(5678.00));
+  });
 }
