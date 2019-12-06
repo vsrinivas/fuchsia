@@ -542,7 +542,8 @@ void CheckNdmHeaderVersion(NdmRamDriver* driver, uint32_t page_num, uint16_t maj
 // where each header is saved), which is not ideal, but it's required to make
 // sure things work as expected.
 TEST_F(FtlUpgradeTest, UpgradesToVersion2) {
-  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions);
+  const TestOptions kNoEccErrors = {INT32_MAX, 50, false, false};
+  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, kNoEccErrors);
 
   // Retain a pointer. The driver's lifetime is tied to ftl_.
   NdmRamDriver* driver = driver_to_pass.get();
