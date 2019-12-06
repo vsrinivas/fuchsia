@@ -87,26 +87,26 @@ uint32_t GetWatchpointLength(uint32_t dbgwcr) {
   // clang-format off
   uint32_t bas = ARM64_DBGWCR_BAS_GET(dbgwcr);
   switch (bas) {
-    case 0x00000000: return 0;
+    case 0b00000000: return 0;
 
-    case 0x00000001: return 1;
-    case 0x00000010: return 1;
-    case 0x00000100: return 1;
-    case 0x00001000: return 1;
-    case 0x00010000: return 1;
-    case 0x00100000: return 1;
-    case 0x01000000: return 1;
-    case 0x10000000: return 1;
+    case 0b00000001: return 1;
+    case 0b00000010: return 1;
+    case 0b00000100: return 1;
+    case 0b00001000: return 1;
+    case 0b00010000: return 1;
+    case 0b00100000: return 1;
+    case 0b01000000: return 1;
+    case 0b10000000: return 1;
 
-    case 0x00000011: return 2;
-    case 0x00001100: return 2;
-    case 0x00110000: return 2;
-    case 0x11000000: return 2;
+    case 0b00000011: return 2;
+    case 0b00001100: return 2;
+    case 0b00110000: return 2;
+    case 0b11000000: return 2;
 
-    case 0x00001111: return 4;
-    case 0x11110000: return 4;
+    case 0b00001111: return 4;
+    case 0b11110000: return 4;
 
-    case 0x11111111: return 8;
+    case 0b11111111: return 8;
     default:
       FXL_NOTREACHED() << "Wrong bas value: 0x" << std::hex << bas;
       return 0;
@@ -171,17 +171,15 @@ WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* regs,
   // Search for a free slot.
   int slot = -1;
   for (uint32_t i = 0; i < watchpoint_count; i++) {
-    if (regs->hw_wps[i].dbgwvr != 0)
-      continue;
+    if (regs->hw_wps[i].dbgwvr == 0) {
+      slot = i;
+      break;
+    }
 
     // If it's the same address, we need top compare length.
     uint32_t length = GetWatchpointLength(regs->hw_wps[i].dbgwcr);
     if (regs->hw_wps[i].dbgwvr == base_address && length == range.size())
       return CreateResult(ZX_ERR_ALREADY_BOUND);
-
-    // Found slot.
-    slot = i;
-    break;
   }
 
   if (slot == -1)
