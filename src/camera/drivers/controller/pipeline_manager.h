@@ -68,7 +68,7 @@ class PipelineManager {
                                                      const InternalConfigNode& internal_node,
                                                      ProcessNode* parent_node);
 
-  zx_status_t AppendToExistingGraph(PipelineInfo* info,
+  zx_status_t AppendToExistingGraph(PipelineInfo* info, ProcessNode* graph_node,
                                     fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
   // Gets the next node for the requested stream path
@@ -85,6 +85,9 @@ class PipelineManager {
   void OnClientStreamDisconnect(PipelineInfo* info);
 
   bool IsStreamAlreadyCreated(PipelineInfo* info, ProcessNode* node);
+
+  fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t> FindNodeToAttachNewStream(
+      PipelineInfo* info, const InternalConfigNode& current_internal_node, ProcessNode* graph_head);
 
  private:
   fit::result<std::unique_ptr<ProcessNode>, zx_status_t> ConfigureStreamPipelineHelper(

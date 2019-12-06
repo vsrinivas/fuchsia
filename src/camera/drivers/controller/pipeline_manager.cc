@@ -229,8 +229,52 @@ PipelineManager::ConfigureStreamPipelineHelper(
   return fit::ok(std::move(input_processing_node));
 }
 
+static bool SupportsStreamType(const std::vector<fuchsia::camera2::CameraStreamType>& streams,
+                               fuchsia::camera2::CameraStreamType type) {
+  if (std::find(streams.begin(), streams.end(), type) == streams.end()) {
+    return false;
+  }
+  return true;
+}
+
+fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t>
+PipelineManager::FindNodeToAttachNewStream(PipelineInfo* info,
+                                           const InternalConfigNode& current_internal_node,
+                                           ProcessNode* node) {
+  auto requested_stream_type = info->stream_config->properties.stream_type();
+
+  // Validate if this node supports the requested stream type
+  // to be safe.
+  if (!SupportsStreamType(node->supported_streams(), requested_stream_type)) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  // Traverse the |node| to find a node which supports this stream
+  // but none of its children support this stream.
+  for (auto& child_node_info : node->child_nodes_info()) {
+    if (SupportsStreamType(child_node_info.child_node->supported_streams(),
+                           requested_stream_type)) {
+      // If we find a child node which supports the requested stream type,
+      // we move on to that child node.
+      auto next_internal_node = GetNextNodeInPipeline(info, current_internal_node);
+      if (!next_internal_node) {
+        FX_LOGS(ERROR) << "Failed to get next node for requested stream";
+        return fit::error(ZX_ERR_INTERNAL);
+      }
+      return FindNodeToAttachNewStream(info, *next_internal_node, child_node_info.child_node.get());
+    }
+    // This is the node we need to attach the new stream pipeline to
+    return fit::ok(std::make_pair(current_internal_node, node));
+  }
+
+  // Should not reach here
+  FX_LOGS(ERROR) << "Failed FindNodeToAttachNewStream";
+  return fit::error(ZX_ERR_INTERNAL);
+}
+
 zx_status_t PipelineManager::AppendToExistingGraph(
-    PipelineInfo* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
+    PipelineInfo* info, ProcessNode* graph_head,
+    fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
   // TODO(braval): Add support for appending new nodes to existing graph.
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -251,7 +295,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
           return ZX_ERR_ALREADY_BOUND;
         }
         // We will now append the requested stream to the existing graph.
-        auto result = AppendToExistingGraph(info, stream);
+        auto result = AppendToExistingGraph(info, full_resolution_stream_.get(), stream);
         if (result != ZX_OK) {
           FX_PLOGST(ERROR, TAG, result) << "AppendToExistingGraph failed";
           return result;
@@ -275,7 +319,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
           return ZX_ERR_ALREADY_BOUND;
         }
         // We will now append the requested stream to the existing graph.
-        auto result = AppendToExistingGraph(info, stream);
+        auto result = AppendToExistingGraph(info, downscaled_resolution_stream_.get(), stream);
         if (result != ZX_OK) {
           FX_PLOGST(ERROR, TAG, result) << "AppendToExistingGraph failed";
           return result;

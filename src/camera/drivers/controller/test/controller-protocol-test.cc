@@ -212,7 +212,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
   }
 
-  void TestConfigure_MonitorConfig_Stream1() {
+  void TestConfigure_MonitorConfig_StreamFR() {
     controller_protocol_device_->PopulateConfigurations();
     InternalConfigInfo* internal_info = nullptr;
     // Get the internal configuration for monitor config
@@ -290,14 +290,33 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     // Check if the stream got created.
     EXPECT_TRUE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
+
     // Change the requested stream type.
-    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
     info.stream_config = &stream_config;
+
+    auto append_result =
+        pipeline_manager_->FindNodeToAttachNewStream(&info, info.node, result.value().get());
+    ASSERT_EQ(true, append_result.is_ok());
+
+    EXPECT_EQ(NodeType::kInputStream, append_result.value().second->type());
+    EXPECT_EQ(append_result.value().second->supported_streams().size(), 2u);
+
     // Check for a stream which is not created.
     EXPECT_FALSE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
+
+    // Change the requested stream type to something invalid for this configuration.
+    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    info.stream_config = &stream_config;
+
+    append_result =
+        pipeline_manager_->FindNodeToAttachNewStream(&info, info.node, result.value().get());
+    ASSERT_EQ(true, append_result.is_error());
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, append_result.error());
   }
 
-  void TestConfigure_MonitorConfig_Stream2() {
+  void TestConfigure_MonitorConfig_StreamDS() {
     controller_protocol_device_->PopulateConfigurations();
     InternalConfigInfo* internal_info = nullptr;
     // Get the internal configuration for monitor config
@@ -460,6 +479,23 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
               fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
                   fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
                   fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+
+    // Check if the stream got created.
+    EXPECT_TRUE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
+
+    // Change the requested stream type.
+    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+    info.stream_config = &stream_config;
+
+    auto append_result =
+        pipeline_manager_->FindNodeToAttachNewStream(&info, info.node, result.value().get());
+    ASSERT_EQ(true, append_result.is_ok());
+
+    EXPECT_EQ(NodeType::kGdc, append_result.value().second->type());
+    EXPECT_EQ(append_result.value().second->supported_streams().size(), 2u);
+
+    // Check for a stream which is not created.
+    EXPECT_FALSE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
   }
 
   void TestShutdownPathAfterStreamingOn() {
@@ -539,12 +575,12 @@ TEST_F(ControllerProtocolTest, TestShutdownPathAfterStreamingOn) {
   TestShutdownPathAfterStreamingOn();
 }
 
-TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_Stream1) {
-  TestConfigure_MonitorConfig_Stream1();
+TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_StreamFR) {
+  TestConfigure_MonitorConfig_StreamFR();
 }
 
-TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_Stream2) {
-  TestConfigure_MonitorConfig_Stream2();
+TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_StreamDS) {
+  TestConfigure_MonitorConfig_StreamDS();
 }
 
 TEST_F(ControllerProtocolTest, TestConfigure_VideoConfig_Stream1) {
