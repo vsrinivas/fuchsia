@@ -632,6 +632,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		case types.ConstDeclType, types.StructDeclType, types.XUnionDeclType:
 			if val.Nullable {
 				if borrowed {
+					// TODO(fxb/42304): Replace with "Option<&mut %s>".
 					r = fmt.Sprintf("Option<fidl::encoding::OutOfLine<'_, %s>>", t)
 				} else {
 					r = fmt.Sprintf("Option<Box<%s>>", t)
@@ -643,6 +644,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 					r = t
 				}
 			}
+		// TODO(fxb/42304): Combine this into the case above.
 		case types.UnionDeclType:
 			if val.Nullable {
 				if borrowed {
@@ -665,6 +667,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 			if val.Nullable {
 				r = fmt.Sprintf("Option<%s>", t)
 			} else {
+				// TODO(fxb/42304): Replace with "&mut %s".
 				r = t
 			}
 		case types.InterfaceDeclType:

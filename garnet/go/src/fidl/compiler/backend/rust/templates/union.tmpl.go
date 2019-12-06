@@ -20,8 +20,6 @@ fidl_union! {
   ],
   size: {{ .Size }},
   align: {{ .Alignment }},
-  {{- /* This type is emitted in sourcefile.tmpl.go. */}}
-  out_of_line_ty: OutOfLineUnion,
 }
 {{- end }}
 `

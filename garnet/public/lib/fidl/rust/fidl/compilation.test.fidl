@@ -16,6 +16,7 @@ enum ErrorReturn: uint32 {
 [FragileBase]
 protocol TestInterface {
   TestMethod(TestXUnion test_x_union) -> (TestXUnion test_x_union);
+  TestNullableXUnion(TestXUnion? test_x_union) -> (TestXUnion? test_x_union);
   TestErrorMethod(uint16 arg) -> () error ErrorReturn;
 };
 

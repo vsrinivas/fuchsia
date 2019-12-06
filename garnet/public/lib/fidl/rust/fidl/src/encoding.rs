@@ -1515,51 +1515,98 @@ mod fidl_handle_encoding {
 #[cfg(not(target_os = "fuchsia"))]
 pub use fidl_handle_encoding::*;
 
-/// A trait that provides automatic `Encodable` and `Decodable`
-/// implementations for a container that has inline data to decode,
-/// and expects to find a presence indicator at the start of its
-/// encoding/decoding.
+/// A trait that provides automatic support for nullable types.
 ///
-/// Types that implement this trait will automatically receive
-/// `Encodable` and `Decodable` implementations for `Option<Self>`
-/// (rather than `Option<Box<Self>>` or `Option<OutOfLine<Self>>`).
-///
-/// If `Self` only implements one of `Encodable` or `Decodable`, then only that
-/// one will be automatically implemented for `Option<Self>`. This is why the
-/// trait extends `Layout` rather than `Encodable + Decodable`.
-pub trait AutonullContainer: Layout {}
-
-/// A trait that provides automatic `Encodable` and `Decodable`
-/// implementations for `Option<Box<Self>>` and `Option<OutOfLine<Self>>`.
-pub trait Autonull: Encodable + Decodable {}
+/// Types that implement this trait will automatically receive `Encodable` and
+/// `Decodable` implementations for `Option<Box<Self>>` (nullable owned type),
+/// and `Encodable` for `Option<&mut Self>` (nullable borrowed type).
+pub trait Autonull: Encodable + Decodable {
+    /// Returns true if the type is naturally able to be nullable.
+    ///
+    /// Types that return true (e.g., xunions) encode `Some(x)` the same as `x`,
+    /// and `None` as a full bout of inline zeros. Types that return false
+    /// (e.g., structs) encode `Some(x)` as `ALLOC_PRESENT_U64` with an
+    /// out-of-line payload, and `None` as `ALLOC_ABSENT_U64`.
+    fn naturally_nullable(context: &Context) -> bool;
+}
 
 /// A wrapper for FIDL types that will cause them to be encoded
 /// or decoded from the out-of-line buffer rather than inline.
+// TODO(fxb/42304): Remove this.
 pub struct OutOfLine<'a, T>(pub &'a mut T);
 
-impl<T: AutonullContainer> Layout for Option<T> {
+impl<T: Autonull> Layout for Option<&mut T> {
     fn inline_align(context: &Context) -> usize {
-        <T as Layout>::inline_align(context)
+        if T::naturally_nullable(context) {
+            <T as Layout>::inline_align(context)
+        } else {
+            8
+        }
     }
     fn inline_size(context: &Context) -> usize {
-        <T as Layout>::inline_size(context)
+        if T::naturally_nullable(context) {
+            <T as Layout>::inline_size(context)
+        } else {
+            8
+        }
     }
 }
 
-impl<T: AutonullContainer + Encodable> Encodable for Option<T> {
+impl<T: Autonull> Encodable for Option<&mut T> {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        match self {
-            Some(x) => x.encode(encoder),
-            None => {
-                // `None` always corresponds to a full bout of inline zeros,
-                // aka `ALLOC_ABSENT_u64`, with an additional zero-length for
-                // out-of-line vectors and tables.
-                for byte in encoder.next_slice(encoder.inline_size_of::<T>())? {
-                    *byte = 0;
+        if T::naturally_nullable(&encoder.context) {
+            match self {
+                Some(x) => x.encode(encoder),
+                None => {
+                    for byte in encoder.next_slice(encoder.inline_size_of::<T>())? {
+                        *byte = 0;
+                    }
+                    Ok(())
                 }
-                Ok(())
+            }
+        } else {
+            match self {
+                Some(x) => {
+                    ALLOC_PRESENT_U64.encode(encoder)?;
+                    encoder.write_out_of_line(encoder.inline_size_of::<T>(), |encoder| {
+                        x.encode(encoder)
+                    })
+                }
+                None => ALLOC_ABSENT_U64.encode(encoder),
             }
         }
+    }
+}
+
+// TODO(fxb/42304): Remove this.
+impl<T: Autonull> Layout for Option<OutOfLine<'_, T>> {
+    fn inline_align(context: &Context) -> usize {
+        <Option<&mut T> as Layout>::inline_align(context)
+    }
+    fn inline_size(context: &Context) -> usize {
+        <Option<&mut T> as Layout>::inline_size(context)
+    }
+}
+
+// TODO(fxb/42304): Remove this.
+impl<T: Autonull> Encodable for Option<OutOfLine<'_, T>> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+        self.as_mut().map(|x| -> &mut T { x.0 }).encode(encoder)
+    }
+}
+
+impl<T: Autonull> Layout for Option<Box<T>> {
+    fn inline_align(context: &Context) -> usize {
+        <Option<&mut T> as Layout>::inline_align(context)
+    }
+    fn inline_size(context: &Context) -> usize {
+        <Option<&mut T> as Layout>::inline_size(context)
+    }
+}
+
+impl<T: Autonull> Encodable for Option<Box<T>> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
+        self.as_deref_mut().encode(encoder)
     }
 }
 
@@ -1569,78 +1616,39 @@ fn check_for_presence(decoder: &mut Decoder<'_>, inline_size: usize) -> Result<b
     Ok(decoder.peek_slice(inline_size)?.iter().any(|byte| *byte != 0))
 }
 
-impl<T: AutonullContainer + Decodable> Decodable for Option<T> {
+impl<T: Autonull> Decodable for Option<Box<T>> {
     fn new_empty() -> Self {
         None
     }
     fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-        let inline_size = decoder.inline_size_of::<T>();
-        let present = check_for_presence(decoder, inline_size)?;
-        if present {
-            self.get_or_insert_with(|| T::new_empty()).decode(decoder)?;
-            Ok(())
+        if T::naturally_nullable(&decoder.context) {
+            let inline_size = decoder.inline_size_of::<T>();
+            let present = check_for_presence(decoder, inline_size)?;
+            if present {
+                self.get_or_insert_with(|| Box::new(T::new_empty())).decode(decoder)
+            } else {
+                *self = None;
+                // Eat the full `inline_size` bytes including the
+                // ALLOC_ABSENT that we only peeked at before
+                // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
+                decoder.next_slice(inline_size)?;
+                Ok(())
+            }
         } else {
-            *self = None;
-            // Eat the full `inline_size` bytes including the
-            // ALLOC_ABSENT that we only peeked at before
-            // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-            decoder.next_slice(inline_size)?;
-            Ok(())
+            let mut present: u64 = 0;
+            present.decode(decoder)?;
+            match present {
+                ALLOC_PRESENT_U64 => decoder
+                    .read_out_of_line(decoder.inline_size_of::<T>(), |decoder| {
+                        self.get_or_insert_with(|| Box::new(T::new_empty())).decode(decoder)
+                    }),
+                ALLOC_ABSENT_U64 => {
+                    *self = None;
+                    Ok(())
+                }
+                _ => Err(Error::Invalid),
+            }
         }
-    }
-}
-
-impl<T: Autonull> AutonullContainer for OutOfLine<'_, T> {}
-
-impl<T: Autonull> Layout for OutOfLine<'_, T> {
-    fn inline_align(_context: &Context) -> usize {
-        8
-    }
-    fn inline_size(_context: &Context) -> usize {
-        8
-    }
-}
-
-impl<T: Autonull> Encodable for OutOfLine<'_, T> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        ALLOC_PRESENT_U64.encode(encoder)?;
-        encoder.write_out_of_line(encoder.inline_size_of::<T>(), |encoder| self.0.encode(encoder))
-    }
-}
-
-impl<T: Autonull> AutonullContainer for Box<T> {}
-
-impl<T: Autonull> Layout for Box<T> {
-    fn inline_align(_context: &Context) -> usize {
-        8
-    }
-    fn inline_size(_context: &Context) -> usize {
-        8
-    }
-}
-
-impl<T: Autonull> Encodable for Box<T> {
-    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        ALLOC_PRESENT_U64.encode(encoder)?;
-        encoder.write_out_of_line(encoder.inline_size_of::<T>(), |encoder| {
-            (&mut **self).encode(encoder)
-        })
-    }
-}
-
-impl<T: Autonull> Decodable for Box<T> {
-    fn new_empty() -> Self {
-        Box::new(T::new_empty())
-    }
-    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-        let mut present: u64 = 0;
-        fidl_decode!(&mut present, decoder)?;
-        if present != ALLOC_PRESENT_U64 {
-            return Err(Error::NotNullable);
-        }
-        return decoder.read_out_of_line(decoder.inline_size_of::<T>(), |decoder| {
-            (&mut **self).decode(decoder)
-        });
     }
 }
 
@@ -1736,7 +1744,11 @@ macro_rules! fidl_struct {
             }
         }
 
-        impl $crate::encoding::Autonull for $name {}
+        impl $crate::encoding::Autonull for $name {
+            fn naturally_nullable(_context: &$crate::encoding::Context) -> bool {
+                false
+            }
+        }
     }
 }
 
@@ -1773,7 +1785,11 @@ macro_rules! fidl_empty_struct {
           }
         }
 
-        impl $crate::encoding::Autonull for $name {}
+        impl $crate::encoding::Autonull for $name {
+            fn naturally_nullable(_context: &$crate::encoding::Context) -> bool {
+                false
+            }
+        }
     }
 }
 
@@ -1989,8 +2005,6 @@ macro_rules! fidl_table {
                 })
             }
         }
-
-        impl $crate::encoding::AutonullContainer for $name {}
     }
 }
 
@@ -2204,7 +2218,7 @@ where
         let start_pos = decoder.inline_pos();
 
         let mut tag: u32 = 0;
-        fidl_decode!(&mut tag, decoder)?;
+        tag.decode(decoder)?;
         // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
         decoder.next_slice(union_result_field_padding::<O>(&decoder.context))?;
 
@@ -2213,7 +2227,7 @@ where
                 loop {
                     match self {
                         Ok(val) => {
-                            fidl_decode!(val, decoder)?;
+                            val.decode(decoder)?;
                             decoder.skip_tail_padding::<Self>(start_pos)?;
                             break;
                         }
@@ -2231,7 +2245,7 @@ where
                 loop {
                     match self {
                         Err(val) => {
-                            fidl_decode!(val, decoder)?;
+                            val.decode(decoder)?;
                             decoder.skip_tail_padding::<Self>(start_pos)?;
                             break;
                         }
@@ -2265,7 +2279,6 @@ macro_rules! fidl_union {
         )*],
         size: $size:expr,
         align: $align:expr,
-        out_of_line_ty: $out_of_line_ty:ident,
     ) => {
         $( #[$attrs] )*
         pub enum $name {
@@ -2437,69 +2450,9 @@ macro_rules! fidl_union {
             }
         }
 
-        impl $crate::encoding::AutonullContainer for $out_of_line_ty<'_, $name> {}
-        impl $crate::encoding::AutonullContainer for Box<$name> {}
-
-        impl $crate::encoding::Layout for $out_of_line_ty<'_, $name> {
-            fn inline_align(_context: &$crate::encoding::Context) -> usize {
-                8
-            }
-            fn inline_size(context: &$crate::encoding::Context) -> usize {
-                if context.unions_use_xunion_format {
-                    24
-                } else {
-                    8
-                }
-            }
-        }
-        impl $crate::encoding::Layout for Box<$name> {
-            fn inline_align(_context: &$crate::encoding::Context) -> usize {
-                8
-            }
-            fn inline_size(context: &$crate::encoding::Context) -> usize {
-                if context.unions_use_xunion_format {
-                    24
-                } else {
-                    8
-                }
-            }
-        }
-
-        impl $crate::encoding::Encodable for $out_of_line_ty<'_, $name> {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
-                if encoder.context().unions_use_xunion_format {
-                    $crate::fidl_encode!(&mut self.0, encoder)
-                } else {
-                    $crate::fidl_encode!(&mut $crate::encoding::ALLOC_PRESENT_U64, encoder)?;
-                    encoder.write_out_of_line(encoder.inline_size_of::<$name>(), |encoder| {
-                        $crate::fidl_encode!(&mut self.0, encoder)
-                    })
-                }
-            }
-        }
-        impl $crate::encoding::Encodable for Box<$name> {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
-                $crate::fidl_encode!(&mut $out_of_line_ty(&mut **self), encoder)
-            }
-        }
-
-        impl $crate::encoding::Decodable for Box<$name> {
-            fn new_empty() -> Self {
-                Box::new($crate::fidl_new_empty!($name))
-            }
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
-                if decoder.context().unions_use_xunion_format {
-                    (**self).decode(decoder)
-                } else {
-                    let mut present: u64 = 0;
-                    $crate::fidl_decode!(&mut present, decoder)?;
-                    if present != $crate::encoding::ALLOC_PRESENT_U64 {
-                        return Err($crate::Error::NotNullable);
-                    }
-                    decoder.read_out_of_line(decoder.inline_size_of::<$name>(), |decoder| {
-                        (&mut **self).decode(decoder)
-                    })
-                }
+        impl $crate::encoding::Autonull for $name {
+            fn naturally_nullable(context: &$crate::encoding::Context) -> bool {
+                context.unions_use_xunion_format
             }
         }
     }
@@ -2659,28 +2612,9 @@ macro_rules! fidl_xunion {
             }
         }
 
-        impl $crate::encoding::AutonullContainer for Box<$name> {}
-
-        impl $crate::encoding::Layout for Box<$name> {
-            fn inline_align(context: &$crate::encoding::Context) -> usize {
-                <$name as $crate::encoding::Layout>::inline_align(context)
-            }
-
-            fn inline_size(context: &$crate::encoding::Context) -> usize {
-                <$name as $crate::encoding::Layout>::inline_size(context)
-            }
-        }
-
-        impl $crate::encoding::Encodable for Box<$name> {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
-                (**self).encode(encoder)
-            }
-        }
-
-        impl $crate::encoding::Decodable for Box<$name> {
-            fn new_empty() -> Self { Box::new($name::new_empty()) }
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
-                (**self).decode(decoder)
+        impl $crate::encoding::Autonull for $name {
+            fn naturally_nullable(_context: &$crate::encoding::Context) -> bool {
+                true
             }
         }
     }
@@ -3221,7 +3155,6 @@ mod test {
             ],
             size: 16,
             align: 8,
-            out_of_line_ty: OutOfLine,
         };
 
         let buf = &mut Vec::new();
@@ -3292,7 +3225,6 @@ mod test {
             ],
             size: 8,
             align: 4,
-            out_of_line_ty: OutOfLine,
         };
 
         let buf = &mut Vec::new();
@@ -3466,7 +3398,6 @@ mod test {
             ],
             size: 24,
             align: 8,
-            out_of_line_ty: OutOfLine,
         };
 
         for ctx in CONTEXTS {
@@ -3669,14 +3600,6 @@ mod test {
         table = MyTable { num: Some(32), ..MyTable::empty() };
         assert_eq!(Some(32), table.num);
         assert_eq!(None, table.string);
-    }
-
-    #[test]
-    fn encode_decode_table_none() {
-        for ctx in CONTEXTS {
-            let table_none = encode_decode::<Option<MyTable>>(ctx, &mut None);
-            assert!(table_none.is_none());
-        }
     }
 
     #[test]
@@ -3984,7 +3907,6 @@ mod test {
         ],
         size: 8,
         align: 4,
-        out_of_line_ty: OutOfLine,
     }
 
     // Ensure single-variant xunion compiles (no irrefutable pattern errors).
@@ -4031,7 +3953,6 @@ mod test {
         ],
         size: 24,
         align: 8,
-        out_of_line_ty: OutOfLine,
     }
 
     fidl_xunion! {
@@ -4339,7 +4260,6 @@ mod test {
             ],
             size: 8,
             align: 8,
-            out_of_line_ty: OutOfLine,
         };
 
         let mut x = BigOrdinal::X(0);
@@ -4414,27 +4334,6 @@ mod zx_test {
                 handle: Some(handle.into_handle()),
             };
             let table_out = encode_decode(ctx, &mut starting_table);
-            assert_eq!(table_out.num, Some(5));
-            assert_eq!(table_out.num_none, None);
-            assert_eq!(table_out.string, Some("foo".to_string()));
-            assert_eq!(table_out.handle.unwrap().raw_handle(), raw_handle);
-        }
-    }
-
-    #[test]
-    fn encode_decode_table_some() {
-        for ctx in CONTEXTS {
-            // create a random handle to encode and then decode.
-            let handle = zx::Vmo::create(1024).expect("vmo creation failed");
-            let raw_handle = handle.raw_handle();
-            let mut starting_table = Some(MyTable {
-                num: Some(5),
-                num_none: None,
-                string: Some("foo".to_string()),
-                handle: Some(handle.into_handle()),
-            });
-            let table_out = encode_decode(ctx, &mut starting_table);
-            let table_out = table_out.expect("table was None");
             assert_eq!(table_out.num, Some(5));
             assert_eq!(table_out.num_none, None);
             assert_eq!(table_out.string, Some("foo".to_string()));

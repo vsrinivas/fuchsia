@@ -22,6 +22,7 @@ use fuchsia_zircon as zx;
 use fuchsia_zircon_status as zx_status;
 #[allow(unused_imports)]
 use fidl::{
+	encoding::OutOfLine,
 	fidl_bits,
 	fidl_enum,
 	fidl_empty_struct,
@@ -39,7 +40,10 @@ use fidl::{
 	TODO(fxb/40850): Remove this.
 */ -}}
 {{ if .Unions -}}
-pub struct OutOfLineUnion<'a, T>(pub &'a mut T);
+pub type OutOfLineUnion<'a, T> = OutOfLine<'a, T>;
+pub fn OutOfLineUnion<'a, T>(x: &'a mut T) -> OutOfLine<'a, T> {
+	OutOfLine(x)
+}
 {{ end -}}
 
 {{ range $bits := .Bits -}}
