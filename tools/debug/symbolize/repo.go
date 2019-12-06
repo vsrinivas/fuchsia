@@ -34,13 +34,13 @@ type Repository interface {
 	GetBuildObject(buildID string) (FileCloser, error)
 }
 
-type dummyFileCloser string
+type NopFileCloser string
 
-func (d dummyFileCloser) String() string {
+func (d NopFileCloser) String() string {
 	return string(d)
 }
 
-func (d dummyFileCloser) Close() error {
+func (d NopFileCloser) Close() error {
 	return nil
 }
 
@@ -166,7 +166,7 @@ func (i *IDsTxtRepo) updateCache() error {
 
 func (i *IDsTxtRepo) GetBuildObject(buildID string) (FileCloser, error) {
 	if file, ok := i.readFromCache(buildID); ok && file.Verify() != nil {
-		return dummyFileCloser(file.Filepath), nil
+		return NopFileCloser(file.Filepath), nil
 	}
 	if err := i.updateCache(); err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func (i *IDsTxtRepo) GetBuildObject(buildID string) (FileCloser, error) {
 		if err := file.Verify(); err != nil {
 			return nil, err
 		}
-		return dummyFileCloser(file.Filepath), nil
+		return NopFileCloser(file.Filepath), nil
 	}
 	return nil, fmt.Errorf("could not find file for %s", buildID)
 }
@@ -214,5 +214,5 @@ func (b NewBuildIDRepo) GetBuildObject(buildID string) (FileCloser, error) {
 	if err := bin.Verify(); err != nil {
 		return nil, err
 	}
-	return dummyFileCloser(bin.Filepath), nil
+	return NopFileCloser(bin.Filepath), nil
 }

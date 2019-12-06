@@ -4,13 +4,25 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("covargs_lib") {
+  name = "go.fuchsia.dev/fuchsia/tools/debug/covargs/lib"
+  deps = [
+    "//tools/debug/symbolize:symbolize_lib",
+    "//tools/lib/logger",
+    "//tools/testing/runtests",
+  ]
+}
 
 go_library("main") {
   name = "go.fuchsia.dev/fuchsia/tools/debug/covargs/cmd"
   source_dir = "cmd"
   deps = [
+    ":covargs_lib",
     "//tools/debug/elflib",
     "//tools/debug/symbolize:symbolize_lib",
+    "//tools/lib/cache",
     "//tools/lib/color",
     "//tools/lib/command",
     "//tools/lib/logger",
@@ -22,5 +34,14 @@ go_binary("covargs") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/debug/covargs/cmd"
   deps = [
     ":main",
+  ]
+}
+
+go_test("covargs_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/covargs/lib" ]
+  deps = [
+    ":covargs_lib",
+    "//tools/debug/elflib",
+    "//tools/debug/symbolize:symbolize_lib",
   ]
 }

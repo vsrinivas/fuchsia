@@ -6,10 +6,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"time"
 
@@ -63,44 +61,9 @@ func init() {
 	flag.BoolVar(&idsRel, "ids-rel", false, "tells the symbolizer to always use ids.txt relative paths")
 }
 
-type dumpEntry struct {
-	Modules  []symbolize.Module  `json:"modules"`
-	Segments []symbolize.Segment `json:"segments"`
-	Type     string              `json:"type"`
-	Name     string              `json:"name"`
-}
-
-type dumpHandler struct {
-	dumps []dumpEntry
-}
-
-func (d *dumpHandler) HandleDump(dump *symbolize.DumpfileElement) {
-	triggerCtx := dump.Context()
-	d.dumps = append(d.dumps, dumpEntry{
-		Modules:  triggerCtx.Mods,
-		Segments: triggerCtx.Segs,
-		Type:     dump.SinkType(),
-		Name:     dump.Name(),
-	})
-}
-
-func (d *dumpHandler) Write(buf io.Writer) error {
-	enc := json.NewEncoder(buf)
-	enc.SetIndent("", "  ")
-	err := enc.Encode(d.dumps)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func main() {
 	// Parse flags and setup helpers
 	flag.Parse()
-	var jsonTriggerHandler *dumpHandler
-	if jsonOutput != "" {
-		jsonTriggerHandler = &dumpHandler{}
-	}
 
 	// Setup logger and context
 	painter := color.NewColor(colors)
@@ -136,11 +99,14 @@ func main() {
 		repo.AddRepo(cloudRepo)
 	}
 	demuxer := symbolize.NewDemuxer(&repo, symbolizer)
-	tap := symbolize.NewTriggerTap()
-	if jsonTriggerHandler != nil {
-		tap.AddHandler(jsonTriggerHandler.HandleDump)
-	}
 	presenter := symbolize.NewBasicPresenter(os.Stdout, painter.Enabled())
+
+	tap := symbolize.NewTriggerTap()
+	var dumpHandler *symbolize.DumpHandler
+	if jsonOutput != "" {
+		dumpHandler = &symbolize.DumpHandler{}
+		tap.AddHandler(dumpHandler.HandleDump)
+	}
 
 	// Build the pipeline to start presenting.
 	if err := symbolizer.Start(ctx); err != nil {
@@ -156,12 +122,12 @@ func main() {
 	symbolize.Consume(trash)
 
 	// Once the pipeline has finished output all triggers
-	if jsonTriggerHandler != nil {
+	if jsonOutput != "" {
 		file, err := os.Create(jsonOutput)
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
-		if err := jsonTriggerHandler.Write(file); err != nil {
+		if err := dumpHandler.Write(file); err != nil {
 			log.Fatalf("%v\n", err)
 		}
 	}

@@ -15,21 +15,42 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
+	"go.fuchsia.dev/fuchsia/tools/debug/covargs/lib"
 	"go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/cache"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
-	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+)
+
+type argList []string
+
+func (a *argList) String() string {
+	return fmt.Sprintf("%s", []string(*a))
+}
+
+func (a *argList) Set(value string) error {
+	*a = append(*a, value)
+	return nil
+}
+
+const (
+	symbolCacheSize   uint64        = 100
+	cloudFetchTimeout time.Duration = time.Duration(5) * time.Second
 )
 
 var (
 	colors            color.EnableColor
 	level             logger.LogLevel
-	summaryFile       command.StringsFlag
+	summaryFile       argList
+	buildIDDirPaths   argList
 	idsFile           string
-	symbolizeDumpFile command.StringsFlag
+	idsPaths          argList
+	symbolServers     argList
+	symbolCache       string
+	symbolizeDumpFile argList
 	dryRun            bool
 	outputDir         string
 	llvmCov           string
@@ -45,7 +66,10 @@ func init() {
 	flag.Var(&colors, "color", "can be never, auto, always")
 	flag.Var(&level, "level", "can be fatal, error, warning, info, debug or trace")
 	flag.Var(&summaryFile, "summary", "path to summary.json file")
-	flag.StringVar(&idsFile, "ids", "", "path to ids.txt")
+	flag.Var(&buildIDDirPaths, "build-id-dir", "path to .build-id directory")
+	flag.Var(&idsPaths, "ids", "path to ids.txt")
+	flag.Var(&symbolServers, "symbol-server", "name of a GCS bucket that contains debug binaries indexed by build ID")
+	flag.StringVar(&symbolCache, "symbol-cache", "", "path to directory to store cached debug binaries in")
 	flag.Var(&symbolizeDumpFile, "symbolize-dump", "path to the json emited from the symbolizer")
 	flag.BoolVar(&dryRun, "dry-run", false, "if set the system prints out commands that would be run instead of running them")
 	flag.StringVar(&outputDir, "output-dir", "", "the directory to output results to")
@@ -90,16 +114,8 @@ func readSummary(summaryFiles []string) (map[string][]runtests.DataSink, error) 
 	return sinks, nil
 }
 
-type SymbolizerDump struct {
-	Modules  []symbolize.Module `json:"modules"`
-	SinkType string             `json:"type"`
-	DumpName string             `json:"name"`
-}
-
-type SymbolizerOutput []SymbolizerDump
-
-func readSymbolizerOutput(outputFiles []string) (map[string]SymbolizerDump, error) {
-	dumps := make(map[string]SymbolizerDump)
+func readSymbolizerOutput(outputFiles []string) (map[string]symbolize.DumpEntry, error) {
+	dumps := make(map[string]symbolize.DumpEntry)
 
 	for _, outputFile := range outputFiles {
 		// TODO(phosek): process these in parallel using goroutines.
@@ -108,41 +124,22 @@ func readSymbolizerOutput(outputFiles []string) (map[string]SymbolizerDump, erro
 			return nil, fmt.Errorf("cannot open %q: %v", outputFile, err)
 		}
 		defer file.Close()
-		var output SymbolizerOutput
+		var output []symbolize.DumpEntry
 		if err := json.NewDecoder(file).Decode(&output); err != nil {
 			return nil, fmt.Errorf("cannot decode %q: %v", outputFile, err)
 		}
 
 		for _, dump := range output {
-			dumps[dump.DumpName] = dump
+			dumps[dump.Name] = dump
 		}
 	}
 
 	return dumps, nil
 }
 
-// Output is indexed by build id
-func readIDsTxt(idsFile string) (map[string]elflib.BinaryFileRef, error) {
-	file, err := os.Open(idsFile)
-	if err != nil {
-		return nil, fmt.Errorf("cannot open %q: %s", idsFile, err)
-	}
-	defer file.Close()
-	refs, err := elflib.ReadIDsFile(file)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read %q: %v", idsFile, err)
-	}
-	out := make(map[string]elflib.BinaryFileRef)
-	for _, ref := range refs {
-		out[ref.BuildID] = ref
-	}
-	return out, nil
-}
-
 type indexedInfo struct {
-	dumps   map[string]SymbolizerDump
+	dumps   map[string]symbolize.DumpEntry
 	summary map[string][]runtests.DataSink
-	ids     map[string]elflib.BinaryFileRef
 }
 
 type ProfileEntry struct {
@@ -150,7 +147,7 @@ type ProfileEntry struct {
 	ModuleFiles []string `json:"modules"`
 }
 
-func readInfo(dumpFiles, summaryFiles []string, idsFile string) (*indexedInfo, error) {
+func readInfo(dumpFiles, summaryFiles []string) (*indexedInfo, error) {
 	summary, err := readSummary(summaryFile)
 	if err != nil {
 		return nil, err
@@ -159,46 +156,10 @@ func readInfo(dumpFiles, summaryFiles []string, idsFile string) (*indexedInfo, e
 	if err != nil {
 		return nil, err
 	}
-	ids, err := readIDsTxt(idsFile)
-	if err != nil {
-		return nil, err
-	}
 	return &indexedInfo{
 		dumps:   dumps,
 		summary: summary,
-		ids:     ids,
 	}, nil
-}
-
-func mergeInfo(ctx context.Context, info *indexedInfo) ([]ProfileEntry, error) {
-	entries := []ProfileEntry{}
-
-	for _, sink := range info.summary[llvmProfileSinkType] {
-		dump, ok := info.dumps[sink.Name]
-		if !ok {
-			logger.Warningf(ctx, "%s not found in summary file\n", sink.Name)
-			continue
-		}
-
-		// This is going to go in a covDataEntry as the list of paths to the modules for the data
-		moduleFiles := []string{}
-		for _, mod := range dump.Modules {
-			if ref, ok := info.ids[mod.Build]; ok {
-				moduleFiles = append(moduleFiles, ref.Filepath)
-			} else {
-				logger.Warningf(ctx, "module with build id %s not found in ids.txt file\n", mod.Build)
-				continue
-			}
-		}
-
-		// Finally we can add all the data
-		entries = append(entries, ProfileEntry{
-			ModuleFiles: moduleFiles,
-			ProfileData: sink.File,
-		})
-	}
-
-	return entries, nil
 }
 
 type Action struct {
@@ -242,7 +203,7 @@ func isInstrumented(filepath string) bool {
 	return true
 }
 
-func process(ctx context.Context) error {
+func process(ctx context.Context, repo symbolize.Repository) error {
 	// Make the output directory
 	err := os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
@@ -250,13 +211,13 @@ func process(ctx context.Context) error {
 	}
 
 	// Read in all the data
-	info, err := readInfo(symbolizeDumpFile, summaryFile, idsFile)
+	info, err := readInfo(symbolizeDumpFile, summaryFile)
 	if err != nil {
 		return fmt.Errorf("parsing info: %v", err)
 	}
 
 	// Merge all the information
-	entries, err := mergeInfo(ctx, info)
+	entries, err := covargs.MergeProfiles(ctx, info.dumps, info.summary, repo)
 	if err != nil {
 		return fmt.Errorf("merging info: %v", err)
 	}
@@ -356,7 +317,33 @@ func main() {
 	log := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "")
 	ctx := logger.WithLogger(context.Background(), log)
 
-	if err := process(ctx); err != nil {
+	var repo symbolize.CompositeRepo
+	for _, dir := range buildIDDirPaths {
+		repo.AddRepo(symbolize.NewBuildIDRepo(dir))
+	}
+	for _, idsPath := range idsPaths {
+		repo.AddRepo(symbolize.NewIDsTxtRepo(idsPath, false))
+	}
+	var fileCache *cache.FileCache
+	if len(symbolServers) > 0 {
+		if symbolCache == "" {
+			log.Fatalf("-symbol-cache must be set if a symbol server is used")
+		}
+		var err error
+		if fileCache, err = cache.GetFileCache(symbolCache, symbolCacheSize); err != nil {
+			log.Fatalf("%v\n", err)
+		}
+	}
+	for _, symbolServer := range symbolServers {
+		cloudRepo, err := symbolize.NewCloudRepo(ctx, symbolServer, fileCache)
+		if err != nil {
+			log.Fatalf("%v\n", err)
+		}
+		cloudRepo.SetTimeout(cloudFetchTimeout)
+		repo.AddRepo(cloudRepo)
+	}
+
+	if err := process(ctx, &repo); err != nil {
 		log.Errorf("%v\n", err)
 		os.Exit(1)
 	}

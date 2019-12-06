@@ -38,7 +38,7 @@ func (m mockSource) GetBuildObject(buildID string) (FileCloser, error) {
 			if err := file.Verify(); err != nil {
 				return nil, err
 			}
-			return dummyFileCloser(file.Filepath), nil
+			return NopFileCloser(file.Filepath), nil
 		}
 	}
 	return nil, fmt.Errorf("could not find file associated with %s", buildID)

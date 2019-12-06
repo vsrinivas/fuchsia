@@ -22,6 +22,7 @@ group("tests") {
   deps = [
     "//tools/debug/bloaty:bloaty_tests",
     "//tools/debug/breakpad:breakpad_tests",
+    "//tools/debug/covargs:covargs_tests",
     "//tools/debug/dump_breakpad_symbols:dump_breakpad_symbols_tests",
     "//tools/debug/elflib:tools_debug_elflib_tests",
     "//tools/debug/symbolize:symbolize_tests",
