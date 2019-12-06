@@ -44,11 +44,13 @@ core_tests = [
   "vmo",
 ]
 
-# These tests need get_root_resource(), which is only available in the
-# unified core-tests binary.
+# These tests need to run in the unified core-tests binary because
+# they either call get_root_resource() or they need to run in a job
+# tree without any exception handler.
 unified_only = [
   "bad-syscall",
   "bti",
+  "default-exception-handler",  # needs job tree w/o exception handler.
   "debug:unified-only",
   "interrupt",
   "profile",
@@ -86,9 +88,10 @@ foreach(test_name, core_tests) {
   }
 }
 
-# Now build all of those (and more) together into the standalone core-tests
-# binary.  This can and must be run directly from userboot because it
-# requires the root resource handle but no system services whatsoever.
+# Now build all of those (and more) together into the core-tests
+# binary.  This can and must be run directly from userboot because
+# some of the tests require the root resource handle or no system
+# services whatsoever.
 zx_test("standalone") {
   test_group = "core"
   deps = core_tests + unified_only

@@ -402,6 +402,12 @@ extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe) {
 }
 
 void arch_dump_exception_context(const arch_exception_context_t* context) {
+  // If we don't have a frame, there's nothing more we can print.
+  if (context->frame == nullptr) {
+    printf("no frame to dump\n");
+    return;
+  }
+
   uint32_t ec = BITS_SHIFT(context->esr, 31, 26);
   uint32_t iss = BITS(context->esr, 24, 0);
 

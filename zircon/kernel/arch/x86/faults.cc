@@ -501,6 +501,12 @@ void arch_iframe_process_pending_signals(iframe_t* iframe) {
 }
 
 void arch_dump_exception_context(const arch_exception_context_t* context) {
+  // If we don't have a frame, there's nothing more we can print.
+  if (context->frame == nullptr) {
+    printf("no frame to dump\n");
+    return;
+  }
+
   if (context->is_page_fault) {
     x86_dump_pfe(context->frame, context->cr2);
   }
