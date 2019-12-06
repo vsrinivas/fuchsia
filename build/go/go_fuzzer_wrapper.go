@@ -17,7 +17,9 @@ import (
 //export LLVMFuzzerTestOneInput
 func LLVMFuzzerTestOneInput(data *C.uint8_t, size C.size_t) C.int {
 	s := make([]byte, size)
-	copy(s, (*[1 << 30]byte)(unsafe.Pointer(data))[:size:size])
+	if size != 0 {
+		copy(s, (*[1 << 30]byte)(unsafe.Pointer(data))[:size:size])
+	}
 
 	target.Fuzz(s)
 	return 0
