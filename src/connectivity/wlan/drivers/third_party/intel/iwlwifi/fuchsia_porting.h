@@ -206,13 +206,13 @@ static inline int test_bit(int nbits, const volatile unsigned long* addr) {
 }
 
 static inline bool test_and_set_bit(long bit, volatile unsigned long* addr) {
-  unsigned long mask = 1ul << bit;
-  return mask & __atomic_fetch_or(addr, mask, __ATOMIC_SEQ_CST);
+  unsigned long mask = 1ul << (bit % BITS_PER_LONG);
+  return mask & __atomic_fetch_or(&addr[bit / BITS_PER_LONG], mask, __ATOMIC_SEQ_CST);
 }
 
 static inline bool test_and_clear_bit(long bit, volatile unsigned long* addr) {
-  unsigned long mask = 1ul << bit;
-  return mask & __atomic_fetch_and(addr, ~mask, __ATOMIC_SEQ_CST);
+  unsigned long mask = 1ul << (bit % BITS_PER_LONG);
+  return mask & __atomic_fetch_and(&addr[bit / BITS_PER_LONG], ~mask, __ATOMIC_SEQ_CST);
 }
 
 static inline void set_bit(long bit, unsigned long* addr) { test_and_set_bit(bit, addr); }
@@ -222,7 +222,9 @@ static inline void clear_bit(long bit, volatile unsigned long* addr) {
 }
 
 // This is the non-atomic version of set_bit.
-static inline void __set_bit(long bit, unsigned long* addr) { *addr |= 1ul << bit; }
+static inline void __set_bit(long bit, unsigned long* addr) {
+  addr[bit / BITS_PER_LONG] |= 1ul << (bit % BITS_PER_LONG);
+}
 
 static inline int atomic_read(const atomic_t* atomic) {
   return __atomic_load_n(&atomic->value, __ATOMIC_RELAXED);

@@ -68,6 +68,18 @@ executable("dummy_test") {
   deps = testing_deps
 }
 
+executable("fuchsia_porting_test") {
+  output_name = "fuchsia_porting_test"
+  testonly = true
+
+  sources = [
+    "fuchsia_porting_test.cc",
+  ]
+
+  defines = testing_defines
+  deps = testing_deps
+}
+
 executable("iwl-phy-db_test") {
   output_name = "iwl-phy-db_test"
   testonly = true
@@ -178,6 +190,7 @@ unittest_package("iwlwifi_test") {
 
   deps = [
     ":dummy_test",
+    ":fuchsia_porting_test",
     ":iwl-phy-db_test",
     ":mvm_test",
     ":notif-wait_test",
@@ -191,6 +204,10 @@ unittest_package("iwlwifi_test") {
   tests = [
     {
       name = "dummy_test"
+      environments = basic_envs
+    },
+    {
+      name = "fuchsia_porting_test"
       environments = basic_envs
     },
     {
