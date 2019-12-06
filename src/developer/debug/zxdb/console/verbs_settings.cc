@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+#include "src/developer/debug/zxdb/client/execution_scope.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -17,6 +18,7 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_settings.h"
+#include "src/developer/debug/zxdb/console/nouns.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -263,7 +265,7 @@ Err SettingToOutput(ConsoleContext* console_context, const Command& cmd, const s
     return err;
 
   if (!setting_context.setting.value.is_null()) {
-    *out = FormatSetting(setting_context.setting);
+    *out = FormatSetting(console_context, setting_context.setting);
     return Err();
   }
 
@@ -273,27 +275,27 @@ Err SettingToOutput(ConsoleContext* console_context, const Command& cmd, const s
 Err CompleteSettingsToOutput(const Command& cmd, ConsoleContext* context, OutputBuffer* out) {
   // Output in the following order: System -> Job -> Target -> Thread
   out->Append(OutputBuffer(Syntax::kHeading, "Global\n"));
-  out->Append(FormatSettingStore(context->session()->system().settings()));
+  out->Append(FormatSettingStore(context, context->session()->system().settings()));
   out->Append("\n");
 
   if (JobContext* job = cmd.job_context(); job && !job->settings().schema()->empty()) {
     auto title = fxl::StringPrintf("Job %d\n", context->IdForJobContext(job));
     out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
-    out->Append(FormatSettingStore(job->settings()));
+    out->Append(FormatSettingStore(context, job->settings()));
     out->Append("\n");
   }
 
   if (Target* target = cmd.target(); target && !target->settings().schema()->empty()) {
     auto title = fxl::StringPrintf("Process %d\n", context->IdForTarget(target));
     out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
-    out->Append(FormatSettingStore(target->settings()));
+    out->Append(FormatSettingStore(context, target->settings()));
     out->Append("\n");
   }
 
   if (Thread* thread = cmd.thread(); thread && !thread->settings().schema()->empty()) {
     auto title = fxl::StringPrintf("Thread %d\n", context->IdForThread(thread));
     out->Append(OutputBuffer(Syntax::kHeading, std::move(title)));
-    out->Append(FormatSettingStore(thread->settings()));
+    out->Append(FormatSettingStore(context, thread->settings()));
     out->Append("\n");
   }
 
@@ -468,17 +470,26 @@ Err SetList(const SettingContext& setting_context, const std::vector<std::string
   return Err();
 }
 
+Err SetExecutionScope(ConsoleContext* console_context, const SettingContext& setting_context,
+                      const std::string& scope_str, SettingStore* store) {
+  ErrOr<ExecutionScope> scope_or = ParseExecutionScope(console_context, scope_str);
+  if (scope_or.has_error())
+    return scope_or.err();
+
+  return store->SetExecutionScope(setting_context.setting.info.name, scope_or.value());
+}
+
 // Will run the sets against the correct SettingStore:
 // |setting_context| represents the required context needed to reason about the command.
 // for user feedback.
 // |out| is the resultant setting, which is used for user feedback.
-Err SetSetting(const SettingContext& setting_context, const std::vector<std::string>& values,
-               SettingStore* store, Setting* out) {
+Err SetSetting(ConsoleContext* console_context, const SettingContext& setting_context,
+               const std::vector<std::string>& values, SettingStore* store, Setting* out) {
   Err err;
   if (setting_context.op != ParsedSetCommand::kAssign && !setting_context.setting.value.is_list())
     return Err("Appending/removing only works for list options.");
 
-  switch (setting_context.setting.value.type) {
+  switch (setting_context.setting.value.type()) {
     case SettingType::kBoolean:
       err = SetBool(store, setting_context.setting.info.name, values[0]);
       break;
@@ -490,6 +501,9 @@ Err SetSetting(const SettingContext& setting_context, const std::vector<std::str
       break;
     case SettingType::kList:
       err = SetList(setting_context, values, store);
+      break;
+    case SettingType::kExecutionScope:
+      err = SetExecutionScope(console_context, setting_context, values[0], store);
       break;
     case SettingType::kNull:
       return Err("Unknown type for setting %s. Please file a bug with repro.",
@@ -536,7 +550,7 @@ OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
       FXL_NOTREACHED() << "Should not receive a default setting.";
   }
 
-  out.Append(FormatSettingShort(setting));
+  out.Append(FormatSettingShort(console_context, setting));
   return out;
 }
 
@@ -566,7 +580,8 @@ Err DoSet(ConsoleContext* console_context, const Command& cmd) {
   }
 
   Setting out_setting;  // Used for showing the new value.
-  err = SetSetting(setting_context, parsed.value().values, setting_context.store, &out_setting);
+  err = SetSetting(console_context, setting_context, parsed.value().values, setting_context.store,
+                   &out_setting);
   if (!err.ok())
     return err;
 
@@ -664,6 +679,36 @@ ErrOr<ParsedSetCommand> ParseSetCommand(const std::string& input) {
   for (const auto& token : value_tokens)
     result.values.push_back(std::move(token.str));
   return result;
+}
+
+ErrOr<ExecutionScope> ParseExecutionScope(ConsoleContext* console_context,
+                                          const std::string& input) {
+  // Use the command parser to get the scope.
+  Command parsed;
+  if (Err err = ParseCommand(input, &parsed); err.has_error())
+    return err;
+
+  const char kScopeHelp[] =
+      "Scope not valid, expecting \"global\", \"process\", or \"thread\" only.";
+
+  // We accept the "global", "process", and "thread" nouns, and no verbs or switches.
+  if (parsed.verb() != Verb::kNone)
+    return Err(kScopeHelp);
+  if (parsed.ValidateNouns({Noun::kGlobal, Noun::kProcess, Noun::kThread}).has_error())
+    return Err(kScopeHelp);
+  if (!parsed.args().empty())
+    return Err(kScopeHelp);
+
+  // Convert the nouns to objects.
+  if (Err err = console_context->FillOutCommand(&parsed); err.has_error())
+    return err;
+
+  // Valid, convert to scope based on what nouns were specified.
+  if (parsed.HasNoun(Noun::kThread))
+    return ExecutionScope(parsed.thread());
+  if (parsed.HasNoun(Noun::kProcess))
+    return ExecutionScope(parsed.target());
+  return ExecutionScope();
 }
 
 void AppendSettingsVerbs(std::map<Verb, VerbRecord>* verbs) {

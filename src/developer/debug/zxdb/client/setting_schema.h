@@ -33,14 +33,16 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
   const SchemaSetting& GetSetting(const std::string& name) const;
   const std::map<std::string, SchemaSetting>& settings() const { return settings_; }
 
-  // Create new items for settings that only belong to this schema. For inter-schema options, the
-  // easier way is to create the Setting separately and then insert it to each schema with
-  // AddSetting.
+  // Create new items for simple settings that only belong to this schema. For inter-schema options
+  // or for the more complex schema types, create the Setting separately and then insert it to each
+  // schema with AddSetting().
   //
   // For the String variant, it can take a list of valid options which new values must match to
   // validate against. This is done as a case-sensitive comparison.
   void AddBool(std::string name, std::string description, bool value = false);
   void AddInt(std::string name, std::string description, int value = 0);
+  void AddExecutionScope(std::string name, std::string description,
+                         const ExecutionScope value = ExecutionScope());
   void AddString(std::string name, std::string description, std::string value = {},
                  std::vector<std::string> valid_options = {});
 

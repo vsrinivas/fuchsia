@@ -6,9 +6,11 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/zxdb/client/execution_scope.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
+#include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/mock_console.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
@@ -79,7 +81,8 @@ TEST(VerbsSettings, ParseSetCommand) {
   // Missing value.
   result = ParseSetCommand("foo");
   ASSERT_TRUE(result.has_error());
-  EXPECT_EQ("Expecting a value to set. Use \"set setting-name setting-value\".", result.err().msg());
+  EXPECT_EQ("Expecting a value to set. Use \"set setting-name setting-value\".",
+            result.err().msg());
 
   // Regular two-argument form.
   result = ParseSetCommand("foo bar");
@@ -193,6 +196,56 @@ TEST_F(VerbsSettingsTest, GetSet) {
       "• gldir four",
       ExtractValuesFromGet(DoInput("global get build-dirs")));
   EXPECT_EQ("• prdir", ExtractValuesFromGet(DoInput("get build-dirs")));
+}
+
+TEST_F(VerbsSettingsTest, ParseExecutionScope) {
+  ConsoleContext context(&session());
+
+  // Inject one running process and thread.
+  constexpr int kProcessKoid = 1234;
+  InjectProcess(kProcessKoid);
+  InjectThread(kProcessKoid, 5678);
+
+  // Random input.
+  ErrOr<ExecutionScope> result = ParseExecutionScope(&context, "something invalid");
+  EXPECT_TRUE(result.has_error());
+
+  // Valid nouns but not the right ones.
+  result = ParseExecutionScope(&context, "breakpoint 3");
+  EXPECT_TRUE(result.has_error());
+
+  // Verb (not valid).
+  result = ParseExecutionScope(&context, "process next");
+  EXPECT_TRUE(result.has_error());
+
+  // Valid global scope.
+  result = ParseExecutionScope(&context, "global");
+  EXPECT_TRUE(result.ok());
+  EXPECT_EQ(ExecutionScope::kSystem, result.value().type());
+
+  // Valid process scope.
+  result = ParseExecutionScope(&context, "process");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(ExecutionScope::kTarget, result.value().type());
+  result = ParseExecutionScope(&context, "process 1");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(ExecutionScope::kTarget, result.value().type());
+
+  // Invalid process scope (there's only one).
+  result = ParseExecutionScope(&context, "process 2");
+  EXPECT_TRUE(result.has_error());
+
+  // Valid thread scope.
+  result = ParseExecutionScope(&context, "thread");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(ExecutionScope::kThread, result.value().type());
+  result = ParseExecutionScope(&context, "process 1 thread 1");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(ExecutionScope::kThread, result.value().type());
+
+  // Invalid process scope (there's only one).
+  result = ParseExecutionScope(&context, "thread 2");
+  EXPECT_TRUE(result.has_error());
 }
 
 }  // namespace zxdb

@@ -35,6 +35,12 @@ void SettingSchema::AddInt(std::string name, std::string description, int v) {
   AddSetting(std::move(name), {std::move(info), SettingValue(v)});
 }
 
+void SettingSchema::AddExecutionScope(std::string name, std::string description,
+                                      const ExecutionScope v) {
+  SettingInfo info{name, std::move(description)};
+  AddSetting(std::move(name), {std::move(info), SettingValue(v)});
+}
+
 void SettingSchema::AddString(std::string name, std::string description, std::string v,
                               std::vector<std::string> valid_options) {
   SettingInfo info{name, std::move(description)};
@@ -69,9 +75,10 @@ Err SettingSchema::ValidateSetting(const std::string& key, const SettingValue& v
     return Err("Setting \"%s\" not found in the given context.", key.data());
 
   auto& setting = it->second;
-  if (setting.setting.value.type != value.type) {
+  if (setting.setting.value.type() != value.type()) {
     return Err("Setting \"%s\" expects a different type (expected: %s, given: %s).", key.data(),
-               SettingTypeToString(value.type), SettingTypeToString(setting.setting.value.type));
+               SettingTypeToString(value.type()),
+               SettingTypeToString(setting.setting.value.type()));
   }
 
   if (!setting.options.empty()) {

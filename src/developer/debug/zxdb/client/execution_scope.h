@@ -5,8 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_EXECUTION_SCOPE_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_EXECUTION_SCOPE_H_
 
-#include "src/developer/debug/zxdb/client/target.h"
-#include "src/developer/debug/zxdb/client/thread.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 

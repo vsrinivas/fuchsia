@@ -22,6 +22,8 @@ const char* SettingTypeToString(SettingType type) {
       return "string";
     case SettingType::kList:
       return "list";
+    case SettingType::kExecutionScope:
+      return "scope";
     case SettingType::kNull:
       return "<null>";
   }
@@ -29,21 +31,25 @@ const char* SettingTypeToString(SettingType type) {
 
 SettingValue::SettingValue() = default;
 
-SettingValue::SettingValue(bool val) : type(SettingType::kBoolean), value(val) {}
+SettingValue::SettingValue(bool val) : type_(SettingType::kBoolean), value_(val) {}
 
-SettingValue::SettingValue(int val) : type(SettingType::kInteger), value(val) {}
+SettingValue::SettingValue(int val) : type_(SettingType::kInteger), value_(val) {}
 
-SettingValue::SettingValue(const char* val) : type(SettingType::kString), value(std::string(val)) {}
+SettingValue::SettingValue(const char* val)
+    : type_(SettingType::kString), value_(std::string(val)) {}
 
-SettingValue::SettingValue(std::string val) : type(SettingType::kString), value(val) {}
+SettingValue::SettingValue(std::string val) : type_(SettingType::kString), value_(val) {}
 
 SettingValue::SettingValue(std::vector<std::string> val)
-    : type(SettingType::kList), value(std::move(val)) {}
+    : type_(SettingType::kList), value_(std::move(val)) {}
+
+SettingValue::SettingValue(ExecutionScope scope)
+    : type_(SettingType::kExecutionScope), value_(scope) {}
 
 std::string SettingValue::ToDebugString() const {
   std::stringstream ss;
-  ss << "[" << SettingTypeToString(type) << "]: ";
-  switch (type) {
+  ss << "[" << SettingTypeToString(type_) << "]: ";
+  switch (type_) {
     case SettingType::kNull:
       return "<null>";
     case SettingType::kBoolean:
@@ -54,7 +60,10 @@ std::string SettingValue::ToDebugString() const {
       break;
     case SettingType::kString:
       return get_string();
-      break;
+    case SettingType::kExecutionScope:
+      // Scope formatting depends on the frontend. Currently we don't have a client-agnostic
+      // formatting for this.
+      return "<execution scope>";
     case SettingType::kList:
       for (auto& v : get_list()) {
         ss << v << ", ";

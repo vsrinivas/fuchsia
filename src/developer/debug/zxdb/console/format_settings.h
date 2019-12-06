@@ -13,16 +13,17 @@
 namespace zxdb {
 
 class Command;
+class ConsoleContext;
 class Err;
 class OutputBuffer;
 
-OutputBuffer FormatSettingStore(const SettingStore& store);
+OutputBuffer FormatSettingStore(ConsoleContext* context, const SettingStore& store);
 
 // Outputs the detailed information about a particular setting.
-OutputBuffer FormatSetting(const Setting&);
+OutputBuffer FormatSetting(ConsoleContext* context, const Setting&);
 
 // Formats the setting to just show <name>:<value>.
-OutputBuffer FormatSettingShort(const Setting&);
+OutputBuffer FormatSettingShort(ConsoleContext* context, const Setting&);
 
 }  // namespace zxdb
 

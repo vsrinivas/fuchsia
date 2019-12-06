@@ -5,6 +5,8 @@
 #include "src/developer/debug/zxdb/client/execution_scope.h"
 
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/client/thread.h"
 
 namespace zxdb {
 

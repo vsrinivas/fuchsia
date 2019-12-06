@@ -51,6 +51,12 @@ std::string SettingStore::GetString(const std::string& key) const {
   return value.get_string();
 }
 
+const ExecutionScope& SettingStore::GetExecutionScope(const std::string& key) const {
+  auto value = GetValue(key);
+  FXL_DCHECK(value.is_execution_scope());
+  return value.get_execution_scope();
+}
+
 std::vector<std::string> SettingStore::GetList(const std::string& key) const {
   auto value = GetValue(key);
   FXL_DCHECK(value.is_list());
@@ -97,6 +103,10 @@ Err SettingStore::SetString(const std::string& key, std::string val) {
   return SetSetting(key, std::move(val));
 }
 
+Err SettingStore::SetExecutionScope(const std::string& key, const ExecutionScope& scope) {
+  return SetSetting(key, scope);
+}
+
 Err SettingStore::SetList(const std::string& key, std::vector<std::string> list) {
   return SetSetting(key, std::move(list));
 }
@@ -105,8 +115,7 @@ template <typename T>
 Err SettingStore::SetSetting(const std::string& key, T t) {
   // Check if the setting is valid.
   SettingValue setting(t);
-  Err err = schema_->ValidateSetting(key, setting);
-  if (err.has_error())
+  if (Err err = schema_->ValidateSetting(key, setting); err.has_error())
     return err;
 
   // We can safely insert or override and notify observers.
