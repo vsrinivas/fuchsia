@@ -16,6 +16,9 @@ SCRIPTS_DIR = os.path.dirname(SCRIPT_DIR)
 FUCHSIA_ROOT = os.path.dirname(SCRIPTS_DIR)
 FX = os.path.join(SCRIPTS_DIR, 'fx')
 
+SCRIPT_LABEL = '//' + os.path.relpath(os.path.abspath(__file__),
+                                      start=FUCHSIA_ROOT)
+
 
 class Type(object):
     DRIVER = 'zx_driver'
@@ -189,7 +192,7 @@ def main():
     message = [
         '[unification] Move //zircon/system/' + args.binary + ' to the GN build',
         '',
-        'Generated with: //scripts/unification/move_zn_binary.py',
+        'Generated with: ' + SCRIPT_LABEL,
         '',
         'Bug: 36139'
     ]
