@@ -11,9 +11,10 @@ rustc_test("destruction_integration_test_bin") {
   edition = "2018"
   source_root = "integration_test.rs"
   deps = [
+    "//garnet/lib/rust/io_util",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//src/sys/component_manager:lib",
+    "//src/sys/component_manager/tests:breakpoint_system_client",
+    "//src/sys/component_manager/tests:test_utils",
     "//third_party/rust_crates:failure",
   ]
 }

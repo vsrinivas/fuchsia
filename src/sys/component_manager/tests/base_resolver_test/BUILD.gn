@@ -18,7 +18,6 @@ rustc_test("base_resolver_test_bin") {
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:test_utils",
-    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",
   ]
 }

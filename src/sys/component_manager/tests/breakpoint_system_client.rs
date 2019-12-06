@@ -9,7 +9,9 @@ use {
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync,
     fuchsia_component::client::*,
     futures::future::BoxFuture,
+    futures::lock::Mutex,
     futures::StreamExt,
+    std::sync::Arc,
 };
 
 /// A wrapper over the BreakpointSystem FIDL proxy.
@@ -43,6 +45,14 @@ impl BreakpointSystemClient {
             .await
             .context("could not register breakpoints")?;
         Ok(InvocationReceiverClient::new(proxy))
+    }
+
+    pub async fn soak_events(
+        &self,
+        event_types: Vec<fbreak::EventType>,
+    ) -> Result<EventSink, Error> {
+        let receiver = self.set_breakpoints(event_types).await?;
+        Ok(EventSink::soak_async(receiver))
     }
 
     pub async fn start_component_manager(&self) -> Result<(), Error> {
@@ -222,6 +232,66 @@ pub trait RoutingProtocol {
         // Send the client end of the CapabilityProvider protocol
         let proxy = self.protocol_proxy();
         Box::pin(async move { proxy.set_provider(client_end).await })
+    }
+}
+
+/// Describes an event drained out by the EventSink
+#[derive(Eq, PartialEq, PartialOrd, Ord, Debug)]
+pub struct DrainedEvent {
+    pub event_type: fbreak::EventType,
+    pub target_moniker: String,
+}
+
+/// Soaks events from an InvocationReceiverClient, allowing them to be
+/// drained at a later point in time.
+pub struct EventSink {
+    drained_events: Arc<Mutex<Vec<DrainedEvent>>>,
+}
+
+impl EventSink {
+    fn soak_async(receiver: InvocationReceiverClient) -> Self {
+        let drained_events = Arc::new(Mutex::new(vec![]));
+        {
+            // Start an async task that soaks up events from the receiver
+            let drained_events = drained_events.clone();
+            fasync::spawn(async move {
+                // TODO(xbhatnag): Terminate this infinite loop when EventSink is dropped.
+                // Or pass in a Weak and terminate if it can't be upgraded.
+                loop {
+                    // Get the next invocation from the receiver
+                    let inv = receiver
+                        .next()
+                        .await
+                        .expect("Failed to get next event from InvocationReceiver");
+
+                    // Construct the DrainedEvent from the Invocation
+                    let event_type =
+                        inv.event_type.expect("Failed to get event type from Invocation");
+                    let target_moniker = inv
+                        .target_moniker
+                        .as_ref()
+                        .expect("Failed to get target moniker from Invocation")
+                        .clone();
+                    let event = DrainedEvent { event_type, target_moniker };
+
+                    // Insert the event into the list
+                    {
+                        let mut drained_events = drained_events.lock().await;
+                        drained_events.push(event);
+                    }
+
+                    // Resume from the invocation
+                    inv.resume().await.expect("Could not resume from invocation");
+                }
+            });
+        }
+        Self { drained_events }
+    }
+
+    pub async fn drain(&self) -> Vec<DrainedEvent> {
+        // Lock and drain out all events from the vector
+        let mut drained_events = self.drained_events.lock().await;
+        drained_events.drain(..).collect()
     }
 }
 

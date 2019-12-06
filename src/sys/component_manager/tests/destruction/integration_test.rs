@@ -3,100 +3,95 @@
 // found in the LICENSE file.
 
 use {
-    component_manager_lib::{
-        builtin_environment::BuiltinEnvironment,
-        model::{
-            self,
-            hooks::*,
-            testing::breakpoints::*,
-            testing::test_hook::{Lifecycle, TestHook},
-            Binder, ComponentManagerConfig,
-        },
-        startup,
-    },
-    failure::{Error, ResultExt},
-    fuchsia_async as fasync, fuchsia_syslog as syslog,
+    breakpoint_system_client::*,
+    failure::Error,
+    fuchsia_async as fasync,
+    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
+    test_utils::*,
 };
 
-// TODO: This is a white box test so that we can use hooks. Really this should be a black box test,
-// but we need to implement stopping and/or external hooks for that to be possible.
+/// Drains the required number of events, sorts them and compares them
+/// to the expected events
+fn expect_next(events: &mut Vec<DrainedEvent>, expected: Vec<DrainedEvent>) {
+    let num_events: usize = expected.len();
+    let mut next: Vec<DrainedEvent> = events.drain(0..num_events).collect();
+    next.sort_unstable();
+    assert_eq!(next, expected);
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn destruction() -> Result<(), Error> {
-    syslog::init_with_tags(&[]).context("could not initialize logging")?;
+    let test = BlackBoxTest::default(
+        "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/collection_realm.cm",
+    )
+    .await?;
 
-    // Set up model and hooks.
-    let root_component_url =
-        "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/collection_realm.cm"
-            .to_string();
-    let args = startup::Arguments {
-        use_builtin_process_launcher: false,
-        use_builtin_vmex: false,
-        root_component_url,
-        debug: false,
-    };
-    let model = startup::model_setup(&args).await?;
-    let _builtin_environment =
-        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await;
-    let test_hook = TestHook::new();
-
-    let breakpoint_system = BreakpointSystem::new();
-    let breakpoint_receiver =
-        breakpoint_system.register(vec![EventType::PostDestroyInstance]).await;
-
-    model.root_realm.hooks.install(test_hook.hooks()).await;
-    model.root_realm.hooks.install(breakpoint_system.hooks()).await;
-
-    let root_moniker = model::AbsoluteMoniker::root();
-    model.bind(&root_moniker).await?;
+    let sink = test
+        .breakpoint_system
+        .soak_events(vec![StopInstance::TYPE, PostDestroyInstance::TYPE])
+        .await?;
+    let receiver = test.breakpoint_system.set_breakpoints(vec![PostDestroyInstance::TYPE]).await?;
+    test.breakpoint_system.start_component_manager().await?;
 
     // Wait for `coll:root` to be destroyed.
-    let invocation = breakpoint_receiver
-        .wait_until(EventType::PostDestroyInstance, vec!["coll:root:1"].into())
-        .await;
+    let invocation = receiver.wait_until_exact::<PostDestroyInstance>("/coll:root:1").await?;
 
     // Assert that root component has no children.
-    let children: Vec<_> = model
-        .root_realm
-        .lock_state()
-        .await
-        .as_ref()
-        .expect("not resolved")
-        .all_child_realms()
-        .keys()
-        .map(|m| m.clone())
-        .collect();
-    assert!(children.is_empty());
+    let child_dir_path = test.hub_v2_path.join("children");
+    let child_dir_path = child_dir_path.to_str().expect("invalid chars");
+    let child_dir = open_directory_in_namespace(child_dir_path, OPEN_RIGHT_READABLE)?;
+    let child_dir_contents = list_directory(&child_dir).await?;
+    assert!(child_dir_contents.is_empty());
 
     // Assert the expected lifecycle events. The leaves can be stopped/destroyed in either order.
-    let mut events: Vec<_> = test_hook
-        .lifecycle()
-        .into_iter()
-        .filter_map(|e| match e {
-            Lifecycle::Stop(_) | Lifecycle::Destroy(_) => Some(e),
-            _ => None,
-        })
-        .collect();
+    let mut events = sink.drain().await;
 
-    let mut next: Vec<_> = events.drain(0..2).collect();
-    next.sort_unstable();
-    let expected: Vec<_> = vec![
-        Lifecycle::Stop(vec!["coll:root:1", "trigger_a:0"].into()),
-        Lifecycle::Stop(vec!["coll:root:1", "trigger_b:0"].into()),
-    ];
-    assert_eq!(next, expected);
-    let next: Vec<_> = events.drain(0..1).collect();
-    assert_eq!(next, vec![Lifecycle::Stop(vec!["coll:root:1"].into())]);
+    expect_next(
+        &mut events,
+        vec![
+            DrainedEvent {
+                event_type: StopInstance::TYPE,
+                target_moniker: "/coll:root:1/trigger_a:0".to_string(),
+            },
+            DrainedEvent {
+                event_type: StopInstance::TYPE,
+                target_moniker: "/coll:root:1/trigger_b:0".to_string(),
+            },
+        ],
+    );
 
-    let mut next: Vec<_> = events.drain(0..2).collect();
-    next.sort_unstable();
-    let expected: Vec<_> = vec![
-        Lifecycle::Destroy(vec!["coll:root:1", "trigger_a:0"].into()),
-        Lifecycle::Destroy(vec!["coll:root:1", "trigger_b:0"].into()),
-    ];
-    assert_eq!(next, expected);
-    assert_eq!(events, vec![Lifecycle::Destroy(vec!["coll:root:1"].into())]);
+    expect_next(
+        &mut events,
+        vec![DrainedEvent {
+            event_type: StopInstance::TYPE,
+            target_moniker: "/coll:root:1".to_string(),
+        }],
+    );
 
-    invocation.resume();
+    expect_next(
+        &mut events,
+        vec![
+            DrainedEvent {
+                event_type: PostDestroyInstance::TYPE,
+                target_moniker: "/coll:root:1/trigger_a:0".to_string(),
+            },
+            DrainedEvent {
+                event_type: PostDestroyInstance::TYPE,
+                target_moniker: "/coll:root:1/trigger_b:0".to_string(),
+            },
+        ],
+    );
+
+    expect_next(
+        &mut events,
+        vec![DrainedEvent {
+            event_type: PostDestroyInstance::TYPE,
+            target_moniker: "/coll:root:1".to_string(),
+        }],
+    );
+
+    assert!(events.is_empty());
+    invocation.resume().await?;
 
     Ok(())
 }
