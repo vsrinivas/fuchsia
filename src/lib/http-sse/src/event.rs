@@ -48,6 +48,14 @@ impl Event {
         Ok(())
     }
 
+    /// Serialize the `Event` to bytes suitable for writing to an http sse stream.
+    pub fn to_vec(&self) -> Vec<u8> {
+        let mut ret = vec![];
+        // to_writer only errors if the Writer errors, and write for Vec does not error
+        self.to_writer(&mut ret).unwrap();
+        ret
+    }
+
     pub fn event_type(&self) -> &str {
         &self.event_type
     }
@@ -62,7 +70,7 @@ pub enum EventError {
     #[fail(display = "event type cannot contain carriage returns")]
     TypeHasCarriageReturn,
 
-    #[fail(display = "event type cannot contain carriage returns")]
+    #[fail(display = "event type cannot contain newlines")]
     TypeHasNewline,
 
     #[fail(display = "event data cannot be empty")]

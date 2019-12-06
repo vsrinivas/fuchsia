@@ -1,5 +1,20 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.posix.socket.Provider"
+            ]
+        }
+    },
     "program": {
         "binary": "test/http-sse-lib-test"
+    },
+    "sandbox": {
+        "features": [
+            "root-ssl-certificates"
+        ],
+        "services": [
+            "fuchsia.posix.socket.Provider"
+        ]
     }
 }
