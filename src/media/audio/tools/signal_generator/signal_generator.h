@@ -32,6 +32,7 @@ class MediaApp {
   void set_int24_format(bool use_int24) { use_int24_ = use_int24; }
 
   void set_output_type(OutputSignalType output_type) { output_signal_type_ = output_type; }
+  void set_usage(fuchsia::media::AudioRenderUsage usage) { usage_ = usage; }
   void set_frequency(double frequency) { frequency_ = frequency; }
   void set_amplitude(float amplitude) { amplitude_ = amplitude; }
 
@@ -121,6 +122,8 @@ class MediaApp {
   bool use_int24_ = false;
   uint32_t sample_size_;
   uint32_t frame_size_;
+
+  fuchsia::media::AudioRenderUsage usage_ = fuchsia::media::AudioRenderUsage::MEDIA;
 
   OutputSignalType output_signal_type_;
 

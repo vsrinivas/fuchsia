@@ -61,6 +61,18 @@ constexpr char kSystemMuteDefault[] = "1";
 constexpr char kDeviceSettingsSwitch[] = "settings";
 constexpr char kDeviceSettingsDefault[] = "0";
 
+constexpr char kRenderUsageSwitch[] = "usage";
+constexpr char kRenderUsageDefault[] = "MEDIA";
+constexpr std::array<std::pair<const char*, fuchsia::media::AudioRenderUsage>,
+                     fuchsia::media::RENDER_USAGE_COUNT>
+    kRenderUsageOptions = {{
+        {"BACKGROUND", fuchsia::media::AudioRenderUsage::BACKGROUND},
+        {"MEDIA", fuchsia::media::AudioRenderUsage::MEDIA},
+        {"INTERRUPTION", fuchsia::media::AudioRenderUsage::INTERRUPTION},
+        {"SYSTEM_AGENT", fuchsia::media::AudioRenderUsage::SYSTEM_AGENT},
+        {"COMMUNICATION", fuchsia::media::AudioRenderUsage::COMMUNICATION},
+    }};
+
 constexpr char kHelpSwitch[] = "help";
 }  // namespace
 
@@ -70,13 +82,23 @@ void usage(const char* prog_name) {
 
   printf("\nAdditional optional settings include:\n");
 
-  printf("\n\t  By default, set stream format to %s-channel float32 at %s Hz\n",
-         kNumChannelsDefault, kFrameRateDefaultHz);
+  printf("\n\t  By default, set stream format to %s-channel float32 at %s Hz with a %s usage\n",
+         kNumChannelsDefault, kFrameRateDefaultHz, kRenderUsageDefault);
   printf("\t--%s=<NUM_CHANS>\tSpecify number of channels\n", kNumChannelsSwitch);
   printf("\t--%s\t\t\tUse 16-bit integer samples\n", kInt16FormatSwitch);
   printf("\t--%s\t\t\tUse 24-in-32-bit integer samples (left-justified 'padded-24')\n",
          kInt24FormatSwitch);
   printf("\t--%s=<FRAME_RATE>\tSet frame rate in Hz\n", kFrameRateSwitch);
+  printf("\t--%s=<RENDER_USAGE>\tSet stream render usage. RENDER_USAGE must be one of:\n\t\t",
+         kRenderUsageSwitch);
+  for (auto it = kRenderUsageOptions.cbegin(); it != kRenderUsageOptions.cend(); ++it) {
+    printf("%s", it->first);
+    if (it + 1 != kRenderUsageOptions.cend()) {
+      printf(", ");
+    } else {
+      printf("\n");
+    }
+  }
 
   printf("\n\t  By default, signal is a %s Hz sine wave\n", kFrequencyDefaultHz);
   printf("\t--%s[=<FREQ>]  \tPlay sine wave at given frequency (Hz)\n", kSineWaveSwitch);
@@ -178,6 +200,21 @@ int main(int argc, const char** argv) {
 
   if (command_line.HasOption(kInt24FormatSwitch)) {
     media_app.set_int24_format(true);
+  }
+
+  if (command_line.HasOption(kRenderUsageSwitch)) {
+    std::string usage_option;
+    command_line.GetOptionValue(kRenderUsageSwitch, &usage_option);
+    auto it = std::find_if(kRenderUsageOptions.cbegin(), kRenderUsageOptions.cend(),
+                           [&usage_option](auto usage_string_and_usage) {
+                             return usage_option == usage_string_and_usage.first;
+                           });
+    if (it == kRenderUsageOptions.cend()) {
+      printf("Unrecognized AudioRenderUsage %s\n\n", usage_option.c_str());
+      usage(argv[0]);
+      return 0;
+    }
+    media_app.set_usage(it->second);
   }
 
   // Handle signal type and frequency specifications.

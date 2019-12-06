@@ -274,6 +274,8 @@ void MediaApp::SetStreamType() {
     audio_renderer_->SetPtsContinuityThreshold(pts_continuity_threshold_secs_);
   }
 
+  audio_renderer_->SetUsage(usage_);
+
   audio_renderer_->SetPcmStreamType(format);
 
   // Set stream gain and mute, if specified.
