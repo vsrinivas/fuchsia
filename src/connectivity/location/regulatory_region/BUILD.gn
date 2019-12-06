@@ -16,7 +16,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
-    "//sdk/fidl/fuchsia.location:fuchsia.location.namedplace-rustc",
+    "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
   ]

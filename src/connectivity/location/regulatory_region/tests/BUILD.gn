@@ -13,7 +13,7 @@ rustc_test("test") {
   deps = [
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
-    "//sdk/fidl/fuchsia.location:fuchsia.location.namedplace-rustc",
+    "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
   ]
