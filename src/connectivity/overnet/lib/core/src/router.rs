@@ -592,16 +592,6 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
         Ok(())
     }
 
-    /// Return true if there's a client oriented established connection to `dest`.
-    fn connected_to(&self, dest: NodeId) -> bool {
-        if let Some(peer_id) = self.node_to_client_peer.get(&dest) {
-            let peer = self.peers.get(*peer_id).unwrap();
-            peer.config.is_some()
-        } else {
-            false
-        }
-    }
-
     /// Create a new stream to advertised service `service` on remote node id `node`.
     fn new_stream(&mut self, node: NodeId, service: &str) -> Result<StreamId<LinkData>, Error> {
         assert_ne!(node, self.node_id);
@@ -1751,11 +1741,6 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         }
     }
 
-    /// New object with default options
-    pub fn new() -> Self {
-        Self::new_with_options(RouterOptions::new())
-    }
-
     /// Return the key for the SaltSlab representing streams
     pub fn shadow_streams<T>(&self) -> ShadowSlab<Stream<LinkData>, T> {
         self.endpoints.streams.shadow()
@@ -1843,11 +1828,6 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         self.endpoints.adjust_route(dest, link_id)
     }
 
-    /// Return true if there's a client oriented established connection to `dest`.
-    pub fn connected_to(&self, dest: NodeId) -> bool {
-        self.endpoints.connected_to(dest)
-    }
-
     /// Regenerate our description packet and send it to all peers.
     pub fn publish_node_description(&mut self, services: Vec<String>) -> Result<(), Error> {
         self.endpoints.publish_node_description(services)
@@ -1869,20 +1849,6 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                 peer.bytes_sent += bytes;
             },
         )
-    }
-
-    /// Send a datagram on a stream.
-    pub fn queue_send_bytes(
-        &mut self,
-        stream_id: StreamId<LinkData>,
-        framed: bool,
-        bytes: &mut [u8],
-        fin: bool,
-    ) -> Result<(), Error> {
-        self.endpoints.queue_send_bytes(stream_id, framed, bytes, fin, |peer, messages, bytes| {
-            peer.messages_sent += messages;
-            peer.bytes_sent += bytes;
-        })
     }
 
     /// Receive a packet from some link.
@@ -2387,7 +2353,7 @@ mod tests {
     #[test]
     fn no_op() {
         init();
-        Router::<u8, Instant>::new();
+        Router::<u8, Instant>::new_with_options(RouterOptions::new());
         assert_eq!(
             Router::<u8, Instant>::new_with_options(RouterOptions::new().set_node_id(1.into()))
                 .node_id
@@ -2401,6 +2367,19 @@ mod tests {
         router2: Router<u8, Instant>,
         link1: LinkId<u8>,
         link2: LinkId<u8>,
+    }
+
+    /// Return true if there's a client oriented established connection to `dest`.
+    fn connected_to<LinkData: Copy + Debug, Time: RouterTime>(
+        router: &Router<LinkData, Time>,
+        dest: NodeId,
+    ) -> bool {
+        if let Some(peer_id) = router.endpoints.node_to_client_peer.get(&dest) {
+            let peer = router.endpoints.peers.get(*peer_id).unwrap();
+            peer.config.is_some()
+        } else {
+            false
+        }
     }
 
     impl TwoNode {
@@ -2496,7 +2475,7 @@ mod tests {
         timeout_ms(
             || {
                 let mut env = TwoNode::new();
-                while !env.router1.connected_to(env.router2.node_id) {
+                while !connected_to(&env.router1, env.router2.node_id) {
                     env.step(|frame| match frame {
                         IncomingMessage::UpdateNode(_, _, _) => Ok(()),
                         _ => unimplemented!(),
@@ -2513,7 +2492,7 @@ mod tests {
         timeout_ms(
             || {
                 let mut env = TwoNode::new();
-                while !env.router1.connected_to(env.router2.node_id) {
+                while !connected_to(&env.router1, env.router2.node_id) {
                     env.step(|frame| match frame {
                         IncomingMessage::UpdateNode(_, _, _) => Ok(()),
                         _ => unimplemented!(),
@@ -2555,7 +2534,7 @@ mod tests {
         timeout_ms(
             || {
                 let mut env = TwoNode::new();
-                while !env.router1.connected_to(env.router2.node_id) {
+                while !connected_to(&env.router1, env.router2.node_id) {
                     env.step(|frame| match frame {
                         IncomingMessage::UpdateNode(_, _, _) => Ok(()),
                         _ => unimplemented!(),
@@ -2612,7 +2591,7 @@ mod tests {
         timeout_ms(
             || {
                 let mut env = TwoNode::new();
-                while !env.router1.connected_to(env.router2.node_id) {
+                while !connected_to(&env.router1, env.router2.node_id) {
                     env.step(|frame| match frame {
                         IncomingMessage::UpdateNode(_, _, _) => Ok(()),
                         _ => unimplemented!(),

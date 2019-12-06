@@ -18,8 +18,5 @@ mod stream_framer;
 pub use labels::{NodeId, NodeLinkId};
 pub use node::{Node, NodeOptions, NodeRuntime, PhysLinkId};
 pub use node_table::{LinkDescription, NodeDescription, NodeStateCallback, NodeTable};
-pub use router::{
-    generate_node_id, LinkId, MessageReceiver, Router, RouterOptions, RouterTime, SendHandle,
-    StreamId,
-};
+pub use router::{generate_node_id, LinkId, MessageReceiver, RouterTime, SendHandle, StreamId};
 pub use stream_framer::{StreamDeframer, StreamFramer};
