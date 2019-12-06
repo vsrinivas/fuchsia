@@ -94,8 +94,6 @@ zx_status_t RndisHost::Command(void* command) {
 }
 
 void RndisHost::Recv(usb_request_t* request) {
-  size_t len = request->response.actual;
-
   void* read_data;
   zx_status_t status = usb_request_mmap(request, &read_data);
   if (status != ZX_OK) {
@@ -103,29 +101,57 @@ void RndisHost::Recv(usb_request_t* request) {
     return;
   }
 
-  while (len > sizeof(rndis_packet_header)) {
-    rndis_packet_header* header = static_cast<rndis_packet_header*>(read_data);
+  size_t remaining = request->response.actual;
+  while (remaining >= sizeof(rndis_packet_header)) {
+    const auto* header = static_cast<const rndis_packet_header*>(read_data);
 
-    // The |data_offset| field contains the offset to the payload measured from the start of
-    // the field itself.
-    size_t data_offset = offsetof(rndis_packet_header, data_offset) + header->data_offset;
-
-    if (header->msg_type != RNDIS_PACKET_MSG || len < header->msg_length ||
-        len < data_offset + header->data_length) {
-      zxlogf(DEBUG1, "rndis bad packet\n");
+    if (header->msg_type != RNDIS_PACKET_MSG) {
+      zxlogf(ERROR, "rndishost receive: bad data packet type %u\n", header->msg_type);
+      return;
+    }
+    if (header->msg_length > remaining) {
+      zxlogf(ERROR,
+             "rndishost receive: bad data packet message length: %u bytes, but only %zu bytes "
+             "remain\n",
+             header->msg_length, remaining);
+      return;
+    }
+    if (header->msg_length < sizeof(*header)) {
+      zxlogf(ERROR,
+             "rndishost receive: bad data packet message length: %u bytes is smaller than header\n",
+             header->msg_length);
+      return;
+    }
+    if (header->data_length > header->msg_length) {
+      zxlogf(ERROR,
+             "rndishost receive: bad data packet data length: %u bytes is longer than message of "
+             "%u bytes\n",
+             header->data_length, header->msg_length);
+      return;
+    }
+    static_assert(sizeof(*header) >= offsetof(rndis_packet_header, data_offset));
+    if (header->data_offset > header->msg_length - offsetof(rndis_packet_header, data_offset)) {
+      zxlogf(ERROR,
+             "rndishost receive: bad data packet data offset: %zu + %u bytes is after message of "
+             "%u bytes\n",
+             offsetof(rndis_packet_header, data_offset), header->data_offset, header->msg_length);
       return;
     }
 
-    if (header->data_length == 0) {
-      // No more data.
+    size_t total_offset = offsetof(rndis_packet_header, data_offset) + header->data_offset;
+    if (total_offset > header->msg_length - header->data_length) {
+      zxlogf(ERROR,
+             "rndishost receive: bad data packet: data continues after end of message (message "
+             "length = %u; data offset = %zu, data length = %u)\n",
+             header->msg_length, total_offset, header->data_length);
       return;
     }
 
-    ethernet_ifc_recv(&ifc_, static_cast<uint8_t*>(read_data) + data_offset, header->data_length,
+    ethernet_ifc_recv(&ifc_, static_cast<uint8_t*>(read_data) + total_offset, header->data_length,
                       0);
 
     read_data = static_cast<uint8_t*>(read_data) + header->msg_length;
-    len -= header->msg_length;
+    remaining -= header->msg_length;
   }
 }
 
