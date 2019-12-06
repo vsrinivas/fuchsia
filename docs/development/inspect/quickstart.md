@@ -98,12 +98,12 @@ when read. The example below shows that a child called "lazy" exists with
 the string property "version" and has an additional child that is called
 "lazy."
 
-`root->CreateLazyValues(name, callback)` works as
-`root->CreateLazyNode(name, callback)`, except all properties on the
-promised Inspector's root node are added directly as values to the
-original `root`. In the second output of the example below, the internal
-"lazy" nodes do not appear and their values are flattened into properties
-on `root`.
+`root->CreateLazyValues(name, callback)` works like `root->CreateLazyNode(name,
+callback)`, except all properties and child nodes on the promised root node are
+added directly as values
+to the original `root`. In the second output of this example, the internal
+lazy nodes do not appear and their values are flattened into properties on
+`root`.
 
 ```
 root->CreateLazy{Node,Values}("lazy", [] {
@@ -274,7 +274,7 @@ part of your component (typically main.rs) looks similar to this:
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
   ...
-  let mut fs = ServiceFs::new_local();
+  let mut fs = ServiceFs::new();
   ...
   Ok(())
 }
@@ -284,7 +284,7 @@ Add the following to your initialization code:
 
 ```
 // This creates the root of an inspect tree.
-let inspector = inspect::Inspector::new();
+let inspector = component::inspector();
 
 // This serves the inspect Tree to the default path for reading at the standard
 // location "/diagnostics/fuchsia.inspect.Tree".
@@ -294,12 +294,12 @@ inspector.serve(&mut fs)?;
 let root = inspector.root();
 ```
 
-Don't forget to `use fuchsia_inspect as inspect;`!
+Don't forget to `use fuchsia_inspect::component;`!
 
 Now you can use inspect! For example try the following:
 
 ```
-let hello_world_property = inspect.create_string("hello", "world!");
+let hello_world_property = root.create_string("hello", "world!");
 ```
 
 See [this example](/garnet/examples/rust/inspect-rs/src/main.rs) for further
@@ -330,6 +330,74 @@ See [Supported Data Types](#supported-data-types) for a full list of data types 
 
 Refer to [C++ Library Concepts](#c_library-concepts), as similar concepts
 apply in Rust.
+
+The Rust library provides two ways of creating nodes and properties:
+
+- `create_*`: This gives ownership of the property or node object to the caller.
+  When the returned object is dropped, it is removed. For example:
+
+  ```
+  {
+      let property = root.create_int("name", 1);
+  }
+  ```
+
+In this example, the property went out of scope so a drop on the property is
+called. Readers won't see this property.
+
+- `record_*`: This entangles the lifetime of the object where the method is
+  called with the resulting object. When the object where the method was called
+  is deleted, the resulting property is deleted.
+
+  ```
+  {
+      let node = root.create_child("name");
+      {
+        node.record_uint(2); // no return
+      }
+      // The uint property will still be visibile to readers.
+  }
+  ```
+
+In this example, neither the node nor the property is now visible to readers.
+
+#### Dynamic Value Support
+
+Refer to [C++ Dynamic Value Support](#dynamic-value-support), as similar
+concepts apply in Rust.
+
+Example:
+
+```
+root.create_lazy_{child,values}("lazy", [] {
+    async move {
+        let inspector = Inspector::new();
+        inspector.root().record_string("version", "1.0");
+        inspector.root().record_lazy_{node,values}("lazy", [] {
+            let inspector = Inspector::new();
+            inspector.root().record_int("value", 10);
+            // `_value`'s drop is called when the function returns, so it will be removed.
+            // For these situations `record_` is provided.
+            let _value = inspector.root().create_int("gone", 2);
+            Ok(inspector)
+        });
+        Ok(inspector)
+    }
+    .boxed()
+});
+
+Output (create_lazy_node):
+root:
+  lazy:
+    version = "1.0"
+    lazy:
+      val = 10
+
+Output (create_lazy_values):
+root:
+  val = 10
+  version = "1.0"
+```
 
 
 ## Dart
@@ -465,5 +533,4 @@ Type | Description | Notes
   StringProperty | A property with a UTF-8 string value. | All Languages
   ByteVectorProperty | A property with an arbitrary byte value. | All Languages
   Node | A node under which metrics, properties, and more nodes may be nested. | All Languages
-  LazyNode | Instantiates a complete tree of Nodes dynamically. | C++, Rust (in progress).
-
+  LazyNode | Instantiates a complete tree of Nodes dynamically. | C++, Rust
