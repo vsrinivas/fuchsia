@@ -7,12 +7,12 @@ import("//build/rust/rustc_binary.gni")
 
 group("all") {
   deps = [
-    ":touchable_session",
+    ":input_session",
   ]
 }
 
-rustc_binary("touchable_session_bin") {
-  name = "touchable_session"
+rustc_binary("input_session_bin") {
+  name = "input_session"
   edition = "2018"
 
   deps = [
@@ -25,21 +25,21 @@ rustc_binary("touchable_session_bin") {
   ]
 }
 
-package("touchable_session") {
+package("input_session") {
   deps = [
-    ":touchable_session_bin",
+    ":input_session_bin",
   ]
 
   meta = [
     {
-      path = rebase_path("meta/touchable_session.cml")
-      dest = "touchable_session.cm"
+      path = rebase_path("meta/input_session.cml")
+      dest = "input_session.cm"
     },
   ]
 
   binaries = [
     {
-      name = "touchable_session"
+      name = "input_session"
     },
   ]
 }

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/touchable_session"
+        "binary": "bin/input_session"
     },
     "use": [
         {
