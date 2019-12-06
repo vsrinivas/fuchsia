@@ -1404,8 +1404,9 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
   }
 
   // Create a View and Link, then connect and return if the Link is valid.
+  std::string debug_name = args.debug_name ? *args.debug_name : std::string();
   auto view = fxl::MakeRefCounted<View>(session, id, std::move(control_ref), std::move(view_ref),
-                                        *args.debug_name, session->shared_error_reporter(),
+                                        std::move(debug_name), session->shared_error_reporter(),
                                         session->event_reporter());
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ImportLink link =
@@ -1426,8 +1427,9 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
   }
 
   // Create a View and Link, then connect and return if the Link is valid.
+  std::string debug_name = args.debug_name ? *args.debug_name : std::string();
   auto view = fxl::MakeRefCounted<View>(
-      session, id, std::move(args.control_ref), std::move(args.view_ref), *args.debug_name,
+      session, id, std::move(args.control_ref), std::move(args.view_ref), std::move(debug_name),
       session->shared_error_reporter(), session->event_reporter());
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ImportLink link =
@@ -1444,7 +1446,9 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
 ResourcePtr GfxCommandApplier::CreateViewHolder(Session* session, ResourceId id,
                                                 fuchsia::ui::gfx::ViewHolderArgs args) {
   // Create a ViewHolder and Link, then connect and return if the Link is valid.
-  auto view_holder = fxl::MakeRefCounted<ViewHolder>(session, session->id(), id, *args.debug_name);
+  std::string debug_name = args.debug_name ? *args.debug_name : std::string();
+  auto view_holder =
+      fxl::MakeRefCounted<ViewHolder>(session, session->id(), id, std::move(debug_name));
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ExportLink link = view_linker->CreateExport(
       view_holder.get(), std::move(args.token.value), session->error_reporter());

@@ -401,7 +401,7 @@ fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id) {
 }
 
 fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, fuchsia::ui::views::ViewToken token,
-                                           const std::string& debug_name) {
+                                           const fit::optional<std::string>& debug_name) {
   ZX_DEBUG_ASSERT(token.value);
 
   scenic::ViewRefPair ref_pair = scenic::ViewRefPair::New();
@@ -410,7 +410,7 @@ fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, fuchsia::ui::views::View
   view.token = std::move(token);
   view.control_ref = std::move(ref_pair.control_ref);
   view.view_ref = std::move(ref_pair.view_ref);
-  view.debug_name = debug_name;
+  view.debug_name = debug_name ? fidl::StringPtr(*debug_name) : fit::nullopt;
 
   fuchsia::ui::gfx::ResourceArgs resource;
   resource.set_view3(std::move(view));
@@ -420,14 +420,14 @@ fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, fuchsia::ui::views::View
 fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, fuchsia::ui::views::ViewToken token,
                                            fuchsia::ui::views::ViewRefControl control_ref,
                                            fuchsia::ui::views::ViewRef view_ref,
-                                           const std::string& debug_name) {
+                                           const fit::optional<std::string>& debug_name) {
   ZX_DEBUG_ASSERT(token.value);
 
   fuchsia::ui::gfx::ViewArgs3 view;
   view.token = std::move(token);
   view.control_ref = std::move(control_ref);
   view.view_ref = std::move(view_ref);
-  view.debug_name = debug_name;
+  view.debug_name = debug_name ? fidl::StringPtr(*debug_name) : fit::nullopt;
 
   fuchsia::ui::gfx::ResourceArgs resource;
   resource.set_view3(std::move(view));
@@ -436,12 +436,12 @@ fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id, fuchsia::ui::views::View
 
 fuchsia::ui::gfx::Command NewCreateViewHolderCmd(uint32_t id,
                                                  fuchsia::ui::views::ViewHolderToken token,
-                                                 const std::string& debug_name) {
+                                                 const fit::optional<std::string>& debug_name) {
   ZX_DEBUG_ASSERT(token.value);
 
   fuchsia::ui::gfx::ViewHolderArgs view_holder;
   view_holder.token = std::move(token);
-  view_holder.debug_name = debug_name;
+  view_holder.debug_name = debug_name ? fidl::StringPtr(*debug_name) : fit::nullopt;
 
   fuchsia::ui::gfx::ResourceArgs resource;
   resource.set_view_holder(std::move(view_holder));

@@ -13,8 +13,8 @@
 #include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/view_node.h"
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
-#include "src/ui/scenic/lib/gfx/tests/session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
+#include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -58,6 +58,17 @@ TEST_F(ViewTest, DISABLED_CreateViewWithBadTokenDies) {
                             "");
   EXPECT_DEATH_IF_SUPPORTED(
       Apply(scenic::NewCreateViewHolderCmd(2, fuchsia::ui::views::ViewHolderToken(), "")), "");
+}
+
+TEST_F(ViewTest, NullableDebugName) {
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  constexpr ResourceId kViewHolderId = 1u;
+  EXPECT_TRUE(Apply(
+      scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token), fit::nullopt)));
+  constexpr ResourceId kViewId = 2u;
+  EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), fit::nullopt)));
+  EXPECT_ERROR_COUNT(0);
 }
 
 TEST_F(ViewTest, ChildrenCanBeAddedToViewWithoutViewHolder) {
