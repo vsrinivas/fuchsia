@@ -63,7 +63,7 @@ TEST_F(ViewEmbedderTest, ProtectedVkcube) {
 
   auto info = scenic::LaunchComponentAndCreateView(
       environment_->launcher_ptr(),
-      "fuchsia-pkg://fuchsia.com/vkcube_on_scenic#meta/vkcube_on_scenic.cmx",
+      "fuchsia-pkg://fuchsia.com/vkcube-on-scenic#meta/vkcube_on_scenic.cmx",
       {"--protected_output"});
 
   scenic::EmbedderView embedder_view(CreatePresentationContext());

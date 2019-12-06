@@ -13,6 +13,7 @@ group("tests") {
     ":swapchain_tests",
     ":unittests",
     ":viewstate_apptests",
+    "//garnet/packages/examples:vkcube-on-scenic",
   ]
 }
 
