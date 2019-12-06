@@ -37,23 +37,13 @@ enum AddressSpaceChildDriverType : uint32 {
 
 [Layout = "Simple"]
 protocol AddressSpaceDevice {
-    // Deprecated (moved to AddressSpaceChildDriver)
-    // Allocates goldfish address space of given size.
-    [Transitional]
-    AllocateBlock(uint64 size) -> (zx.status res, uint64 paddr, handle<vmo>? vmo);
-
-    // Free goldfish address space associated with given ID.
-    [Transitional]
-    DeallocateBlock(uint64 paddr) -> (zx.status res);
-
     OpenChildDriver(AddressSpaceChildDriverType type, request<AddressSpaceChildDriver> req);
 };
 
 // Child driver protocol
 
 // By default, creating connection to the driver does not associate any child
-// driver with the connection, and merely makes it possible to allocate blocks
-// in the PCI BAR (This behavior is also deprecated).
+// driver with the connection.
 
 // The client opens a child driver via OpenChildDriver, giving the type of the
 // driver as an argument along with a request for the connection.  The type of
