@@ -25,6 +25,12 @@ toc:
     path: /docs/concepts/drivers/simple.md
   - title: "Ethernet devices"
     path: /docs/concepts/drivers/ethernet.md
+  - title: "USB devices"
+    section:
+      - title: "Overview"
+        path: /docs/concepts/usb/overview.md
+      - title: "Lifecycle of a USB request"
+        path: /docs/concepts/usb/request-lifecycle.md
   - title: "RAMdisk device"
     path: /docs/concepts/drivers/ramdisk.md
   - title: "Adding tracing to device drivers"

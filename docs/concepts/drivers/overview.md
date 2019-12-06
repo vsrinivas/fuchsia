@@ -7,6 +7,7 @@
 * [Driver Development](/docs/concepts/drivers/driver-development.md)
 * [Platform Bus](/docs/concepts/drivers/platform-bus.md)
 * [Device Firmware](/docs/concepts/drivers/firmware.md)
+* [USB drivers](/docs/concepts/usb/overview.md)
 
 ## Tutorial presentations
 
