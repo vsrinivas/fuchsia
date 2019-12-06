@@ -13,6 +13,8 @@ source_set("input") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/inspect_deprecated",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
     "//src/ui/lib/escher/geometry:escher_geometry",

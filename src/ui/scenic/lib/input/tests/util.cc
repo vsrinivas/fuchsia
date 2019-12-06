@@ -291,24 +291,28 @@ bool PointerMatches(const PointerEvent& event, uint32_t pointer_id, PointerEvent
                     float x, float y) {
   using fuchsia::ui::input::operator<<;
 
+  bool result = true;
   if (event.pointer_id != pointer_id) {
-    FXL_LOG(ERROR) << "  Actual: " << event.pointer_id;
-    FXL_LOG(ERROR) << "Expected: " << pointer_id;
-    return false;
-  } else if (event.phase != phase) {
-    FXL_LOG(ERROR) << "  Actual: " << event.phase;
-    FXL_LOG(ERROR) << "Expected: " << phase;
-    return false;
-  } else if (fabs(event.x - x) > kEpsilon) {
-    FXL_LOG(ERROR) << "  Actual: " << event.x;
-    FXL_LOG(ERROR) << "Expected: " << x;
-    return false;
-  } else if (fabs(event.y - y) > kEpsilon) {
-    FXL_LOG(ERROR) << "  Actual: " << event.y;
-    FXL_LOG(ERROR) << "Expected: " << y;
-    return false;
+    FXL_LOG(ERROR) << "  Actual id: " << event.pointer_id;
+    FXL_LOG(ERROR) << "Expected id: " << pointer_id;
+    result = false;
   }
-  return true;
+  if (event.phase != phase) {
+    FXL_LOG(ERROR) << "  Actual phase: " << event.phase;
+    FXL_LOG(ERROR) << "Expected phase: " << phase;
+    result = false;
+  }
+  if (fabs(event.x - x) > kEpsilon) {
+    FXL_LOG(ERROR) << "  Actual x: " << event.x;
+    FXL_LOG(ERROR) << "Expected x: " << x;
+    result = false;
+  }
+  if (fabs(event.y - y) > kEpsilon) {
+    FXL_LOG(ERROR) << "  Actual y: " << event.y;
+    FXL_LOG(ERROR) << "Expected y: " << y;
+    result = false;
+  }
+  return result;
 }
 
 }  // namespace lib_ui_input_tests

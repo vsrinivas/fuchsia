@@ -15,6 +15,10 @@ namespace test {
 
 using SceneGraphTest = SessionTest;
 
+fit::function<std::optional<glm::mat4>()> NoGlobalTransform() {
+  return [] { return std::nullopt; };
+}
+
 bool ContainsCompositor(const std::vector<CompositorWeakPtr>& compositors, Compositor* compositor) {
   auto it =
       std::find_if(compositors.begin(), compositors.end(),
@@ -86,10 +90,12 @@ TEST_F(SceneGraphTest, RequestFocusChange) {
   {
     ViewTreeUpdates updates;
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
-                                         .may_receive_focus = [] { return true; }});
+                                         .may_receive_focus = [] { return true; },
+                                         .global_transform = NoGlobalTransform()});
     updates.push_back(ViewTreeNewAttachNode{.koid = 1111u});
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(child_view_pair.view_ref),
-                                         .may_receive_focus = [] { return true; }});
+                                         .may_receive_focus = [] { return true; },
+                                         .global_transform = NoGlobalTransform()});
     updates.push_back(ViewTreeMakeGlobalRoot{.koid = parent_koid});
     updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
     updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});
@@ -120,10 +126,12 @@ TEST_F(SceneGraphTest, RequestFocusChangeButMayNotReceiveFocus) {
   {
     ViewTreeUpdates updates;
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
-                                         .may_receive_focus = [] { return true; }});
+                                         .may_receive_focus = [] { return true; },
+                                         .global_transform = NoGlobalTransform()});
     updates.push_back(ViewTreeNewAttachNode{.koid = 1111u});
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(child_view_pair.view_ref),
-                                         .may_receive_focus = [] { return false; }});  // Different!
+                                         .may_receive_focus = [] { return false; },  // Different!
+                                         .global_transform = NoGlobalTransform()});
     updates.push_back(ViewTreeMakeGlobalRoot{.koid = parent_koid});
     updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
     updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});

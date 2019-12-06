@@ -55,12 +55,20 @@ View::View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl c
       return true;
     };
 
+    fit::function<std::optional<glm::mat4>()> global_transform = [weak_ptr = GetWeakPtr()] {
+      // Return the global transform if the view is still alive and attached to a scene.
+      return weak_ptr && weak_ptr->GetViewNode()->scene()
+                 ? std::optional<glm::mat4>{weak_ptr->GetViewNode()->GetGlobalTransform()}
+                 : std::nullopt;
+    };
+
     FXL_DCHECK(session->id() != 0u) << "GFX-side invariant for ViewTree";
     gfx_session_->view_tree_updates().push_back(
         ViewTreeNewRefNode{.view_ref = std::move(clone),
                            .event_reporter = std::move(reporter),
                            .may_receive_focus = std::move(may_receive_focus),
-                           .gfx_session_id = session->id()});
+                           .global_transform = std::move(global_transform),
+                           .session_id = session->id()});
   }
 
   FXL_DCHECK(validate_viewref(control_ref_, view_ref_));

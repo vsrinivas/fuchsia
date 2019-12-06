@@ -47,7 +47,7 @@ std::optional<zx_koid_t> ViewTree::ParentOf(zx_koid_t child) const {
   return std::nullopt;
 }
 
-SessionId ViewTree::SessionIdOf(zx_koid_t koid) const {
+scheduling::SessionId ViewTree::SessionIdOf(zx_koid_t koid) const {
   if (!IsValid(koid) || !IsTracked(koid)) {
     return 0u;
   }
@@ -55,7 +55,7 @@ SessionId ViewTree::SessionIdOf(zx_koid_t koid) const {
   if (const auto ptr = std::get_if<AttachNode>(&nodes_.at(koid))) {
     return 0u;
   } else if (const auto ptr = std::get_if<RefNode>(&nodes_.at(koid))) {
-    return ptr->gfx_session_id;
+    return ptr->session_id;
   }
 
   FXL_NOTREACHED() << "impossible";
@@ -109,6 +109,14 @@ bool ViewTree::IsRefNode(zx_koid_t koid) const {
 bool ViewTree::MayReceiveFocus(zx_koid_t koid) const {
   FXL_DCHECK(IsTracked(koid) && IsRefNode(koid)) << "precondition";
   return std::get_if<RefNode>(&nodes_.at(koid))->may_receive_focus();
+}
+
+std::optional<glm::mat4> ViewTree::GlobalTransformOf(zx_koid_t koid) const {
+  if (!IsTracked(koid) || !IsRefNode(koid)) {
+    return std::nullopt;
+  }
+
+  return std::get_if<RefNode>(&nodes_.at(koid))->global_transform();
 }
 
 bool ViewTree::IsStateValid() const {
@@ -321,11 +329,14 @@ ViewTree::FocusChangeStatus ViewTree::RequestFocusChange(const zx_koid_t request
 }
 
 void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWeakPtr reporter,
-                          fit::function<bool()> may_receive_focus, SessionId gfx_session_id) {
+                          fit::function<bool()> may_receive_focus,
+                          fit::function<std::optional<glm::mat4>()> global_transform,
+                          scheduling::SessionId session_id) {
   const zx_koid_t koid = ExtractKoid(view_ref);
   FXL_DCHECK(IsValid(koid)) << "precondition";
   FXL_DCHECK(!IsTracked(koid)) << "precondition";
   FXL_DCHECK(may_receive_focus) << "precondition";  // Callback exists.
+  FXL_DCHECK(global_transform) << "precondition";   // Callback exists.
 
   if (!IsValid(koid) || IsTracked(koid))
     return;  // Bail.
@@ -333,7 +344,8 @@ void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWea
   nodes_[koid] = RefNode{.view_ref = std::move(view_ref),
                          .event_reporter = reporter,
                          .may_receive_focus = std::move(may_receive_focus),
-                         .gfx_session_id = gfx_session_id};
+                         .global_transform = std::move(global_transform),
+                         .session_id = session_id};
 
   FXL_DCHECK(IsStateValid()) << "postcondition";
 }

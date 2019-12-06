@@ -8,6 +8,7 @@
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 
 #include <map>
 #include <memory>
@@ -29,8 +30,15 @@ namespace input {
 //
 // The general flow of events is:
 // DispatchCommand --[decide what/where]--> EnqueueEvent
-class InputSystem : public System, public fuchsia::ui::policy::accessibility::PointerEventRegistry {
+class InputSystem : public System,
+                    public fuchsia::ui::policy::accessibility::PointerEventRegistry,
+                    public fuchsia::ui::scenic::PointerCaptureListenerRegistry {
  public:
+  struct PointerCaptureListener {
+    fuchsia::ui::scenic::PointerCaptureListenerPtr listener_ptr;
+    fuchsia::ui::views::ViewRef view_ref;
+  };
+
   static constexpr TypeId kTypeId = kInput;
   static const char* kName;
 
@@ -60,6 +68,20 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
                     pointer_event_listener,
                 RegisterCallback callback) override;
 
+  // Gets the global transform of the view corresponding to |view_ref| from the scene graph's view
+  // tree. Return std::nullopt for exceptional cases (e.g., invalid or unknown view ref).
+  std::optional<glm::mat4> GetGlobalTransformByViewRef(
+      const fuchsia::ui::views::ViewRef& view_ref) const;
+
+  // |fuchsia.ui.pointercapture.ListenerRegistry|
+  void RegisterListener(
+      fidl::InterfaceHandle<fuchsia::ui::scenic::PointerCaptureListener> listener_handle,
+      fuchsia::ui::views::ViewRef view_ref, RegisterListenerCallback success_callback) override;
+
+  // Send a copy of the event to the singleton listener of pointer capture API if there is one.
+  void ReportPointerEventToPointerCaptureListener(
+      const fuchsia::ui::input::PointerEvent& pointer) const;
+
  private:
   gfx::Engine* const engine_;
 
@@ -79,6 +101,12 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
   // We honor the first accessibility listener to register. A call to Register()
   // above will fail if there is already a registered listener.
   fuchsia::ui::input::accessibility::PointerEventListenerPtr accessibility_pointer_event_listener_;
+
+  fidl::BindingSet<fuchsia::ui::scenic::PointerCaptureListenerRegistry> pointer_capture_registry_;
+  // A singleton listener who wants to be notified when pointer event happens.
+  // We honor the first pointer capture listener to register. A call to RegisterListener()
+  // above will fail if there is already a registered listener.
+  std::optional<PointerCaptureListener> pointer_capture_listener_;
 };
 
 // Per-session treatment of input commands.
@@ -91,6 +119,8 @@ class InputCommandDispatcher : public CommandDispatcher {
   // |CommandDispatcher|
   void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
 
+  const InputSystem* input_system() { return input_system_; }
+
  private:
   // A buffer to store pointer events.
   //
@@ -102,11 +132,11 @@ class InputCommandDispatcher : public CommandDispatcher {
   // consume / reject them.
   class PointerEventBuffer {
    public:
-    // Captures the deferred parallel dispatch of pointer events, along with pointer phase.
-    struct DeferredPerViewPointerEvents {
-      fuchsia::ui::input::PointerEventPhase phase;
+    // Captures the deferred parallel dispatch of a pointer event.
+    struct DeferredPointerEvent {
+      fuchsia::ui::input::PointerEvent event;
       // Position 0 of the vector holds the top-most view. The vector may be empty.
-      std::vector<std::pair<ViewStack::Entry, fuchsia::ui::input::PointerEvent>> parallel_events;
+      std::vector<ViewStack::Entry> parallel_event_receivers;
     };
     // Represents a stream of pointer events. A stream is a sequence of pointer events with phase
     // ADD -> * -> REMOVE.
@@ -114,7 +144,7 @@ class InputCommandDispatcher : public CommandDispatcher {
       // The temporally-ordered pointer events of this stream. Each element of this vector (indexed
       // by time) contains another vector (indexed by view); one touch event may be dispatched
       // multiple times, to multiple views, in parallel (simultaneously).
-      std::vector<DeferredPerViewPointerEvents> serial_events;
+      std::vector<DeferredPointerEvent> serial_events;
     };
     // Possible states of a stream.
     enum PointerIdStreamStatus {
@@ -126,12 +156,12 @@ class InputCommandDispatcher : public CommandDispatcher {
     PointerEventBuffer(InputCommandDispatcher* dispatcher);
     ~PointerEventBuffer();
 
-    // Adds a parallel dispatch event list |views_and_events| to the latest
+    // Adds a parallel dispatch event list |views_and_event| to the latest
     // stream associated with |pointer_id|. It also takes
     // |accessibility_pointer_event|, which is sent to the listener depending on
     // the current stream status.
-    void AddEvents(uint32_t pointer_id, DeferredPerViewPointerEvents views_and_events,
-                   fuchsia::ui::input::accessibility::PointerEvent accessibility_pointer_event);
+    void AddEvent(uint32_t pointer_id, DeferredPointerEvent views_and_event,
+                  fuchsia::ui::input::accessibility::PointerEvent accessibility_pointer_event);
 
     // Adds a new stream associated with |pointer_id|.
     void AddStream(uint32_t pointer_id);
@@ -149,9 +179,9 @@ class InputCommandDispatcher : public CommandDispatcher {
     }
 
    private:
-    // Dispatches a parallel set of events to views; set may be empty.
-    // Conditionally trigger focus change request, based on |views_and_events.phase|.
-    void DispatchEvents(DeferredPerViewPointerEvents views_and_events);
+    // Dispatches an event to a parallel set of views; set may be empty.
+    // Conditionally trigger focus change request, based on |views_and_event.event.phase|.
+    void DispatchEvent(DeferredPointerEvent views_and_event);
 
     InputCommandDispatcher* const dispatcher_;
 
@@ -187,7 +217,7 @@ class InputCommandDispatcher : public CommandDispatcher {
 
   // Enqueue the pointer event into the entry in a ViewStack.
   static void ReportPointerEvent(const ViewStack::Entry& view_info,
-                                 fuchsia::ui::input::PointerEvent pointer);
+                                 const fuchsia::ui::input::PointerEvent& pointer);
 
   // Enqueue the keyboard event into an EventReporter.
   static void ReportKeyboardEvent(EventReporter* reporter,

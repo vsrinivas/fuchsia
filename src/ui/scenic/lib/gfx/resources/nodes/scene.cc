@@ -7,9 +7,11 @@
 #include <trace/event.h>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/point_light.h"
+#include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 
 namespace scenic_impl {
@@ -49,13 +51,17 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id)
     // Scene may *always* receive focus when connected to a compositor. If it is not actually
     // connected to a compositor, the request-focus policy will ensure it is never sent focus.
     fit::function<bool()> may_receive_focus = [] { return true; };
+    fit::function<std::optional<glm::mat4>()> global_transform = [weak_ptr = GetWeakPtr()] {
+      return weak_ptr ? std::optional<glm::mat4>{weak_ptr->GetGlobalTransform()} : std::nullopt;
+    };
 
     FXL_DCHECK(session_id != 0u) << "GFX-side invariant for ViewTree";
     gfx_session_->view_tree_updates().push_back(
         ViewTreeNewRefNode{.view_ref = std::move(clone),
                            .event_reporter = std::move(reporter),
                            .may_receive_focus = std::move(may_receive_focus),
-                           .gfx_session_id = session_id});
+                           .global_transform = std::move(global_transform),
+                           .session_id = session_id});
   }
   // NOTE: Whether or not this Scene is connected to the Compositor CANNOT be determined here (and
   // hence we can't push ViewTreeMakeRoot(koid)). Instead, the session updater must determine which

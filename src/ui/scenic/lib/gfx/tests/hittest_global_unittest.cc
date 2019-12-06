@@ -46,8 +46,9 @@ namespace {
 
 // Creates a unit ray entering at (x, y) from z = 1 pointed at -z.
 //
-// This should be kept pretty consistent with input_system.cc CreateScreenPerpendicularRay. One
-// notable divergence is that we don't jitter the x,y here, for more straightforward expectations.
+// This should be kept pretty consistent with input_system.cc CreateJitteredScreenPerpendicularRay.
+// One notable divergence is that we don't jitter the x,y here, for more straightforward
+// expectations.
 escher::ray4 HitRay(float x, float y) {
   return {
       .origin = {x, y, 1, 1},

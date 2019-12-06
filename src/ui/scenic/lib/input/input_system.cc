@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/sys/cpp/component_context.h>
+#include <zircon/status.h>
 
 #include <algorithm>
 #include <memory>
@@ -16,6 +17,7 @@
 
 #include <trace/event.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/time/time_point.h"
 #include "src/ui/lib/escher/geometry/types.h"
@@ -214,6 +216,9 @@ InputSystem::InputSystem(SystemContext context, gfx::Engine* engine)
   this->context()->app_context()->outgoing()->AddPublicService(
       accessibility_pointer_event_registry_.GetHandler(this));
 
+  this->context()->app_context()->outgoing()->AddPublicService(
+      pointer_capture_registry_.GetHandler(this));
+
   FXL_LOG(INFO) << "Scenic input system initialized.";
 }
 
@@ -234,6 +239,57 @@ void InputSystem::Register(
     // An accessibility listener is already registered.
     callback(/*success=*/false);
   }
+}
+
+std::optional<glm::mat4> InputSystem::GetGlobalTransformByViewRef(
+    const fuchsia::ui::views::ViewRef& view_ref) const {
+  if (!engine_->scene_graph()) {
+    return std::nullopt;
+  }
+  zx_koid_t view_ref_koid = fsl::GetKoid(view_ref.reference.get());
+  return engine_->scene_graph()->view_tree().GlobalTransformOf(view_ref_koid);
+}
+
+void InputSystem::RegisterListener(
+    fidl::InterfaceHandle<fuchsia::ui::scenic::PointerCaptureListener> listener_handle,
+    fuchsia::ui::views::ViewRef view_ref, RegisterListenerCallback success_callback) {
+  if (pointer_capture_listener_) {
+    // Already have a listener, decline registration.
+    success_callback(false);
+    return;
+  }
+
+  fuchsia::ui::scenic::PointerCaptureListenerPtr new_listener;
+  new_listener.Bind(std::move(listener_handle));
+
+  // Remove listener if the interface closes.
+  new_listener.set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Pointer capture listener interface closed with error: "
+                   << zx_status_get_string(status);
+    pointer_capture_listener_ = std::nullopt;
+  });
+
+  pointer_capture_listener_ = PointerCaptureListener{.listener_ptr = std::move(new_listener),
+                                                     .view_ref = std::move(view_ref)};
+
+  success_callback(true);
+}
+
+void InputSystem::ReportPointerEventToPointerCaptureListener(const PointerEvent& pointer) const {
+  if (!pointer_capture_listener_) {
+    return;
+  }
+
+  const PointerCaptureListener& listener = pointer_capture_listener_.value();
+
+  std::optional<glm::mat4> global_transform = GetGlobalTransformByViewRef(listener.view_ref);
+  if (!global_transform) {
+    return;
+  }
+
+  // TODO(42145): Implement flow control.
+  listener.listener_ptr->OnPointerEvent(BuildLocalPointerEvent(pointer, global_transform.value()),
+                                        [] {});
 }
 
 InputCommandDispatcher::InputCommandDispatcher(CommandDispatcherContext command_dispatcher_context,
@@ -365,26 +421,25 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
   }
 
   // Input delivery must be parallel; needed for gesture disambiguation.
-  std::vector<std::pair<ViewStack::Entry, PointerEvent>> deferred_events;
+  std::vector<ViewStack::Entry> deferred_event_receivers;
   for (const auto& entry : touch_targets_[pointer_id].stack) {
-    PointerEvent clone;
-    fidl::Clone(command.pointer_event, &clone);
     if (a11y_enabled) {
-      deferred_events.emplace_back(entry, std::move(clone));
+      deferred_event_receivers.emplace_back(entry);
     } else {
-      ReportPointerEvent(entry, std::move(clone));
+      ReportPointerEvent(entry, command.pointer_event);
     }
     if (!parallel_dispatch_) {
       break;  // TODO(SCN-1047): Remove when gesture disambiguation is ready.
     }
   }
 
-  FXL_DCHECK(a11y_enabled || deferred_events.empty())
+  FXL_DCHECK(a11y_enabled || deferred_event_receivers.empty())
       << "When a11y pointer forwarding is off, never defer events.";
+
   if (a11y_enabled) {
-    // We handle both latched (!deferred_events.empty()) and unlatched (deferred_events.empty())
-    // touch events, for two reasons.
-    // (1) We must notify accessibility about events regardless of latch, so that it has full
+    // We handle both latched (!deferred_event_receivers.empty()) and unlatched
+    // (deferred_event_receivers.empty()) touch events, for two reasons. (1) We must notify
+    // accessibility about events regardless of latch, so that it has full
     //     information about a gesture stream. E.g., the gesture could start traversal in empty
     //     space before MOVE-ing onto a rect; accessibility needs both the gesture and the rect.
     // (2) We must trigger a potential focus change request, even if no view receives the triggering
@@ -417,9 +472,13 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
     const auto top_hit_view_local = TransformPointerCoords(pointer, view_transform);
     AccessibilityPointerEvent packet = BuildAccessibilityPointerEvent(
         command.pointer_event, ndc, top_hit_view_local, view_ref_koid);
-    pointer_event_buffer_->AddEvents(
-        pointer_id, {.phase = pointer_phase, .parallel_events = std::move(deferred_events)},
+    pointer_event_buffer_->AddEvent(
+        pointer_id,
+        {.event = std::move(command.pointer_event),
+         .parallel_event_receivers = std::move(deferred_event_receivers)},
         std::move(packet));
+  } else {
+    input_system()->ReportPointerEventToPointerCaptureListener(command.pointer_event);
   }
 
   if (pointer_phase == Phase::REMOVE || pointer_phase == Phase::CANCEL) {
@@ -535,8 +594,8 @@ void InputCommandDispatcher::DispatchCommand(const SendKeyboardInputCmd& command
 
   const ViewTree& view_tree = engine_->scene_graph()->view_tree();
   EventReporterWeakPtr reporter = view_tree.EventReporterOf(focused_view);
-  SessionId gfx_session_id = view_tree.SessionIdOf(focused_view);
-  if (reporter && input_system_->hard_keyboard_requested().count(gfx_session_id) > 0) {
+  scheduling::SessionId session_id = view_tree.SessionIdOf(focused_view);
+  if (reporter && input_system_->hard_keyboard_requested().count(session_id) > 0) {
     ReportKeyboardEvent(reporter.get(), command.keyboard_event);
   }
 }
@@ -576,7 +635,7 @@ void InputCommandDispatcher::DispatchCommand(const SetParallelDispatchCmd& comma
 }
 
 void InputCommandDispatcher::ReportPointerEvent(const ViewStack::Entry& view_info,
-                                                PointerEvent pointer) {
+                                                const PointerEvent& pointer) {
   if (!view_info.reporter)
     return;  // Session's event reporter no longer available. Bail quietly.
 
@@ -699,7 +758,7 @@ InputCommandDispatcher::PointerEventBuffer::~PointerEventBuffer() {
   for (auto& pointer_id_and_streams : buffer_) {
     for (auto& stream : pointer_id_and_streams.second) {
       for (auto& deferred_events : stream.serial_events) {
-        DispatchEvents(std::move(deferred_events));
+        DispatchEvent(std::move(deferred_events));
       }
     }
   }
@@ -730,7 +789,7 @@ void InputCommandDispatcher::PointerEventBuffer::UpdateStream(
       // potential future (in case this stream is not done yet).
       status = PointerIdStreamStatus::REJECTED;
       for (auto& deferred_events : stream.serial_events) {
-        DispatchEvents(std::move(deferred_events));
+        DispatchEvent(std::move(deferred_events));
       }
       // Clears the stream -- objects have been moved, but container still holds
       // their space.
@@ -753,21 +812,21 @@ void InputCommandDispatcher::PointerEventBuffer::UpdateStream(
       << "invariant: streams are waiting, so status is waiting";
 }
 
-void InputCommandDispatcher::PointerEventBuffer::AddEvents(
-    uint32_t pointer_id, DeferredPerViewPointerEvents views_and_events,
+void InputCommandDispatcher::PointerEventBuffer::AddEvent(
+    uint32_t pointer_id, DeferredPointerEvent views_and_event,
     AccessibilityPointerEvent accessibility_pointer_event) {
   auto it = active_stream_info_.find(pointer_id);
   FXL_DCHECK(it != active_stream_info_.end()) << "Received an invalid pointer id.";
   const auto status = it->second;
   if (status == PointerIdStreamStatus::WAITING_RESPONSE) {
     PointerIdStream& stream = buffer_[pointer_id].back();
-    stream.serial_events.emplace_back(std::move(views_and_events));
+    stream.serial_events.emplace_back(std::move(views_and_event));
   } else if (status == PointerIdStreamStatus::REJECTED) {
     // All previous events were already dispatched when this stream was
     // rejected. Sends this new incoming events to their normal flow as well.
     // There is still the possibility of triggering a focus change event, when
     // ADD -> a11y listener rejected -> DOWN event arrived.
-    DispatchEvents(std::move(views_and_events));
+    DispatchEvent(std::move(views_and_event));
     return;
   }
   // PointerIdStreamStatus::CONSUMED or PointerIdStreamStatus::WAITING_RESPONSE
@@ -786,16 +845,14 @@ void InputCommandDispatcher::PointerEventBuffer::AddStream(uint32_t pointer_id) 
   active_stream_info_[pointer_id] = PointerIdStreamStatus::WAITING_RESPONSE;
 }
 
-void InputCommandDispatcher::PointerEventBuffer::DispatchEvents(
-    DeferredPerViewPointerEvents views_and_events) {
+void InputCommandDispatcher::PointerEventBuffer::DispatchEvent(
+    DeferredPointerEvent views_and_event) {
   // If this parallel dispatch of events corresponds to a DOWN event, this
   // triggers a possible deferred focus change event.
-  if (views_and_events.phase == Phase::DOWN) {
-    if (!views_and_events.parallel_events.empty()) {
+  if (views_and_event.event.phase == Phase::DOWN) {
+    if (!views_and_event.parallel_event_receivers.empty()) {
       // Request that focus be transferred to the top view.
-      FXL_DCHECK(views_and_events.parallel_events[0].second.phase == views_and_events.phase)
-          << "invariant";
-      const zx_koid_t view_koid = views_and_events.parallel_events[0].first.view_ref_koid;
+      const zx_koid_t view_koid = views_and_event.parallel_event_receivers[0].view_ref_koid;
       FXL_DCHECK(view_koid != ZX_KOID_INVALID) << "invariant";
       dispatcher_->RequestFocusChange(view_koid);
     } else if (dispatcher_->focus_chain_root() != ZX_KOID_INVALID) {
@@ -806,8 +863,9 @@ void InputCommandDispatcher::PointerEventBuffer::DispatchEvents(
     }
   }
 
-  for (auto& view_and_event : views_and_events.parallel_events) {
-    dispatcher_->ReportPointerEvent(view_and_event.first, std::move(view_and_event.second));
+  dispatcher_->input_system()->ReportPointerEventToPointerCaptureListener(views_and_event.event);
+  for (auto& view : views_and_event.parallel_event_receivers) {
+    dispatcher_->ReportPointerEvent(view, views_and_event.event);
   }
 }
 

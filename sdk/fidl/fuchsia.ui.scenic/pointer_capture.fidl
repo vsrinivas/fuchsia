@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.scenic;
+
+using fuchsia.ui.input;
+using fuchsia.ui.views;
+
+/// A method of obtaining global pointer events, regardless of view focus.
+protocol PointerCaptureListener {
+    OnPointerEvent(fuchsia.ui.input.PointerEvent event) -> ();
+};
+
+/// Injects a listener protocol, along with a ViewRef that defines the coordinate space of the captured pointer events.
+[Discoverable]
+protocol PointerCaptureListenerRegistry {
+    /// This protocol will be subsumed by gesture disambiguation.
+    [Transitional]
+    RegisterListener(PointerCaptureListener listener, fuchsia.ui.views.ViewRef view_ref) -> (bool success);
+};

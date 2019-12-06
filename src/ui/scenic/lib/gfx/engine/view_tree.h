@@ -15,6 +15,7 @@
 #include <variant>
 #include <vector>
 
+#include "src/ui/lib/escher/geometry/transform.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 
@@ -75,8 +76,10 @@ class ViewTree {
     // Park a callback that returns whether a view may currently receive focus.
     fit::function<bool()> may_receive_focus;
 
-    // TODO(24643): Remove this field.
-    SessionId gfx_session_id = 0u;  // Default value: an invalid GFX session ID.
+    // Park a callback that returns the current global transform of the node.
+    fit::function<std::optional<glm::mat4>()> global_transform;
+
+    scheduling::SessionId session_id = 0u;  // Default value: an invalid ID.
   };
 
   // Provide detail on if/why focus change request was denied.
@@ -103,16 +106,19 @@ class ViewTree {
   // Invariant: child exists in nodes_ map.
   std::optional<zx_koid_t> ParentOf(zx_koid_t child) const;
 
-  // TODO(24643): Remove this method.
-  // Return the GFX session ID declared for a tracked node.
+  // Return the scheduling::SessionId declared for a tracked node.
   // Always return 0u for AttachNode, otherwise return stored value for RefNode.
-  // NOTE: This is exclusively to provide legacy support for hard keyboard event dispatch.
-  SessionId SessionIdOf(zx_koid_t koid) const;
+  // NOTE: Multiple KOIDs can return the same SessionId
+  scheduling::SessionId SessionIdOf(zx_koid_t koid) const;
 
   // Return the event reporter declared for a tracked node.
   // Be forgiving: If koid is invalid, or is untracked, return a null event reporter.
   // Note that a valid and tracked koid may still return null, or later become null.
   EventReporterWeakPtr EventReporterOf(zx_koid_t koid) const;
+
+  // Return the global transform of the node attached to a tracked |koid|.
+  // Returns std::nullopt if no node was found or the node had no valid global transform.
+  std::optional<glm::mat4> GlobalTransformOf(zx_koid_t koid) const;
 
   // Return true if koid is (1) valid and (2) exists in nodes_ map.
   bool IsTracked(zx_koid_t koid) const;
@@ -147,8 +153,11 @@ class ViewTree {
   // Pre: view_ref is a valid ViewRef
   // Pre: view_ref not in nodes_ map
   // Pre: may_receive_focus is a non-null callback
+  // Pre: global_transform is a non-null callback
   void NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWeakPtr reporter,
-                  fit::function<bool()> may_receive_focus, SessionId gfx_session_id = 0u);
+                  fit::function<bool()> may_receive_focus,
+                  fit::function<std::optional<glm::mat4>()> global_transform,
+                  scheduling::SessionId session_id = 0u);
 
   // Pre: koid is a valid KOID
   // Pre: koid not in nodes_ map
@@ -216,7 +225,8 @@ struct ViewTreeNewRefNode {
   fuchsia::ui::views::ViewRef view_ref;
   EventReporterWeakPtr event_reporter;
   fit::function<bool()> may_receive_focus;
-  SessionId gfx_session_id = 0u;
+  fit::function<std::optional<glm::mat4>()> global_transform;
+  scheduling::SessionId session_id = 0u;
 };
 
 struct ViewTreeNewAttachNode {

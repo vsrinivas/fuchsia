@@ -29,6 +29,7 @@ executable("unittests") {
     "focus_transfer_test.cc",
     "hard_keyboard_delivery_test.cc",
     "mouse_delivery_test.cc",
+    "pointer_capture_test.cc",
   ]
   deps = [
     ":util",
