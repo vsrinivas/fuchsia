@@ -6,6 +6,7 @@ import("//build/config.gni")
 import("//build/config/fuchsia/zircon_images.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -17,12 +18,10 @@ group("tests") {
   ]
 }
 
-rustc_binary("bin") {
-  name = "terminal"
-  edition = "2018"
+rustc_library("lib") {
+  name = "terminal_lib"
   with_unit_tests = true
-
-  with_lto = "fat"
+  edition = "2018"
 
   deps = [
     "third_party/term-model",
@@ -51,19 +50,37 @@ rustc_binary("bin") {
   ]
 }
 
+rustc_binary("bin") {
+  name = "terminal"
+  edition = "2018"
+  with_unit_tests = true
+
+  with_lto = "fat"
+
+  deps = [
+    ":lib",
+    "//garnet/public/rust/carnelian",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
 package("terminal") {
+  deps = [
+    ":bin"
+  ]
+
+  binaries = [
+    {
+      name = "terminal"
+    },
+  ]
+
   meta = [
     {
       path = rebase_path("meta/terminal.cmx")
       dest = "terminal.cmx"
     },
   ]
-
-  deps = [
-    ":bin",
-  ]
-
-  binary = "terminal"
 }
 
 config_data("tiles_with_terminal_config") {
@@ -81,7 +98,7 @@ zircon_extras_manifest("terminal_tests_zircon_deps.manifest") {
 
 test_package("terminal_tests") {
   deps = [
-    ":bin_test",
+    ":lib_test",
     ":terminal_tests_zircon_deps.manifest",
   ]
 
@@ -89,7 +106,8 @@ test_package("terminal_tests") {
 
   tests = [
     {
-      name = "terminal_bin_test"
+      name = "terminal_lib_lib_test"
+      dest = "terminal_tests"
       environments = basic_envs
     },
   ]

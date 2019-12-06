@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/terminal_bin_test"
+        "binary": "test/terminal_tests"
     },
     "sandbox": {
         "features": [
