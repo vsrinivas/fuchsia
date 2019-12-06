@@ -71,13 +71,10 @@ fn unique_list_with_arg(attrs: &[Attribute], call: &str) -> Result<Option<Nested
     Ok(lists_with_arg.pop())
 }
 
-fn fidl_table_type(span: Span, attrs: &[Attribute]) -> Result<Ident> {
+fn fidl_table_path(span: Span, attrs: &[Attribute]) -> Result<Path> {
     match unique_list_with_arg(attrs, "fidl_table_src")? {
         Some(nested) => match nested {
-            NestedMeta::Meta(Meta::Path(fidl_table_type)) => fidl_table_type
-                .get_ident()
-                .cloned()
-                .ok_or(Error::new(fidl_table_type.span(), "Invalid identifier")),
+            NestedMeta::Meta(Meta::Path(fidl_table_path)) => Ok(fidl_table_path),
             _ => Err(Error::new(
                 span,
                 concat!(
@@ -178,7 +175,19 @@ fn impl_valid_fidl_table(
     fields: Punctuated<Field, Comma>,
     attrs: &[Attribute],
 ) -> Result<TokenStream> {
-    let fidl_table_type = fidl_table_type(name.span(), attrs)?;
+    let fidl_table_path = fidl_table_path(name.span(), attrs)?;
+    let fidl_table_type = match fidl_table_path.segments.last() {
+        Some(segment) => segment.ident.clone(),
+        None => {
+            return Err(Error::new(
+                name.span(),
+                concat!(
+                    "The #[fidl_table_src(FidlTableType)] attribute ",
+                    "takes only one argument, a type name."
+                ),
+            ))
+        }
+    };
 
     let missing_field_error_type = {
         let mut error_type_name = fidl_table_type.to_string();
@@ -299,9 +308,9 @@ fn impl_valid_fidl_table(
 
         #custom_validator_error_from_impl
 
-        impl std::convert::TryFrom<#fidl_table_type> for #name {
+        impl std::convert::TryFrom<#fidl_table_path> for #name {
             type Error = #error_type_name;
-            fn try_from(src: #fidl_table_type) -> std::result::Result<Self, Self::Error> {
+            fn try_from(src: #fidl_table_path) -> std::result::Result<Self, Self::Error> {
                 use ::fidl_table_validation::Validate;
                 let maybe_valid = Self {
                     #field_validations
@@ -311,8 +320,8 @@ fn impl_valid_fidl_table(
             }
         }
 
-        impl std::convert::From<#name> for #fidl_table_type {
-            fn from(src: #name) -> #fidl_table_type {
+        impl std::convert::From<#name> for #fidl_table_path {
+            fn from(src: #name) -> #fidl_table_path {
                 Self {
                     #field_intos
                 }

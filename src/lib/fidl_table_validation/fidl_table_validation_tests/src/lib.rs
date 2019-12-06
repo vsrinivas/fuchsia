@@ -224,3 +224,24 @@ fn back_into_original_nested() {
         FidlHello { nested: Some(NestedFidl { required: Some(10) }) }
     );
 }
+
+mod nested {
+    #[derive(Debug, PartialEq)]
+    pub(crate) struct FidlHello {
+        pub required: Option<usize>,
+    }
+}
+
+#[test]
+fn works_with_nested_typenames() {
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(nested::FidlHello)]
+    struct ValidHello {
+        required: usize,
+    }
+
+    match ValidHello::try_from(nested::FidlHello { required: Some(7) }) {
+        Ok(valid_hello) => assert_eq!(ValidHello { required: 7 }, valid_hello),
+        Err(e) => panic!("Did not expect to fail to build ValidHello: got {:?}", e),
+    };
+}
