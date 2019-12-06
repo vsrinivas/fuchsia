@@ -122,7 +122,6 @@ if (current_cpu != "") {
       "$zx/system/dev/usb/mt-musb-host:mt-hci-test",
       "$zx/system/dev/usb/mt-musb-host:mt-hci-transaction-test",
       "$zx/system/dev/usb/xhci-rewrite:xhci-unittest",
-      "$zx/system/uapp/audio:test",
       "$zx/system/uapp/disk-pave:install-disk-image-test",
       "$zx/system/uapp/nand-util:nand-util-test",
       "$zx/system/uapp/thermal-cli:thermal-cli-test",

@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("audio") {
   testonly = true
   deps = [
@@ -20,19 +33,20 @@ source_set("src") {
     "wav-source.cc",
   ]
   public_deps = [
-    "$zx/system/ulib/audio-proto-utils",
-    "$zx/system/ulib/audio-utils",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
+    "//zircon/public/lib/audio-proto-utils",
+    "//zircon/public/lib/audio-utils",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
   ]
   deps = [
-    "$zx/system/ulib/fdio",
+    "//zircon/public/lib/fdio",
   ]
 }
 
-zx_executable("bin") {
+executable("bin") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "audio"
+  output_dir = "$root_out_dir/zircon-migrated"
   sources = [
     "audio.cc",
   ]
@@ -41,7 +55,11 @@ zx_executable("bin") {
   ]
 }
 
-zx_test("test") {
+test("test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "audio-test"
   sources = [
     "sine-source-test.cc",
@@ -49,11 +67,22 @@ zx_test("test") {
   include_dirs = [ "." ]
   deps = [
     ":src",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+migrated_manifest("bin-manifest") {
+  deps = [
+    ":bin",
+  ]
+}
+
+migrated_manifest("test-manifest") {
+  deps = [
+    ":test",
   ]
 }

@@ -44,7 +44,6 @@ group("images") {
 
 aggregate_manifest("legacy-image") {
   deps = [
-    ":bin.audio",
     ":bin.backlight",
     ":bin.biotime",
     ":bin.blktest",
@@ -341,7 +340,6 @@ aggregate_manifest("legacy-image") {
     ":driver.virtio",
     ":driver.xhci",
     ":driver.zxcrypt",
-    ":test.sys.audio-test",
   ]
 
   # CPU-specific targets.
@@ -757,7 +755,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.async-test",
     ":test.sys.async-testing-test",
     ":test.sys.audio-dsp-test",
-    ":test.sys.audio-test",
     ":test.sys.backlight-test",
     ":test.sys.backtrace-request-integration-test",
     ":test.sys.backtrace-request-test",
@@ -1202,7 +1199,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.async-test",
     ":test.sys.async-testing-test",
     ":test.sys.audio-dsp-test",
-    ":test.sys.audio-test",
     ":test.sys.backlight-test",
     ":test.sys.backtrace-request-integration-test",
     ":test.sys.backtrace-request-test",
@@ -1505,13 +1501,20 @@ aggregate_manifest("legacy-tests") {
 #    using idiomatic constructs - the edit should be a removal.
 
 aggregate_manifest("migrated-image") {
-  deps = []
+  deps = [
+    "//zircon/system/uapp/audio:bin-manifest",
+    "//zircon/system/uapp/audio:test-manifest",
+  ]
 }
 
 aggregate_manifest("migrated-aux") {
-  deps = []
+  deps = [
+    "//zircon/system/uapp/audio:test-manifest",
+  ]
 }
 
 aggregate_manifest("migrated-tests") {
-  deps = []
+  deps = [
+    "//zircon/system/uapp/audio:test-manifest",
+  ]
 }
