@@ -85,6 +85,11 @@ mod tests {
     use fuchsia_async as fasync;
     use futures::prelude::*;
 
+    const TEST_LUX_VAL: u8 = 25;
+    const TEST_RED_VAL: u8 = 10;
+    const TEST_GREEN_VAL: u8 = 9;
+    const TEST_BLUE_VAL: u8 = 6;
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_read_sensor() {
         let (proxy, mut stream) =
@@ -94,7 +99,19 @@ mod tests {
             while let Some(request) = stream.try_next().await.unwrap() {
                 if let SensorRequest::GetReport { type_: _, id: _, responder } = request {
                     // Taken from actual sensor report
-                    let data: [u8; 11] = [1, 1, 0, 25, 0, 10, 0, 9, 0, 6, 0];
+                    let data: [u8; 11] = [
+                        1,
+                        1,
+                        0,
+                        TEST_LUX_VAL,
+                        0,
+                        TEST_RED_VAL,
+                        0,
+                        TEST_GREEN_VAL,
+                        0,
+                        TEST_BLUE_VAL,
+                        0,
+                    ];
                     responder.send(0, &mut data.iter().cloned()).unwrap();
                 }
             }
@@ -103,10 +120,10 @@ mod tests {
         let result = read_sensor(&proxy).await;
         match result {
             Ok(input_rpt) => {
-                assert_eq!(input_rpt.illuminance, 25);
-                assert_eq!(input_rpt.red, 10);
-                assert_eq!(input_rpt.green, 9);
-                assert_eq!(input_rpt.blue, 6);
+                assert_eq!(input_rpt.illuminance, TEST_LUX_VAL as u16);
+                assert_eq!(input_rpt.red, TEST_RED_VAL as u16);
+                assert_eq!(input_rpt.green, TEST_GREEN_VAL as u16);
+                assert_eq!(input_rpt.blue, TEST_BLUE_VAL as u16);
             }
             Err(e) => {
                 panic!("Sensor read failed: {:?}", e);

@@ -13,6 +13,11 @@ use {
 
 const ENV_NAME: &str = "settings_service_light_sensor_test_environment";
 
+const TEST_LUX_VAL: u8 = 25;
+const TEST_RED_VAL: u8 = 10;
+const TEST_GREEN_VAL: u8 = 9;
+const TEST_BLUE_VAL: u8 = 6;
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_light_sensor() {
     let service_gen = |service_name: &str, channel: zx::Channel| {
@@ -32,7 +37,19 @@ async fn test_light_sensor() {
                 } = request
                 {
                     // Taken from actual sensor report
-                    let data: [u8; 11] = [1, 1, 0, 25, 0, 10, 0, 9, 0, 6, 0];
+                    let data: [u8; 11] = [
+                        1,
+                        1,
+                        0,
+                        TEST_LUX_VAL,
+                        0,
+                        TEST_RED_VAL,
+                        0,
+                        TEST_GREEN_VAL,
+                        0,
+                        TEST_BLUE_VAL,
+                        0,
+                    ];
                     responder.send(0, &mut data.iter().cloned()).unwrap();
                 }
             }
@@ -59,5 +76,13 @@ async fn test_light_sensor() {
         .expect("watch completed")
         .expect("watch successful");
 
-    assert_eq!(data.illuminance_lux, Some(25.0));
+    assert_eq!(data.illuminance_lux, Some(TEST_LUX_VAL.into()));
+    assert_eq!(
+        data.color,
+        Some(fidl_fuchsia_ui_types::ColorRgb {
+            red: TEST_RED_VAL.into(),
+            green: TEST_GREEN_VAL.into(),
+            blue: TEST_BLUE_VAL.into(),
+        })
+    );
 }

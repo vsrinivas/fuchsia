@@ -4,6 +4,8 @@
 
 library fuchsia.settings;
 
+using fuchsia.ui.types;
+
 /// Settings related to display
 [Discoverable]
 protocol Display {
@@ -27,6 +29,9 @@ table DisplaySettings {
 };
 
 table LightSensorData {
-    /// Brightness from the light sensor measured in lux
+    /// Brightness from the light sensor measured in lux.
     1: float32 illuminance_lux;
+
+    /// Color measured by light sensor in rgb.
+    2: fuchsia.ui.types.ColorRgb color;
 };

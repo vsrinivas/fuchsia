@@ -157,10 +157,12 @@ fn start_light_sensor_scanner(
 }
 
 async fn get_sensor_data(sensor: &SensorProxy) -> LightData {
-    let lux: f32 =
-        read_sensor(&sensor).await.expect("Could not read from the sensor").illuminance.into();
-
-    LightData { illuminance: lux }
+    let sensor_data = read_sensor(&sensor).await.expect("Could not read from the sensor");
+    let lux: f32 = sensor_data.illuminance.into();
+    let red: f32 = sensor_data.red.into();
+    let green: f32 = sensor_data.green.into();
+    let blue: f32 = sensor_data.blue.into();
+    LightData { illuminance: lux, color: fidl_fuchsia_ui_types::ColorRgb { red, green, blue } }
 }
 
 #[cfg(test)]
@@ -212,8 +214,14 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_notify_on_change() {
-        let data1 = LightData { illuminance: 10.0 };
-        let data2 = LightData { illuminance: 15.0 };
+        let data1 = LightData {
+            illuminance: 10.0,
+            color: fidl_fuchsia_ui_types::ColorRgb { red: 3.0, green: 6.0, blue: 1.0 },
+        };
+        let data2 = LightData {
+            illuminance: 15.0,
+            color: fidl_fuchsia_ui_types::ColorRgb { red: 1.0, green: 9.0, blue: 5.0 },
+        };
 
         let (light_sender, light_receiver) = unbounded::<LightData>();
 

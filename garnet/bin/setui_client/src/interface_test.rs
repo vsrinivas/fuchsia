@@ -346,7 +346,14 @@ async fn validate_light_sensor() -> Result<(), Error> {
                 DisplayRequest::WatchLightSensor { delta: _, responder } => {
                     *watch_called_clone.write() = true;
                     responder
-                        .send(&mut Ok(LightSensorData { illuminance_lux: Some(100.0) }))
+                        .send(&mut Ok(LightSensorData {
+                            illuminance_lux: Some(100.0),
+                            color: Some(fidl_fuchsia_ui_types::ColorRgb {
+                                red: 25.0,
+                                green: 16.0,
+                                blue: 59.0,
+                            }),
+                        }))
                         .unwrap();
                 }
                 _ => {}

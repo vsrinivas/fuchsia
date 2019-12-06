@@ -201,10 +201,13 @@ pub struct SetupInfo {
     pub configuration_interfaces: ConfigurationInterfaceFlags,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct LightData {
-    /// Overall illuminance as measured in lux
+    /// Overall illuminance as measured in lux.
     pub illuminance: f32,
+
+    /// Light sensor color reading in rgb.
+    pub color: fidl_fuchsia_ui_types::ColorRgb,
 }
 
 /// The possible responses to a SettingRequest.

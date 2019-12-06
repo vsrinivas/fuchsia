@@ -31,6 +31,7 @@ impl From<SettingResponse> for LightSensorData {
         if let SettingResponse::LightSensor(data) = response {
             let mut sensor_data = fidl_fuchsia_settings::LightSensorData::empty();
             sensor_data.illuminance_lux = Some(data.illuminance);
+            sensor_data.color = Some(data.color);
             sensor_data
         } else {
             panic!("incorrect value sent to display");
