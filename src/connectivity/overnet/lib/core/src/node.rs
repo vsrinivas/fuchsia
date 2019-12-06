@@ -961,11 +961,11 @@ mod test {
             unimplemented!();
         }
 
-        fn spawn_local<F>(&mut self, _future: F)
+        fn spawn_local<F>(&mut self, future: F)
         where
             F: Future<Output = ()> + 'static,
         {
-            unimplemented!();
+            self.0.spawn_local(future).unwrap();
         }
 
         fn at(&mut self, t: Time, f: impl FnOnce() + 'static) {
@@ -977,12 +977,10 @@ mod test {
                 }
                 let _ = tx.send(());
             });
-            self.0
-                .spawn_local(async move {
-                    rx.await.unwrap();
-                    f();
-                })
-                .unwrap();
+            self.spawn_local(async move {
+                rx.await.unwrap();
+                f();
+            });
         }
 
         fn router_link_id(&self, _id: Self::LinkId) -> LinkId<PhysLinkId<()>> {
@@ -1015,5 +1013,36 @@ mod test {
         .unwrap();
         pool.run_until(try_join(n.clone().list_peers(), n.clone().list_peers()))
             .expect_err("Concurrent list peers should fail");
+    }
+
+    #[test]
+    #[cfg(not(target_os = "fuchsia"))]
+    fn initial_greeting_packet() {
+        init();
+        let mut pool = futures::executor::LocalPool::new();
+        let n = Node::new(
+            TestRuntime(pool.spawner()),
+            NodeOptions::from_router_options(test_router_options()).export_diagnostics(false),
+        )
+        .unwrap();
+        let node_id = n.id();
+        let (c, s) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
+        let mut c = fidl::AsyncSocket::from_socket(c).unwrap();
+        n.attach_socket_link(Some("test".to_string()), s).unwrap();
+        pool.run_until(async move {
+            let mut deframer = StreamDeframer::new();
+            let mut buf = [0u8; 1024];
+            let mut greeting_bytes = loop {
+                let n = c.read(&mut buf).await.unwrap();
+                deframer.queue_recv(&buf[..n]);
+                if let Some(greeting) = deframer.next_incoming_frame() {
+                    break greeting;
+                }
+            };
+            let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut()).unwrap();
+            assert_eq!(greeting.magic_string, Some("OVERNET SOCKET LINK".to_string()));
+            assert_eq!(greeting.node_id, Some(node_id.into()));
+            assert_eq!(greeting.connection_label, Some("test".to_string()));
+        });
     }
 }

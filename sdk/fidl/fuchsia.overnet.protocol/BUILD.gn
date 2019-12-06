@@ -5,12 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.overnet.protocol") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "string-bounds-not-specified",
-    "vector-bounds-not-specified",
-  ]
-
   sources = [
     "diagnostic.fidl",
     "labels.fidl",

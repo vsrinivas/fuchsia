@@ -56,6 +56,13 @@ impl<T> std::cmp::PartialEq for SaltedID<T> {
 
 impl<T> std::cmp::Eq for SaltedID<T> {}
 
+impl<T> std::hash::Hash for SaltedID<T> {
+    fn hash<H: std::hash::Hasher>(&self, h: &mut H) {
+        h.write_u32(self.obfuscated_id);
+        h.write_u32(self.salt);
+    }
+}
+
 /// Allows retrieving the T from a SaltedID<T>
 pub trait ElemType {
     /// The element pointed to by an ID

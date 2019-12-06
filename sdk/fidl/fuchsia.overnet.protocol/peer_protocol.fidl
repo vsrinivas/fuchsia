@@ -19,7 +19,17 @@ xunion PeerMessage {
     UpdateLinkStatus update_link_status;
 };
 
-/// Reply messages for PeerMessage, where appropriate
+/// Overall connection configuration request
+table ConfigRequest {
+};
+
+/// Overall connection configuration response - sent as the first response message
+/// on the connection stream.
+table ConfigResponse {
+};
+
+/// Reply messages for PeerMessage, where appropriate.
+/// The ConfigResponse message must have been sent already.
 xunion PeerReply {
     /// Acknowledge an UpdateLinkStatus message
     Empty update_link_status_ack;
@@ -34,7 +44,7 @@ struct Empty {
 ///  - no routing decisions based on partial information from any one node
 struct UpdateLinkStatus {
     /// Status of all active links originating at the sending node
-    vector<LinkStatus> link_status;
+    vector<LinkStatus>:MAX link_status;
 };
 
 /// Create a new stream, labelled `stream_id`, to communicate with the
@@ -55,7 +65,7 @@ table ConnectToServiceOptions {
 /// Description of a single node.
 table PeerDescription {
     /// The set of services published by this node.
-    1: vector<string> services;
+    1: vector<string:MAX_SERVICE_NAME_LENGTH>:MAX services;
 };
 
 /// Metrics associated with a link.
