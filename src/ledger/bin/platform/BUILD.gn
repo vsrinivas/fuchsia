@@ -28,6 +28,7 @@ source_set("implementation") {
 
   public_deps = [
     ":platform",
+    "//src/ledger/lib/convert",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

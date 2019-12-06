@@ -6,6 +6,7 @@
 #define SRC_LEDGER_BIN_PLATFORM_PLATFORM_H_
 
 #include <memory>
+#include <vector>
 
 #include "leveldb/env.h"
 #include "src/ledger/bin/platform/detached_path.h"
@@ -58,6 +59,11 @@ class FileSystem {
 
   // Returns whether the given |path| refers to a directory.
   virtual bool IsDirectory(DetachedPath path) = 0;
+
+  // Lists the contents of the directory at the given |path| and stores them in |dir_contents|. The
+  // current path (e.g. ".") and the parent path (e.g. "..") are not included in the result. Returns
+  // true on success or false otherwise.
+  virtual bool GetDirectoryContents(DetachedPath path, std::vector<std::string>* dir_contents) = 0;
 
   // Deletes the file or empty directory at the given |path|. If the |path| refers to a non-empty
   // directory, the operation fails. Returns true on success or false otherwise.

@@ -6,8 +6,6 @@ visibility = [ "//src/ledger/*" ]
 
 source_set("filesystem") {
   sources = [
-    "directory_reader.cc",
-    "directory_reader.h",
     "get_directory_content_size.cc",
     "get_directory_content_size.h",
   ]
@@ -24,7 +22,6 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "directory_reader_unittest.cc",
     "get_directory_content_size_unittest.cc",
   ]
 

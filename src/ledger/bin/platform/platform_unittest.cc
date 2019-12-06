@@ -11,6 +11,7 @@
 namespace ledger {
 namespace {
 using testing::Gt;
+using testing::UnorderedElementsAre;
 
 TEST(PlatformTest, WriteReadFile) {
   std::unique_ptr<Platform> platform = MakePlatform();
@@ -70,6 +71,22 @@ TEST(PlatformTest, CreateDirectoryWithSubpaths) {
 
   EXPECT_TRUE(platform->file_system()->CreateDirectory(subpath));
   EXPECT_TRUE(platform->file_system()->IsDirectory(subpath));
+}
+
+TEST(PlatformTest, GetDirectoryContents) {
+  std::unique_ptr<Platform> platform = MakePlatform();
+  scoped_tmpfs::ScopedTmpFS tmpfs;
+  std::string kFileContent = "file content";
+  ASSERT_TRUE(platform->file_system()->CreateDirectory(DetachedPath(tmpfs.root_fd(), "foo")));
+  ASSERT_TRUE(
+      platform->file_system()->WriteFile(DetachedPath(tmpfs.root_fd(), "bar"), kFileContent));
+  ASSERT_TRUE(
+      platform->file_system()->WriteFile(DetachedPath(tmpfs.root_fd(), "foo/baz"), kFileContent));
+
+  std::vector<std::string> contents;
+  EXPECT_TRUE(
+      platform->file_system()->GetDirectoryContents(DetachedPath(tmpfs.root_fd()), &contents));
+  EXPECT_THAT(contents, UnorderedElementsAre("foo", "bar"));
 }
 
 TEST(PlatformTest, DeletePathFile) {

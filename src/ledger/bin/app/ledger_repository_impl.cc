@@ -16,7 +16,6 @@
 #include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
@@ -195,20 +194,26 @@ void LedgerRepositoryImpl::TrySyncClosedPage(absl::string_view ledger_name,
 // thread.
 void LedgerRepositoryImpl::GetNames(fit::function<void(std::set<std::string>)> callback) {
   std::set<std::string> child_names;
-  ledger::GetDirectoryEntries(content_path_, [&child_names](absl::string_view entry) {
+  std::vector<std::string> contents;
+  if (!environment_->file_system()->GetDirectoryContents(content_path_, &contents)) {
+    FXL_LOG(ERROR) << "Failed to get directory entries at " << content_path_.path();
+    callback({});
+    return;
+  }
+
+  for (const std::string& content : contents) {
     std::string decoded;
-    if (absl::WebSafeBase64Unescape(entry, &decoded)) {
+    if (absl::WebSafeBase64Unescape(content, &decoded)) {
       child_names.insert(decoded);
-      return true;
     } else {
       // NOTE(nathaniel): The ChildrenManager API does not currently have a
       // means to indicate errors; our response to an error here is to
       // simply log and refrain from telling Inspect that the problematic
       // child exists.
-      FXL_LOG(ERROR) << "Failed to decode encoded ledger name \"" << entry << "\"!";
-      return false;
+      FXL_LOG(ERROR) << "Failed to decode encoded ledger name \"" << content << "\"!";
+      break;
     }
-  });
+  };
   callback(child_names);
 };
 

@@ -17,7 +17,6 @@
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/serialization_version.h"
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/public/status.h"
@@ -43,24 +42,26 @@ using ::testing::ElementsAre;
 // the source path.
 bool FindPathToDir(ledger::FileSystem* file_system, const ledger::DetachedPath& root_path,
                    absl::string_view target_dir, ledger::DetachedPath* path_to_dir) {
-  bool dir_found = false;
-  auto on_next_directory_entry = [&](absl::string_view entry) {
+  std::vector<std::string> directory_entries;
+  if (!file_system->GetDirectoryContents(root_path, &directory_entries)) {
+    FXL_LOG(ERROR) << "Error while reading directory contents at: " << root_path.path();
+    return false;
+  }
+  for (const std::string& entry : directory_entries) {
     ledger::DetachedPath current_path = root_path.SubPath(entry);
     if (file_system->IsDirectory(
             ledger::DetachedPath(current_path.root_fd(), current_path.path()))) {
       if (entry == target_dir) {
-        dir_found = true;
         *path_to_dir = std::move(current_path);
-        return false;
+        return true;
       }
-      dir_found = FindPathToDir(file_system, current_path, target_dir, path_to_dir);
-      // If the page path was found, stop the iteration by returning false.
-      return !dir_found;
+      if (FindPathToDir(file_system, current_path, target_dir, path_to_dir)) {
+        // The page path was found in |current_path|.
+        return true;
+      }
     }
-    return true;
-  };
-  ledger::GetDirectoryEntries(root_path, on_next_directory_entry);
-  return dir_found;
+  }
+  return false;
 }
 
 template <class A>
@@ -300,15 +301,10 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   EXPECT_FALSE(platform_->file_system()->IsFile(path));
   EXPECT_TRUE(repo_disconnected);
 
-  // Make sure all the contents are deleted. Only the staging directory should
-  // be present.
+  // Make sure all the contents are deleted. Only the staging directory should be present.
   std::vector<std::string> directory_entries;
-  auto on_next_directory_entry = [&](absl::string_view entry) {
-    directory_entries.push_back(convert::ToString(entry));
-    return true;
-  };
-  EXPECT_TRUE(
-      ledger::GetDirectoryEntries(ledger::DetachedPath(tmpfs.root_fd()), on_next_directory_entry));
+  EXPECT_TRUE(platform_->file_system()->GetDirectoryContents(ledger::DetachedPath(tmpfs.root_fd()),
+                                                             &directory_entries));
   EXPECT_THAT(directory_entries, ElementsAre("staging"));
 
   // Verify that the Ledger app didn't crash.

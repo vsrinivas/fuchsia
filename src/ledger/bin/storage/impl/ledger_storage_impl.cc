@@ -12,8 +12,8 @@
 #include <iterator>
 #include <set>
 #include <string>
+#include <vector>
 
-#include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/lib/callback/scoped_callback.h"
@@ -70,12 +70,13 @@ Status LedgerStorageImpl::Init() {
 void LedgerStorageImpl::ListPages(fit::function<void(Status, std::set<PageId>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger", "ledger_storage_list_pages");
   std::set<PageId> page_ids;
-  ledger::GetDirectoryEntries(storage_dir_, [&page_ids](absl::string_view encoded_page_id) {
+  std::vector<std::string> encoded_page_ids;
+  environment_->file_system()->GetDirectoryContents(storage_dir_, &encoded_page_ids);
+  for (const std::string& encoded_page_id : encoded_page_ids) {
     if (encoded_page_id != kStagingDirName) {
       page_ids.insert(GetId(encoded_page_id));
     }
-    return true;
-  });
+  }
   timed_callback(Status::OK, std::move(page_ids));
 }
 

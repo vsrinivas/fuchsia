@@ -32,6 +32,7 @@ class FuchsiaFileSystem : public FileSystem {
   bool GetFileSize(DetachedPath path, uint64_t* size) override;
   bool CreateDirectory(DetachedPath path) override;
   bool IsDirectory(DetachedPath path) override;
+  bool GetDirectoryContents(DetachedPath path, std::vector<std::string>* dir_contents) override;
   bool DeletePath(DetachedPath path) override;
   bool DeletePathRecursively(DetachedPath path) override;
 };

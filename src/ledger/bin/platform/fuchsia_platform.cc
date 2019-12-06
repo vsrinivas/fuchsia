@@ -5,14 +5,18 @@
 
 #include "src/ledger/bin/platform/fuchsia_platform.h"
 
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "util/env_fuchsia.h"
 
 namespace ledger {
 namespace {
+
+constexpr absl::string_view kCurrentPath = ".";
 
 class FuchsiaFileDescriptor : public FileSystem::FileDescriptor {
  public:
@@ -82,6 +86,18 @@ bool FuchsiaFileSystem::CreateDirectory(DetachedPath path) {
 
 bool FuchsiaFileSystem::IsDirectory(DetachedPath path) {
   return files::IsDirectoryAt(path.root_fd(), path.path());
+}
+
+bool FuchsiaFileSystem::GetDirectoryContents(DetachedPath path,
+                                             std::vector<std::string>* dir_contents) {
+  if (!files::ReadDirContentsAt(path.root_fd(), path.path(), dir_contents)) {
+    return false;
+  }
+  // Remove the current directory string from the result.
+  auto it = std::find(dir_contents->begin(), dir_contents->end(), convert::ToString(kCurrentPath));
+  FXL_DCHECK(it != dir_contents->end());
+  dir_contents->erase(it);
+  return true;
 }
 
 bool FuchsiaFileSystem::DeletePath(DetachedPath path) {

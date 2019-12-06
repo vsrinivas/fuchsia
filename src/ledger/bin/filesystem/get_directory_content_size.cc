@@ -7,7 +7,6 @@
 #include <queue>
 #include <string>
 
-#include "src/ledger/bin/filesystem/directory_reader.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -22,23 +21,23 @@ bool GetDirectoryContentSize(FileSystem* file_system, DetachedPath directory, ui
   while (!directories.empty()) {
     DetachedPath parent = std::move(directories.front());
     directories.pop();
-    if (!GetDirectoryEntries(
-            parent, [file_system, &parent, size, &directories](absl::string_view child) {
-              DetachedPath child_path = parent.SubPath(child);
-              if (file_system->IsDirectory(child_path)) {
-                directories.push(child_path);
-              } else {
-                uint64_t file_size = 0;
-                if (!file_system->GetFileSize(child_path, &file_size)) {
-                  FXL_LOG(ERROR) << "Couldn't get file size of " << child_path.path();
-                  return false;
-                }
-                *size += file_size;
-              }
-              return true;
-            })) {
+    std::vector<std::string> children;
+    if (!file_system->GetDirectoryContents(parent, &children)) {
       FXL_LOG(ERROR) << "Couldn't retrieve contents of " << parent.path();
       return false;
+    }
+    for (const std::string& child : children) {
+      DetachedPath child_path = parent.SubPath(child);
+      if (file_system->IsDirectory(child_path)) {
+        directories.push(child_path);
+      } else {
+        uint64_t file_size = 0;
+        if (!file_system->GetFileSize(child_path, &file_size)) {
+          FXL_LOG(ERROR) << "Couldn't get file size of " << child_path.path();
+          return false;
+        }
+        *size += file_size;
+      }
     }
   }
   return true;
