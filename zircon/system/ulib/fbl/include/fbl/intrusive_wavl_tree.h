@@ -218,6 +218,10 @@ class WAVLTree {
   const_iterator end() const { return const_iterator(sentinel()); }
   const_iterator cend() const { return const_iterator(sentinel()); }
 
+  // Iterator accessors to the root node.
+  iterator root() { return is_empty() ? end() : iterator(root_); }
+  const_iterator croot() const { return is_empty() ? cend() : const_iterator(root_); }
+
   // make_iterator : construct an iterator out of a pointer to an object
   iterator make_iterator(ValueType& obj) { return iterator(&obj); }
   const_iterator make_iterator(const ValueType& obj) const {
@@ -281,8 +285,13 @@ class WAVLTree {
 
     internal_insert(ptr, &collision);
 
-    if (iter)
+    if (collision) {
+      Observer::RecordInsertCollision(obj, iterator(collision));
+    }
+
+    if (iter) {
       *iter = collision ? iterator(collision) : iterator(obj);
+    }
 
     return !collision;
   }
@@ -307,6 +316,7 @@ class WAVLTree {
     // with.
     if (collision) {
       ZX_DEBUG_ASSERT(ptr != nullptr);
+      Observer::RecordInsertReplace(iterator(collision), PtrTraits::GetRaw(ptr));
       return internal_swap(collision, std::move(ptr));
     }
 
@@ -610,6 +620,7 @@ class WAVLTree {
     }
 
     bool IsValid() const { return internal::valid_sentinel_ptr(node_); }
+    explicit operator bool() const { return IsValid(); }
     bool operator==(const iterator_impl& other) const { return node_ == other.node_; }
     bool operator!=(const iterator_impl& other) const { return node_ != other.node_; }
 
@@ -647,6 +658,24 @@ class WAVLTree {
       iterator_impl ret(*this);
       --(*this);
       return ret;
+    }
+
+    iterator_impl parent() const {
+      ZX_DEBUG_ASSERT(internal::valid_sentinel_ptr(node_));
+      auto& ns = NodeTraits::node_state(*node_);
+      return iterator_impl(ns.parent_);
+    }
+
+    iterator_impl left() const {
+      ZX_DEBUG_ASSERT(internal::valid_sentinel_ptr(node_));
+      auto& ns = NodeTraits::node_state(*node_);
+      return iterator_impl(ns.left_);
+    }
+
+    iterator_impl right() const {
+      ZX_DEBUG_ASSERT(internal::valid_sentinel_ptr(node_));
+      auto& ns = NodeTraits::node_state(*node_);
+      return iterator_impl(ns.right_);
     }
 
     typename PtrTraits::PtrType CopyPointer() const {
@@ -762,9 +791,8 @@ class WAVLTree {
       right_most_ = PtrTraits::GetRaw(ptr);
 
       root_ = PtrTraits::Leak(ptr);
-
       ++count_;
-      Observer::RecordInsert();
+      Observer::RecordInsert(root());
       return;
     }
 
@@ -786,15 +814,14 @@ class WAVLTree {
       // knows which object he/she collided with.  Either way, do not
       // actually insert the object.
       if (KeyTraits::EqualTo(key, parent_key)) {
-        ZX_DEBUG_ASSERT(collision);
-
-        if (collision) {
-          ZX_DEBUG_ASSERT(*collision == nullptr);
-          *collision = parent;
-        }
-
+        ZX_DEBUG_ASSERT(collision && *collision == nullptr);
+        *collision = parent;
         return;
       }
+
+      // Update user-defined invariants in the subtree node only when the
+      // key does not collide.
+      Observer::RecordInsertTraverse(PtrTraits::GetRaw(ptr), iterator(parent));
 
       auto& parent_ns = NodeTraits::node_state(*parent);
 
@@ -839,10 +866,11 @@ class WAVLTree {
     // traits definition of "valid").
     ZX_DEBUG_ASSERT(internal::valid_sentinel_ptr(*owner) == false);
     ns.parent_ = parent;
-    *owner = PtrTraits::Leak(ptr);
 
+    *owner = PtrTraits::Leak(ptr);
     ++count_;
-    Observer::RecordInsert();
+
+    Observer::RecordInsert(iterator(*owner));
 
     // Finally, perform post-insert balance operations.
     BalancePostInsert(*owner);
@@ -974,7 +1002,7 @@ class WAVLTree {
 
     // Update the count bookkeeping.
     --count_;
-    Observer::RecordErase();
+    Observer::RecordErase(target, iterator(parent));
 
     // Time to rebalance.  We know that we don't need to rebalance if we
     // just removed the root (IOW - its parent was the sentinel value).
@@ -1404,6 +1432,11 @@ class WAVLTree {
     // The pointer to Y cannot be a sentinel, because that would imply that
     // X was LR-most.
     ZX_DEBUG_ASSERT(!internal::is_sentinel_ptr(Y));
+
+    // Record the rotation observation before the links are updated. The children are specified here
+    // as a left rotation. These are transformed by the LRTraits for the right rotation case.
+    Observer::RecordRotation(iterator(X), iterator(Y), iterator(LRTraits::RLChild(X_ns)),
+                             iterator(Z), iterator(LRTraits::LRChild(Z_ns)));
 
     // Permute the downstream links.
     RawPtrType tmp = X_link;

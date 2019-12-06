@@ -4,6 +4,8 @@
 
 #include <math.h>
 
+#include <algorithm>
+
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/tests/intrusive_containers/intrusive_wavl_tree_checker.h>
@@ -120,49 +122,128 @@ VERIFY_CONTAINER_SIZES(WAVL, sizeof(void*) * 4);
 class WAVLBalanceTestObserver {
  public:
   struct OpCounts {
-    OpCounts() { reset(); }
+    OpCounts() = default;
 
-    void reset() {
-      insert_ops_ = 0;
-      insert_promotes_ = 0;
-      insert_rotations_ = 0;
-      insert_double_rotations_ = 0;
-      erase_ops_ = 0;
-      erase_demotes_ = 0;
-      erase_rotations_ = 0;
-      erase_double_rotations_ = 0;
-    }
+    void reset() { *this = OpCounts{}; }
 
     void accumulate(OpCounts& target) {
       target.insert_ops_ += insert_ops_;
       target.insert_promotes_ += insert_promotes_;
       target.insert_rotations_ += insert_rotations_;
       target.insert_double_rotations_ += insert_double_rotations_;
+      target.insert_collisions_ += insert_collisions_;
+      target.insert_replacements_ += insert_replacements_;
+      target.insert_traversals_ += insert_traversals_;
+      target.inspected_rotations_ += inspected_rotations_;
       target.erase_ops_ += erase_ops_;
       target.erase_demotes_ += erase_demotes_;
       target.erase_rotations_ += erase_rotations_;
       target.erase_double_rotations_ += erase_double_rotations_;
     }
 
-    size_t insert_ops_;
-    size_t insert_promotes_;
-    size_t insert_rotations_;
-    size_t insert_double_rotations_;
+    size_t insert_ops_{0};
+    size_t insert_promotes_{0};
+    size_t insert_rotations_{0};
+    size_t insert_double_rotations_{0};
+    size_t insert_collisions_{0};
+    size_t insert_replacements_{0};
+    size_t insert_traversals_{0};
 
-    size_t erase_ops_;
-    size_t erase_demotes_;
-    size_t erase_rotations_;
-    size_t erase_double_rotations_;
+    size_t inspected_rotations_{0};
+
+    size_t erase_ops_{0};
+    size_t erase_demotes_{0};
+    size_t erase_rotations_{0};
+    size_t erase_double_rotations_{0};
   };
 
   static void ResetObserverOpCounts() { op_counts_.reset(); }
   static void AccumulateObserverOpCounts(OpCounts& target) { op_counts_.accumulate(target); }
 
-  static void RecordInsert() { ++op_counts_.insert_ops_; }
+  template <typename Iter>
+  static void RecordInsert(Iter node) {
+    ++op_counts_.insert_ops_;
+
+    // Set the subtree min/max values to the node's key, as it is a leaf when
+    // first inserted, before rebalancing.
+    node->min_subtree_key_ = node->max_subtree_key_ = node->key_;
+  }
+  template <typename T, typename Iter>
+  static void RecordInsertCollision(T* node, Iter collision) {
+    ++op_counts_.insert_collisions_;
+
+    // A collision doesn't affect the subtree min/max values of any ancestor
+    // during traversal.
+  }
+  template <typename Iter, typename T>
+  static void RecordInsertReplace(Iter node, T* replacement) {
+    ++op_counts_.insert_replacements_;
+
+    // Copy the subtree min/max values to the replacement node.
+    replacement->min_subtree_key_ = node->min_subtree_key_;
+    replacement->max_subtree_key_ = node->max_subtree_key_;
+  }
+  template <typename T, typename Iter>
+  static void RecordInsertTraverse(T* node, Iter ancestor) {
+    ++op_counts_.insert_traversals_;
+
+    // Update each ancestor's subtree min/max values as the insertion traverses
+    // them to find the insertion point of the new node.
+    ancestor->min_subtree_key_ = std::min(ancestor->min_subtree_key_, node->key_);
+    ancestor->max_subtree_key_ = std::max(ancestor->max_subtree_key_, node->key_);
+  }
   static void RecordInsertPromote() { ++op_counts_.insert_promotes_; }
   static void RecordInsertRotation() { ++op_counts_.insert_rotations_; }
   static void RecordInsertDoubleRotation() { ++op_counts_.insert_double_rotations_; }
-  static void RecordErase() { ++op_counts_.erase_ops_; }
+  template <typename Iter>
+  static void RecordRotation(Iter pivot, Iter lr_child, Iter rl_child, Iter parent, Iter sibling) {
+    ++op_counts_.inspected_rotations_;
+
+    // Update the subtree min/max values given the nodes that are about to be
+    // rotated.
+
+    // The overall subtree maintains the same max/min. The pivot replaces the
+    // parent at the head of the subtree.
+    pivot->min_subtree_key_ = parent->min_subtree_key_;
+    pivot->max_subtree_key_ = parent->max_subtree_key_;
+
+    // Compute the new subtree min/max of the original parent, which may now
+    // include a node adopted from the pivot.
+    parent->min_subtree_key_ = parent->key_;
+    parent->max_subtree_key_ = parent->key_;
+    if (sibling) {
+      parent->min_subtree_key_ = std::min(parent->min_subtree_key_, sibling->min_subtree_key_);
+      parent->max_subtree_key_ = std::max(parent->max_subtree_key_, sibling->max_subtree_key_);
+    }
+    if (lr_child) {
+      parent->min_subtree_key_ = std::min(parent->min_subtree_key_, lr_child->min_subtree_key_);
+      parent->max_subtree_key_ = std::max(parent->max_subtree_key_, lr_child->max_subtree_key_);
+    }
+  }
+  template <typename T, typename Iter>
+  static void RecordErase(T* node, Iter invalidated) {
+    ++op_counts_.erase_ops_;
+
+    // Erasing a node may invalidate each ancestor's subtree min/max along the
+    // path to the root: re-compute the min/max values for each ancestor.
+    // Note that this process could be terminated early when updating an
+    // ancestor has no effect, but this optimization is not necessary to
+    // demonstrate correctness.
+    Iter current = invalidated;
+    while (current) {
+      current->min_subtree_key_ = current->key_;
+      current->max_subtree_key_ = current->key_;
+      if (Iter left = current.left(); left) {
+        current->min_subtree_key_ = std::min(current->min_subtree_key_, left->min_subtree_key_);
+        current->max_subtree_key_ = std::max(current->max_subtree_key_, left->max_subtree_key_);
+      }
+      if (Iter right = current.right(); right) {
+        current->min_subtree_key_ = std::min(current->min_subtree_key_, right->min_subtree_key_);
+        current->max_subtree_key_ = std::max(current->max_subtree_key_, right->max_subtree_key_);
+      }
+      current = current.parent();
+    }
+  }
   static void RecordEraseDemote() { ++op_counts_.erase_demotes_; }
   static void RecordEraseRotation() { ++op_counts_.erase_rotations_; }
   static void RecordEraseDoubleRotation() { ++op_counts_.erase_double_rotations_; }
@@ -220,7 +301,7 @@ class WAVLBalanceTestObserver {
       max_depth = static_cast<uint64_t>(log2N * scale) + 1;
     }
 
-    size_t total_insert_rotations =
+    const size_t total_insert_rotations =
         op_counts_.insert_rotations_ + op_counts_.insert_double_rotations_;
     EXPECT_LE(op_counts_.insert_promotes_,
               (3 * op_counts_.insert_ops_) + (2 * op_counts_.erase_ops_),
@@ -228,10 +309,17 @@ class WAVLBalanceTestObserver {
     EXPECT_LE(total_insert_rotations, op_counts_.insert_ops_,
               "#insert_rotations must be <= #inserts");
 
-    size_t total_erase_rotations = op_counts_.erase_rotations_ + op_counts_.erase_double_rotations_;
+    const size_t total_erase_rotations =
+        op_counts_.erase_rotations_ + op_counts_.erase_double_rotations_;
     EXPECT_LE(op_counts_.erase_demotes_, op_counts_.erase_ops_,
               "#erase demotes must be <= #erases");
     EXPECT_LE(total_erase_rotations, op_counts_.erase_ops_, "#erase_rotations must be <= #erases");
+
+    const size_t total_inspected_rotations =
+        op_counts_.insert_rotations_ + op_counts_.erase_rotations_ +
+        2 * op_counts_.insert_double_rotations_ + 2 * op_counts_.erase_double_rotations_;
+    EXPECT_EQ(total_inspected_rotations, op_counts_.inspected_rotations_,
+              "#inspected rotations must be == #rotations");
 
     EXPECT_GE(max_depth, depth);
   }
@@ -266,6 +354,8 @@ class BalanceTestObj {
   }
 
   BalanceTestKeyType GetKey() const { return key_; }
+  BalanceTestKeyType GetMinSubtreeKey() const { return min_subtree_key_; }
+  BalanceTestKeyType GetMaxSubtreeKey() const { return max_subtree_key_; }
   BalanceTestObj* EraseDeckPtr() const { return erase_deck_ptr_; }
 
   void SwapEraseDeckPtr(BalanceTestObj& other) {
@@ -278,6 +368,7 @@ class BalanceTestObj {
 
  private:
   friend DefaultWAVLTreeTraits<BalanceTestObjPtr, int32_t>;
+  friend WAVLBalanceTestObserver;
 
   static void operator delete(void* ptr) {
     // Deliberate no-op
@@ -285,11 +376,18 @@ class BalanceTestObj {
   friend class std::default_delete<BalanceTestObj>;
 
   BalanceTestKeyType key_;
+  BalanceTestKeyType min_subtree_key_;
+  BalanceTestKeyType max_subtree_key_;
   BalanceTestObj* erase_deck_ptr_;
   WAVLTreeNodeState<BalanceTestObjPtr, int32_t> wavl_node_state_;
 };
 
+// Only enable heavy weight testing when asked to do so.
+#if FBL_TEST_ENABLE_WAVL_TREE_BALANCE_TEST
 static constexpr size_t kBalanceTestSize = 2048;
+#else
+static constexpr size_t kBalanceTestSize = 32;
+#endif
 
 static void DoBalanceTestInsert(BalanceTestTree& tree, BalanceTestObj* ptr) {
   // The selected object should not be in the tree.
@@ -299,6 +397,28 @@ static void DoBalanceTestInsert(BalanceTestTree& tree, BalanceTestObj* ptr) {
   // Put the object into the tree.  Assert that it succeeds, then
   // sanity check the tree.
   ASSERT_TRUE(tree.insert_or_find(BalanceTestObjPtr(ptr)));
+  ASSERT_NO_FAILURES(WAVLTreeChecker::SanityCheck(tree));
+}
+
+static void DoBalanceTestCollide(BalanceTestTree& tree, BalanceTestObj* ptr) {
+  // The selected object should not be in the tree.
+  ASSERT_NOT_NULL(ptr);
+  ASSERT_FALSE(ptr->InContainer());
+
+  // Put the object into the tree.  Assert that it fails, then
+  // sanity check the tree.
+  ASSERT_FALSE(tree.insert_or_find(BalanceTestObjPtr(ptr)));
+  ASSERT_NO_FAILURES(WAVLTreeChecker::SanityCheck(tree));
+}
+
+static void DoBalanceTestReplace(BalanceTestTree& tree, BalanceTestObj* ptr) {
+  // The selected object should not be in the tree.
+  ASSERT_NOT_NULL(ptr);
+  ASSERT_FALSE(ptr->InContainer());
+
+  // Put the object into the tree.  Assert that it fails, then
+  // sanity check the tree.
+  ASSERT_NOT_NULL(tree.insert_or_replace(BalanceTestObjPtr(ptr)));
   ASSERT_NO_FAILURES(WAVLTreeChecker::SanityCheck(tree));
 }
 
@@ -327,6 +447,75 @@ static void ShuffleEraseDeck(const std::unique_ptr<BalanceTestObj[]>& objects,
     if (ndx != i)
       objects[i].SwapEraseDeckPtr(objects[ndx]);
   }
+}
+
+// Performs an efficient check that the augmented binary tree invariants hold.
+// The augmented binary tree maintains the min/max keys of every subtree. The
+// min/max values in the root node should always match the keys of the leftmost/
+// rightmost nodes, respectively.
+static void CheckAugmentedInvariants(const BalanceTestTree& tree) {
+  if (const auto root = tree.croot(); root) {
+    EXPECT_EQ(root->GetMinSubtreeKey(), tree.front().GetKey());
+    EXPECT_EQ(root->GetMaxSubtreeKey(), tree.back().GetKey());
+  }
+}
+
+// Checks that left, right, and parent iterator operations reach the expected
+// nodes.
+static void CheckIterators(const BalanceTestTree& tree) {
+  // Descend the left and right paths from the root. These should reach the
+  // leftmost and rightmost nodes in no more iterations than there are nodes,
+  // in the worst case.
+  const auto left_most = tree.cbegin();
+  const auto right_most = --tree.cend();
+  const auto root = tree.croot();
+  const auto size = tree.size();
+
+  auto left_cursor = root;
+  auto right_cursor = root;
+  size_t i;
+  for (i = 0; (left_cursor != left_most || right_cursor != right_most) && i < size; ++i) {
+    ASSERT_TRUE(left_cursor);
+    if (left_cursor == left_most) {
+      EXPECT_FALSE(left_cursor.left());
+    } else {
+      left_cursor = left_cursor.left();
+    }
+
+    ASSERT_TRUE(right_cursor);
+    if (right_cursor == right_most) {
+      EXPECT_FALSE(right_cursor.right());
+    } else {
+      right_cursor = right_cursor.right();
+    }
+  }
+
+  EXPECT_EQ(left_cursor, left_most);
+  EXPECT_EQ(right_cursor, right_most);
+
+  // Ascend the left and right paths to the root. These should reach the root
+  // node in no more iterations than the descent above.
+  const size_t limit = i;
+  left_cursor = left_most;
+  right_cursor = right_most;
+  for (i = 0; (left_cursor != root || right_cursor != root) && i < limit; ++i) {
+    ASSERT_TRUE(left_cursor);
+    if (left_cursor == root) {
+      EXPECT_FALSE(left_cursor.parent());
+    } else {
+      left_cursor = left_cursor.parent();
+    }
+
+    ASSERT_TRUE(right_cursor);
+    if (right_cursor == root) {
+      EXPECT_FALSE(right_cursor.parent());
+    } else {
+      right_cursor = right_cursor.parent();
+    }
+  }
+
+  EXPECT_EQ(left_cursor, root);
+  EXPECT_EQ(right_cursor, root);
 }
 
 // clang-format off
@@ -476,15 +665,14 @@ RUN_ZXTEST(WavlTreeTest, UPDDTE,  LowerBound)
 RUN_ZXTEST(WavlTreeTest, UPCDTE,  LowerBound)
 RUN_ZXTEST(WavlTreeTest, RPTE, LowerBound)
 
-// The balance test is a pretty heavy test.  Only enable it when asked to do so.
-#if FBL_TEST_ENABLE_WAVL_TREE_BALANCE_TEST
-TEST(WavlTreeTest, Balance) {
+TEST(WavlTreeTest, BalanceAndInvariants) {
   WAVLBalanceTestObserver::OpCounts op_counts;
 
   // Declare these in a specific order (object pointer first) so that the tree
   // has a chance to clean up before the memory backing the objects gets
   // cleaned up.
   std::unique_ptr<BalanceTestObj[]> objects;
+  std::unique_ptr<BalanceTestObj[]> replacements;
   BalanceTestTree tree;
 
   // We will run this test 3 times with 3 different (constant) seeds.  During
@@ -496,11 +684,18 @@ TEST(WavlTreeTest, Balance) {
   static const BalanceTestKeyType seeds[] = {0xe87e1062fc1f4f80u, 0x03d6bffb124b4918u,
                                              0x8f7d83e8d10b4765u};
 
+  // The replacements set is a fraction of the size of the object set.
+  const size_t kReplacementCount = kBalanceTestSize / 8;
+  static_assert(kReplacementCount != 0);
+
   // Allocate the objects we will use for the test.
   {
     AllocChecker ac;
     objects.reset(new (&ac) BalanceTestObj[kBalanceTestSize]);
     ASSERT_TRUE(ac.check(), "Failed to allocate test objects!");
+
+    replacements.reset(new (&ac) BalanceTestObj[kReplacementCount]);
+    ASSERT_TRUE(ac.check(), "Failed to allocate replacement objects!");
   }
 
   for (size_t seed_ndx = 0; seed_ndx < fbl::count_of(seeds); ++seed_ndx) {
@@ -514,18 +709,30 @@ TEST(WavlTreeTest, Balance) {
     // the object in the erase deck sequence at the same time.
     switch (seed_ndx) {
       case 0u:
-        for (size_t i = 0; i < kBalanceTestSize; ++i)
+        for (size_t i = 0; i < kBalanceTestSize; ++i) {
           objects[i].Init(i);
+          if (i < kReplacementCount) {
+            replacements[i].Init(i);
+          }
+        }
         break;
 
       case 1u:
-        for (size_t i = 0; i < kBalanceTestSize; ++i)
+        for (size_t i = 0; i < kBalanceTestSize; ++i) {
           objects[i].Init(kBalanceTestSize - i);
+          if (i < kReplacementCount) {
+            replacements[i].Init(kBalanceTestSize - i);
+          }
+        }
         break;
 
       default:
-        for (size_t i = 0; i < kBalanceTestSize; ++i)
+        for (size_t i = 0; i < kBalanceTestSize; ++i) {
           objects[i].Init(rng.GetNext());
+          if (i < kReplacementCount) {
+            replacements[i].Init(objects[i].GetKey());
+          }
+        }
         break;
     }
 
@@ -533,30 +740,71 @@ TEST(WavlTreeTest, Balance) {
     // the tree.  If anything goes wrong, just abort the test.  If we keep
     // going, we are just going to get an unmanageable amt of errors.
     for (size_t i = 0; i < kBalanceTestSize; ++i) {
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
       ASSERT_NO_FAILURES(DoBalanceTestInsert(tree, &objects[i]));
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
     }
+
+    ASSERT_NO_FAILURES(CheckIterators(tree));
+
+    // Collide the replacement set with the tree.
+    for (size_t i = 0; i < kReplacementCount; ++i) {
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
+      ASSERT_NO_FAILURES(DoBalanceTestCollide(tree, &replacements[i]));
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
+    }
+
+    // Replace nodes in the tree with the replacement set.
+    for (size_t i = 0; i < kReplacementCount; ++i) {
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
+      ASSERT_NO_FAILURES(DoBalanceTestReplace(tree, &replacements[i]));
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
+    }
+
+    ASSERT_NO_FAILURES(CheckIterators(tree));
+
+    // Replace the original nodes in the tree.
+    for (size_t i = 0; i < kReplacementCount; ++i) {
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
+      ASSERT_NO_FAILURES(DoBalanceTestReplace(tree, &objects[i]));
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
+    }
+
+    ASSERT_NO_FAILURES(CheckIterators(tree));
 
     // Shuffle the erase deck.
     ShuffleEraseDeck(objects, rng);
 
     // Erase half of the elements in the tree.
     for (size_t i = 0; i < (kBalanceTestSize >> 1); ++i) {
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
       ASSERT_NO_FAILURES(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()));
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
     }
+
+    ASSERT_NO_FAILURES(CheckIterators(tree));
 
     // Put the elements back so that we have inserted some elements into a
     // non-empty tree which has seen erase operations.
     for (size_t i = 0; i < (kBalanceTestSize >> 1); ++i) {
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
       ASSERT_NO_FAILURES(DoBalanceTestInsert(tree, objects[i].EraseDeckPtr()));
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
     }
+
+    ASSERT_NO_FAILURES(CheckIterators(tree));
 
     // Shuffle the erase deck again.
     ShuffleEraseDeck(objects, rng);
 
     // Now erase every element from the tree.
     for (size_t i = 0; i < kBalanceTestSize; ++i) {
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
       ASSERT_NO_FAILURES(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()));
+      ASSERT_NO_FAILURES(CheckAugmentedInvariants(tree));
     }
+
+    ASSERT_NO_FAILURES(CheckIterators(tree));
 
     ASSERT_EQ(0u, tree.size());
 
@@ -569,12 +817,15 @@ TEST(WavlTreeTest, Balance) {
   EXPECT_LT(0u, op_counts.insert_promotes_, "Insufficient test coverage!");
   EXPECT_LT(0u, op_counts.insert_rotations_, "Insufficient test coverage!");
   EXPECT_LT(0u, op_counts.insert_double_rotations_, "Insufficient test coverage!");
+  EXPECT_LT(0u, op_counts.insert_collisions_, "Insufficient test coverage!");
+  EXPECT_LT(0u, op_counts.insert_replacements_, "Insufficient test coverage!");
+  EXPECT_LT(0u, op_counts.insert_traversals_, "Insufficient test coverage!");
+  EXPECT_LT(0u, op_counts.inspected_rotations_, "Insufficient test coverage!");
   EXPECT_LT(0u, op_counts.erase_ops_, "Insufficient test coverage!");
   EXPECT_LT(0u, op_counts.erase_demotes_, "Insufficient test coverage!");
   EXPECT_LT(0u, op_counts.erase_rotations_, "Insufficient test coverage!");
   EXPECT_LT(0u, op_counts.erase_double_rotations_, "Insufficient test coverage!");
 }
-#endif
 
 }  // namespace intrusive_containers
 }  // namespace tests
