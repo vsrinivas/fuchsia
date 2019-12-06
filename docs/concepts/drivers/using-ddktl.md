@@ -15,23 +15,36 @@ by providing mixins that ensure type safety and perform basic functionality.
 > * [CRTPs &mdash; or Curiously Recurring Template Patterns][crtp].
 
 The mixins that we'll be discussing are defined in
-[`//zircon/system/ulib/ddktl/include/ddktl/device.h`][/zircon/system/ulib/ddktl/include/ddktl/device.h].
+[`//zircon/system/ulib/ddktl/include/ddktl/device.h`](/zircon/system/ulib/ddktl/include/ddktl/device.h).
 
 The following mixins are provided:
 
-Mixin class            | Function             | Purpose
+Mixin class            | Function                | Purpose
+-----------------------|-------------------------|------------------------------
+`ddk::GetProtocolable`    | **DdkGetProtocol()** | fetches the protocol
+`ddk::Openable`           | **DdkOpen()**        | client's **open()**
+`ddk::Closable`           | **DdkClose()**       | client's **close()**
+`ddk::UnbindableNew`      | **DdkUnbindNew()**   | called when this device is being removed
+`ddk::Messageable`        | **DdkMessage()**     | for FIDL IPC messages
+`ddk::SuspendableNew`     | **DdkSuspendNew()**  | to suspend device
+`ddk::ResumableNew`       | **DdkResumeNew()**   | to resume device
+`ddk::PerformanceTunable` | **DdkSetPerformanceState()**   | to transition the performant state
+`ddk::AutoSuspendable`    | **DdkConfigureAutoSuspend()**   | to configure whether a driver can auto suspend the device
+`ddk::Rxrpcable`          | **DdkRxrpc()**       | remote messages for bus devices
+
+For completeness, the following mixins are also provided, but have been deprecated:
+
+Deprecated Mixin class | Function             | Purpose
 -----------------------|----------------------|------------------------------
-`ddk::GetProtocolable` | **DdkGetProtocol()** | fetches the protocol
-`ddk::Openable`        | **DdkOpen()**        | client's **open()**
-`ddk::Closable`        | **DdkClose()**       | client's **close()**
-`ddk::UnbindableNew`   | **DdkUnbindNew()**   | called when this device is being removed
+`ddk::Suspendable`     | **DdkSuspend()**     | to suspend device
+`ddk::Resumable`       | **DdkResume()**      | to resume device
 `ddk::Readable`        | **DdkRead()**        | client's **read()**
 `ddk::Writable`        | **DdkWrite()**       | client's **write()**
 `ddk::GetSizable`      | **DdkGetSize()**     | returns size of device
-`ddk::Messageable`     | **DdkMessage()**     | for FIDL IPC messages
-`ddk::Suspendable`     | **DdkSuspend()**     | to suspend device
-`ddk::Resumable`       | **DdkResume()**      | to resume device
-`ddk::Rxrpcable`       | **DdkRxrpc()**       | remote messages for bus devices
+
+These mixins correspond to the functions defined in the
+[`zx_protocol_device_t`](/zircon/system/ulib/ddk/include/ddk/device.h#74) struct
+that is used in the [simple, C-based drivers](simple.md).
 
 When defining the class for your device, you specify which functions it will
 support by including the appropriate mixins.
@@ -117,8 +130,8 @@ any **open()**, **close()**, and **read()** client calls
 will now flow to your implementations of **DdkOpen()**, **DdkClose()**,
 and **DdkRead()**, respectively.
 
-As an example, in the directory [`//zircon/system/dev/block/zxcrypt`][/zircon/system/dev/block/zxcrypt]
-we have a typical device declaration ([`device.h`][/zircon/system/dev/block/zxcrypt/device.h]):
+As an example, in the directory [`//zircon/system/dev/block/zxcrypt`](/zircon/system/dev/block/zxcrypt)
+we have a typical device declaration ([`device.h`](/zircon/system/dev/block/zxcrypt/device.h)):
 
 ```c++
 [01] class Device;
@@ -151,7 +164,7 @@ Lines `[11` .. `15]` provide the prototypes for the three optional mixins and th
 mandatory **DdkRelease()** member function.
 
 Here's an example of the `zxcrypt` device's `DdkGetProtocol` implementation (from
-[`device.cpp`][/zircon/system/dev/block/zxcrypt/device.cc]):
+[`device.cc`](/zircon/system/dev/block/zxcrypt/device.cc)):
 
 ```c++
 zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
@@ -178,7 +191,7 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
 Let's take a look at how a driver uses the DDKTL.
 
 We're going to use the USB XHCI driver for this set of code samples; you can find it
-[here: `//zircon/system/dev/usb/xhci/usb-xhci.cpp`][/zircon/system/dev/usb/xhci//usbx-hci.cc].
+[here: `//zircon/system/dev/usb/xhci/usb-xhci.cpp`](/zircon/system/dev/usb/xhci/usb-xhci.cc).
 
 In the previous sections, we saw [simple, C-based drivers](simple.md).
 Recall that those drivers had binding instructions (usually at the bottom of the
@@ -208,6 +221,9 @@ static zx_driver_ops_t driver_ops = [](){
 } // namespace usb_xhci
 
 ZIRCON_DRIVER_BEGIN(usb_xhci, usb_xhci::driver_ops, "zircon", "0.1", 9)
+    // binding instructions
+    ...
+ZIRCON_DRIVER_END(usb_xhci)
 ```
 
 This executes the **driver_ops()** lambda, which returns an initialized `zx_driver_ops_t` structure.
@@ -300,4 +316,4 @@ This usage is typical.
 [dev/block/zxcrypt]: /zircon/system/dev/block/zxcrypt
 [include/ddktl/device.h]: /zircon/system/ulib/ddktl/include/ddktl/device.h
 [mixins]: https://en.wikipedia.org/wiki/Mixin
-[usbxhci.cpp]: /zircon/system/dev/usb/xhci/usb-xhci.cc
+[usb-xhci.cc]: /zircon/system/dev/usb/xhci/usb-xhci.cc

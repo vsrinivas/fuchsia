@@ -32,19 +32,44 @@
 //
 //
 // :: Available mixins ::
+// +-------------------------+----------------------------------------------------+
+// | Mixin class             | Required function implementation                   |
+// +-------------------------+----------------------------------------------------+
+// | ddk::GetProtocolable    | zx_status_t DdkGetProtocol(uint32_t proto_id,      |
+// |                         |                            void* out)              |
+// |                         |                                                    |
+// | ddk::Openable           | zx_status_t DdkOpen(zx_device_t** dev_out,         |
+// |                         |                     uint32_t flags)                |
+// |                         |                                                    |
+// | ddk::Closable           | zx_status_t DdkClose(uint32_t flags)               |
+// |                         |                                                    |
+// | ddk::UnbindableNew      | void DdkUnbindNew(ddk::UnbindTxn txn)              |
+// |                         |                                                    |
+// | ddk::PerformanceTunable | zx_status_t DdkSetPerformanceState(                |
+// |                         |                           uint32_t requested_state,|
+// |                         |                           uint32_t* out_state)     |
+// |                         |                                                    |
+// | ddk::AutoSuspendable    | zx_status_t DdkConfigureAutoSuspend(bool enable,   |
+// |                         |                      uint8_t requested_sleep_state)|
+// |                         |                                                    |
+// | ddk::Messageable        | zx_status_t DdkMessage(fidl_msg_t* msg,            |
+// |                         |                        fidl_txn_t* txn)            |
+// |                         |                                                    |
+// | ddk::SuspendableNew     | zx_status_t DdkSuspendNew(uint8_t requested_state, |
+// |                         |                           bool enable_wake,        |
+// |                         |                           uint8_t* out_state)      |
+// |                         |                                                    |
+// | ddk::ResumableNew       | zx_status_t DdkResumeNew(uint8_t requested_state,  |
+// |                         |                          uint8_t* out_state)       |
+// | ddk::Resumable          | zx_status_t DdkResume(uint32_t flags)              |
+// |                         |                                                    |
+// | ddk::Rxrpcable          | zx_status_t DdkRxrpc(zx_handle_t channel)          |
+// +-------------------------+----------------------------------------------------+
+//
+// Deprecated Mixins:
 // +----------------------+----------------------------------------------------+
 // | Mixin class          | Required function implementation                   |
 // +----------------------+----------------------------------------------------+
-// | ddk::GetProtocolable | zx_status_t DdkGetProtocol(uint32_t proto_id,      |
-// |                      |                            void* out)              |
-// |                      |                                                    |
-// | ddk::Openable        | zx_status_t DdkOpen(zx_device_t** dev_out,         |
-// |                      |                     uint32_t flags)                |
-// |                      |                                                    |
-// | ddk::Closable        | zx_status_t DdkClose(uint32_t flags)               |
-// |                      |                                                    |
-// | ddk::UnbindableNew   | void DdkUnbindNew(ddk::UnbindTxn txn)              |
-// |                      |                                                    |
 // | ddk::Readable        | zx_status_t DdkRead(void* buf, size_t count,       |
 // |                      |                     zx_off_t off, size_t* actual)  |
 // |                      |                                                    |
@@ -54,14 +79,9 @@
 // |                      |                                                    |
 // | ddk::GetSizable      | zx_off_t DdkGetSize()                              |
 // |                      |                                                    |
-// | ddk::Messageable     | zx_status_t DdkMessage(fidl_msg_t* msg,            |
-// |                      |                        fidl_txn_t* txn)            |
-// |                      |                                                    |
 // | ddk::Suspendable     | zx_status_t DdkSuspend(uint32_t flags)             |
 // |                      |                                                    |
 // | ddk::Resumable       | zx_status_t DdkResume(uint32_t flags)              |
-// |                      |                                                    |
-// | ddk::Rxrpcable       | zx_status_t DdkRxrpc(zx_handle_t channel)          |
 // +----------------------+----------------------------------------------------+
 //
 // Note: the ddk::FullDevice type alias may also be used if your device class
