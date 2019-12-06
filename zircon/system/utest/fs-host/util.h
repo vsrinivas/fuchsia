@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
-#include <minfs/host.h>
 #include <fcntl.h>
 
-#define DEFAULT_DISK_SIZE (1llu << 32)
+#include <minfs/host.h>
+#include <unittest/unittest.h>
 
-#define MOUNT_PATH "/tmp/zircon-fs-test"
+#define DEFAULT_DISK_SIZE (1llu << 32)
 
 typedef struct expected_dirent {
   bool seen;  // Should be set to "false", used internally by checking function.
