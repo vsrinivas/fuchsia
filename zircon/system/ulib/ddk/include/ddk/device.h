@@ -362,6 +362,19 @@ typedef struct zx_protocol_device {
   // This hook will only be executed on the devhost's main thread.
   zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 
+  //@ ## child_pre_release
+  // The child_pre_release hook is used to signal that a child device
+  // will soon be released. This is after the child and all its descendents
+  // have been unbound and removed from the device filesystem, and all client
+  // connections to the child have been closed.
+  //
+  // The device may want to drop any references to the child context or child
+  // **zx_device_t**.
+  //
+  // This hook may be called from any thread including the devhost's main
+  // thread.
+  void (*child_pre_release)(void* ctx, void* child_ctx);
+
 } zx_protocol_device_t;
 
 // Device Accessors

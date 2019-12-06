@@ -104,6 +104,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     return Dispatch(ops->message, ZX_ERR_NOT_SUPPORTED, msg, txn);
   }
 
+  void ChildPreReleaseOp(void* child_ctx) { Dispatch(ops->child_pre_release, child_ctx); }
+
   void set_bind_conn(fit::callback<void(zx_status_t)>);
   fit::callback<void(zx_status_t)> take_bind_conn();
 

@@ -367,6 +367,20 @@ class Rxrpcable : public base_mixin {
   }
 };
 
+template <typename D>
+class ChildPreReleaseable : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckChildPreReleaseable<D>();
+    proto->child_pre_release = ChildPreRelease;
+  }
+
+ private:
+  static void ChildPreRelease(void* ctx, void* child_ctx) {
+    static_cast<D*>(ctx)->DdkChildPreRelease(child_ctx);
+  }
+};
+
 // Device is templated on the list of mixins that define which DDK device
 // methods are implemented. Note that internal::base_device *must* be the
 // left-most base class in order to ensure that its constructor runs before the

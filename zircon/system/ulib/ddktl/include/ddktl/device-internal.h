@@ -329,6 +329,17 @@ constexpr void CheckRxrpcable() {
                 "'zx_status_t DdkRxrpc(zx_handle_t)'.");
 }
 
+DECLARE_HAS_MEMBER_FN(has_ddk_child_pre_release, DdkChildPreRelease);
+
+template <typename D>
+constexpr void CheckChildPreReleaseable() {
+  static_assert(has_ddk_child_pre_release<D>::value,
+                "ChildPreReleaseable classes must implement DdkChildPreRelease");
+  static_assert(std::is_same<decltype(&D::DdkChildPreRelease), void (D::*)(void*)>::value,
+                "DdkChildPreRelease must be a public non-static member function with signature "
+                "'void DdkChildPreRelease(void*)'.");
+}
+
 // all_mixins
 //
 // Checks a list of types to ensure that all of them are ddk mixins (i.e., they inherit from the

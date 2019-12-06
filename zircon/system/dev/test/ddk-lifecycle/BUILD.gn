@@ -1,0 +1,52 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl.gni")
+
+fidl_library("fuchsia.device.lifecycle.test") {
+  visibility = [ ":*" ]
+  sources = [
+    "lifecycle.test.fidl",
+  ]
+}
+
+if (current_toolchain != default_toolchain) {
+  zx_driver("ddk-lifecycle-test") {
+    testonly = true
+    sources = [
+      "test-driver-child.cc",
+      "test-driver.cc",
+    ]
+    deps = [
+      ":fuchsia.device.lifecycle.test.llcpp",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/ddktl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/sync",
+      "$zx/system/ulib/zircon",
+    ]
+
+    # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
+    # Tests fail when using #"$zx/system/ulib/fdio:static",
+    deprecated_inhibit_driver_shlib_allowlist = true
+  }
+
+  zx_test("ddk-lifecycle") {
+    sources = [
+      "test.cc",
+    ]
+    deps = [
+      ":fuchsia.device.lifecycle.test.llcpp",
+      "$zx/system/ulib/ddk",
+      "$zx/system/ulib/devmgr-integration-test",
+      "$zx/system/ulib/devmgr-launcher",
+      "$zx/system/ulib/driver-integration-test",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxtest",
+    ]
+  }
+}

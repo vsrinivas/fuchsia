@@ -101,6 +101,8 @@ static zx_status_t default_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) 
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+static void default_child_pre_release(void* ctx, void* child_ctx) {}
+
 zx_protocol_device_t device_default_ops = []() {
   zx_protocol_device_t ops = {};
   ops.open = default_open;
@@ -115,6 +117,7 @@ zx_protocol_device_t device_default_ops = []() {
   ops.rxrpc = default_rxrpc;
   ops.message = default_message;
   ops.set_performance_state = default_set_performance_state;
+  ops.child_pre_release = default_child_pre_release;
   return ops;
 }();
 
@@ -228,6 +231,10 @@ void devhost_finalize() {
   while ((dev = list.pop_front()) != nullptr) {
     // invoke release op
     if (dev->flags & DEV_FLAG_ADDED) {
+      if (dev->parent) {
+        ApiAutoRelock relock;
+        dev->parent->ChildPreReleaseOp(dev->ctx);
+      }
       ApiAutoRelock relock;
       dev->ReleaseOp();
     }
