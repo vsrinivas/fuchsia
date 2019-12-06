@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/cobalt/metrics_registry.gni")
+
 source_set("archive") {
   sources = [
     "archive.cc",
@@ -41,6 +43,7 @@ source_set("cobalt") {
   ]
 
   deps = [
+    ":metrics_registry",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
   ]
@@ -94,4 +97,13 @@ source_set("time") {
   ]
 
   visibility = [ "//src/developer/feedback/*" ]
+}
+
+metrics_registry("metrics_registry") {
+  # This must match the name of our Cobalt project as specified in:
+  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
+  project_name = "feedback"
+  namespace = "cobalt_registry"
+  generate_cc = true
+  generate_binarypb = false
 }

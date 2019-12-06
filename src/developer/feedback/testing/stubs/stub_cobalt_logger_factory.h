@@ -100,10 +100,9 @@ class StubCobaltLoggerFactory : public StubCobaltLoggerFactoryBase {
       : StubCobaltLoggerFactoryBase(std::move(logger)) {}
 
  private:
-  void CreateLoggerFromProjectName(
-      std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
-      fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      LoggerFactory::CreateLoggerFromProjectNameCallback callback) override;
+  void CreateLoggerFromProjectId(
+      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
 };
 
 // Always close the connection before setting up the logger.
@@ -113,10 +112,9 @@ class StubCobaltLoggerFactoryClosesConnection : public StubCobaltLoggerFactoryBa
       : StubCobaltLoggerFactoryBase(std::make_unique<StubCobaltLoggerBase>()) {}
 
  private:
-  void CreateLoggerFromProjectName(
-      std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
-      fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      LoggerFactory::CreateLoggerFromProjectNameCallback callback) override;
+  void CreateLoggerFromProjectId(
+      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
 };
 
 // Always fail to create the logger.
@@ -126,10 +124,9 @@ class StubCobaltLoggerFactoryFailsToCreateLogger : public StubCobaltLoggerFactor
       : StubCobaltLoggerFactoryBase(std::make_unique<StubCobaltLoggerBase>()) {}
 
  private:
-  void CreateLoggerFromProjectName(
-      std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
-      fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      LoggerFactory::CreateLoggerFromProjectNameCallback callback) override;
+  void CreateLoggerFromProjectId(
+      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
 };
 
 // Delay calling the callee provided callback by the specified delay.
@@ -140,10 +137,9 @@ class StubCobaltLoggerFactoryDelaysCallback : public StubCobaltLoggerFactoryBase
       : StubCobaltLoggerFactoryBase(std::move(logger)), dispatcher_(dispatcher), delay_(delay) {}
 
  private:
-  void CreateLoggerFromProjectName(
-      std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
-      fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectNameCallback callback) override;
+  void CreateLoggerFromProjectId(
+      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
 
   async_dispatcher_t* dispatcher_;
   zx::duration delay_;

@@ -4,19 +4,17 @@
 
 #include "src/developer/feedback/utils/cobalt.h"
 
+#include "src/developer/feedback/utils/metrics_registry.cb.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 namespace {
 
+using cobalt_registry::kProjectId;
 using fuchsia::cobalt::LoggerFactory;
-using fuchsia::cobalt::ReleaseStage;
 using fuchsia::cobalt::Status;
 using fxl::StringPrintf;
-
-constexpr char kProjectName[] = "feedback";
-constexpr ReleaseStage kReleaseStage = ReleaseStage::DOGFOOD;
 
 constexpr uint32_t kMaxQueueSize = 500u;
 
@@ -56,8 +54,8 @@ void Cobalt::SetUpLogger() {
 
   // We don't need a long standing connection to the LoggerFactory so we unbind afer setting up the
   // Logger.
-  logger_factory_->CreateLoggerFromProjectName(
-      kProjectName, kReleaseStage, logger_.NewRequest(), [this](Status status) {
+  logger_factory_->CreateLoggerFromProjectId(
+      kProjectId, logger_.NewRequest(), [this](Status status) {
         logger_factory_.Unbind();
 
         if (status != Status::OK) {

@@ -16,32 +16,32 @@ namespace feedback {
 
 using fuchsia::cobalt::ReleaseStage;
 using fuchsia::cobalt::Status;
-using CreateLoggerFromProjectNameCallback =
-    fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectNameCallback;
+using CreateLoggerFromProjectIdCallback =
+    fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdCallback;
 using fuchsia::cobalt::Logger;
 
-void StubCobaltLoggerFactory::CreateLoggerFromProjectName(
-    std::string project_name, ReleaseStage release_stage, fidl::InterfaceRequest<Logger> logger,
-    CreateLoggerFromProjectNameCallback callback) {
+void StubCobaltLoggerFactory::CreateLoggerFromProjectId(
+    uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
+    CreateLoggerFromProjectIdCallback callback) {
   logger_bindings_.AddBinding(logger_.get(), std::move(logger));
   callback(Status::OK);
 }
 
-void StubCobaltLoggerFactoryClosesConnection::CreateLoggerFromProjectName(
-    std::string project_name, ReleaseStage release_stage, fidl::InterfaceRequest<Logger> logger,
-    CreateLoggerFromProjectNameCallback callback) {
+void StubCobaltLoggerFactoryClosesConnection::CreateLoggerFromProjectId(
+    uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
+    CreateLoggerFromProjectIdCallback callback) {
   CloseFactoryConnection();
 }
 
-void StubCobaltLoggerFactoryFailsToCreateLogger::CreateLoggerFromProjectName(
-    std::string project_name, ReleaseStage release_stage, fidl::InterfaceRequest<Logger> logger,
-    CreateLoggerFromProjectNameCallback callback) {
+void StubCobaltLoggerFactoryFailsToCreateLogger::CreateLoggerFromProjectId(
+    uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
+    CreateLoggerFromProjectIdCallback callback) {
   callback(Status::INVALID_ARGUMENTS);
 }
 
-void StubCobaltLoggerFactoryDelaysCallback::CreateLoggerFromProjectName(
-    std::string project_name, ReleaseStage release_stage, fidl::InterfaceRequest<Logger> logger,
-    CreateLoggerFromProjectNameCallback callback) {
+void StubCobaltLoggerFactoryDelaysCallback::CreateLoggerFromProjectId(
+    uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
+    CreateLoggerFromProjectIdCallback callback) {
   logger_bindings_.AddBinding(logger_.get(), std::move(logger));
   async::PostDelayedTask(
       dispatcher_, [cb = std::move(callback)]() { cb(Status::OK); }, delay_);

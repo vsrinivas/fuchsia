@@ -23,6 +23,8 @@
 
 namespace feedback {
 
+using cobalt_registry::kProjectId;
+
 fit::promise<void> HandleRebootLog(const std::string& filepath,
                                    std::shared_ptr<sys::ServiceDirectory> services) {
   auto handler = std::make_unique<internal::RebootLogHandler>(services);
@@ -268,10 +270,8 @@ fit::promise<void> RebootLogHandler::SendCobaltMetrics(CrashType crash_type) {
   // Cobalt metrics registry. We specify that our release stage is DOGFOOD.
   // This means we are not allowed to use any metrics declared as DEBUG
   // or FISHFOOD.
-  static const char kProjectName[] = "feedback";
-  cobalt_logger_factory_->CreateLoggerFromProjectName(
-      kProjectName, fuchsia::cobalt::ReleaseStage::DOGFOOD, cobalt_logger_.NewRequest(),
-      [this, crash_type](fuchsia::cobalt::Status status) {
+  cobalt_logger_factory_->CreateLoggerFromProjectId(
+      kProjectId, cobalt_logger_.NewRequest(), [this, crash_type](fuchsia::cobalt::Status status) {
         if (status != fuchsia::cobalt::Status::OK) {
           FX_LOGS(ERROR) << "Error getting feedback metrics logger: " << CobaltStatus(status);
           cobalt_logging_done_.completer.complete_error();
