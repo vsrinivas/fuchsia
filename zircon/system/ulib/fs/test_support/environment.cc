@@ -29,7 +29,7 @@ behavior).
 Options:
 --device path_to_device (-d): Performs tests on top of a specific block device
 --no-journal: Don't use journal
---pager: Use pager (if supported by the filesystem)
+--pager (-p): Use pager (if supported by the filesystem)
 --help (-h): Displays full help
 
 )""";
@@ -40,7 +40,7 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
   while (true) {
     struct option options[] = {
         {"device", required_argument, nullptr, 'd'},
-        {"no-journal", no_argument, nullptr, 'j'},
+        {"no-journal", no_argument, nullptr, 'j'},  // No short option.
         {"pager", no_argument, nullptr, 'p'},
         {"help", no_argument, nullptr, 'h'},
         {"gtest_filter", optional_argument, nullptr, 'f'},
@@ -52,7 +52,7 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "d:jphf::l::s::i:r:b::", options, &opt_index);
+    int c = getopt_long(argc, argv, "d:phf::l::s::i:r:b::", options, &opt_index);
     if (c < 0) {
       break;
     }

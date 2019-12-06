@@ -77,7 +77,7 @@ TEST(EnvironmentTest, RejectsUnknownOption) {
 }
 
 TEST(EnvironmentTest, ValidOptions) {
-  const char* options[] = {"test-name", "--device", "path", "--no-journal", nullptr};
+  const char* options[] = {"test-name", "--device", "path", "--no-journal", "--pager", nullptr};
   optind = 1;
 
   Environment::TestConfig config = {};
