@@ -117,7 +117,7 @@ should be reported.
 ### Inspecting the content of a GN target
 
 ```bash
-$ gn desc out/default //path/to/my:target
+$ fx gn desc out/default //path/to/my:target
 ```
 
 ### Finding references to a GN target
