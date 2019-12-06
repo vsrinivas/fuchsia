@@ -519,7 +519,7 @@ zx_status_t RndisHost::AddDevice() {
 
   for (int i = 0; i < READ_REQ_COUNT; i++) {
     usb_request_t* req;
-    status = usb_request_alloc(&req, RNDIS_BUFFER_SIZE, bulk_in_addr_, req_size);
+    status = usb_request_alloc(&req, RNDIS_MAX_XFER_SIZE, bulk_in_addr_, req_size);
     if (status != ZX_OK) {
       return status;
     }
