@@ -6,7 +6,7 @@ anything on your internal storage. This USB flash drive can then direct your
 device to boot from the freshly-built OS on your network-connected host
 development machine (or alternately from the OS on the flash drive itself).
 
-+ Execute `fx set x64` (if you haven't already)
++ Execute `fx set core.x64` (if you haven't already)
 + Create a __zedboot__ key using, `fx mkzedboot /path/to/your/device`. The
 `mkzedboot` command does the following:
   + Creates a FAT partition continaing an EFI System Partition, containing
