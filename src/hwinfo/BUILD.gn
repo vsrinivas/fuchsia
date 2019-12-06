@@ -37,14 +37,6 @@ rustc_binary("hwinfo_bin") {
   ]
 }
 
-config_data("hwinfo_service_config") {
-  for_pkg = "sysmgr"
-
-  sources = [
-    "hwinfo.config",
-  ]
-}
-
 hwinfo_config_validate("hwinfo_default_product_config_validate") {
   type = "product"
   config = "default_product_config.json"
