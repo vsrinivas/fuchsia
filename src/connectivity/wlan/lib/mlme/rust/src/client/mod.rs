@@ -130,9 +130,9 @@ impl ClientMlme {
 /// The Client STA is in its early development process and does not yet manage its internal state
 /// machine or track negotiated capabilities.
 pub struct Client {
-    bssid: Bssid,
-    iface_mac: MacAddr,
     state: Option<States>,
+    pub bssid: Bssid,
+    pub iface_mac: MacAddr,
     pub is_rsn: bool,
 }
 

@@ -15,7 +15,10 @@ use {
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::{error, info, warn},
-    wlan_common::{mac, time::TimeUnit},
+    wlan_common::{
+        mac::{self, MacAddr},
+        time::TimeUnit,
+    },
     wlan_statemachine::*,
     zerocopy::ByteSlice,
 };
@@ -214,7 +217,7 @@ impl Associating {
         sta: &mut Client,
         ctx: &mut Context,
         assoc_resp_hdr: &mac::AssocRespHdr,
-    ) -> Result<ControlledPort, ()> {
+    ) -> Result<(mac::Aid, ControlledPort), ()> {
         ctx.timer.cancel_event(self.timeout);
 
         match assoc_resp_hdr.status_code {
@@ -224,7 +227,9 @@ impl Associating {
                     assoc_resp_hdr.aid,
                     fidl_mlme::AssociateResultCodes::Success,
                 );
-                Ok(if sta.is_rsn { ControlledPort::Closed } else { ControlledPort::Open })
+                let controlled_port =
+                    if sta.is_rsn { ControlledPort::Closed } else { ControlledPort::Open };
+                Ok((assoc_resp_hdr.aid, controlled_port))
             }
             status_code => {
                 error!("association with BSS failed: {:?}", status_code);
@@ -295,12 +300,14 @@ impl ControlledPort {
 
 /// Client received a "successful" association response from the BSS.
 pub struct Associated {
+    aid: mac::Aid,
     controlled_port: ControlledPort,
 }
 impl DeauthenticationHandler for Associated {}
 
 impl Associated {
     /// Processes inbound data frames.
+    // TODO(42159): Drop frames from foreign BSS.
     fn on_data_frame<B: ByteSlice>(
         &self,
         sta: &mut Client,
@@ -310,6 +317,13 @@ impl Associated {
         qos_ctrl: Option<mac::QosControl>,
         body: B,
     ) {
+        self.request_bu_if_available(
+            sta,
+            ctx,
+            fixed_data_fields.frame_ctrl,
+            mac::data_dst_addr(fixed_data_fields),
+        );
+
         let is_controlled_port_open = self.controlled_port.is_opened();
         sta.handle_data_frame(
             ctx,
@@ -319,6 +333,30 @@ impl Associated {
             body,
             is_controlled_port_open,
         );
+    }
+
+    /// Process every inbound management frame before its being handed off to a more specific
+    /// handler.
+    fn on_any_mgmt_frame(&self, sta: &mut Client, ctx: &mut Context, mgmt_hdr: &mac::MgmtHdr) {
+        self.request_bu_if_available(sta, ctx, mgmt_hdr.frame_ctrl, mgmt_hdr.addr1);
+    }
+
+    /// Sends PS-POLL requests if the FrameControl's more_data bit is set, and the received frame
+    /// was addressed for this STA. No-op if the controlled port is closed.
+    fn request_bu_if_available(
+        &self,
+        sta: &mut Client,
+        ctx: &mut Context,
+        fc: mac::FrameControl,
+        dst_addr: MacAddr,
+    ) {
+        if !self.controlled_port.is_opened() {
+            return;
+        }
+        // IEEE Std. 802.11-2016, 9.2.4.1.8
+        if fc.more_data() && dst_addr == sta.iface_mac {
+            let _ignored = sta.send_ps_poll_frame(ctx, self.aid);
+        }
     }
 
     /// Processes an inbound diassociation frame.
@@ -505,8 +543,8 @@ impl States {
             States::Associating(state) => match mgmt_body {
                 mac::MgmtBody::AssociationResp { assoc_resp_hdr, .. } => {
                     match state.on_assoc_resp_frame(sta, ctx, &assoc_resp_hdr) {
-                        Ok(controlled_port) => {
-                            state.transition_to(Associated { controlled_port }).into()
+                        Ok((aid, controlled_port)) => {
+                            state.transition_to(Associated { aid, controlled_port }).into()
                         }
                         Err(()) => state.transition_to(Authenticated).into(),
                     }
@@ -523,17 +561,20 @@ impl States {
                 }
                 _ => state.into(),
             },
-            States::Associated(state) => match mgmt_body {
-                mac::MgmtBody::Deauthentication { deauth_hdr, .. } => {
-                    state.on_deauth_frame(sta, ctx, &deauth_hdr);
-                    state.transition_to(Joined).into()
+            States::Associated(state) => {
+                state.on_any_mgmt_frame(sta, ctx, mgmt_hdr);
+                match mgmt_body {
+                    mac::MgmtBody::Deauthentication { deauth_hdr, .. } => {
+                        state.on_deauth_frame(sta, ctx, &deauth_hdr);
+                        state.transition_to(Joined).into()
+                    }
+                    mac::MgmtBody::Disassociation { disassoc_hdr, .. } => {
+                        state.on_disassoc_frame(sta, ctx, &disassoc_hdr);
+                        state.transition_to(Authenticated).into()
+                    }
+                    _ => state.into(),
                 }
-                mac::MgmtBody::Disassociation { disassoc_hdr, .. } => {
-                    state.on_disassoc_frame(sta, ctx, &disassoc_hdr);
-                    state.transition_to(Authenticated).into()
-                }
-                _ => state.into(),
-            },
+            }
             _ => self,
         }
     }
@@ -608,7 +649,7 @@ mod tests {
     };
 
     const BSSID: Bssid = Bssid([6u8; 6]);
-    const IFACE_MAC: MacAddr = [7u8; 6];
+    const IFACE_MAC: MacAddr = [3u8; 6];
 
     struct MockObjects {
         fake_device: FakeDevice,
@@ -674,7 +715,7 @@ mod tests {
             0b1011_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Auth Header:
@@ -891,8 +932,7 @@ mod tests {
             ctx.timer.schedule_event(ctx.timer.now() + 1.seconds(), TimedEvent::Associating);
         let state = Associating { timeout };
 
-        // Verify authentication was considered successful.
-        let controlled_port = state
+        let (aid, controlled_port) = state
             .on_assoc_resp_frame(
                 &mut sta,
                 &mut ctx,
@@ -903,6 +943,7 @@ mod tests {
                 },
             )
             .expect("failed processing association response frame");
+        assert_eq!(aid, 42);
         assert_eq!(ControlledPort::Open, controlled_port);
 
         // Verify timeout was canceled.
@@ -928,8 +969,7 @@ mod tests {
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
         let state = Associating { timeout };
 
-        // Verify authentication was considered successful.
-        let controlled_port = state
+        let (aid, controlled_port) = state
             .on_assoc_resp_frame(
                 &mut sta,
                 &mut ctx,
@@ -940,6 +980,7 @@ mod tests {
                 },
             )
             .expect("failed processing association response frame");
+        assert_eq!(aid, 42);
         assert_eq!(ControlledPort::Closed, controlled_port);
 
         // Verify timeout was canceled.
@@ -1081,7 +1122,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let state = Associated { controlled_port: ControlledPort::Open };
+        let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
 
         state.on_deauth_frame(
             &mut sta,
@@ -1108,7 +1149,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let state = Associated { controlled_port: ControlledPort::Open };
+        let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
 
         state.on_disassoc_frame(
             &mut sta,
@@ -1133,16 +1174,10 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let state = Associated { controlled_port: ControlledPort::Closed };
+        let state = Associated { aid: 0, controlled_port: ControlledPort::Closed };
 
         let data_frame = make_data_frame_single_llc(None, None);
-        let parsed_frame = mac::MacFrame::parse(&data_frame[..], false).expect("invalid frame");
-        let (fixed, addr4, qos, body) = match parsed_frame {
-            mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
-                (fixed_fields, addr4.map(|x| *x), qos_ctrl.map(|x| x.get()), body)
-            }
-            _ => panic!("error parsing data frame"),
-        };
+        let (fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
         state.on_data_frame(&mut sta, &mut ctx, &fixed, addr4, qos, body);
 
         // Verify data frame was dropped.
@@ -1154,16 +1189,10 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let state = Associated { controlled_port: ControlledPort::Open };
+        let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
 
         let data_frame = make_data_frame_single_llc(None, None);
-        let parsed_frame = mac::MacFrame::parse(&data_frame[..], false).expect("invalid frame");
-        let (fixed, addr4, qos, body) = match parsed_frame {
-            mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
-                (fixed_fields, addr4.map(|x| *x), qos_ctrl.map(|x| x.get()), body)
-            }
-            _ => panic!("error parsing data frame"),
-        };
+        let (fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
         state.on_data_frame(&mut sta, &mut ctx, &fixed, addr4, qos, body);
 
         // Verify data frame was processed.
@@ -1182,16 +1211,10 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let state = Associated { controlled_port: ControlledPort::Closed };
+        let state = Associated { aid: 0, controlled_port: ControlledPort::Closed };
 
         let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
-        let parsed_frame = mac::MacFrame::parse(&eapol_frame[..], false).expect("invalid frame");
-        let (fixed, addr4, qos, body) = match parsed_frame {
-            mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
-                (fixed_fields, addr4.map(|x| *x), qos_ctrl.map(|x| x.get()), body)
-            }
-            _ => panic!("error parsing data frame"),
-        };
+        let (fixed, addr4, qos, body) = parse_data_frame(&eapol_frame[..]);
         state.on_data_frame(&mut sta, &mut ctx, &fixed, addr4, qos, body);
 
         // Verify EAPOL frame was not sent to netstack.
@@ -1213,16 +1236,10 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let state = Associated { controlled_port: ControlledPort::Open };
+        let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
 
         let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
-        let parsed_frame = mac::MacFrame::parse(&eapol_frame[..], false).expect("invalid frame");
-        let (fixed, addr4, qos, body) = match parsed_frame {
-            mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
-                (fixed_fields, addr4.map(|x| *x), qos_ctrl.map(|x| x.get()), body)
-            }
-            _ => panic!("error parsing data frame"),
-        };
+        let (fixed, addr4, qos, body) = parse_data_frame(&eapol_frame[..]);
         state.on_data_frame(&mut sta, &mut ctx, &fixed, addr4, qos, body);
 
         // Verify EAPOL frame was not sent to netstack.
@@ -1244,16 +1261,10 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let state = Associated { controlled_port: ControlledPort::Open };
+        let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
 
         let data_frame = make_data_frame_amsdu();
-        let parsed_frame = mac::MacFrame::parse(&data_frame[..], false).expect("invalid frame");
-        let (fixed, addr4, qos, body) = match parsed_frame {
-            mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
-                (fixed_fields, addr4.map(|x| *x), qos_ctrl.map(|x| x.get()), body)
-            }
-            _ => panic!("error parsing data frame"),
-        };
+        let (fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
         state.on_data_frame(&mut sta, &mut ctx, &fixed, addr4, qos, body);
 
         let queue = &m.fake_device.eth_queue;
@@ -1274,6 +1285,102 @@ mod tests {
         ];
         expected_second_eth_frame.extend_from_slice(MSDU_2_PAYLOAD);
         assert_eq!(queue[1], &expected_second_eth_frame[..]);
+    }
+
+    #[test]
+    fn associated_request_bu_data_frame() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let state = Associated { aid: 42, controlled_port: ControlledPort::Open };
+
+        let data_frame = make_data_frame_single_llc(None, None);
+        let (mut fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
+        fixed.frame_ctrl = fixed.frame_ctrl.with_more_data(true);
+        state.on_data_frame(&mut sta, &mut ctx, &fixed, addr4, qos, body);
+
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        #[rustfmt::skip]
+        assert_eq!(&m
+            .fake_device.wlan_queue[0].0[..], &[
+            // Frame Control:
+            0b10100100, 0b00000000, // FC
+            42, 0b11_000000, // Id
+            6, 6, 6, 6, 6, 6, // addr1
+            3, 3, 3, 3, 3, 3, // addr2
+        ][..]);
+    }
+
+    #[test]
+    fn associated_request_bu_mgmt_frame() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let state = Associated { aid: 42, controlled_port: ControlledPort::Open };
+
+        state.on_any_mgmt_frame(
+            &mut sta,
+            &mut ctx,
+            &mac::MgmtHdr {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::BEACON)
+                    .with_more_data(true),
+                duration: 0,
+                addr1: [3; 6],
+                addr2: BSSID.0,
+                addr3: BSSID.0,
+                seq_ctrl: mac::SequenceControl(0),
+            },
+        );
+
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        #[rustfmt::skip]
+        assert_eq!(&m
+            .fake_device.wlan_queue[0].0[..], &[
+            // Frame Control:
+            0b10100100, 0b00000000, // FC
+            42, 0b11_000000, // Id
+            6, 6, 6, 6, 6, 6, // addr1
+            3, 3, 3, 3, 3, 3, // addr2
+        ][..]);
+    }
+
+    #[test]
+    fn associated_no_bu_request() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+
+        // Closed Controlled port
+        let state = Associated { aid: 42, controlled_port: ControlledPort::Closed };
+        let data_frame = make_data_frame_single_llc(None, None);
+        let (mut fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
+        fixed.frame_ctrl = fixed.frame_ctrl.with_more_data(true);
+        state.on_data_frame(&mut sta, &mut ctx, &fixed, addr4, qos, body);
+        assert_eq!(m.fake_device.wlan_queue.len(), 0);
+
+        // Foreign management frame
+        let state = States::from(statemachine::testing::new_state(Associated {
+            aid: 42,
+            controlled_port: ControlledPort::Open,
+        }));
+        #[rustfmt::skip]
+        let beacon = vec![
+            // Mgmt Header:
+            0b1000_00_00, 0b00100000, // Frame Control
+            0, 0, // Duration
+            3, 3, 3, 3, 3, 3, // Addr1
+            7, 7, 7, 7, 7, 7, // Addr2
+            5, 5, 5, 5, 5, 5, // Addr3
+            0x10, 0, // Sequence Control
+            // Omit IEs
+        ];
+        state.on_mac_frame(&mut sta, &mut ctx, &beacon[..], false);
+        assert_eq!(m.fake_device.wlan_queue.len(), 0);
+
+        // Foreign data frame
+        // TODO(42159): Add test.
     }
 
     #[test]
@@ -1305,7 +1412,7 @@ mod tests {
             0b1011_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Auth Header:
@@ -1333,7 +1440,7 @@ mod tests {
             0b1011_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Auth Header:
@@ -1378,7 +1485,7 @@ mod tests {
             0b1100_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Deauth Header:
@@ -1402,7 +1509,7 @@ mod tests {
             0b1100_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Deauth Header:
@@ -1428,7 +1535,7 @@ mod tests {
             0b1011_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             5, 5, 5, 5, 5, 5, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             5, 5, 5, 5, 5, 5, // Addr3
             0x10, 0, // Sequence Control
             // Auth Header:
@@ -1447,7 +1554,7 @@ mod tests {
             0b1011_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Auth Header:
@@ -1475,7 +1582,7 @@ mod tests {
             0b0001_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Assoc Resp Header:
@@ -1503,7 +1610,7 @@ mod tests {
             0b0001_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Assoc Resp Header:
@@ -1546,7 +1653,7 @@ mod tests {
             0b1100_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Deauth Header:
@@ -1562,6 +1669,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut state = States::from(statemachine::testing::new_state(Associated {
+            aid: 0,
             controlled_port: ControlledPort::Open,
         }));
 
@@ -1572,7 +1680,7 @@ mod tests {
             0b1010_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Deauth Header:
@@ -1588,6 +1696,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut state = States::from(statemachine::testing::new_state(Associated {
+            aid: 0,
             controlled_port: ControlledPort::Open,
         }));
 
@@ -1598,7 +1707,7 @@ mod tests {
             0b1100_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
             6, 6, 6, 6, 6, 6, // Addr1
-            7, 7, 7, 7, 7, 7, // Addr2
+            3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
             // Deauth Header:
@@ -1606,5 +1715,17 @@ mod tests {
         ];
         state = state.on_mac_frame(&mut sta, &mut ctx, &deauth[..], false);
         assert_variant!(state, States::Joined(_), "not in joined state");
+    }
+
+    fn parse_data_frame(
+        bytes: &[u8],
+    ) -> (mac::FixedDataHdrFields, Option<MacAddr>, Option<mac::QosControl>, &[u8]) {
+        let parsed_frame = mac::MacFrame::parse(bytes, false).expect("invalid frame");
+        match parsed_frame {
+            mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
+                (*fixed_fields, addr4.map(|x| *x), qos_ctrl.map(|x| x.get()), body)
+            }
+            _ => panic!("error parsing data frame"),
+        }
     }
 }
