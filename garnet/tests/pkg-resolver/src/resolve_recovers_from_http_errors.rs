@@ -24,7 +24,6 @@ async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
     failure_status: Status,
 ) {
     let env = TestEnv::new();
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)

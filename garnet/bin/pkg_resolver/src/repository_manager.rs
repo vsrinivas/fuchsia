@@ -12,8 +12,7 @@ use {
     },
     failure::Fail,
     fidl_fuchsia_amber::{
-        self, ControlProxy as AmberProxy, FetchResultEvent, FetchResultMarker,
-        OpenedRepositoryMarker, OpenedRepositoryProxy,
+        self, ControlProxy as AmberProxy, OpenedRepositoryMarker, OpenedRepositoryProxy,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_async as fasync, fuchsia_inspect as inspect,
@@ -306,61 +305,19 @@ impl<A: AmberConnect> RepositoryManager<A> {
         blob_fetcher: &'a BlobFetcher,
     ) -> LocalBoxFuture<'a, Result<BlobId, Status>> {
         let res = self.connect_to_repo(url.repo());
-        let experiments = self.experiments.clone();
         async move {
             let (repo, config) = res?;
             // While the fuchsia-pkg:// spec doesn't require a package name, we do.
-            let name = url.name().ok_or_else(|| {
+            if url.name().is_none() {
                 fx_log_err!("package url is missing a package name: {}", url);
-                Err(Status::INVALID_ARGS)
-            })?;
-            if experiments.get(Experiment::DownloadBlob) {
-                crate::cache::cache_package_using_amber(repo, &config, url, cache, blob_fetcher)
-                    .await
-                    .map_err(|e| {
-                        fx_log_err!("error caching package: {}", e);
-                        e.to_resolve_status()
-                    })
-            } else {
-                let (result, result_server_end) =
-                    fidl::endpoints::create_proxy::<FetchResultMarker>().map_err(|err| {
-                        fx_log_err!("failed to create proxy: {}", err);
-                        Status::INTERNAL
-                    })?;
-                // Ask amber to cache the package.
-                repo.get_update_complete(
-                    &name,
-                    url.variant(),
-                    url.package_hash(),
-                    result_server_end,
-                )
-                .map_err(|err| {
-                    fx_log_err!("error communicating with amber: {:?}", err);
-                    Status::INTERNAL
-                })?;
-                match result.take_event_stream().into_future().await {
-                    (Some(Ok(FetchResultEvent::OnSuccess { merkle })), _) => match merkle.parse() {
-                        Ok(merkle) => Ok(merkle),
-                        Err(err) => {
-                            fx_log_err!("{:?} is not a valid merkleroot: {:?}", merkle, err);
-                            return Err(Status::INTERNAL);
-                        }
-                    },
-                    (Some(Ok(FetchResultEvent::OnError { result, message })), _) => {
-                        let status = Status::from_raw(result);
-                        fx_log_err!("error fetching package: {}: {}", status, message);
-                        return Err(status);
-                    }
-                    (Some(Err(err)), _) => {
-                        fx_log_err!("error communicating with amber: {}", err);
-                        return Err(Status::INTERNAL);
-                    }
-                    (None, _) => {
-                        fx_log_err!("amber unexpectedly closed fetch result channel");
-                        return Err(Status::INTERNAL);
-                    }
-                }
+                return Err(Status::INVALID_ARGS);
             }
+            crate::cache::cache_package_using_amber(repo, &config, url, cache, blob_fetcher)
+                .await
+                .map_err(|e| {
+                    fx_log_err!("error caching package: {}", e);
+                    e.to_resolve_status()
+                })
         }
         .boxed_local()
     }

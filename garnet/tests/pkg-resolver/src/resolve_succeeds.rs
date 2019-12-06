@@ -128,7 +128,7 @@ async fn package_resolution() {
         .expect("package to resolve without error");
 
     // Verify the served package directory contains the exact expected contents.
-    pkg.verify_contents(&package).await.expect("correct package contents");
+    pkg.verify_contents(&package).await.unwrap();
 
     // All blobs in the repository should now be present in blobfs.
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
@@ -136,7 +136,8 @@ async fn package_resolution() {
     env.stop().await;
 }
 
-async fn verify_separate_blobs_url(download_blob: bool) {
+#[fasync::run_singlethreaded(test)]
+async fn separate_blobs_url() {
     let env = TestEnv::new();
     let pkg = make_rolldice_pkg_with_extra_blobs(3).await;
     let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -165,34 +166,19 @@ async fn verify_separate_blobs_url(download_blob: bool) {
     repo_config.insert_mirror(mirror).unwrap();
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
 
-    // Optionally use the new install flow.
-    if download_blob {
-        env.set_experiment_state(Experiment::DownloadBlob, true).await;
-    }
-
     // Verify package installation from the split repo succeeds.
     let package = env
         .resolve_package("fuchsia-pkg://test/rolldice")
         .await
         .expect("package to resolve without error");
-    pkg.verify_contents(&package).await.expect("correct package contents");
+    pkg.verify_contents(&package).await.unwrap();
     std::fs::rename(repo_root.join("blobsbolb"), repo_root.join("blobs")).unwrap();
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
 
     env.stop().await;
 }
 
-#[fasync::run_singlethreaded(test)]
-async fn separate_blobs_url() {
-    verify_separate_blobs_url(false).await
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn download_blob_separate_blobs_url() {
-    verify_separate_blobs_url(true).await
-}
-
-async fn verify_download_blob_resolve_with_altered_env(
+async fn verify_resolve_with_altered_env(
     pkg: Package,
     alter_env: impl FnOnce(&TestEnv, &Package),
 ) -> () {
@@ -210,31 +196,29 @@ async fn verify_download_blob_resolve_with_altered_env(
 
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
 
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
-
     alter_env(&env, &pkg);
 
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
-    let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
+    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
 
-    pkg.verify_contents(&package_dir).await.expect("correct package contents");
+    pkg.verify_contents(&package_dir).await.unwrap();
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
 
     env.stop().await;
 }
 
-fn verify_download_blob_resolve(pkg: Package) -> impl Future<Output = ()> {
-    verify_download_blob_resolve_with_altered_env(pkg, |_, _| {})
+fn verify_resolve(pkg: Package) -> impl Future<Output = ()> {
+    verify_resolve_with_altered_env(pkg, |_, _| {})
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn download_blob_meta_far_only() {
-    verify_download_blob_resolve(PackageBuilder::new("uniblob").build().await.unwrap()).await
+async fn meta_far_only() {
+    verify_resolve(PackageBuilder::new("uniblob").build().await.unwrap()).await
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn download_blob_meta_far_and_empty_blob() {
-    verify_download_blob_resolve(
+async fn meta_far_and_empty_blob() {
+    verify_resolve(
         PackageBuilder::new("emptyblob")
             .add_resource_at("data/empty", "".as_bytes())
             .build()
@@ -245,8 +229,8 @@ async fn download_blob_meta_far_and_empty_blob() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn download_blob_experiment_large_blobs() {
-    verify_download_blob_resolve(
+async fn large_blobs() {
+    verify_resolve(
         PackageBuilder::new("numbers")
             .add_resource_at("bin/numbers", ROLLDICE_BIN)
             .add_resource_at("data/ones", io::repeat(1).take(1 * 1024 * 1024))
@@ -260,19 +244,129 @@ async fn download_blob_experiment_large_blobs() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn download_blob_experiment_many_blobs() {
-    verify_download_blob_resolve(make_rolldice_pkg_with_extra_blobs(200).await).await
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn download_blob_experiment_identity() {
-    verify_download_blob_resolve(Package::identity().await.unwrap()).await
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn download_blob_experiment_identity_hyper() {
+async fn pinned_merkle_resolution() {
     let env = TestEnv::new();
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
+
+    // Since our test harness doesn't yet include a way to update a package, we generate two
+    // separate packages to test resolution with a pinned merkle root.
+    // We can do this with two packages because the TUF metadata doesn't currently contain
+    // package names, only the latest known merkle root for a given name.
+    // So, generate two packages, and then resolve one package with the merkle of the other
+    // to test resolution with a pinned merkle.
+    let pkg1 = PackageBuilder::new("pinned-merkle-foo")
+        .add_resource_at("data/foo", "foo".as_bytes())
+        .build()
+        .await
+        .unwrap();
+    let pkg2 = PackageBuilder::new("pinned-merkle-bar")
+        .add_resource_at("data/bar", "bar".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg1)
+            .add_package(&pkg2)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let served_repository = repo.build_server().start().unwrap();
+    env.register_repo(&served_repository).await;
+
+    let pkg1_url_with_pkg2_merkle =
+        format!("fuchsia-pkg://test/pinned-merkle-foo?hash={}", pkg2.meta_far_merkle_root());
+
+    let package_dir = env.resolve_package(&pkg1_url_with_pkg2_merkle).await.unwrap();
+    pkg2.verify_contents(&package_dir).await.unwrap();
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn variant_resolution() {
+    let env = TestEnv::new();
+    let pkg = PackageBuilder::new("variant-foo")
+        .add_resource_at("data/foo", "foo".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let served_repository = repo.build_server().start().unwrap();
+    env.register_repo(&served_repository).await;
+
+    let pkg_url = &"fuchsia-pkg://test/variant-foo/0";
+
+    let package_dir = env.resolve_package(pkg_url).await.unwrap();
+    pkg.verify_contents(&package_dir).await.unwrap();
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn error_codes() {
+    let env = TestEnv::new();
+    let pkg = PackageBuilder::new("error-foo")
+        .add_resource_at("data/foo", "foo".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let served_repository = repo.build_server().start().unwrap();
+    env.register_repo(&served_repository).await;
+
+    // Invalid URL
+    assert_matches!(
+        env.resolve_package("fuchsia-pkg://test/bad-url!").await,
+        Err(Status::INVALID_ARGS)
+    );
+
+    // Nonexistant repo
+    assert_matches!(
+        env.resolve_package("fuchsia-pkg://a/nonexistent").await,
+        Err(Status::NOT_FOUND)
+    );
+
+    // Nonexistant package
+    assert_matches!(
+        env.resolve_package("fuchsia-pkg://test/nonexistent").await,
+        Err(Status::INTERNAL)
+    );
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn many_blobs() {
+    verify_resolve(make_rolldice_pkg_with_extra_blobs(200).await).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn identity() {
+    verify_resolve(Package::identity().await.unwrap()).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn identity_hyper() {
+    let env = TestEnv::new();
 
     let pkg = Package::identity().await.unwrap();
     let repo = Arc::new(
@@ -286,15 +380,15 @@ async fn download_blob_experiment_identity_hyper() {
     env.register_repo(&served_repository).await;
 
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
-    let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
+    let package_dir = env.resolve_package(&pkg_url).await.unwrap();
 
-    pkg.verify_contents(&package_dir).await.expect("correct package contents");
+    pkg.verify_contents(&package_dir).await.unwrap();
 
     env.stop().await;
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn download_blob_experiment_retries() {
+async fn retries() {
     let env = TestEnv::new();
 
     let pkg = PackageBuilder::new("try-hard")
@@ -318,7 +412,6 @@ async fn download_blob_experiment_retries() {
         .start()
         .unwrap();
     env.register_repo(&served_repository).await;
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
     let package_dir = env.resolve_package("fuchsia-pkg://test/try-hard").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
@@ -346,9 +439,8 @@ async fn download_blob_experiment_retries() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn download_blob_experiment_handles_429_responses() {
+async fn handles_429_responses() {
     let env = TestEnv::new();
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
     let pkg1 = PackageBuilder::new("rate-limit-far")
         .add_resource_at("data/foo", "foo".as_bytes())
@@ -419,7 +511,7 @@ async fn download_blob_experiment_handles_429_responses() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn download_blob_experiment_uses_cached_package() {
+async fn use_cached_package() {
     let env = TestEnv::new();
 
     let pkg = PackageBuilder::new("resolve-twice")
@@ -444,8 +536,6 @@ async fn download_blob_experiment_uses_cached_package() {
         .start()
         .unwrap();
 
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
-
     // the package can't be resolved before the repository is configured.
     assert_matches!(
         env.resolve_package("fuchsia-pkg://test/resolve-twice").await,
@@ -462,15 +552,13 @@ async fn download_blob_experiment_uses_cached_package() {
 
     // package resolves as expected.
     fail_requests.unset();
-    let package_dir =
-        env.resolve_package("fuchsia-pkg://test/resolve-twice").await.expect("package to resolve");
-    pkg.verify_contents(&package_dir).await.expect("correct package contents");
+    let package_dir = env.resolve_package("fuchsia-pkg://test/resolve-twice").await.unwrap();
+    pkg.verify_contents(&package_dir).await.unwrap();
 
     // if no mirrors are accessible, the cached package is returned.
     fail_requests.set();
-    let package_dir =
-        env.resolve_package("fuchsia-pkg://test/resolve-twice").await.expect("package to resolve");
-    pkg.verify_contents(&package_dir).await.expect("correct package contents");
+    let package_dir = env.resolve_package("fuchsia-pkg://test/resolve-twice").await.unwrap();
+    pkg.verify_contents(&package_dir).await.unwrap();
 
     served_repository.stop().await;
     env.stop().await;
@@ -478,97 +566,73 @@ async fn download_blob_experiment_uses_cached_package() {
 
 #[fasync::run_singlethreaded(test)]
 async fn meta_far_installed_blobs_not_installed() {
-    verify_download_blob_resolve_with_altered_env(
-        make_rolldice_pkg_with_extra_blobs(3).await,
-        |env, pkg| {
-            env.add_file_to_pkgfs_at_path(
-                pkg.meta_far().expect("package has meta.far"),
-                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
-            )
-        },
-    )
+    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
+        env.add_file_to_pkgfs_at_path(
+            pkg.meta_far().unwrap(),
+            format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
+        )
+    })
     .await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn meta_far_partially_installed() {
-    verify_download_blob_resolve_with_altered_env(
-        make_rolldice_pkg_with_extra_blobs(3).await,
-        |env, pkg| {
-            env.partially_add_file_to_pkgfs_at_path(
-                pkg.meta_far().expect("package has meta.far"),
-                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
-            )
-        },
-    )
+    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
+        env.partially_add_file_to_pkgfs_at_path(
+            pkg.meta_far().unwrap(),
+            format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
+        )
+    })
     .await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn meta_far_already_in_blobfs() {
-    verify_download_blob_resolve_with_altered_env(
-        make_rolldice_pkg_with_extra_blobs(3).await,
-        |env, pkg| {
-            env.add_file_with_merkle_to_blobfs(
-                pkg.meta_far().expect("package has meta.far"),
-                pkg.meta_far_merkle_root(),
-            )
-        },
-    )
+    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
+        env.add_file_with_merkle_to_blobfs(pkg.meta_far().unwrap(), pkg.meta_far_merkle_root())
+    })
     .await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn all_blobs_already_in_blobfs() {
-    verify_download_blob_resolve_with_altered_env(
-        make_rolldice_pkg_with_extra_blobs(3).await,
-        |env, pkg| {
-            env.add_file_with_merkle_to_blobfs(
-                pkg.meta_far().expect("package has meta.far"),
-                pkg.meta_far_merkle_root(),
-            );
-            env.add_slice_to_blobfs(ROLLDICE_BIN);
-            for i in 0..3 {
-                env.add_slice_to_blobfs(extra_blob_contents(i).as_slice());
-            }
-        },
-    )
+    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
+        env.add_file_with_merkle_to_blobfs(pkg.meta_far().unwrap(), pkg.meta_far_merkle_root());
+        env.add_slice_to_blobfs(ROLLDICE_BIN);
+        for i in 0..3 {
+            env.add_slice_to_blobfs(extra_blob_contents(i).as_slice());
+        }
+    })
     .await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn meta_far_installed_one_blob_in_blobfs() {
-    verify_download_blob_resolve_with_altered_env(
-        make_rolldice_pkg_with_extra_blobs(3).await,
-        |env, pkg| {
-            env.add_file_to_pkgfs_at_path(
-                pkg.meta_far().expect("package has meta.far"),
-                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
-            );
-            env.add_slice_to_blobfs(ROLLDICE_BIN);
-        },
-    )
+    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
+        env.add_file_to_pkgfs_at_path(
+            pkg.meta_far().unwrap(),
+            format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
+        );
+        env.add_slice_to_blobfs(ROLLDICE_BIN);
+    })
     .await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn meta_far_installed_one_blob_partially_installed() {
-    verify_download_blob_resolve_with_altered_env(
-        make_rolldice_pkg_with_extra_blobs(3).await,
-        |env, pkg| {
-            env.add_file_to_pkgfs_at_path(
-                pkg.meta_far().expect("package has meta.far"),
-                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
-            );
-            env.partially_add_slice_to_pkgfs_at_path(
-                ROLLDICE_BIN,
-                format!(
-                    "install/blob/{}",
-                    MerkleTree::from_reader(ROLLDICE_BIN).expect("merkle slice").root().to_string()
-                ),
-            );
-        },
-    )
+    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
+        env.add_file_to_pkgfs_at_path(
+            pkg.meta_far().unwrap(),
+            format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
+        );
+        env.partially_add_slice_to_pkgfs_at_path(
+            ROLLDICE_BIN,
+            format!(
+                "install/blob/{}",
+                MerkleTree::from_reader(ROLLDICE_BIN).expect("merkle slice").root().to_string()
+            ),
+        );
+    })
     .await
 }
 
@@ -677,7 +741,6 @@ async fn test_concurrent_blob_writes() {
     let served_repository =
         repo.build_server().uri_path_override_handler(blocking_uri_path_handler).start().unwrap();
     env.register_repo(&served_repository).await;
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
     // Construct the resolver proxies (clients)
     let resolver_proxy_1 =
@@ -708,9 +771,8 @@ async fn test_concurrent_blob_writes() {
     // TODO(39488) pkgfs assumes the blob is present and doesn't tell the package resolver to fetch
     // it, so it never hooks up to the pending future to resolve that blob, resolving an incomplete
     // package.
-    let package2_dir = resolve_package(&resolver_proxy_2, &"fuchsia-pkg://test/package2")
-        .await
-        .expect("package to resolve");
+    let package2_dir =
+        resolve_package(&resolver_proxy_2, &"fuchsia-pkg://test/package2").await.unwrap();
     assert_matches!(
         pkg2.verify_contents(&package2_dir).await,
         Err(VerificationError::NoUser0 { path }) if path == "blob/duplicate"
@@ -718,8 +780,8 @@ async fn test_concurrent_blob_writes() {
 
     // When we unblock the server, we should observe that package 1 is successfully resolved
     unblocking_closure();
-    let package1_dir = package1_resolution_fut.await.expect("package to resolve");
-    pkg1.verify_contents(&package1_dir).await.expect("correct package contents");
+    let package1_dir = package1_resolution_fut.await.unwrap();
+    pkg1.verify_contents(&package1_dir).await.unwrap();
     env.stop().await;
 }
 
@@ -778,9 +840,8 @@ impl UriPathHandler for BlockResponseUriPathHandler {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn download_blob_experiment_dedups_concurrent_content_blob_fetches() {
+async fn dedup_concurrent_content_blob_fetches() {
     let env = TestEnv::new();
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
     // Make a few test packages with no more than 6 blobs.  There is no guarantee what order the
     // package resolver will fetch blobs in other than it will fetch one of the meta FARs first and
@@ -875,8 +936,8 @@ async fn download_blob_experiment_dedups_concurrent_content_blob_fetches() {
     let pkg1_dir = pkg1_fut.await.expect("package 1 to resolve");
     let pkg2_dir = pkg2_fut.await.expect("package 2 to resolve");
 
-    pkg1.verify_contents(&pkg1_dir).await.expect("correct package contents");
-    pkg2.verify_contents(&pkg2_dir).await.expect("correct package contents");
+    pkg1.verify_contents(&pkg1_dir).await.unwrap();
+    pkg2.verify_contents(&pkg2_dir).await.unwrap();
 
     env.stop().await;
 }
@@ -895,7 +956,7 @@ async fn rust_tuf_experiment_identity() {
     env.set_experiment_state(Experiment::RustTuf, true).await;
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
     let package = env.resolve_package(&pkg_url).await.expect("package to resolve without error");
-    pkg.verify_contents(&package).await.expect("correct package contents");
+    pkg.verify_contents(&package).await.unwrap();
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
     env.stop().await;
 }

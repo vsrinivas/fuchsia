@@ -354,7 +354,6 @@ async fn assert_resolve_package_with_failing_pkgfs_fails(
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
     env.proxies.repo_manager.add(repo_config.into()).await?;
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
     let res = env.resolve_package("fuchsia-pkg://test/rolldice").await;
 
