@@ -27,6 +27,7 @@
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
+            "fuchsia.media.SessionAudioConsumerFactory",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.ModuleContext",
