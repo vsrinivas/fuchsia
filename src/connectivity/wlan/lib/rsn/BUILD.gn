@@ -18,6 +18,7 @@ rustc_library("wlan-rsn") {
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/eapol",
     "//src/connectivity/wlan/lib/statemachine:wlan-statemachine",
+    "//third_party/boringssl/rust/boringssl-sys",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
