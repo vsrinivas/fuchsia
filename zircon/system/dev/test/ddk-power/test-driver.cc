@@ -107,7 +107,8 @@ void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
 
 void TestPowerDriver::GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result result;
-  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+  result.set_err(&status);
   completer.Reply(std::move(result));
 }
 

@@ -150,23 +150,23 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
     fio::NodeInfo info;
     if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Connector>) {
       fio::Service service;
-      info.set_service(std::move(service));
+      info.set_service(&service);
       callback(&info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
       fio::FileObject file = {
           .event = std::move(repr.observer)
       };
-      info.set_file(std::move(file));
+      info.set_file(&file);
       callback(&info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
       fio::DirectoryObject directory;
-      info.set_directory(std::move(directory));
+      info.set_directory(&directory);
       callback(&info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Pipe>) {
       fio::Pipe pipe = {
           .socket = std::move(repr.socket)
       };
-      info.set_pipe(std::move(pipe));
+      info.set_pipe(&pipe);
       callback(&info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Memory>) {
       fio::Vmofile vmofile = {
@@ -174,25 +174,25 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
           .offset = repr.offset,
           .length = repr.length
       };
-      info.set_vmofile(std::move(vmofile));
+      info.set_vmofile(&vmofile);
       callback(&info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
       fio::Device device = {
           .event = std::move(repr.event)
       };
-      info.set_device(std::move(device));
+      info.set_device(&device);
       callback(&info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
       fio::Tty tty = {
           .event = std::move(repr.event)
       };
-      info.set_tty(std::move(tty));
+      info.set_tty(&tty);
       callback(&info);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Socket>) {
       fio::Socket socket = {
           .socket = std::move(repr.socket)
       };
-      info.set_socket(std::move(socket));
+      info.set_socket(&socket);
       callback(&info);
     } else {
       ZX_PANIC("Representation variant is not initialized");

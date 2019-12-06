@@ -47,12 +47,6 @@ struct {{ .Name }} {
 
   bool is_{{ .Name }}() const { return ordinal_ == Ordinal::{{ .TagName }}; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.LLDecl }}&& val) {
-    {{ $.Name }} result;
-    result.set_{{ .Name }}(std::move(val));
-    return result;
-  }
   static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.LLDecl }}* val) {
     {{ $.Name }} result;
     result.set_{{ .Name }}(val);
@@ -67,30 +61,10 @@ struct {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, {{ .Type.LLDecl }}>::value && std::is_copy_assignable<T>::value>
-  set_{{ .Name }}(const T& v) {
-    mutable_{{ .Name }}() = v;
-  }
-{{ "" }}
-  {{- range .DocComments }}
-  //{{ . }}
-  {{- end }}
   template <typename T>
   std::enable_if_t<std::is_convertible<T, {{ .Type.LLDecl }}>::value && std::is_copy_assignable<T>::value>
   set_{{ .Name }}(const T* v) {
     mutable_{{ .Name }}() = *v;
-  }
-{{ "" }}
-  {{- range .DocComments }}
-  //{{ . }}
-  {{- end }}
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, {{ .Type.LLDecl }}>::value && std::is_move_assignable<T>::value>
-  set_{{ .Name }}(T&& v) {
-    mutable_{{ .Name }}() = std::move(v);
   }
 {{ "" }}
   {{- range .DocComments }}

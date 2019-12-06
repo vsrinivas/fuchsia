@@ -90,12 +90,6 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response&& val) {
-    WithErrorSyntax_ResponseAsStruct_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static WithErrorSyntax_ResponseAsStruct_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response* val) {
     WithErrorSyntax_ResponseAsStruct_Result result;
     result.set_response(val);
@@ -104,24 +98,10 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
 
   ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -134,12 +114,6 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t&& val) {
-    WithErrorSyntax_ResponseAsStruct_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t* val) {
     WithErrorSyntax_ResponseAsStruct_Result result;
     result.set_err(val);
@@ -148,24 +122,10 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
 
   uint32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -255,12 +215,6 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&& val) {
-    WithErrorSyntax_ErrorAsPrimitive_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* val) {
     WithErrorSyntax_ErrorAsPrimitive_Result result;
     result.set_response(val);
@@ -269,24 +223,10 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -299,12 +239,6 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t&& val) {
-    WithErrorSyntax_ErrorAsPrimitive_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t* val) {
     WithErrorSyntax_ErrorAsPrimitive_Result result;
     result.set_err(val);
@@ -313,24 +247,10 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   uint32_t& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
@@ -1431,12 +1351,6 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response&& val) {
-    WithErrorSyntax_ErrorAsEnum_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
   static WithErrorSyntax_ErrorAsEnum_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response* val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
     result.set_response(val);
@@ -1445,24 +1359,10 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& mutable_response();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
   }
 
   template <typename T>
@@ -1475,12 +1375,6 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  static WithErrorSyntax_ErrorAsEnum_Result WithErr(::llcpp::test::name::ErrorEnun&& val) {
-    WithErrorSyntax_ErrorAsEnum_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
   static WithErrorSyntax_ErrorAsEnum_Result WithErr(::llcpp::test::name::ErrorEnun* val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
     result.set_err(val);
@@ -1489,24 +1383,10 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   ::llcpp::test::name::ErrorEnun& mutable_err();
 
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::ErrorEnun>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::ErrorEnun>::value && std::is_copy_assignable<T>::value>
   set_err(const T* v) {
     mutable_err() = *v;
-  }
-
-  // TODO(fxb/41475) Remove this in favor of the pointer version.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::ErrorEnun>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
   }
 
   template <typename T>
