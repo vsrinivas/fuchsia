@@ -1,29 +1,5 @@
 # Scenic, the Fuchsia graphics engine
 
-- [Scenic, the Fuchsia graphics engine](#scenic-the-fuchsia-graphics-engine)
-- [Introduction](#introduction)
-  - [Scenic and Fuchsia](#scenic-and-fuchsia)
-- [Concepts](#concepts)
-  - [Scenic](#scenic)
-  - [Sessions](#sessions)
-  - [Resources](#resources)
-    - [Nodes](#nodes)
-    - [Scenes](#scenes)
-    - [Compositors](#compositors)
-    - [Scenic Resource Graph](#scenic-resource-graph)
-    - [TODO: More Resources](#todo-more-resources)
-  - [Coordinate Frames and Units](#coordinate-frames-and-units)
-    - [Units](#units)
-    - [World Space](#world-space)
-    - [View Space](#view-space)
-  - [Views and Bounds](#views-and-bounds)
-  - [Timing Model](#timing-model)
-  - [Fences](#fences)
-- [Examples of using Scenic](#examples-of-using-scenic)
-- [API Guide](#api-guide)
-  - [FIDL protocols](#fidl-protocols)
-  - [TODO](#todo)
-
 # Introduction {#introduction}
 
 Scenic is a system service that composes graphical objects from multiple
@@ -273,9 +249,20 @@ TODO(SCN-1228): Talk about synchronization.
 
 # Examples of using Scenic {#examples-of-using-scenic}
 
-A simple example of using Scenic is the [bouncing ball](/src/ui/examples/bouncing_ball/README.md) app.
+* [bouncing_ball](/src/ui/examples/bouncing_ball/README.md): Simple example that doesn't use any wrapper library.
+* [simplest_app](/src/ui/examples/simplest_app/README.md): Draws a background color that changes with user input.
+* [spinning_square](/src/ui/examples/spinning_square/README.md): Draws a square and animates it.
+* [tile](/src/ui/examples/tile/README.md): Simple window-manager-like app that embeds child views.
+* Other examples: [`//src/ui/examples`](/src/ui/examples)
 
 # API Guide {#api-guide}
+
+## Scenic client libraries
+
+Scenic has convenience wrapper libraries for some languages. These can be used instead of using the FIDL API directly.
+
+* [C++ client library](/sdk/lib/ui/scenic/cpp) (see also examples: [simplest_app](/src/ui/examples/simplest_app/README.md), [spinning_square](/src/ui/examples/spinning_square/README.md), [simplest_embedder](/src/ui/examples/simplest_embedder/README.md), [tile](/src/ui/examples/tile/README.md))
+* [Rust client library](/garnet/public/rust/fuchsia-scenic)
 
 ## FIDL protocols {#fidl-protocols}
 
@@ -315,5 +302,4 @@ make up Scenic.
 
 ## TODO {#todo}
 
-Talk about how to get started using Scenic, running examples,
-recommended implementation strategies, etc.
+Talk about how to get started using Scenic, recommended implementation strategies, etc.
