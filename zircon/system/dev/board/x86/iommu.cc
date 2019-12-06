@@ -46,7 +46,7 @@ static zx_status_t acpi_scope_to_desc(ACPI_DMAR_DEVICE_SCOPE* acpi_scope,
   if (acpi_scope->Length < sizeof(*acpi_scope)) {
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
-  desc_scope->num_hops = (acpi_scope->Length - sizeof(*acpi_scope)) / 2;
+  desc_scope->num_hops = static_cast<uint8_t>((acpi_scope->Length - sizeof(*acpi_scope)) / 2);
   if (countof(desc_scope->dev_func) < desc_scope->num_hops) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -63,7 +63,7 @@ static zx_status_t acpi_scope_to_desc(ACPI_DMAR_DEVICE_SCOPE* acpi_scope,
     uint16_t v = *(uint16_t*)((uintptr_t)acpi_scope + sizeof(*acpi_scope) + 2 * i);
     const uint8_t dev = v & 0x1f;
     const uint8_t func = (v >> 8) & 0x7;
-    desc_scope->dev_func[i] = (dev << 3) | func;
+    desc_scope->dev_func[i] = static_cast<uint8_t>((dev << 3) | func);
   }
   return ZX_OK;
 }
@@ -238,7 +238,7 @@ static zx_status_t append_reserved_mem(ACPI_TABLE_DMAR* table, zx_iommu_desc_int
         if (next_reserved_mem_desc_base + mem_desc_size <= (uintptr_t)desc + desc_len) {
           mem_desc->base_addr = rec->BaseAddress;
           mem_desc->len = rec->EndAddress - rec->BaseAddress + 1;
-          mem_desc->scope_bytes = mem_desc_size - sizeof(*mem_desc);
+          mem_desc->scope_bytes = static_cast<uint8_t>(mem_desc_size - sizeof(*mem_desc));
           next_reserved_mem_desc_base += mem_desc_size;
         }
         *bytes_needed += mem_desc_size;
@@ -297,7 +297,7 @@ static zx_status_t create_whole_segment_iommu_desc(ACPI_TABLE_DMAR* table,
 
   size_t desc_len =
       sizeof(zx_iommu_desc_intel_t) + sizeof(zx_iommu_desc_intel_scope_t) * num_scopes;
-  zx_iommu_desc_intel_t* desc = malloc(desc_len);
+  zx_iommu_desc_intel_t* desc = static_cast<zx_iommu_desc_intel_t*>(malloc(desc_len));
   if (!desc) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -323,7 +323,8 @@ static zx_status_t create_whole_segment_iommu_desc(ACPI_TABLE_DMAR* table,
           free(desc);
           return status;
         }
-        desc->scope_bytes += scopes_found * sizeof(zx_iommu_desc_intel_scope_t);
+        desc->scope_bytes = static_cast<uint8_t>(
+            desc->scope_bytes + scopes_found * sizeof(zx_iommu_desc_intel_scope_t));
         num_scopes -= scopes_found;
       }
     }
@@ -333,7 +334,8 @@ static zx_status_t create_whole_segment_iommu_desc(ACPI_TABLE_DMAR* table,
   size_t reserved_mem_bytes = 0;
   zx_status_t status = append_reserved_mem(table, desc, desc_len, &reserved_mem_bytes);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
-    zx_iommu_desc_intel_t* new_desc = realloc(desc, desc_len + reserved_mem_bytes);
+    zx_iommu_desc_intel_t* new_desc =
+        static_cast<zx_iommu_desc_intel_t*>(realloc(desc, desc_len + reserved_mem_bytes));
     if (new_desc == NULL) {
       free(desc);
       return ZX_ERR_NO_MEMORY;
@@ -346,7 +348,8 @@ static zx_status_t create_whole_segment_iommu_desc(ACPI_TABLE_DMAR* table,
     free(desc);
     return status;
   }
-  desc->reserved_memory_bytes += reserved_mem_bytes;
+  desc->reserved_memory_bytes =
+      static_cast<uint16_t>(desc->reserved_memory_bytes + reserved_mem_bytes);
 
   *desc_out = desc;
   *desc_len_out = desc_len;
@@ -367,7 +370,7 @@ static zx_status_t create_partial_segment_iommu_desc(ACPI_TABLE_DMAR* table,
 
   size_t desc_len =
       sizeof(zx_iommu_desc_intel_t) + sizeof(zx_iommu_desc_intel_scope_t) * num_scopes;
-  zx_iommu_desc_intel_t* desc = malloc(desc_len);
+  zx_iommu_desc_intel_t* desc = static_cast<zx_iommu_desc_intel_t*>(malloc(desc_len));
   if (!desc) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -384,12 +387,13 @@ static zx_status_t create_partial_segment_iommu_desc(ACPI_TABLE_DMAR* table,
     free(desc);
     return status;
   }
-  desc->scope_bytes = actual_num_scopes * sizeof(zx_iommu_desc_intel_scope_t);
+  desc->scope_bytes = static_cast<uint8_t>(actual_num_scopes * sizeof(zx_iommu_desc_intel_scope_t));
 
   size_t reserved_mem_bytes = 0;
   status = append_reserved_mem(table, desc, desc_len, &reserved_mem_bytes);
   if (status == ZX_ERR_BUFFER_TOO_SMALL) {
-    zx_iommu_desc_intel_t* new_desc = realloc(desc, desc_len + reserved_mem_bytes);
+    zx_iommu_desc_intel_t* new_desc =
+        static_cast<zx_iommu_desc_intel_t*>(realloc(desc, desc_len + reserved_mem_bytes));
     if (new_desc == NULL) {
       status = ZX_ERR_NO_MEMORY;
       goto cleanup;
@@ -401,7 +405,8 @@ static zx_status_t create_partial_segment_iommu_desc(ACPI_TABLE_DMAR* table,
   if (status != ZX_OK) {
     goto cleanup;
   }
-  desc->reserved_memory_bytes += reserved_mem_bytes;
+  desc->reserved_memory_bytes =
+      static_cast<uint16_t>(desc->reserved_memory_bytes + reserved_mem_bytes);
 
   *desc_out = desc;
   *desc_len_out = desc_len;
@@ -485,7 +490,7 @@ zx_status_t iommu_manager_init(void) {
     return ZX_OK;
   }
 
-  iommu_mgr.iommus = malloc(sizeof(iommu_info_t) * num_iommus);
+  iommu_mgr.iommus = static_cast<iommu_info_t*>(malloc(sizeof(iommu_info_t) * num_iommus));
   if (iommu_mgr.iommus == NULL) {
     return ZX_ERR_NO_MEMORY;
   }

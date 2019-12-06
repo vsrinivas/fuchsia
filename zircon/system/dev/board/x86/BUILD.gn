@@ -61,7 +61,7 @@ zx_driver("platform-bus-x86") {
     "acpi-nswalk.cc",
     "debug.cc",
     "init.cc",
-    "iommu.c",
+    "iommu.cc",
     "methods.cc",
     "nhlt.cc",
     "pciroot.cc",
