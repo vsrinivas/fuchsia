@@ -496,8 +496,20 @@ struct SbcEncoderSettings {
 struct AacTransportRaw {
 };
 
+/// AAC inside LATM
+struct AacTransportLatm {
+    /// Whether MuxConfiguration stream element is present
+    bool mux_config_present;
+};
+
+/// AAC inside ADTS
+struct AacTransportAdts {
+};
+
 xunion AacTransport {
     AacTransportRaw raw;
+    AacTransportLatm latm;
+    AacTransportAdts adts;
 };
 
 enum AacChannelMode {
