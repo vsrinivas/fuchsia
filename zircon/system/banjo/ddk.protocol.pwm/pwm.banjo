@@ -29,7 +29,7 @@ struct PwmConfig {
    ///       struct mode_config_two_timer two_timer;
    ///     };
    ///   };
-   vector<voidptr> mode_config;
+   vector<voidptr>? mode_config;
 };
 
 [Layout = "ddk-protocol"]

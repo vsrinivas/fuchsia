@@ -21,6 +21,7 @@
 #include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
+#include <ddktl/protocol/pwm.h>
 #include <ddktl/protocol/spi.h>
 #include <ddktl/protocol/sysmem.h>
 #include <ddktl/protocol/tee.h>
@@ -44,6 +45,7 @@ class Component : public ComponentBase {
         codec_(parent),
         pdev_(parent),
         power_(parent),
+        pwm_(parent),
         spi_(parent),
         sysmem_(parent),
         tee_(parent),
@@ -95,6 +97,9 @@ class Component : public ComponentBase {
   zx_status_t RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                        uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                        zx::handle* resp_handles, uint32_t* resp_handle_count);
+  zx_status_t RpcPwm(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                     uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
+                     zx::handle* resp_handles, uint32_t* resp_handle_count);
   zx_status_t RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                      uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                      zx::handle* resp_handles, uint32_t* resp_handle_count);
@@ -126,6 +131,7 @@ class Component : public ComponentBase {
   ddk::CodecProtocolClient codec_;
   ddk::PDevProtocolClient pdev_;
   ddk::PowerProtocolClient power_;
+  ddk::PwmProtocolClient pwm_;
   ddk::SpiProtocolClient spi_;
   ddk::SysmemProtocolClient sysmem_;
   ddk::TeeProtocolClient tee_;

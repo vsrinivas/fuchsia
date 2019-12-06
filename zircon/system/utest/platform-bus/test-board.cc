@@ -67,6 +67,11 @@ int TestBoard::Thread() {
     zxlogf(ERROR, "%s: CodecInit failed: %d\n", __func__, status);
   }
 
+  status = PwmInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: PwmInit failed: %d\n", __func__, status);
+  }
+
   return 0;
 }
 
@@ -143,6 +148,10 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_ABORT_IF(NE, BIND_SPI_BUS_ID, 0),
       BI_MATCH_IF(EQ, BIND_SPI_CHIP_SELECT, 0),
   };
+  const zx_bind_inst_t pwm_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
+      BI_MATCH_IF(EQ, BIND_PWM_ID, 0),
+  };
   device_component_part_t gpio_component[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(gpio_match), gpio_match},
@@ -168,6 +177,10 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(spi_match), spi_match},
   };
+  device_component_part_t pwm_component[] = {
+      {fbl::count_of(root_match), root_match},
+      {fbl::count_of(pwm_match), pwm_match},
+  };
 
   device_component_t composite[] = {
       {fbl::count_of(gpio_component), gpio_component},
@@ -187,6 +200,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       .composite_device_id = PDEV_DID_TEST_COMPOSITE_2,
       .metadata_value = 12345,
   };
+
   const pbus_metadata_t test_metadata_1[] = {{
       .type = DEVICE_METADATA_PRIVATE,
       .data_buffer = &metadata_1,
@@ -198,6 +212,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       .data_buffer = &metadata_2,
       .data_size = sizeof(composite_test_metadata),
   }};
+
   pbus_dev_t pdev = {};
   pdev.name = "composite-dev";
   pdev.vid = PDEV_VID_TEST;
@@ -216,6 +231,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {fbl::count_of(power_component), power_component},
       {fbl::count_of(child4_component), child4_component},
       {fbl::count_of(spi_component), spi_component},
+      {fbl::count_of(pwm_component), pwm_component},
   };
 
   pbus_dev_t pdev2 = {};

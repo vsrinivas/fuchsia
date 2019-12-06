@@ -4,6 +4,8 @@
 
 #include "component.h"
 
+#include <string.h>
+
 #include <memory>
 
 #include <ddk/debug.h>
@@ -422,6 +424,50 @@ zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8
   }
 }
 
+zx_status_t Component::RpcPwm(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                              uint32_t* out_resp_size, zx::handle* req_handles,
+                              uint32_t req_handle_count, zx::handle* resp_handles,
+                              uint32_t* resp_handle_count) {
+  if (!pwm_.is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  auto* req = reinterpret_cast<const PwmProxyRequest*>(req_buf);
+  if (req_size < sizeof(*req)) {
+    zxlogf(ERROR, "%s received %u, expecting %zu\n", __FUNCTION__, req_size, sizeof(*req));
+    return ZX_ERR_INTERNAL;
+  }
+
+  auto* resp = reinterpret_cast<PwmProxyResponse*>(resp_buf);
+  *out_resp_size = sizeof(*resp);
+  switch (req->op) {
+    case PwmOp::GET_CONFIG: {
+      if (req->config.mode_config_size > MAX_MODE_CFG_SIZE * sizeof(uint8_t)) {
+        return ZX_ERR_NO_SPACE;
+      }
+      resp->config.mode_config_size = req->config.mode_config_size;
+      resp->config.mode_config_buffer = resp->mode_cfg;
+      return pwm_.GetConfig(&resp->config);
+    }
+    case PwmOp::SET_CONFIG: {
+      if (req->config.mode_config_size > MAX_MODE_CFG_SIZE * sizeof(uint8_t)) {
+        return ZX_ERR_NO_SPACE;
+      }
+      uint8_t mode_cfg[MAX_MODE_CFG_SIZE] = {0};
+      memcpy(mode_cfg, req->mode_cfg, req->config.mode_config_size);
+      pwm_config_t cfg = {req->config.polarity, req->config.period_ns, req->config.duty_cycle,
+                          mode_cfg, req->config.mode_config_size};
+      return pwm_.SetConfig(&cfg);
+    }
+    case PwmOp::ENABLE:
+      return pwm_.Enable();
+    case PwmOp::DISABLE:
+      return pwm_.Disable();
+    default:
+      zxlogf(ERROR, "%s: unknown Pwm op %u\n", __func__, static_cast<uint32_t>(req->op));
+      return ZX_ERR_INTERNAL;
+  }
+}
+
 zx_status_t Component::RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                               uint32_t* out_resp_size, zx::handle* req_handles,
                               uint32_t req_handle_count, zx::handle* resp_handles,
@@ -635,7 +681,8 @@ zx_status_t Component::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8
     }
     case CodecOp::SET_BRIDGED_MODE: {
       auto* req = reinterpret_cast<const CodecSetBridgedProxyRequest*>(req_buf);
-      codec_.SetBridgedMode(req->enable_bridged_mode, [](void* cookie) {}, nullptr);
+      codec_.SetBridgedMode(
+          req->enable_bridged_mode, [](void* cookie) {}, nullptr);
       return ZX_OK;
     }
     case CodecOp::GET_DAI_FORMATS: {
@@ -663,13 +710,14 @@ zx_status_t Component::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8
       dai_format_t format = req->format;  // Copy format and edit any pointers next.
       format.channels_to_use_list = req->channels_to_use;
 
-      codec_.SetDaiFormat(&format,
-                          [](void* cookie, zx_status_t status) {
-                            auto* out = reinterpret_cast<AsyncOut*>(cookie);
-                            out->status = status;
-                            sync_completion_signal(&out->completion);
-                          },
-                          &out);
+      codec_.SetDaiFormat(
+          &format,
+          [](void* cookie, zx_status_t status) {
+            auto* out = reinterpret_cast<AsyncOut*>(cookie);
+            out->status = status;
+            sync_completion_signal(&out->completion);
+          },
+          &out);
       auto status = sync_completion_wait(&out.completion, zx::sec(kTimeoutSecs).get());
       if (status == ZX_OK) {
         status = out.status;
@@ -718,7 +766,8 @@ zx_status_t Component::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8
     }
     case CodecOp::SET_GAIN_STATE: {
       auto* req = reinterpret_cast<const CodecGainStateProxyRequest*>(req_buf);
-      codec_.SetGainState(&req->state, [](void* cookie) {}, nullptr);
+      codec_.SetGainState(
+          &req->state, [](void* cookie) {}, nullptr);
       return ZX_OK;
     }
     case CodecOp::GET_PLUG_STATE: {
@@ -819,6 +868,10 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_POWER:
       status = RpcPower(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                         resp_handles, &resp_handle_count);
+      break;
+    case ZX_PROTOCOL_PWM:
+      status = RpcPwm(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                      resp_handles, &resp_handle_count);
       break;
     case ZX_PROTOCOL_SPI:
       status = RpcSpi(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,

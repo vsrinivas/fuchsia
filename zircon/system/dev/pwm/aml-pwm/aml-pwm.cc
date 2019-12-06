@@ -52,8 +52,7 @@ zx_status_t CopyConfig(pwm_config_t* dest, const pwm_config_t* src) {
   dest->polarity = src->polarity;
   dest->period_ns = src->period_ns;
   dest->duty_cycle = src->duty_cycle;
-  memcpy(const_cast<void*>(dest->mode_config_buffer), src->mode_config_buffer,
-         src->mode_config_size);
+  memcpy(dest->mode_config_buffer, src->mode_config_buffer, src->mode_config_size);
   return ZX_OK;
 }
 

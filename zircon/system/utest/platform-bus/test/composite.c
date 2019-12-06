@@ -21,6 +21,7 @@
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/power.h>
+#include <ddk/protocol/pwm.h>
 #include <ddk/protocol/spi.h>
 
 #include "../test-metadata.h"
@@ -44,12 +45,24 @@ enum Components_2 {
   COMPONENT_POWER_2,
   COMPONENT_CHILD4_2,
   COMPONENT_SPI_2,
+  COMPONENT_PWM_2,
   COMPONENT_COUNT_2,
 };
 
 typedef struct {
   zx_device_t* zxdev;
 } test_t;
+
+typedef struct {
+  uint32_t magic;
+} mode_config_magic_t;
+
+typedef struct {
+  uint32_t mode;
+  union {
+    mode_config_magic_t magic;
+  };
+} mode_config_t;
 
 static void test_release(void* ctx) { free(ctx); }
 
@@ -92,7 +105,6 @@ static zx_status_t test_clock(clock_protocol_t* clock) {
   }
 
   bool is_enabled = false;
-  printf("calling clock_is_enabled\n");
   if ((status = clock_is_enabled(clock, &is_enabled)) != ZX_OK) {
     return status;
   }
@@ -293,11 +305,9 @@ static void test_codec_get_dai_formats_callback(void* ctx, zx_status_t status,
       formats_list[0].bits_per_sample_list[1] != 99 ||
       formats_list[0].bits_per_sample_list[2] != 253 ||
       formats_list[0].number_of_channels_count != 0 || formats_list[0].frame_rates_count != 0 ||
-      formats_list[1].number_of_channels_count != 3 ||
-      number_of_channels_list[0] != 0 ||
-      number_of_channels_list[1] != 1 ||
-      number_of_channels_list[2] != 200 || formats_list[2].frame_rates_count != 1 ||
-      frame_rate != 48000) {
+      formats_list[1].number_of_channels_count != 3 || number_of_channels_list[0] != 0 ||
+      number_of_channels_list[1] != 1 || number_of_channels_list[2] != 200 ||
+      formats_list[2].frame_rates_count != 1 || frame_rate != 48000) {
     *out = ZX_ERR_INTERNAL;
   }
 }
@@ -387,6 +397,35 @@ static zx_status_t test_codec(codec_protocol_t* codec) {
   return ZX_OK;
 }
 
+static zx_status_t test_pwm(pwm_protocol_t* pwm) {
+  zx_status_t status = ZX_OK;
+  mode_config_t mode_cfg = {.mode = 0, .magic = {12345}};
+  pwm_config_t cfg = {
+      false, 1000, 39.0, &mode_cfg, sizeof(mode_cfg),
+  };
+  if ((status = pwm_set_config(pwm, &cfg)) != ZX_OK) {
+    return status;
+  }
+  mode_config_t out_mode_cfg = {.mode = 0, .magic = {0}};
+  pwm_config_t out_config = {
+      false, 0, 0.0, &out_mode_cfg, sizeof(out_mode_cfg),
+  };
+  pwm_get_config(pwm, &out_config);
+  if (cfg.polarity != out_config.polarity || cfg.period_ns != out_config.period_ns ||
+      cfg.duty_cycle != out_config.duty_cycle ||
+      cfg.mode_config_size != out_config.mode_config_size ||
+      memcmp(cfg.mode_config_buffer, out_config.mode_config_buffer, cfg.mode_config_size)) {
+    return ZX_ERR_INTERNAL;
+  }
+  if ((status = pwm_enable(pwm)) != ZX_OK) {
+    return status;
+  }
+  if ((status = pwm_disable(pwm)) != ZX_OK) {
+    return status;
+  }
+  return ZX_OK;
+}
+
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   composite_protocol_t composite;
   zx_status_t status;
@@ -442,6 +481,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   i2c_protocol_t i2c;
   codec_protocol_t codec;
   spi_protocol_t spi;
+  pwm_protocol_t pwm;
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
     if (count != COMPONENT_COUNT_1) {
@@ -449,24 +489,22 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
              actual);
       return ZX_ERR_BAD_STATE;
     }
+
     status = device_get_protocol(components[COMPONENT_CLOCK_1], ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
       return status;
     }
-
     status = device_get_protocol(components[COMPONENT_POWER_1], ZX_PROTOCOL_POWER, &power);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
       return status;
     }
-
     status = device_get_protocol(components[COMPONENT_CHILD4_1], ZX_PROTOCOL_CLOCK, &child4);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol from child4\n", DRIVER_NAME);
       return status;
     }
-
     status = device_get_protocol(components[COMPONENT_GPIO_1], ZX_PROTOCOL_GPIO, &gpio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO\n", DRIVER_NAME);
@@ -487,7 +525,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
       return status;
     }
-
     if ((status = test_power(&power)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_power failed: %d\n", DRIVER_NAME, status);
       return status;
@@ -496,57 +533,61 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: test_gpio failed: %d\n", DRIVER_NAME, status);
       return status;
     }
-
     if ((status = test_i2c(&i2c)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_i2c failed: %d\n", DRIVER_NAME, status);
       return status;
     }
-
     if ((status = test_codec(&codec)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_codec failed: %d\n", DRIVER_NAME, status);
       return status;
     }
-
   } else if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_2) {
     if (count != COMPONENT_COUNT_2) {
       zxlogf(ERROR, "%s: got the wrong number of components (%u, %zu)\n", DRIVER_NAME, count,
              actual);
       return ZX_ERR_BAD_STATE;
     }
+
     status = device_get_protocol(components[COMPONENT_CLOCK_2], ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
       return status;
     }
-
     status = device_get_protocol(components[COMPONENT_POWER_2], ZX_PROTOCOL_POWER, &power);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_POWER\n", DRIVER_NAME);
       return status;
     }
-
     status = device_get_protocol(components[COMPONENT_CHILD4_2], ZX_PROTOCOL_CLOCK, &child4);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol from child4\n", DRIVER_NAME);
       return status;
     }
-
     status = device_get_protocol(components[COMPONENT_SPI_2], ZX_PROTOCOL_SPI, &spi);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_SPI\n", DRIVER_NAME);
       return status;
     }
+    status = device_get_protocol(components[COMPONENT_PWM_2], ZX_PROTOCOL_PWM, &pwm);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PWM\n", DRIVER_NAME);
+      return status;
+    }
+
     if ((status = test_clock(&clock)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
       return status;
     }
-
     if ((status = test_power(&power)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_power failed: %d\n", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_spi(&spi)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_spi failed: %d\n", DRIVER_NAME, status);
+      return status;
+    }
+    if ((status = test_pwm(&pwm)) != ZX_OK) {
+      zxlogf(ERROR, "%s: test_pwm failed: %d\n", DRIVER_NAME, status);
       return status;
     }
   }

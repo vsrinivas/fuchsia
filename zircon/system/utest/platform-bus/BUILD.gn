@@ -38,6 +38,7 @@ group("test") {
     ":test-gpio",
     ":test-i2c",
     ":test-power",
+    ":test-pwm",
     ":test-spi",
   ]
   foreach(driver, simple_drivers) {
@@ -53,12 +54,14 @@ zx_driver("test-board") {
     "test-gpio.cc",
     "test-i2c.cc",
     "test-power.cc",
+    "test-pwm.cc",
     "test-spi.cc",
     "test.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/amlogic",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -167,6 +170,22 @@ zx_driver("test-audio-codec") {
   ]
 }
 
+zx_driver("test-pwm") {
+  sources = [
+    "test/pwm.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.pwm",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
 foreach(driver, simple_drivers) {
   zx_driver("test-$driver") {
     sources = [
@@ -179,6 +198,7 @@ foreach(driver, simple_drivers) {
       "$zx/system/banjo/ddk.protocol.gpio",
       "$zx/system/banjo/ddk.protocol.platform.device",
       "$zx/system/banjo/ddk.protocol.power",
+      "$zx/system/banjo/ddk.protocol.pwm",
       "$zx/system/banjo/ddk.protocol.spi",
       "$zx/system/dev/lib/device-protocol-i2c",
       "$zx/system/ulib/ddk",

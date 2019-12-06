@@ -311,6 +311,7 @@ aggregate_manifest("legacy-image") {
     ":driver.test-i2c",
     ":driver.test-parent",
     ":driver.test-power",
+    ":driver.test-pwm",
     ":driver.test-spi",
     ":driver.test.bind-fail-test",
     ":driver.test.ddk-test",

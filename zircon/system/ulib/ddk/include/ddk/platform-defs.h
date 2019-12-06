@@ -243,6 +243,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_QMI_MODEM     20
 #define PDEV_DID_TEST_DDKASYNCFIDL  21
 #define PDEV_DID_TEST_AT_MODEM      22
+#define PDEV_DID_TEST_PWM           23
 
 // ARM
 #define PDEV_VID_ARM                18

@@ -20,6 +20,7 @@
 #include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
+#include <ddktl/protocol/pwm.h>
 #include <ddktl/protocol/spi.h>
 #include <ddktl/protocol/sysmem.h>
 #include <ddktl/protocol/tee.h>
@@ -42,6 +43,7 @@ class ComponentProxy : public ComponentProxyBase,
                        public ddk::CodecProtocol<ComponentProxy>,
                        public ddk::PDevProtocol<ComponentProxy>,
                        public ddk::PowerProtocol<ComponentProxy>,
+                       public ddk::PwmProtocol<ComponentProxy>,
                        public ddk::SpiProtocol<ComponentProxy>,
                        public ddk::SysmemProtocol<ComponentProxy>,
                        public ddk::TeeProtocol<ComponentProxy>,
@@ -110,6 +112,10 @@ class ComponentProxy : public ComponentProxyBase,
   zx_status_t PowerGetCurrentVoltage(uint32_t index, uint32_t* current_voltage);
   zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
   zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
+  zx_status_t PwmGetConfig(pwm_config_t* out_config);
+  zx_status_t PwmSetConfig(const pwm_config_t* config);
+  zx_status_t PwmEnable();
+  zx_status_t PwmDisable();
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
                          size_t* out_rxdata_actual);
