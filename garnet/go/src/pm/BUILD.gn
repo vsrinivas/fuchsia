@@ -15,6 +15,7 @@ go_library("pm_lib") {
     "//garnet/go/src/far",
     "//garnet/go/src/merkle",
     "//garnet/go/src/sse",
+    "//src/sys/pkg/lib/repo",
     "//third_party/golibs:github.com/flynn/go-tuf",
     "//third_party/golibs:github.com/fsnotify/fsnotify",
     "//third_party/golibs:golang.org/x/crypto",

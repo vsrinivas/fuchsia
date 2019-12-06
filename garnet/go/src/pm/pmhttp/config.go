@@ -10,6 +10,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	tuf_data "github.com/flynn/go-tuf/data"
+
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 )
 
 type ConfigServer struct {
@@ -22,14 +26,11 @@ func NewConfigServer(rootKeyFetcher func() []byte, encryptionKey string) *Config
 }
 
 type Config struct {
-	ID          string
-	RepoURL     string
-	BlobRepoURL string
-	RatePeriod  int
-	RootKeys    []struct {
-		Type  string
-		Value string
-	}
+	ID           string
+	RepoURL      string
+	BlobRepoURL  string
+	RatePeriod   int
+	RootKeys     []repo.KeyConfig
 	StatusConfig struct {
 		Enabled bool
 	}
@@ -72,45 +73,24 @@ func (c *ConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		copy(cfg.BlobKey.Data[:], keyBytes)
 	}
 
-	var keys signedKeys
-	if err := json.Unmarshal(c.rootKeyFetcher(), &keys); err != nil {
+	var err error
+	cfg.RootKeys, err = func() ([]repo.KeyConfig, error) {
+		var signed tuf_data.Signed
+		if err := json.Unmarshal(c.rootKeyFetcher(), &signed); err != nil {
+			return nil, err
+		}
+		var root tuf_data.Root
+		if err := json.Unmarshal(signed.Signed, &root); err != nil {
+			return nil, err
+		}
+		return repo.GetRootKeys(&root)
+	}()
+	if err != nil {
 		log.Printf("root.json parsing error: %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	seen := make(map[string]struct{})
-	for _, id := range keys.Signed.Roles.Root.Keyids {
-		// It's possible for a key to have multiple keyids. Make sure
-		// we only add one actual key to the config.
-		k := keys.Signed.Keys[id]
-		if _, ok := seen[k.Keyval.Public]; ok {
-			continue
-		}
-		seen[k.Keyval.Public] = struct{}{}
-
-		cfg.RootKeys = append(cfg.RootKeys, struct{ Type, Value string }{
-			Type:  k.Keytype,
-			Value: k.Keyval.Public,
-		})
-	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(cfg)
-}
-
-type signedKeys struct {
-	Signed struct {
-		Keys map[string]struct {
-			Keytype string
-			Keyval  struct {
-				Public string
-			}
-		}
-		Roles struct {
-			Root struct {
-				Keyids []string
-			}
-			Threshold int
-		}
-	}
 }

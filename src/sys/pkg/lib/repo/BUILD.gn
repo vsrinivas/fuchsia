@@ -8,9 +8,19 @@ import("//build/go/go_test.gni")
 go_library("repo") {
   name = "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
   deps = [
-    "//third_party/golibs:github.com/pkg/sftp",
-    "//third_party/golibs:golang.org/x/crypto",
+    "//third_party/golibs:github.com/flynn/go-tuf",
   ]
+
+  # The following dependencies are for add.go, which has a +build directive to
+  # only build when not targeting fuchsia. The sftp package features syscall
+  # usage which cannot be compiled for fuchsia.
+  if (!is_fuchsia) {
+    deps += [
+      "//third_party/golibs:github.com/pkg/sftp",
+      "//third_party/golibs:golang.org/x/crypto",
+      "//tools/lib/retry",
+    ]
+  }
 }
 
 group("tests") {

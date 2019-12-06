@@ -6,6 +6,9 @@ package repo
 
 import (
 	"encoding/json"
+	"fmt"
+
+	tuf_data "github.com/flynn/go-tuf/data"
 )
 
 // Config is a struct that mirrors an associated FIDL table
@@ -45,18 +48,50 @@ type typeAndValue struct {
 	Value string `json:"value"`
 }
 
-func (cfg *KeyConfig) MarshalJSON() ([]byte, error) {
+type unexpectedKeyTypeError struct {
+	Type string
+}
+
+func (err unexpectedKeyTypeError) Error() string {
+	return fmt.Sprintf("unsupported key type: %s", err.Type)
+}
+
+func (key *KeyConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&typeAndValue{
-		Type:  "ed25519",
-		Value: cfg.ED25519Key,
+		Type:  tuf_data.KeyTypeEd25519,
+		Value: key.ED25519Key,
 	})
 }
 
-func (cfg *KeyConfig) UnmarshalJSON(data []byte) error {
+func (key *KeyConfig) UnmarshalJSON(data []byte) error {
 	var tv typeAndValue
 	if err := json.Unmarshal(data, &tv); err != nil {
 		return err
 	}
-	cfg.ED25519Key = tv.Value
-	return nil
+
+	switch tv.Type {
+	case tuf_data.KeyTypeEd25519:
+		key.ED25519Key = tv.Value
+		return nil
+	default:
+		return unexpectedKeyTypeError{Type: tv.Type}
+	}
+}
+
+// GetRootKeys returns the list of public key config objects as read from the
+// contents of a repository's root metadata file.
+func GetRootKeys(root *tuf_data.Root) ([]KeyConfig, error) {
+	var rootKeys []KeyConfig
+	for _, k := range root.UniqueKeys()["root"] {
+		v := k.Value.Public.String()
+		var key KeyConfig
+		switch k.Type {
+		case tuf_data.KeyTypeEd25519:
+			key.ED25519Key = v
+		default:
+			return nil, unexpectedKeyTypeError{Type: k.Type}
+		}
+		rootKeys = append(rootKeys, key)
+	}
+	return rootKeys, nil
 }

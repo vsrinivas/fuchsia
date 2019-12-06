@@ -19,6 +19,8 @@ import (
 	"time"
 
 	tuf_data "github.com/flynn/go-tuf/data"
+
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 )
 
 type Server struct {
@@ -90,21 +92,16 @@ func (lw *loggingWriter) WriteHeader(status int) {
 
 // writeConfig writes the source config to the repository.
 func genConfig(dir string, localHostname string, repoName string, port int) (configURL string, configHash string, config []byte, err error) {
-	type keyConfig struct {
-		Type  string
-		Value string
-	}
-
 	type statusConfig struct {
 		Enabled bool
 	}
 
 	type sourceConfig struct {
-		ID           string       `json:"id"`
-		RepoURL      string       `json:"repoUrl"`
-		BlobRepoURL  string       `json:"blobRepoUrl"`
-		RootKeys     []keyConfig  `json:"rootKeys"`
-		StatusConfig statusConfig `json:"statusConfig"`
+		ID           string           `json:"id"`
+		RepoURL      string           `json:"repoUrl"`
+		BlobRepoURL  string           `json:"blobRepoUrl"`
+		RootKeys     []repo.KeyConfig `json:"rootKeys"`
+		StatusConfig statusConfig     `json:"statusConfig"`
 	}
 
 	f, err := os.Open(filepath.Join(dir, "root.json"))
@@ -123,14 +120,9 @@ func genConfig(dir string, localHostname string, repoName string, port int) (con
 		return "", "", nil, err
 	}
 
-	var rootKeys []keyConfig
-	for _, keyID := range root.Roles["root"].KeyIDs {
-		key := root.Keys[keyID]
-
-		rootKeys = append(rootKeys, keyConfig{
-			Type:  key.Type,
-			Value: key.Value.Public.String(),
-		})
+	rootKeys, err := repo.GetRootKeys(&root)
+	if err != nil {
+		return "", "", nil, err
 	}
 
 	hostname := strings.ReplaceAll(localHostname, "%", "%25")
