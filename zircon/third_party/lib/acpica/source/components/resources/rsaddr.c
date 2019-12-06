@@ -328,8 +328,15 @@ AcpiRsGetAddressCommon (
 
     /* Validate the Resource Type */
 
-    if ((Aml->Address.ResourceType > 2) &&
-        (Aml->Address.ResourceType < 0xC0))
+    // Copy the value using memcpy() to safely access a misaligned pointer.
+    // We explicitely cast to AML_RESOURCE_ADDRESS instead of using
+    // `&Aml->Address` because the latter still results in a misaligned access
+    // that UBSan catches. We can safely do this cast since AML_RESOURCE is a
+    // union.
+    UINT8 ResourceType;
+    memcpy(&ResourceType, &((AML_RESOURCE_ADDRESS *)Aml)->ResourceType,
+           sizeof(ResourceType));
+    if (ResourceType > 2 && ResourceType < 0xC0)
     {
         return (FALSE);
     }

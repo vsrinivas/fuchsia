@@ -117,14 +117,14 @@ AcpiUtAllocateOwnerId (
                 break;
             }
 
-            if (!(AcpiGbl_OwnerIdMask[j] & (1 << k)))
+            if (!(AcpiGbl_OwnerIdMask[j] & (1u << k)))
             {
                 /*
                  * Found a free ID. The actual ID is the bit index plus one,
                  * making zero an invalid Owner ID. Save this as the last ID
                  * allocated and update the global ID mask.
                  */
-                AcpiGbl_OwnerIdMask[j] |= (1 << k);
+                AcpiGbl_OwnerIdMask[j] |= (1u << k);
 
                 AcpiGbl_LastOwnerIdIndex = (UINT8) j;
                 AcpiGbl_NextOwnerIdOffset = (UINT8) (k + 1);
@@ -220,7 +220,7 @@ AcpiUtReleaseOwnerId (
     /* Decode ID to index/offset pair */
 
     Index = ACPI_DIV_32 (OwnerId);
-    Bit = 1 << ACPI_MOD_32 (OwnerId);
+    Bit = 1u << ACPI_MOD_32 (OwnerId);
 
     /* Free the owner ID only if it is valid */
 

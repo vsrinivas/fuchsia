@@ -684,8 +684,17 @@ AcpiDsCreateOperand (
             ACPI_DEBUG_PRINT ((ACPI_DB_DISPATCH,
                 "Argument previously created, already stacked\n"));
 
-            AcpiDbDisplayArgumentObject (
-                WalkState->Operands [WalkState->NumOperands - 1], WalkState);
+            // It is possible at this point for NumOperands to be zero.
+            // We can bypass the negative subscript access by checking if it's
+            // zero forts. This still works because, in actuallity,
+            // WalkState->Operands[-1] is NULL, which gets handled appropriately
+            // deep in AcpiDbDisplayArgumentObject by returning early.
+            // FIXME: Should it be possible in the first place for NumOperands
+            // to be zero?
+            if (WalkState->NumOperands) {
+              AcpiDbDisplayArgumentObject (
+                  WalkState->Operands [WalkState->NumOperands - 1], WalkState);
+            }
 
             /*
              * Use value that was already previously returned

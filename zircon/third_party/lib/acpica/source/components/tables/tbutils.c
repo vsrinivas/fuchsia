@@ -228,8 +228,11 @@ AcpiTbGetRootTableEntry (
          * 32-bit platform, RSDT: Return 32-bit table entry
          * 64-bit platform, RSDT: Expand 32-bit to 64-bit and return
          */
-        return ((ACPI_PHYSICAL_ADDRESS) (*ACPI_CAST_PTR (
-            UINT32, TableEntry)));
+        // Copy the value using memcpy() to safely handle a load on a misaligned
+        // pointer.
+        UINT32 result;
+        ACPI_MOVE_32_TO_32(&result, TableEntry);
+        return result;
     }
     else
     {

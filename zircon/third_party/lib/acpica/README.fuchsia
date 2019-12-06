@@ -18,3 +18,5 @@ Modifications:
 - Modified AcpiHwLegacySleep to extract out a subfunction AcpiHwLegacySleepFinal (needed
   for Zircon suspend-to-RAM support).
 - Made AcpiHwSetFirmwareWakingVector an exported function
+- Fix instances of undefined behavior reported by UBSan (misaligned pointer
+  accesses, member accesses on nullptrs, and left shifting by 31 on ints)
