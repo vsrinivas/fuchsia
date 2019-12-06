@@ -11,5 +11,6 @@ group("cast") {
 }
 
 prebuilt_package("cast_runner") {
-  archive = "//topaz/third_party/cast_runner/arch/$target_cpu/cast_runner.far"
+  archive =
+      "//prebuilt/third_party/cast_runner/arch/$target_cpu/cast_runner.far"
 }

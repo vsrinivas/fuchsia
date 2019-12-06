@@ -14,11 +14,11 @@ group("chromium") {
 
 prebuilt_package("web_engine") {
   package_name = "chromium"
-  archive = "//topaz/third_party/chromium/arch/$target_cpu/chromium.far"
+  archive = "//prebuilt/third_party/chromium/arch/$target_cpu/chromium.far"
 }
 
 prebuilt_package("web_runner") {
-  archive = "//topaz/third_party/chromium/arch/$target_cpu/web_runner.far"
+  archive = "//prebuilt/third_party/chromium/arch/$target_cpu/web_runner.far"
 }
 
 # Prebuilt FAR tests
