@@ -14,16 +14,12 @@ group("tests") {
     ":fake_hwinfo_board_config",
     ":fake_hwinfo_product_config",
     ":feedback_agent_tests",
-    ":invalid_override_config",
-    ":valid_override_config",
 
     # Packages for the components that we are injecting in the integration tests.
     "//garnet/bin/sysmem_connector",
     "//garnet/bin/system-update-checker",
     "//garnet/bin/vulkan_loader",
     "//src/developer/feedback/feedback_agent",
-    "//src/developer/feedback/feedback_agent:fake_feedback_agent_invalid_override_config",
-    "//src/developer/feedback/feedback_agent:fake_feedback_agent_valid_override_config",
     "//src/diagnostics/archivist",
     "//src/hwinfo:tests",
   ]
@@ -52,12 +48,6 @@ test_package("feedback_agent_tests") {
 
       # We need to also test on real devices as we talk to a real Scenic service.
       environments = basic_envs
-    },
-    {
-      name = "feedback_agent_integration_test_valid_override_config"
-    },
-    {
-      name = "feedback_agent_integration_test_invalid_override_config"
     },
     {
       name = "inspect_ptr_unittest"
@@ -140,8 +130,6 @@ test_package("feedback_agent_tests") {
     ":config_unittest",
     ":data_provider_unittest",
     ":feedback_agent_integration_test",
-    ":feedback_agent_integration_test_invalid_override_config",
-    ":feedback_agent_integration_test_valid_override_config",
     ":inspect_exe",
     ":inspect_ptr_unittest",
     ":kernel_log_ptr_integration_test",
@@ -261,48 +249,6 @@ executable("feedback_agent_integration_test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-logger",
-  ]
-}
-
-executable("feedback_agent_integration_test_invalid_override_config") {
-  testonly = true
-
-  sources = [
-    "feedback_agent_integration_test_invalid_override_config.cc",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/testing:gmatchers",
-    "//src/developer/feedback/utils:archive",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-executable("feedback_agent_integration_test_valid_override_config") {
-  testonly = true
-
-  sources = [
-    "feedback_agent_integration_test_valid_override_config.cc",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/feedback/feedback_agent:constants",
-    "//src/developer/feedback/testing:gmatchers",
-    "//src/developer/feedback/utils:archive",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
   ]
 }
 
@@ -563,30 +509,6 @@ source_set("zx_object_util") {
   public_deps = [
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
-  ]
-}
-
-config_data("valid_override_config") {
-  for_pkg = "fake_feedback_agent_valid_override_config"
-
-  sources = [
-    "configs/valid_override.json",
-  ]
-
-  outputs = [
-    "override_config.json",
-  ]
-}
-
-config_data("invalid_override_config") {
-  for_pkg = "fake_feedback_agent_invalid_override_config"
-
-  sources = [
-    "configs/invalid_override.json",
-  ]
-
-  outputs = [
-    "override_config.json",
   ]
 }
 

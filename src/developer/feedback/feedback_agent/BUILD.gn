@@ -5,54 +5,34 @@
 import("//build/config.gni")
 import("//build/package.gni")
 
-# We use a template to keep the real and fake packages in sync.
-template("feedback_agent_package") {
-  package(target_name) {
-    binaries = [
-      {
-        name = "feedback_agent"
-      },
-      {
-        name = "data_provider"
-      },
-    ]
+package("feedback_agent") {
+  binaries = [
+    {
+      name = "feedback_agent"
+    },
+    {
+      name = "data_provider"
+    },
+  ]
 
-    meta = [
-      {
-        path = "meta/feedback_agent.cmx"
-        dest = "feedback_agent.cmx"
-      },
-    ]
+  meta = [
+    {
+      path = "meta/feedback_agent.cmx"
+      dest = "feedback_agent.cmx"
+    },
+  ]
 
-    resources = [
-      {
-        path = "configs/default.json"
-        dest = "default_config.json"
-      },
-    ]
+  resources = [
+    {
+      path = "config.json"
+      dest = "config.json"
+    },
+  ]
 
-    deps = [
-      ":data_provider",
-      ":main",
-    ]
-  }
-
-  # Suppress unused variable warnings as the invoker is expected to be empty.
-  not_needed(invoker, "*")
-}
-
-# The real package.
-feedback_agent_package("feedback_agent") {
-}
-
-# A fake package for integration test purposes where we want a valid override config_data() that
-# only affects the fake package.
-feedback_agent_package("fake_feedback_agent_valid_override_config") {
-}
-
-# A fake package for integration test purposes where we want an invalid override config_data() that
-# only affects the fake package.
-feedback_agent_package("fake_feedback_agent_invalid_override_config") {
+  deps = [
+    ":data_provider",
+    ":main",
+  ]
 }
 
 executable("main") {
@@ -162,16 +142,4 @@ source_set("constants") {
   ]
 
   visibility = [ "//src/developer/feedback/feedback_agent/*" ]
-}
-
-config_data("production_config") {
-  for_pkg = "feedback_agent"
-
-  sources = [
-    "configs/production.json",
-  ]
-
-  outputs = [
-    "override_config.json",
-  ]
 }

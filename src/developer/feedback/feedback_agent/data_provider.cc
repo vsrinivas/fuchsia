@@ -31,8 +31,7 @@ using fuchsia::feedback::Data;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 
-const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
-const char kOverrideConfigPath[] = "/config/data/override_config.json";
+const char kConfigPath[] = "/pkg/data/config.json";
 
 // Timeout for a single asynchronous piece of data, e.g., syslog collection.
 const zx::duration kDataTimeout = zx::sec(30);
@@ -46,28 +45,11 @@ std::unique_ptr<DataProvider> DataProvider::TryCreate(
     std::function<void()> after_timeout, zx::duration timeout) {
   Config config;
 
-  // We use the default config included in the package of this component if no override config was
-  // specified or if we failed to parse the override config.
-  bool use_default_config = true;
+  if (const zx_status_t status = ParseConfig(kConfigPath, &config); status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to read config file at " << kConfigPath;
 
-  if (files::IsFile(kOverrideConfigPath)) {
-    use_default_config = false;
-    if (const zx_status_t status = ParseConfig(kOverrideConfigPath, &config); status != ZX_OK) {
-      // We failed to parse the override config: fall back to the default config.
-      use_default_config = true;
-      FX_PLOGS(ERROR, status) << "Failed to read override config file at " << kOverrideConfigPath
-                              << " - falling back to default config file";
-    }
-  }
-
-  // Either there was no override config or we failed to parse it.
-  if (use_default_config) {
-    if (const zx_status_t status = ParseConfig(kDefaultConfigPath, &config); status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to read default config file at " << kDefaultConfigPath;
-
-      FX_LOGS(FATAL) << "Failed to set up data provider";
-      return nullptr;
-    }
+    FX_LOGS(FATAL) << "Failed to set up data provider";
+    return nullptr;
   }
 
   return std::make_unique<DataProvider>(dispatcher, std::move(services), config, after_timeout,

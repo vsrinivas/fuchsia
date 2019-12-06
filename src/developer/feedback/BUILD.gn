@@ -29,6 +29,5 @@ group("tests") {
 group("production_configs") {
   deps = [
     "//src/developer/feedback/crashpad_agent:upload_to_prod_server_config",
-    "//src/developer/feedback/feedback_agent:production_config",
   ]
 }
