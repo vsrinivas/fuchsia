@@ -56,8 +56,8 @@ and debugging Fuchsia and programs running on Fuchsia.
 This section covers Fuchsia development hardware targets.
 
  - [Acer Switch Alpha 12][acer_12]
- - [Intel NUC][intel_nuc] (also [this](hardware/developing_on_nuc.md))
- - [Pixelbook](hardware/pixelbook.md)
+ - [Intel NUC][intel-nuc]
+ - [Pixelbook][pixelbook]
  - [Toulouse][toulouse]
  - [Khadas VIM2][khadas-vim]
  - [iMX8M EVK][imx8mevk]
@@ -108,6 +108,6 @@ This section covers Fuchsia-wide conventions and best practices.
 [khadas-vim]: /docs/development/hardware/khadas-vim.md "Khadas VIM2"
 [imx8mevk]: /docs/development/hardware/imx8mevk.md "iMX8M EVK"
 [hikey960]: /docs/development/hardware/hikey960.md "HiKey960 (96boards.org)"
-
+[intel-nuc]: /docs/development/hardware/intel_nuc.md "Intel NUC"
 [fidl-style]: /docs/development/languages/fidl/style.md
 [fidl-api]: /docs/development/api/fidl.md
