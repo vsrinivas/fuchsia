@@ -58,7 +58,7 @@ zx_driver("platform-bus-x86") {
     "acpi-dev/dev-pwrsrc.cc",
     "acpi-dev/dev-tbmc.cc",
     "acpi-dev/dev-thermal.cc",
-    "acpi-nswalk.c",
+    "acpi-nswalk.cc",
     "debug.cc",
     "init.cc",
     "iommu.c",

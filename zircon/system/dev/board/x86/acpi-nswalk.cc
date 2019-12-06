@@ -20,6 +20,7 @@
 #include <ddk/protocol/sysmem.h>
 
 #include "acpi-private.h"
+#include "acpi.h"
 #include "dev.h"
 #include "errors.h"
 #include "iommu.h"
@@ -35,10 +36,12 @@ static void acpi_device_release(void* ctx) {
   free(dev);
 }
 
-static zx_protocol_device_t acpi_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .release = acpi_device_release,
-};
+static zx_protocol_device_t acpi_device_proto = [] {
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+  ops.release = acpi_device_release;
+  return ops;
+}();
 
 typedef struct {
   acpi_device_pio_resource_t* pio_resources;
@@ -84,7 +87,8 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
       ctx->mmio_resources[ctx->mmio_resource_i].writeable = true;
       ctx->mmio_resources[ctx->mmio_resource_i].base_address = addr.min_address_fixed;
       ctx->mmio_resources[ctx->mmio_resource_i].alignment = 0;
-      ctx->mmio_resources[ctx->mmio_resource_i].address_length = addr.address_length;
+      ctx->mmio_resources[ctx->mmio_resource_i].address_length =
+          static_cast<uint32_t>(addr.address_length);
 
       ctx->mmio_resource_i += 1;
     }
@@ -113,7 +117,7 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
       ctx->irqs[ctx->irq_i].polarity = irq.polarity;
       ctx->irqs[ctx->irq_i].sharable = irq.sharable;
       ctx->irqs[ctx->irq_i].wake_capable = irq.wake_capable;
-      ctx->irqs[ctx->irq_i].pin = irq.pins[i];
+      ctx->irqs[ctx->irq_i].pin = static_cast<uint8_t>(irq.pins[i]);
 
       ctx->irq_i += 1;
     }
@@ -179,16 +183,18 @@ static zx_status_t report_current_resources(acpi_device_t* dev) {
   }
 
   // allocate resources
-  ctx.pio_resources = calloc(ctx.pio_resource_count, sizeof(acpi_device_pio_resource_t));
+  ctx.pio_resources = static_cast<acpi_device_pio_resource_t*>(
+      calloc(ctx.pio_resource_count, sizeof(acpi_device_pio_resource_t)));
   if (!ctx.pio_resources) {
     return ZX_ERR_NO_MEMORY;
   }
-  ctx.mmio_resources = calloc(ctx.mmio_resource_count, sizeof(acpi_device_mmio_resource_t));
+  ctx.mmio_resources = static_cast<acpi_device_mmio_resource_t*>(
+      calloc(ctx.mmio_resource_count, sizeof(acpi_device_mmio_resource_t)));
   if (!ctx.mmio_resources) {
     free(ctx.pio_resources);
     return ZX_ERR_NO_MEMORY;
   }
-  ctx.irqs = calloc(ctx.irq_count, sizeof(acpi_device_irq_t));
+  ctx.irqs = static_cast<acpi_device_irq_t*>(calloc(ctx.irq_count, sizeof(acpi_device_irq_t)));
   if (!ctx.irqs) {
     free(ctx.pio_resources);
     free(ctx.mmio_resources);
@@ -282,7 +288,8 @@ static zx_status_t acpi_op_get_pio(void* ctx, uint32_t index, zx_handle_t* out_p
     goto unlock;
   }
 
-  acpi_device_pio_resource_t* res = dev->pio_resources + index;
+  acpi_device_pio_resource_t* res;
+  res = dev->pio_resources + index;
 
   zx_handle_t resource;
   // Please do not use get_root_resource() in new code. See ZX-1467.
@@ -314,7 +321,8 @@ static zx_status_t acpi_op_get_mmio(void* ctx, uint32_t index, acpi_mmio_t* out_
     goto unlock;
   }
 
-  acpi_device_mmio_resource_t* res = dev->mmio_resources + index;
+  acpi_device_mmio_resource_t* res;
+  res = dev->mmio_resources + index;
   if (((res->base_address & (PAGE_SIZE - 1)) != 0) ||
       ((res->address_length & (PAGE_SIZE - 1)) != 0)) {
     zxlogf(ERROR, "acpi-bus[%s]: memory id=%d addr=0x%08x len=0x%x is not page aligned\n",
@@ -324,7 +332,8 @@ static zx_status_t acpi_op_get_mmio(void* ctx, uint32_t index, acpi_mmio_t* out_
   }
 
   zx_handle_t vmo;
-  size_t size = res->address_length;
+  size_t size;
+  size = res->address_length;
   // Please do not use get_root_resource() in new code. See ZX-1467.
   st = zx_vmo_create_physical(get_root_resource(), res->base_address, size, &vmo);
   if (st != ZX_OK) {
@@ -354,8 +363,10 @@ static zx_status_t acpi_op_map_interrupt(void* ctx, int64_t which_irq, zx_handle
     goto unlock;
   }
 
-  acpi_device_irq_t* irq = dev->irqs + which_irq;
-  uint32_t mode = ZX_INTERRUPT_MODE_DEFAULT;
+  acpi_device_irq_t* irq;
+  irq = dev->irqs + which_irq;
+  uint32_t mode;
+  mode = ZX_INTERRUPT_MODE_DEFAULT;
   st = ZX_OK;
   switch (irq->trigger) {
     case ACPI_IRQ_TRIGGER_EDGE:
@@ -537,7 +548,7 @@ zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI
     }
   }
 
-  acpi_device_t* dev = calloc(1, sizeof(acpi_device_t));
+  acpi_device_t* dev = static_cast<acpi_device_t*>(calloc(1, sizeof(acpi_device_t)));
   if (!dev) {
     return NULL;
   }
@@ -545,16 +556,16 @@ zx_device_t* publish_device(zx_device_t* parent, zx_device_t* platform_bus, ACPI
 
   dev->ns_node = handle;
 
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = name,
-      .ctx = dev,
-      .ops = &acpi_device_proto,
-      .proto_id = protocol_id,
-      .proto_ops = protocol_ops,
-      .props = (propcount > 0) ? props : NULL,
-      .prop_count = propcount,
-  };
+  device_add_args_t args = {};
+
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.name = name;
+  args.ctx = dev;
+  args.ops = &acpi_device_proto;
+  args.props = (propcount > 0) ? props : NULL;
+  args.prop_count = static_cast<uint32_t>(propcount);
+  args.proto_id = protocol_id;
+  args.proto_ops = protocol_ops;
 
   zx_status_t status;
   if ((status = device_add(parent, &args, &dev->zxdev)) != ZX_OK) {
@@ -579,7 +590,7 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
     };
     acpi_status = AcpiEvaluateObject(object, (char*)"H00A._PR0", NULL, &buffer);
     if (acpi_status == AE_OK) {
-      ACPI_OBJECT* pkg = buffer.Pointer;
+      ACPI_OBJECT* pkg = static_cast<ACPI_OBJECT*>(buffer.Pointer);
       for (unsigned i = 0; i < pkg->Package.Count; i++) {
         ACPI_OBJECT* ref = &pkg->Package.Elements[i];
         if (ref->Type != ACPI_TYPE_LOCAL_REFERENCE) {
@@ -639,7 +650,8 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
   if (hid == 0) {
     goto out;
   }
-  const char* cid = NULL;
+  const char* cid;
+  cid = NULL;
   if ((info->Valid & ACPI_VALID_CID) && (info->CompatibleIdList.Count > 0) &&
       // IDs may be 7 or 8 bytes, and Length includes the null byte
       (info->CompatibleIdList.Ids[0].Length == HID_LENGTH ||
@@ -720,8 +732,8 @@ zx_status_t publish_acpi_devices(zx_device_t* parent, zx_device_t* sys_root,
   // Walk the ACPI namespace for devices and publish them
   // Only publish a single PCI device
   publish_acpi_device_ctx_t ctx = {
-      .acpi_root = acpi_root,
       .sys_root = sys_root,
+      .acpi_root = acpi_root,
       .platform_bus = parent,
       .found_pci = false,
       .last_pci = 0xFF,
