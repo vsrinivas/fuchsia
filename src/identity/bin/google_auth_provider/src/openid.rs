@@ -12,6 +12,7 @@ use crate::oauth::{self, AccessToken, RefreshToken};
 
 use fidl_fuchsia_auth::UserProfileInfo;
 use fidl_fuchsia_identity_external::Error as ApiError;
+use fuchsia_zircon::Duration;
 use hyper::StatusCode;
 use log::warn;
 use serde_derive::Deserialize;
@@ -34,7 +35,7 @@ struct OpenIdUserInfoResponse {
 #[derive(Debug, Deserialize)]
 struct OpenIdTokenResponse {
     pub id_token: String,
-    pub expires_in: u64,
+    pub expires_in: u32,
 }
 
 /// Error response for OpenID requests.
@@ -86,13 +87,13 @@ pub fn parse_user_info_response(
 pub fn parse_id_token_response(
     response_body: Option<String>,
     status_code: StatusCode,
-) -> TokenProviderResult<(IdToken, u64)> {
+) -> TokenProviderResult<(IdToken, Duration)> {
     match (response_body.as_ref(), status_code) {
         (Some(response), StatusCode::OK) => {
             let OpenIdTokenResponse { id_token, expires_in } =
                 serde_json::from_str::<OpenIdTokenResponse>(&response)
                     .token_provider_error(ApiError::Server)?;
-            Ok((IdToken(id_token), expires_in))
+            Ok((IdToken(id_token), Duration::from_seconds(expires_in as i64)))
         }
         (Some(response), status) if status.is_client_error() => {
             let error_response = from_str::<OpenIdErrorResponse>(&response)
@@ -165,7 +166,7 @@ mod test {
         let (id_token, expires_in) =
             parse_id_token_response(Some(http_result), StatusCode::OK).unwrap();
         assert_eq!(id_token, IdToken("test-id-token".to_string()));
-        assert_eq!(expires_in, 3600);
+        assert_eq!(expires_in, Duration::from_seconds(3600));
     }
 
     #[test]

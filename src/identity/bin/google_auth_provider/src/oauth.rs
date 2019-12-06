@@ -13,6 +13,7 @@ use crate::http::{HttpRequest, HttpRequestBuilder};
 
 use failure::format_err;
 use fidl_fuchsia_identity_external::Error as ApiError;
+use fuchsia_zircon::Duration;
 use hyper::StatusCode;
 use log::warn;
 use serde_derive::Deserialize;
@@ -40,7 +41,7 @@ struct AccessTokenResponseWithRefreshToken {
 #[derive(Debug, Deserialize)]
 struct AccessTokenResponseWithoutRefreshToken {
     pub access_token: String,
-    pub expires_in: u64,
+    pub expires_in: u32,
 }
 
 /// Error response type for Oauth requests.
@@ -130,12 +131,15 @@ pub fn parse_response_with_refresh_token(
 pub fn parse_response_without_refresh_token(
     response_body: Option<String>,
     status: StatusCode,
-) -> TokenProviderResult<(AccessToken, u64)> {
+) -> TokenProviderResult<(AccessToken, Duration)> {
     match (response_body.as_ref(), status) {
         (Some(response), StatusCode::OK) => {
             let response = from_str::<AccessTokenResponseWithoutRefreshToken>(&response)
                 .token_provider_error(ApiError::Server)?;
-            Ok((AccessToken(response.access_token), response.expires_in))
+            Ok((
+                AccessToken(response.access_token),
+                Duration::from_seconds(response.expires_in as i64),
+            ))
         }
         (Some(response), status) if status.is_client_error() => {
             let response =
@@ -251,7 +255,7 @@ mod test {
         let response_body =
             Some("{\"access_token\": \"test-access-token\", \"expires_in\": 3600}".to_string());
         assert_eq!(
-            (AccessToken("test-access-token".to_string()), 3600),
+            (AccessToken("test-access-token".to_string()), Duration::from_seconds(3600)),
             parse_response_without_refresh_token(response_body, StatusCode::OK).unwrap()
         )
     }

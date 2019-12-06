@@ -181,7 +181,11 @@ where
         let (response_body, status) = self.http_client.request(request).await?;
         let (access_token, expires_in) =
             parse_response_without_refresh_token(response_body, status)?;
-        Ok(AuthToken { token_type: TokenType::AccessToken, token: access_token.0, expires_in })
+        Ok(AuthToken {
+            token_type: TokenType::AccessToken,
+            token: access_token.0,
+            expires_in: expires_in.into_seconds() as u64,
+        })
     }
 
     /// Implementation of `GetAppIdToken` method for the `AuthProvider`
@@ -205,7 +209,11 @@ where
         let request = build_id_token_request(RefreshToken(credential), audience)?;
         let (response_body, status) = self.http_client.request(request).await?;
         let (id_token, expires_in) = parse_id_token_response(response_body, status)?;
-        Ok(AuthToken { token_type: TokenType::IdToken, token: id_token.0, expires_in })
+        Ok(AuthToken {
+            token_type: TokenType::IdToken,
+            token: id_token.0,
+            expires_in: expires_in.into_seconds() as u64,
+        })
     }
 
     /// Implementation of `GetAppFirebaseToken` method for the `AuthProvider`
