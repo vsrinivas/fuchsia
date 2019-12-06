@@ -1010,7 +1010,7 @@ TEST_F(AudioAdminTest, DualCaptureStreamNone) {
 //
 // Creates a pair of loopback capture streams and a render stream and verifies
 // capture streams of different usages can mute each other.
-TEST_F(AudioAdminTest, DualCaptureStreamMute) {
+TEST_F(AudioAdminTest, DISABLED_DualCaptureStreamMute) {
   fuchsia::media::StreamPacket packet[1], captured[2];
 
   // Setup expected behavior from policy for this test
