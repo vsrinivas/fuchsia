@@ -352,6 +352,7 @@ template("escher_library") {
       "renderer/buffer_cache.h",
       "renderer/frame.cc",
       "renderer/frame.h",
+      "renderer/render_funcs.h",
       "renderer/render_queue.cc",
       "renderer/render_queue.h",
       "renderer/render_queue_context.h",

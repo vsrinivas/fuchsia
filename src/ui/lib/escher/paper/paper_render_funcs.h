@@ -5,14 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDER_FUNCS_H_
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDER_FUNCS_H_
 
-#include <vulkan/vulkan.hpp>
-
-#include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/paper/paper_drawable_flags.h"
 #include "src/ui/lib/escher/paper/paper_readme.h"
-#include "src/ui/lib/escher/renderer/frame.h"
-#include "src/ui/lib/escher/renderer/uniform_binding.h"
-#include "src/ui/lib/escher/vk/command_buffer.h"
+#include "src/ui/lib/escher/renderer/render_funcs.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -21,7 +18,7 @@ struct RenderQueueItem;
 
 // Helper functions and structs used by e.g. PaperRenderQueue to produce
 // RenderQueueItems for the RenderQueues that it encapsulates.
-class PaperRenderFuncs {
+class PaperRenderFuncs : public RenderFuncs {
  public:
   // Matches signature of |RenderQueueItem::RenderFunc|.  Expects the items'
   // |object_data| and |instance_data| to be of type |MeshData| and
@@ -29,37 +26,10 @@ class PaperRenderFuncs {
   static void RenderMesh(CommandBuffer* cb, const RenderQueueContext* context,
                          const RenderQueueItem* items, uint32_t instance_count);
 
-  // Struct referenced by |MeshData|, see below.
-  struct IndexBinding {
-    vk::Buffer index_buffer;
-    vk::IndexType index_type;
-    uint64_t index_buffer_offset;
-
-    void Bind(CommandBuffer* cb) const {
-      cb->BindIndices(index_buffer, index_buffer_offset, index_type);
-    }
-  };
-
-  // Struct referenced by |MeshData|, see below.
-  struct VertexBinding {
-    uint32_t binding_index;
-    vk::Buffer buffer;
-    uint64_t offset;
-    uint32_t stride;
-
-    void Bind(CommandBuffer* cb) const { cb->BindVertices(binding_index, buffer, offset, stride); }
-  };
-
-  // Struct referenced by |MeshData|, see below.
-  struct VertexAttributeBinding {
-    uint32_t binding_index;
-    uint32_t attribute_index;
-    vk::Format format;
-    uint32_t offset;
-
-    void Bind(CommandBuffer* cb) const {
-      cb->SetVertexAttributes(binding_index, attribute_index, format, offset);
-    }
+  // Struct intended to be used as the |instance_data| of a |RenderQueueItem|.
+  struct MeshDrawData {
+    UniformBinding object_properties;
+    PaperDrawableFlags flags;
   };
 
   // Struct intended to be used as the |object_data| of a |RenderQueueItem|.
@@ -82,12 +52,6 @@ class PaperRenderFuncs {
     Texture* texture;
 
     void Bind(CommandBuffer* cb) const;
-  };
-
-  // Struct intended to be used as the |instance_data| of a |RenderQueueItem|.
-  struct MeshDrawData {
-    UniformBinding object_properties;
-    PaperDrawableFlags flags;
   };
 
   // Helper function for allocating/populating a |MeshData|.  Both CPU and
