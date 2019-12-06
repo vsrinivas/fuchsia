@@ -93,6 +93,7 @@ Where *condition* is one of
   kernel objects which do not require a parent object for creation.
 
 Where *policy* is one of
+
 + **ZX_POL_ACTION_ALLOW**  allow *condition*.
 + **ZX_POL_ACTION_DENY**  prevent *condition*.
 + **ZX_POL_ACTION_ALLOW_EXCEPTION**  generate an exception via the debug port.
@@ -124,6 +125,7 @@ the maximum of the specified value and its parent job's *min_slack*.
 *default_mode* specifies how slack will be applied when not otherwise indicated
 by the syscall arguments. A job's *default_mode* may be set regardless of its
 parent job's *default_mode*. The possible values for *default_mode* are:
+
 + **ZX_TIMER_SLACK_CENTER**
 + **ZX_TIMER_SLACK_EARLY**
 + **ZX_TIMER_SLACK_LATE**
