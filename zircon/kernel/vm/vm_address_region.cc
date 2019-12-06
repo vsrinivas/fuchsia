@@ -745,6 +745,9 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
   for (auto itr = begin; itr != end;) {
     // Create a copy of the iterator, in case we destroy this element
     auto curr = itr++;
+    // Stash a copy of curr->base() as we may need to use this value to ascend back to the parent
+    // VMAR *after* having destroyed curr.
+    uint64_t curr_base = curr->base();
     VmAddressRegion* up = curr->parent_;
 
     if (curr->is_mapping()) {
@@ -798,7 +801,8 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
       // If partial VMARs are allowed, and we have reached the end of a
       // sub-VMAR range, we ascend and continue iteration.
       do {
-        begin = up->subregions_.upper_bound(curr->base());
+        // Use the stashed curr_base as if curr was a mapping we may have destroyed it.
+        begin = up->subregions_.upper_bound(curr_base);
         if (begin.IsValid()) {
           break;
         }
