@@ -191,6 +191,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    ":component_manager",
     ":component_manager_tests",
     "tests",
   ]
