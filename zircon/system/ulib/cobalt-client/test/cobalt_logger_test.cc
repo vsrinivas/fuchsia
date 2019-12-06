@@ -244,6 +244,7 @@ void BindLoggerToLoggerFactoryService(FakeLoggerFactoryService* binder, FakeLogg
 }
 
 constexpr std::string_view kProjectName = "SomeProject";
+constexpr uint32_t kProjectId = 1234;
 constexpr ReleaseStage kReleaseStage = ReleaseStage::kGa;
 
 class LoggerServiceFixture : public zxtest::Test {
@@ -253,10 +254,35 @@ class LoggerServiceFixture : public zxtest::Test {
     service_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
     checker_.project_name = kProjectName;
+    checker_.project_id = kProjectId;
     checker_.stage = static_cast<decltype(checker_.stage)>(kReleaseStage);
     checker_.return_status = Status::OK;
 
-    // Set up logger factory service.
+    BindLoggerToLoggerFactoryService(&logger_factory_impl_, &logger_impl_, &checker_,
+                                     service_loop_->dispatcher());
+  }
+
+  std::unique_ptr<CobaltLogger> MakeLoggerWithName() {
+    return std::make_unique<CobaltLogger>(OptionsWithName());
+  }
+
+  std::unique_ptr<CobaltLogger> MakeLoggerWithId() {
+    return std::make_unique<CobaltLogger>(OptionsWithId());
+  }
+
+  CobaltOptions OptionsWithId() {
+    CobaltOptions options;
+    options.project_id = kProjectId;
+    options.release_stage = kReleaseStage;
+    options.service_connect = [this](const char* path, zx::channel service_channel) {
+      BindLoggerFactoryService(&logger_factory_impl_, std::move(service_channel),
+                               service_loop_->dispatcher());
+      return ZX_OK;
+    };
+    return options;
+  }
+
+  CobaltOptions OptionsWithName() {
     CobaltOptions options;
     options.project_name = kProjectName;
     options.release_stage = kReleaseStage;
@@ -265,10 +291,7 @@ class LoggerServiceFixture : public zxtest::Test {
                                service_loop_->dispatcher());
       return ZX_OK;
     };
-    logger_ = std::make_unique<CobaltLogger>(std::move(options));
-
-    BindLoggerToLoggerFactoryService(&logger_factory_impl_, &logger_impl_, &checker_,
-                                     service_loop_->dispatcher());
+    return options;
   }
 
   void StartServiceLoop() {
@@ -289,16 +312,12 @@ class LoggerServiceFixture : public zxtest::Test {
 
   async::Loop* GetLoop() { return service_loop_.get(); }
 
-  Logger* logger() { return logger_.get(); }
-
   void SetLoggerLogReturnStatus(Status status) { logger_impl_.set_log_return_status(status); }
 
  protected:
   CreateLoggerValidationArgs checker_;
 
  private:
-  std::unique_ptr<CobaltLogger> logger_ = nullptr;
-
   std::unique_ptr<async::Loop> service_loop_ = nullptr;
 
   FakeLoggerFactoryService logger_factory_impl_;
@@ -309,7 +328,10 @@ using CobaltLoggerTest = LoggerServiceFixture;
 
 constexpr uint64_t kBucketCount = 10;
 
-TEST_F(CobaltLoggerTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
+constexpr int64_t kCounter = 1;
+
+TEST_F(CobaltLoggerTest, LogHistogramObtainsLoggerInstanceWhenOptionsUseProjectName) {
+  auto logger = MakeLoggerWithName();
   std::vector<HistogramBucket> buckets;
 
   MetricOptions info;
@@ -323,7 +345,50 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
-  ASSERT_TRUE(logger()->Log(info, buckets.data(), buckets.size()));
+  ASSERT_TRUE(logger->Log(info, buckets.data(), buckets.size()));
+  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  auto itr = GetStorage().histograms().find(info);
+  ASSERT_NE(GetStorage().histograms().end(), itr);
+  ASSERT_EQ(itr->second.size(), kBucketCount);
+
+  for (uint32_t i = 0; i < itr->second.size(); ++i) {
+    EXPECT_EQ(buckets[i].count, (itr->second).at(i));
+  }
+}
+
+TEST_F(CobaltLoggerTest, LogCounterObtainsLoggerInstanceWhenOptionsUseProjectName) {
+  auto logger = MakeLoggerWithName();
+  MetricOptions info;
+  info.metric_id = 1;
+  info.component = "SomeComponent";
+  info.event_codes = {1, 2, 3, 4, 5};
+
+  ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
+
+  ASSERT_TRUE(logger->Log(info, kCounter));
+  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  auto itr = GetStorage().counters().find(info);
+  ASSERT_NE(GetStorage().counters().end(), itr);
+
+  EXPECT_EQ(itr->second, kCounter);
+}
+
+TEST_F(CobaltLoggerTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
+  auto logger = MakeLoggerWithId();
+  std::vector<HistogramBucket> buckets;
+
+  MetricOptions info;
+  info.metric_id = 1;
+  info.component = "SomeComponent";
+  info.event_codes = {1, 2, 3, 4, 5};
+
+  for (uint32_t i = 0; i < kBucketCount; ++i) {
+    buckets.push_back({.index = i, .count = 2 * i});
+  }
+
+  ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
+
+  ASSERT_TRUE(logger->Log(info, buckets.data(), buckets.size()));
   ASSERT_NO_FATAL_FAILURES(checker_.Check());
   auto itr = GetStorage().histograms().find(info);
   ASSERT_NE(GetStorage().histograms().end(), itr);
@@ -335,6 +400,7 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
 }
 
 TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenFactoryServiceReturnsError) {
+  auto logger = MakeLoggerWithId();
   std::vector<HistogramBucket> buckets;
 
   MetricOptions info;
@@ -349,13 +415,14 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenFactoryServiceReturnsError)
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
-  ASSERT_FALSE(logger()->Log(info, buckets.data(), buckets.size()));
+  ASSERT_FALSE(logger->Log(info, buckets.data(), buckets.size()));
   ASSERT_NO_FATAL_FAILURES(checker_.Check());
   EXPECT_TRUE(GetStorage().histograms().empty());
   EXPECT_TRUE(GetStorage().counters().empty());
 }
 
 TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenLoggerServiceReturnsError) {
+  auto logger = MakeLoggerWithId();
   std::vector<HistogramBucket> buckets;
 
   MetricOptions info;
@@ -370,11 +437,12 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenLoggerServiceReturnsError) 
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
-  ASSERT_FALSE(logger()->Log(info, buckets.data(), buckets.size()));
+  ASSERT_FALSE(logger->Log(info, buckets.data(), buckets.size()));
   ASSERT_NO_FATAL_FAILURES(checker_.Check());
 }
 
 TEST_F(CobaltLoggerTest, LogHistogramWaitsUntilServiceBecomesAvailable) {
+  auto logger = MakeLoggerWithId();
   std::vector<HistogramBucket> buckets;
   std::atomic<bool> log_result(false);
 
@@ -391,7 +459,7 @@ TEST_F(CobaltLoggerTest, LogHistogramWaitsUntilServiceBecomesAvailable) {
       [info, &log_result, &buckets](internal::Logger* logger) {
         log_result.store(logger->Log(info, buckets.data(), buckets.size()));
       },
-      logger());
+      logger.get());
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
@@ -409,9 +477,8 @@ TEST_F(CobaltLoggerTest, LogHistogramWaitsUntilServiceBecomesAvailable) {
   }
 }
 
-constexpr int64_t kCounter = 1;
-
 TEST_F(CobaltLoggerTest, LogCounterReturnsTrueWhenServiceReturnsOk) {
+  auto logger = MakeLoggerWithId();
   MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
@@ -419,7 +486,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsTrueWhenServiceReturnsOk) {
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
-  ASSERT_TRUE(logger()->Log(info, kCounter));
+  ASSERT_TRUE(logger->Log(info, kCounter));
   ASSERT_NO_FATAL_FAILURES(checker_.Check());
   auto itr = GetStorage().counters().find(info);
   ASSERT_NE(GetStorage().counters().end(), itr);
@@ -428,6 +495,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsTrueWhenServiceReturnsOk) {
 }
 
 TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenFactoryServiceReturnsError) {
+  auto logger = MakeLoggerWithId();
   MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
@@ -436,13 +504,14 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenFactoryServiceReturnsError) {
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
-  ASSERT_FALSE(logger()->Log(info, kCounter));
+  ASSERT_FALSE(logger->Log(info, kCounter));
   ASSERT_NO_FATAL_FAILURES(checker_.Check());
   EXPECT_TRUE(GetStorage().histograms().empty());
   EXPECT_TRUE(GetStorage().counters().empty());
 }
 
 TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenLoggerServiceReturnsError) {
+  auto logger = MakeLoggerWithId();
   MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
@@ -451,11 +520,12 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenLoggerServiceReturnsError) {
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
-  ASSERT_FALSE(logger()->Log(info, kCounter));
+  ASSERT_FALSE(logger->Log(info, kCounter));
   ASSERT_NO_FATAL_FAILURES(checker_.Check());
 }
 
 TEST_F(CobaltLoggerTest, LogCounterWaitsUntilServiceBecomesAvailable) {
+  auto logger = MakeLoggerWithId();
   std::atomic<bool> log_result(false);
   MetricOptions info;
   info.metric_id = 1;
@@ -466,7 +536,7 @@ TEST_F(CobaltLoggerTest, LogCounterWaitsUntilServiceBecomesAvailable) {
       [info, &log_result](internal::Logger* logger) {
         log_result.store(logger->Log(info, kCounter));
       },
-      logger());
+      logger.get());
 
   ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
 
@@ -479,92 +549,6 @@ TEST_F(CobaltLoggerTest, LogCounterWaitsUntilServiceBecomesAvailable) {
   ASSERT_NE(GetStorage().counters().end(), itr);
 
   EXPECT_EQ(itr->second, kCounter);
-}
-
-constexpr uint32_t kProjectId = 1234;
-
-class LoggerFromIdServiceFixture : public zxtest::Test {
- public:
-  void SetUp() final {
-    // Initialize the service loop.
-    service_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
-
-    checker_.project_id = kProjectId;
-    checker_.return_status = Status::OK;
-
-    // Set up logger factory service.
-    CobaltOptions options;
-    options.project_id = kProjectId;
-    options.service_connect = [this](const char* path, zx::channel service_channel) {
-      BindLoggerFactoryService(&logger_factory_impl_, std::move(service_channel),
-                               service_loop_->dispatcher());
-      return ZX_OK;
-    };
-    logger_ = std::make_unique<CobaltLogger>(std::move(options));
-
-    BindLoggerToLoggerFactoryService(&logger_factory_impl_, &logger_impl_, &checker_,
-                                     service_loop_->dispatcher());
-  }
-
-  void StartServiceLoop() {
-    ASSERT_NOT_NULL(service_loop_);
-    ASSERT_TRUE(service_loop_->GetState() == ASYNC_LOOP_RUNNABLE);
-    service_loop_->StartThread("LoggerServiceThread");
-  }
-
-  void StopServiceLoop() {
-    service_loop_->Quit();
-    service_loop_->JoinThreads();
-    service_loop_->ResetQuit();
-  }
-
-  void TearDown() final { StopServiceLoop(); }
-
-  const InMemoryLogger& GetStorage() const { return logger_impl_.storage(); }
-
-  async::Loop* GetLoop() { return service_loop_.get(); }
-
-  Logger* logger() { return logger_.get(); }
-
-  void SetLoggerLogReturnStatus(Status status) { logger_impl_.set_log_return_status(status); }
-
- protected:
-  CreateLoggerValidationArgs checker_;
-
- private:
-  std::unique_ptr<CobaltLogger> logger_ = nullptr;
-
-  std::unique_ptr<async::Loop> service_loop_ = nullptr;
-
-  FakeLoggerFactoryService logger_factory_impl_;
-  FakeLoggerService logger_impl_;
-};
-
-using CobaltLoggerFromIdTest = LoggerFromIdServiceFixture;
-
-TEST_F(CobaltLoggerFromIdTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
-  std::vector<HistogramBucket> buckets;
-
-  MetricOptions info;
-  info.metric_id = 1;
-  info.component = "SomeComponent";
-  info.event_codes = {1, 2, 3, 4, 5};
-
-  for (uint32_t i = 0; i < kBucketCount; ++i) {
-    buckets.push_back({.index = i, .count = 2 * i});
-  }
-
-  ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
-
-  ASSERT_TRUE(logger()->Log(info, buckets.data(), buckets.size()));
-  ASSERT_NO_FATAL_FAILURES(checker_.Check());
-  auto itr = GetStorage().histograms().find(info);
-  ASSERT_NE(GetStorage().histograms().end(), itr);
-  ASSERT_EQ(itr->second.size(), kBucketCount);
-
-  for (uint32_t i = 0; i < itr->second.size(); ++i) {
-    EXPECT_EQ(buckets[i].count, (itr->second).at(i));
-  }
 }
 
 }  // namespace
