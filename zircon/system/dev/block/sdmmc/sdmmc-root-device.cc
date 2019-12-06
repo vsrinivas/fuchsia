@@ -25,6 +25,10 @@ zx_status_t SdmmcRootDevice::Bind(void* ctx, zx_device_t* parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<SdmmcRootDevice> dev(new (&ac) SdmmcRootDevice(parent, host));
 
+  if (!ac.check()) {
+    zxlogf(ERROR, "SdmmcRootDevice:Bind: Failed to allocate device\n");
+    return ZX_ERR_NO_MEMORY;
+  }
   zx_status_t st = dev->DdkAdd("sdmmc", DEVICE_ADD_NON_BINDABLE);
   if (st != ZX_OK) {
     return st;
