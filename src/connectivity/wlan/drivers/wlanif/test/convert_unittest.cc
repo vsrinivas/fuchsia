@@ -75,7 +75,7 @@ TEST(ConvertTest, ToVectorRateSets_InvalidRateCount) {
 
   ConvertRates(&rates, bss_desc);
 
-  expected.resize(WLAN_MAC_MAX_RATES);  // ConvertRates will truncate rates
+  expected.resize(wlan_mlme::RATES_MAX_LEN);  // ConvertRates will truncate excess rates
   EXPECT_EQ(rates, expected);
 }
 

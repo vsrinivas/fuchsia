@@ -222,12 +222,10 @@ static void ArrayToVector(::fidl::VectorPtr<T>* vecptr, const T* data, size_t le
 
 void ConvertRates(::std::vector<uint8_t>* rates, const wlanif_bss_description_t& wlanif_desc) {
   uint16_t total_rate_count = wlanif_desc.num_rates;
-  if (total_rate_count > WLAN_MAC_MAX_RATES) {
-#if !WLANIF_TEST
-    warnf("num_rates is %u > max allowed size: %d\n", total_rate_count, WLAN_MAC_MAX_RATES);
-    ZX_DEBUG_ASSERT(total_rate_count <= WLAN_MAC_MAX_RATES);
-#endif
-    total_rate_count = WLAN_MAC_MAX_RATES;
+  if (total_rate_count > wlan_mlme::RATES_MAX_LEN) {
+    warnf("Non-compliant beacon: num_rates (%u) > max allowed (%d). Excess rates truncated.\n",
+          total_rate_count, wlan_mlme::RATES_MAX_LEN);
+    total_rate_count = wlan_mlme::RATES_MAX_LEN;
   }
 
   *rates = {wlanif_desc.rates, wlanif_desc.rates + total_rate_count};
