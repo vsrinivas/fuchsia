@@ -247,15 +247,14 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 warn!("Could not initialize account handler: {:?}", err);
                 err.api_error
             })?;
-        let account_id = account_handler.get_account_id();
         account_handler
             .proxy()
-            .create_account(account_id.clone().into(), auth_mechanism_id.as_ref().map(|x| &**x))
+            .create_account(auth_mechanism_id.as_ref().map(|x| &**x))
             .await
             .map_err(|err| {
-                warn!("Could not create account: {:?}", err);
-                ApiError::Resource
-            })??;
+            warn!("Could not create account: {:?}", err);
+            ApiError::Resource
+        })??;
         Ok(account_handler)
     }
 

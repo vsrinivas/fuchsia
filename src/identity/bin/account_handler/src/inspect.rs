@@ -14,16 +14,19 @@ use fuchsia_inspect::{Node, StringProperty, UintProperty};
 pub struct AccountHandler {
     /// The underlying inspect node.
     node: Node,
+    /// The local account id
+    pub local_account_id: UintProperty,
     /// Represents the state of the account handler, such as "initialized"
     pub lifecycle: StringProperty,
 }
 
 impl AccountHandler {
     /// Creates a new AccountHandler as a child of the supplied node.
-    pub fn new<'a>(parent: &'a Node, lifecycle: &'a str) -> Self {
+    pub fn new<'a>(parent: &'a Node, account_id: &'a LocalAccountId, lifecycle: &'a str) -> Self {
         let node = parent.create_child("account_handler");
+        let local_account_id = (&node).create_uint("local_account_id", account_id.clone().into());
         let lifecycle = (&node).create_string("lifecycle", lifecycle.to_string());
-        Self { node: node, lifecycle }
+        Self { node, local_account_id, lifecycle }
     }
 
     /// Get the underlying node, can be used to create children.
@@ -36,19 +39,16 @@ impl AccountHandler {
 pub struct Account {
     /// The underlying inspect node.
     _node: Node,
-    /// The local account id
-    pub local_account_id: UintProperty,
     /// The number of active clients of the Account.
     pub open_client_channels: UintProperty,
 }
 
 impl Account {
     /// Creates a new Account as a child of the supplied node.
-    pub fn new(parent: &Node, account_id: &LocalAccountId) -> Self {
+    pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("account");
-        let local_account_id = (&node).create_uint("local_account_id", account_id.clone().into());
         let open_client_channels = (&node).create_uint("open_client_channels", 0);
-        Self { _node: node, local_account_id, open_client_channels }
+        Self { _node: node, open_client_channels }
     }
 }
 

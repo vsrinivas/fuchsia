@@ -86,7 +86,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
                 )?);
                 new_handler
                     .proxy()
-                    .load_account(account_id.clone().into())
+                    .load_account()
                     .await
                     .account_manager_error(ApiError::Resource)?
                     .map_err(|err| {

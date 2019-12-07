@@ -105,8 +105,9 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
         // Note: The combination of component URL and environment label determines the location of
         // the data directory for the launched component. It is critical that the label is unique
         // and stable per-account, which we achieve through using the local account id as
-        // the environment name.
-        let env_label = account_id.to_canonical_string();
+        // the environment name. We also pass in the account id as a flag, because the environment
+        // name is not known to the launched component.
+        let account_id_string = account_id.to_canonical_string();
         let mut fs_for_account_handler = ServiceFs::new();
         fs_for_account_handler.add_fidl_service(move |stream| {
             let context_clone = context.clone();
@@ -120,8 +121,8 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
         let (env_controller, app) = fs_for_account_handler
             .launch_component_in_nested_environment(
                 account_handler_url.to_string(),
-                None,
-                env_label.as_ref(),
+                Some(vec![format!("--account_id={}", account_id_string)]),
+                account_id_string.as_ref(),
             )
             .context("Failed to start launcher")
             .account_manager_error(ApiError::Resource)?;

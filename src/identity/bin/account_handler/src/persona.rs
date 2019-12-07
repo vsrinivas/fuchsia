@@ -5,7 +5,7 @@
 use crate::common::AccountLifetime;
 use crate::inspect;
 use crate::TokenManager;
-use account_common::{LocalAccountId, LocalPersonaId};
+use account_common::LocalPersonaId;
 use failure::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthenticationContextProviderProxy, TokenManagerMarker};
@@ -42,9 +42,6 @@ pub struct Persona {
     /// A device-local identifier for this persona.
     id: LocalPersonaId,
 
-    /// The device-local identitier that this persona is a facet of.
-    _account_id: LocalAccountId,
-
     /// Lifetime for this persona's account (ephemeral or persistent with a path).
     lifetime: Arc<AccountLifetime>,
 
@@ -70,7 +67,6 @@ impl Persona {
     /// Constructs a new Persona.
     pub fn new(
         id: LocalPersonaId,
-        account_id: LocalAccountId,
         lifetime: Arc<AccountLifetime>,
         token_manager: Arc<TokenManager>,
         key_manager: Arc<KeyManager>,
@@ -78,15 +74,7 @@ impl Persona {
         inspect_parent: &Node,
     ) -> Persona {
         let persona_inspect = inspect::Persona::new(inspect_parent, &id);
-        Self {
-            id,
-            _account_id: account_id,
-            lifetime,
-            token_manager,
-            key_manager,
-            task_group,
-            inspect: persona_inspect,
-        }
+        Self { id, lifetime, token_manager, key_manager, task_group, inspect: persona_inspect }
     }
 
     /// Returns the device-local identifier for this persona.
@@ -276,7 +264,6 @@ mod tests {
             let inspector = Inspector::new();
             Persona::new(
                 TEST_PERSONA_ID.clone(),
-                TEST_ACCOUNT_ID.clone(),
                 Arc::new(AccountLifetime::Persistent { account_dir: PathBuf::from("/nowhere") }),
                 Arc::clone(&self.token_manager),
                 Arc::clone(&self.key_manager),
@@ -289,7 +276,6 @@ mod tests {
             let inspector = Inspector::new();
             Persona::new(
                 TEST_PERSONA_ID.clone(),
-                TEST_ACCOUNT_ID.clone(),
                 Arc::new(AccountLifetime::Ephemeral),
                 Arc::clone(&self.token_manager),
                 Arc::clone(&self.key_manager),

@@ -21,6 +21,7 @@ mod test_util;
 
 use crate::account_handler::AccountHandler;
 use crate::common::AccountLifetime;
+use account_common::LocalAccountId;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
 use fuchsia_async as fasync;
@@ -38,9 +39,14 @@ const DATA_DIR: &str = "/data";
 /// This flag (prefixed with `--`) results in an in-memory ephemeral account.
 const EPHEMERAL_FLAG: &str = "ephemeral";
 
+/// This required flag (prefixed with `--`), followed by a decimal string,
+/// determines the local account identifier.
+const ACCOUNT_ID_FLAG: &str = "account_id";
+
 fn main() -> Result<(), Error> {
     let mut opts = getopts::Options::new();
     opts.optflag("", EPHEMERAL_FLAG, "this account is an in-memory ephemeral account");
+    opts.reqopt("", ACCOUNT_ID_FLAG, "set the local account id", "ID");
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
     let lifetime = if options.opt_present(EPHEMERAL_FLAG) {
@@ -48,8 +54,19 @@ fn main() -> Result<(), Error> {
     } else {
         AccountLifetime::Persistent { account_dir: DATA_DIR.into() }
     };
+    let account_id = {
+        let account_id = options.opt_str(ACCOUNT_ID_FLAG).expect("Internal getopts error");
+        LocalAccountId::from_canonical_str(&account_id).expect(&format!(
+            "`{}` should be provided as an unsigned 64-bit integer (in decimal).",
+            &account_id
+        ))
+    };
 
-    fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
+    fuchsia_syslog::init_with_tags(&[
+        "auth",
+        &format!("id<{}>", &account_id.to_canonical_string()),
+    ])
+    .expect("Can't init logger");
     info!("Starting account handler");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
@@ -60,7 +77,7 @@ fn main() -> Result<(), Error> {
     // TODO(dnordstrom): Find a testable way to inject global capabilities.
     let context = connect_to_service::<AccountHandlerContextMarker>()
         .expect("Error connecting to the AccountHandlerContext service");
-    let account_handler = Arc::new(AccountHandler::new(context, lifetime, &inspector));
+    let account_handler = Arc::new(AccountHandler::new(context, account_id, lifetime, &inspector));
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_handler_clone = Arc::clone(&account_handler);
         fasync::spawn(async move {

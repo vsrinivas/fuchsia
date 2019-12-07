@@ -81,7 +81,6 @@ using HashSalt = array<byte>:HASH_SALT_SIZE;
 protocol AccountHandlerControl {
     /// Creates a completely new Fuchsia account.
     ///
-    /// `account_id` The new account's local identifier.
     /// `auth_mechanism_id` An `AuthMechanismId` for a storage
     ///                     unlock-capable authentication mechanism. If
     ///                     provided, a single enrollment of that
@@ -91,19 +90,15 @@ protocol AccountHandlerControl {
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
     /// state.
     CreateAccount(
-        fuchsia.identity.account.LocalAccountId account_id,
         fuchsia.identity.account.AuthMechanismId? auth_mechanism_id)
         -> () error fuchsia.identity.account.Error;
 
     /// Loads information about a Fuchsia account that was previously provisioned
     /// on the current device.
     ///
-    /// `id` The account's local identifier.
-    ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
     /// state.
-    LoadAccount(
-        fuchsia.identity.account.LocalAccountId id)
+    LoadAccount()
         -> () error fuchsia.identity.account.Error;
 
     /// Prepares the AccountHandler to receive an account from another device through
@@ -159,12 +154,9 @@ protocol AccountHandlerControl {
     /// Moves the AccountHandler from the `Transferred` state to the
     /// `Initialized` state.
     ///
-    /// `id` The account's local identifier.
-    ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Transferred`
     /// state.
-    FinalizeAccountTransfer(
-        fuchsia.identity.account.LocalAccountId id)
+    FinalizeAccountTransfer()
         -> () error fuchsia.identity.account.Error;
 
     // TODO(fxr/37227) - update encrypt/decrypt APIs to handle data given by KMS.

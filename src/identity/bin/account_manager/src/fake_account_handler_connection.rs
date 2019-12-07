@@ -64,26 +64,25 @@ impl AccountHandlerConnection for FakeAccountHandlerConnection {
         lifetime: Lifetime,
         _context: Arc<AccountHandlerContext>,
     ) -> Result<Self, AccountManagerError> {
-        if &account_id == &*CORRUPT_HANDLER_ACCOUNT_ID {
+        if account_id == *CORRUPT_HANDLER_ACCOUNT_ID {
             return Err(AccountManagerError::new(ApiError::Resource));
         }
+        let generate_unknown_err = account_id == *UNKNOWN_ERROR_ACCOUNT_ID;
         let (proxy, mut stream) = create_proxy_and_stream::<AccountHandlerControlMarker>()?;
         let lifetime_clone = lifetime.clone();
         fasync::spawn(async move {
             while let Some(req) = stream.try_next().await.unwrap() {
                 match req {
-                    AccountHandlerControlRequest::CreateAccount {
-                        account_id, responder, ..
-                    } => {
+                    AccountHandlerControlRequest::CreateAccount { responder, .. } => {
                         let mut response = Ok(());
-                        if &account_id == UNKNOWN_ERROR_ACCOUNT_ID.as_ref() {
+                        if generate_unknown_err {
                             response = Err(ApiError::Unknown);
                         }
                         responder.send(&mut response).unwrap();
                     }
-                    AccountHandlerControlRequest::LoadAccount { id, responder } => {
+                    AccountHandlerControlRequest::LoadAccount { responder } => {
                         let mut response = Ok(());
-                        if &id == UNKNOWN_ERROR_ACCOUNT_ID.as_ref() {
+                        if generate_unknown_err {
                             response = Err(ApiError::Unknown);
                         }
                         // Loading an ephemeral account is always an error
@@ -163,12 +162,7 @@ mod tests {
             Lifetime::Persistent,
             DEFAULT_ACCOUNT_ID.clone(),
         )?;
-        assert!(conn
-            .proxy()
-            .load_account(conn.get_account_id().clone().into())
-            .await
-            .unwrap()
-            .is_ok());
+        assert!(conn.proxy().load_account().await.unwrap().is_ok());
         Ok(())
     }
 
@@ -178,14 +172,7 @@ mod tests {
             Lifetime::Persistent,
             UNKNOWN_ERROR_ACCOUNT_ID.clone(),
         )?;
-        assert_eq!(
-            conn.proxy()
-                .load_account(conn.get_account_id().clone().into())
-                .await
-                .unwrap()
-                .unwrap_err(),
-            ApiError::Unknown
-        );
+        assert_eq!(conn.proxy().load_account().await.unwrap().unwrap_err(), ApiError::Unknown);
         Ok(())
     }
 
@@ -195,14 +182,7 @@ mod tests {
             Lifetime::Ephemeral,
             DEFAULT_ACCOUNT_ID.clone(),
         )?;
-        assert_eq!(
-            conn.proxy()
-                .load_account(conn.get_account_id().clone().into())
-                .await
-                .unwrap()
-                .unwrap_err(),
-            ApiError::Internal
-        );
+        assert_eq!(conn.proxy().load_account().await.unwrap().unwrap_err(), ApiError::Internal);
         Ok(())
     }
 
@@ -212,12 +192,7 @@ mod tests {
             Lifetime::Persistent,
             DEFAULT_ACCOUNT_ID.clone(),
         )?;
-        assert!(conn
-            .proxy()
-            .create_account(conn.get_account_id().clone().into(), None)
-            .await
-            .unwrap()
-            .is_ok());
+        assert!(conn.proxy().create_account(None).await.unwrap().is_ok());
         Ok(())
     }
 
@@ -228,11 +203,7 @@ mod tests {
             UNKNOWN_ERROR_ACCOUNT_ID.clone(),
         )?;
         assert_eq!(
-            conn.proxy()
-                .create_account(conn.get_account_id().clone().into(), None)
-                .await
-                .unwrap()
-                .unwrap_err(),
+            conn.proxy().create_account(None).await.unwrap().unwrap_err(),
             ApiError::Unknown
         );
         Ok(())
@@ -245,12 +216,7 @@ mod tests {
             DEFAULT_ACCOUNT_ID.clone(),
         )?;
         assert!(conn.proxy().terminate().is_ok());
-        assert!(conn
-            .proxy()
-            .create_account(conn.get_account_id().clone().into(), None)
-            .await
-            .unwrap_err()
-            .is_closed());
+        assert!(conn.proxy().create_account(None).await.unwrap_err().is_closed());
         Ok(())
     }
 

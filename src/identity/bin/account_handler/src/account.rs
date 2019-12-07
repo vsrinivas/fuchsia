@@ -9,8 +9,7 @@ use crate::persona::{Persona, PersonaContext};
 use crate::stored_account::StoredAccount;
 use crate::TokenManager;
 use account_common::{
-    AccountManagerError, FidlLocalPersonaId, GlobalAccountId, LocalAccountId, LocalPersonaId,
-    ResultExt,
+    AccountManagerError, FidlLocalPersonaId, GlobalAccountId, LocalPersonaId, ResultExt,
 };
 use failure::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
@@ -49,9 +48,6 @@ pub struct AccountContext {
 /// This state is only available once the Handler has been initialized to a particular account via
 /// the AccountHandlerControl channel.
 pub struct Account {
-    /// A device-local identifier for this account.
-    id: LocalAccountId,
-
     /// A global identifier for this account.
     global_id: GlobalAccountId,
 
@@ -79,7 +75,6 @@ impl Account {
 
     /// Manually construct an account object, shouldn't normally be called directly.
     async fn new(
-        account_id: LocalAccountId,
         persona_id: LocalPersonaId,
         global_account_id: GlobalAccountId,
         lifetime: AccountLifetime,
@@ -112,14 +107,12 @@ impl Account {
         });
         let key_manager = Arc::new(KeyManager::new(key_manager_task_group));
         let lifetime = Arc::new(lifetime);
-        let account_inspect = inspect::Account::new(inspect_parent, &account_id);
+        let account_inspect = inspect::Account::new(inspect_parent);
         Ok(Self {
-            id: account_id.clone(),
             global_id: global_account_id,
             lifetime: Arc::clone(&lifetime),
             default_persona: Arc::new(Persona::new(
                 persona_id,
-                account_id,
                 lifetime,
                 token_manager,
                 key_manager,
@@ -133,7 +126,6 @@ impl Account {
 
     /// Creates a new Fuchsia account and, if it is persistent, stores it on disk.
     pub async fn create(
-        account_id: LocalAccountId,
         lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
         inspect_parent: &Node,
@@ -142,27 +134,19 @@ impl Account {
         let local_persona_id = LocalPersonaId::new(rand::random::<u64>());
         if let AccountLifetime::Persistent { ref account_dir } = lifetime {
             if StoredAccount::path(account_dir).exists() {
-                info!("Attempting to create account twice with local id: {:?}", account_id);
+                info!("Attempting to create account twice");
                 return Err(AccountManagerError::new(ApiError::Internal));
             }
             let stored_account =
                 StoredAccount::new(local_persona_id.clone(), global_account_id.clone());
             stored_account.save(account_dir)?;
         }
-        Self::new(
-            account_id,
-            local_persona_id,
-            global_account_id,
-            lifetime,
-            context_proxy,
-            inspect_parent,
-        )
-        .await
+        Self::new(local_persona_id, global_account_id, lifetime, context_proxy, inspect_parent)
+            .await
     }
 
     /// Loads an existing Fuchsia account from disk.
     pub async fn load(
-        account_id: LocalAccountId,
         lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
         inspect_parent: &Node,
@@ -180,15 +164,8 @@ impl Account {
         let stored_account = StoredAccount::load(account_dir)?;
         let local_persona_id = stored_account.get_default_persona_id().clone();
         let global_account_id = stored_account.get_global_account_id().clone();
-        Self::new(
-            account_id,
-            local_persona_id,
-            global_account_id,
-            lifetime,
-            context_proxy,
-            inspect_parent,
-        )
-        .await
+        Self::new(local_persona_id, global_account_id, lifetime, context_proxy, inspect_parent)
+            .await
     }
 
     /// Removes the account from disk or returns the account and the error.
@@ -220,11 +197,6 @@ impl Account {
     /// Returns a task group which can be used to spawn and cancel tasks that use this instance.
     pub fn task_group(&self) -> &TaskGroup {
         &self.task_group
-    }
-
-    /// A device-local identifier for this account
-    pub fn id(&self) -> &LocalAccountId {
-        &self.id
     }
 
     /// A global identifier for this account
@@ -446,7 +418,6 @@ mod tests {
                 create_endpoints::<AccountHandlerContextMarker>().unwrap();
             let account_dir = self.location.path.clone();
             Account::create(
-                TEST_ACCOUNT_ID.clone(),
                 AccountLifetime::Persistent { account_dir },
                 account_handler_context_client_end.into_proxy().unwrap(),
                 &inspector.root(),
@@ -459,7 +430,6 @@ mod tests {
             let (account_handler_context_client_end, _) =
                 create_endpoints::<AccountHandlerContextMarker>().unwrap();
             Account::create(
-                TEST_ACCOUNT_ID.clone(),
                 AccountLifetime::Ephemeral,
                 account_handler_context_client_end.into_proxy().unwrap(),
                 &inspector.root(),
@@ -472,7 +442,6 @@ mod tests {
             let (account_handler_context_client_end, _) =
                 create_endpoints::<AccountHandlerContextMarker>().unwrap();
             Account::load(
-                TEST_ACCOUNT_ID.clone(),
                 AccountLifetime::Persistent { account_dir: self.location.path.clone() },
                 account_handler_context_client_end.into_proxy().unwrap(),
                 &inspector.root(),
@@ -587,7 +556,6 @@ mod tests {
         let (account_handler_context_client_end, _) =
             create_endpoints::<AccountHandlerContextMarker>().unwrap();
         assert!(Account::load(
-            TEST_ACCOUNT_ID.clone(),
             AccountLifetime::Ephemeral,
             account_handler_context_client_end.into_proxy().unwrap(),
             &inspector.root(),

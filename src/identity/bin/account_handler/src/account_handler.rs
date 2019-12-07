@@ -68,10 +68,11 @@ impl AccountHandler {
     /// Constructs a new AccountHandler.
     pub fn new(
         context: AccountHandlerContextProxy,
+        account_id: LocalAccountId,
         lifetime: AccountLifetime,
         inspector: &Inspector,
     ) -> AccountHandler {
-        let inspect = inspect::AccountHandler::new(inspector.root(), "uninitialized");
+        let inspect = inspect::AccountHandler::new(inspector.root(), &account_id, "uninitialized");
         Self { context, account: RwLock::new(Lifecycle::Uninitialized), lifetime, inspect }
     }
 
@@ -93,16 +94,12 @@ impl AccountHandler {
         req: AccountHandlerControlRequest,
     ) -> Result<(), fidl::Error> {
         match req {
-            AccountHandlerControlRequest::CreateAccount {
-                account_id,
-                auth_mechanism_id,
-                responder,
-            } => {
-                let mut response = self.create_account(account_id.into(), auth_mechanism_id).await;
+            AccountHandlerControlRequest::CreateAccount { auth_mechanism_id, responder } => {
+                let mut response = self.create_account(auth_mechanism_id).await;
                 responder.send(&mut response)?;
             }
-            AccountHandlerControlRequest::LoadAccount { id, responder } => {
-                let mut response = self.load_account(id.into()).await;
+            AccountHandlerControlRequest::LoadAccount { responder } => {
+                let mut response = self.load_account().await;
                 responder.send(&mut response)?;
             }
             AccountHandlerControlRequest::PrepareForAccountTransfer { responder } => {
@@ -154,16 +151,14 @@ impl AccountHandler {
     async fn init_account<'a, F, Fut>(
         &'a self,
         construct_account_fn: F,
-        id: LocalAccountId,
     ) -> Result<(), AccountManagerError>
     where
-        F: FnOnce(LocalAccountId, AccountLifetime, AccountHandlerContextProxy, &'a Node) -> Fut,
+        F: FnOnce(AccountLifetime, AccountHandlerContextProxy, &'a Node) -> Fut,
         Fut: Future<Output = Result<Account, AccountManagerError>>,
     {
         // The function evaluation is front loaded because await is not allowed while holding the
         // lock.
         let account_result = construct_account_fn(
-            id,
             self.lifetime.clone(),
             self.context.clone(),
             self.inspect.get_node(),
@@ -183,11 +178,7 @@ impl AccountHandler {
 
     /// Creates a new Fuchsia account and attaches it to this handler.  Moves
     /// the handler from the `Uninitialized` to `Initialized` state.
-    async fn create_account(
-        &self,
-        account_id: LocalAccountId,
-        auth_mechanism_id: Option<String>,
-    ) -> Result<(), ApiError> {
+    async fn create_account(&self, auth_mechanism_id: Option<String>) -> Result<(), ApiError> {
         match (&self.lifetime, &auth_mechanism_id) {
             (AccountLifetime::Persistent { .. }, Some(_)) => {
                 return Err(ApiError::UnsupportedOperation)
@@ -195,7 +186,7 @@ impl AccountHandler {
             (AccountLifetime::Ephemeral, Some(_)) => return Err(ApiError::InvalidRequest),
             _ => {}
         };
-        self.init_account(Account::create, account_id).await.map_err(|err| {
+        self.init_account(Account::create).await.map_err(|err| {
             warn!("Failed creating Fuchsia account: {:?}", err);
             err.into()
         })
@@ -203,8 +194,8 @@ impl AccountHandler {
 
     /// Loads an existing Fuchsia account and attaches it to this handler.  Moves
     /// the handler from the `Uninitialized` to `Initialized` state.
-    async fn load_account(&self, id: LocalAccountId) -> Result<(), ApiError> {
-        self.init_account(Account::load, id).await.map_err(|err| {
+    async fn load_account(&self) -> Result<(), ApiError> {
+        self.init_account(Account::load).await.map_err(|err| {
             warn!("Failed loading Fuchsia account: {:?}", err);
             err.into()
         })
@@ -275,15 +266,13 @@ impl AccountHandler {
             warn!("Could not acquire exclusive access to account");
             ApiError::Internal
         })?;
-
-        let account_id = account.id().clone();
         match account.remove() {
             Ok(()) => {
-                info!("Deleted Fuchsia account {:?}", account_id);
+                info!("Deleted Fuchsia account");
                 Ok(())
             }
             Err((_account, err)) => {
-                warn!("Could not remove account {:?}: {:?}", account_id, err);
+                warn!("Could not remove account: {:?}", err);
                 Err(err.into())
             }
         }
@@ -381,9 +370,6 @@ mod tests {
     const FORCE_REMOVE_ON: bool = true;
     const FORCE_REMOVE_OFF: bool = false;
 
-    // Will not match a randomly generated account id with high probability.
-    const WRONG_ACCOUNT_ID: u64 = 111111;
-
     const TEST_AUTH_MECHANISM_ID: &str = "<AUTH MECHANISM ID>";
 
     /// An enum expressing unexpected errors that may occur during a test.
@@ -412,7 +398,8 @@ mod tests {
         context: AccountHandlerContextProxy,
         inspector: Arc<Inspector>,
     ) -> (AccountHandlerControlProxy, impl Future<Output = ()>) {
-        let test_object = AccountHandler::new(context, lifetime, &inspector);
+        let test_object =
+            AccountHandler::new(context, TEST_ACCOUNT_ID.clone().into(), lifetime, &inspector);
         let (proxy, request_stream) = create_proxy_and_stream::<AccountHandlerControlMarker>()
             .expect("Failed to create proxy and stream");
 
@@ -477,11 +464,8 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| {
                 async move {
-                    proxy.create_account(TEST_ACCOUNT_ID.clone().into(), None).await??;
-                    assert_eq!(
-                        proxy.create_account(TEST_ACCOUNT_ID.clone().into(), None).await?,
-                        Err(ApiError::Internal)
-                    );
+                    proxy.create_account(None).await??;
+                    assert_eq!(proxy.create_account(None).await?, Err(ApiError::Internal));
                     Ok(())
                 }
             },
@@ -497,9 +481,7 @@ mod tests {
             Arc::clone(&inspector),
             |account_handler_proxy| {
                 async move {
-                    account_handler_proxy
-                        .create_account(TEST_ACCOUNT_ID.clone().into(), None)
-                        .await??;
+                    account_handler_proxy.create_account(None).await??;
 
                     assert_inspect_tree!(inspector, root: {
                         account_handler: contains {
@@ -542,7 +524,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| {
                 async move {
-                    proxy.create_account(TEST_ACCOUNT_ID.clone().into(), None).await??;
+                    proxy.create_account(None).await??;
                     Ok(())
                 }
             },
@@ -552,7 +534,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| {
                 async move {
-                    proxy.load_account(TEST_ACCOUNT_ID.clone().into()).await??;
+                    proxy.load_account().await??;
                     Ok(())
                 }
             },
@@ -567,7 +549,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| {
                 async move {
-                    proxy.create_account(TEST_ACCOUNT_ID.clone().into(), None).await??;
+                    proxy.create_account(None).await??;
 
                     // Different given different salts
                     let mut salt_1 = [0u8; 32];
@@ -593,18 +575,21 @@ mod tests {
                 // to test
                 assert_inspect_tree!(inspector, root: {
                     account_handler: {
+                        local_account_id: TEST_ACCOUNT_ID_UINT,
                         lifecycle: "uninitialized",
                     }
                 });
                 proxy.prepare_for_account_transfer().await??;
                 assert_inspect_tree!(inspector, root: {
                     account_handler: {
+                        local_account_id: TEST_ACCOUNT_ID_UINT,
                         lifecycle: "pendingTransfer",
                     }
                 });
                 proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
                 assert_inspect_tree!(inspector, root: {
                     account_handler: {
+                        local_account_id: TEST_ACCOUNT_ID_UINT,
                         lifecycle: "transferred",
                     }
                 });
@@ -643,7 +628,7 @@ mod tests {
         // Handler in `Initialized` state
         request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
             async move {
-                proxy.create_account(TEST_ACCOUNT_ID.clone().into(), None).await??;
+                proxy.create_account(None).await??;
                 assert_eq!(
                     proxy.prepare_for_account_transfer().await?,
                     Err(ApiError::FailedPrecondition)
@@ -682,7 +667,7 @@ mod tests {
         // Handler in `Initialized` state
         request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
             async move {
-                proxy.create_account(TEST_ACCOUNT_ID.clone().into(), None).await??;
+                proxy.create_account(None).await??;
                 assert_eq!(
                     proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
                     Err(ApiError::FailedPrecondition)
@@ -699,7 +684,7 @@ mod tests {
                 proxy.prepare_for_account_transfer().await??;
                 proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
                 assert_eq!(
-                    proxy.finalize_account_transfer(TEST_ACCOUNT_ID.clone().into()).await?,
+                    proxy.finalize_account_transfer().await?,
                     Err(ApiError::UnsupportedOperation)
                 );
                 Ok(())
@@ -711,8 +696,7 @@ mod tests {
     fn test_load_ephemeral_account_fails() {
         request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
             async move {
-                let expected_id = TEST_ACCOUNT_ID.clone();
-                assert_eq!(proxy.load_account(expected_id.into()).await?, Err(ApiError::Internal));
+                assert_eq!(proxy.load_account().await?, Err(ApiError::Internal));
                 Ok(())
             }
         });
@@ -726,16 +710,17 @@ mod tests {
             async move {
                 assert_inspect_tree!(inspector, root: {
                     account_handler: {
+                        local_account_id: TEST_ACCOUNT_ID_UINT,
                         lifecycle: "uninitialized",
                     }
                 });
 
-                proxy.create_account(TEST_ACCOUNT_ID.clone().into(), None).await??;
+                proxy.create_account(None).await??;
                 assert_inspect_tree!(inspector, root: {
                     account_handler: {
+                        local_account_id: TEST_ACCOUNT_ID_UINT,
                         lifecycle: "initialized",
                         account: {
-                            local_account_id: TEST_ACCOUNT_ID_UINT,
                             open_client_channels: 0u64,
                         },
                         default_persona: {
@@ -759,6 +744,7 @@ mod tests {
 
                 assert_inspect_tree!(inspector, root: {
                     account_handler: {
+                        local_account_id: TEST_ACCOUNT_ID_UINT,
                         lifecycle: "finished",
                     }
                 });
@@ -802,7 +788,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| {
                 async move {
-                    proxy.create_account(TEST_ACCOUNT_ID.clone().into(), None).await??;
+                    proxy.create_account(None).await??;
 
                     // Keep an open channel to an account.
                     let (account_client_end, account_server_end) = create_endpoints().unwrap();
@@ -836,10 +822,7 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| {
                 async move {
-                    assert_eq!(
-                        proxy.load_account(WRONG_ACCOUNT_ID).await?,
-                        Err(ApiError::NotFound)
-                    );
+                    assert_eq!(proxy.load_account().await?, Err(ApiError::NotFound));
                     Ok(())
                 }
             },
@@ -851,7 +834,7 @@ mod tests {
         request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
             async move {
                 assert_eq!(
-                    proxy.create_account(WRONG_ACCOUNT_ID, Some(TEST_AUTH_MECHANISM_ID)).await?,
+                    proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await?,
                     Err(ApiError::InvalidRequest)
                 );
                 Ok(())
@@ -868,9 +851,7 @@ mod tests {
             |proxy| {
                 async move {
                     assert_eq!(
-                        proxy
-                            .create_account(WRONG_ACCOUNT_ID, Some(TEST_AUTH_MECHANISM_ID))
-                            .await?,
+                        proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await?,
                         Err(ApiError::UnsupportedOperation)
                     );
                     Ok(())

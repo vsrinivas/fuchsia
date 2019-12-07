@@ -145,6 +145,22 @@ impl LocalAccountId {
     pub fn to_canonical_string(&self) -> String {
         self.inner.to_string()
     }
+
+    /// Inverse of `to_canonical_string`. Returns Some(id) if &id.to_canonical_string() == s.
+    pub fn from_canonical_str(s: &str) -> Option<Self> {
+        match s.parse::<u64>() {
+            Ok(id) => {
+                let ret = Self::new(id);
+                // Double check s is the true canonical representation
+                if s == &ret.to_canonical_string() {
+                    Some(ret)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        }
+    }
 }
 
 impl LocalPersonaId {
@@ -201,5 +217,33 @@ mod tests {
     fn test_to_primitive() {
         let value = LocalAccountId::new(333);
         assert_eq!(u64::from(value), 333u64);
+    }
+
+    #[test]
+    fn test_to_canonical_string() {
+        assert_eq!(&LocalAccountId::new(0).to_canonical_string(), "0");
+        assert_eq!(&LocalAccountId::new(333).to_canonical_string(), "333");
+        assert_eq!(
+            &LocalAccountId::new(18446744073709551615).to_canonical_string(),
+            "18446744073709551615" // max u64
+        );
+    }
+
+    #[test]
+    fn test_from_canonical_str() {
+        assert_eq!(LocalAccountId::from_canonical_str("0"), Some(LocalAccountId::from(0)));
+        assert_eq!(LocalAccountId::from_canonical_str("333"), Some(LocalAccountId::from(333)));
+        assert_eq!(
+            LocalAccountId::from_canonical_str("18446744073709551615"), // max u64
+            Some(LocalAccountId::from(18446744073709551615))
+        );
+
+        assert_eq!(LocalAccountId::from_canonical_str("-1"), None);
+        assert_eq!(LocalAccountId::from_canonical_str("18446744073709551616"), None); // max u64 + 1
+        assert_eq!(LocalAccountId::from_canonical_str("0333"), None);
+        assert_eq!(LocalAccountId::from_canonical_str(" 333"), None);
+        assert_eq!(LocalAccountId::from_canonical_str(" "), None);
+        assert_eq!(LocalAccountId::from_canonical_str(""), None);
+        assert_eq!(LocalAccountId::from_canonical_str("333 "), None);
     }
 }
