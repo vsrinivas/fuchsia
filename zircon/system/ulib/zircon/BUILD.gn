@@ -95,6 +95,7 @@ if (current_toolchain == default_toolchain) {
       "zx_clock_get_monotonic.cc",
       "zx_cprng_draw.cc",
       "zx_deadline_after.cc",
+      "zx_exception_get_string.cc",
       "zx_status_get_string.cc",
       "zx_system_get_dcache_line_size.cc",
       "zx_system_get_features.cc",
@@ -174,6 +175,12 @@ if (current_toolchain == default_toolchain) {
           sdk = {
             include_dir = rebase_path("include", root_build_dir)
             headers = [ "zircon/status.h" ]
+          }
+        },
+        {
+          sdk = {
+            include_dir = rebase_path("include", root_build_dir)
+            headers = [ "zircon/exception.h" ]
           }
         },
         {

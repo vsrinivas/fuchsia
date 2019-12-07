@@ -5,6 +5,7 @@
 zx_test("exception") {
   sources = [
     "exception.cc",
+    "exception_to_string.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
