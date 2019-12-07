@@ -4,6 +4,9 @@
 
 #include "src/developer/exception_broker/limbo_client/limbo_client.h"
 
+#include <zircon/syscalls/exception.h>
+
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 
 namespace fuchsia {
@@ -23,6 +26,34 @@ zx_status_t LimboClient::Init() {
     return status;
 
   active_ = active;
+
+  return ZX_OK;
+}
+
+zx_status_t LimboClient::ListProcesses(std::vector<ProcessDescription>* processes) {
+  if (!connection_)
+    return ZX_ERR_UNAVAILABLE;
+
+  ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+  if (zx_status_t status = connection_->WatchProcessesWaitingOnException(&result); status != ZX_OK)
+    return status;
+
+  if (result.is_err())
+    return result.err();
+
+  processes->reserve(result.response().exception_list.size());
+  for (auto& exception : result.response().exception_list) {
+    ProcessDescription description = {};
+    description.process_koid = exception.info().process_koid;
+    description.process_name = fsl::GetObjectName(exception.process().get());
+
+    description.thread_koid = exception.info().thread_koid;
+    description.thread_name = fsl::GetObjectName(exception.thread().get());
+
+    description.exception = static_cast<zx_excp_type_t>(exception.info().type);
+
+    processes->push_back(std::move(description));
+  }
 
   return ZX_OK;
 }

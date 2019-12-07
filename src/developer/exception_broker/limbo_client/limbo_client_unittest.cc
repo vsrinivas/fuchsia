@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/exception.h>
 
 #include <gtest/gtest.h>
 
@@ -23,13 +24,39 @@ class StubProcessLimbo : public ProcessLimbo {
  public:
   void set_active(bool active) { active_ = active; }
 
+  void AppendException(zx_koid_t process_koid, zx_koid_t thread_koid, zx_excp_type_t exception) {
+    exceptions_.push_back({process_koid, thread_koid, exception});
+  }
+
   // ProcessLimbo implementation.
 
   void WatchActive(WatchActiveCallback callback) override { callback(active_); }
 
   void WatchProcessesWaitingOnException(
       ProcessLimbo::WatchProcessesWaitingOnExceptionCallback callback) override {
-    FXL_NOTREACHED() << "Not needed for tests.";
+    std::vector<ProcessExceptionMetadata> exceptions;
+    exceptions.reserve(exceptions_.size());
+    for (auto [process_koid, thread_koid, exception] : exceptions_) {
+      ExceptionInfo info = {};
+      info.process_koid = process_koid;
+      info.thread_koid = thread_koid;
+      info.type = static_cast<ExceptionType>(exception);
+
+      ProcessExceptionMetadata metadata = {};
+      metadata.set_info(std::move(info));
+
+      zx::process process;
+      FXL_CHECK(zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &process) == ZX_OK);
+      metadata.set_process(std::move(process));
+
+      zx::thread thread;
+      FXL_CHECK(zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &thread) == ZX_OK);
+      metadata.set_thread(std::move(thread));
+
+      exceptions.push_back(std::move(metadata));
+    }
+
+    callback(fit::ok(std::move(exceptions)));
   }
 
   void RetrieveException(zx_koid_t process_koid,
@@ -60,6 +87,7 @@ class StubProcessLimbo : public ProcessLimbo {
  private:
   bool active_ = false;
   std::vector<std::string> filters_;
+  std::vector<std::tuple<zx_koid_t, zx_koid_t, zx_excp_type_t>> exceptions_;
 
   fidl::BindingSet<ProcessLimbo> bindings_;
 };
@@ -83,8 +111,9 @@ struct TestContext {
 
   async::Loop remote_loop;
   async::Loop local_loop;
-  sys::testing::ServiceDirectoryProvider services;
+
   StubProcessLimbo process_limbo;
+  sys::testing::ServiceDirectoryProvider services;
 };
 
 #define ASSERT_ZX_EQ(stmt, expected)                                                          \
@@ -129,6 +158,40 @@ TEST(LimboClient, Filters) {
     ASSERT_EQ(filters.size(), 2u);
     EXPECT_EQ(filters[0], "filter-1");
     EXPECT_EQ(filters[1], "filter-2");
+  }
+}
+
+TEST(LimboClient, ListProcesses) {
+  TestContext context;
+
+  LimboClient client(context.services.service_directory());
+  ASSERT_ZX_EQ(client.Init(), ZX_OK);
+
+  constexpr zx_koid_t kProcessKoid1 = 0x1;
+  constexpr zx_koid_t kProcessKoid2 = 0x2;
+  constexpr zx_koid_t kThreadKoid1 = 0x3;
+  constexpr zx_koid_t kThreadKoid2 = 0x4;
+
+  constexpr zx_excp_type_t kException1 = ZX_EXCP_UNALIGNED_ACCESS;
+  constexpr zx_excp_type_t kException2 = ZX_EXCP_SW_BREAKPOINT;
+
+  context.process_limbo.AppendException(kProcessKoid1, kThreadKoid1, kException1);
+  context.process_limbo.AppendException(kProcessKoid2, kThreadKoid2, kException2);
+
+  {
+    std::vector<LimboClient::ProcessDescription> processes;
+    ASSERT_ZX_EQ(client.ListProcesses(&processes), ZX_OK);
+
+    ASSERT_EQ(processes.size(), 2u);
+    EXPECT_EQ(processes[0].process_koid, kProcessKoid1);
+    EXPECT_EQ(processes[0].thread_koid, kThreadKoid1);
+    EXPECT_EQ(processes[0].thread_name, "process-limbo-thread");
+    EXPECT_EQ(processes[0].exception, kException1);
+
+    EXPECT_EQ(processes[1].process_koid, kProcessKoid2);
+    EXPECT_EQ(processes[1].thread_koid, kThreadKoid2);
+    EXPECT_EQ(processes[1].thread_name, "process-limbo-thread");
+    EXPECT_EQ(processes[1].exception, kException2);
   }
 }
 

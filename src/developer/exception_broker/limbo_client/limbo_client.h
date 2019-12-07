@@ -7,6 +7,7 @@
 
 #include <fuchsia/exception/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
+#include <zircon/syscalls/exception.h>
 
 namespace fuchsia {
 namespace exception {
@@ -18,6 +19,17 @@ class LimboClient {
   zx_status_t Init();
 
   bool active() const { return active_; }
+
+  struct ProcessDescription {
+    zx_koid_t process_koid;
+    zx_koid_t thread_koid;
+
+    std::string process_name;
+    std::string thread_name;
+
+    zx_excp_type_t exception;
+  };
+  zx_status_t ListProcesses(std::vector<ProcessDescription>* processes);
 
   zx_status_t GetFilters(std::vector<std::string>* filters);
   zx_status_t AppendFilters(const std::vector<std::string>& filters);
