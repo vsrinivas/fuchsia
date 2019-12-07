@@ -12,7 +12,6 @@
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/synchronization/lock.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/files/directory.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 

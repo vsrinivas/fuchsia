@@ -22,7 +22,6 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/files/directory.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {

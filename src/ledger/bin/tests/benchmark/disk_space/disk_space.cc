@@ -26,7 +26,6 @@
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/files/directory.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"

@@ -8,8 +8,6 @@
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/platform.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
 
 namespace ledger {
 namespace {
