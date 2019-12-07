@@ -10,7 +10,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -453,9 +452,9 @@ void LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
 
   // <base_path>/<serialization_version> becomes
   // <base_path>/<random temporary name>/graveyard/<serialization_version>
-  if (renameat(repository_information.content_path.root_fd(),
-               repository_information.content_path.path().c_str(), tmp_directory.root_fd(),
-               destination.c_str()) != 0) {
+  if (environment_->file_system()->Rename(repository_information.content_path,
+                                          DetachedPath(tmp_directory.root_fd(), destination)) !=
+      0) {
     FXL_LOG(ERROR) << "Unable to move repository local storage to " << destination
                    << ". Error: " << strerror(errno);
     return;

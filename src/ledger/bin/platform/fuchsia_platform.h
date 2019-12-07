@@ -35,6 +35,7 @@ class FuchsiaFileSystem : public FileSystem {
   bool GetDirectoryContents(DetachedPath path, std::vector<std::string>* dir_contents) override;
   bool DeletePath(DetachedPath path) override;
   bool DeletePathRecursively(DetachedPath path) override;
+  bool Rename(DetachedPath origin, DetachedPath destination) override;
 };
 
 class FuchsiaPlatform : public Platform {

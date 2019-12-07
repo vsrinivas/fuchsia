@@ -72,6 +72,9 @@ class FileSystem {
   // Deletes the file or directory at the given |path|. If the |path| refers to a directory, all its
   // contents are recursively deleted. Returns true on success or false otherwise.
   virtual bool DeletePathRecursively(DetachedPath path) = 0;
+
+  // Renames the |origin| path to |destination|. Returns true on success or false otherwise.
+  virtual bool Rename(DetachedPath origin, DetachedPath destination) = 0;
 };
 
 // Provides all platform specific operations.

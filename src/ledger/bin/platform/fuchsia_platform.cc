@@ -5,6 +5,8 @@
 
 #include "src/ledger/bin/platform/fuchsia_platform.h"
 
+#include <stdio.h>
+
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -106,6 +108,11 @@ bool FuchsiaFileSystem::DeletePath(DetachedPath path) {
 
 bool FuchsiaFileSystem::DeletePathRecursively(DetachedPath path) {
   return files::DeletePathAt(path.root_fd(), path.path(), /*recursive*/ true);
+}
+
+bool FuchsiaFileSystem::Rename(DetachedPath origin, DetachedPath destination) {
+  return renameat(origin.root_fd(), origin.path().c_str(), destination.root_fd(),
+                  destination.path().c_str());
 }
 
 std::unique_ptr<Platform> MakePlatform() { return std::make_unique<FuchsiaPlatform>(); }

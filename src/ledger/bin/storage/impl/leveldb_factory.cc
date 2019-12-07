@@ -331,7 +331,7 @@ Status LevelDbFactory::IOLevelDbFactory::CreateDbThroughStagingPathOnIOThread(
   auto result = std::make_unique<LevelDb>(environment_->file_system(), environment_->dispatcher(),
                                           tmp_destination);
   RETURN_ON_ERROR(result->Init());
-  // If the parent directory doesn't exist, renameat will fail.
+  // If the parent directory doesn't exist, renaming will fail.
   // Note that |cached_db_path_| will also be created throught the staging path
   // and thus, this code path will be reached. Its parent directory is lazily
   // created when result->Init() (see code above) is called:
@@ -341,11 +341,10 @@ Status LevelDbFactory::IOLevelDbFactory::CreateDbThroughStagingPathOnIOThread(
   FXL_DCHECK(ParentDirectoryExists(environment_->file_system(), db_path))
       << "Parent directory does not exit for path: " << db_path.path();
   // Move it to the final destination.
-  if (renameat(tmp_destination.root_fd(), tmp_destination.path().c_str(), db_path.root_fd(),
-               db_path.path().c_str()) != 0) {
+  if (environment_->file_system()->Rename(tmp_destination, db_path) != 0) {
     FXL_LOG(ERROR) << "Unable to move LevelDb from staging path to final "
                       "destination: "
-                   << db_path.path() << ". Error: " << strerror(errno);
+                   << db_path.path() << ".";
     return Status::IO_ERROR;
   }
   *db = std::move(result);
@@ -370,8 +369,7 @@ LevelDbFactory::IOLevelDbFactory::ReturnPrecachedDbOnIOThread(
   }
 
   // Move the cached db to the final destination.
-  if (renameat(cached_db_path_.root_fd(), cached_db_path_.path().c_str(), db_path.root_fd(),
-               db_path.path().c_str()) != 0) {
+  if (environment_->file_system()->Rename(cached_db_path_, db_path) != 0) {
     FXL_LOG(ERROR) << "Unable to move LevelDb from: " << cached_db_path_.path()
                    << " to final destination: " << db_path.path() << ". Error: " << strerror(errno);
     // Moving to the final destination failed, but the cached db was created
