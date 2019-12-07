@@ -7,11 +7,10 @@ zx_executable("lsblk") {
     "main.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
-    "$zx/system/fidl/fuchsia-hardware-skipblock:c",
+    "$zx/system/fidl/fuchsia-hardware-block:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-block-partition:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",

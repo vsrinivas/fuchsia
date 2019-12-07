@@ -4,11 +4,10 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <fuchsia/hardware/skipblock/c/fidl.h>
+#include <fuchsia/hardware/block/llcpp/fidl.h>
+#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
+#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
@@ -35,6 +34,11 @@
 
 #define DEV_BLOCK "/dev/class/block"
 #define DEV_SKIP_BLOCK "/dev/class/skip-block"
+
+namespace fuchsia_device = ::llcpp::fuchsia::device;
+namespace fuchsia_block = ::llcpp::fuchsia::hardware::block;
+namespace fuchsia_partition = ::llcpp::fuchsia::hardware::block::partition;
+namespace fuchsia_skipblock = ::llcpp::fuchsia::hardware::skipblock;
 
 static char* size_to_cstring(char* str, size_t maxlen, uint64_t size) {
   const char* unit;
@@ -63,31 +67,23 @@ typedef struct blkinfo {
   char path[128];
   char topo[1024];
   char guid[GPT_GUID_STRLEN];
-  char label[fuchsia_hardware_block_partition_NAME_LENGTH + 1];
+  char label[fuchsia_partition::NAME_LENGTH + 1];
   char sizestr[6];
 } blkinfo_t;
 
-static void populate_topo_path(const zx::unowned_channel& channel, blkinfo_t* info) {
-  zx_status_t call_status = ZX_OK;
+static void populate_topo_path(const zx::channel& channel, blkinfo_t* info) {
   size_t path_len;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
-      zx::unowned_channel(channel->get()));
-  zx_status_t status = resp.status();
-
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
-  } else {
-    path_len = resp->result.response().path.size();
-    auto r = resp->result.response();
-    memcpy(info->topo, r.path.data(), r.path.size());
-  }
-
-  if (status != ZX_OK || call_status != ZX_OK) {
+  auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(channel.borrow());
+  if (resp.status() != ZX_OK || resp->result.is_err()) {
     strcpy(info->topo, "UNKNOWN");
     return;
   }
-  info->topo[path_len] = 0;
-  return;
+
+  path_len = resp->result.response().path.size();
+  auto r = resp->result.response();
+  memcpy(info->topo, r.path.data(), r.path.size());
+
+  info->topo[path_len] = '\0';
 }
 
 static int cmd_list_blk(void) {
@@ -117,32 +113,30 @@ static int cmd_list_blk(void) {
       continue;
     }
     fzl::FdioCaller caller(std::move(fd));
-    zx::unowned_channel channel(caller.borrow_channel());
 
-    populate_topo_path(channel, &info);
+    populate_topo_path(*caller.channel(), &info);
 
-    fuchsia_hardware_block_BlockInfo block_info;
-    zx_status_t status;
-    zx_status_t io_status =
-        fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &block_info);
-    if (io_status == ZX_OK && status == ZX_OK) {
+    fuchsia_block::BlockInfo block_info;
+    auto info_resp = fuchsia_block::Block::Call::GetInfo(caller.channel());
+    if (info_resp.ok() && info_resp->status == ZX_OK && info_resp->info) {
+      block_info = *info_resp->info;
       size_to_cstring(info.sizestr, sizeof(info.sizestr),
-                      block_info.block_size * block_info.block_count);
+                      info_resp->info->block_size * info_resp->info->block_count);
     }
-    fuchsia_hardware_block_partition_GUID guid;
 
-    io_status =
-        fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel->get(), &status, &guid);
-    if (io_status == ZX_OK && status == ZX_OK) {
-      uint8_to_guid_string(info.guid, guid.value);
+    auto guid_resp = fuchsia_partition::Partition::Call::GetTypeGuid(caller.channel());
+    if (guid_resp.ok() && guid_resp->status == ZX_OK && guid_resp->guid) {
+      uint8_to_guid_string(info.guid, guid_resp->guid->value.data());
       type = gpt_guid_to_type(info.guid);
     }
 
-    size_t actual;
-    io_status = fuchsia_hardware_block_partition_PartitionGetName(
-        channel->get(), &status, info.label, sizeof(info.label), &actual);
-    if (io_status == ZX_OK && status == ZX_OK) {
-      info.label[actual] = '\0';
+    auto name_resp = fuchsia_partition::Partition::Call::GetName(caller.channel());
+    if (name_resp.ok() && name_resp->status == ZX_OK) {
+      size_t truncated_name_len = name_resp->name.size() <= sizeof(info.label) - 1
+                                      ? name_resp->name.size()
+                                      : sizeof(info.label) - 1;
+      strncpy(info.label, name_resp->name.begin(), truncated_name_len);
+      info.label[truncated_name_len] = '\0';
     } else {
       info.label[0] = '\0';
     }
@@ -183,16 +177,15 @@ static int cmd_list_skip_blk(void) {
       continue;
     }
     fzl::FdioCaller caller(std::move(fd));
-    zx::unowned_channel channel(caller.borrow_channel());
-    populate_topo_path(channel, &info);
 
-    zx_status_t status;
-    fuchsia_hardware_skipblock_PartitionInfo partition_info;
-    fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(channel->get(), &status, &partition_info);
-    if (status == ZX_OK) {
-      size_to_cstring(info.sizestr, sizeof(info.sizestr),
-                      partition_info.block_size_bytes * partition_info.partition_block_count);
-      uint8_to_guid_string(info.guid, partition_info.partition_guid);
+    populate_topo_path(*caller.channel(), &info);
+
+    auto result = fuchsia_skipblock::SkipBlock::Call::GetPartitionInfo(caller.channel());
+    if (result.ok() && result->status == ZX_OK) {
+      size_to_cstring(
+          info.sizestr, sizeof(info.sizestr),
+          result->partition_info.block_size_bytes * result->partition_info.partition_block_count);
+      uint8_to_guid_string(info.guid, result->partition_info.partition_guid.data());
       type = gpt_guid_to_type(info.guid);
     }
 
@@ -207,12 +200,14 @@ static int try_read_skip_blk(const fzl::UnownedFdioCaller& caller, off_t offset,
   // check that count and offset are aligned to block size
   uint64_t blksize;
   zx_status_t status;
-  fuchsia_hardware_skipblock_PartitionInfo info;
-  fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo(caller.borrow_channel(), &status, &info);
-  if (status != ZX_OK) {
-    return status;
+  auto result = fuchsia_skipblock::SkipBlock::Call::GetPartitionInfo(caller.channel());
+  if (result.status() != ZX_OK) {
+    return result.status();
   }
-  blksize = info.block_size_bytes;
+  if (result.value().status != ZX_OK) {
+    return result.value().status;
+  }
+  blksize = result->partition_info.block_size_bytes;
   if (count % blksize) {
     fprintf(stderr, "Bytes read must be a multiple of blksize=%" PRIu64 "\n", blksize);
     return -1;
@@ -242,14 +237,18 @@ static int try_read_skip_blk(const fzl::UnownedFdioCaller& caller, off_t offset,
   }
 
   // read the data
-  fuchsia_hardware_skipblock_ReadWriteOperation op = {
-      .vmo = dup.release(),
-      .vmo_offset = 0,
-      .block = static_cast<uint32_t>(offset / blksize),
-      .block_count = static_cast<uint32_t>(count / blksize),
-  };
-
-  fuchsia_hardware_skipblock_SkipBlockRead(caller.borrow_channel(), &op, &status);
+  auto read_result = fuchsia_skipblock::SkipBlock::Call::Read(
+      caller.channel(), fuchsia_skipblock::ReadWriteOperation{
+                            .vmo = std::move(dup),
+                            .vmo_offset = 0,
+                            .block = static_cast<uint32_t>(offset / blksize),
+                            .block_count = static_cast<uint32_t>(count / blksize),
+                        });
+  if (read_result.status() != ZX_OK) {
+    status = read_result.status();
+  } else {
+    status = read_result.value().status;
+  }
   if (status != ZX_OK) {
     fprintf(stderr, "Error %d in SkipBlockRead()\n", status);
     return status;
@@ -322,17 +321,12 @@ static int cmd_stats(const char* dev, bool clear) {
     return -1;
   }
   fzl::FdioCaller caller(std::move(fd));
-
-  fuchsia_hardware_block_BlockStats stats;
-  zx_status_t status;
-  zx_status_t io_status =
-      fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear, &status, &stats);
-  if (io_status != ZX_OK || status != ZX_OK) {
+  auto result = fuchsia_block::Block::Call::GetStats(caller.channel(), clear);
+  if (!result.ok() || result->status != ZX_OK) {
     fprintf(stderr, "Error getting stats for %s\n", dev);
     return -1;
   }
-
-  storage_metrics::BlockDeviceMetrics metrics(&stats);
+  storage_metrics::BlockDeviceMetrics metrics(result->stats);
   metrics.Dump(stdout);
   return 0;
 }
