@@ -170,8 +170,8 @@ static zx_protocol_device_t device_proto = {
     .version = DEVICE_OPS_VERSION,
     .open = device_open,
     .close = device_close,
-    .message = device_message,
     .release = device_release,
+    .message = device_message,
 };
 
 static zx_status_t driver_bind(void* context, zx_device_t* parent) {
