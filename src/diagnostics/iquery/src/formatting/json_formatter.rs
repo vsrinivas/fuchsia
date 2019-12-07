@@ -49,7 +49,7 @@ impl Formatter for JsonFormatter {
                 })
             })
             .collect::<Result<Vec<inspect_formatter::HierarchyData>, Error>>()?;
-        inspect_formatter::JsonFormatter::format(hierachies)
+        inspect_formatter::JsonFormatter::format_multiple(hierachies)
     }
 
     fn format_locations(&self, results: Vec<IqueryResult>) -> Result<String, Error> {

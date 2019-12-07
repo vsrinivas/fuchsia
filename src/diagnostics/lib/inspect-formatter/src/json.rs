@@ -20,21 +20,25 @@ use {
 pub struct JsonFormatter {}
 
 impl HierarchyFormatter for JsonFormatter {
-    fn format(hierarchies: Vec<HierarchyData>) -> Result<String, Error> {
+    fn format(hierarchy: HierarchyData) -> Result<String, Error> {
+        let mut bytes = Vec::new();
+        let mut serializer =
+            JsonSerializer::with_formatter(&mut bytes, PrettyFormatter::with_indent(b"    "));
+        json!(SerializableHierarchy { hierarchy_data: hierarchy }).serialize(&mut serializer)?;
+        Ok(from_utf8(&bytes)?.to_string())
+    }
+
+    fn format_multiple(hierarchies: Vec<HierarchyData>) -> Result<String, Error> {
         let values = hierarchies
             .into_iter()
             .map(|hierarchy_data| SerializableHierarchy { hierarchy_data })
-            .collect();
-        output(values)
+            .collect::<Vec<SerializableHierarchy>>();
+        let mut bytes = Vec::new();
+        let mut serializer =
+            JsonSerializer::with_formatter(&mut bytes, PrettyFormatter::with_indent(b"    "));
+        json!(values).serialize(&mut serializer)?;
+        Ok(from_utf8(&bytes)?.to_string())
     }
-}
-
-fn output(values: Vec<SerializableHierarchy>) -> Result<String, Error> {
-    let mut bytes = Vec::new();
-    let mut serializer =
-        JsonSerializer::with_formatter(&mut bytes, PrettyFormatter::with_indent(b"    "));
-    json!(values).serialize(&mut serializer)?;
-    Ok(from_utf8(&bytes)?.to_string())
 }
 
 // The following wrapping structs are used to implement Serialize on them given
@@ -176,7 +180,28 @@ mod tests {
     use {super::*, fuchsia_inspect::reader::ArrayFormat};
 
     #[test]
-    fn format_json() -> Result<(), Error> {
+    fn format_json() {
+        let hierarchy =
+            NodeHierarchy::new("root", vec![Property::Double("double".to_string(), 2.5)], vec![]);
+        let data = HierarchyData {
+            hierarchy,
+            file_path: "/some/path/out/objects/root.inspect".to_string(),
+            fields: vec![],
+        };
+        let result = JsonFormatter::format(data).expect("failed to format hierarchy");
+        let expected = "{
+    \"contents\": {
+        \"root\": {
+            \"double\": 2.5
+        }
+    },
+    \"path\": \"/some/path/out/objects/root.inspect\"
+}";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn format_json_multiple() -> Result<(), Error> {
         let (a, b) = get_hierarchies();
         let datas = vec![
             HierarchyData {
@@ -190,8 +215,8 @@ mod tests {
                 fields: vec!["root".to_string(), "x".to_string(), "y".to_string()],
             },
         ];
-        let result = JsonFormatter::format(datas).expect("failed to format hierarchies");
-        assert_eq!(get_expected_json(), result);
+        let result = JsonFormatter::format_multiple(datas).expect("failed to format hierarchies");
+        assert_eq!(get_expected_multi_json(), result);
         Ok(())
     }
 
@@ -240,7 +265,7 @@ mod tests {
         )
     }
 
-    fn get_expected_json() -> String {
+    fn get_expected_multi_json() -> String {
         "[
     {
         \"contents\": {

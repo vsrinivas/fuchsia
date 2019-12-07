@@ -581,7 +581,7 @@ impl ReaderServer {
                 }
             });
 
-        let formatted_json_string = JsonFormatter::format(hierarchy_datas)?;
+        let formatted_json_string = JsonFormatter::format_multiple(hierarchy_datas)?;
 
         let vmo_size: u64 = formatted_json_string.len() as u64;
 

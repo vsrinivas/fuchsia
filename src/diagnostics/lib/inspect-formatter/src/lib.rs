@@ -38,5 +38,6 @@ pub struct HierarchyData {
 /// Implementors of this trait will provide different ways of formatting an
 /// inspect hierarchy.
 pub trait HierarchyFormatter {
-    fn format(hierarchies: Vec<HierarchyData>) -> Result<String, Error>;
+    fn format(hierarchy: HierarchyData) -> Result<String, Error>;
+    fn format_multiple(hierarchies: Vec<HierarchyData>) -> Result<String, Error>;
 }
