@@ -11,7 +11,6 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/scenic/lib/scenic/forward_declarations.h"
-#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 
@@ -78,9 +77,8 @@ class TempSessionDelegate : public CommandDispatcher {
 
   virtual void SetDebugName(const std::string& debug_name) = 0;
 
-  virtual void GetFuturePresentationInfos(
-      zx::duration requested_prediction_span,
-      scheduling::FrameScheduler::GetFuturePresentationInfosCallback return_callback) = 0;
+  virtual std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationInfos(
+      zx::duration requested_prediction_span) = 0;
 
   virtual void SetOnFramePresentedCallback(OnFramePresentedCallback callback) = 0;
 

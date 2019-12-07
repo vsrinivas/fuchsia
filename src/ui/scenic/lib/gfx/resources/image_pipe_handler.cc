@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/gfx/resources/image_pipe_handler.h"
-
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 
 namespace scenic_impl {

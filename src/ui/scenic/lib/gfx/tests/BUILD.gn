@@ -9,7 +9,6 @@ group("tests") {
   testonly = true
   public_deps = [
     ":apptests",
-    ":delegating_frame_scheduler_integration_tests",
     ":pixeltests",
     ":swapchain_tests",
     ":unittests",
@@ -208,19 +207,6 @@ executable("swapchain_tests") {
   testonly = true
   sources = [
     "display_swapchain_test.cc",
-  ]
-  deps = [
-    ":testing_deps",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-  include_dirs = [ "//src/ui/lib/escher" ]
-}
-
-executable("delegating_frame_scheduler_integration_tests") {
-  output_name = "gfx_frame_scheduler_integration_tests"
-  testonly = true
-  sources = [
-    "delegating_frame_scheduler_integration_test.cc",
   ]
   deps = [
     ":testing_deps",

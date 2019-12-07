@@ -19,6 +19,9 @@ class DisplayManager {
   DisplayManager() = default;
   ~DisplayManager() = default;
 
+  using VsyncCallback =
+      fit::function<void(zx::time timestamp, const std::vector<uint64_t>& images)>;
+
   // Waits for the default display to become available then invokes the callback.
   void WaitForDefaultDisplayController(fit::closure display_available_cb);
 

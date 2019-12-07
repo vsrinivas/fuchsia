@@ -31,7 +31,6 @@
 #include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
-#include "src/ui/scenic/lib/scheduling/delegating_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
@@ -130,7 +129,7 @@ class Engine : public scheduling::FrameRenderer {
                           escher_image_factory(),
                           escher_rounded_rect_factory(),
                           release_fence_signaller(),
-                          delegating_frame_scheduler_,
+                          frame_scheduler_,
                           scene_graph(),
                           &view_linker_};
   }
@@ -195,7 +194,7 @@ class Engine : public scheduling::FrameRenderer {
 
   // TODO(SCN-1502): This is a temporary solution until we can remove frame_scheduler from
   // ResourceContext. Do not add any additional dependencies on this object/pointer.
-  std::shared_ptr<scheduling::DelegatingFrameScheduler> delegating_frame_scheduler_;
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
   SceneGraph scene_graph_;
 

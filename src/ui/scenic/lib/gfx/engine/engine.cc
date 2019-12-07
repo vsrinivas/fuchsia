@@ -45,8 +45,7 @@ Engine::Engine(sys::ComponentContext* app_context,
       rounded_rect_factory_(std::make_unique<escher::RoundedRectFactory>(escher_)),
       release_fence_signaller_(
           std::make_unique<escher::ReleaseFenceSignaller>(escher()->command_buffer_sequencer())),
-      delegating_frame_scheduler_(
-          std::make_shared<scheduling::DelegatingFrameScheduler>(frame_scheduler)),
+      frame_scheduler_(frame_scheduler),
       scene_graph_(app_context),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
@@ -64,8 +63,7 @@ Engine::Engine(sys::ComponentContext* app_context,
                                     escher()->gpu_allocator(), escher()->resource_recycler())
                               : nullptr),
       release_fence_signaller_(std::move(release_fence_signaller)),
-      delegating_frame_scheduler_(
-          std::make_shared<scheduling::DelegatingFrameScheduler>(frame_scheduler)),
+      frame_scheduler_(frame_scheduler),
       scene_graph_(app_context),
       weak_factory_(this) {
   InitializeInspectObjects();

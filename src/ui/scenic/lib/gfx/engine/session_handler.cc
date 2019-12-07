@@ -51,10 +51,9 @@ void SessionHandler::SetOnFramePresentedCallback(OnFramePresentedCallback callba
   session_->SetOnFramePresentedCallback(std::move(callback));
 }
 
-void SessionHandler::GetFuturePresentationInfos(
-    zx::duration requested_prediction_span,
-    scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback) {
-  session_->GetFuturePresentationInfos(requested_prediction_span, std::move(callback));
+std::vector<fuchsia::scenic::scheduling::PresentationInfo>
+SessionHandler::GetFuturePresentationInfos(zx::duration requested_prediction_span) {
+  return session_->GetFuturePresentationInfos(zx::duration(requested_prediction_span));
 }
 
 void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {

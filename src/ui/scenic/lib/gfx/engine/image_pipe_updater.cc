@@ -11,8 +11,8 @@ namespace scenic_impl {
 namespace gfx {
 
 ImagePipeUpdater::ImagePipeUpdater(SessionId id,
-                                   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_)
-    : session_id_(id), frame_scheduler_(std::move(frame_scheduler_)) {}
+                                   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler)
+    : session_id_(id), frame_scheduler_(std::move(frame_scheduler)) {}
 
 ImagePipeUpdater::~ImagePipeUpdater() { scheduled_image_pipe_updates_ = {}; }
 

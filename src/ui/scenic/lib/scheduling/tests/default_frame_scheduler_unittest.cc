@@ -1201,10 +1201,7 @@ TEST_F(FrameSchedulerTest, SinglePredictedPresentation_ShouldBeReasonable) {
       fake_vsync_timing_->GetLastVsyncTime() + fake_vsync_timing_->GetVsyncInterval();
 
   // Ask for a prediction for one frame into the future.
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> predicted_presents;
-  scheduler->GetFuturePresentationInfos(zx::duration(0), [&](auto future_presents) {
-    predicted_presents = std::move(future_presents);
-  });
+  auto predicted_presents = scheduler->GetFuturePresentationInfos(zx::duration(0));
 
   EXPECT_GE(predicted_presents.size(), 1u);
   EXPECT_EQ(predicted_presents[0].presentation_time(), next_vsync.get());
@@ -1236,10 +1233,7 @@ TEST_F(FrameSchedulerTest, ArbitraryPredictedPresentation_ShouldBeReasonable) {
   RunLoopUntil(vsync1);
 
   // Ask for a prediction.
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> predicted_presents;
-  scheduler->GetFuturePresentationInfos(zx::duration(0), [&](auto future_presents) {
-    predicted_presents = std::move(future_presents);
-  });
+  auto predicted_presents = scheduler->GetFuturePresentationInfos(zx::duration(0));
 
   EXPECT_GE(predicted_presents.size(), 1u);
   EXPECT_EQ(predicted_presents[0].presentation_time(), vsync2.get());
@@ -1266,10 +1260,8 @@ TEST_F(FrameSchedulerTest, MultiplePredictedPresentations_ShouldBeReasonable) {
   EXPECT_GT(fake_vsync_timing_->GetVsyncInterval(), zx::duration(0));
 
   // Ask for a prediction a few frames into the future.
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> predicted_presents;
-  scheduler->GetFuturePresentationInfos(
-      zx::duration((vsync4 - vsync0).get()),
-      [&](auto future_presents) { predicted_presents = std::move(future_presents); });
+  auto predicted_presents =
+      scheduler->GetFuturePresentationInfos(zx::duration((vsync4 - vsync0).get()));
 
   // Expect at least one frame of prediction.
   EXPECT_GE(predicted_presents.size(), 1u);
@@ -1297,10 +1289,7 @@ TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
       fake_vsync_timing_->GetLastVsyncTime() + fake_vsync_timing_->GetVsyncInterval();
 
   // Ask for an extremely large prediction duration.
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> predicted_presents;
-  scheduler->GetFuturePresentationInfos(zx::duration(INTMAX_MAX), [&](auto future_presents) {
-    predicted_presents = std::move(future_presents);
-  });
+  auto predicted_presents = scheduler->GetFuturePresentationInfos(zx::duration(INTMAX_MAX));
 
   constexpr static const uint64_t kOverlyLargeRequestCount = 100u;
 

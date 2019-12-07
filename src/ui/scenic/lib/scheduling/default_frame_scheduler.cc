@@ -185,22 +185,22 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   update_manager_.RatchetPresentCallbacks(presentation_time, frame_number_);
 
   // Create a FrameTimings instance for this frame to track the render and presentation times.
-  auto timings_rendered_callback = [weak =
-                                        weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
-    if (weak) {
-      weak->OnFrameRendered(timings);
-    } else {
-      FXL_LOG(ERROR) << "Error, cannot record render time: FrameScheduler does not exist";
-    }
-  };
-  auto timings_presented_callback = [weak =
-                                         weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
-    if (weak) {
-      weak->OnFramePresented(timings);
-    } else {
-      FXL_LOG(ERROR) << "Error, cannot record presentation time: FrameScheduler does not exist";
-    }
-  };
+  auto timings_rendered_callback =
+      [weak = weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
+        if (weak) {
+          weak->OnFrameRendered(timings);
+        } else {
+          FXL_LOG(ERROR) << "Error, cannot record render time: FrameScheduler does not exist";
+        }
+      };
+  auto timings_presented_callback =
+      [weak = weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
+        if (weak) {
+          weak->OnFramePresented(timings);
+        } else {
+          FXL_LOG(ERROR) << "Error, cannot record presentation time: FrameScheduler does not exist";
+        }
+      };
   auto frame_timings = std::make_unique<FrameTimings>(
       frame_number_, presentation_time, wakeup_time_, frame_render_start_time,
       std::move(timings_rendered_callback), std::move(timings_presented_callback));
@@ -258,9 +258,8 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
   RequestFrame();
 }
 
-void DefaultFrameScheduler::GetFuturePresentationInfos(
-    zx::duration requested_prediction_span,
-    FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) {
+std::vector<fuchsia::scenic::scheduling::PresentationInfo>
+DefaultFrameScheduler::GetFuturePresentationInfos(zx::duration requested_prediction_span) {
   std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
 
   PredictionRequest request;
@@ -309,13 +308,12 @@ void DefaultFrameScheduler::GetFuturePresentationInfos(
   }
 
   ZX_DEBUG_ASSERT(infos.size() >= 1);
-  presentation_infos_callback(std::move(infos));
+  return infos;
 }
 
 void DefaultFrameScheduler::SetOnFramePresentedCallbackForSession(
-    SessionId session, OnFramePresentedCallback frame_presented_callback) {
-  update_manager_.SetOnFramePresentedCallbackForSession(session,
-                                                        std::move(frame_presented_callback));
+    SessionId session, OnFramePresentedCallback callback) {
+  update_manager_.SetOnFramePresentedCallbackForSession(session, std::move(callback));
 }
 
 DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult DefaultFrameScheduler::ApplyUpdates(
@@ -417,7 +415,7 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_
   std::for_each(
       session_updaters_.begin(), session_updaters_.end(),
       [this, &sessions_to_update, &update_results, target_presentation_time, latched_time,
-       frame_number](fxl::WeakPtr<SessionUpdater> updater) {
+          frame_number](fxl::WeakPtr<SessionUpdater> updater) {
         auto session_results = updater->UpdateSessions(sessions_to_update, target_presentation_time,
                                                        latched_time, frame_number);
 
@@ -514,9 +512,9 @@ void DefaultFrameScheduler::UpdateManager::SignalPresentCallbacks(
 }
 
 void DefaultFrameScheduler::UpdateManager::SetOnFramePresentedCallbackForSession(
-    SessionId session, OnFramePresentedCallback frame_presented_callback) {
+    SessionId session, OnFramePresentedCallback callback) {
   FXL_DCHECK(present2_callback_map_.find(session) == present2_callback_map_.end());
-  present2_callback_map_[session] = std::move(frame_presented_callback);
+  present2_callback_map_[session] = std::move(callback);
 }
 
 }  // namespace scheduling
