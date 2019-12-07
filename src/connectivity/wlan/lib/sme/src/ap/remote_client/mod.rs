@@ -17,7 +17,7 @@ use {
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::error,
-    wlan_common::mac::Aid,
+    wlan_common::{ie::SupportedRate, mac::Aid},
     wlan_rsn::key::exchange::Key,
 };
 
@@ -58,14 +58,21 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         aid_map: &mut aid::Map,
-        rates: &[u8],
+        ap_rates: &[SupportedRate],
+        client_rates: &[u8],
         rsn_cfg: &Option<RsnCfg>,
         s_rsne: Option<Vec<u8>>,
     ) {
         // Safe: |state| is never None and always replaced with Some(..).
-        self.state = Some(
-            self.state.take().unwrap().handle_assoc_ind(self, ctx, aid_map, rates, rsn_cfg, s_rsne),
-        );
+        self.state = Some(self.state.take().unwrap().handle_assoc_ind(
+            self,
+            ctx,
+            aid_map,
+            ap_rates,
+            client_rates,
+            rsn_cfg,
+            s_rsne,
+        ));
     }
 
     pub fn handle_disassoc_ind(&mut self, ctx: &mut Context, aid_map: &mut aid::Map) {
@@ -234,7 +241,14 @@ mod tests {
         let (mut ctx, _, _) = make_env();
         r_sta.handle_auth_ind(&mut ctx, fidl_mlme::AuthenticationTypes::OpenSystem);
         let mut aid_map = aid::Map::default();
-        r_sta.handle_assoc_ind(&mut ctx, &mut aid_map, &[][..], &None, None);
+        r_sta.handle_assoc_ind(
+            &mut ctx,
+            &mut aid_map,
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
+            &None,
+            None,
+        );
         assert_eq!(r_sta.authenticated(), true);
     }
 
@@ -244,7 +258,14 @@ mod tests {
         let (mut ctx, _, _) = make_env();
         r_sta.handle_auth_ind(&mut ctx, fidl_mlme::AuthenticationTypes::OpenSystem);
         let mut aid_map = aid::Map::default();
-        r_sta.handle_assoc_ind(&mut ctx, &mut aid_map, &[][..], &None, None);
+        r_sta.handle_assoc_ind(
+            &mut ctx,
+            &mut aid_map,
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
+            &None,
+            None,
+        );
         assert_eq!(r_sta.aid(), Some(1));
     }
 
@@ -255,7 +276,14 @@ mod tests {
         r_sta.handle_auth_ind(&mut ctx, fidl_mlme::AuthenticationTypes::OpenSystem);
         assert_eq!(r_sta.authenticated(), true);
         let mut aid_map = aid::Map::default();
-        r_sta.handle_assoc_ind(&mut ctx, &mut aid_map, &[][..], &None, None);
+        r_sta.handle_assoc_ind(
+            &mut ctx,
+            &mut aid_map,
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
+            &None,
+            None,
+        );
         assert_variant!(r_sta.aid(), Some(_));
         r_sta.handle_disassoc_ind(&mut ctx, &mut aid_map);
         assert_eq!(r_sta.aid(), None);

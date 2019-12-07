@@ -105,6 +105,7 @@ pub(crate) fn build_join_capabilities(
     let client_rates = band_info.rates.iter().map(|&r| SupportedRate(r)).collect::<Vec<_>>();
     let ap_rates = bss_rates.iter().map(|&r| SupportedRate(r)).collect::<Vec<_>>();
     let rates = intersect_rates(ApRates(&ap_rates), ClientRates(&client_rates))
+        .map_err(|error| format_err!("could not intersect rates: {:?}", error))
         .context(format!("deriving rates: {:?} + {:?}", band_info.rates, bss_rates))?;
 
     // Step 2.3 - Override HT Capabilities and VHT Capabilities

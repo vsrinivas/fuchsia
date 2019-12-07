@@ -4,12 +4,32 @@
 
 use {
     crate::ie::SupportedRate,
-    failure::{format_err, Error},
     std::collections::HashSet,
+    zerocopy::LayoutVerified,
 };
 
 pub struct ApRates<'a>(pub &'a [SupportedRate]);
 pub struct ClientRates<'a>(pub &'a [SupportedRate]);
+
+impl <'a> From<&'a [u8]> for ApRates<'a> {
+    fn from(rates: &'a [u8]) -> Self {
+        // This is always safe, as SupportedRate is a newtype of u8.
+        Self(LayoutVerified::new_slice(rates).unwrap().into_slice())
+    }
+}
+
+impl <'a> From<&'a [u8]> for ClientRates<'a> {
+    fn from(rates: &'a [u8]) -> Self {
+        // This is always safe, as SupportedRate is a newtype of u8.
+        Self(LayoutVerified::new_slice(rates).unwrap().into_slice())
+    }
+}
+
+#[derive(Eq, PartialEq, Debug)]
+pub enum IntersectRatesError {
+    BasicRatesMismatch,
+    NoApRatesSupported,
+}
 
 /// Returns the rates specified by the AP that are also supported by the client, with basic bits
 /// following their values in the AP.
@@ -18,18 +38,18 @@ pub struct ClientRates<'a>(pub &'a [SupportedRate]);
 pub fn intersect_rates(
     ap_rates: ApRates,
     client_rates: ClientRates,
-) -> Result<Vec<SupportedRate>, Error> {
+) -> Result<Vec<SupportedRate>, IntersectRatesError> {
     let mut rates = ap_rates.0.to_vec();
     let client_rates = client_rates.0.iter().map(|r| r.rate()).collect::<HashSet<_>>();
     // The client MUST support ALL basic rates specified by the AP.
     if rates.iter().any(|ra| ra.basic() && !client_rates.contains(&ra.rate())) {
-        return Err(format_err!("At least one basic rate not supported."));
+        return Err(IntersectRatesError::BasicRatesMismatch);
     }
 
     // Remove rates that are not supported by the client.
     rates.retain(|ra| client_rates.contains(&ra.rate()));
     if rates.is_empty() {
-        Err(format_err!("Client does not support any AP rates."))
+        Err(IntersectRatesError::NoApRatesSupported)
     } else {
         Ok(rates)
     }
@@ -52,7 +72,7 @@ mod tests {
             ClientRates(&[SupportedRate(111)][..]),
         )
         .unwrap_err();
-        assert!(format!("{}", error).contains("At least one basic rate not supported."));
+        assert_eq!(error, IntersectRatesError::BasicRatesMismatch);
     }
 
     #[test]
@@ -83,7 +103,7 @@ mod tests {
     fn no_rates_are_supported() {
         let error =
             intersect_rates(ApRates(&[SupportedRate(120)][..]), ClientRates(&[][..])).unwrap_err();
-        assert!(format!("{}", error).contains("Client does not support any AP rates."));
+        assert_eq!(error, IntersectRatesError::NoApRatesSupported);
     }
 
     #[test]

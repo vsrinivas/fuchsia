@@ -159,7 +159,9 @@ pub fn fake_device_info(addr: MacAddr) -> DeviceInfo {
             fake_2ghz_band_capabilities_vht(),
             fake_band_capabilities_5ghz_vht(ChanWidthSet::TWENTY_FORTY),
         ],
-        driver_features: vec![],
+        driver_features: vec![
+            fidl_common::DriverFeature::TempSoftmac,
+        ],
     }
 }
 

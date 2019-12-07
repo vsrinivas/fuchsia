@@ -11,12 +11,12 @@ use {
         timer::EventId,
     },
     failure::{bail, ensure, format_err},
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon::{self as zx, DurationNum},
     log::error,
     std::sync::{Arc, Mutex},
     wlan_common::{
-        ie::rsn::rsne,
+        ie::{intersect, rsn::rsne, SupportedRate},
         mac::{Aid, MacAddr},
     },
     wlan_rsn::{
@@ -27,6 +27,7 @@ use {
         NegotiatedProtection, ProtectionInfo,
     },
     wlan_statemachine::*,
+    zerocopy::AsBytes,
 };
 
 // This is not specified by 802.11, but we need some way of kicking out clients that authenticate
@@ -109,6 +110,7 @@ pub struct Authenticated {
 struct AssociationError {
     error: failure::Error,
     result_code: fidl_mlme::AssociateResultCodes,
+    reason_code: fidl_mlme::ReasonCode,
 }
 
 /// Contains information from a successful association.
@@ -133,7 +135,8 @@ impl Authenticated {
         r_sta: &mut RemoteClient,
         ctx: &mut Context,
         aid_map: &mut aid::Map,
-        rates: &[u8],
+        ap_rates: &[SupportedRate],
+        client_rates: &[u8],
         rsn_cfg: &Option<RsnCfg>,
         s_rsne: Option<Vec<u8>>,
     ) -> Result<Association, AssociationError> {
@@ -148,6 +151,7 @@ impl Authenticated {
                 .map_err(|error| AssociationError {
                     error,
                     result_code: fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
+                    reason_code: fidl_mlme::ReasonCode::Ieee8021XAuthFailed,
                 })?;
 
                 Some(RsnaLinkState::new(authenticator))
@@ -157,6 +161,7 @@ impl Authenticated {
                 return Err(AssociationError {
                     error: format_err!("unexpected RSN element: {:?}", s_rsne),
                     result_code: fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
+                    reason_code: fidl_mlme::ReasonCode::ReasonInvalidElement,
                 });
             }
         };
@@ -164,10 +169,43 @@ impl Authenticated {
         let aid = aid_map.assign_aid().map_err(|error| AssociationError {
             error,
             result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+            reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
         })?;
 
-        // TODO(37891): Intersect rates.
-        let rates = rates.to_vec();
+        let rates =
+            if ctx.device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac) {
+                // The IEEE 802.11 standard doesn't really specify what happens if the client rates
+                // mismatch the AP rates at this point: the client should have already determined
+                // the appropriate rates via the beacon or probe response frames. However, just to
+                // be safe, we intersect these rates here.
+                intersect::intersect_rates(
+                    intersect::ApRates(ap_rates),
+                    client_rates.into(),
+                )
+                .map_err(|error| AssociationError {
+                    error: format_err!(
+                        "could not intersect rates ({:?} + {:?}): {:?}",
+                        ap_rates,
+                        client_rates,
+                        error
+                    ),
+                    result_code: match error {
+                        intersect::IntersectRatesError::BasicRatesMismatch => {
+                            fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch
+                        }
+                        intersect::IntersectRatesError::NoApRatesSupported => {
+                            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
+                        }
+                    },
+                    reason_code: fidl_mlme::ReasonCode::ReasonInvalidElement,
+                })?
+                .as_bytes()
+                .to_vec()
+            } else {
+                // If we are using a FullMAC driver, don't do the intersection and just pass the
+                // client rates back: they won't be used meaningfully anyway.
+                client_rates.to_vec()
+            };
 
         Ok(Association { aid, rates, rsna_link_state })
     }
@@ -518,13 +556,22 @@ impl States {
         r_sta: &mut RemoteClient,
         ctx: &mut Context,
         aid_map: &mut aid::Map,
-        rates: &[u8],
+        ap_rates: &[SupportedRate],
+        client_rates: &[u8],
         rsn_cfg: &Option<RsnCfg>,
         s_rsne: Option<Vec<u8>>,
     ) -> States {
         match self {
             States::Authenticated(state) => {
-                match state.handle_assoc_ind(r_sta, ctx, aid_map, rates, rsn_cfg, s_rsne) {
+                match state.handle_assoc_ind(
+                    r_sta,
+                    ctx,
+                    aid_map,
+                    ap_rates,
+                    client_rates,
+                    rsn_cfg,
+                    s_rsne,
+                ) {
                     Ok(Association { aid, rates, mut rsna_link_state }) => {
                         r_sta.send_associate_resp(
                             ctx,
@@ -550,18 +597,10 @@ impl States {
 
                         state.transition_to(Associated { aid, rsna_link_state }).into()
                     }
-                    Err(AssociationError { error, result_code }) => {
+                    Err(AssociationError { error, result_code, reason_code }) => {
                         error!("client {:02X?} MLME-ASSOCIATE.indication: {}", r_sta.addr, error);
                         r_sta.send_associate_resp(ctx, result_code, 0, vec![]);
-                        r_sta.send_deauthenticate_req(
-                            ctx,
-                            match result_code {
-                                fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch => {
-                                    fidl_mlme::ReasonCode::Ieee8021XAuthFailed
-                                }
-                                _ => fidl_mlme::ReasonCode::UnspecifiedReason,
-                            },
-                        );
+                        r_sta.send_deauthenticate_req(ctx, reason_code);
                         state.transition_to(Authenticating).into()
                     }
                 }
@@ -662,7 +701,7 @@ impl States {
                 States::Associated(state) => {
                     // If the client is already associated, we can't time it out.
                     state.into()
-                },
+                }
                 _ => {
                     error!(
                         "client {:02X?} received AssociationTimeout in unexpected state; \
@@ -825,8 +864,15 @@ mod tests {
         let state = States::from(State::new(Authenticating));
 
         let mut aid_map = aid::Map::default();
-        let state =
-            state.handle_assoc_ind(&mut r_sta, &mut ctx, &mut aid_map, &[][..], &None, None);
+        let state = state.handle_assoc_ind(
+            &mut r_sta,
+            &mut ctx,
+            &mut aid_map,
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
+            &None,
+            None,
+        );
 
         let (_, Authenticating) = match state {
             States::Authenticating(state) => state.release_data(),
@@ -922,8 +968,15 @@ mod tests {
             State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
 
         let mut aid_map = aid::Map::default();
-        let state =
-            state.handle_assoc_ind(&mut r_sta, &mut ctx, &mut aid_map, &[][..], &None, None);
+        let state = state.handle_assoc_ind(
+            &mut r_sta,
+            &mut ctx,
+            &mut aid_map,
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
+            &None,
+            None,
+        );
 
         let (_, Associated { rsna_link_state, aid }) = match state {
             States::Associated(state) => state.release_data(),
@@ -937,10 +990,150 @@ mod tests {
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address,
             result_code,
+            rates,
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(rates, vec![0b11111000]);
+        });
+    }
+
+    #[test]
+    fn authenticated_goes_to_associated_differing_nonbasic_rates() {
+        let mut r_sta = make_remote_client();
+        let (mut ctx, mut mlme_stream, _) = make_env();
+
+        let state: States =
+            State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
+
+        let mut aid_map = aid::Map::default();
+        state.handle_assoc_ind(
+            &mut r_sta,
+            &mut ctx,
+            &mut aid_map,
+            &[SupportedRate(0b11111000), SupportedRate(0b01111001)][..],
+            &[0b11111000, 0b01111010][..],
+            &None,
+            None,
+        );
+
+        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
+        assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
+            rates,
+            ..
+        }) => {
+            assert_eq!(rates, vec![0b11111000]);
+        });
+    }
+
+    #[test]
+    fn authenticated_goes_to_associated_fullmac() {
+        let mut r_sta = make_remote_client();
+        let (mut ctx, mut mlme_stream, _) = make_env();
+
+        ctx.device_info.driver_features = vec![];
+
+        let state: States =
+            State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
+
+        let mut aid_map = aid::Map::default();
+        state.handle_assoc_ind(
+            &mut r_sta,
+            &mut ctx,
+            &mut aid_map,
+            &[][..],
+            &[0b11111000, 0b01111010][..],
+            &None,
+            None,
+        );
+
+        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
+        assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
+            rates,
+            ..
+        }) => {
+            assert_eq!(rates, vec![0b11111000, 0b01111010]);
+        });
+    }
+
+    #[test]
+    fn authenticated_goes_to_associated_differing_basic_rates() {
+        let mut r_sta = make_remote_client();
+        let (mut ctx, mut mlme_stream, _) = make_env();
+
+        let state: States =
+            State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
+
+        let mut aid_map = aid::Map::default();
+        state.handle_assoc_ind(
+            &mut r_sta,
+            &mut ctx,
+            &mut aid_map,
+            &[SupportedRate(0b11111001)][..],
+            &[0b11111000][..],
+            &None,
+            None,
+        );
+
+        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
+        assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
+            peer_sta_address,
+            result_code,
+            ..
+        }) => {
+            assert_eq!(peer_sta_address, CLIENT_ADDR);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch);
+        });
+
+        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
+        assert_variant!(mlme_event, MlmeRequest::Deauthenticate(fidl_mlme::DeauthenticateRequest {
+            peer_sta_address,
+            reason_code,
+            ..
+        }) => {
+            assert_eq!(peer_sta_address, CLIENT_ADDR);
+            assert_eq!(reason_code, fidl_mlme::ReasonCode::ReasonInvalidElement);
+        });
+    }
+
+    #[test]
+    fn authenticated_goes_to_associated_no_ap_rates() {
+        let mut r_sta = make_remote_client();
+        let (mut ctx, mut mlme_stream, _) = make_env();
+
+        let state: States =
+            State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
+
+        let mut aid_map = aid::Map::default();
+        state.handle_assoc_ind(
+            &mut r_sta,
+            &mut ctx,
+            &mut aid_map,
+            &[SupportedRate(0b01111000)][..],
+            &[][..],
+            &None,
+            None,
+        );
+
+        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
+        assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
+            peer_sta_address,
+            result_code,
+            ..
+        }) => {
+            assert_eq!(peer_sta_address, CLIENT_ADDR);
+            assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch);
+        });
+
+        let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
+        assert_variant!(mlme_event, MlmeRequest::Deauthenticate(fidl_mlme::DeauthenticateRequest {
+            peer_sta_address,
+            reason_code,
+            ..
+        }) => {
+            assert_eq!(peer_sta_address, CLIENT_ADDR);
+            assert_eq!(reason_code, fidl_mlme::ReasonCode::ReasonInvalidElement);
         });
     }
 
@@ -957,8 +1150,15 @@ mod tests {
             // Keep assigning AIDs until we run out of them.
         }
 
-        let state =
-            state.handle_assoc_ind(&mut r_sta, &mut ctx, &mut aid_map, &[][..], &None, None);
+        let state = state.handle_assoc_ind(
+            &mut r_sta,
+            &mut ctx,
+            &mut aid_map,
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
+            &None,
+            None,
+        );
 
         let (_, Authenticating) = match state {
             States::Authenticating(state) => state.release_data(),
@@ -1003,7 +1203,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
-            &[][..],
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
             &None,
             Some(s_rsne_vec),
         );
@@ -1030,7 +1231,7 @@ mod tests {
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
-            assert_eq!(reason_code, fidl_mlme::ReasonCode::Ieee8021XAuthFailed);
+            assert_eq!(reason_code, fidl_mlme::ReasonCode::ReasonInvalidElement);
         });
     }
 
@@ -1054,7 +1255,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
-            &[][..],
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
             &Some(rsn_cfg),
             Some(s_rsne_vec),
         );
@@ -1103,7 +1305,8 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
-            &[][..],
+            &[SupportedRate(0b11111000)][..],
+            &[0b11111000][..],
             &Some(rsn_cfg),
             Some(s_rsne_vec),
         );
@@ -1120,10 +1323,12 @@ mod tests {
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address,
             result_code,
+            rates,
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCodes::Success);
+            assert_eq!(rates, vec![0b11111000]);
         });
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");

@@ -29,7 +29,7 @@ use {
     std::collections::HashMap,
     wlan_common::{
         channel::{Channel, Phy},
-        ie::rsn::rsne::Rsne,
+        ie::{intersect, rsn::rsne::Rsne, SupportedRate},
         RadioConfig,
     },
     wlan_rsn::{self, psk},
@@ -62,6 +62,7 @@ enum State {
         ctx: Context,
         ssid: Ssid,
         rsn_cfg: Option<RsnCfg>,
+        rates: Vec<SupportedRate>,
         responder: Responder<StartResult>,
         start_timeout: EventId,
     },
@@ -79,6 +80,7 @@ pub struct RsnCfg {
 struct InfraBss {
     ssid: Ssid,
     rsn_cfg: Option<RsnCfg>,
+    rates: Vec<SupportedRate>,
     clients: HashMap<MacAddr, RemoteClient>,
     aid_map: aid::Map,
     ctx: Context,
@@ -147,20 +149,25 @@ impl ApSme {
                     Ok(rsn_cfg) => rsn_cfg
                 };
 
+                let rates = get_device_rates(&ctx.device_info, op.chan);
+
                 let req = create_start_request(
                     &op,
                     &config.ssid,
                     rsn_cfg.as_ref(),
-                    get_device_rates(&ctx.device_info, op.chan),
+                    &rates,
                 );
                 ctx.mlme_sink.send(MlmeRequest::Start(req));
                 let event = Event::Sme { event: SmeEvent::StartTimeout };
                 let start_timeout = ctx.timer.schedule(event);
 
+                let ap_rates = intersect::ApRates::from(rates).0.to_vec();
+
                 State::Starting {
                     ctx,
                     ssid: config.ssid,
                     rsn_cfg,
+                    rates: ap_rates,
                     responder,
                     start_timeout,
                 }
@@ -237,15 +244,17 @@ impl super::Station for ApSme {
                 warn!("received MlmeEvent while ApSme is idle {:?}", event);
                 state
             }
-            State::Starting { ctx, ssid, rsn_cfg, responder, start_timeout } => match event {
-                MlmeEvent::StartConf { resp } => {
-                    handle_start_conf(resp, ctx, ssid, rsn_cfg, responder)
+            State::Starting { ctx, ssid, rsn_cfg, rates, responder, start_timeout } => {
+                match event {
+                    MlmeEvent::StartConf { resp } => {
+                        handle_start_conf(resp, ctx, ssid, rsn_cfg, rates, responder)
+                    }
+                    _ => {
+                        warn!("received MlmeEvent while ApSme is starting {:?}", event);
+                        State::Starting { ctx, ssid, rsn_cfg, rates, responder, start_timeout }
+                    }
                 }
-                _ => {
-                    warn!("received MlmeEvent while ApSme is starting {:?}", event);
-                    State::Starting { ctx, ssid, rsn_cfg, responder, start_timeout }
-                }
-            },
+            }
             State::Started { ref mut bss } => {
                 match event {
                     MlmeEvent::AuthenticateInd { ind } => bss.handle_auth_ind(ind),
@@ -279,7 +288,7 @@ impl super::Station for ApSme {
     fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
         self.state = self.state.take().map(|mut state| match state {
             State::Idle { .. } => state,
-            State::Starting { start_timeout, ctx, responder, ssid, rsn_cfg } => {
+            State::Starting { start_timeout, ctx, responder, rates, ssid, rsn_cfg } => {
                 match timed_event.event {
                     Event::Sme { event } => match event {
                         SmeEvent::StartTimeout if start_timeout == timed_event.id => {
@@ -287,9 +296,11 @@ impl super::Station for ApSme {
                             responder.respond(StartResult::TimedOut);
                             State::Idle { ctx }
                         }
-                        _ => State::Starting { start_timeout, ctx, responder, ssid, rsn_cfg },
+                        _ => {
+                            State::Starting { start_timeout, ctx, responder, rates, ssid, rsn_cfg }
+                        }
                     },
-                    _ => State::Starting { start_timeout, ctx, responder, ssid, rsn_cfg },
+                    _ => State::Starting { start_timeout, ctx, responder, rates, ssid, rsn_cfg },
                 }
             }
             State::Started { ref mut bss } => {
@@ -320,6 +331,7 @@ fn handle_start_conf(
     ctx: Context,
     ssid: Ssid,
     rsn_cfg: Option<RsnCfg>,
+    rates: Vec<SupportedRate>,
     responder: Responder<StartResult>,
 ) -> State {
     match conf.result_code {
@@ -331,6 +343,8 @@ fn handle_start_conf(
                     rsn_cfg,
                     clients: HashMap::new(),
                     aid_map: aid::Map::default(),
+                    // This unwrap should always be safe, as SupportedRates is just a newtype of u8.
+                    rates,
                     ctx,
                 },
             }
@@ -422,6 +436,7 @@ impl InfraBss {
         client.handle_assoc_ind(
             &mut self.ctx,
             &mut self.aid_map,
+            &self.rates,
             &ind.rates,
             &self.rsn_cfg,
             ind.rsne,
@@ -971,7 +986,9 @@ mod tests {
                     listen_interval: 100,
                     ssid: Some(SSID.to_vec()),
                     rsne,
-                    rates: vec![1, 2, 3],
+                    rates: vec![
+                        0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c,
+                    ],
                 },
             }
         }
@@ -1045,6 +1062,8 @@ mod tests {
     }
 
     fn create_sme() -> (ApSme, MlmeStream, TimeStream) {
-        ApSme::new(fake_device_info(AP_ADDR))
+        let mut device_info = fake_device_info(AP_ADDR);
+        device_info.bands = vec![fake_2ghz_band_capabilities()];
+        ApSme::new(device_info)
     }
 }
