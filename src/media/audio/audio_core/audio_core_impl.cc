@@ -24,14 +24,12 @@ constexpr zx_vm_option_t kAudioRendererVmarFlags =
 
 }  // namespace
 
-constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
-
 AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
                              std::unique_ptr<sys::ComponentContext> component_context,
                              CommandLineOptions options)
     : threading_model_(*threading_model),
       device_settings_persistence_(threading_model),
-      device_manager_(threading_model, &route_graph_, &device_settings_persistence_, *this),
+      device_manager_(threading_model, &route_graph_, &device_settings_persistence_),
       volume_manager_(threading_model->FidlDomain().dispatcher()),
       audio_admin_(this, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
       route_graph_(ProcessConfig::instance().routing_config()),
@@ -71,9 +69,7 @@ void AudioCoreImpl::PublishServices() {
   component_context_->outgoing()->AddPublicService<fuchsia::media::AudioCore>(
       [this](fidl::InterfaceRequest<fuchsia::media::AudioCore> request) {
         bindings_.AddBinding(this, std::move(request));
-        bindings_.bindings().back()->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
       });
-  // TODO(dalesat): Load the gain/mute values.
 
   component_context_->outgoing()->AddPublicService<fuchsia::media::AudioDeviceEnumerator>(
       [this](fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request) {
@@ -107,57 +103,6 @@ void AudioCoreImpl::CreateAudioCapturer(
   } else {
     route_graph_.AddCapturer(
         AudioCapturerImpl::Create(loopback, std::move(audio_capturer_request), this));
-  }
-}
-
-void AudioCoreImpl::SetSystemGain(float gain_db) {
-  TRACE_DURATION("audio", "AudioCoreImpl::SetSystemGain");
-  // NAN is undefined and "signless". We cannot simply clamp it into range.
-  AUD_VLOG(TRACE) << " (" << gain_db << " dB)";
-  if (isnan(gain_db)) {
-    FX_LOGS(ERROR) << "Invalid system gain " << gain_db << " dB -- making no change";
-    return;
-  }
-  gain_db =
-      std::max(std::min(gain_db, kMaxSystemAudioGainDb), fuchsia::media::audio::MUTED_GAIN_DB);
-
-  if (system_gain_db_ == gain_db) {
-    // This system gain is the same as the last one we broadcast. A device might have received a
-    // SetDeviceGain call since we last set this. Only update devices that have diverged from the
-    // System Gain/Mute values.
-    device_manager_.OnSystemGain(false);
-    return;
-  }
-
-  system_gain_db_ = gain_db;
-
-  // This will be broadcast to all output devices.
-  device_manager_.OnSystemGain(true);
-  NotifyGainMuteChanged();
-}
-
-void AudioCoreImpl::SetSystemMute(bool muted) {
-  TRACE_DURATION("audio", "AudioCoreImpl::SetSystemMute");
-  AUD_VLOG(TRACE) << " (mute: " << muted << ")";
-  if (system_muted_ == muted) {
-    // A device might have received a SetDeviceMute call since we last set this. Only update devices
-    // that have diverged from the System Gain/Mute values.
-    device_manager_.OnSystemGain(false);
-    return;
-  }
-
-  system_muted_ = muted;
-
-  // This will be broadcast to all output devices.
-  device_manager_.OnSystemGain(true);
-  NotifyGainMuteChanged();
-}
-
-void AudioCoreImpl::NotifyGainMuteChanged() {
-  TRACE_DURATION("audio", "AudioCoreImpl::NotifyGainMuteChanged");
-  AUD_VLOG(TRACE) << " (" << system_gain_db_ << " dB, mute: " << system_muted_ << ")";
-  for (auto& binding : bindings_.bindings()) {
-    binding->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
   }
 }
 

@@ -34,8 +34,7 @@ class SystemGainMuteProvider;
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
   AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
-                     AudioDeviceSettingsPersistence* device_settings_persistence,
-                     const SystemGainMuteProvider& system_gain_mute);
+                     AudioDeviceSettingsPersistence* device_settings_persistence);
   ~AudioDeviceManager();
 
   ThreadingModel& threading_model() { return threading_model_; }
@@ -60,11 +59,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   // Add a new device-enumerator client. Called from service framework when a new client connects.
   void AddDeviceEnumeratorClient(
       fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request);
-
-  // SetSystemGain/Mute has been called. 'changed' tells us whether System Gain or Mute values
-  // actually changed. If not, only update devices that (because of calls to SetDeviceGain) have
-  // diverged from System settings.
-  void OnSystemGain(bool changed);
 
   // |media::audio::DeviceRegistry|
   void AddDevice(const fbl::RefPtr<AudioDevice>& device) override;
@@ -114,15 +108,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   // Re-evaluate which device is the default. Notify users, if this has changed.
   void UpdateDefaultDevice(bool input);
 
-  // Update a device gain to the "system" gain exposed by the top-level service.
-  //
-  // TODO(johngro): Remove this when we remove system gain entirely.
-  void UpdateDeviceToSystemGain(const fbl::RefPtr<AudioDevice>& device);
-
   ThreadingModel& threading_model_;
-
-  // Pointer to System gain/mute values. This pointer cannot be bad while we still exist.
-  const SystemGainMuteProvider& system_gain_mute_;
 
   RouteGraph& route_graph_;
 

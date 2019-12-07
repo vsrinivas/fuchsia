@@ -23,10 +23,8 @@
 namespace media::audio {
 
 AudioDeviceManager::AudioDeviceManager(ThreadingModel* threading_model, RouteGraph* route_graph,
-                                       AudioDeviceSettingsPersistence* device_settings_persistence,
-                                       const SystemGainMuteProvider& system_gain_mute)
+                                       AudioDeviceSettingsPersistence* device_settings_persistence)
     : threading_model_(*threading_model),
-      system_gain_mute_(system_gain_mute),
       route_graph_(*route_graph),
       device_settings_persistence_(*device_settings_persistence) {
   FX_DCHECK(route_graph);
@@ -114,10 +112,13 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
     return;
   }
 
-  // TODO(johngro): remove this when system gain is fully deprecated.
-  // For now, set each output "device" gain to the "system" gain value.
   if (device->is_output()) {
-    UpdateDeviceToSystemGain(device);
+    constexpr float kDefaultDeviceGain = -12.0;
+    constexpr uint32_t set_flags =
+        fuchsia::media::SetAudioGainFlag_GainValid | fuchsia::media::SetAudioGainFlag_MuteValid;
+    fuchsia::media::AudioGainInfo set_cmd = {kDefaultDeviceGain, 0u};
+    REP(SettingDeviceGainInfo(*device, set_cmd, set_flags));
+    device->SetGainInfo(set_cmd, set_flags);
   }
 
   // Determine whether this device's persistent settings are actually unique,
@@ -233,25 +234,6 @@ void AudioDeviceManager::OnPlugStateChanged(const fbl::RefPtr<AudioDevice>& devi
     OnDevicePlugged(device, plug_time);
   } else {
     OnDeviceUnplugged(device, plug_time);
-  }
-}
-
-// SetSystemGain or SetSystemMute has been called. 'changed' tells us whether
-// the System Gain / Mute values actually changed. If not, only update devices
-// that (because of calls to SetDeviceGain) have diverged from System settings.
-//
-// We update link gains in Device::SetGainInfo rather than here, so that we
-// catch changes to device gain coming from SetSystemGain OR SetDeviceGain.
-void AudioDeviceManager::OnSystemGain(bool changed) {
-  TRACE_DURATION("audio", "AudioDeviceManager::OnSystemGain");
-  for (auto& [_, device] : devices_) {
-    if (device->is_output() && (changed || device->system_gain_dirty)) {
-      UpdateDeviceToSystemGain(device);
-      NotifyDeviceGainChanged(*device);
-      device->system_gain_dirty = false;
-    }
-    // We intentionally route System Gain only to Output devices, not Inputs.
-    // If needed, we could revisit this in the future.
   }
 }
 
@@ -405,19 +387,6 @@ void AudioDeviceManager::UpdateDefaultDevice(bool input) {
     }
     old_id = new_id;
   }
-}
-
-void AudioDeviceManager::UpdateDeviceToSystemGain(const fbl::RefPtr<AudioDevice>& device) {
-  TRACE_DURATION("audio", "AudioDeviceManager::UpdateDeviceToSystemGain");
-  constexpr uint32_t set_flags =
-      fuchsia::media::SetAudioGainFlag_GainValid | fuchsia::media::SetAudioGainFlag_MuteValid;
-  fuchsia::media::AudioGainInfo set_cmd = {
-      system_gain_mute_.system_gain_db(),
-      system_gain_mute_.system_muted() ? fuchsia::media::AudioGainInfoFlag_Mute : 0u};
-
-  FX_DCHECK(device != nullptr);
-  REP(SettingDeviceGainInfo(*device, set_cmd, set_flags));
-  device->SetGainInfo(set_cmd, set_flags);
 }
 
 void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::string device_name,

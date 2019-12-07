@@ -23,15 +23,7 @@
 
 namespace media::audio {
 
-class SystemGainMuteProvider {
- public:
-  virtual float system_gain_db() const = 0;
-  virtual bool system_muted() const = 0;
-};
-
-class AudioCoreImpl : public fuchsia::media::AudioCore,
-                      SystemGainMuteProvider,
-                      UsageGainAdjustment {
+class AudioCoreImpl : public fuchsia::media::AudioCore, UsageGainAdjustment {
  public:
   AudioCoreImpl(ThreadingModel* threading_model,
                 std::unique_ptr<sys::ComponentContext> component_context,
@@ -59,8 +51,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
   void CreateAudioCapturer(
       bool loopback,
       fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) final;
-  void SetSystemGain(float gain_db) final;
-  void SetSystemMute(bool muted) final;
   void EnableDeviceSettings(bool enabled) final;
   void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) final;
   void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) final;
@@ -73,20 +63,11 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
   void LoadDefaults() final;
 
  private:
-  // |SystemGainMuteProvider|
-  float system_gain_db() const override { return system_gain_db_; }
-  bool system_muted() const override { return system_muted_; }
-
   // |UsageGainAdjustment|
   void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db) override;
   void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage,
                                      float gain_db) override;
 
-  static constexpr float kDefaultSystemGainDb = -12.0f;
-  static constexpr bool kDefaultSystemMuted = false;
-  static constexpr float kMaxSystemAudioGainDb = Gain::kUnityGainDb;
-
-  void NotifyGainMuteChanged();
   void PublishServices();
   void Shutdown();
 
@@ -109,11 +90,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
   RouteGraph route_graph_;
 
   std::unique_ptr<sys::ComponentContext> component_context_;
-
-  // TODO(13436): remove this state.  Migrate users to AudioDeviceEnumerator, to control gain on
-  // a per-input/output basis. Either way, Gain and Mute should remain fully independent.
-  float system_gain_db_ = kDefaultSystemGainDb;
-  bool system_muted_ = kDefaultSystemMuted;
 
   // We allocate a sub-vmar to hold the audio renderer buffers. Keeping these in a sub-vmar allows
   // us to take advantage of ASLR while minimizing page table fragmentation.
