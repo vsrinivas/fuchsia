@@ -481,6 +481,12 @@ impl States {
                 self.on_mgmt_frame(sta, ctx, &mgmt_hdr, body)
             }
             mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
+                // Drop frames from foreign BSS.
+                match mac::data_bssid(&fixed_fields) {
+                    Some(bssid) if bssid == sta.bssid.0 => (),
+                    _ => return self,
+                };
+
                 if let States::Associated(state) = &self {
                     state.on_data_frame(
                         sta,
@@ -1378,9 +1384,42 @@ mod tests {
         ];
         state.on_mac_frame(&mut sta, &mut ctx, &beacon[..], false);
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
+    }
+
+    #[test]
+    fn associated_drop_foreign_data_frames() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
 
         // Foreign data frame
-        // TODO(42159): Add test.
+        let state = States::from(statemachine::testing::new_state(Associated {
+            aid: 42,
+            controlled_port: ControlledPort::Open,
+        }));
+        let fc = mac::FrameControl(0)
+            .with_frame_type(mac::FrameType::DATA)
+            .with_data_subtype(mac::DataSubtype(0))
+            .with_from_ds(true);
+        let fc = fc.0.to_le_bytes();
+        // Send data frame from an address other than the BSSID([6u8; 6]).
+        let bytes = vec![
+            // Data Header
+            fc[0], fc[1], // fc
+            2, 2, // duration
+            3, 3, 3, 3, 3, 3, // addr1
+            4, 4, 4, 4, 4, 4, // addr2
+            5, 5, 5, 5, 5, 5, // addr3
+            6, 6, // sequence control
+            // LLC Header
+            7, 7, 7, // DSAP, SSAP & control
+            8, 8, 8, // OUI
+            9, 10, // eth type
+            // Trailing bytes
+            11, 11, 11,
+        ];
+        state.on_mac_frame(&mut sta, &mut ctx, &bytes[..], false);
+        assert_eq!(m.fake_device.eth_queue.len(), 0);
     }
 
     #[test]
