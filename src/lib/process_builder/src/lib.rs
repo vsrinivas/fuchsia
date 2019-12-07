@@ -81,6 +81,7 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef, DurationNum, HandleBased},
     futures::prelude::*,
     lazy_static::lazy_static,
+    log::warn,
     std::convert::TryFrom,
     std::default::Default,
     std::ffi::{CStr, CString},
@@ -809,7 +810,17 @@ impl Drop for ReservationVmar {
         // This is safe because there are no mappings in the region and it is not a region in the
         // current process.
         unsafe {
-            self.0.destroy().expect("Failed to destroy reservation VMAR");
+            // TODO(fxb/42437): add back the .expect() here.
+            // Temporarily ignoring failures here since we're seeing secondary failures here
+            // masking other process spawning failures since dropping the process handle before
+            // destroying the child vmar handle destroys the child vmar handle automatically.
+            // We won't leak anything ignoring this error, and it'll help us figure out what
+            // the primary failures we're seeing in CQ/CI are.
+            let result = self.0.destroy();
+            if result.is_err() {
+                warn!("Failed to drop reservation VMAR; carrying on presuming we dropped the
+                      process handle first");
+            }
         }
     }
 }
