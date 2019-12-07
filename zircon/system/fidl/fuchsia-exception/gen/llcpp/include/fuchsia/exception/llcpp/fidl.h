@@ -1144,6 +1144,10 @@ struct ProcessLimbo_RetrieveException_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboSetActiveRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboSetActiveRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboSetActiveResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboSetActiveResponseTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboWatchActiveRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboWatchActiveRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboWatchActiveResponseTable;
@@ -1176,10 +1180,35 @@ extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboGetFiltersResponse
 // Protocol meant for clients interested in obtaining processes that are
 // suspended waiting for an exception handler (in limbo). This is the core
 // feature that enables Just In Time (JIT) debugging.
+//
+// An example usage of this API would be having a debugger listen on limbo for
+// new processes. Then another component (eg. a CLI tool) could activate the
+// limbo, meaning that the system is now ready to capture crashing processes.
+// As the debugger got a notification that the limbo is now active, it can
+// correctly handle newly excepted processes and do its normal workflow.
 class ProcessLimbo final {
   ProcessLimbo() = delete;
  public:
   static constexpr char Name[] = "fuchsia.exception.ProcessLimbo";
+
+  using SetActiveResponse = ::fidl::AnyZeroArgMessage;
+  struct SetActiveRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    bool active;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboSetActiveRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboSetActiveRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+  };
 
   struct WatchActiveResponse final {
     FIDL_ALIGNDECL
@@ -1388,6 +1417,22 @@ class ProcessLimbo final {
     ResultOf() = delete;
    private:
     template <typename ResponseType>
+    class SetActive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      SetActive_Impl(::zx::unowned_channel _client_end, bool active);
+      ~SetActive_Impl() = default;
+      SetActive_Impl(SetActive_Impl&& other) = default;
+      SetActive_Impl& operator=(SetActive_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class WatchActive_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -1501,6 +1546,7 @@ class ProcessLimbo final {
     };
 
    public:
+    using SetActive = SetActive_Impl<SetActiveResponse>;
     using WatchActive = WatchActive_Impl<WatchActiveResponse>;
     using WatchProcessesWaitingOnException = WatchProcessesWaitingOnException_Impl<WatchProcessesWaitingOnExceptionResponse>;
     using RetrieveException = RetrieveException_Impl<RetrieveExceptionResponse>;
@@ -1515,6 +1561,22 @@ class ProcessLimbo final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
    private:
+    template <typename ResponseType>
+    class SetActive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetActive_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool active, ::fidl::BytePart _response_buffer);
+      ~SetActive_Impl() = default;
+      SetActive_Impl(SetActive_Impl&& other) = default;
+      SetActive_Impl& operator=(SetActive_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
     template <typename ResponseType>
     class WatchActive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
@@ -1629,6 +1691,7 @@ class ProcessLimbo final {
     };
 
    public:
+    using SetActive = SetActive_Impl<SetActiveResponse>;
     using WatchActive = WatchActive_Impl<WatchActiveResponse>;
     using WatchProcessesWaitingOnException = WatchProcessesWaitingOnException_Impl<WatchProcessesWaitingOnExceptionResponse>;
     using RetrieveException = RetrieveException_Impl<RetrieveExceptionResponse>;
@@ -1649,17 +1712,37 @@ class ProcessLimbo final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
+    // Set the active state of the limbo. Will trigger the |WatchActive| event
+    // if there was a change, meaning that any listening components will receive
+    // a notification. This includes the caller of |SetActive|.
+    //
+    // When a limbo is inactive, there will not be any processes waiting on it,
+    // meaning that any waiting processes will be freed upon deactivating the
+    // limbo.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::SetActive SetActive(bool active);
+
+    // Set the active state of the limbo. Will trigger the |WatchActive| event
+    // if there was a change, meaning that any listening components will receive
+    // a notification. This includes the caller of |SetActive|.
+    //
+    // When a limbo is inactive, there will not be any processes waiting on it,
+    // meaning that any waiting processes will be freed upon deactivating the
+    // limbo.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetActive SetActive(::fidl::BytePart _request_buffer, bool active, ::fidl::BytePart _response_buffer);
+
     // Watchs for changes determining whether the limbo is currently active,
     // using a Hanging Get pattern. An active limbo could be empty (not have
-    // any processes waiting on an exception). However, an inactive limbo is
-    // guaranteed to not have any processes waiting in it.
+    // any processes waiting on an exception).
+    // When a limbo is inactive, there will not be any processes waiting on it.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WatchActive WatchActive();
 
     // Watchs for changes determining whether the limbo is currently active,
     // using a Hanging Get pattern. An active limbo could be empty (not have
-    // any processes waiting on an exception). However, an inactive limbo is
-    // guaranteed to not have any processes waiting in it.
+    // any processes waiting on an exception).
+    // When a limbo is inactive, there will not be any processes waiting on it.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::WatchActive WatchActive(::fidl::BytePart _response_buffer);
 
@@ -1814,17 +1897,37 @@ class ProcessLimbo final {
     Call() = delete;
    public:
 
+    // Set the active state of the limbo. Will trigger the |WatchActive| event
+    // if there was a change, meaning that any listening components will receive
+    // a notification. This includes the caller of |SetActive|.
+    //
+    // When a limbo is inactive, there will not be any processes waiting on it,
+    // meaning that any waiting processes will be freed upon deactivating the
+    // limbo.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::SetActive SetActive(::zx::unowned_channel _client_end, bool active);
+
+    // Set the active state of the limbo. Will trigger the |WatchActive| event
+    // if there was a change, meaning that any listening components will receive
+    // a notification. This includes the caller of |SetActive|.
+    //
+    // When a limbo is inactive, there will not be any processes waiting on it,
+    // meaning that any waiting processes will be freed upon deactivating the
+    // limbo.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetActive SetActive(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool active, ::fidl::BytePart _response_buffer);
+
     // Watchs for changes determining whether the limbo is currently active,
     // using a Hanging Get pattern. An active limbo could be empty (not have
-    // any processes waiting on an exception). However, an inactive limbo is
-    // guaranteed to not have any processes waiting in it.
+    // any processes waiting on an exception).
+    // When a limbo is inactive, there will not be any processes waiting on it.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WatchActive WatchActive(::zx::unowned_channel _client_end);
 
     // Watchs for changes determining whether the limbo is currently active,
     // using a Hanging Get pattern. An active limbo could be empty (not have
-    // any processes waiting on an exception). However, an inactive limbo is
-    // guaranteed to not have any processes waiting in it.
+    // any processes waiting on an exception).
+    // When a limbo is inactive, there will not be any processes waiting on it.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::WatchActive WatchActive(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
@@ -1978,10 +2081,19 @@ class ProcessLimbo final {
     InPlace() = delete;
    public:
 
+    // Set the active state of the limbo. Will trigger the |WatchActive| event
+    // if there was a change, meaning that any listening components will receive
+    // a notification. This includes the caller of |SetActive|.
+    //
+    // When a limbo is inactive, there will not be any processes waiting on it,
+    // meaning that any waiting processes will be freed upon deactivating the
+    // limbo.
+    static ::fidl::DecodeResult<SetActiveResponse> SetActive(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetActiveRequest> params, ::fidl::BytePart response_buffer);
+
     // Watchs for changes determining whether the limbo is currently active,
     // using a Hanging Get pattern. An active limbo could be empty (not have
-    // any processes waiting on an exception). However, an inactive limbo is
-    // guaranteed to not have any processes waiting in it.
+    // any processes waiting on an exception).
+    // When a limbo is inactive, there will not be any processes waiting on it.
     static ::fidl::DecodeResult<WatchActiveResponse> WatchActive(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Watch for processes that are waiting on exceptions, using a Hanging Get
@@ -2058,6 +2170,18 @@ class ProcessLimbo final {
     virtual ~Interface() = default;
     using _Outer = ProcessLimbo;
     using _Base = ::fidl::CompleterBase;
+
+    class SetActiveCompleterBase : public _Base {
+     public:
+      void Reply();
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SetActiveCompleter = ::fidl::Completer<SetActiveCompleterBase>;
+
+    virtual void SetActive(bool active, SetActiveCompleter::Sync _completer) = 0;
 
     class WatchActiveCompleterBase : public _Base {
      public:
@@ -2197,6 +2321,8 @@ class ProcessLimbo final {
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
    public:
+    static void SetActiveRequest(const ::fidl::DecodedMessage<ProcessLimbo::SetActiveRequest>& _msg);
+    static void SetActiveResponse(const ::fidl::DecodedMessage<ProcessLimbo::SetActiveResponse>& _msg);
     static void WatchActiveRequest(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveRequest>& _msg);
     static void WatchActiveResponse(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveResponse>& _msg);
     static void WatchProcessesWaitingOnExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::WatchProcessesWaitingOnExceptionRequest>& _msg);
@@ -2294,6 +2420,14 @@ static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException
 template <>
 struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::SetActiveRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::SetActiveRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::SetActiveRequest)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::SetActiveRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::SetActiveRequest, active) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::WatchActiveResponse> : public std::true_type {};

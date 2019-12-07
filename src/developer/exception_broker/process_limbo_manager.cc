@@ -158,6 +158,12 @@ fxl::WeakPtr<ProcessLimboHandler> ProcessLimboHandler::GetWeakPtr() {
   return weak_factory_.GetWeakPtr();
 }
 
+void ProcessLimboHandler::SetActive(bool active, SetActiveCallback cb) {
+  // Call the callback before so that the response of this call is sent before any hanging gets.
+  cb();
+  limbo_manager_->SetActive(active);
+}
+
 void ProcessLimboHandler::ActiveStateChanged(bool active) {
   if (!is_active_callback_) {
     // Reset the WatchActive state as the state is different from the last time the get was called.

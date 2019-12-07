@@ -459,8 +459,13 @@ TEST(ProcessLimboManager, ManyHandlers) {
   ASSERT_FALSE(limbo_manager.SetActive(false));
   ASSERT_EQ(active_callbacks.size(), 0u);
 
-  // Changing the state should issue all the callbacks.
-  ASSERT_TRUE(limbo_manager.SetActive(true));
+  // Having a handler issue a SetActive command should trigger the callbacks.
+  {
+    bool called = false;
+    handlers[0]->SetActive(true, [&called]() { called = true; });
+    ASSERT_TRUE(called);
+  }
+
   ASSERT_EQ(active_callbacks.size(), 3u);
   EXPECT_TRUE(active_callbacks[0]);
   EXPECT_TRUE(active_callbacks[1]);

@@ -30,6 +30,10 @@ class StubProcessLimbo : public ProcessLimbo {
 
   // ProcessLimbo implementation.
 
+  void SetActive(bool active, SetActiveCallback cb) override {
+    FXL_NOTREACHED() << "Not needed for tests.";
+  }
+
   void WatchActive(WatchActiveCallback callback) override { callback(active_); }
 
   void WatchProcessesWaitingOnException(

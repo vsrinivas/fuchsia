@@ -16,12 +16,27 @@ const uint64 MAX_FILTERS_PER_CALL = 32;
 /// Protocol meant for clients interested in obtaining processes that are
 /// suspended waiting for an exception handler (in limbo). This is the core
 /// feature that enables Just In Time (JIT) debugging.
+///
+/// An example usage of this API would be having a debugger listen on limbo for
+/// new processes. Then another component (eg. a CLI tool) could activate the
+/// limbo, meaning that the system is now ready to capture crashing processes.
+/// As the debugger got a notification that the limbo is now active, it can
+/// correctly handle newly excepted processes and do its normal workflow.
 [Discoverable]
 protocol ProcessLimbo {
+    /// Set the active state of the limbo. Will trigger the |WatchActive| event
+    /// if there was a change, meaning that any listening components will receive
+    /// a notification. This includes the caller of |SetActive|.
+    ///
+    /// When a limbo is inactive, there will not be any processes waiting on it,
+    /// meaning that any waiting processes will be freed upon deactivating the
+    /// limbo.
+    SetActive(bool active) -> ();
+
     /// Watchs for changes determining whether the limbo is currently active,
     /// using a Hanging Get pattern. An active limbo could be empty (not have
-    /// any processes waiting on an exception). However, an inactive limbo is
-    /// guaranteed to not have any processes waiting in it.
+    /// any processes waiting on an exception).
+    /// When a limbo is inactive, there will not be any processes waiting on it.
     WatchActive() -> (bool is_active);
 
     /// Watch for processes that are waiting on exceptions, using a Hanging Get

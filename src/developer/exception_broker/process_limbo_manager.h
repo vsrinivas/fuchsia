@@ -87,6 +87,7 @@ class ProcessLimboHandler : public ProcessLimbo {
   void LimboChanged(std::vector<ProcessExceptionMetadata> processes);
 
   // fuchsia.exception.ProcessLimbo implementation.
+  void SetActive(bool active, SetActiveCallback) override;
 
   void WatchActive(WatchActiveCallback) override;
 
