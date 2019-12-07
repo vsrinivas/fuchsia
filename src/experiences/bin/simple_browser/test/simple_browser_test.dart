@@ -12,23 +12,21 @@ import 'package:simple_browser/app.dart';
 import 'package:simple_browser/src/blocs/tabs_bloc.dart';
 import 'package:simple_browser/src/blocs/webpage_bloc.dart';
 import 'package:simple_browser/src/models/app_model.dart';
-import 'package:simple_browser/src/models/tabs_action.dart';
 
 void main() {
   setupLogger(name: 'simple_browser_test');
 
+  Stream<Locale> lstream;
+  TabsBloc<WebPageBloc> tabsBloc;
+
   testWidgets('localized text is displayed in the widgets',
       (WidgetTester tester) async {
-    Stream<Locale> lstream = Stream.fromIterable(
+    lstream = Stream.fromIterable(
             [Locale.fromSubtags(languageCode: 'sr', countryCode: 'RS')])
         .asBroadcastStream();
-    TabsBloc<WebPageBloc> tabsBloc;
+
     tabsBloc = TabsBloc(
-      tabFactory: () => WebPageBloc(
-        popupHandler: (tab) => tabsBloc.request.add(
-          AddTabAction<WebPageBloc>(tab: tab),
-        ),
-      ),
+      tabFactory: () => MockWebPageBloc(),
       disposeTab: (tab) {
         tab.dispose();
       },
@@ -56,3 +54,5 @@ void main() {
 }
 
 class MockAppModel extends Mock implements AppModel {}
+
+class MockWebPageBloc extends Mock implements WebPageBloc {}

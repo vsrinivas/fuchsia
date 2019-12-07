@@ -12,6 +12,7 @@ import 'src/blocs/tabs_bloc.dart';
 import 'src/blocs/webpage_bloc.dart';
 import 'src/models/app_model.dart';
 import 'src/models/tabs_action.dart';
+import 'src/services/simple_browser_web_service.dart';
 import 'src/utils/browser_shortcuts.dart';
 import 'src/utils/tld_checker.dart';
 
@@ -23,13 +24,19 @@ void main() {
   // Bind |tabsBloc| here so that it can be referenced in the TabsBloc
   // constructor arguments.
   TabsBloc<WebPageBloc> tabsBloc;
+
   tabsBloc = TabsBloc(
-    tabFactory: () => WebPageBloc(
-      context: _context,
-      popupHandler: (tab) => tabsBloc.request.add(
-        AddTabAction<WebPageBloc>(tab: tab),
-      ),
-    ),
+    tabFactory: () {
+      SimpleBrowserWebService webService = SimpleBrowserWebService(
+        context: _context,
+        popupHandler: (tab) => tabsBloc.request.add(
+          AddTabAction<WebPageBloc>(tab: tab),
+        ),
+      );
+      return WebPageBloc(
+        webService: webService,
+      );
+    },
     disposeTab: (tab) {
       tab.dispose();
     },
