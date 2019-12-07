@@ -1,0 +1,74 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+package("soundplayer") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "soundplayer"
+
+  meta = [
+    {
+      path = rebase_path("meta/soundplayer.cmx")
+      dest = "soundplayer.cmx"
+    },
+  ]
+}
+
+rustc_binary("bin") {
+  name = "soundplayer"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds-rustc",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+
+  test_deps = [
+    "//src/lib/test_util",
+    "//third_party/rust_crates:futures-test",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
+  ]
+}
+
+config_data("configs") {
+  for_pkg = "sysmgr"
+  outputs = [
+    "soundplayer.config",
+  ]
+  sources = [
+    "service.config",
+  ]
+}
+
+test_package("soundplayer_tests") {
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "soundplayer_bin_test"
+      environments = basic_envs
+    },
+  ]
+}

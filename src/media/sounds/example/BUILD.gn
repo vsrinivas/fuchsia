@@ -1,0 +1,61 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("example") {
+  deps = [
+    ":soundplayer_example",
+  ]
+}
+
+package("soundplayer_example") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "soundplayer_example"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/soundplayer_example.cmx")
+      dest = "soundplayer_example.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//garnet/test_data/media/third_party/chromium_media_test_data/sfx_s16le.wav")
+      dest = "sfx.wav"
+    },
+  ]
+}
+
+rustc_binary("bin") {
+  name = "soundplayer_example"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/zerocopy",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds-rustc",
+    "//src/lib/fidl_table_validation",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+}

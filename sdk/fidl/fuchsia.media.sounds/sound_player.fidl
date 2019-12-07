@@ -1,0 +1,51 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.sounds;
+
+using fuchsia.media;
+using fuchsia.mem;
+using zx;
+
+/// Allows clients to play fire-and-forget sounds.
+[Discoverable]
+protocol Player {
+    /// Adds a sound to the collection maintained for the client, reading the sound from a file.
+    /// If `id` identifies an existing sound in the collection, the service will close the
+    /// connection.
+    ///
+    /// Currently, only PCM WAV files are supported.
+    AddSoundFromFile(uint32 id, handle<channel> file_channel) -> () error zx.status;
+
+    /// Adds a sound, in the form of a buffer containing raw PCM samples, to the collection
+    /// maintained for the client. The service will retain a handle to the buffer's VMO until the
+    /// sound is removed and is no longer playing or until the connection is closed.
+    ///
+    /// If `id` identifies an existing sound in the collection, the service will close the
+    /// connection.
+    AddSoundBuffer(uint32 id, fuchsia.mem.Buffer buffer, fuchsia.media.AudioStreamType stream_type);
+
+    /// Removes a sound from the collection maintained for the client. A sound can be removed even
+    /// if a `PlaySound` method is pending for that sound.
+    ///
+    /// If `id` doesn't identify an existing sound in the collection, the service will do nothing.
+    /// This is tolerated so that clients don't have to wait for the response from
+    /// `AddSoundFromFile` before playing and removing the sound.
+    ///
+    /// Removing an unneeded sound frees the resources associated with that sound, principally
+    /// the VMO required to store the uncompressed sound.
+    RemoveSound(uint32 id);
+
+    /// Plays the existing sound identified by `id` using a renderer with usage `usage`. The
+    /// sound is played as soon as possible. The reply is sent when the sound is finished playing.
+    /// If `id` doesn't identify an existing sound in the collection, the method return
+    /// `PlaySoundError.NO_SUCH_SOUND`.
+    PlaySound(uint32 id, fuchsia.media.AudioRenderUsage usage) -> () error PlaySoundError;
+};
+
+/// Error type for `Player.PlaySound`.
+enum PlaySoundError {
+    /// The `id` passed to `PlaySound` is not recognized.
+    NO_SUCH_SOUND = 1;
+};

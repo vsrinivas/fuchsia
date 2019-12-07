@@ -11,6 +11,7 @@ group("media") {
     "//src/media/lib",
     "//src/media/playback",
     "//src/media/sessions",
+    "//src/media/sounds",
     "//src/media/stream_processors",
   ]
 }
@@ -24,6 +25,7 @@ group("tests") {
     "//src/media/lib:tests",
     "//src/media/playback:tests",
     "//src/media/sessions:tests",
+    "//src/media/sounds:tests",
     "//src/media/stream_processors:tests",
   ]
 }

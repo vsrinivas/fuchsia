@@ -9,6 +9,7 @@ group("services") {
     "//src/media/codec/bundles:services",
     "//src/media/playback/bundles:services",
     "//src/media/sessions/bundles:services",
+    "//src/media/sounds/bundles:services",
     "//src/media/stream_processors/bundles:services",
   ]
 }
@@ -20,6 +21,7 @@ group("tools") {
     "//src/media/codec/bundles:tools",
     "//src/media/playback/bundles:tools",
     "//src/media/sessions/bundles:tools",
+    "//src/media/sounds/bundles:tools",
     "//src/media/stream_processors/bundles:tools",
   ]
 }
@@ -31,6 +33,7 @@ group("examples") {
     "//src/media/codec/bundles:examples",
     "//src/media/playback/bundles:examples",
     "//src/media/sessions/bundles:examples",
+    "//src/media/sounds/bundles:examples",
     "//src/media/stream_processors/bundles:examples",
   ]
 }
@@ -42,6 +45,7 @@ group("config") {
     "//src/media/codec/bundles:config",
     "//src/media/playback/bundles:config",
     "//src/media/sessions/bundles:config",
+    "//src/media/sounds/bundles:config",
     "//src/media/stream_processors/bundles:config",
   ]
 }

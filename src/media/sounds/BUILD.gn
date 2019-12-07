@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("sounds") {
+  testonly = true
+  public_deps = [
+    ":tests",
+    "//src/media/sounds/example",
+    "//src/media/sounds/soundplayer",
+    "//src/media/sounds/soundplayer:configs",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    "//src/media/sounds/soundplayer:soundplayer_tests",
+  ]
+}

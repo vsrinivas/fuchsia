@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/soundplayer_example"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.media.sounds.Player"
+        ]
+    }
+}
