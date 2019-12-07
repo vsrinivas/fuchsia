@@ -267,9 +267,11 @@ void Session::EnqueueEvent(::fuchsia::ui::input::InputEvent event) {
   event_reporter_->EnqueueEvent(std::move(event));
 }
 
-std::vector<fuchsia::scenic::scheduling::PresentationInfo> Session::GetFuturePresentationInfos(
-    zx::duration requested_prediction_span) {
-  return {session_context_.frame_scheduler->GetFuturePresentationInfos(requested_prediction_span)};
+void Session::GetFuturePresentationInfos(
+    zx::duration requested_prediction_span,
+    scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback) {
+  session_context_.frame_scheduler->GetFuturePresentationInfos(requested_prediction_span,
+                                                               std::move(callback));
 }
 
 bool Session::SetRootView(fxl::WeakPtr<View> view) {

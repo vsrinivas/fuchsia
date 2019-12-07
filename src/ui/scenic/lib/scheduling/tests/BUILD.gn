@@ -22,6 +22,7 @@ executable("unittests") {
   testonly = true
   sources = [
     "default_frame_scheduler_unittest.cc",
+    "delegating_frame_scheduler_test.cc",
     "duration_predictor_unittest.cc",
     "frame_predictor_unittest.cc",
     "frame_scheduler_test.cc",

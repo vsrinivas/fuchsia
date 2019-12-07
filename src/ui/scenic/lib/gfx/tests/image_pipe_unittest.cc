@@ -10,8 +10,8 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/scenic/lib/gfx/tests/image_pipe_unittest_common.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
-#include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
+#include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 
 namespace scenic_impl {
 namespace gfx {

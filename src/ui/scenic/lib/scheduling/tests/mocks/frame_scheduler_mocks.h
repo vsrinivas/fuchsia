@@ -20,29 +20,63 @@ class MockFrameScheduler : public FrameScheduler {
  public:
   MockFrameScheduler() = default;
 
+  // |FrameScheduler|
   void SetFrameRenderer(fxl::WeakPtr<FrameRenderer> frame_renderer) override {}
+  // |FrameScheduler|
   void AddSessionUpdater(fxl::WeakPtr<SessionUpdater> session_updater) override {}
+  // |FrameScheduler|
+  void SetRenderContinuously(bool render_continuously) override;
 
-  void SetRenderContinuously(bool render_continuously) override {}
-  void ScheduleUpdateForSession(zx::time presentation_time, SessionId session) override {}
+  // |FrameScheduler|
+  void ScheduleUpdateForSession(zx::time presentation_time,
+                                scenic_impl::SessionId session) override;
 
-  void SetOnFramePresentedCallbackForSession(SessionId session,
-                                             OnFramePresentedCallback callback) override {}
+  // |FrameScheduler|
+  void GetFuturePresentationInfos(
+      zx::duration requested_prediction_span,
+      FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) override;
 
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationInfos(
-      zx::duration requested_prediction_span) override {
-    return std::vector<fuchsia::scenic::scheduling::PresentationInfo>{};
+  // |FrameScheduler|
+  void SetOnFramePresentedCallbackForSession(
+      scenic_impl::SessionId session, OnFramePresentedCallback frame_presented_callback) override;
+
+  // Testing only. Used for mock method callbacks.
+  using OnSetRenderContinuouslyCallback = std::function<void(bool)>;
+  using OnScheduleUpdateForSessionCallback = std::function<void(zx::time, scenic_impl::SessionId)>;
+  using OnGetFuturePresentationInfosCallback =
+      std::function<std::vector<fuchsia::scenic::scheduling::PresentationInfo>(
+          zx::duration requested_prediction_span)>;
+  using OnSetOnFramePresentedCallbackForSessionCallback =
+      std::function<void(scenic_impl::SessionId session, OnFramePresentedCallback callback)>;
+
+  // Testing only. Sets mock method callback.
+  void set_set_render_continuously_callback(OnSetRenderContinuouslyCallback callback) {
+    set_render_continuously_callback_ = callback;
   }
 
-  void OnFramePresented(const FrameTimings& timings) override { ++frame_presented_call_count_; }
-  void OnFrameRendered(const FrameTimings& timings) override { ++frame_rendered_call_count_; }
+  // Testing only. Sets mock method callback.
+  void set_schedule_update_for_session_callback(OnScheduleUpdateForSessionCallback callback) {
+    schedule_update_for_session_callback_ = callback;
+  }
 
-  uint32_t frame_presented_call_count() { return frame_presented_call_count_; }
-  uint32_t frame_rendered_call_count() { return frame_rendered_call_count_; }
+  // Testing only. Sets mock method callback.
+  void set_get_future_presentation_infos_callback(OnGetFuturePresentationInfosCallback callback) {
+    get_future_presentation_infos_callback_ = callback;
+  }
+
+  // Testing only. Sets mock method callback.
+  void set_set_on_frame_presented_callback_for_session_callback(
+      OnSetOnFramePresentedCallbackForSessionCallback callback) {
+    set_on_frame_presented_callback_for_session_callback_ = callback;
+  }
 
  private:
-  uint32_t frame_presented_call_count_ = 0;
-  uint32_t frame_rendered_call_count_ = 0;
+  // Testing only. Mock method callbacks.
+  OnSetRenderContinuouslyCallback set_render_continuously_callback_;
+  OnScheduleUpdateForSessionCallback schedule_update_for_session_callback_;
+  OnGetFuturePresentationInfosCallback get_future_presentation_infos_callback_;
+  OnSetOnFramePresentedCallbackForSessionCallback
+      set_on_frame_presented_callback_for_session_callback_;
 };
 
 class FakeVsyncTiming : public VsyncTiming {

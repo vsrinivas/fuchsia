@@ -143,6 +143,11 @@ class Session final : public fuchsia::ui::scenic::Session {
   // invoke the callback for each event.
   void FlushEvents() { reporter_->FlushEvents(); }
 
+  // Gets the future presentation times from the frame scheduler (indirectly),
+  // and invokes |callback|.
+  void InvokeFuturePresentationTimesCallback(zx_duration_t requested_prediction_span,
+                                             RequestPresentationTimesCallback callback);
+
   // True until we are in the process of being destroyed.
   bool valid_ = true;
 

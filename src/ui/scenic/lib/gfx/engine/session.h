@@ -134,8 +134,10 @@ class Session {
   // Returns information about future presentation times, and their respective latch points.
   //
   // See fuchsia::ui::scenic::RequestPresentationTimes for more details.
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationInfos(
-      zx::duration requested_prediction_span);
+
+  void GetFuturePresentationInfos(
+      zx::duration requested_prediction_span,
+      scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback);
 
   void SetDebugName(const std::string& debug_name) { debug_name_ = debug_name; }
 

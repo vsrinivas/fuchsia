@@ -51,12 +51,13 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
   // called once per session.
-  void SetOnFramePresentedCallbackForSession(SessionId session,
-                                             OnFramePresentedCallback callback) override;
+  void SetOnFramePresentedCallbackForSession(
+      SessionId session, OnFramePresentedCallback frame_presented_callback) override;
 
   // |FrameScheduler|
-  std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationInfos(
-      zx::duration requested_prediction_span) override;
+  void GetFuturePresentationInfos(
+      zx::duration requested_prediction_span,
+      FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) override;
 
   constexpr static zx::duration kInitialRenderDuration = zx::msec(5);
   constexpr static zx::duration kInitialUpdateDuration = zx::msec(1);
@@ -111,7 +112,7 @@ class DefaultFrameScheduler : public FrameScheduler {
     // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
     // called once per session.
     void SetOnFramePresentedCallbackForSession(SessionId session,
-                                               OnFramePresentedCallback callback);
+                                               OnFramePresentedCallback frame_presented_callback);
 
    private:
     std::vector<fxl::WeakPtr<SessionUpdater>> session_updaters_;
@@ -139,11 +140,9 @@ class DefaultFrameScheduler : public FrameScheduler {
   };
 
  protected:
-  // |FrameScheduler|
-  void OnFramePresented(const FrameTimings& timings) override;
+  void OnFramePresented(const FrameTimings& timings);
 
-  // |FrameScheduler|
-  void OnFrameRendered(const FrameTimings& timings) override;
+  void OnFrameRendered(const FrameTimings& timings);
 
  private:
   // Requests a new frame to be drawn, which schedules the next wake up time for rendering. If we've

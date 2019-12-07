@@ -50,6 +50,8 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
     fuchsia::ui::display::Info info;
   };
 
+  // Internal data structure that holds the DisplayController interface and
+  // associated info (listener, list of Displays).
   struct DisplayControllerPrivate {
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller;
     std::unique_ptr<DisplayControllerListener> listener;

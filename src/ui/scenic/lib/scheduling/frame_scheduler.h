@@ -108,20 +108,15 @@ class FrameScheduler {
 
   // Gets the predicted latch points and presentation times for the frames at or before the next
   // |requested_prediction_span| time span. Uses the FramePredictor to do so.
-  virtual std::vector<fuchsia::scenic::scheduling::PresentationInfo> GetFuturePresentationInfos(
-      zx::duration requested_prediction_span) = 0;
+  using GetFuturePresentationInfosCallback =
+      fit::function<void(std::vector<fuchsia::scenic::scheduling::PresentationInfo>)>;
+  virtual void GetFuturePresentationInfos(zx::duration requested_prediction_span,
+                                          GetFuturePresentationInfosCallback callback) = 0;
 
   // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
   // called once per session.
   virtual void SetOnFramePresentedCallbackForSession(SessionId session,
                                                      OnFramePresentedCallback callback) = 0;
-
- protected:
-  // Called when the frame drawn by RenderFrame() has been presented to the display.
-  virtual void OnFramePresented(const FrameTimings& timings) = 0;
-
-  // Called when the frame drawn by RenderFrame() has finished rendering.
-  virtual void OnFrameRendered(const FrameTimings& timings) = 0;
 };
 
 }  // namespace scheduling

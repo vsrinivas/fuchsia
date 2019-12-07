@@ -15,7 +15,6 @@
 
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
-#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 #include "src/ui/lib/escher/util/type_utils.h"
@@ -736,12 +735,15 @@ bool GfxCommandApplier::ApplySetRendererParamCmd(Session* session,
     switch (command.param.Which()) {
       case fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         return renderer->SetShadowTechnique(command.param.shadow_technique());
-      case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
+      case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency: {
+        // TODO(42510): Remove the SetRenderContinuously command.
         // TODO(SCN-1169): SetRenderContinuously should only affect the
         // compositor that has the renderer attached to it.
-        session->session_context().frame_scheduler->SetRenderContinuously(
-            command.param.render_frequency() == fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
+        bool render_continuously =
+            command.param.render_frequency() == fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY;
+        session->session_context().frame_scheduler->SetRenderContinuously(render_continuously);
         return true;
+      }
       case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
         renderer->set_enable_debugging(command.param.enable_debugging());
         return true;
