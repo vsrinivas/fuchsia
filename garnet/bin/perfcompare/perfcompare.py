@@ -39,7 +39,7 @@ import scipy.stats
 
 # Dataset types:
 #
-# There are three types of dataset containing raw perf test results:
+# There are four types of dataset containing raw perf test results:
 #
 #  * Process dataset: JSON data from a single *.fuchsiaperf.json file,
 #    which is usually from a single process launch.  This may contain
@@ -50,6 +50,9 @@ import scipy.stats
 #
 #  * Multi-boot dataset: Data from multiple boots of a single build of
 #    Fuchsia.  This may contain multiple boot datasets.
+#
+#  * Before/after dataset: Contains two multi-boot datasets, one from a
+#    "before" build of Fuchsia and one from an "after" build.
 #
 # Note that we use the term "dataset" rather than "results" because the
 # former makes it easier to disambiguate using singular vs. plural.  For
@@ -79,6 +82,9 @@ import scipy.stats
 #
 #  * Multi-boot dataset: a directory containing a "by_boot" subdirectory,
 #    which contains boot dataset directories.
+#
+# A before/after dataset may be represented as two directories, or as a
+# single JSON file.
 
 
 # ALPHA is a parameter for calculating confidence intervals.  It is
@@ -200,6 +206,25 @@ class MultiBootDataset(object):
             yield SingleBootDataset(os.path.join(by_boot_dir, name))
 
 
+class SingleBootDatasetJson(object):
+
+    def __init__(self, boot_dataset_json):
+        self._list = boot_dataset_json['process_datasets']
+
+    def GetProcessDatasets(self):
+        return iter(self._list)
+
+
+class MultiBootDatasetJson(object):
+
+    def __init__(self, multiboot_dataset_json):
+        self._list = multiboot_dataset_json['boot_datasets']
+
+    def GetBootDatasets(self):
+        for boot_dataset_json in self._list:
+            yield SingleBootDatasetJson(boot_dataset_json)
+
+
 # Takes a list of values that are collected from consecutive runs of a
 # test.  For libperftest tests, those are test runs within a process.
 #
@@ -292,10 +317,29 @@ def FormatTable(heading_row, rows, out_fh):
         out_fh.write('\n')
 
 
-def ComparePerf(args, out_fh):
-    results_maps = [
-        StatsFromMultiBootDataset(MultiBootDataset(dir_path))
-        for dir_path in [args.results_dir_before, args.results_dir_after]]
+def ComparePerf(parser, args, out_fh):
+    # Validate the command line arguments.  Check that were are given
+    # either a JSON file or directories but not both.
+    dir_paths = [
+        dir_path
+        for dir_path in [args.results_dir_before, args.results_dir_after]
+        if dir_path is not None]
+    if (len(dir_paths) not in (0, 2) or
+        not ((args.dataset_file is not None) ^ (len(dir_paths) == 2))):
+        parser.error('Usage: --dataset_file INPUT_FILE |'
+                     ' RESULTS_DIR_BEFORE RESULTS_DIR_AFTER')
+
+    if args.dataset_file is not None:
+        # Read from JSON format.
+        dual_dataset = ReadJsonFile(args.dataset_file)
+        results_maps = [
+            StatsFromMultiBootDataset(MultiBootDatasetJson(dual_dataset[key]))
+            for key in ['before_dataset', 'after_dataset']]
+    else:
+        # Read from directory-based format.
+        results_maps = [
+            StatsFromMultiBootDataset(MultiBootDataset(dir_path))
+            for dir_path in dir_paths]
 
     # Set of all test case names, including those added or removed.
     labels = set(results_maps[0].iterkeys())
@@ -366,6 +410,21 @@ def ComparePerf(args, out_fh):
 
     out_fh.write('Results from all test cases:\n\n')
     FormatTable(heading_row, all_rows, out_fh)
+
+
+def MakeCombinedPerfDatasetFile(args, out_fh):
+    def ConvertToJson(dir_path):
+        return {
+            'boot_datasets':
+            [{'process_datasets': list(boot_dataset.GetProcessDatasets())}
+             for boot_dataset in MultiBootDataset(dir_path).GetBootDatasets()]}
+    dataset = {'before_dataset': ConvertToJson(args.results_dir_before),
+               'after_dataset': ConvertToJson(args.results_dir_after)}
+    # Use indent=0 because it outputs newlines in place of spaces, making
+    # the output somewhat human-readable without wasting space with actual
+    # indentation.  Use sort_keys=True to produce more deterministic
+    # output.
+    json.dump(dataset, out_fh, sort_keys=True, indent=0)
 
 
 def IntervalsIntersect(interval1, interval2):
@@ -451,10 +510,23 @@ def Main(argv, out_fh):
     parser_compare_perf = subparsers.add_parser(
         'compare_perf',
         help='Compare two sets of perf test results')
-    parser_compare_perf.add_argument('results_dir_before')
-    parser_compare_perf.add_argument('results_dir_after')
+    parser_compare_perf.add_argument(
+        '-f', '--dataset_file',
+        help='Input file: a JSON file containing a before-after dataset')
+    parser_compare_perf.add_argument('results_dir_before', nargs='?')
+    parser_compare_perf.add_argument('results_dir_after', nargs='?')
     parser_compare_perf.set_defaults(
-        func=lambda args: ComparePerf(args, out_fh))
+        func=lambda args: ComparePerf(parser, args, out_fh))
+
+    parser_make_combined = subparsers.add_parser(
+        'make_combined_perf_dataset_file',
+        help='Converts a before-after dataset from the directory-based format'
+        ' to a single JSON file.  This subcommand is intended to be invoked by'
+        ' the fuchsia_perfcompare.py recipe.')
+    parser_make_combined.add_argument('results_dir_before')
+    parser_make_combined.add_argument('results_dir_after')
+    parser_make_combined.set_defaults(
+        func=lambda args: MakeCombinedPerfDatasetFile(args, out_fh))
 
     parser_validate_perfcompare = subparsers.add_parser(
         'validate_perfcompare',

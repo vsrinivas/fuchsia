@@ -321,11 +321,30 @@ class PerfCompareTest(TempDirTestCase):
             results[test_name].FormatConfidenceInterval(),
             '992 +/- 26 ns')
 
+    # Returns the output of compare_perf for the given directories, going
+    # via the single-file JSON format.
+    def ComparePerfViaSingleFile(self, before_dir, after_dir):
+        # Convert to the single-file JSON format.
+        json_file = os.path.join(self.MakeTempDir(), 'dataset.json')
+        with open(json_file, 'w') as fh:
+            perfcompare.Main(['make_combined_perf_dataset_file',
+                              before_dir, after_dir], fh)
+        # Run compare_perf on the JSON file.
+        stdout = StringIO.StringIO()
+        perfcompare.Main(['compare_perf', '--dataset_file', json_file], stdout)
+        return stdout.getvalue()
+
     # Returns the output of compare_perf when run on the given directories.
     def ComparePerf(self, before_dir, after_dir):
         stdout = StringIO.StringIO()
         perfcompare.Main(['compare_perf', before_dir, after_dir], stdout)
-        return stdout.getvalue()
+        output = stdout.getvalue()
+
+        # Check that going via the single-file JSON format produces the
+        # same result.
+        self.assertEquals(self.ComparePerfViaSingleFile(before_dir, after_dir),
+                          output)
+        return output
 
     def test_mean_and_stddev(self):
         values = [10, 5, 15]
