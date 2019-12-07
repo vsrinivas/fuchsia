@@ -94,11 +94,13 @@ void GatherMemoryDigest::Gather() {
 
   DockyardProxyStatus status = Dockyard().SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
+    FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
+                   << " Memory digest and summary samples will be missing";
   }
   status = Dockyard().SendStringSampleList(strings);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << "SendStringSampleList failed (" << status << ")";
+    FXL_LOG(ERROR) << DockyardErrorString("SendStringSampleList", status)
+                   << " Memory digest and summary names will be missing";
   }
 }
 

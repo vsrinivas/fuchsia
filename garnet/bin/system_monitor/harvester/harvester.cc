@@ -23,17 +23,6 @@
 
 namespace harvester {
 
-std::ostream& operator<<(std::ostream& out, const DockyardProxyStatus& status) {
-  switch (status) {
-    case DockyardProxyStatus::OK:
-      return out << "OK (0)";
-    case DockyardProxyStatus::ERROR:
-      return out << "ERROR (-1)";
-  }
-  FXL_NOTREACHED();
-  return out;
-}
-
 Harvester::Harvester(zx_handle_t root_resource,
                      async_dispatcher_t* fast_dispatcher,
                      async_dispatcher_t* slow_dispatcher,

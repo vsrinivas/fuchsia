@@ -17,6 +17,7 @@ group("harvester") {
 
 source_set("lib") {
   sources = [
+    "dockyard_proxy.cc",
     "dockyard_proxy.h",
     "dockyard_proxy_grpc.cc",
     "dockyard_proxy_grpc.h",

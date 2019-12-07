@@ -18,7 +18,8 @@ void GatherIntrospection::Gather() {
   DockyardProxyStatus status = Dockyard().SendInspectJson(
       "inspect:/hub/fake/234/faux.Inspect", fake_json_data);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
+    FXL_LOG(ERROR) << DockyardErrorString("SendInspectJson", status)
+                   << " Inspection data will be missing";
   }
 }
 

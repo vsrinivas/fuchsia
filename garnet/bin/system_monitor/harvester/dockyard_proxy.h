@@ -24,6 +24,12 @@ enum class DockyardProxyStatus : int {
   ERROR = -1,
 };
 
+// Combine the |cmd| name that created the error with the |err| to create a
+// human readable error message.
+std::string DockyardErrorString(const std::string& cmd,
+                                DockyardProxyStatus err);
+
+// Convert the |status| (enum) into a human readable string.
 std::ostream& operator<<(std::ostream& out, const DockyardProxyStatus& status);
 
 // A proxy for a remote Dockyard.

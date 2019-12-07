@@ -13,7 +13,7 @@ namespace harvester {
 
 std::string ZxErrorString(const std::string& cmd, zx_status_t err) {
   std::ostringstream os;
-  os << cmd << " returned " << err << "(" << zx_status_get_string(err) << ")";
+  os << cmd << " returned " << zx_status_get_string(err) << " (" << err << ")";
   return os.str();
 }
 

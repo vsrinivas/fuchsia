@@ -32,8 +32,17 @@ class TaskHarvester final : public TaskEnumerator {
       }
     }
 
-    dockyard_proxy->SendSampleList(int_sample_list_);
-    dockyard_proxy->SendStringSampleList(string_sample_list_);
+    DockyardProxyStatus status =
+        dockyard_proxy->SendSampleList(int_sample_list_);
+    if (status != DockyardProxyStatus::OK) {
+      FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
+                     << " Job/process/thread information will be missing";
+    }
+    status = dockyard_proxy->SendStringSampleList(string_sample_list_);
+    if (status != DockyardProxyStatus::OK) {
+      FXL_LOG(ERROR) << DockyardErrorString("SendStringSampleList", status)
+                     << " Job/process/thread names will be missing";
+    }
 
     int_sample_list_.clear();
     string_sample_list_.clear();

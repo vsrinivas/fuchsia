@@ -25,7 +25,8 @@ void GatherMemory::GatherDeviceProperties() {
   list.emplace_back(DEVICE_TOTAL, stats.total_bytes);
   DockyardProxyStatus status = Dockyard().SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
+    FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
+                   << " The total memory value will be missing";
   }
 }
 
@@ -71,7 +72,8 @@ void GatherMemory::Gather() {
 
   DockyardProxyStatus status = Dockyard().SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
+    FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
+                   << " Overall memory samples will be missing";
   }
 }
 

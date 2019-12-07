@@ -69,8 +69,13 @@ int main(int argc, char** argv) {
         std::make_unique<harvester::DockyardProxyGrpc>(grpc::CreateChannel(
             positional_args[0], grpc::InsecureChannelCredentials()));
 
-    if (!dockyard_proxy ||
-        dockyard_proxy->Init() != harvester::DockyardProxyStatus::OK) {
+    if (!dockyard_proxy) {
+      FXL_LOG(ERROR) << "unable to create dockyard_proxy";
+      exit(EXIT_CODE_GENERAL_ERROR);
+    }
+    harvester::DockyardProxyStatus status = dockyard_proxy->Init();
+    if (status != harvester::DockyardProxyStatus::OK) {
+      FXL_LOG(ERROR) << harvester::DockyardErrorString("Init", status);
       exit(EXIT_CODE_GENERAL_ERROR);
     }
   } else {

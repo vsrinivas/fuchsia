@@ -39,7 +39,8 @@ void GatherCpu::GatherDeviceProperties() {
   list.emplace_back(CPU_COUNT, avail);
   DockyardProxyStatus status = Dockyard().SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
+    FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
+                   << " The cpu_count value will be missing";
   }
 }
 
@@ -84,7 +85,8 @@ void GatherCpu::Gather() {
   }
   DockyardProxyStatus status = Dockyard().SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
+    FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
+                   << " Overall cpu values will be missing";
   }
 }
 

@@ -22,7 +22,12 @@ void GatherInspectable::Gather() {
     label << "inspectable:" << location.AbsoluteFilePath();
     string_sample_list.emplace_back(label.str(), location.file_name);
   }
-  Dockyard().SendStringSampleList(string_sample_list);
+  DockyardProxyStatus status =
+      Dockyard().SendStringSampleList(string_sample_list);
+  if (status != DockyardProxyStatus::OK) {
+    FXL_LOG(ERROR) << DockyardErrorString("SendStringSampleList", status)
+                   << " The list of inspectable components will be missing";
+  }
 }
 
 }  // namespace harvester
