@@ -16,6 +16,7 @@ rustc_library("input") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",

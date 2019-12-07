@@ -3,11 +3,16 @@
 // found in the LICENSE file.
 
 use {
+    async_trait::async_trait,
     failure::{self, format_err, Error, ResultExt},
     fdio,
     fidl_fuchsia_input_report::InputDeviceMarker,
-    std::fs::{read_dir, ReadDir},
-    std::path::{Path, PathBuf},
+    fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::channel::mpsc::Sender,
+    std::{
+        fs::{read_dir, ReadDir},
+        path::{Path, PathBuf},
+    },
 };
 
 /// The path to the input-report directory.
@@ -34,6 +39,250 @@ pub struct InputDeviceWithType {
 
     /// The enum value for the type of device, as determined from its DeviceDescriptor
     pub device_type: InputDeviceType,
+}
+
+/// A `MouseBinding` connects a mouse device to a session. It reads InputReports, tracks the state
+/// of the device, and streams InputReports to the session.
+/// TODO(vickiecheng): Stream InputMessages instead of InputReports to the session.
+pub struct MouseBinding {
+    /// The channel to stream InputReports to
+    report_stream: Sender<fidl_fuchsia_input_report::InputReport>,
+
+    /// The minimum x axis position of the mouse.
+    _min_x: i64,
+
+    /// The maximum x axis position of the mouse.
+    _max_x: i64,
+
+    /// The minimum y axis position of the mouse.
+    _min_y: i64,
+
+    /// The maximum y axis position of the mouse.
+    _max_y: i64,
+
+    /// The minimum vertical scroll position for the mouse.
+    _min_v: Option<i64>,
+
+    /// The maximum vertical scroll position for the mouse.
+    _max_v: Option<i64>,
+
+    /// The minimum horizontal scroll position for the mouse.
+    _min_h: Option<i64>,
+
+    /// The maximum horizontal scroll position for the mouse.
+    _max_h: Option<i64>,
+
+    /// The buttons on the mouse.
+    /// TODO(vickiecheng): Change u8 to button phases.
+    _buttons: Vec<u8>,
+}
+
+/// A `Contact` holds information about the ranges of a touch contact.
+pub struct Contact {
+    /// The minimum x axis position of the contact.
+    _min_x: i64,
+
+    /// The maximum x axis position of the contact.
+    _max_x: i64,
+
+    /// The minimum y axis position of the contact.
+    _min_y: i64,
+
+    /// The maximum y axis position of the contact.
+    _max_y: i64,
+
+    /// The minimum pressure of the contact.
+    _min_pressure: Option<i64>,
+
+    /// The maximum pressure of the contact.
+    _max_pressure: Option<i64>,
+
+    /// The minimum width of the contact.
+    _min_width: Option<i64>,
+
+    /// The maximum width of the contact.
+    _max_width: Option<i64>,
+
+    /// The minimum height of the contact.
+    _min_height: Option<i64>,
+
+    /// The maximum height of the contact.
+    _max_height: Option<i64>,
+}
+
+/// A `MouseBinding` connects a touch device to a session. It reads InputReports, tracks the state
+/// of the device, and streams InputReports to the session.
+/// TODO(vickiecheng): Stream InputMessages instead of InputReports to the session.
+#[allow(dead_code)]
+pub struct TouchBinding {
+    /// The channel to stream InputReports to
+    report_stream: Sender<fidl_fuchsia_input_report::InputReport>,
+
+    /// The boundaries of each touch.
+    contacts: Vec<Contact>,
+}
+
+/// Connects an InputDevice to a session.
+#[async_trait]
+pub trait InputDeviceBinding: Sized {
+    /// Creates a new InputDeviceBinding.
+    ///
+    /// # Errors
+    /// If a connection couldn't be made to the device or a device was not found.
+    async fn new(
+        report_stream: Sender<fidl_fuchsia_input_report::InputReport>,
+    ) -> Result<Self, Error>;
+}
+
+/// Sets up polling of InputReports for an InputDevice.
+trait InputDeviceBindingInternal: Sized {
+    // Returns a clone of the Sender to the channel reporting InputReports to the session.
+    /// TODO(vickiecheng): Stream InputMessages instead of InputReports to the session.
+    fn get_report_stream(&self) -> Sender<fidl_fuchsia_input_report::InputReport>;
+
+    // Spawns a thread that continuously polls for InputReports. Sends the reports to the binding's
+    // `report_stream`.
+    fn listen_for_reports(&self, device_proxy: fidl_fuchsia_input_report::InputDeviceProxy) {
+        let mut channel_endpoint = self.get_report_stream();
+        fasync::spawn(async move {
+            let (_status, event) = match device_proxy.get_reports_event().await {
+                Ok((s, e)) => (s, e),
+                Err(e) => {
+                    panic!("Failed to get reports event with error: {}.", e);
+                }
+            };
+
+            loop {
+                let _ = fasync::OnSignals::new(&event, zx::Signals::USER_0).await;
+
+                let input_reports: Vec<fidl_fuchsia_input_report::InputReport> =
+                    match device_proxy.get_reports().await {
+                        Ok(reports) => reports,
+                        Err(e) => {
+                            panic!("Failed to get reports with error: {}", e);
+                        }
+                    };
+
+                for report in input_reports {
+                    channel_endpoint.try_send(report).unwrap();
+                }
+            }
+        });
+    }
+}
+
+#[async_trait]
+impl InputDeviceBinding for MouseBinding {
+    async fn new(
+        report_stream: Sender<fidl_fuchsia_input_report::InputReport>,
+    ) -> Result<Self, Error> {
+        let proxy: fidl_fuchsia_input_report::InputDeviceProxy = get_mouse_input_device().await?;
+        if let Some(descriptor) = proxy.get_descriptor().await?.mouse {
+            let mut min_v = None;
+            let mut max_v = None;
+            if let Some(scroll_v) = descriptor.scroll_v {
+                min_v = Some(scroll_v.range.min);
+                max_v = Some(scroll_v.range.max);
+            }
+
+            let mut min_h = None;
+            let mut max_h = None;
+            if let Some(scroll_v) = descriptor.scroll_v {
+                min_h = Some(scroll_v.range.min);
+                max_h = Some(scroll_v.range.max);
+            }
+
+            let mouse = MouseBinding {
+                report_stream: report_stream,
+                _min_x: descriptor.movement_x.unwrap().range.min,
+                _max_x: descriptor.movement_x.unwrap().range.max,
+                _min_y: descriptor.movement_y.unwrap().range.min,
+                _max_y: descriptor.movement_y.unwrap().range.max,
+                _min_v: min_v,
+                _max_v: max_v,
+                _min_h: min_h,
+                _max_h: max_h,
+                _buttons: descriptor.buttons.unwrap(),
+            };
+
+            &mouse.listen_for_reports(proxy);
+            return Ok(mouse);
+        };
+
+        Err(format_err!("Unable to create new MouseBinding."))
+    }
+}
+
+impl InputDeviceBindingInternal for MouseBinding {
+    fn get_report_stream(&self) -> Sender<fidl_fuchsia_input_report::InputReport> {
+        self.report_stream.clone()
+    }
+}
+
+#[async_trait]
+impl InputDeviceBinding for TouchBinding {
+    async fn new(
+        report_stream: Sender<fidl_fuchsia_input_report::InputReport>,
+    ) -> Result<Self, Error> {
+        let proxy: fidl_fuchsia_input_report::InputDeviceProxy = get_touch_input_device().await?;
+        if let Some(descriptor) = proxy.get_descriptor().await?.touch {
+            let mut contacts: Vec<Contact> =
+                Vec::with_capacity(descriptor.max_contacts.unwrap() as usize);
+
+            if let Some(contact_descriptors) = descriptor.contacts {
+                for descriptor in contact_descriptors {
+                    let mut min_pressure = None;
+                    let mut max_pressure = None;
+                    if let Some(pressure) = descriptor.pressure {
+                        min_pressure = Some(pressure.range.min);
+                        max_pressure = Some(pressure.range.max);
+                    }
+
+                    let mut min_width = None;
+                    let mut max_width = None;
+                    if let Some(width) = descriptor.contact_width {
+                        min_width = Some(width.range.min);
+                        max_width = Some(width.range.max);
+                    }
+
+                    let mut min_height = None;
+                    let mut max_height = None;
+                    if let Some(height) = descriptor.contact_height {
+                        min_height = Some(height.range.min);
+                        max_height = Some(height.range.max);
+                    }
+
+                    let contact: Contact = Contact {
+                        _min_x: descriptor.position_x.unwrap().range.min,
+                        _max_x: descriptor.position_x.unwrap().range.max,
+                        _min_y: descriptor.position_y.unwrap().range.min,
+                        _max_y: descriptor.position_y.unwrap().range.max,
+                        _min_pressure: min_pressure,
+                        _max_pressure: max_pressure,
+                        _min_width: min_width,
+                        _max_width: max_width,
+                        _min_height: min_height,
+                        _max_height: max_height,
+                    };
+
+                    contacts.push(contact);
+                }
+            }
+
+            let touch = TouchBinding { report_stream: report_stream, contacts: contacts };
+
+            &touch.listen_for_reports(proxy);
+            return Ok(touch);
+        };
+
+        Err(format_err!("Unable to create new TouchBinding."))
+    }
+}
+
+impl InputDeviceBindingInternal for TouchBinding {
+    fn get_report_stream(&self) -> Sender<fidl_fuchsia_input_report::InputReport> {
+        self.report_stream.clone()
+    }
 }
 
 /// Returns a proxy to the first available mouse input device.
