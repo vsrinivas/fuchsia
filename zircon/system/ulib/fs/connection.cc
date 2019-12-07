@@ -162,12 +162,12 @@ zx_status_t Connection::StartDispatching(zx::channel channel) {
   ZX_DEBUG_ASSERT(!binding_);
   ZX_DEBUG_ASSERT(vfs_->dispatcher());
 
-  auto binding = std::make_shared<Binding>(this, vfs_->dispatcher(), std::move(channel));
-  zx_status_t status = binding->StartDispatching();
+  binding_ = std::make_shared<Binding>(this, vfs_->dispatcher(), std::move(channel));
+  zx_status_t status = binding_->StartDispatching();
   if (status != ZX_OK) {
+    binding_.reset();
     return status;
   }
-  binding_ = std::move(binding);
   return ZX_OK;
 }
 
