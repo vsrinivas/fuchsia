@@ -63,7 +63,7 @@ bits ContextFeatureFlags : uint64 {
     NETWORK = 0x1;
 
     /// Enables audio input and output. Requires [`fuchsia.media.Audio`] and
-    /// [`fuchsia.media.AudioConsumer`] service.
+    /// [`fuchsia.media.SessionAudioConsumerFactory`] service.
     AUDIO = 0x2;
 
     /// Enables GPU-accelerated rendering of the web content. Requires the following services:
