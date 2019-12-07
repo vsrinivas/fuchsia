@@ -36,14 +36,17 @@ template("config_data") {
                              "public_deps",
                              "sources",
                              "testonly",
+                             "visibility",
                            ])
 
     if (!defined(outputs)) {
-      outputs = [ "{{source_file_part}}" ]
+      outputs = [
+        "{{source_file_part}}",
+      ]
     }
 
     assert(outputs != [] && outputs - [ outputs[0] ] == [],
-          "Exactly one output pattern required.")
+           "Exactly one output pattern required.")
 
     metadata = {
       config_package_entries = []
@@ -52,9 +55,8 @@ template("config_data") {
       }
       foreach(source, sources) {
         foreach(target, process_file_template([ source ], outputs)) {
-          config_package_entries +=
-              [ "data/" + for_pkg + "/" + target + "=" +
-                rebase_path(source, root_build_dir) ]
+          config_package_entries += [ "data/" + for_pkg + "/" + target + "=" +
+                                      rebase_path(source, root_build_dir) ]
         }
       }
     }

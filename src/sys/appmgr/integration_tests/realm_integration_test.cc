@@ -473,30 +473,6 @@ class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
   std::string component_url_;
 };
 
-TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTP) {
-  RunComponent(enclosing_environment_.get(), "http://example.com");
-  WaitForComponentLoad();
-  EXPECT_THAT(component_url(), Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"));
-}
-
-TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTPS) {
-  RunComponent(enclosing_environment_.get(), "https://example.com");
-  WaitForComponentLoad();
-  EXPECT_THAT(component_url(), Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"));
-}
-
-TEST_F(RealmFakeLoaderTest, CreateCastComponent_CAST) {
-  RunComponent(enclosing_environment_.get(), "cast://a12345/");
-  WaitForComponentLoad();
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx", component_url());
-}
-
-TEST_F(RealmFakeLoaderTest, CreateCastComponent_CASTS) {
-  RunComponent(enclosing_environment_.get(), "casts://a12345/");
-  WaitForComponentLoad();
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx", component_url());
-}
-
 TEST_F(RealmFakeLoaderTest, CreateInvalidComponent) {
   TerminationReason reason = TerminationReason::UNKNOWN;
   int64_t return_code = INT64_MAX;

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/packages/prebuilt_package.gni")
 
 group("cast") {
@@ -10,7 +11,31 @@ group("cast") {
   ]
 }
 
-prebuilt_package("cast_runner") {
+group("cast_runner") {
+  deps = [
+    ":cast_runner_config",
+    ":cast_runner_pkg",
+  ]
+}
+
+config_data("cast_runner_config") {
+  visibility = [ ":cast_runner" ]
+
+  for_pkg = "appmgr"
+
+  sources = [
+    "config/cast_scheme_map.config",
+  ]
+
+  outputs = [
+    "scheme_map/cast.config",
+  ]
+}
+
+prebuilt_package("cast_runner_pkg") {
+  visibility = [ ":cast_runner" ]
+
+  package_name = "cast_runner"
   archive =
       "//prebuilt/third_party/cast_runner/arch/$target_cpu/cast_runner.far"
 }

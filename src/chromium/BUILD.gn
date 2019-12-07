@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/packages/prebuilt_package.gni")
 import("//build/packages/prebuilt_test_manifest.gni")
 
@@ -12,12 +13,52 @@ group("chromium") {
   ]
 }
 
-prebuilt_package("web_engine") {
+group("web_engine") {
+  deps = [
+    ":web_engine_config",
+    ":web_engine_pkg",
+  ]
+}
+
+config_data("web_engine_config") {
+  visibility = [ ":web_engine" ]
+
+  for_pkg = "sysmgr"
+  sources = [
+    rebase_path("config/web_context_provider.config"),
+  ]
+}
+
+prebuilt_package("web_engine_pkg") {
+  visibility = [ ":web_engine" ]
+
   package_name = "chromium"
   archive = "//prebuilt/third_party/chromium/arch/$target_cpu/chromium.far"
 }
 
-prebuilt_package("web_runner") {
+group("web_runner") {
+  deps = [
+    ":web_runner_config",
+    ":web_runner_pkg",
+  ]
+}
+
+config_data("web_runner_config") {
+  visibility = [ ":web_runner" ]
+  for_pkg = "appmgr"
+  sources = [
+    rebase_path("config/http_scheme_map.config"),
+  ]
+
+  outputs = [
+    "scheme_map/http.config",
+  ]
+}
+
+prebuilt_package("web_runner_pkg") {
+  visibility = [ ":web_runner" ]
+
+  package_name = "web_runner"
   archive = "//prebuilt/third_party/chromium/arch/$target_cpu/web_runner.far"
 }
 
