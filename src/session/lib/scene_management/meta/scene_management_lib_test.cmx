@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/scene_management_lib_test"
+    }
+}

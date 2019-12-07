@@ -7,6 +7,7 @@ group("all") {
     "//src/session/lib/element_management",
     "//src/session/lib/input",
     "//src/session/lib/realm_management",
+    "//src/session/lib/scene_management",
   ]
 }
 
@@ -17,5 +18,6 @@ group("tests") {
     "//src/session/lib/element_management:element_management_tests",
     "//src/session/lib/input:input_tests",
     "//src/session/lib/realm_management:realm_management_tests",
+    "//src/session/lib/scene_management:scene_management_tests",
   ]
 }

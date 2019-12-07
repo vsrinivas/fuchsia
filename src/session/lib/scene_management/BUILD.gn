@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("scene_management") {
+  name = "scene_management"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+test_package("scene_management_tests") {
+  deps = [
+    ":scene_management_test",
+  ]
+  tests = [
+    {
+      name = "scene_management_lib_test"
+    },
+  ]
+}
