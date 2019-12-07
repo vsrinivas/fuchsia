@@ -19,6 +19,7 @@
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
 #include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/display/display_controller_listener.h"
+#include "src/ui/scenic/lib/gfx/swapchain/buffer_pool.h"
 #include "src/ui/scenic/lib/gfx/swapchain/swapchain.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 
@@ -76,13 +77,6 @@ class DisplaySwapchain : public Swapchain {
  private:
   friend class test::DisplaySwapchainTest;
 
-  struct Framebuffer {
-    zx::vmo vmo;
-    escher::GpuMemPtr device_memory;
-    escher::ImagePtr escher_image;
-    uint64_t fb_id;
-  };
-
   struct FrameRecord {
     fxl::WeakPtr<scheduling::FrameTimings> frame_timings;
     size_t swapchain_index;
@@ -97,6 +91,8 @@ class DisplaySwapchain : public Swapchain {
     uint64_t retired_event_id;
 
     bool presented = false;
+    BufferPool::Framebuffer* buffer = nullptr;
+    bool use_protected_memory = false;
   };
   std::unique_ptr<FrameRecord> NewFrameRecord(fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
                                               size_t swapchain_index);
@@ -154,16 +150,12 @@ class DisplaySwapchain : public Swapchain {
   size_t outstanding_frame_count_ = 0;
   bool use_protected_memory_ = false;
 
-  // Config used for all imported images.
-  fuchsia::hardware::display::ImageConfig image_config_;
-
-  std::vector<Framebuffer> swapchain_buffers_;
+  BufferPool swapchain_buffers_;
   // Optionally generated on the fly.
-  std::vector<Framebuffer> protected_swapchain_buffers_;
+  BufferPool protected_swapchain_buffers_;
 
   std::vector<std::unique_ptr<FrameRecord>> frames_;
 
-  vk::Format format_;
   vk::Device device_;
   vk::Queue queue_;
 

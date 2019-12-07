@@ -18,12 +18,10 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 
+#define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
+
 namespace scenic_impl {
 namespace gfx {
-
-namespace {
-
-#define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
 
 // TODO(SCN-400): Don't triple buffer.  This is done to avoid "tearing", but it
 // wastes memory, and can result in the "permanent" addition of an extra Vsync
@@ -54,18 +52,7 @@ namespace {
 //
 // If you followed that, it should be clear both why triple-buffering fixes the
 // tearing, and why it adds the frame of latency.
-const uint32_t kSwapchainImageCount = 3;
-
-// Helper functions
-
-// Enumerate the formats supported for the specified surface/device, and pick a
-// suitable one.
-vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues);
-
-// Determines the necessary framebuffer image usage.
-vk::ImageUsageFlags GetFramebufferImageUsage();
-
-}  // namespace
+static const uint32_t kSwapchainImageCount = 3;
 
 DisplaySwapchain::DisplaySwapchain(
     Sysmem* sysmem,
@@ -76,14 +63,16 @@ DisplaySwapchain::DisplaySwapchain(
       sysmem_(sysmem),
       display_(display),
       display_controller_(display_controller),
-      display_controller_listener_(display_controller_listener) {
+      display_controller_listener_(display_controller_listener),
+      swapchain_buffers_(/*count=*/0, /*environment=*/nullptr, /*use_protected_memory=*/false),
+      protected_swapchain_buffers_(/*count=*/0, /*environment=*/nullptr,
+                                   /*use_protected_memory=*/true) {
   FXL_DCHECK(display);
   FXL_DCHECK(sysmem);
 
   if (escher_) {
     device_ = escher_->vk_device();
     queue_ = escher_->device()->vk_main_queue();
-    format_ = GetDisplayImageFormat(escher->device());
     display_->Claim();
     frames_.resize(kSwapchainImageCount);
 
@@ -104,7 +93,6 @@ DisplaySwapchain::DisplaySwapchain(
   } else {
     device_ = vk::Device();
     queue_ = vk::Queue();
-    format_ = vk::Format::eUndefined;
 
     display_->Claim();
 
@@ -112,235 +100,27 @@ DisplaySwapchain::DisplaySwapchain(
   }
 }
 
-// Create a number of synced tokens that can be imported into collections.
-static std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> DuplicateToken(
-    const fuchsia::sysmem::BufferCollectionTokenSyncPtr& input, uint32_t count) {
-  std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> output;
-  for (uint32_t i = 0; i < count; i++) {
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr new_token;
-    zx_status_t status =
-        input->Duplicate(std::numeric_limits<uint32_t>::max(), new_token.NewRequest());
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unable to duplicate token:" << status;
-      return std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr>();
-    }
-    output.push_back(std::move(new_token));
-  }
-  zx_status_t status = input->Sync();
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to sync token:" << status;
-    return std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr>();
-  }
-  return output;
-}
-
 bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource_recycler,
                                               bool use_protected_memory) {
   FXL_CHECK(escher_);
-  vk::ImageUsageFlags image_usage = GetFramebufferImageUsage();
-
-#if !defined(__aarch64__) && !defined(__x86_64__)
-  FXL_DLOG(ERROR) << "Display swapchain only supported on intel and arm";
-  return false;
-#endif
-
-  const uint32_t width_in_px = display_->width_in_px();
-  const uint32_t height_in_px = display_->height_in_px();
-  zx_pixel_format_t pixel_format = ZX_PIXEL_FORMAT_NONE;
-  for (zx_pixel_format_t format : display_->pixel_formats()) {
-    // The formats are in priority order, so pick the first usable one.
-    if (format == ZX_PIXEL_FORMAT_RGB_x888 || format == ZX_PIXEL_FORMAT_ARGB_8888) {
-      pixel_format = format;
-      break;
-    }
+  BufferPool::Environment environment = {
+      .display_controller = display_controller_,
+      .display = display_,
+      .escher = escher_,
+      .sysmem = sysmem_,
+      .recycler = resource_recycler,
+      .vk_device = device_,
+  };
+  BufferPool pool(kSwapchainImageCount, &environment, use_protected_memory);
+  if ((*display_controller_)->SetLayerPrimaryConfig(primary_layer_id_, pool.image_config()) !=
+      ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to set layer primary config";
   }
-
-  if (pixel_format == ZX_PIXEL_FORMAT_NONE) {
-    FXL_LOG(ERROR) << "Unable to find usable pixel format.";
-    return false;
+  if (use_protected_memory) {
+    protected_swapchain_buffers_ = std::move(pool);
+  } else {
+    swapchain_buffers_ = std::move(pool);
   }
-
-  SetImageConfig(primary_layer_id_, width_in_px, height_in_px, pixel_format);
-
-  // Create all the tokens.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token = sysmem_->CreateBufferCollection();
-  if (!local_token) {
-    FXL_LOG(ERROR) << "Sysmem tokens couldn't be allocated";
-    return false;
-  }
-  zx_status_t status;
-
-  auto tokens = DuplicateToken(local_token, 2);
-
-  if (tokens.empty()) {
-    FXL_LOG(ERROR) << "Sysmem tokens failed to be duped.";
-    return false;
-  }
-
-  // Set display buffer constraints.
-  uint64_t display_collection_id = ImportBufferCollection(std::move(tokens[1]));
-  if (!display_collection_id) {
-    FXL_LOG(ERROR) << "Setting buffer collection constraints failed.";
-    return false;
-  }
-
-  auto collection_closer = fbl::MakeAutoCall([this, display_collection_id]() {
-    if ((*display_controller_)->ReleaseBufferCollection(display_collection_id) != ZX_OK) {
-      FXL_LOG(ERROR) << "ReleaseBufferCollection failed.";
-    }
-  });
-
-  // Set Vulkan buffer constraints.
-  vk::ImageCreateInfo create_info;
-  create_info.flags =
-      use_protected_memory ? vk::ImageCreateFlagBits::eProtected : vk::ImageCreateFlags();
-  create_info.imageType = vk::ImageType::e2D, create_info.format = format_;
-  create_info.extent = vk::Extent3D{width_in_px, height_in_px, 1};
-  create_info.mipLevels = 1;
-  create_info.arrayLayers = 1;
-  create_info.samples = vk::SampleCountFlagBits::e1;
-  create_info.tiling = vk::ImageTiling::eOptimal;
-  create_info.usage = image_usage;
-  create_info.sharingMode = vk::SharingMode::eExclusive;
-  create_info.initialLayout = vk::ImageLayout::eUndefined;
-
-  vk::BufferCollectionCreateInfoFUCHSIA import_collection;
-  import_collection.collectionToken = tokens[0].Unbind().TakeChannel().release();
-  auto import_result = device_.createBufferCollectionFUCHSIA(import_collection, nullptr,
-                                                             escher_->device()->dispatch_loader());
-  if (import_result.result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "VkImportBufferCollectionFUCHSIA failed: "
-                   << vk::to_string(import_result.result);
-    return false;
-  }
-
-  auto vulkan_collection_closer = fbl::MakeAutoCall([this, import_result]() {
-    device_.destroyBufferCollectionFUCHSIA(import_result.value, nullptr,
-                                           escher_->device()->dispatch_loader());
-  });
-
-  auto constraints_result = device_.setBufferCollectionConstraintsFUCHSIA(
-      import_result.value, create_info, escher_->device()->dispatch_loader());
-  if (constraints_result != vk::Result::eSuccess) {
-    FXL_LOG(ERROR) << "VkSetBufferCollectionConstraints failed: "
-                   << vk::to_string(constraints_result);
-    return false;
-  }
-
-  // Use the local collection so we can read out the error if allocation
-  // fails, and to ensure everything's allocated before trying to import it
-  // into another process.
-  fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection =
-      sysmem_->GetCollectionFromToken(std::move(local_token));
-  if (!sysmem_collection) {
-    return false;
-  }
-  fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.min_buffer_count = kSwapchainImageCount;
-  constraints.usage.vulkan = fuchsia::sysmem::noneUsage;
-  status = sysmem_collection->SetConstraints(true, constraints);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to set constraints:" << status;
-    return false;
-  }
-
-  fuchsia::sysmem::BufferCollectionInfo_2 info;
-  zx_status_t allocation_status = ZX_OK;
-  // Wait for the buffers to be allocated.
-  status = sysmem_collection->WaitForBuffersAllocated(&allocation_status, &info);
-  if (status != ZX_OK || allocation_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Waiting for buffers failed:" << status << " " << allocation_status;
-    return false;
-  }
-
-  // Import the collection into a vulkan image.
-  if (info.buffer_count < kSwapchainImageCount) {
-    FXL_LOG(ERROR) << "Incorrect buffer collection count: " << info.buffer_count;
-    return false;
-  }
-
-  for (uint32_t i = 0; i < kSwapchainImageCount; i++) {
-    vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
-    collection_image_info.collection = import_result.value;
-    collection_image_info.index = i;
-    create_info.setPNext(&collection_image_info);
-
-    auto image_result = device_.createImage(create_info);
-    if (image_result.result != vk::Result::eSuccess) {
-      FXL_LOG(ERROR) << "VkCreateImage failed: " << vk::to_string(image_result.result);
-      return false;
-    }
-
-    auto memory_requirements = device_.getImageMemoryRequirements(image_result.value);
-    auto collection_properties = device_.getBufferCollectionPropertiesFUCHSIA(
-        import_result.value, escher_->device()->dispatch_loader());
-    if (collection_properties.result != vk::Result::eSuccess) {
-      FXL_LOG(ERROR) << "VkGetBufferCollectionProperties failed: "
-                     << vk::to_string(collection_properties.result);
-      return false;
-    }
-
-    uint32_t memory_type_index = escher::CountTrailingZeros(
-        memory_requirements.memoryTypeBits & collection_properties.value.memoryTypeBits);
-    vk::ImportMemoryBufferCollectionFUCHSIA import_info;
-    import_info.collection = import_result.value;
-    import_info.index = i;
-    vk::MemoryAllocateInfo alloc_info;
-    alloc_info.setPNext(&import_info);
-    alloc_info.allocationSize = memory_requirements.size;
-    alloc_info.memoryTypeIndex = memory_type_index;
-
-    auto mem_result = device_.allocateMemory(alloc_info);
-
-    if (mem_result.result != vk::Result::eSuccess) {
-      FXL_LOG(ERROR) << "vkAllocMemory failed: " << vk::to_string(mem_result.result);
-      return false;
-    }
-
-    Framebuffer buffer;
-    buffer.device_memory = escher::GpuMem::AdoptVkMemory(
-        device_, mem_result.value, memory_requirements.size, false /* needs_mapped_ptr */);
-    FXL_CHECK(buffer.device_memory);
-
-    // Wrap the image and device memory in a escher::Image.
-    escher::ImageInfo image_info;
-    image_info.format = format_;
-    image_info.width = width_in_px;
-    image_info.height = height_in_px;
-    image_info.usage = image_usage;
-    image_info.memory_flags =
-        use_protected_memory ? vk::MemoryPropertyFlagBits::eProtected : vk::MemoryPropertyFlags();
-
-    // escher::NaiveImage::AdoptVkImage() binds the memory to the image.
-    buffer.escher_image = escher::impl::NaiveImage::AdoptVkImage(
-        resource_recycler, image_info, image_result.value, buffer.device_memory);
-
-    if (!buffer.escher_image) {
-      FXL_LOG(ERROR) << "Creating escher::EscherImage failed.";
-      device_.destroyImage(image_result.value);
-      return false;
-    } else {
-      buffer.escher_image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
-    }
-    zx_status_t import_image_status = ZX_OK;
-    zx_status_t transport_status = (*display_controller_)
-                                       ->ImportImage(image_config_, display_collection_id, i,
-                                                     &import_image_status, &buffer.fb_id);
-    if (transport_status != ZX_OK || import_image_status != ZX_OK) {
-      buffer.fb_id = fuchsia::hardware::display::invalidId;
-      FXL_LOG(ERROR) << "Importing image failed.";
-      return false;
-    }
-
-    if (use_protected_memory) {
-      protected_swapchain_buffers_.push_back(std::move(buffer));
-    } else {
-      swapchain_buffers_.push_back(std::move(buffer));
-    }
-  }
-
-  sysmem_collection->Close();
-
   return true;
 }
 
@@ -385,16 +165,8 @@ DisplaySwapchain::~DisplaySwapchain() {
     }
   }
 
-  for (auto& buffer : swapchain_buffers_) {
-    if ((*display_controller_)->ReleaseImage(buffer.fb_id) != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to release image";
-    }
-  }
-  for (auto& buffer : protected_swapchain_buffers_) {
-    if ((*display_controller_)->ReleaseImage(buffer.fb_id) != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to release image";
-    }
-  }
+  swapchain_buffers_.Clear(display_controller_);
+  protected_swapchain_buffers_.Clear(display_controller_);
 }
 
 std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
@@ -455,28 +227,37 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
   FXL_DCHECK(hla.swapchain == this);
   FXL_DCHECK(frame_timings);
 
-  // Find the next framebuffer to render into, and other corresponding data.
-  auto& buffer = use_protected_memory_ ? protected_swapchain_buffers_[next_frame_index_]
-                                       : swapchain_buffers_[next_frame_index_];
-
   // Create a record that can be used to notify |frame_timings| (and hence
   // ultimately the FrameScheduler) that the frame has been presented.
   //
   // There must not already exist a pending record.  If there is, it indicates
   // an error in the FrameScheduler logic (or somewhere similar), which should
   // not have scheduled another frame when there are no framebuffers available.
-  if (frames_[next_frame_index_]) {
-    if (auto timings = frames_[next_frame_index_]->frame_timings) {
+  auto& old_frame = frames_[next_frame_index_];
+  if (old_frame) {
+    if (auto timings = old_frame->frame_timings) {
       FXL_CHECK(timings->finalized());
     }
-    if (frames_[next_frame_index_]->retired_event.wait_one(ZX_EVENT_SIGNALED, zx::time(),
-                                                           nullptr) != ZX_OK) {
+    if (old_frame->retired_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr) != ZX_OK) {
       FXL_LOG(WARNING) << "DisplaySwapchain::DrawAndPresentFrame rendering "
                           "into in-use backbuffer";
+    }
+    if (old_frame->buffer) {
+      if (old_frame->use_protected_memory) {
+        protected_swapchain_buffers_.Put(old_frame->buffer);
+      } else {
+        swapchain_buffers_.Put(old_frame->buffer);
+      }
+      old_frame->buffer = nullptr;
     }
   }
 
   auto& frame_record = frames_[next_frame_index_] = NewFrameRecord(frame_timings, swapchain_index);
+  // Find the next framebuffer to render into, and other corresponding data.
+  frame_record->buffer = use_protected_memory_ ? protected_swapchain_buffers_.GetUnused()
+                                               : swapchain_buffers_.GetUnused();
+  frame_record->use_protected_memory = use_protected_memory_;
+  FXL_CHECK(frame_record->buffer != nullptr);
 
   next_frame_index_ = (next_frame_index_ + 1) % kSwapchainImageCount;
   outstanding_frame_count_++;
@@ -502,14 +283,14 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
                                        : escher::SemaphorePtr();
     // TODO(SCN-1088): handle more hardware layers: the single image from
     // buffer.escher_image is not enough; we need one for each layer.
-    draw_callback(frame_timings->target_presentation_time(), buffer.escher_image, hla.items[i],
-                  escher::SemaphorePtr(), render_finished_escher_semaphore);
+    draw_callback(frame_timings->target_presentation_time(), frame_record->buffer->escher_image,
+                  hla.items[i], escher::SemaphorePtr(), render_finished_escher_semaphore);
   }
 
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() present");
 
-  Flip(display_->display_id(), buffer.fb_id, frame_record->render_finished_event_id,
+  Flip(display_->display_id(), frame_record->buffer->id, frame_record->render_finished_event_id,
        frame_record->retired_event_id);
 
   if ((*display_controller_)->ReleaseEvent(frame_record->render_finished_event_id) != ZX_OK) {
@@ -631,13 +412,9 @@ void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
 
   bool match = false;
   while (outstanding_frame_count_ && !match) {
-    match = swapchain_buffers_[presented_frame_idx_].fb_id == image_id;
-    // Check if the presented image was from |protected_swapchain_buffers_| list.
-    if (!match && protected_swapchain_buffers_.size() > presented_frame_idx_) {
-      match = protected_swapchain_buffers_[presented_frame_idx_].fb_id == image_id;
-    }
-
     auto& record = frames_[presented_frame_idx_];
+    match = record->buffer->id == image_id;
+
     // Don't double-report a frame as presented if a frame is shown twice
     // due to the next frame missing its deadline.
     if (!record->presented) {
@@ -684,53 +461,6 @@ uint64_t DisplaySwapchain::ImportEvent(const zx::event& event) {
   return event_id;
 }
 
-void DisplaySwapchain::SetImageConfig(uint64_t layer_id, int32_t width, int32_t height,
-                                      zx_pixel_format_t format) {
-  image_config_.height = height;
-  image_config_.width = width;
-  image_config_.pixel_format = format;
-
-#if defined(__x86_64__)
-  // IMAGE_TYPE_X_TILED from ddk/protocol/intelgpucore.h
-  image_config_.type = 1;
-#elif defined(__aarch64__)
-  image_config_.type = 0;
-#else
-  FXL_DCHECK(false) << "Display swapchain only supported on intel and ARM";
-#endif
-
-  if ((*display_controller_)->SetLayerPrimaryConfig(layer_id, image_config_) != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to set layer primary config";
-  }
-}
-
-uint64_t DisplaySwapchain::ImportBufferCollection(
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
-  uint64_t buffer_collection_id = next_buffer_collection_id_++;
-  zx_status_t status;
-
-  if ((*display_controller_)
-              ->ImportBufferCollection(buffer_collection_id, std::move(token), &status) != ZX_OK ||
-      status != ZX_OK) {
-    FXL_LOG(ERROR) << "ImportBufferCollection failed - status: " << status;
-    return 0;
-  }
-
-  if ((*display_controller_)
-              ->SetBufferCollectionConstraints(buffer_collection_id, image_config_, &status) !=
-          ZX_OK ||
-      status != ZX_OK) {
-    FXL_LOG(ERROR) << "SetBufferCollectionConstraints failed.";
-
-    if ((*display_controller_)->ReleaseBufferCollection(buffer_collection_id) != ZX_OK) {
-      FXL_LOG(ERROR) << "ReleaseBufferCollection failed.";
-    }
-    return 0;
-  }
-
-  return buffer_collection_id;
-}
-
 void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_finished_event_id,
                             uint64_t signal_event_id) {
   zx_status_t status =
@@ -743,20 +473,6 @@ void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_
   // TODO(SCN-244): handle this more robustly.
   FXL_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
 }
-
-namespace {
-
-vk::ImageUsageFlags GetFramebufferImageUsage() {
-  return vk::ImageUsageFlagBits::eColorAttachment |
-         // For blitting frame #.
-         vk::ImageUsageFlagBits::eTransferDst;
-}
-
-vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {
-  return vk::Format::eB8G8R8A8Unorm;
-}
-
-}  // namespace
 
 }  // namespace gfx
 }  // namespace scenic_impl

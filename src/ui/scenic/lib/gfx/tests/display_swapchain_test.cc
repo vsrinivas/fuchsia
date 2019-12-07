@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"
 
+#include <lib/async/default.h>
+#include <lib/async/time.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/syscalls.h>
@@ -16,6 +18,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
+#include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 
@@ -28,6 +31,7 @@ using escher::ReleaseFenceSignaller;
 using escher::VulkanDeviceQueues;
 using escher::VulkanDeviceQueuesPtr;
 using escher::VulkanInstance;
+using scheduling::FrameTimings;
 using scheduling::test::MockFrameScheduler;
 
 using Fixture = gtest::RealLoopFixture;
@@ -51,12 +55,13 @@ class DisplaySwapchainTest : public Fixture {
     sysmem_ = std::make_unique<Sysmem>();
     display_manager_ = std::make_unique<display::DisplayManager>();
 
-    auto vulkan_device = CreateVulkanDeviceQueues();
+    auto vulkan_device = CreateVulkanDeviceQueues(/*use_protected_memory*/ false);
     escher_ = std::make_unique<escher::Escher>(vulkan_device);
     release_fence_signaller_ =
         std::make_unique<ReleaseFenceSignaller>(escher_->command_buffer_sequencer());
     image_factory_ = std::make_unique<ImageFactoryAdapter>(escher_->gpu_allocator(),
                                                            escher_->resource_recycler());
+    frame_scheduler_ = std::make_shared<MockFrameScheduler>();
     auto session_context = SessionContext{escher_->vk_device(),
                                           escher_.get(),
                                           escher_->resource_recycler(),
@@ -89,7 +94,7 @@ class DisplaySwapchainTest : public Fixture {
     Fixture::TearDown();
   }
 
-  static escher::VulkanDeviceQueuesPtr CreateVulkanDeviceQueues() {
+  static escher::VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
     VulkanInstance::Params instance_params(
         {{"VK_LAYER_LUNARG_standard_validation"},
          {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME},
@@ -97,17 +102,49 @@ class DisplaySwapchainTest : public Fixture {
 
     auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
     // This extension is necessary to support exporting Vulkan memory to a VMO.
-    return VulkanDeviceQueues::New(
+    auto queues = VulkanDeviceQueues::New(
         vulkan_instance,
         {{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME, VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
           VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME, VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
           VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME},
          {},
          vk::SurfaceKHR()});
+    if (use_protected_memory && !queues->caps().allow_protected_memory) {
+      return nullptr;
+    }
+    return queues;
   }
 
-  const std::vector<DisplaySwapchain::Framebuffer>& Framebuffers(
-      DisplaySwapchain* swapchain) const {
+  void DrawAndPresentFrame(DisplaySwapchain* swapchain, fxl::WeakPtr<FrameTimings> timing,
+                           size_t swapchain_index, const HardwareLayerAssignment& hla) {
+    swapchain->DrawAndPresentFrame(
+        timing, swapchain_index, hla,
+        [this, timing](zx::time present_time, const escher::ImagePtr& out,
+                       const HardwareLayerAssignment::Item& hla, const escher::SemaphorePtr& wait,
+                       const escher::SemaphorePtr& signal) {
+          auto device = escher()->device();
+          zx_signals_t tmp;
+          if (wait) {
+            EXPECT_EQ(GetEventForSemaphore(device, wait)
+                          .wait_one(ZX_EVENT_SIGNALED, zx::time(ZX_TIME_INFINITE), &tmp),
+                      ZX_OK);
+          }
+          if (signal) {
+            EXPECT_EQ(GetEventForSemaphore(device, signal).signal(0, ZX_EVENT_SIGNALED), ZX_OK);
+          }
+        });
+  }
+
+  std::unique_ptr<FrameTimings> MakeTimings(uint64_t frame_number, zx::time present_time,
+                                            zx::time latch_time, zx::time started_time) {
+    FXL_CHECK(frame_scheduler_);
+    return std::make_unique<FrameTimings>(
+        frame_number, present_time, latch_time, started_time,
+        fit::bind_member(frame_scheduler_.get(), &MockFrameScheduler::OnFrameRendered),
+        fit::bind_member(frame_scheduler_.get(), &MockFrameScheduler::OnFramePresented));
+  }
+
+  const BufferPool& Framebuffers(DisplaySwapchain* swapchain) const {
     return swapchain->swapchain_buffers_;
   }
 
@@ -129,6 +166,58 @@ class DisplaySwapchainTest : public Fixture {
   std::shared_ptr<TestErrorReporter> error_reporter_;
   std::shared_ptr<TestEventReporter> event_reporter_;
 };
+
+VK_TEST_F(DisplaySwapchainTest, RenderStress) {
+  auto swapchain = CreateSwapchain(display());
+
+  auto layer = fxl::MakeRefCounted<Layer>(session(), session()->id(), 0);
+  HardwareLayerAssignment hla({{{0, {layer.get()}}}, swapchain.get()});
+
+  constexpr size_t kNumFrames = 100;
+  std::array<std::unique_ptr<FrameTimings>, kNumFrames> timings;
+  for (size_t i = 0; i < kNumFrames; ++i) {
+    zx::time now(async_now(dispatcher()));
+    timings[i] = MakeTimings(i, now + zx::msec(15), now + zx::msec(10), now);
+    timings[i]->RegisterSwapchains(1);
+    DrawAndPresentFrame(swapchain.get(), timings[i]->GetWeakPtr(), 0, hla);
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([t = timings[i].get()]() { return t->finalized(); },
+                                          /*timeout=*/zx::msec(50)));
+  }
+  RunLoopUntilIdle();
+  EXPECT_EQ(scheduler()->frame_rendered_call_count(), kNumFrames);
+  // Last frame is left up on the display, so look for presentation.
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this]() { return scheduler()->frame_presented_call_count() == kNumFrames; },
+      /*timeout=*/zx::msec(50)));
+}
+
+VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
+  if (!CreateVulkanDeviceQueues(/*use_protected_memory=*/true)) {
+    GTEST_SKIP();
+  }
+  auto swapchain = CreateSwapchain(display());
+  swapchain->SetUseProtectedMemory(true);
+
+  auto layer = fxl::MakeRefCounted<Layer>(session(), session()->id(), 0);
+  HardwareLayerAssignment hla({{{0, {layer.get()}}}, swapchain.get()});
+
+  constexpr size_t kNumFrames = 100;
+  std::array<std::unique_ptr<FrameTimings>, kNumFrames> timings;
+  for (size_t i = 0; i < kNumFrames; ++i) {
+    zx::time now(async_now(dispatcher()));
+    timings[i] = MakeTimings(i, now + zx::msec(15), now + zx::msec(10), now);
+    timings[i]->RegisterSwapchains(1);
+    DrawAndPresentFrame(swapchain.get(), timings[i]->GetWeakPtr(), 0, hla);
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([t = timings[i].get()]() { return t->finalized(); },
+                                          /*timeout=*/zx::msec(50)));
+  }
+  RunLoopUntilIdle();
+  EXPECT_EQ(scheduler()->frame_rendered_call_count(), kNumFrames);
+  // Last frame is left up on the display, so look for presentation.
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this]() { return scheduler()->frame_presented_call_count() == kNumFrames; },
+      /*timeout=*/zx::msec(50)));
+}
 
 VK_TEST_F(DisplaySwapchainTest, InitializesFramebuffers) {
   auto swapchain = CreateSwapchain(display());

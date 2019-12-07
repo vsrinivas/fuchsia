@@ -199,6 +199,8 @@ source_set("gfx") {
     "snapshot/snapshotter.cc",
     "snapshot/snapshotter.h",
     "snapshot/version.h",
+    "swapchain/buffer_pool.cc",
+    "swapchain/buffer_pool.h",
     "swapchain/display_swapchain.cc",
     "swapchain/display_swapchain.h",
     "swapchain/swapchain.h",
