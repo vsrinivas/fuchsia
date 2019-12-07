@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
             Some(channel_configs) => channel_configs.default_channel.clone(),
             None => None,
         };
-        let (app_set, channel_source) = configuration::get_app_set(&version, default_channel);
+        let (app_set, channel_source) = configuration::get_app_set(&version, default_channel).await;
         info!("Omaha app set: {:?}", app_set.to_vec().await);
         let config = configuration::get_config(&version);
         info!("Update config: {:?}", config);
