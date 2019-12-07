@@ -45,4 +45,13 @@ TEST_F(GatherMemoryDigestTest, Inspectable) {
   // has no shared memory then all three values will be equal.
   EXPECT_GE(total_bytes, scaled_bytes);
   EXPECT_GE(scaled_bytes, private_bytes);
+
+  // Test that the values have some sane value. If the kernel really can be
+  // using ten gigabytes for itself, then this test should be updated.
+  // If these fail and the kernel should not taking more than 10GB then verify
+  // that the memory::Capture is being initialized with memory::GetCapture().
+  const uint64_t TEN_GB = 1024ULL * 1024 * 1024 * 10;
+  EXPECT_GT(TEN_GB, private_bytes);
+  EXPECT_GT(TEN_GB, scaled_bytes);
+  EXPECT_GT(TEN_GB, total_bytes);
 }

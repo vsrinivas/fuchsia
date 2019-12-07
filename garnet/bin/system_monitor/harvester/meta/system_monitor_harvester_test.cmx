@@ -3,7 +3,9 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.boot.RootJob",
-                "fuchsia.boot.RootResource"
+                "fuchsia.boot.RootJobForInspect",
+                "fuchsia.boot.RootResource",
+                "fuchsia.kernel.Stats"
             ]
         }
     },
@@ -16,7 +18,9 @@
         ],
         "services": [
             "fuchsia.boot.RootJob",
+            "fuchsia.boot.RootJobForInspect",
             "fuchsia.boot.RootResource",
+            "fuchsia.kernel.Stats",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider"
         ]

@@ -52,9 +52,23 @@ void GatherMemoryDigest::Gather() {
       {"Orphaned", "memory_digest:orphaned"},
       {"Kernel", "memory_digest:kernel"},
       {"Free", "memory_digest:free"},
+      {"Undigested", "memory_digest:undigested"},
   };
 
   memory::Capture capture;
+  memory::CaptureState capture_state;
+  zx_status_t zx_status = memory::Capture::GetCaptureState(&capture_state);
+  if (zx_status != ZX_OK) {
+    FXL_LOG(ERROR) << ZxErrorString("GetCaptureState", zx_status)
+                   << " Memory Digest will not be collected";
+    return;
+  }
+  zx_status = memory::Capture::GetCapture(&capture, capture_state, memory::VMO);
+  if (zx_status != ZX_OK) {
+    FXL_LOG(ERROR) << ZxErrorString("GetCapture", zx_status)
+                   << " Memory Digest will not be collected";
+    return;
+  }
   memory::Digest digest(capture, &digester_);
   memory::Summary summary(capture, &namer_, digest.undigested_vmos());
 
