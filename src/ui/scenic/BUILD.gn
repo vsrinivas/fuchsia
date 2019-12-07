@@ -230,6 +230,16 @@ package("scenic_pkg") {
         path = "//src/ui/lib/escher/shaders/spirv/pose_buffer_latching_comp14695981039346656037.spirv"
         dest = "shaders/pose_buffer_latching_comp14695981039346656037.spirv"
       },
+      {
+        path = "//src/ui/lib/escher/shaders/spirv/shaders_flatland_flat_main_frag14695981039346656037.spirv"
+        dest =
+            "shaders/shaders_flatland_flat_main_frag14695981039346656037.spirv"
+      },
+      {
+        path = "//src/ui/lib/escher/shaders/spirv/shaders_flatland_flat_main_vert14695981039346656037.spirv"
+        dest =
+            "shaders/shaders_flatland_flat_main_vert14695981039346656037.spirv"
+      },
     ]
   }
 

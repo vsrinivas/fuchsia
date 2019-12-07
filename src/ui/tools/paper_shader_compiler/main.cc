@@ -6,6 +6,7 @@
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/escher_process_init.h"
+#include "src/ui/lib/escher/flatland/flatland_static_config.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
@@ -84,8 +85,11 @@ int main(int argc, const char** argv) {
   auto filesystem = escher::HackFilesystem::New();
 
   // The binary for this is expected to be in ./out/default/host_x64.
-  bool success = filesystem->InitializeWithRealFiles(escher::kPaperRendererShaderPaths,
-                                                     "./../../../../src/ui/lib/escher/");
+
+  auto paths = escher::kPaperRendererShaderPaths;
+  paths.insert(paths.end(), escher::kFlatlandShaderPaths.begin(),
+               escher::kFlatlandShaderPaths.end());
+  bool success = filesystem->InitializeWithRealFiles(paths, "./../../../../src/ui/lib/escher/");
   FXL_CHECK(success);
   FXL_CHECK(filesystem->base_path());
 
@@ -117,6 +121,11 @@ int main(int argc, const char** argv) {
 
   if (!CompileAndWriteComputeShader(filesystem, escher::hmd::g_kernel_src,
                                     escher::hmd::kPoseLatchingShaderName)) {
+    return EXIT_FAILURE;
+  }
+
+  // Flatland shader.
+  if (!CompileAndWriteShader(filesystem, escher::kFlatlandStandardProgram)) {
     return EXIT_FAILURE;
   }
 

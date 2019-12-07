@@ -5,6 +5,7 @@
 #include "src/ui/lib/escher/vk/shader_program.h"
 
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
+#include "src/ui/lib/escher/flatland/flatland_static_config.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
@@ -143,6 +144,7 @@ VK_TEST_F(ShaderProgramTest, SpirVReadFileTest) {
   load_and_check_program(kPointLightFalloffProgramData);
   load_and_check_program(kShadowVolumeGeometryProgramData);
   load_and_check_program(kShadowVolumeGeometryDebugProgramData);
+  load_and_check_program(kFlatlandStandardProgram);
 }
 
 VK_TEST_F(ShaderProgramTest, CachedVariants) {

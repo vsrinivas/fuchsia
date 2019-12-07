@@ -221,7 +221,8 @@ bool ShaderModuleTemplate::Variant::GenerateSpirV(std::vector<uint32_t>* output)
 
   auto status = result.GetCompilationStatus();
   if (status != shaderc_compilation_status_success) {
-    FXL_LOG(ERROR) << "Shader compilation failed with status: " << status;
+    FXL_LOG(ERROR) << "Shader compilation failed with status: " << status << ". "
+                   << " Error message: " << result.GetErrorMessage();
     return false;
   }
 
