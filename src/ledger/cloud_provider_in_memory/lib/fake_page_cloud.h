@@ -10,6 +10,7 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/cloud_provider_in_memory/lib/diff_tree.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/lib/callback/auto_cleanable.h"
 
@@ -57,7 +58,12 @@ class FakePageCloud : public cloud_provider::PageCloud {
   fidl::BindingSet<cloud_provider::PageCloud> bindings_;
   fit::closure on_discardable_;
 
+  // The id and data of commits received until know, ordered.
   std::vector<CommitRecord> commits_;
+  // The set of ids of the commits present in |commits_|.
+  std::set<std::string> known_commits_;
+  // The set of known diffs.
+  DiffTree diffs_;
   std::map<std::string, std::string> objects_;
 
   // Watchers set by the client.

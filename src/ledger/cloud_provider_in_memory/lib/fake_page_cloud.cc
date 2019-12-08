@@ -73,6 +73,44 @@ cloud_provider::Commit MakeFidlCommit(CommitRecord commit) {
   return result;
 }
 
+bool DecodeDiffEntry(const cloud_provider::DiffEntry& entry, CloudDiffEntry* result) {
+  if (!entry.has_entry_id() || !entry.has_operation() || !entry.has_data()) {
+    return false;
+  }
+
+  result->entry_id = convert::ToString(entry.entry_id());
+  result->operation = entry.operation();
+  result->data = convert::ToString(entry.data());
+  return true;
+}
+
+bool DecodeDiff(const cloud_provider::Diff& diff, PageState* page_state,
+                std::vector<CloudDiffEntry>* diff_entries) {
+  if (!diff.has_base_state() || !diff.has_changes()) {
+    return false;
+  }
+
+  if (diff.base_state().is_empty_page()) {
+    *page_state = std::nullopt;
+  } else if (diff.base_state().is_at_commit()) {
+    *page_state = convert::ToString(diff.base_state().at_commit());
+  } else {
+    return false;
+  }
+
+  diff_entries->clear();
+  diff_entries->reserve(diff.changes().size());
+  for (auto& diff_entry : diff.changes()) {
+    CloudDiffEntry decoded;
+    if (!DecodeDiffEntry(diff_entry, &decoded)) {
+      return false;
+    }
+    diff_entries->push_back(std::move(decoded));
+  }
+
+  return true;
+}
+
 }  // namespace
 
 class FakePageCloud::WatcherContainer {
@@ -121,7 +159,7 @@ void FakePageCloud::WatcherContainer::SendCommits(std::vector<cloud_provider::Co
   waiting_for_watcher_ack_ = true;
   next_commit_index_ = next_commit_index;
   cloud_provider::CommitPack commit_pack;
-  if (!ledger::EncodeToBuffer(&commits, &commit_pack.buffer)) {
+  if (!EncodeToBuffer(&commits, &commit_pack.buffer)) {
     watcher_->OnError(cloud_provider::Status::INTERNAL_ERROR);
     return;
   }
@@ -191,7 +229,7 @@ bool FakePageCloud::MustReturnError(uint64_t request_signature) {
 void FakePageCloud::AddCommits(cloud_provider::CommitPack commit_pack,
                                AddCommitsCallback callback) {
   cloud_provider::Commits commits;
-  if (!ledger::DecodeFromBuffer(commit_pack.buffer, &commits)) {
+  if (!DecodeFromBuffer(commit_pack.buffer, &commits)) {
     callback(cloud_provider::Status::INTERNAL_ERROR);
     return;
   }
@@ -200,13 +238,55 @@ void FakePageCloud::AddCommits(cloud_provider::CommitPack commit_pack,
     callback(cloud_provider::Status::NETWORK_ERROR);
     return;
   }
+
+  // Check that the commits are valid to insert: the base of the diff must be uploaded before the
+  // diff to avoid cycles.
+  std::set<std::string> commits_in_batch;
+  std::vector<std::pair<std::string, std::string>> commits_to_insert;
+  std::vector<std::tuple<std::string, PageState, std::vector<CloudDiffEntry>>> diffs_to_insert;
   for (const cloud_provider::Commit& commit : commit_entries) {
     if (!commit.has_id() || !commit.has_data()) {
       callback(cloud_provider::Status::ARGUMENT_ERROR);
       return;
     }
-    commits_.push_back({convert::ToString(commit.id()), convert::ToString(commit.data())});
+    std::string commit_id = convert::ToString(commit.id());
+    if (known_commits_.find(commit_id) != known_commits_.end()) {
+      // The commit already exists, we will not insert it again.
+      continue;
+    }
+    if (commits_in_batch.find(commit_id) != commits_in_batch.end()) {
+      // The commit is present twice in the pack.
+      callback(cloud_provider::Status::ARGUMENT_ERROR);
+      return;
+    }
+    if (commit.has_diff()) {
+      PageState diff_base;
+      std::vector<CloudDiffEntry> diff_entries;
+      if (!DecodeDiff(commit.diff(), &diff_base, &diff_entries)) {
+        callback(cloud_provider::Status::ARGUMENT_ERROR);
+        return;
+      }
+      if (diff_base && known_commits_.find(*diff_base) == known_commits_.end() &&
+          commits_in_batch.find(*diff_base) == commits_in_batch.end()) {
+        // The diff parent commit is unknown, reject the diff.
+        callback(cloud_provider::Status::NOT_FOUND);
+        return;
+      }
+      diffs_to_insert.emplace_back(commit_id, std::move(diff_base), std::move(diff_entries));
+    }
+    commits_in_batch.insert(commit_id);
+    commits_to_insert.emplace_back(std::move(commit_id), convert::ToString(commit.data()));
   }
+
+  // The commits are valid, we can insert them.
+  for (auto& [commit_id, commit_data] : commits_to_insert) {
+    known_commits_.insert(commit_id);
+    commits_.push_back({std::move(commit_id), std::move(commit_data)});
+  }
+  for (auto& [commit_id, diff_base, diff_entries] : diffs_to_insert) {
+    diffs_.AddDiff(std::move(commit_id), std::move(diff_base), std::move(diff_entries));
+  }
+
   SendPendingCommits();
   callback(cloud_provider::Status::OK);
 }
@@ -237,7 +317,7 @@ void FakePageCloud::GetCommits(std::unique_ptr<cloud_provider::PositionToken> mi
     token = fidl::MakeOptional(PositionToToken(commits_.size() - 1));
   }
   cloud_provider::CommitPack commit_pack;
-  if (!ledger::EncodeToBuffer(&result, &commit_pack.buffer)) {
+  if (!EncodeToBuffer(&result, &commit_pack.buffer)) {
     callback(cloud_provider::Status::INTERNAL_ERROR, nullptr, nullptr);
     return;
   }
@@ -301,7 +381,40 @@ void FakePageCloud::SetWatcher(std::unique_ptr<cloud_provider::PositionToken> mi
 void FakePageCloud::GetDiff(std::vector<uint8_t> commit_id,
                             std::vector<std::vector<uint8_t>> possible_bases,
                             GetDiffCallback callback) {
-  callback(cloud_provider::Status::NOT_SUPPORTED, {});
+  // Check that the commit exists.
+  std::string translated_commit_id = convert::ToString(commit_id);
+  if (known_commits_.find(translated_commit_id) == known_commits_.end()) {
+    callback(cloud_provider::Status::NOT_FOUND, {});
+    return;
+  }
+
+  std::vector<std::string> translated_bases;
+  std::transform(possible_bases.begin(), possible_bases.end(), std::back_inserter(translated_bases),
+                 convert::ToString);
+  auto [base_state, diff_entries] = diffs_.GetSmallestDiff(translated_commit_id, translated_bases);
+
+  cloud_provider::Diff diff;
+  if (base_state) {
+    diff.mutable_base_state()->set_at_commit(convert::ToArray(*base_state));
+  } else {
+    diff.mutable_base_state()->set_empty_page({});
+  }
+
+  diff.set_changes({});
+  for (const CloudDiffEntry& diff_entry : diff_entries) {
+    cloud_provider::DiffEntry encoded;
+    *encoded.mutable_entry_id() = convert::ToArray(diff_entry.entry_id);
+    *encoded.mutable_operation() = diff_entry.operation;
+    *encoded.mutable_data() = convert::ToArray(diff_entry.data);
+    diff.mutable_changes()->push_back(std::move(encoded));
+  }
+
+  auto diff_pack = std::make_unique<cloud_provider::DiffPack>();
+  if (!EncodeToBuffer(&diff, &diff_pack->buffer)) {
+    callback(cloud_provider::Status::INTERNAL_ERROR, {});
+    return;
+  }
+  callback(cloud_provider::Status::OK, std::move(diff_pack));
 }
 
 void FakePageCloud::UpdateClock(cloud_provider::ClockPack /*clock*/, UpdateClockCallback callback) {

@@ -20,10 +20,6 @@ namespace {
 constexpr absl::string_view kCloudProviderUrl =
     "fuchsia-pkg://fuchsia.com/cloud_provider_in_memory#meta/"
     "cloud_provider_in_memory.cmx";
-
-constexpr absl::string_view kGtestFilter =
-    "--gtest_filter=-PageCloudTest.Diff_*:PageCloudTest.DiffCompat_*";
-
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -48,7 +44,7 @@ int main(int argc, char** argv) {
 
   int32_t return_code = -1;
   async::PostTask(loop.dispatcher(), [&launcher, &return_code, &loop] {
-    launcher.Run({convert::ToString(kGtestFilter)}, [&return_code, &loop](int32_t result) {
+    launcher.Run({}, [&return_code, &loop](int32_t result) {
       return_code = result;
       loop.Quit();
     });

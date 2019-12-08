@@ -41,9 +41,15 @@ source_set("unittests") {
   testonly = true
   sources = [
     "diff_tree_unittest.cc",
+    "fake_page_cloud_unittest.cc",
   ]
   deps = [
     ":lib",
+    "//src/ledger/bin/fidl/include",
+    "//src/ledger/lib/convert",
+    "//src/ledger/lib/encoding",
+    "//src/lib/callback",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
