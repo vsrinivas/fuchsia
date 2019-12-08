@@ -8,17 +8,18 @@
 
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <lib/zx/debuglog.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 static void run_program(const char* progname, const char** argv, zx_handle_t h) {
-  zx_handle_t logger = ZX_HANDLE_INVALID;
-  zx_debuglog_create(ZX_HANDLE_INVALID, 0, &logger);
+  zx::debuglog logger;
+  zx::debuglog::create(zx::resource(), 0, &logger);
 
   fdio_spawn_action_t actions[] = {
       {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = progname}},
       {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-       .h = {.id = PA_HND(PA_FD, 0 | FDIO_FLAG_USE_FOR_STDIO), .handle = logger}},
+       .h = {.id = PA_HND(PA_FD, 0 | FDIO_FLAG_USE_FOR_STDIO), .handle = logger.release()}},
       {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = PA_HND(PA_USER0, 0), .handle = h}},
   };
 
