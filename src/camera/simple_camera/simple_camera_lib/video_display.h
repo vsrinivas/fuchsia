@@ -70,7 +70,9 @@ class VideoDisplay {
   std::unique_ptr<CameraClient> camera_client_;
   zx::eventpair stream_token_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(VideoDisplay);
+  // Disallow copy and assign
+  VideoDisplay(const VideoDisplay&) = delete;
+  VideoDisplay& operator=(const VideoDisplay&) = delete;
 };
 
 }  // namespace simple_camera

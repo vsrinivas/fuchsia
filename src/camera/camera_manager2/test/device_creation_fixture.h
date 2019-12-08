@@ -79,7 +79,7 @@ class DeviceCreationFixture : public gtest::RealLoopFixture {
       binding_set_.AddBinding(device, fidl::InterfaceRequest<Interface>(std::move(c)));
       return ZX_OK;
     });
-    FXL_CHECK(ZX_OK == dir_->AddEntry(name, service));
+    FX_CHECK(ZX_OK == dir_->AddEntry(name, service));
     return {name, dir_};
   }
 

@@ -14,8 +14,8 @@
 
 #include <fbl/vector.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/ui/base_view/base_view.h"
 
 namespace video_display {
@@ -42,7 +42,9 @@ class SimpleCameraView : public scenic::BaseView {
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::simplecamera::SimpleCameraPtr simple_camera_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(SimpleCameraView);
+  // Disallow copy and assign
+  SimpleCameraView(const SimpleCameraView&) = delete;
+  SimpleCameraView& operator=(const SimpleCameraView&) = delete;
 };
 
 }  // namespace video_display

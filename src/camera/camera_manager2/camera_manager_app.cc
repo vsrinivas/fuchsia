@@ -87,12 +87,12 @@ void CameraManagerApp::ConnectToStream(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     fidl::InterfaceRequest<fuchsia::camera2::Stream> client_request,
     fuchsia::camera2::Manager::ConnectToStreamCallback callback) {
-  // Create a cleanup function, so we can just return if we get an error.
   auto cleanup = fbl::MakeAutoCall([&callback]() {
     FX_LOGS(ERROR) << "Failed to connect to stream";
     ::fuchsia::sysmem::ImageFormat_2 ret;
     callback(ret);
   });
+
   // 1: Check that the camera exists:
   auto device = GetActiveDevice(camera_id);
   if (!device) {
@@ -107,7 +107,7 @@ void CameraManagerApp::ConnectToStream(
   // 3: Pick a config, stream and image_format_index
   zx_status_t status = device->MatchConstraints(constraints, &config_index, &stream_type);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to match constraints. status: " << status;
+    FX_LOGS(ERROR) << "Failed to match constraints. status: " << status;
     return;
   }
   FX_LOGS(INFO) << "Picked config " << config_index << " stream index: " << stream_type
@@ -134,7 +134,7 @@ void CameraManagerApp::ConnectToStream(
   status =
       sysmem_allocator_->BindSharedCollection(std::move(token), sysmem_collection.NewRequest());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to connect to BindSharedCollection.";
+    FX_LOGS(ERROR) << "Failed to connect to BindSharedCollection.";
     return;
   }
 
