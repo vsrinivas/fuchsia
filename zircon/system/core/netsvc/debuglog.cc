@@ -5,6 +5,7 @@
 #include "debuglog.h"
 
 #include <inttypes.h>
+#include <lib/zx/debuglog.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -17,7 +18,7 @@
 
 #define MAX_LOG_LINE (ZX_LOG_RECORD_MAX + 32)
 
-static zx_handle_t loghandle;
+static zx::debuglog debuglog;
 static logpacket_t pkt;
 static size_t pkt_len;
 
@@ -44,7 +45,7 @@ static size_t get_log_line(char* out) {
   char buf[ZX_LOG_RECORD_MAX + 1];
   zx_log_record_t* rec = reinterpret_cast<zx_log_record_t*>(buf);
   for (;;) {
-    if (zx_debuglog_read(loghandle, 0, rec, ZX_LOG_RECORD_MAX) > 0) {
+    if (debuglog.read(0, rec, ZX_LOG_RECORD_MAX) > 0) {
       if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
         rec->datalen--;
       }
@@ -65,7 +66,7 @@ static size_t get_log_line(char* out) {
 }
 
 int debuglog_init() {
-  if (zx_debuglog_create(ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, &loghandle) < 0) {
+  if (zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &debuglog) < 0) {
     return -1;
   }
 
