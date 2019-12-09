@@ -82,11 +82,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_zircon::Status, hyper::StatusCode, matches::assert_matches};
+    use {super::*, hyper::StatusCode, matches::assert_matches};
 
     #[test]
     fn http_errors_aborts_on_io_error() {
-        assert_eq!(HttpErrors::default().next_backoff(&FetchError::Io(Status::INTERNAL)), None);
+        assert_eq!(
+            HttpErrors::default().next_backoff(&FetchError::CreateBlob(
+                pkgfs::install::BlobCreateError::AlreadyExists
+            )),
+            None
+        );
     }
 
     #[test]

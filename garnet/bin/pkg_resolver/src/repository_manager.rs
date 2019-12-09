@@ -5,7 +5,7 @@
 use {
     crate::{
         amber_connector::AmberConnect,
-        cache::{BlobFetcher, PackageCache},
+        cache::{BlobFetcher, PackageCache, ToResolveStatus},
         experiment::{Experiment, Experiments},
         inspect_util::{self, InspectableRepoUrl, InspectableRepositoryConfig},
         tuf_util::OpenedRepository,

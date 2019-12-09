@@ -4,12 +4,10 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::{StreamExt, TryFutureExt},
-    std::fs::File,
 };
 
 mod cache_service;
@@ -26,7 +24,10 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     let pkgfs_versions =
-        connect_to_pkgfs("versions").context("error connecting to pkgfs/versions")?;
+        pkgfs::versions::Client::open_from_namespace().context("error opening pkgfs/versions")?;
+    let pkgfs_ctl =
+        pkgfs::control::Client::open_from_namespace().context("error opening pkgfs/ctl")?;
+
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::spawn(
             cache_service::serve(Clone::clone(&pkgfs_versions), stream)
@@ -34,7 +35,6 @@ fn main() -> Result<(), Error> {
         )
     });
 
-    let pkgfs_ctl = connect_to_pkgfs("ctl").context("error connecting to pkgfs/ctl")?;
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::spawn(
             gc_service::serve(Clone::clone(&pkgfs_ctl), stream)
@@ -46,10 +46,4 @@ fn main() -> Result<(), Error> {
 
     let () = executor.run(fs.collect(), SERVER_THREADS);
     Ok(())
-}
-
-fn connect_to_pkgfs(sub_dir: &str) -> Result<DirectoryProxy, Error> {
-    let f = File::open(&format!("/pkgfs/{}", sub_dir))?;
-    let chan = fasync::Channel::from_channel(fdio::clone_channel(&f)?)?;
-    Ok(DirectoryProxy::new(chan))
 }

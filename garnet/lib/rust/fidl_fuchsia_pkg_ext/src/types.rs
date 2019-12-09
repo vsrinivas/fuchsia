@@ -77,6 +77,18 @@ impl From<BlobId> for fidl::BlobId {
     }
 }
 
+impl From<fuchsia_merkle::Hash> for BlobId {
+    fn from(hash: fuchsia_merkle::Hash) -> Self {
+        Self(hash.into())
+    }
+}
+
+impl From<BlobId> for fuchsia_merkle::Hash {
+    fn from(id: BlobId) -> Self {
+        id.0.into()
+    }
+}
+
 impl fmt::Display for BlobId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&hex::encode(self.0))

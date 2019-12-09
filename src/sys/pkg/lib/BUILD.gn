@@ -6,6 +6,7 @@ group("lib") {
   testonly = true
   deps = [
     "omaha-client",
+    "pkgfs",
     "repo",
   ]
 }
@@ -14,6 +15,7 @@ group("tests") {
   testonly = true
   deps = [
     "omaha-client:tests",
+    "pkgfs:tests",
     "repo:tests",
   ]
 }

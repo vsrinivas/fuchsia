@@ -33,6 +33,7 @@ rustc_binary("bin") {
     "//src/sys/lib/fuchsia_backoff",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//src/sys/lib/fuchsia_url_rewrite",
+    "//src/sys/pkg/lib/pkgfs",
 
     # "//garnet/public/rust/tuf", FIXME re-enable once tuf is on futures alpha 13
     "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",

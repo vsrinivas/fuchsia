@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "test/pkgfs_lib_test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/ramctl"
+        ],
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

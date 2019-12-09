@@ -7,13 +7,10 @@ use {
     failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_amber::OpenedRepositoryProxy,
-    fidl_fuchsia_io::{
-        DirectoryEvent, DirectoryMarker, DirectoryProxy, FileEvent, FileMarker, FileProxy, NodeInfo,
-    },
+    fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::PackageCacheProxy,
     fidl_fuchsia_pkg_ext::{BlobId, BlobIdParseError, MirrorConfig, RepositoryConfig},
-    files_async::{readdir, DirentKind},
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Status,
     futures::{
@@ -24,7 +21,9 @@ use {
     http::Uri,
     hyper::{body::Payload, Body, Request, StatusCode},
     parking_lot::Mutex,
+    pkgfs::install::BlobKind,
     std::{
+        collections::HashSet,
         convert::TryInto,
         hash::Hash,
         num::TryFromIntError,
@@ -44,16 +43,16 @@ pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Ar
 #[derive(Clone)]
 pub struct PackageCache {
     cache: PackageCacheProxy,
-    pkgfs_install: DirectoryProxy,
-    pkgfs_needs: DirectoryProxy,
+    pkgfs_install: pkgfs::install::Client,
+    pkgfs_needs: pkgfs::needs::Client,
 }
 
 impl PackageCache {
     /// Constructs a new [`PackageCache`].
     pub fn new(
         cache: PackageCacheProxy,
-        pkgfs_install: DirectoryProxy,
-        pkgfs_needs: DirectoryProxy,
+        pkgfs_install: pkgfs::install::Client,
+        pkgfs_needs: pkgfs::needs::Client,
     ) -> Self {
         Self { cache, pkgfs_install, pkgfs_needs }
     }
@@ -96,38 +95,14 @@ impl PackageCache {
         &self,
         merkle: BlobId,
         blob_kind: BlobKind,
-    ) -> Result<Option<FileProxy>, FuchsiaIoError> {
-        let (file, server_end) =
-            fidl::endpoints::create_proxy::<FileMarker>().map_err(FuchsiaIoError::CreateProxy)?;
-        let server_end = ServerEnd::new(server_end.into_channel());
-
-        let flags = fidl_fuchsia_io::OPEN_FLAG_CREATE
-            | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-            | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
-        let path = blob_kind.make_install_path(&merkle);
-        self.pkgfs_install
-            .open(flags, 0, &path, server_end)
-            .map_err(FuchsiaIoError::SendOpenRequest)?;
-
-        let mut events = file.take_event_stream();
-        let FileEvent::OnOpen_ { s: status, info } = events
-            .next()
-            .await
-            .ok_or_else(|| FuchsiaIoError::EventStreamClosed)?
-            .map_err(FuchsiaIoError::OnOpenDecode)?;
-
-        let file = match Status::from_raw(status) {
-            Status::OK => Ok(Some(file)),
-            // Lost a race with another process writing to blobfs, and the blob already exists.
-            // Or, we are the first one to try to create the empty blob which always exists.
-            Status::ALREADY_EXISTS => Ok(None),
-            status => Err(FuchsiaIoError::OpenError(status)),
-        }?;
-
-        match info.map(|info| *info) {
-            Some(NodeInfo::File(_)) => Ok(file),
-            Some(_) => Err(FuchsiaIoError::WrongNodeType),
-            None => Err(FuchsiaIoError::ExpectedNodeInfo),
+    ) -> Result<
+        Option<(pkgfs::install::Blob<pkgfs::install::NeedsTruncate>, pkgfs::install::BlobCloser)>,
+        pkgfs::install::BlobCreateError,
+    > {
+        match self.pkgfs_install.create_blob(merkle.into(), blob_kind).await {
+            Ok((file, closer)) => Ok(Some((file, closer))),
+            Err(pkgfs::install::BlobCreateError::AlreadyExists) => Ok(None),
+            Err(e) => Err(e),
         }
     }
 
@@ -138,104 +113,11 @@ impl PackageCache {
     fn list_needs(
         &self,
         pkg_merkle: BlobId,
-    ) -> impl Stream<Item = Result<Vec<BlobId>, ListNeedsError>> + '_ {
-        // None if stream is terminated and should not continue to enumerate needs.
-        let state = Some(&self.pkgfs_needs);
-
-        futures::stream::unfold(state, move |state: Option<&DirectoryProxy>| {
-            async move {
-                if let Some(pkgfs_needs) = state {
-                    match enumerate_needs_dir(pkgfs_needs, pkg_merkle).await {
-                        Ok(needs) => {
-                            if needs.is_empty() {
-                                None
-                            } else {
-                                Some((Ok(needs), Some(pkgfs_needs)))
-                            }
-                        }
-                        // report the error and terminate the stream.
-                        Err(err) => return Some((Err(err), None)),
-                    }
-                } else {
-                    None
-                }
-            }
-        })
+    ) -> impl Stream<Item = Result<HashSet<BlobId>, pkgfs::needs::ListNeedsError>> + '_ {
+        self.pkgfs_needs
+            .list_needs(pkg_merkle.into())
+            .map(|item| item.map(|needs| needs.into_iter().map(Into::into).collect()))
     }
-}
-
-/// Lists all blobs currently in the `pkg_merkle`'s needs directory.
-async fn enumerate_needs_dir(
-    pkgfs_needs: &DirectoryProxy,
-    pkg_merkle: BlobId,
-) -> Result<Vec<BlobId>, ListNeedsError> {
-    let (needs_dir, server_end) =
-        fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(FuchsiaIoError::CreateProxy)?;
-    let server_end = ServerEnd::new(server_end.into_channel());
-
-    let flags = fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
-        | fidl_fuchsia_io::OPEN_RIGHT_READABLE
-        | fidl_fuchsia_io::OPEN_FLAG_DESCRIBE;
-    pkgfs_needs
-        .open(flags, 0, &format!("packages/{}", pkg_merkle.to_string()), server_end)
-        .map_err(FuchsiaIoError::SendOpenRequest)?;
-
-    let mut events = needs_dir.take_event_stream();
-    let DirectoryEvent::OnOpen_ { s: status, info } = events
-        .next()
-        .await
-        .ok_or_else(|| FuchsiaIoError::EventStreamClosed)?
-        .map_err(FuchsiaIoError::OnOpenDecode)?;
-
-    match Status::from_raw(status) {
-        Status::OK => Ok(()),
-        Status::NOT_FOUND => return Ok(vec![]),
-        status => Err(FuchsiaIoError::OpenError(status)),
-    }?;
-
-    match info.map(|info| *info) {
-        Some(NodeInfo::Directory(_)) => Ok(()),
-        Some(_) => Err(FuchsiaIoError::WrongNodeType),
-        None => Err(FuchsiaIoError::ExpectedNodeInfo),
-    }?;
-
-    let entries = readdir(&needs_dir).await.map_err(ListNeedsError::ReadDir)?;
-
-    Ok(entries
-        .into_iter()
-        .filter_map(|entry| {
-            if entry.kind == DirentKind::File {
-                Some(entry.name.parse().map_err(ListNeedsError::ParseError))
-            } else {
-                fx_log_warn!("Ignoring unknown needs entry: {:?}", entry.name);
-                None
-            }
-        })
-        .collect::<Result<Vec<BlobId>, ListNeedsError>>()?)
-}
-
-#[derive(Debug, Fail)]
-pub enum FuchsiaIoError {
-    #[fail(display = "unable to create a fidl proxy: {}", _0)]
-    CreateProxy(#[cause] fidl::Error),
-
-    #[fail(display = "unable to send open request: {}", _0)]
-    SendOpenRequest(#[cause] fidl::Error),
-
-    #[fail(display = "node info not provided by server")]
-    ExpectedNodeInfo,
-
-    #[fail(display = "event stream closed prematurely")]
-    EventStreamClosed,
-
-    #[fail(display = "failed to read OnOpen event: {}", _0)]
-    OnOpenDecode(#[cause] fidl::Error),
-
-    #[fail(display = "open failed with status {}", _0)]
-    OpenError(#[cause] Status),
-
-    #[fail(display = "node was not the expected type")]
-    WrongNodeType,
 }
 
 #[derive(Debug, Fail)]
@@ -262,40 +144,6 @@ impl From<PackageOpenError> for Status {
             PackageOpenError::NotFound => Status::NOT_FOUND,
             _ => Status::INTERNAL,
         }
-    }
-}
-
-#[derive(Debug, Fail)]
-pub enum ListNeedsError {
-    #[fail(display = "io error while listing needs: {}", _0)]
-    Io(#[cause] FuchsiaIoError),
-
-    #[fail(display = "could not read needs dir: {}", _0)]
-    ReadDir(#[cause] files_async::Error),
-
-    #[fail(display = "unable to parse a need blob id: {}", _0)]
-    ParseError(#[cause] BlobIdParseError),
-}
-
-impl From<FuchsiaIoError> for ListNeedsError {
-    fn from(x: FuchsiaIoError) -> Self {
-        ListNeedsError::Io(x)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum BlobKind {
-    Package,
-    Data,
-}
-
-impl BlobKind {
-    fn make_install_path(&self, merkle: &BlobId) -> String {
-        let name = match *self {
-            BlobKind::Package => "pkg",
-            BlobKind::Data => "blob",
-        };
-        format!("{}/{}", name, merkle)
     }
 }
 
@@ -400,14 +248,14 @@ pub enum CacheError {
     MerkleFor(#[cause] MerkleForError),
 
     #[fail(display = "while listing needed blobs for package: {}", _0)]
-    ListNeeds(#[cause] ListNeedsError),
+    ListNeeds(#[cause] pkgfs::needs::ListNeedsError),
 
     #[fail(display = "while fetching blobs for package: {}", _0)]
     Fetch(Arc<FetchError>),
 }
 
-impl From<ListNeedsError> for CacheError {
-    fn from(x: ListNeedsError) -> Self {
+impl From<pkgfs::needs::ListNeedsError> for CacheError {
+    fn from(x: pkgfs::needs::ListNeedsError) -> Self {
         CacheError::ListNeeds(x)
     }
 }
@@ -424,14 +272,18 @@ impl From<Arc<FetchError>> for CacheError {
     }
 }
 
+pub(crate) trait ToResolveStatus {
+    fn to_resolve_status(&self) -> Status;
+}
+
 // From resolver.fidl:
 // * `ZX_ERR_ACCESS_DENIED` if the resolver does not have permission to fetch a package blob.
 // * `ZX_ERR_IO` if there is some other unspecified error during I/O.
 // * `ZX_ERR_NOT_FOUND` if the package or a package blob does not exist.
 // * `ZX_ERR_NO_SPACE` if there is no space available to store the package.
 // * `ZX_ERR_UNAVAILABLE` if the resolver is currently unable to fetch a package blob.
-impl CacheError {
-    pub(crate) fn to_resolve_status(&self) -> Status {
+impl ToResolveStatus for CacheError {
+    fn to_resolve_status(&self) -> Status {
         match self {
             CacheError::Fidl(_) => Status::IO,
             CacheError::MerkleFor(err) => err.to_resolve_status(),
@@ -440,7 +292,7 @@ impl CacheError {
         }
     }
 }
-impl MerkleForError {
+impl ToResolveStatus for MerkleForError {
     fn to_resolve_status(&self) -> Status {
         match self {
             MerkleForError::Fidl(_) => Status::IO,
@@ -456,16 +308,33 @@ impl MerkleForError {
         }
     }
 }
-impl ListNeedsError {
+impl ToResolveStatus for pkgfs::needs::ListNeedsError {
     fn to_resolve_status(&self) -> Status {
         match self {
-            ListNeedsError::Io(_) => Status::IO,
-            ListNeedsError::ReadDir(_) => Status::IO,
-            ListNeedsError::ParseError(_) => Status::INTERNAL,
+            pkgfs::needs::ListNeedsError::OpenDir(_) => Status::IO,
+            pkgfs::needs::ListNeedsError::ReadDir(_) => Status::IO,
+            pkgfs::needs::ListNeedsError::ParseError(_) => Status::INTERNAL,
         }
     }
 }
-impl FetchError {
+impl ToResolveStatus for pkgfs::install::BlobTruncateError {
+    fn to_resolve_status(&self) -> Status {
+        match self {
+            pkgfs::install::BlobTruncateError::Fidl(_) => Status::IO,
+            pkgfs::install::BlobTruncateError::UnexpectedResponse(_) => Status::IO,
+        }
+    }
+}
+impl ToResolveStatus for pkgfs::install::BlobWriteError {
+    fn to_resolve_status(&self) -> Status {
+        match self {
+            pkgfs::install::BlobWriteError::Fidl(_) => Status::IO,
+            pkgfs::install::BlobWriteError::Overwrite => Status::IO,
+            pkgfs::install::BlobWriteError::UnexpectedResponse(_) => Status::IO,
+        }
+    }
+}
+impl ToResolveStatus for FetchError {
     fn to_resolve_status(&self) -> Status {
         match self {
             FetchError::CreateBlob(_) => Status::IO,
@@ -478,10 +347,8 @@ impl FetchError {
             FetchError::BlobTooLarge => Status::UNAVAILABLE,
             FetchError::Hyper(_) => Status::UNAVAILABLE,
             FetchError::Http(_) => Status::UNAVAILABLE,
-            FetchError::Overwrite => Status::IO,
-            FetchError::Truncate(_) => Status::IO,
-            FetchError::Fidl(_) => Status::IO,
-            FetchError::Io(_) => Status::IO,
+            FetchError::Truncate(e) => e.to_resolve_status(),
+            FetchError::Write(e) => e.to_resolve_status(),
             FetchError::NoMirrors => Status::INTERNAL,
             FetchError::BlobUrl(_) => Status::INTERNAL,
         }
@@ -647,10 +514,12 @@ async fn fetch_blob(
         let mirror_stats = &mirror_stats;
 
         async {
-            if let Some(blob) =
+            if let Some((blob, blob_closer)) =
                 cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
             {
-                download_blob(client, &blob_url, blob_kind, expected_len, blob).await?;
+                let res = download_blob(client, &blob_url, expected_len, blob).await;
+                blob_closer.close().await;
+                res?;
             }
 
             Ok(())
@@ -736,29 +605,9 @@ fn make_blob_url(blob_mirror_url: &str, merkle: &BlobId) -> Result<hyper::Uri, B
 async fn download_blob(
     client: &fuchsia_hyper::HttpsClient,
     uri: &http::Uri,
-    blob_kind: BlobKind,
     expected_len: Option<u64>,
-    dest: FileProxy,
+    dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
 ) -> Result<(), FetchError> {
-    // If dest is not `Close`d after a partial write or a write of corrupted bytes,
-    // subsequent attempts to re-open the blob for writing (e.g. if the package resolve
-    // is re-tried) will fail. Suspected that pkgfs is not closing its channel to blobfs
-    // for the given blob when the resolver's channel to pkgfs is closed,
-    // and keeping the channel open causes blobfs to fail attempts to open the same blob
-    // again for writing.
-    struct FileProxyCloserGuard<'a> {
-        f: &'a FileProxy,
-    }
-
-    impl Drop for FileProxyCloserGuard<'_> {
-        fn drop(&mut self) {
-            // Sending the Close message is synchronous, only waiting for the response is async.
-            let _f = self.f.close();
-        }
-    }
-
-    let _fpc = FileProxyCloserGuard { f: &dest };
-
     let request = Request::get(uri).body(Body::empty())?;
     let response = client.request(request).compat().await?;
 
@@ -780,8 +629,7 @@ async fn download_blob(
         (None, None) => return Err(FetchError::UnknownLength),
     };
 
-    Status::ok(dest.truncate(expected_len).await.map_err(FetchError::Fidl)?)
-        .map_err(FetchError::Truncate)?;
+    let mut dest = dest.truncate(expected_len).await.map_err(FetchError::Truncate)?;
 
     let mut chunks = body.compat();
     let mut written = 0u64;
@@ -790,33 +638,16 @@ async fn download_blob(
             return Err(FetchError::BlobTooLarge);
         }
 
-        // Split this chunk into smaller chunks that can fit through FIDL.
-        let mut chunk = chunk.as_ref();
-        while !chunk.is_empty() {
-            let subchunk_len = chunk.len().min(fidl_fuchsia_io::MAX_BUF as usize);
-            let subchunk = &chunk[..subchunk_len];
-
-            let fut = dest.write(&mut subchunk.into_iter().cloned());
-            let (status, actual) = fut.await.map_err(FetchError::Fidl)?;
-            match Status::from_raw(status) {
-                Status::OK => {}
-                Status::ALREADY_EXISTS => {
-                    if blob_kind == BlobKind::Package && written + actual == expected_len {
-                        // pkgfs returns ALREADY_EXISTS on the final write of a meta FAR iff no other
-                        // needs exist. Allow the error, but ignore the hint and check needs anyway.
-                    } else {
-                        return Err(FetchError::Io(Status::ALREADY_EXISTS));
-                    }
-                }
-                status => return Err(FetchError::Io(status)),
+        dest = match dest.write(&chunk).await.map_err(FetchError::Write)? {
+            pkgfs::install::BlobWriteSuccess::MoreToWrite(blob) => {
+                written += chunk.len() as u64;
+                blob
             }
-            if actual > subchunk_len as u64 {
-                return Err(FetchError::Overwrite);
+            pkgfs::install::BlobWriteSuccess::Done => {
+                written += chunk.len() as u64;
+                break;
             }
-
-            written += actual;
-            chunk = &chunk[actual as usize..];
-        }
+        };
     }
 
     if expected_len != written {
@@ -829,7 +660,7 @@ async fn download_blob(
 #[derive(Debug, Fail)]
 pub enum FetchError {
     #[fail(display = "could not create blob: {}", _0)]
-    CreateBlob(#[cause] FuchsiaIoError),
+    CreateBlob(#[cause] pkgfs::install::BlobCreateError),
 
     #[fail(display = "http request expected 200, got {}", _0)]
     BadHttpStatus(hyper::StatusCode),
@@ -849,23 +680,17 @@ pub enum FetchError {
     #[fail(display = "downloaded blob was too large")]
     BlobTooLarge,
 
-    #[fail(display = "file endpoint reported more bytes written than were provided")]
-    Overwrite,
-
     #[fail(display = "failed to truncate blob: {}", _0)]
-    Truncate(#[cause] Status),
+    Truncate(#[cause] pkgfs::install::BlobTruncateError),
+
+    #[fail(display = "failed to write blob data: {}", _0)]
+    Write(#[cause] pkgfs::install::BlobWriteError),
 
     #[fail(display = "hyper error: {}", _0)]
     Hyper(#[cause] hyper::Error),
 
     #[fail(display = "http error: {}", _0)]
     Http(#[cause] hyper::http::Error),
-
-    #[fail(display = "fidl error: {}", _0)]
-    Fidl(#[cause] fidl::Error),
-
-    #[fail(display = "io error: {}", _0)]
-    Io(#[cause] Status),
 
     #[fail(display = "blob url error: {}", _0)]
     BlobUrl(#[cause] BlobUrlError),

@@ -4,7 +4,6 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_pkg::PackageCacheMarker,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
@@ -86,8 +85,10 @@ fn main() -> Result<(), Error> {
 
     let pkg_cache =
         connect_to_service::<PackageCacheMarker>().context("error connecting to package cache")?;
-    let pkgfs_install = connect_to_pkgfs("install").context("error connecting to pkgfs/install")?;
-    let pkgfs_needs = connect_to_pkgfs("needs").context("error connecting to pkgfs/needs")?;
+    let pkgfs_install = pkgfs::install::Client::open_from_namespace()
+        .context("error connecting to pkgfs/install")?;
+    let pkgfs_needs =
+        pkgfs::needs::Client::open_from_namespace().context("error connecting to pkgfs/needs")?;
     let cache = PackageCache::new(pkg_cache, pkgfs_install, pkgfs_needs);
 
     let inspector = fuchsia_inspect::Inspector::new();
@@ -212,13 +213,6 @@ fn main() -> Result<(), Error> {
     let () = executor.run_singlethreaded(futures.collect());
 
     Ok(())
-}
-
-fn connect_to_pkgfs(subdir: &str) -> Result<DirectoryProxy, Error> {
-    io_util::open_directory_in_namespace(
-        &format!("/pkgfs/{}", subdir),
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-    )
 }
 
 fn load_repo_manager(
