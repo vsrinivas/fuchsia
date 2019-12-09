@@ -45,6 +45,7 @@ base_package_labels += [
   "//src/connectivity/network/dhcp:dhcpd",
   "//src/connectivity/network/mdns/bundles:utils",
   "//src/connectivity/network/net-cli",
+  "//src/connectivity/lowpan/tools",
   "//src/connectivity/wlan:service",
   "//src/connectivity/wlan:tests",
   "//src/connectivity/wlan:tools",

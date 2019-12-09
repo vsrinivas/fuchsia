@@ -1,0 +1,48 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "lowpan_spinel_driver"
+  with_unit_tests = true
+  edition = "2018"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:rand",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+  ]
+}
+
+package("lowpan_spinel_driver") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "lowpan_spinel_driver"
+
+  meta = [
+    {
+      path = rebase_path("meta/lowpan_spinel_driver.cmx")
+      dest = "lowpan_spinel_driver.cmx"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":bin_test",
+  ]
+}

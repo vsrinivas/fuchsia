@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/lowpan_spinel_driver_bin_test"
+    }
+}

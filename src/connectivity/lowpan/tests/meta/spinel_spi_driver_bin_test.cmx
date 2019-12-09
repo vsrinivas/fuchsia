@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/spinel_spi_driver_bin_test"
+    }
+}

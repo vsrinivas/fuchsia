@@ -1,0 +1,37 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+test_package("tests") {
+  package_name = "lowpan-tests"
+
+  deps = [
+    "integration:lowpan_integration_tests",
+    "//src/connectivity/lowpan/drivers/lowpan_spinel_driver:tests",
+    "//src/connectivity/lowpan/drivers/spinel_spi_driver:tests",
+    "//src/connectivity/lowpan/service:tests",
+  ]
+
+  tests = [
+    {
+      name = "lowpan_integration_tests"
+      environments = basic_envs
+    },
+    {
+      name = "lowpanservice_bin_test"
+      environments = basic_envs
+    },
+    {
+      name = "lowpan_spinel_driver_bin_test"
+      environments = basic_envs
+    },
+    {
+      name = "spinel_spi_driver_bin_test"
+      environments = basic_envs
+    },
+  ]
+}

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/lowpan_integration_tests"
+    }
+}
