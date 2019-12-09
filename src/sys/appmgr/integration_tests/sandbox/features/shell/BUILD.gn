@@ -9,26 +9,11 @@ group("shell") {
   testonly = true
   deps = [
     ":has_deprecated_shell",
-    ":has_deprecated_shell_ends_with_opal_test",
     ":no_shell",
   ]
 }
 
 sandbox_test_package("has_deprecated_shell") {
-  deprecated_shell = "//build"
-
-  sources = [
-    "has_shell.cc",
-  ]
-
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
-  ]
-  environments = basic_envs
-}
-
-sandbox_test_package("has_deprecated_shell_ends_with_opal_test") {
   deprecated_shell = "//build"
 
   sources = [

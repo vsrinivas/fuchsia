@@ -62,8 +62,6 @@ constexpr char kDeprecatedShellAllowlist[] =
     "allowlist/deprecated_shell.txt";
 constexpr char kDeprecatedAmbientReplaceAsExecAllowlist[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
-// Delete this when b/140175266 is fixed
-constexpr char kOpalTest[] = "opal_test.cmx";
 
 using fuchsia::sys::TerminationReason;
 
@@ -1035,13 +1033,7 @@ bool Realm::IsAllowedToUseDeprecatedShell(std::string ns_id) {
   Allowlist deprecated_shell_allowlist(appmgr_config_dir_,
                                        kDeprecatedShellAllowlist,
                                        Allowlist::kExpected);
-  if (deprecated_shell_allowlist.IsAllowed(ns_id)) {
-    return true;
-  }
-  // Delete the below when b/140175266 is fixed
-  const std::string opal_test = kOpalTest;
-  return ns_id.size() >= opal_test.size() &&
-         ns_id.compare(ns_id.size() - opal_test.size(), opal_test.size(), opal_test) == 0;
+  return deprecated_shell_allowlist.IsAllowed(ns_id);
 }
 
 bool Realm::IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(std::string ns_id) {
