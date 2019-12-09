@@ -23,9 +23,6 @@ zx_status_t StreamImpl::Create(zx::channel channel, async_dispatcher_t* dispatch
     return status;
   }
 
-  stream->binding_.set_error_handler(
-      [](zx_status_t status) { FX_PLOGST(ERROR, TAG, status) << "Client disconnected"; });
-
   *stream_out = std::move(stream);
   return ZX_OK;
 }

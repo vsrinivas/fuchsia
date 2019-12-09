@@ -226,10 +226,8 @@ PipelineManager::ConfigureStreamPipelineHelper(
   }
 
   auto output_node = output_node_result.value();
-  auto status = output_node->client_stream()->Attach(stream.TakeChannel(), [this, info]() {
-    FX_LOGST(INFO, TAG) << "Stream client disconnected";
-    OnClientStreamDisconnect(info);
-  });
+  auto status = output_node->client_stream()->Attach(
+      stream.TakeChannel(), [this, info]() { OnClientStreamDisconnect(info); });
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, TAG, status) << "Failed to bind output stream";
     return fit::error(status);

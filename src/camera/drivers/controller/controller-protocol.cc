@@ -19,10 +19,8 @@ ControllerImpl::ControllerImpl(zx_device_t* device,
                                const ddk::GdcProtocolClient& gdc, fit::closure on_connection_closed,
                                fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
     : binding_(this), pipeline_manager_(device, dispatcher, isp, gdc, std::move(sysmem_allocator)) {
-  binding_.set_error_handler([occ = std::move(on_connection_closed)](zx_status_t status) {
-    FX_PLOGST(ERROR, TAG, status) << "Client disconnected";
-    occ();
-  });
+  binding_.set_error_handler(
+      [occ = std::move(on_connection_closed)](zx_status_t status) { occ(); });
   binding_.Bind(std::move(control), dispatcher);
 }
 

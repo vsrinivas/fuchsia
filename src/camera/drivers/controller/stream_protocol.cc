@@ -24,10 +24,10 @@ zx_status_t StreamImpl::Attach(zx::channel channel, fit::function<void(void)> di
   FX_DCHECK(!binding_.is_bound());
   disconnect_handler_ = std::move(disconnect_handler);
   binding_.set_error_handler([this](zx_status_t status) {
-    FX_PLOGST(ERROR, TAG, status) << "Client disconnected";
     Shutdown(status);
     disconnect_handler_();
   });
+
   zx_status_t status = binding_.Bind(std::move(channel));
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, TAG, status);

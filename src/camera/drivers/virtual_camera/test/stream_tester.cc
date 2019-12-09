@@ -18,7 +18,6 @@
 namespace camera {
 
 constexpr uint32_t kNumFramesToWaitFor = 10;
-constexpr auto TAG = "virtual_camera";
 
 static zx_status_t RunLoopUntil(async::Loop* loop, fit::function<bool()> condition) {
   while (!condition()) {
@@ -52,8 +51,6 @@ void StreamTester::TestGetFrames() {
 }
 
 void StreamTester::DefaultOnFrameAvailable(fuchsia::camera2::FrameAvailableInfo frame) {
-  FX_LOGST(INFO, TAG) << "Received FrameNotify Event " << frame_counter_
-                << " at index: " << frame.buffer_id;
   switch (frame.frame_status) {
     case fuchsia::camera2::FrameStatus::OK:
       stream_->ReleaseFrame(frame.buffer_id);

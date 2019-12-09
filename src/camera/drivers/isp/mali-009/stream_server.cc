@@ -103,7 +103,6 @@ zx_status_t StreamServer::AddClient(zx::channel channel,
     FX_PLOGST(ERROR, TAG, status) << "Error getting read-only buffers";
     return status;
   }
-  FX_LOGST(INFO, TAG) << "Client " << next_stream_id_ << " connected.";
   streams_[next_stream_id_++] = std::move(stream);
   return ZX_OK;
 }
@@ -135,7 +134,6 @@ void StreamServer::FrameAvailable(uint32_t id, std::list<uint32_t>* out_frames_t
     }
   }
   for (auto id : disconnected_client_ids) {
-    FX_LOGST(INFO, TAG) << "Client " << id << " disconnected.";
     streams_.erase(id);
   }
 
@@ -144,8 +142,9 @@ void StreamServer::FrameAvailable(uint32_t id, std::list<uint32_t>* out_frames_t
   for (const auto& stream : streams_) {
     const auto& buffer_ids = stream.second->GetOutstandingBuffers();
     if (buffer_ids.size() >= kFramesToHold) {
-      FX_LOGST(WARNING, TAG) << "Client " << stream.first
-                       << " is holding too many buffer references and stalling other clients.";
+      FX_LOGST(WARNING, TAG)
+          << "Client " << stream.first
+          << " is holding too many buffer references and stalling other clients.";
     }
     for (const auto buffer_id : buffer_ids) {
       ++buffer_refs[buffer_id];

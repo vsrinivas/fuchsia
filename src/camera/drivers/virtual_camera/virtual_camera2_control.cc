@@ -90,13 +90,8 @@ VirtualCamera2ControllerImpl::VirtualCamera2ControllerImpl(
   config1.stream_configs.push_back(std::move(sconfig));
   configs_.push_back(std::move(config1));
 
-  binding_.set_error_handler(
-      [on_connection_closed = std::move(on_connection_closed)](zx_status_t status) {
-        if (status != ZX_ERR_PEER_CLOSED) {
-          FX_PLOGST(ERROR, TAG, status) << "VirtualCamera disconnected";
-        }
-        on_connection_closed();
-      });
+  binding_.set_error_handler([on_connection_closed = std::move(on_connection_closed)](
+                                 zx_status_t status) { on_connection_closed(); });
   binding_.Bind(std::move(control), dispatcher);
 }
 
