@@ -5,11 +5,15 @@
 use {
     crate::{buffer::OutBuf, error::Error, key},
     banjo_ddk_protocol_wlan_info::*,
+    banjo_ddk_protocol_wlan_mac::{WlanHwScanConfig, WlanmacInfo},
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::ffi::c_void,
     wlan_common::{mac::MacAddr, TimeUnit},
 };
+
+#[cfg(test)]
+pub use test_utils::*;
 
 #[derive(Debug, PartialEq)]
 pub struct LinkStatus(u8);
@@ -47,6 +51,10 @@ pub struct Device {
     /// Set a key on the device.
     /// |key| is mutable because the underlying API does not take a const wlan_key_config_t.
     set_key: extern "C" fn(device: *mut c_void, key: *mut key::KeyConfig) -> i32,
+    /// Make scan request to the driver
+    start_hw_scan: extern "C" fn(device: *mut c_void, config: *const WlanHwScanConfig) -> i32,
+    /// Get information and capabilities of this WLAN interface
+    get_wlan_info: extern "C" fn(device: *mut c_void) -> WlanmacInfo,
     /// Configure the device's BSS.
     /// |cfg| is mutable because the underlying API does not take a const wlan_bss_config_t.
     configure_bss: extern "C" fn(device: *mut c_void, cfg: *mut WlanBssConfig) -> i32,
@@ -112,8 +120,17 @@ impl Device {
         zx::ok(status)
     }
 
+    pub fn start_hw_scan(&self, config: &WlanHwScanConfig) -> Result<(), zx::Status> {
+        let status = (self.start_hw_scan)(self.device, config as *const WlanHwScanConfig);
+        zx::ok(status)
+    }
+
     pub fn channel(&self) -> WlanChannel {
         (self.get_wlan_channel)(self.device)
+    }
+
+    pub fn wlan_info(&self) -> WlanmacInfo {
+        (self.get_wlan_info)(self.device)
     }
 
     pub fn configure_bss(&self, mut cfg: WlanBssConfig) -> Result<(), zx::Status> {
@@ -159,195 +176,340 @@ impl Device {
 }
 
 #[cfg(test)]
-pub struct FakeDevice {
-    pub eth_queue: Vec<Vec<u8>>,
-    pub wlan_queue: Vec<(Vec<u8>, u32)>,
-    pub sme_sap: (zx::Channel, zx::Channel),
-    pub wlan_channel: WlanChannel,
-    pub keys: Vec<key::KeyConfig>,
-    pub bss_cfg: Option<WlanBssConfig>,
-    pub bcn_cfg: Option<(Vec<u8>, usize, TimeUnit)>,
-    pub link_status: LinkStatus,
-    pub assocs: std::collections::HashMap<MacAddr, WlanAssocCtx>,
+macro_rules! arr {
+    ($slice:expr, $size:expr) => {{
+        assert!($slice.len() < $size);
+        let mut a = [0; $size];
+        a[..$slice.len()].clone_from_slice(&$slice);
+        a
+    }};
 }
 
 #[cfg(test)]
-impl FakeDevice {
-    pub fn new() -> Self {
-        let sme_sap = zx::Channel::create().expect("error creating channel");
-        Self {
-            eth_queue: vec![],
-            wlan_queue: vec![],
-            sme_sap,
-            wlan_channel: WlanChannel {
-                primary: 0,
-                cbw: WlanChannelBandwidth::_20,
-                secondary80: 0,
+mod test_utils {
+    use {super::*, banjo_ddk_hw_wlan_ieee80211::*, banjo_ddk_hw_wlan_wlaninfo::*};
+
+    pub struct FakeDevice {
+        pub eth_queue: Vec<Vec<u8>>,
+        pub wlan_queue: Vec<(Vec<u8>, u32)>,
+        pub sme_sap: (zx::Channel, zx::Channel),
+        pub wlan_channel: WlanChannel,
+        pub keys: Vec<key::KeyConfig>,
+        pub hw_scan_req: Option<WlanHwScanConfig>,
+        pub info: WlanmacInfo,
+        pub bss_cfg: Option<WlanBssConfig>,
+        pub bcn_cfg: Option<(Vec<u8>, usize, TimeUnit)>,
+        pub link_status: LinkStatus,
+        pub assocs: std::collections::HashMap<MacAddr, WlanAssocCtx>,
+    }
+
+    impl FakeDevice {
+        pub fn new() -> Self {
+            let sme_sap = zx::Channel::create().expect("error creating channel");
+            Self {
+                eth_queue: vec![],
+                wlan_queue: vec![],
+                sme_sap,
+                wlan_channel: WlanChannel {
+                    primary: 0,
+                    cbw: WlanChannelBandwidth::_20,
+                    secondary80: 0,
+                },
+                hw_scan_req: None,
+                info: fake_wlanmac_info(),
+                keys: vec![],
+                bss_cfg: None,
+                bcn_cfg: None,
+                link_status: LinkStatus::DOWN,
+                assocs: std::collections::HashMap::new(),
+            }
+        }
+
+        pub extern "C" fn deliver_eth_frame(
+            device: *mut c_void,
+            data: *const u8,
+            len: usize,
+        ) -> i32 {
+            assert!(!device.is_null());
+            assert!(!data.is_null());
+            assert_ne!(len, 0);
+            // safe here because slice will not outlive data
+            let slice = unsafe { std::slice::from_raw_parts(data, len) };
+            // safe here because device_ptr alwyas points to self
+            unsafe {
+                (*(device as *mut Self)).eth_queue.push(slice.to_vec());
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn send_wlan_frame(device: *mut c_void, buf: OutBuf, flags: u32) -> i32 {
+            assert!(!device.is_null());
+            // safe here because device_ptr always points to Self
+            unsafe {
+                (*(device as *mut Self)).wlan_queue.push((buf.as_slice().to_vec(), flags));
+            }
+            buf.free();
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn set_link_status(device: *mut c_void, status: u8) -> i32 {
+            assert!(!device.is_null());
+            // safe here because device_ptr always points to Self
+            unsafe {
+                (*(device as *mut Self)).link_status = LinkStatus(status);
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn send_wlan_frame_with_failure(_: *mut c_void, buf: OutBuf, _: u32) -> i32 {
+            buf.free();
+            zx::sys::ZX_ERR_IO
+        }
+
+        pub extern "C" fn get_sme_channel(device: *mut c_void) -> u32 {
+            use fuchsia_zircon::AsHandleRef;
+
+            unsafe { (*(device as *mut Self)).sme_sap.0.as_handle_ref().raw_handle() }
+        }
+
+        pub extern "C" fn get_wlan_channel(device: *mut c_void) -> WlanChannel {
+            unsafe { (*(device as *const Self)).wlan_channel }
+        }
+
+        pub extern "C" fn set_wlan_channel(device: *mut c_void, wlan_channel: WlanChannel) -> i32 {
+            unsafe {
+                (*(device as *mut Self)).wlan_channel = wlan_channel;
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn set_key(device: *mut c_void, key: *mut key::KeyConfig) -> i32 {
+            unsafe {
+                (*(device as *mut Self)).keys.push((*key).clone());
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn start_hw_scan(
+            device: *mut c_void,
+            config: *const WlanHwScanConfig,
+        ) -> i32 {
+            unsafe {
+                (*(device as *mut Self)).hw_scan_req = Some((*config).clone());
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn start_hw_scan_fails(
+            _device: *mut c_void,
+            _config: *const WlanHwScanConfig,
+        ) -> i32 {
+            zx::sys::ZX_ERR_NOT_SUPPORTED
+        }
+
+        pub extern "C" fn get_wlan_info(device: *mut c_void) -> WlanmacInfo {
+            unsafe { (*(device as *const Self)).info }
+        }
+
+        pub extern "C" fn configure_bss(device: *mut c_void, cfg: *mut WlanBssConfig) -> i32 {
+            unsafe {
+                (*(device as *mut Self)).bss_cfg.replace((*cfg).clone());
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn enable_beaconing(
+            device: *mut c_void,
+            beacon_tmpl_data: *const u8,
+            beacon_tmpl_len: usize,
+            tim_ele_offset: usize,
+            beacon_interval: u16,
+        ) -> i32 {
+            unsafe {
+                (*(device as *mut Self)).bcn_cfg = Some((
+                    std::slice::from_raw_parts(beacon_tmpl_data, beacon_tmpl_len).to_vec(),
+                    tim_ele_offset,
+                    TimeUnit(beacon_interval),
+                ));
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn disable_beaconing(device: *mut c_void) -> i32 {
+            unsafe {
+                (*(device as *mut Self)).bcn_cfg = None;
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn configure_assoc(device: *mut c_void, cfg: *mut WlanAssocCtx) -> i32 {
+            unsafe {
+                (*(device as *mut Self)).assocs.insert((*cfg).bssid, (*cfg).clone());
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn clear_assoc(device: *mut c_void, addr: &MacAddr) -> i32 {
+            unsafe {
+                (*(device as *mut Self)).assocs.remove(addr);
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub fn next_mlme_msg<T: fidl::encoding::Decodable>(&mut self) -> Result<T, Error> {
+            use fidl::encoding::{decode_transaction_header, Decodable, Decoder};
+
+            let mut buf = zx::MessageBuf::new();
+            let () =
+                self.sme_sap.1.read(&mut buf).map_err(|status| {
+                    Error::Status(format!("error reading MLME message"), status)
+                })?;
+
+            let (header, tail): (_, &[u8]) = decode_transaction_header(buf.bytes())?;
+            let mut msg = Decodable::new_empty();
+            Decoder::decode_into(&header, tail, &mut [], &mut msg)
+                .expect("error decoding MLME message");
+            Ok(msg)
+        }
+
+        pub fn reset(&mut self) {
+            self.eth_queue.clear();
+        }
+
+        pub fn as_device(&mut self) -> Device {
+            Device {
+                device: self as *mut Self as *mut c_void,
+                deliver_eth_frame: Self::deliver_eth_frame,
+                send_wlan_frame: Self::send_wlan_frame,
+                get_sme_channel: Self::get_sme_channel,
+                get_wlan_channel: Self::get_wlan_channel,
+                set_wlan_channel: Self::set_wlan_channel,
+                set_key: Self::set_key,
+                start_hw_scan: Self::start_hw_scan,
+                get_wlan_info: Self::get_wlan_info,
+                configure_bss: Self::configure_bss,
+                enable_beaconing: Self::enable_beaconing,
+                disable_beaconing: Self::disable_beaconing,
+                set_link_status: Self::set_link_status,
+                configure_assoc: Self::configure_assoc,
+                clear_assoc: Self::clear_assoc,
+            }
+        }
+
+        pub fn as_device_fail_wlan_tx(&mut self) -> Device {
+            let mut dev = self.as_device();
+            dev.send_wlan_frame = Self::send_wlan_frame_with_failure;
+            dev
+        }
+
+        pub fn as_device_fail_start_hw_scan(&mut self) -> Device {
+            Device { start_hw_scan: Self::start_hw_scan_fails, ..self.as_device() }
+        }
+    }
+
+    pub fn fake_wlanmac_info() -> WlanmacInfo {
+        let bands_count = 2;
+        let mut bands = [default_band_info(); WLAN_INFO_MAX_BANDS];
+        bands[0] = WlanInfoBandInfo {
+            band: WlanInfoBand::_2GHZ,
+            rates: arr!([12, 24, 48, 54, 96, 108], WLAN_INFO_BAND_INFO_MAX_RATES),
+            supported_channels: WlanInfoChannelList {
+                base_freq: 2407,
+                channels: arr!(
+                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+                    WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS
+                ),
             },
-            keys: vec![],
-            bss_cfg: None,
-            bcn_cfg: None,
-            link_status: LinkStatus::DOWN,
-            assocs: std::collections::HashMap::new(),
+            ht_supported: true,
+            ht_caps: ht_cap(),
+            vht_supported: false,
+            vht_caps: Ieee80211VhtCapabilities {
+                vht_capability_info: 0,
+                supported_vht_mcs_and_nss_set: 0,
+            },
+        };
+        bands[1] = WlanInfoBandInfo {
+            band: WlanInfoBand::_5GHZ,
+            rates: arr!([12, 24, 48, 54, 96, 108], WLAN_INFO_BAND_INFO_MAX_RATES),
+            supported_channels: WlanInfoChannelList {
+                base_freq: 5000,
+                channels: arr!(
+                    [36, 40, 44, 48, 149, 153, 157, 161],
+                    WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS
+                ),
+            },
+            ht_supported: true,
+            ht_caps: ht_cap(),
+            vht_supported: false,
+            vht_caps: Ieee80211VhtCapabilities {
+                vht_capability_info: 0x0f805032,
+                supported_vht_mcs_and_nss_set: 0x0000fffe0000fffe,
+            },
+        };
+
+        let ifc_info = WlanInfo {
+            mac_addr: [99; 6],
+            mac_role: WlanInfoMacRole::CLIENT,
+            supported_phys: WlanInfoPhyType::OFDM | WlanInfoPhyType::HT | WlanInfoPhyType::VHT,
+            driver_features: WlanInfoDriverFeature(0),
+            caps: WlanInfoHardwareCapability(0),
+            bands,
+            bands_count,
+        };
+        WlanmacInfo { ifc_info }
+    }
+
+    fn ht_cap() -> Ieee80211HtCapabilities {
+        Ieee80211HtCapabilities {
+            ht_capability_info: 0x0063,
+            ampdu_params: 0x17,
+            supported_mcs_set: Ieee80211HtCapabilitiesSupportedMcsSet {
+                bytes: [
+                    // Rx MCS bitmask, Supported MCS values: 0-7
+                    0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                    // Tx parameters
+                    0x01, 0x00, 0x00, 0x00,
+                ],
+            },
+            ht_ext_capabilities: 0,
+            tx_beamforming_capabilities: 0,
+            asel_capabilities: 0,
         }
     }
 
-    pub extern "C" fn deliver_eth_frame(device: *mut c_void, data: *const u8, len: usize) -> i32 {
-        assert!(!device.is_null());
-        assert!(!data.is_null());
-        assert_ne!(len, 0);
-        // safe here because slice will not outlive data
-        let slice = unsafe { std::slice::from_raw_parts(data, len) };
-        // safe here because device_ptr alwyas points to self
-        unsafe {
-            (*(device as *mut Self)).eth_queue.push(slice.to_vec());
+    /// Placeholder for default initialization of WlanInfoBandInfo, used for case where we don't
+    /// care about the exact information, but the type demands it.
+    pub const fn default_band_info() -> WlanInfoBandInfo {
+        WlanInfoBandInfo {
+            band: WlanInfoBand(0),
+            ht_supported: false,
+            ht_caps: Ieee80211HtCapabilities {
+                ht_capability_info: 0,
+                ampdu_params: 0,
+                supported_mcs_set: Ieee80211HtCapabilitiesSupportedMcsSet { bytes: [0; 16] },
+                ht_ext_capabilities: 0,
+                tx_beamforming_capabilities: 0,
+                asel_capabilities: 0,
+            },
+            vht_supported: false,
+            vht_caps: Ieee80211VhtCapabilities {
+                vht_capability_info: 0,
+                supported_vht_mcs_and_nss_set: 0,
+            },
+            rates: [0; WLAN_INFO_BAND_INFO_MAX_RATES],
+            supported_channels: WlanInfoChannelList {
+                base_freq: 0,
+                channels: [0; WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS],
+            },
         }
-        zx::sys::ZX_OK
-    }
-
-    pub extern "C" fn send_wlan_frame(device: *mut c_void, buf: OutBuf, flags: u32) -> i32 {
-        assert!(!device.is_null());
-        // safe here because device_ptr always points to Self
-        unsafe {
-            (*(device as *mut Self)).wlan_queue.push((buf.as_slice().to_vec(), flags));
-        }
-        buf.free();
-        zx::sys::ZX_OK
-    }
-
-    pub extern "C" fn set_link_status(device: *mut c_void, status: u8) -> i32 {
-        assert!(!device.is_null());
-        // safe here because device_ptr always points to Self
-        unsafe {
-            (*(device as *mut Self)).link_status = LinkStatus(status);
-        }
-        zx::sys::ZX_OK
-    }
-
-    pub extern "C" fn send_wlan_frame_with_failure(_: *mut c_void, buf: OutBuf, _: u32) -> i32 {
-        buf.free();
-        zx::sys::ZX_ERR_IO
-    }
-
-    pub extern "C" fn get_sme_channel(device: *mut c_void) -> u32 {
-        use fuchsia_zircon::AsHandleRef;
-
-        unsafe { (*(device as *mut Self)).sme_sap.0.as_handle_ref().raw_handle() }
-    }
-
-    pub extern "C" fn get_wlan_channel(device: *mut c_void) -> WlanChannel {
-        unsafe { (*(device as *const Self)).wlan_channel }
-    }
-
-    pub extern "C" fn set_wlan_channel(device: *mut c_void, wlan_channel: WlanChannel) -> i32 {
-        unsafe {
-            (*(device as *mut Self)).wlan_channel = wlan_channel;
-        }
-        zx::sys::ZX_OK
-    }
-
-    pub extern "C" fn set_key(device: *mut c_void, key: *mut key::KeyConfig) -> i32 {
-        unsafe {
-            (*(device as *mut Self)).keys.push((*key).clone());
-        }
-        zx::sys::ZX_OK
-    }
-
-    pub extern "C" fn configure_bss(device: *mut c_void, cfg: *mut WlanBssConfig) -> i32 {
-        unsafe {
-            (*(device as *mut Self)).bss_cfg.replace((*cfg).clone());
-        }
-        zx::sys::ZX_OK
-    }
-
-    pub extern "C" fn enable_beaconing(
-        device: *mut c_void,
-        beacon_tmpl_data: *const u8,
-        beacon_tmpl_len: usize,
-        tim_ele_offset: usize,
-        beacon_interval: u16,
-    ) -> i32 {
-        unsafe {
-            (*(device as *mut Self)).bcn_cfg = Some((
-                std::slice::from_raw_parts(beacon_tmpl_data, beacon_tmpl_len).to_vec(),
-                tim_ele_offset,
-                TimeUnit(beacon_interval),
-            ));
-        }
-        zx::sys::ZX_OK
-    }
-
-    pub extern "C" fn disable_beaconing(device: *mut c_void) -> i32 {
-        unsafe {
-            (*(device as *mut Self)).bcn_cfg = None;
-        }
-        zx::sys::ZX_OK
-    }
-
-    pub extern "C" fn configure_assoc(device: *mut c_void, cfg: *mut WlanAssocCtx) -> i32 {
-        unsafe {
-            (*(device as *mut Self)).assocs.insert((*cfg).bssid, (*cfg).clone());
-        }
-        zx::sys::ZX_OK
-    }
-
-    pub extern "C" fn clear_assoc(device: *mut c_void, addr: &MacAddr) -> i32 {
-        unsafe {
-            (*(device as *mut Self)).assocs.remove(addr);
-        }
-        zx::sys::ZX_OK
-    }
-
-    pub fn next_mlme_msg<T: fidl::encoding::Decodable>(&mut self) -> Result<T, Error> {
-        use fidl::encoding::{decode_transaction_header, Decodable, Decoder};
-
-        let mut buf = zx::MessageBuf::new();
-        let () = self
-            .sme_sap
-            .1
-            .read(&mut buf)
-            .map_err(|status| Error::Status(format!("error reading MLME message"), status))?;
-
-        let (header, tail): (_, &[u8]) = decode_transaction_header(buf.bytes())?;
-        let mut msg = Decodable::new_empty();
-        Decoder::decode_into(&header, tail, &mut [], &mut msg)
-            .expect("error decoding MLME message");
-        Ok(msg)
-    }
-
-    pub fn reset(&mut self) {
-        self.eth_queue.clear();
-    }
-
-    pub fn as_device(&mut self) -> Device {
-        Device {
-            device: self as *mut Self as *mut c_void,
-            deliver_eth_frame: Self::deliver_eth_frame,
-            send_wlan_frame: Self::send_wlan_frame,
-            get_sme_channel: Self::get_sme_channel,
-            get_wlan_channel: Self::get_wlan_channel,
-            set_wlan_channel: Self::set_wlan_channel,
-            set_key: Self::set_key,
-            configure_bss: Self::configure_bss,
-            enable_beaconing: Self::enable_beaconing,
-            disable_beaconing: Self::disable_beaconing,
-            set_link_status: Self::set_link_status,
-            configure_assoc: Self::configure_assoc,
-            clear_assoc: Self::clear_assoc,
-        }
-    }
-
-    pub fn as_device_fail_wlan_tx(&mut self) -> Device {
-        let mut dev = self.as_device();
-        dev.send_wlan_frame = Self::send_wlan_frame_with_failure;
-        dev
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::*, banjo_ddk_hw_wlan_ieee80211::*, banjo_wlan_protocol_info::*,
+        super::*, banjo_ddk_hw_wlan_ieee80211::*, banjo_ddk_hw_wlan_wlaninfo::*,
+        banjo_ddk_protocol_wlan_mac::WlanHwScanType, banjo_wlan_protocol_info::*,
         wlan_common::assert_variant,
     };
 
@@ -383,7 +545,6 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut dev = fake_device.as_device();
         dev.get_sme_channel = get_sme_channel;
-
         let result = dev.access_sme_sender(|sender| {
             sender.send_authenticate_conf(&mut make_auth_confirm_msg())
         });
@@ -457,6 +618,35 @@ mod tests {
         })
         .expect("error setting key");
         assert_eq!(fake_device.keys.len(), 1);
+    }
+
+    #[test]
+    fn start_hw_scan() {
+        let mut fake_device = FakeDevice::new();
+        let dev = fake_device.as_device();
+
+        let result = dev.start_hw_scan(&WlanHwScanConfig {
+            scan_type: WlanHwScanType::PASSIVE,
+            num_channels: 3,
+            channels: arr!([1, 2, 3], WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS),
+            ssid: WlanSsid { len: 3, ssid: arr!([65; 3], WLAN_MAX_SSID_LEN as usize) },
+        });
+        assert!(result.is_ok());
+        assert_variant!(fake_device.hw_scan_req, Some(config) => {
+            assert_eq!(config.scan_type, WlanHwScanType::PASSIVE);
+            assert_eq!(config.num_channels, 3);
+            assert_eq!(&config.channels[..], &arr!([1, 2, 3], WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS)[..]);
+            assert_eq!(config.ssid, WlanSsid { len: 3, ssid: arr!([65; 3], WLAN_MAX_SSID_LEN as usize) });
+        }, "expected HW scan config");
+    }
+
+    #[test]
+    fn get_wlan_info() {
+        let mut fake_device = FakeDevice::new();
+        let dev = fake_device.as_device();
+        let info = dev.wlan_info();
+        assert_eq!(info.ifc_info.mac_addr, [99; 6]);
+        assert_eq!(info.ifc_info.bands_count, 2);
     }
 
     #[test]

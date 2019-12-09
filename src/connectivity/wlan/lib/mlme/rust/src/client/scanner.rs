@@ -15,7 +15,11 @@ use {
         error::Error,
         timer::{EventId, Timer},
     },
-    banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
+    banjo_ddk_hw_wlan_wlaninfo::{WlanInfoDriverFeature, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS},
+    banjo_ddk_protocol_wlan_info::{
+        WlanChannel, WlanChannelBandwidth, WlanSsid, WLAN_MAX_SSID_LEN,
+    },
+    banjo_ddk_protocol_wlan_mac::{WlanHwScan, WlanHwScanConfig, WlanHwScanType},
     failure::Fail,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, warn},
@@ -41,15 +45,30 @@ type BeaconHash = u64;
 pub enum ScanError {
     #[fail(display = "scanner is busy")]
     Busy,
-    #[fail(display = "scan request contains invalid argument")]
-    InvalidArg,
+    #[fail(display = "invalid arg: empty channel list")]
+    EmptyChannelList,
+    #[fail(display = "invalid arg: channel list too large")]
+    ChannelListTooLarge,
+    #[fail(display = "invalid arg: max_channel_time < min_channel_time")]
+    MaxChannelTimeLtMin,
+    #[fail(display = "invalid arg: SSID too long")]
+    SsidTooLong,
+    #[fail(display = "fail starting hw scan: {}", _0)]
+    StartHwScanFails(#[cause] zx::Status),
+    #[fail(display = "hw scan aborted")]
+    HwScanAborted,
 }
 
 impl From<ScanError> for zx::Status {
     fn from(e: ScanError) -> Self {
         match e {
             ScanError::Busy => zx::Status::UNAVAILABLE,
-            ScanError::InvalidArg => zx::Status::INVALID_ARGS,
+            ScanError::EmptyChannelList
+            | ScanError::ChannelListTooLarge
+            | ScanError::MaxChannelTimeLtMin
+            | ScanError::SsidTooLong => zx::Status::INVALID_ARGS,
+            ScanError::StartHwScanFails(status) => status,
+            ScanError::HwScanAborted => zx::Status::INTERNAL,
         }
     }
 }
@@ -117,21 +136,53 @@ impl Scanner {
             return Err(ScanError::Busy);
         }
 
-        if req.channel_list.as_ref().map(|list| list.is_empty()).unwrap_or(true)
-            || req.max_channel_time < req.min_channel_time
-        {
+        let channel_list = req.channel_list.as_ref().map(|list| list.as_slice()).unwrap_or(&[][..]);
+        if channel_list.is_empty() {
             send_scan_end(req.txn_id, fidl_mlme::ScanResultCodes::InvalidArgs, &mut self.device);
-            return Err(ScanError::InvalidArg);
+            return Err(ScanError::EmptyChannelList);
+        }
+        if channel_list.len() > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS {
+            send_scan_end(req.txn_id, fidl_mlme::ScanResultCodes::InvalidArgs, &mut self.device);
+            return Err(ScanError::ChannelListTooLarge);
+        }
+        if req.max_channel_time < req.min_channel_time {
+            send_scan_end(req.txn_id, fidl_mlme::ScanResultCodes::InvalidArgs, &mut self.device);
+            return Err(ScanError::MaxChannelTimeLtMin);
+        }
+        if req.ssid.len() > WLAN_MAX_SSID_LEN as usize {
+            send_scan_end(req.txn_id, fidl_mlme::ScanResultCodes::InvalidArgs, &mut self.device);
+            return Err(ScanError::SsidTooLong);
         }
 
         let mut chan_sched_req_id = None;
-        let hw_scan = false;
+        let wlan_info = self.device.wlan_info().ifc_info;
+        let hw_scan = (wlan_info.driver_features & WlanInfoDriverFeature::SCAN_OFFLOAD).0 > 0;
         if hw_scan {
-            // TODO(29063): Add support for hw_scan
+            let scan_type = if req.scan_type == fidl_mlme::ScanTypes::Active {
+                WlanHwScanType::ACTIVE
+            } else {
+                WlanHwScanType::PASSIVE
+            };
+            let mut channels = [0; WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS];
+            channels[..channel_list.len()].copy_from_slice(channel_list);
+            let mut ssid = [0; WLAN_MAX_SSID_LEN as usize];
+            ssid[..req.ssid.len()].copy_from_slice(&req.ssid[..]);
+
+            let config = WlanHwScanConfig {
+                scan_type,
+                num_channels: channel_list.len() as u8,
+                channels,
+                ssid: WlanSsid { len: req.ssid.len() as u8, ssid },
+            };
+            if let Err(status) = self.device.start_hw_scan(&config) {
+                send_scan_end(
+                    req.txn_id,
+                    fidl_mlme::ScanResultCodes::InternalError,
+                    &mut self.device,
+                );
+                return Err(ScanError::StartHwScanFails(status));
+            }
         } else {
-            // Safe to unwrap because we checked previously that channel list is not empty
-            let channel_list =
-                req.channel_list.as_ref().map(|list| list.as_slice()).unwrap_or(&[][..]);
             let channels = channel_list
                 .iter()
                 .map(|c| WlanChannel {
@@ -244,6 +295,26 @@ impl Scanner {
         }
     }
 
+    pub fn handle_hw_scan_complete(&mut self, status: WlanHwScan) {
+        let req = match self.ongoing_scan_req.take() {
+            Some(req) => req,
+            None => {
+                warn!("Received HwScanComplete with status {:?} while no req in progress", status);
+                return;
+            }
+        };
+
+        if status == WlanHwScan::SUCCESS {
+            send_results_and_end(req, &mut self.device);
+        } else {
+            send_scan_end(
+                req.req.txn_id,
+                fidl_mlme::ScanResultCodes::InternalError,
+                &mut self.device,
+            );
+        }
+    }
+
     /// Called after switching to a requested channel from a scan request. It's primarily to
     /// send out, or schedule to send out, a probe request in an active scan.
     pub fn begin_requested_channel_time(&mut self, channel: WlanChannel) {
@@ -312,13 +383,8 @@ impl Scanner {
             Some(OngoingScanRequest { chan_sched_req_id: Some(id), .. }) if id == request_id => (),
             _ => return,
         }
-
         // Safe to unwrap because control point only reaches here if there's ongoing scan request
-        let mut scan_req = self.ongoing_scan_req.take().unwrap();
-        for (_, (_, bss_description)) in scan_req.seen_bss.drain().into_iter() {
-            send_scan_result(scan_req.req.txn_id, bss_description, &mut self.device);
-        }
-        send_scan_end(scan_req.req.txn_id, fidl_mlme::ScanResultCodes::Success, &mut self.device);
+        send_results_and_end(self.ongoing_scan_req.take().unwrap(), &mut self.device);
     }
 
     #[cfg(test)]
@@ -336,6 +402,13 @@ impl Scanner {
             None => None,
         }
     }
+}
+
+fn send_results_and_end(mut scan_req: OngoingScanRequest, device: &mut Device) {
+    for (_, (_, bss_description)) in scan_req.seen_bss.drain().into_iter() {
+        send_scan_result(scan_req.req.txn_id, bss_description, device);
+    }
+    send_scan_end(scan_req.req.txn_id, fidl_mlme::ScanResultCodes::Success, device);
 }
 
 fn send_scan_result(txn_id: u64, bss: fidl_mlme::BssDescription, device: &mut Device) {
@@ -548,7 +621,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_scan_req_invalid_arg() {
+    fn test_handle_scan_req_empty_channel_list() {
         let mut m = MockObjects::new();
         let mut scanner = m.create_scanner();
 
@@ -558,7 +631,7 @@ mod tests {
             m.create_channel_listener_fn(),
             &mut m.chan_sched,
         );
-        assert_variant!(result, Err(ScanError::InvalidArg));
+        assert_variant!(result, Err(ScanError::EmptyChannelList));
         let scan_end = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
@@ -566,6 +639,177 @@ mod tests {
         assert_eq!(
             scan_end,
             fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InvalidArgs }
+        );
+    }
+
+    #[test]
+    fn test_handle_scan_req_long_channel_list() {
+        let mut m = MockObjects::new();
+        let mut scanner = m.create_scanner();
+
+        let mut channel_list = vec![];
+        for i in 1..=65 {
+            channel_list.push(i);
+        }
+        let scan_req = fidl_mlme::ScanRequest { channel_list: Some(channel_list), ..scan_req() };
+        let result = scanner.handle_mlme_scan_req(
+            scan_req,
+            m.create_channel_listener_fn(),
+            &mut m.chan_sched,
+        );
+        assert_variant!(result, Err(ScanError::ChannelListTooLarge));
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InvalidArgs }
+        );
+    }
+
+    #[test]
+    fn test_handle_scan_req_invalid_channel_time() {
+        let mut m = MockObjects::new();
+        let mut scanner = m.create_scanner();
+
+        let scan_req =
+            fidl_mlme::ScanRequest { min_channel_time: 101, max_channel_time: 100, ..scan_req() };
+        let result = scanner.handle_mlme_scan_req(
+            scan_req,
+            m.create_channel_listener_fn(),
+            &mut m.chan_sched,
+        );
+        assert_variant!(result, Err(ScanError::MaxChannelTimeLtMin));
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InvalidArgs }
+        );
+    }
+
+    #[test]
+    fn test_handle_scan_req_ssid_too_long() {
+        let mut m = MockObjects::new();
+        let mut scanner = m.create_scanner();
+
+        let scan_req = fidl_mlme::ScanRequest { ssid: vec![65; 33], ..scan_req() };
+        let result = scanner.handle_mlme_scan_req(
+            scan_req,
+            m.create_channel_listener_fn(),
+            &mut m.chan_sched,
+        );
+        assert_variant!(result, Err(ScanError::SsidTooLong));
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InvalidArgs }
+        );
+    }
+
+    #[test]
+    fn test_start_hw_scan_success() {
+        let mut m = MockObjects::new();
+        m.fake_device.info.ifc_info.driver_features |= WlanInfoDriverFeature::SCAN_OFFLOAD;
+        let mut scanner = m.create_scanner();
+
+        scanner
+            .handle_mlme_scan_req(scan_req(), m.create_channel_listener_fn(), &mut m.chan_sched)
+            .expect("expect scan req accepted");
+
+        // Verify that hw-scan is requested
+        assert_variant!(m.fake_device.hw_scan_req, Some(config) => {
+            assert_eq!(config.scan_type, WlanHwScanType::PASSIVE);
+            assert_eq!(config.num_channels, 1);
+
+            let mut channels = [0u8; WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS];
+            channels[..1].copy_from_slice(&[6]);
+            assert_eq!(&config.channels[..], &channels[..]);
+
+            let mut ssid = [0; WLAN_MAX_SSID_LEN as usize];
+            ssid[..4].copy_from_slice(b"ssid");
+            assert_eq!(config.ssid, WlanSsid { len: 4, ssid });
+        }, "HW scan not initiated");
+
+        // Verify that software scan is not scheduled
+        assert!(scanner.chan_sched_req_id().is_none());
+
+        // Mock receiving a beacon
+        handle_beacon(&mut scanner, TIMESTAMP, &beacon_ies()[..]);
+
+        // Verify scan results are sent on hw scan complete
+        scanner.handle_hw_scan_complete(WlanHwScan::SUCCESS);
+        m.fake_device.next_mlme_msg::<fidl_mlme::ScanResult>().expect("error reading ScanResult");
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::Success }
+        );
+    }
+
+    #[test]
+    fn test_start_hw_scan_fails() {
+        let mut m = MockObjects::new();
+        m.fake_device.info.ifc_info.driver_features |= WlanInfoDriverFeature::SCAN_OFFLOAD;
+        let mut scanner = Scanner::new(
+            m.fake_device.as_device_fail_start_hw_scan(),
+            FakeBufferProvider::new(),
+            Timer::<TimedEvent>::new(m.fake_scheduler.as_scheduler()),
+            IFACE_MAC,
+        );
+
+        let result = scanner.handle_mlme_scan_req(
+            scan_req(),
+            m.create_channel_listener_fn(),
+            &mut m.chan_sched,
+        );
+        assert_variant!(result, Err(ScanError::StartHwScanFails(zx::Status::NOT_SUPPORTED)));
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InternalError }
+        );
+    }
+
+    #[test]
+    fn test_start_hw_scan_aborted() {
+        let mut m = MockObjects::new();
+        m.fake_device.info.ifc_info.driver_features |= WlanInfoDriverFeature::SCAN_OFFLOAD;
+        let mut scanner = m.create_scanner();
+
+        scanner
+            .handle_mlme_scan_req(scan_req(), m.create_channel_listener_fn(), &mut m.chan_sched)
+            .expect("expect scan req accepted");
+
+        // Verify that hw-scan is requested
+        assert_variant!(m.fake_device.hw_scan_req, Some(_), "HW scan not initiated");
+        // Verify that software scan is not scheduled
+        assert!(scanner.chan_sched_req_id().is_none());
+
+        // Mock receiving a beacon
+        handle_beacon(&mut scanner, TIMESTAMP, &beacon_ies()[..]);
+
+        // Verify scan results are sent on hw scan complete
+        scanner.handle_hw_scan_complete(WlanHwScan::ABORTED);
+        let scan_end = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect("error reading MLME ScanEnd");
+        assert_eq!(
+            scan_end,
+            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::InternalError }
         );
     }
 

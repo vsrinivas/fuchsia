@@ -24,7 +24,9 @@ rustc_library("wlan-mlme") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:log",
     "//zircon/system/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211-rustc",
+    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo-rustc",
     "//zircon/system/banjo/ddk.protocol.wlan.info:ddk.protocol.wlan.info-rustc",
+    "//zircon/system/banjo/ddk.protocol.wlan.mac:ddk.protocol.wlan.mac-rustc",
     "//zircon/system/banjo/wlan.protocol.info:wlan.protocol.info-rustc",
   ]
 }
