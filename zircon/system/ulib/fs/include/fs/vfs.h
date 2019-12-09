@@ -193,8 +193,9 @@ class Vfs {
 
   explicit Vfs(async_dispatcher_t* dispatcher);
 
-  async_dispatcher_t* dispatcher() { return dispatcher_; }
-  void SetDispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
+
+  void SetDispatcher(async_dispatcher_t* dispatcher);
 
   // Begins serving VFS messages over the specified channel.
   // If the vnode supports multiple protocols and the client requested more than one of them,

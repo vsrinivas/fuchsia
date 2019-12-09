@@ -112,7 +112,15 @@ Vfs::Vfs() = default;
 Vfs::~Vfs() = default;
 
 #ifdef __Fuchsia__
+
 Vfs::Vfs(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+
+void Vfs::SetDispatcher(async_dispatcher_t* dispatcher) {
+  ZX_ASSERT_MSG(!dispatcher_,
+                "Vfs::SetDispatcher maybe only be called when dispatcher_ is not set.");
+  dispatcher_ = dispatcher;
+}
+
 #endif
 
 Vfs::OpenResult Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,

@@ -21,6 +21,7 @@ zx_test("fs-vnode") {
     "service_tests.cc",
     "teardown_tests.cc",
     "tracked_remote_dir_tests.cc",
+    "vfs_tests.cc",
     "vfs_types_tests.cc",
     "vmo_file_tests.cc",
     "vnode_contract_tests.cc",
