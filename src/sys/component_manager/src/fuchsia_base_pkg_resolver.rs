@@ -154,8 +154,13 @@ mod tests {
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::NodeMarker,
         fuchsia_async as fasync,
-        fuchsia_vfs_pseudo_fs::{directory::entry::DirectoryEntry, pseudo_directory},
-        std::{iter, path::Path},
+        fuchsia_vfs_pseudo_fs_mt::{
+            directory::entry::DirectoryEntry,
+            execution_scope::ExecutionScope,
+            path,
+            pseudo_directory,
+        },
+        std::path::Path,
     };
 
     fn new_fake_pkgfs() -> DirectoryProxy {
@@ -188,18 +193,17 @@ mod tests {
                     )
                     .expect("failed to open path in namespace");
                 };
-            let mut fake_pkgfs = pseudo_directory! {
+            let fake_pkgfs = pseudo_directory! {
                 "packages" =>
                     directory_broker::DirectoryBroker::new(Box::new(packages_dir_broker_fn)),
             };
             fake_pkgfs.open(
+                ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
                 OPEN_RIGHT_READABLE,
                 MODE_TYPE_DIRECTORY,
-                &mut iter::empty(),
+                path::Path::empty(),
                 ServerEnd::new(pkgfs_server.into_channel()),
             );
-            let _ = fake_pkgfs.await;
-            panic!("fake_pkgfs exited!");
         });
         pkgfs_client
     }

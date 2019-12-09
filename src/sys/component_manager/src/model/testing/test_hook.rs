@@ -5,14 +5,19 @@
 use {
     crate::{
         capability::*,
-        model::{addable_directory::AddableDirectory, *},
+        model::*,
+        model::addable_directory::AddableDirectoryWithResult,
     },
     directory_broker,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
-    fuchsia_async as fasync,
-    fuchsia_vfs_pseudo_fs::directory,
-    fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
+    fuchsia_async::EHandle,
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::immutable::simple as pfs,
+        directory::entry::DirectoryEntry,
+        execution_scope::ExecutionScope,
+        path::Path,
+    },
     fuchsia_zircon as zx,
     futures::{executor::block_on, future::BoxFuture, lock::Mutex, prelude::*},
     std::{
@@ -331,7 +336,7 @@ impl Hook for HubInjectionTestHook {
                 *capability_provider = self
                     .on_route_framework_capability_async(
                         event.target_realm.clone(),
-                        &capability,
+                        capability,
                         capability_provider.take(),
                     )
                     .await?;
@@ -363,15 +368,6 @@ impl HubInjectionCapabilityProvider {
         relative_path: String,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
-        let mut dir_path = self.relative_path.clone();
-        dir_path.append(
-            &mut relative_path
-                .split("/")
-                .map(|s| s.to_string())
-                .filter(|s| !s.is_empty())
-                .collect::<Vec<String>>(),
-        );
-
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
         self.intercepted_capability.open(flags, open_mode, String::new(), server_chan).await?;
 
@@ -379,22 +375,22 @@ impl HubInjectionCapabilityProvider {
             .into_proxy()
             .expect("failed to create directory proxy");
 
-        let mut dir = directory::simple::empty();
+        let dir = pfs::simple();
         dir.add_node(
             "old_hub",
             directory_broker::DirectoryBroker::from_directory_proxy(hub_proxy),
             &self.abs_moniker,
         )?;
+        let mut rel_path = self.relative_path.clone();
+        rel_path.push(relative_path);
+        let path = Path::validate_and_split(rel_path.join("/")).expect("Failed to split and validate path");
         dir.open(
+            ExecutionScope::from_executor(Box::new(EHandle::local())),
             flags,
             open_mode,
-            &mut dir_path.iter().map(|s| s.as_str()),
+            path,
             ServerEnd::new(server_end),
         );
-
-        fasync::spawn(async move {
-            let _ = dir.await;
-        });
 
         Ok(())
     }

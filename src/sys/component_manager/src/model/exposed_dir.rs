@@ -5,23 +5,15 @@
 use {
     crate::model::*,
     cm_rust::ComponentDecl,
-    fuchsia_async as fasync,
-    fuchsia_vfs_pseudo_fs::directory,
-    futures::future::{AbortHandle, Abortable},
+    fuchsia_vfs_pseudo_fs_mt::directory::immutable as pfs,
+    std::sync::Arc,
 };
+
+type Directory = Arc<pfs::Simple>;
 
 /// Represents a component's directory of exposed capabilities.
 pub struct ExposedDir {
-    pub root_dir: directory::controlled::Controller<'static>,
-    dir_abort_handles: Vec<AbortHandle>,
-}
-
-impl Drop for ExposedDir {
-    fn drop(&mut self) {
-        for abort_handle in &self.dir_abort_handles {
-            abort_handle.abort();
-        }
-    }
+    pub root_dir: Directory,
 }
 
 impl ExposedDir {
@@ -30,19 +22,10 @@ impl ExposedDir {
         abs_moniker: &AbsoluteMoniker,
         decl: ComponentDecl,
     ) -> Result<Self, ModelError> {
-        let mut dir_abort_handles = vec![];
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        dir_abort_handles.push(abort_handle);
-        let (controller, mut controlled) =
-            directory::controlled::controlled(directory::simple::empty());
+        let mut dir = pfs::simple();
         let route_fn = RoutingFacade::new(model.clone()).route_expose_fn_factory();
         let tree = DirTree::build_from_exposes(route_fn, abs_moniker, decl);
-        tree.install(abs_moniker, &mut controlled)?;
-        let future = Abortable::new(controlled, abort_registration);
-        fasync::spawn(async move {
-            // Drop unused return value.
-            let _ = future.await;
-        });
-        Ok(ExposedDir { root_dir: controller, dir_abort_handles })
+        tree.install(abs_moniker, &mut dir)?;
+        Ok(ExposedDir { root_dir: dir})
     }
 }

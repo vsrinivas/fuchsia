@@ -12,6 +12,9 @@ use {
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_vfs_pseudo_fs_mt::{
+        execution_scope::ExecutionScope, path::Path, directory::entry::DirectoryEntry
+    },
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
         future::{BoxFuture, FutureExt},
@@ -487,16 +490,13 @@ impl Realm {
         // the same directory rights as the parent directory connection.
         let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
         exposed_dir
-            .root_dir
-            .open(flags, fio::MODE_TYPE_DIRECTORY, vec![], server_end)
-            .await
-            .map_err(|e| {
-                ModelError::capability_discovery_error(format_err!(
-                    "failed to open exposed dir for {}: {}",
-                    self.abs_moniker,
-                    e
-                ))
-            })?;
+            .root_dir.clone()
+            .open(
+                ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+                flags,
+                fio::MODE_TYPE_DIRECTORY,
+                Path::empty(),
+                server_end);
         Ok(())
     }
 }

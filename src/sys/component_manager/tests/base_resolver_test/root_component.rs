@@ -9,10 +9,14 @@ use {
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::*,
     fuchsia_runtime,
-    fuchsia_vfs_pseudo_fs::{directory::entry::DirectoryEntry, pseudo_directory},
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::entry::DirectoryEntry,
+        execution_scope::ExecutionScope,
+        path::Path,
+        pseudo_directory,
+    },
     fuchsia_zircon::{self as zx},
     io_util,
-    std::iter,
 };
 
 #[fasync::run_singlethreaded]
@@ -26,7 +30,7 @@ async fn main() -> Result<(), Error> {
 
     let pkg_dir = io_util::open_directory_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE)
         .expect("failed to open /pkg");
-    let mut fake_pkgfs = pseudo_directory! {
+    let fake_pkgfs = pseudo_directory! {
         "pkgfs" => pseudo_directory! {
             "packages" => pseudo_directory! {
                 "echo_server" => pseudo_directory! {
@@ -36,17 +40,12 @@ async fn main() -> Result<(), Error> {
         },
     };
     fake_pkgfs.open(
+        ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
         fio::OPEN_RIGHT_READABLE,
         fio::MODE_TYPE_DIRECTORY,
-        &mut iter::empty(),
+        Path::empty(),
         startup_handle,
     );
-
-    // Serve the pkgfs directory
-    fasync::spawn(async {
-        let _ = fake_pkgfs.await;
-        panic!("fake_pkgfs exited!");
-    });
 
     // Bind to the echo_server.
     let mut child_ref = fsys::ChildRef { name: "echo_server".to_string(), collection: None };

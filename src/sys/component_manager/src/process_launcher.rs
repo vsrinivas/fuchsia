@@ -328,14 +328,21 @@ mod tests {
         fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
-        fuchsia_async as fasync,
+        fuchsia_async::{
+            EHandle,
+            self as fasync,
+        },
         fuchsia_runtime::{job_default, HandleType},
-        fuchsia_vfs_pseudo_fs::{
-            directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
+        fuchsia_vfs_pseudo_fs_mt::{
+            directory::entry::DirectoryEntry,
+            execution_scope::ExecutionScope,
+            file::pcb::asynchronous::read_only_static,
+            path,
+            pseudo_directory,
         },
         fuchsia_zircon::HandleBased,
         futures::lock::Mutex,
-        std::{fs::File, iter, mem, path::Path},
+        std::{fs::File, mem, path::Path},
     };
 
     extern "C" {
@@ -538,19 +545,16 @@ mod tests {
 
         let test_content_bytes = test_content.clone().into_bytes();
         let (dir_server, dir_client) = zx::Channel::create()?;
-        fasync::spawn(async move {
-            let mut dir = pseudo_directory! {
-                "test_file" => read_only(|| Ok(test_content_bytes.clone())),
-            };
-            dir.open(
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
-                fio::MODE_TYPE_DIRECTORY,
-                &mut iter::empty(),
-                ServerEnd::new(dir_server),
-            );
-            dir.await;
-            panic!("Pseudo dir stopped serving!");
-        });
+        let dir = pseudo_directory! {
+            "test_file" => read_only_static(test_content_bytes),
+        };
+        dir.clone().open(
+            ExecutionScope::from_executor(Box::new(EHandle::local())),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            path::Path::empty(),
+            ServerEnd::new(dir_server),
+        );
 
         let mut name_infos = vec![fproc::NameInfo {
             path: "/dir".to_string(),

@@ -4,14 +4,18 @@
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, DIRENT_TYPE_SERVICE, INO_UNKNOWN},
-    fuchsia_vfs_pseudo_fs as fvfs,
-    fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
-    futures::future::FusedFuture,
-    std::{future::Future, pin::Pin, task::{Context, Poll}},
-    void::Void,
+    fuchsia_vfs_pseudo_fs_mt as fvfs,
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::entry::DirectoryEntry,
+        directory::entry::EntryInfo,
+        execution_scope::ExecutionScope,
+        path::Path,
+    },
+    parking_lot::Mutex,
+    std::sync::Arc,
 };
 
-pub type RoutingFn = Box<dyn FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send>;
+pub type RoutingFn = Box<dyn FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send + Sync>;
 
 // TODO(ZX-3606): move this into the pseudo dir fs crate.
 /// DirectoryBroker exists to hold a slot in a fuchsia_vfs_pseudo_fs directory and proxy open
@@ -19,6 +23,10 @@ pub type RoutingFn = Box<dyn FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Se
 /// request for this directory entry is received the given ServerEnd is passed into the closure,
 /// which will presumably make an open request somewhere else and forward on the ServerEnd.
 pub struct DirectoryBroker {
+    inner: Mutex<Inner>,
+}
+
+struct Inner {
     /// The parameters are as follows:
     ///  flags: u32
     ///  mode: u32
@@ -30,14 +38,16 @@ pub struct DirectoryBroker {
 
 impl DirectoryBroker {
     /// new will create a new DirectoryBroker to forward directory open requests.
-    pub fn new(route_open: RoutingFn) -> Self {
-        return DirectoryBroker {
-            route_open,
-            entry_info: fvfs::directory::entry::EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_SERVICE),
-        };
+    pub fn new(route_open: RoutingFn) -> Arc<DirectoryBroker> {
+        return Arc::new(DirectoryBroker {
+            inner: Mutex::new(Inner {
+                route_open,
+                entry_info: EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_SERVICE),
+            }),
+        });
     }
 
-    pub fn from_directory_proxy(dir: DirectoryProxy) -> DirectoryBroker {
+    pub fn from_directory_proxy(dir: DirectoryProxy) -> Arc<DirectoryBroker> {
         Self::new(Box::new(
             move |flags: u32,
                   mode: u32,
@@ -61,34 +71,26 @@ impl DirectoryBroker {
 
 impl DirectoryEntry for DirectoryBroker {
     fn open(
-        &mut self,
+        self: Arc<Self>,
+        _scope: ExecutionScope,
         flags: u32,
         mode: u32,
-        path: &mut dyn Iterator<Item = &str>,
+        path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        let relative_path = path.collect::<Vec<&str>>().join("/");
-        (self.route_open)(flags, mode, relative_path, server_end);
+        let mut this = self.inner.lock();
+        (&mut this.route_open)(flags, mode, path.into_string(), server_end);
     }
 
     fn entry_info(&self) -> fvfs::directory::entry::EntryInfo {
-        return fvfs::directory::entry::EntryInfo::new(
-            self.entry_info.inode(),
-            self.entry_info.type_(),
-        );
+        let this = self.inner.lock();
+        fvfs::directory::entry::EntryInfo::new(
+            this.entry_info.inode(),
+            this.entry_info.type_(),
+        )
     }
-}
-impl FusedFuture for DirectoryBroker {
-    fn is_terminated(&self) -> bool {
-        // TODO: ibobyr says:
-        //     As this kind of service is special, it can forward `is_terminated` to the contained
-        //     proxy, via the EventStreams, but for now "true" should work as well.
-        true
-    }
-}
-impl Future for DirectoryBroker {
-    type Output = Void;
-    fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Self::Output> {
-        Poll::Pending
+
+    fn can_hardlink(&self) -> bool {
+        false
     }
 }

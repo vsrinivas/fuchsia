@@ -11,9 +11,13 @@ use {
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_async as fasync, fuchsia_runtime,
     fuchsia_syslog::fx_log_info,
-    fuchsia_vfs_pseudo_fs::{directory::entry::DirectoryEntry, pseudo_directory},
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::entry::DirectoryEntry,
+        execution_scope::ExecutionScope,
+        path,
+        pseudo_directory,
+    },
     fuchsia_zircon as zx, io_util,
-    std::iter,
 };
 
 #[fasync::run_singlethreaded]
@@ -25,7 +29,7 @@ async fn main() -> Result<(), Error> {
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())
             .ok_or(format_err!("missing startup handle"))?;
 
-    let mut out_dir = pseudo_directory! {
+    let out_dir = pseudo_directory! {
         "data" =>
             directory_broker::DirectoryBroker::new(Box::new(|flags, mode, path, server_end| {
                 fx_log_info!("new handle to data directory being given out");
@@ -38,13 +42,14 @@ async fn main() -> Result<(), Error> {
             })),
     };
     out_dir.open(
+        ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         MODE_TYPE_DIRECTORY,
-        &mut iter::empty(),
+        path::Path::empty(),
         ServerEnd::new(zx::Channel::from(out_dir_handle)),
     );
-    fx_log_info!("storage_user successfully initialized");
-    let _ = out_dir.await;
-    fx_log_info!("storage_user exiting");
-    Err(format_err!("storage user exiting when it shouldn't"))
+    // Permanently hanging here because without this, storage_integration_test will hang due to
+    // this function exiting early.
+    fasync::futures::future::pending::<()>().await;
+    Ok(())
 }

@@ -104,9 +104,16 @@ mod tests {
         fidl::endpoints,
         fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
         fidl_fuchsia_sys2::ComponentDecl,
-        fuchsia_async as fasync,
-        fuchsia_vfs_pseudo_fs::{
-            directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
+        fuchsia_async::{
+            EHandle,
+            self as fasync,
+        },
+        fuchsia_vfs_pseudo_fs_mt::{
+            directory::entry::DirectoryEntry,
+            execution_scope::ExecutionScope,
+            file::pcb::asynchronous::read_only_static,
+            path,
+            pseudo_directory,
         },
     };
 
@@ -120,26 +127,22 @@ mod tests {
         let cm_path = Path::new("/pkg/meta/component_manager_tests_hello_world.cm");
         let cm_bytes = std::fs::read(cm_path)?;
         let (proxy, server_end) = endpoints::create_proxy::<fio::NodeMarker>()?;
-        fasync::spawn(async move {
-            let mut dir = pseudo_directory! {
-                "packages" => pseudo_directory! {
-                    "hello_world" => pseudo_directory! {
-                        "meta" => pseudo_directory! {
-                            "component_manager_tests_hello_world.cm" =>
-                                read_only(|| Ok(cm_bytes.clone())),
-                        },
+        let dir = pseudo_directory! {
+            "packages" => pseudo_directory! {
+                "hello_world" => pseudo_directory! {
+                    "meta" => pseudo_directory! {
+                        "component_manager_tests_hello_world.cm" => read_only_static(cm_bytes.clone()),
                     },
                 },
-            };
-            dir.open(
-                fio::OPEN_RIGHT_READABLE,
-                fio::MODE_TYPE_DIRECTORY,
-                &mut std::iter::empty(),
-                server_end,
-            );
-            dir.await;
-            panic!("Pseudo dir stopped serving!");
-        });
+            },
+        };
+        dir.open(
+            ExecutionScope::from_executor(Box::new(EHandle::local())),
+            fio::OPEN_RIGHT_READABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            path::Path::empty(),
+            server_end,
+        );
         let proxy = io_util::node_to_directory(proxy)?;
         let resolver = FuchsiaBootResolver::new_from_directory(proxy);
 

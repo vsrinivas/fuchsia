@@ -28,6 +28,7 @@ use {
     },
     fidl_fuchsia_sys2 as fsys, files_async, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
+    fuchsia_vfs_pseudo_fs_mt::directory::entry::DirectoryEntry,
     futures::TryStreamExt,
     std::collections::HashSet,
     std::path::Path,
@@ -226,10 +227,8 @@ pub async fn call_echo<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> Str
 
 /// Create a `DirectoryEntry` and `Channel` pair. The created `DirectoryEntry`
 /// provides the service `S`, sending all requests to the returned channel.
-pub fn create_service_directory_entry<S>() -> (
-    impl fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry + 'static,
-    futures::channel::mpsc::Receiver<fidl::endpoints::Request<S>>,
-)
+pub fn create_service_directory_entry<S>(
+) -> (Arc<dyn DirectoryEntry>, futures::channel::mpsc::Receiver<fidl::endpoints::Request<S>>)
 where
     S: fidl::endpoints::ServiceMarker,
     fidl::endpoints::Request<S>: Send,

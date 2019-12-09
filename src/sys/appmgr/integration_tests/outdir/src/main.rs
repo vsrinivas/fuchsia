@@ -11,12 +11,16 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy, Proxy},
     fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
-    fuchsia_vfs_pseudo_fs::{
-        directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::entry::DirectoryEntry,
+        execution_scope::ExecutionScope,
+        file::pcb::asynchronous::read_only_static,
+        path::Path as pfsPath,
+        pseudo_directory,
     },
     fuchsia_zircon::HandleBased,
     io_util,
-    std::{ffi::CString, iter, path::Path},
+    std::{ffi::CString, path::Path},
 };
 
 /// This integration test creates a new appmgr process and confirms that it can connect to a sysmgr
@@ -70,7 +74,7 @@ async fn main() -> Result<(), Error> {
             .expect("failed to open /pkg");
         let pkg_dir_2 = io_util::clone_directory(&pkg_dir, fio::CLONE_FLAG_SAME_RIGHTS)
             .expect("failed to clone /pkg handle");
-        let mut fake_pkgfs = pseudo_directory! {
+        let fake_pkgfs = pseudo_directory! {
             "packages" => pseudo_directory! {
                 "sysmgr" => pseudo_directory! {
                     "0" => directory_broker::DirectoryBroker::from_directory_proxy(pkg_dir),
@@ -82,11 +86,11 @@ async fn main() -> Result<(), Error> {
                     "0" => pseudo_directory! {
                         "data" => pseudo_directory! {
                             "sysmgr" => pseudo_directory! {
-                                "services.config" => read_only(|| Ok(SYSMGR_SERVICES_CONFIG.as_bytes().to_vec())),
+                                "services.config" => read_only_static(SYSMGR_SERVICES_CONFIG),
                             },
                             "appmgr" => pseudo_directory! {
                                 "scheme_map" => pseudo_directory! {
-                                    "default.config" => read_only(|| Ok(APPMGR_SCHEME_MAP.as_bytes().to_vec())),
+                                    "default.config" => read_only_static(APPMGR_SCHEME_MAP),
                                 }
                             },
                         },
@@ -95,13 +99,12 @@ async fn main() -> Result<(), Error> {
             },
         };
         fake_pkgfs.open(
+            ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
             fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
-            &mut iter::empty(),
+            pfsPath::empty(),
             pkgfs_server_end,
         );
-        let _ = fake_pkgfs.await;
-        panic!("fake_pkgfs exited!");
     });
     let pkgfs_c_str = CString::new("/pkgfs").unwrap();
     spawn_actions.push(fdio::SpawnAction::add_namespace_entry(

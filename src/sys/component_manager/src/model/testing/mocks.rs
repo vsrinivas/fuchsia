@@ -11,9 +11,13 @@ use {
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_vfs_pseudo_fs::{
-        directory::{self, entry::DirectoryEntry},
-        file::simple::read_only,
+    fuchsia_async::EHandle,
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::entry::DirectoryEntry,
+        execution_scope::ExecutionScope,
+        file::pcb::asynchronous::read_only_static,
+        path::Path,
+        pseudo_directory,
     },
     fuchsia_zircon::{AsHandleRef, Koid},
     futures::{future::BoxFuture, lock::Mutex, prelude::*},
@@ -90,15 +94,16 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
                     });
                 }
                 CapabilityType::Directory | CapabilityType::Storage => {
-                    let mut sub_dir = directory::simple::empty();
-                    sub_dir
-                        .add_entry("hello", { read_only(move || Ok(b"friend".to_vec())) })
-                        .map_err(|(s, _)| s)
-                        .expect("Failed to add 'hello' entry");
-                    sub_dir.open(flags, mode, &mut relative_path.split("/"), server_end);
-                    fasync::spawn(async move {
-                        let _ = sub_dir.await;
-                    });
+                    let sub_dir = pseudo_directory!(
+                        "hello" => read_only_static(b"friend"),
+                    );
+                    let path = Path::validate_and_split(relative_path).expect("Failed to split path");
+                    sub_dir.open(
+                        ExecutionScope::from_executor(Box::new(EHandle::local())),
+                        flags,
+                        mode,
+                        path,
+                        server_end);
                 }
                 CapabilityType::Runner => {
                     // TODO(fxb/4761): Implement routing for runner caps.

@@ -18,37 +18,32 @@ use {
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
+    fuchsia_async as fasync,
+    fuchsia_async::EHandle,
     fuchsia_component::client,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
-    fuchsia_vfs_pseudo_fs::{
-        directory::{self, entry::DirectoryEntry},
-        file::simple::read_only,
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::immutable::simple as pfs,
+        directory::entry::DirectoryEntry,
+        directory::entry_container::DirectlyMutable,
+        file::pcb::asynchronous::read_only_static,
+        execution_scope::ExecutionScope,
+        pseudo_directory,
+        path::Path as fvfsPath,
+        tree_builder::TreeBuilder,
     },
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Task},
     futures::{
-        future::{AbortHandle, Abortable, BoxFuture},
+        future::BoxFuture,
         TryStreamExt,
     },
     library_loader,
     log::warn,
-    std::{boxed::Box, iter, path::Path},
+    std::{path::Path, sync::Arc},
 };
 
-// TODO(fsamuel): We might want to store other things in this struct in the
-// future, in which case, RuntimeDirectory might not be an appropriate name.
-pub struct RuntimeDirectory {
-    pub controller: directory::controlled::Controller<'static>,
-    /// Called when a component's execution is terminated to drop the 'runtime'
-    /// directory.
-    abort_handle: AbortHandle,
-}
-
-impl Drop for RuntimeDirectory {
-    fn drop(&mut self) {
-        self.abort_handle.abort();
-    }
-}
+type Directory = Arc<pfs::Simple>;
 
 /// Errors produced by `ElfRunner`.
 #[derive(Debug, Clone, Fail)]
@@ -168,54 +163,38 @@ impl ElfRunner {
         &'a self,
         runtime_dir: ServerEnd<DirectoryMarker>,
         args: &'a Vec<String>,
-    ) -> RuntimeDirectory {
-        let (runtime_controller, mut runtime_controlled) =
-            directory::controlled::controlled(directory::simple::empty());
-        runtime_controlled.open(
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            0,
-            &mut iter::empty(),
-            ServerEnd::<NodeMarker>::new(runtime_dir.into_channel()),
-        );
-
+    ) -> Directory {
+        let mut runtime_tree_builder = TreeBuilder::empty_dir();
         let mut count: u32 = 0;
-        let mut args_dir = directory::simple::empty();
         for arg in args.iter() {
             let arg_copy = arg.clone();
-            let _ = args_dir.add_entry(&count.to_string(), {
-                read_only(move || Ok(arg_copy.clone().into_bytes()))
-            });
+            runtime_tree_builder.add_entry(["args", &count.to_string()], read_only_static(arg_copy.clone())).expect("Failed to add arg to runtime directory");
             count += 1;
         }
-        let _ = runtime_controlled.add_entry("args", args_dir);
 
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        let future = Abortable::new(runtime_controlled, abort_registration);
-        fasync::spawn(async move {
-            let _ = future.await;
-        });
-
-        RuntimeDirectory { controller: runtime_controller, abort_handle }
+        let runtime_directory = runtime_tree_builder.build();
+        runtime_directory.clone().open(
+            ExecutionScope::from_executor(Box::new(EHandle::local())),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            0,
+            fvfsPath::empty(),
+            ServerEnd::<NodeMarker>::new(runtime_dir.into_channel()),
+        );
+        runtime_directory
     }
 
     async fn create_elf_directory<'a>(
         &'a self,
-        runtime_dir: &'a RuntimeDirectory,
+        runtime_dir: &'a Directory,
         resolved_url: &'a String,
         process_id: u64,
         job_id: u64,
     ) -> Result<(), RunnerError> {
-        let mut elf_dir = directory::simple::empty();
-        elf_dir
-            .add_entry("process_id", { read_only(move || Ok(Vec::from(process_id.to_string()))) })
-            .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
-        elf_dir
-            .add_entry("job_id", { read_only(move || Ok(Vec::from(job_id.to_string()))) })
-            .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
-        runtime_dir
-            .controller
-            .add_entry_res("elf", elf_dir)
-            .await
+        let elf_dir = pseudo_directory!(
+            "process_id" => read_only_static(process_id.to_string()),
+            "job_id" => read_only_static(job_id.to_string()),
+        );
+        runtime_dir.clone().add_entry("elf", elf_dir)
             .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
         Ok(())
     }
@@ -225,7 +204,7 @@ impl ElfRunner {
         url: &'a str,
         start_info: fsys::ComponentStartInfo,
         launcher: &'a fproc::LauncherProxy,
-    ) -> Result<(Option<RuntimeDirectory>, fproc::LaunchInfo), Error> {
+    ) -> Result<(Option<Directory>, fproc::LaunchInfo), Error> {
         let bin_path =
             get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(url, e))?;
         let bin_arg = &[String::from(
@@ -423,7 +402,7 @@ impl ElfRunner {
 struct ElfController {
     // namespace directory for this component, kept just as a reference to
     // keep the namespace alive
-    _runtime_dir: RuntimeDirectory,
+    _runtime_dir: Directory,
     // stream via which the component manager will ask the controller to
     // manipulate the component
     request_stream: fsys::ComponentControllerRequestStream,
@@ -433,7 +412,7 @@ struct ElfController {
 
 impl ElfController {
     pub fn new(
-        runtime_dir: RuntimeDirectory,
+        runtime_dir: Directory,
         job: Job,
         requests: fsys::ComponentControllerRequestStream,
     ) -> ElfController {

@@ -7,7 +7,7 @@ use {
         capability::*,
         model::{
             self,
-            addable_directory::{AddableDirectory, AddableDirectoryWithResult},
+            addable_directory::{AddableDirectoryWithResult},
             error::ModelError,
             hooks::*,
             CapabilityUsageTree,
@@ -17,11 +17,17 @@ use {
     directory_broker,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
-    fuchsia_async as fasync,
-    fuchsia_vfs_pseudo_fs::{directory, file::simple::read_only},
+    fuchsia_async::EHandle,
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::immutable::simple as pfs,
+        path::Path as pfsPath,
+        directory::entry::DirectoryEntry,
+        execution_scope::ExecutionScope,
+        file::pcb::asynchronous::read_only_static,
+    },
     fuchsia_zircon as zx,
     futures::{
-        future::{AbortHandle, Abortable, BoxFuture},
+        future::{BoxFuture},
         lock::Mutex,
     },
     std::{
@@ -29,6 +35,9 @@ use {
         sync::{Arc, Weak},
     },
 };
+
+// Declare simple directory type for brevity
+type Directory = Arc<pfs::Simple>;
 
 struct HubCapabilityProvider {
     abs_moniker: model::AbsoluteMoniker,
@@ -52,16 +61,15 @@ impl HubCapabilityProvider {
         relative_path: String,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
-        let mut dir_path = self.relative_path.clone();
-        dir_path.append(
-            &mut relative_path
-                .split("/")
-                .map(|s| s.to_string())
-                .filter(|s| !s.is_empty())
-                .collect::<Vec<String>>(),
-        );
-
-        self.hub_inner.open(&self.abs_moniker, flags, open_mode, dir_path, server_end).await?;
+        // Append relative_path to the back of the local relative_path vector, then convert it to a
+        // pfsPath.
+        let mut rel_path = self.relative_path.clone();
+        rel_path.push(relative_path.clone());
+        let dir_path = pfsPath::validate_and_split(rel_path.join("/"));
+        if dir_path.is_err() {
+            return Err(ModelError::open_directory_error(self.abs_moniker.clone(), relative_path))
+        };
+        self.hub_inner.open(&self.abs_moniker, flags, open_mode, dir_path.unwrap(), server_end).await?;
 
         Ok(())
     }
@@ -84,16 +92,16 @@ struct Instance {
     pub abs_moniker: model::AbsoluteMoniker,
     pub component_url: String,
     pub execution: Option<Execution>,
-    pub directory: directory::controlled::Controller<'static>,
-    pub children_directory: directory::controlled::Controller<'static>,
-    pub deleting_directory: directory::controlled::Controller<'static>,
+    pub directory: Directory,
+    pub children_directory: Directory,
+    pub deleting_directory: Directory,
 }
 
 /// The execution state for a component that has started running.
 struct Execution {
     pub resolved_url: String,
-    pub directory: directory::controlled::Controller<'static>,
-    pub capability_usage_tree: CapabilityUsageTree<'static>,
+    pub capability_usage_tree: CapabilityUsageTree,
+    pub directory: Directory,
 }
 
 /// The Hub is a directory tree representing the component topology. Through the Hub,
@@ -115,7 +123,7 @@ impl Hub {
 
     pub async fn open_root(&self, flags: u32, server_end: zx::Channel) -> Result<(), ModelError> {
         let root_moniker = model::AbsoluteMoniker::root();
-        self.inner.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, vec![], server_end).await?;
+        self.inner.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, pfsPath::empty(), server_end).await?;
         Ok(())
     }
 
@@ -137,14 +145,7 @@ impl Hub {
 
 pub struct HubInner {
     instances: Mutex<HashMap<model::AbsoluteMoniker, Instance>>,
-    /// Called when Hub is dropped to drop pseudodirectory hosting the Hub.
-    abort_handle: AbortHandle,
-}
-
-impl Drop for HubInner {
-    fn drop(&mut self) {
-        self.abort_handle.abort();
-    }
+    scope: ExecutionScope,
 }
 
 impl HubInner {
@@ -153,18 +154,10 @@ impl HubInner {
         let mut instances_map = HashMap::new();
         let abs_moniker = model::AbsoluteMoniker::root();
 
-        let root_directory =
-            HubInner::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
-                .expect("Did not create directory.");
+        HubInner::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
+            .expect("Did not create directory.");
 
-        // Run the hub root directory forever until the component manager is terminated.
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        let future = Abortable::new(root_directory, abort_registration);
-        fasync::spawn(async move {
-            let _ = future.await;
-        });
-
-        Ok(HubInner { instances: Mutex::new(instances_map), abort_handle })
+        Ok(HubInner { instances: Mutex::new(instances_map), scope: ExecutionScope::from_executor(Box::new(EHandle::local())) })
     }
 
     pub async fn open(
@@ -172,24 +165,22 @@ impl HubInner {
         abs_moniker: &model::AbsoluteMoniker,
         flags: u32,
         open_mode: u32,
-        relative_path: Vec<String>,
+        relative_path: pfsPath,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let instances_map = self.instances.lock().await;
         if !instances_map.contains_key(&abs_moniker) {
-            let relative_path = relative_path.join("/");
-            return Err(ModelError::open_directory_error(abs_moniker.clone(), relative_path));
+            return Err(ModelError::open_directory_error(abs_moniker.clone(), relative_path.into_string()));
         }
         instances_map[&abs_moniker]
-            .directory
-            .open_node(
+            .directory.clone()
+            .open(
+                self.scope.clone(),
                 flags,
                 open_mode,
                 relative_path,
                 ServerEnd::<NodeMarker>::new(server_end),
-                &abs_moniker,
-            )
-            .await?;
+            );
         Ok(())
     }
 
@@ -197,21 +188,17 @@ impl HubInner {
         abs_moniker: &model::AbsoluteMoniker,
         component_url: String,
         instance_map: &mut HashMap<model::AbsoluteMoniker, Instance>,
-    ) -> Result<Option<directory::controlled::Controlled<'static>>, ModelError> {
+    ) -> Result<Option<Directory>, ModelError> {
         if instance_map.contains_key(&abs_moniker) {
             return Ok(None);
         }
 
-        let (instance_controller, mut instance_controlled) =
-            directory::controlled::controlled(directory::simple::empty());
+        let instance = pfs::simple();
 
         // Add a 'url' file.
-        instance_controlled.add_node(
+        instance.add_node(
             "url",
-            {
-                let url = component_url.clone();
-                read_only(move || Ok(url.clone().into_bytes()))
-            },
+            { read_only_static(component_url.clone().into_bytes()) },
             &abs_moniker,
         )?;
 
@@ -221,28 +208,26 @@ impl HubInner {
         let id =
             if let Some(child_moniker) = abs_moniker.leaf() { child_moniker.instance() } else { 0 };
         let component_type = if id > 0 { "dynamic" } else { "static" };
-        instance_controlled.add_node(
+        instance.add_node(
             "id",
-            { read_only(move || Ok(id.to_string().into_bytes())) },
+            { read_only_static(id.to_string().into_bytes()) },
             &abs_moniker,
         )?;
 
         // Add a 'component_type' file.
-        instance_controlled.add_node(
+        instance.add_node(
             "component_type",
-            { read_only(move || Ok(component_type.to_string().into_bytes())) },
+            { read_only_static(component_type.to_string().into_bytes()) },
             &abs_moniker,
         )?;
 
         // Add a children directory.
-        let (children_controller, children_controlled) =
-            directory::controlled::controlled(directory::simple::empty());
-        instance_controlled.add_node("children", children_controlled, &abs_moniker)?;
+        let children = pfs::simple();
+        instance.add_node("children", children.clone(), &abs_moniker)?;
 
         // Add a deleting directory.
-        let (deleting_controller, deleting_controlled) =
-            directory::controlled::controlled(directory::simple::empty());
-        instance_controlled.add_node("deleting", deleting_controlled, &abs_moniker)?;
+        let deleting = pfs::simple();
+        instance.add_node("deleting", deleting.clone(), &abs_moniker)?;
 
         instance_map.insert(
             abs_moniker.clone(),
@@ -250,13 +235,13 @@ impl HubInner {
                 abs_moniker: abs_moniker.clone(),
                 component_url,
                 execution: None,
-                directory: instance_controller,
-                children_directory: children_controller,
-                deleting_directory: deleting_controller,
+                directory: instance.clone(),
+                children_directory: children.clone(),
+                deleting_directory: deleting.clone(),
             },
         );
 
-        Ok(Some(instance_controlled))
+        Ok(Some(instance))
     }
 
     async fn add_instance_to_parent_if_necessary<'a>(
@@ -268,32 +253,30 @@ impl HubInner {
             HubInner::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
         {
             if let (Some(leaf), Some(parent_moniker)) = (abs_moniker.leaf(), abs_moniker.parent()) {
-                // In the children directory, the child's instance id is not used
                 let partial_moniker = leaf.to_partial();
                 instances_map[&parent_moniker]
                     .children_directory
-                    .add_node(partial_moniker.as_str(), controlled, &abs_moniker)
-                    .await?;
+                    .add_node(partial_moniker.as_str(), controlled.clone(), &abs_moniker)?;
             }
         }
         Ok(())
     }
 
     fn add_resolved_url_file(
-        execution_directory: &mut directory::controlled::Controlled<'static>,
+        execution_directory: Directory,
         resolved_url: String,
         abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         execution_directory.add_node(
             "resolved_url",
-            { read_only(move || Ok(resolved_url.clone().into_bytes())) },
+            { read_only_static(resolved_url.into_bytes()) },
             &abs_moniker,
         )?;
         Ok(())
     }
 
     fn add_in_directory(
-        execution_directory: &mut directory::controlled::Controlled<'static>,
+        execution_directory: Directory,
         component_decl: ComponentDecl,
         runtime: &model::Runtime,
         routing_facade: &model::RoutingFacade,
@@ -304,7 +287,7 @@ impl HubInner {
             &abs_moniker,
             component_decl,
         );
-        let mut in_dir = directory::simple::empty();
+        let mut in_dir = pfs::simple();
         tree.install(&abs_moniker, &mut in_dir)?;
         let pkg_dir = runtime.namespace.as_ref().and_then(|n| n.package_dir.as_ref());
         if let Some(pkg_dir) = Self::clone_dir(pkg_dir) {
@@ -319,7 +302,7 @@ impl HubInner {
     }
 
     fn add_expose_directory(
-        execution_directory: &mut directory::controlled::Controlled<'static>,
+        execution_directory: Directory,
         component_decl: ComponentDecl,
         routing_facade: &model::RoutingFacade,
         abs_moniker: &model::AbsoluteMoniker,
@@ -329,14 +312,14 @@ impl HubInner {
             &abs_moniker,
             component_decl,
         );
-        let mut expose_dir = directory::simple::empty();
+        let mut expose_dir = pfs::simple();
         tree.install(&abs_moniker, &mut expose_dir)?;
         execution_directory.add_node("expose", expose_dir, &abs_moniker)?;
         Ok(())
     }
 
     fn add_out_directory(
-        execution_directory: &mut directory::controlled::Controlled<'static>,
+        execution_directory: Directory,
         runtime: &model::Runtime,
         abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -351,7 +334,7 @@ impl HubInner {
     }
 
     fn add_runtime_directory(
-        execution_directory: &mut directory::controlled::Controlled<'static>,
+        execution_directory: Directory,
         runtime: &model::Runtime,
         abs_moniker: &model::AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -387,29 +370,26 @@ impl HubInner {
         if instance.execution.is_none() {
             let execution = realm.lock_execution().await;
             if let Some(runtime) = execution.runtime.as_ref() {
-                let (execution_controller, mut execution_controlled) =
-                    directory::controlled::controlled(directory::simple::empty());
+                let execution_directory = pfs::simple();
 
-                let (used_controller, used_controlled) =
-                    directory::controlled::controlled(directory::simple::empty());
+                let used = pfs::simple();
 
-                let capability_usage_tree =
-                    CapabilityUsageTree::new(used_controller, routing_facade.clone());
+                let capability_usage_tree = CapabilityUsageTree::new(used.clone(), routing_facade.clone());
                 let exec = Execution {
                     resolved_url: runtime.resolved_url.clone(),
-                    directory: execution_controller,
+                    directory: execution_directory.clone(),
                     capability_usage_tree,
                 };
                 instance.execution = Some(exec);
 
                 Self::add_resolved_url_file(
-                    &mut execution_controlled,
+                    execution_directory.clone(),
                     runtime.resolved_url.clone(),
                     &abs_moniker,
                 )?;
 
                 Self::add_in_directory(
-                    &mut execution_controlled,
+                    execution_directory.clone(),
                     component_decl.clone(),
                     &runtime,
                     &routing_facade,
@@ -417,19 +397,18 @@ impl HubInner {
                 )?;
 
                 Self::add_expose_directory(
-                    &mut execution_controlled,
+                    execution_directory.clone(),
                     component_decl.clone(),
                     &routing_facade,
                     &abs_moniker,
                 )?;
 
-                execution_controlled.add_node("used", used_controlled, &abs_moniker)?;
+                execution_directory.add_node("used", used, &abs_moniker)?;
+                Self::add_out_directory(execution_directory.clone(), runtime, &abs_moniker)?;
 
-                Self::add_out_directory(&mut execution_controlled, runtime, &abs_moniker)?;
+                Self::add_runtime_directory(execution_directory.clone(), runtime, &abs_moniker)?;
 
-                Self::add_runtime_directory(&mut execution_controlled, runtime, &abs_moniker)?;
-
-                instance.directory.add_node("exec", execution_controlled, &abs_moniker).await?;
+                instance.directory.add_node("exec", execution_directory, &abs_moniker)?;
             }
         }
 
@@ -470,7 +449,7 @@ impl HubInner {
             realm.abs_moniker.parent().expect("a root component cannot be dynamic");
         let leaf = realm.abs_moniker.leaf().expect("a root component cannot be dynamic");
 
-        instance_map[&parent_moniker].deleting_directory.remove_node(leaf.as_str()).await?;
+        instance_map[&parent_moniker].deleting_directory.remove_node(leaf.as_str())?;
         instance_map
             .remove(&realm.abs_moniker)
             .expect("the dynamic component must exist in the instance map");
@@ -479,7 +458,7 @@ impl HubInner {
 
     async fn on_stop_instance_async(&self, realm: Arc<model::Realm>) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
-        instance_map[&realm.abs_moniker].directory.remove_node("exec").await?;
+        instance_map[&realm.abs_moniker].directory.remove_node("exec")?;
         instance_map.get_mut(&realm.abs_moniker).expect("instance must exist").execution = None;
         Ok(())
     }
@@ -499,15 +478,11 @@ impl HubInner {
         let directory = instance_map[&parent_moniker]
             .children_directory
             .remove_node(partial_moniker.as_str())
-            .await?
-            .ok_or(ModelError::remove_entry_error(leaf.as_str()))?;
+            .map_err(|_| ModelError::remove_entry_error(leaf.as_str()))?;
 
-        // In the deleting directory, the child's instance id is used
         instance_map[&parent_moniker]
             .deleting_directory
-            .add_node(leaf.as_str(), directory, &realm.abs_moniker)
-            .await?;
-
+            .add_node(leaf.as_str(), directory, &realm.abs_moniker)?;
         Ok(())
     }
 
@@ -641,62 +616,51 @@ mod tests {
             OPEN_RIGHT_WRITABLE,
         },
         fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
-        fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
-        std::{convert::TryFrom, iter, path::Path},
+        fuchsia_async::EHandle,
+        fuchsia_vfs_pseudo_fs_mt::{
+            directory::entry::DirectoryEntry,
+            execution_scope::ExecutionScope,
+            path::Path as pfsPath,
+            pseudo_directory,
+            file::pcb::asynchronous::read_only_static,
+        },
+        std::{convert::TryFrom, path::Path},
     };
 
     /// Hosts an out directory with a 'foo' file.
     fn foo_out_dir_fn() -> Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
-            let mut out_dir = directory::simple::empty();
-            // Add a 'foo' file.
-            out_dir
-                .add_entry("foo", { read_only(move || Ok(b"bar".to_vec())) })
-                .map_err(|(s, _)| s)
-                .expect("Failed to add 'foo' entry");
-
-            out_dir.open(
-                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
-                &mut iter::empty(),
-                ServerEnd::new(server_end.into_channel()),
+            let out_dir = pseudo_directory!(
+                "foo" => read_only_static(b"bar"),
+                "test" => pseudo_directory!(
+                    "aaa" => read_only_static(b"bbb"),
+                ),
             );
 
-            let mut test_dir = directory::simple::empty();
-            test_dir
-                .add_entry("aaa", { read_only(move || Ok(b"bbb".to_vec())) })
-                .map_err(|(s, _)| s)
-                .expect("Failed to add 'aaa' entry");
-            out_dir
-                .add_entry("test", test_dir)
-                .map_err(|(s, _)| s)
-                .expect("Failed to add 'test' directory.");
-
-            fasync::spawn(async move {
-                let _ = out_dir.await;
-            });
+            out_dir.clone().open(
+                ExecutionScope::from_executor(Box::new(EHandle::local())),
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                pfsPath::empty(),
+                ServerEnd::new(server_end.into_channel()),
+            );
         })
     }
 
     /// Hosts a runtime directory with a 'bleep' file.
     fn bleep_runtime_dir_fn() -> Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
-            let mut pseudo_dir = directory::simple::empty();
-            // Add a 'bleep' file.
-            pseudo_dir
-                .add_entry("bleep", { read_only(move || Ok(b"blah".to_vec())) })
-                .map_err(|(s, _)| s)
-                .expect("Failed to add 'bleep' entry");
+            let pseudo_dir = pseudo_directory!(
+                "bleep" => read_only_static(b"blah"),
+            );
 
-            pseudo_dir.open(
+            pseudo_dir.clone().open(
+                ExecutionScope::from_executor(Box::new(EHandle::local())),
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
-                &mut iter::empty(),
+                pfsPath::empty(),
                 ServerEnd::new(server_end.into_channel()),
             );
-            fasync::spawn(async move {
-                let _ = pseudo_dir.await;
-            });
         })
     }
 

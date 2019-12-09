@@ -9,19 +9,22 @@ use {
     crate::model::*,
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::{DirectoryBroker, RoutingFn},
-    fuchsia_vfs_pseudo_fs::directory,
+    fuchsia_vfs_pseudo_fs_mt::directory::immutable::simple as pfs,
     std::collections::HashMap,
+    std::sync::Arc
 };
 
-pub struct CapabilityUsageTree<'entries> {
-    directory_nodes: HashMap<String, CapabilityUsageTree<'entries>>,
-    dir: Box<directory::controlled::Controller<'entries>>,
+type Directory = Arc<pfs::Simple>;
+
+pub struct CapabilityUsageTree {
+    directory_nodes: HashMap<String, CapabilityUsageTree>,
+    dir: Box<Directory>,
     routing_facade: RoutingFacade,
 }
 
-impl<'entries> CapabilityUsageTree<'entries> {
+impl CapabilityUsageTree {
     pub fn new(
-        dir: directory::controlled::Controller<'entries>,
+        dir: Directory,
         routing_facade: RoutingFacade,
     ) -> Self {
         Self { directory_nodes: HashMap::new(), dir: Box::new(dir), routing_facade }
@@ -43,30 +46,29 @@ impl<'entries> CapabilityUsageTree<'entries> {
         let node = DirectoryBroker::new(routing_fn);
 
         // Adding a node to the Hub can fail
-        tree.dir.add_node(&basename, node, abs_moniker).await.or_else(|_| {
+        tree.dir.add_node(&basename, node, abs_moniker).unwrap_or_else(|_| {
             // TODO(xbhatnag): The error received is not granular enough to know if the node
             // already exists, so treat this as a success for now. Ideally, pseudo_vfs should
             // have an exists() operation.
-            Ok(())
-        })
+        });
+        Ok(())
     }
 
     async fn to_directory_node(
         &mut self,
         path: &CapabilityPath,
         abs_moniker: &AbsoluteMoniker,
-    ) -> Result<&mut CapabilityUsageTree<'entries>, ModelError> {
+    ) -> Result<&mut CapabilityUsageTree, ModelError> {
         let components = path.dirname.split("/");
         let mut tree = self;
         for component in components {
             if !component.is_empty() {
                 // If the next component does not exist in the tree, create it.
                 if !tree.directory_nodes.contains_key(component) {
-                    let (controller, controlled) =
-                        directory::controlled::controlled(directory::simple::empty());
+                    let dir_node = pfs::simple();
                     let routing_facade = tree.routing_facade.clone();
-                    let child_tree = CapabilityUsageTree::new(controller, routing_facade);
-                    tree.dir.add_node(component, controlled, abs_moniker).await?;
+                    let child_tree = CapabilityUsageTree::new(dir_node.clone(), routing_facade);
+                    tree.dir.add_node(component, dir_node, abs_moniker)?;
                     tree.directory_nodes.insert(component.to_string(), child_tree);
                 }
 
@@ -122,10 +124,10 @@ impl DirTree {
     pub fn install<'entries>(
         self,
         abs_moniker: &AbsoluteMoniker,
-        root_dir: &mut impl AddableDirectory<'entries>,
+        root_dir: &mut impl AddableDirectory,
     ) -> Result<(), ModelError> {
         for (name, subtree) in self.directory_nodes {
-            let mut subdir = directory::simple::empty();
+            let mut subdir = pfs::simple();
             subtree.install(abs_moniker, &mut subdir)?;
             root_dir.add_node(&name, subdir, abs_moniker)?;
         }
@@ -198,10 +200,15 @@ mod tests {
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
         fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
-        fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
+        fidl_fuchsia_io2 as fio2,
+        fuchsia_async::EHandle,
+        fuchsia_vfs_pseudo_fs_mt::{
+            directory::entry::DirectoryEntry,
+            execution_scope::ExecutionScope,
+            path,
+        },
         fuchsia_zircon as zx,
-        std::{convert::TryFrom, iter},
+        std::convert::TryFrom,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -237,18 +244,16 @@ mod tests {
         let tree = DirTree::build_from_uses(routing_factory, &abs_moniker, decl.clone());
 
         // Convert the tree to a directory.
-        let mut in_dir = directory::simple::empty();
+        let mut in_dir = pfs::simple();
         tree.install(&abs_moniker, &mut in_dir).expect("Unable to build pseudodirectory");
         let (in_dir_client, in_dir_server) = zx::Channel::create().unwrap();
         in_dir.open(
+            ExecutionScope::from_executor(Box::new(EHandle::local())),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
-            &mut iter::empty(),
+            path::Path::empty(),
             ServerEnd::<NodeMarker>::new(in_dir_server.into()),
         );
-        fasync::spawn(async move {
-            let _ = in_dir.await;
-        });
         let in_dir_proxy = ClientEnd::<DirectoryMarker>::new(in_dir_client)
             .into_proxy()
             .expect("failed to create directory proxy");
@@ -310,18 +315,16 @@ mod tests {
         let tree = DirTree::build_from_exposes(routing_factory, &abs_moniker, decl.clone());
 
         // Convert the tree to a directory.
-        let mut expose_dir = directory::simple::empty();
+        let mut expose_dir = pfs::simple();
         tree.install(&abs_moniker, &mut expose_dir).expect("Unable to build pseudodirectory");
         let (expose_dir_client, expose_dir_server) = zx::Channel::create().unwrap();
         expose_dir.open(
+            ExecutionScope::from_executor(Box::new(EHandle::local())),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
-            &mut iter::empty(),
+            path::Path::empty(),
             ServerEnd::<NodeMarker>::new(expose_dir_server.into()),
         );
-        fasync::spawn(async move {
-            let _ = expose_dir.await;
-        });
         let expose_dir_proxy = ClientEnd::<DirectoryMarker>::new(expose_dir_client)
             .into_proxy()
             .expect("failed to create directory proxy");

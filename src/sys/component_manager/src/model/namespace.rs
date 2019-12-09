@@ -9,13 +9,26 @@ use {
     directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeMarker},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_vfs_pseudo_fs as fvfs,
-    fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_async::EHandle,
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::immutable::simple as pfs,
+        directory::entry::DirectoryEntry,
+        directory::entry_container::DirectlyMutable,
+        execution_scope::ExecutionScope,
+        path::Path,
+    },
     fuchsia_zircon as zx,
-    futures::future::{AbortHandle, Abortable, BoxFuture},
+    futures::future::{
+        Abortable,
+        AbortHandle,
+        BoxFuture,
+    },
     log::*,
-    std::{collections::HashMap, iter},
+    std::{collections::HashMap, sync::Arc},
 };
+
+type Directory = Arc<pfs::Simple>;
 
 pub struct IncomingNamespace {
     pub package_dir: Option<DirectoryProxy>,
@@ -212,7 +225,7 @@ impl IncomingNamespace {
         };
 
         waiters.push(Box::pin(route_on_usage));
-        ns.paths.push(target_path);
+        ns.paths.push(target_path.clone());
         ns.directories.push(client_end);
         Ok(())
     }
@@ -227,7 +240,6 @@ impl IncomingNamespace {
             let (abort_handle, abort_registration) = AbortHandle::new_pair();
             self.dir_abort_handles.push(abort_handle);
             let future = Abortable::new(waiter, abort_registration);
-
             // The future for a directory waiter will only terminate once the directory channel is
             // first used, so we must start up a new task here to run the future instead of calling
             // await on it directly. This is wrapped in an async move {.await;}` block to drop
@@ -242,7 +254,7 @@ impl IncomingNamespace {
     /// Adds a service broker in `svc_dirs` for service described by `use_`. The service will be
     /// proxied to the outgoing directory of the source component.
     fn add_service_use(
-        svc_dirs: &mut HashMap<String, fvfs::directory::simple::Simple>,
+        svc_dirs: &mut HashMap<String, Directory>,
         use_: &cm_rust::UseServiceProtocolDecl,
         model: Model,
         abs_moniker: AbsoluteMoniker,
@@ -289,45 +301,35 @@ impl IncomingNamespace {
 
         let service_dir = svc_dirs
             .entry(use_.target_path.dirname.clone())
-            .or_insert(fvfs::directory::simple::empty());
-        service_dir
+            .or_insert(pfs::simple());
+        service_dir.clone()
             .add_entry(
                 &use_.target_path.basename,
                 directory_broker::DirectoryBroker::new(route_open_fn),
             )
-            .map_err(|(status, _)| status)
             .expect("could not add service to directory");
         Ok(())
     }
 
     /// serve_and_install_svc_dirs will take all of the pseudo directories collected in
-    /// svc_dirs (as populated by add_service_use calls), start them as abortable futures, and
-    /// install them in the namespace. The abortable handles are saved in the IncomingNamespace, to
+    /// svc_dirs (as populated by add_service_use calls), start them and install them in the
+    /// namespace. The abortable handles are saved in the IncomingNamespace, to
     /// be called when the IncomingNamespace is dropped.
     fn serve_and_install_svc_dirs(
         &mut self,
         ns: &mut fsys::ComponentNamespace,
-        svc_dirs: HashMap<String, fvfs::directory::simple::Simple<'static>>,
+        svc_dirs: HashMap<String, Directory>,
     ) -> Result<(), ModelError> {
-        for (target_dir_path, mut pseudo_dir) in svc_dirs {
+        for (target_dir_path, pseudo_dir) in svc_dirs {
             let (client_end, server_end) =
                 create_endpoints::<NodeMarker>().expect("could not create node proxy endpoints");
-            pseudo_dir.open(
+            pseudo_dir.clone().open(
+                ExecutionScope::from_executor(Box::new(EHandle::local())),
                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
-                &mut iter::empty(),
-                server_end,
+                Path::empty(),
+                server_end.into_channel().into(),
             );
-            let (abort_handle, abort_registration) = AbortHandle::new_pair();
-            self.dir_abort_handles.push(abort_handle);
-            let future = Abortable::new(pseudo_dir, abort_registration);
-
-            // The future for a pseudo directory will never terminate, so we must start up a new
-            // task here to run the future instead of calling await on it directly. This is
-            // wrapped in an async move {.await;}` block like to drop the unused return value.
-            fasync::spawn(async move {
-                let _ = future.await;
-            });
 
             ns.paths.push(target_dir_path.as_str().to_string());
             let client_end = ClientEnd::new(client_end.into_channel()); // coerce to ClientEnd<Dir>
