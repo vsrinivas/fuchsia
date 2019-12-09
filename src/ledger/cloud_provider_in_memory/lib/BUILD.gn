@@ -26,6 +26,7 @@ source_set("lib") {
   ]
 
   deps = [
+    "//peridot/lib/rng",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/lib/convert",
@@ -45,6 +46,7 @@ source_set("unittests") {
   ]
   deps = [
     ":lib",
+    "//peridot/lib/rng",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/encoding",

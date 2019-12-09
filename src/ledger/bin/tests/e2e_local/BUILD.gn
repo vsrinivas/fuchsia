@@ -15,6 +15,7 @@ executable("e2e_local") {
   ]
 
   deps = [
+    "//peridot/lib/rng:system",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/lib/fidl/cpp",

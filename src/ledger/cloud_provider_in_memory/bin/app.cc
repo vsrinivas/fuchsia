@@ -11,6 +11,7 @@
 
 #include <memory>
 
+#include "peridot/lib/rng/system_random.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 
 namespace cloud_provider {
@@ -27,7 +28,7 @@ class App {
   ~App() = default;
 
   bool Start() {
-    cloud_provider_impl_ = std::make_unique<ledger::FakeCloudProvider>(dispatcher_);
+    cloud_provider_impl_ = std::make_unique<ledger::FakeCloudProvider>(dispatcher_, &random_);
 
     component_context_->outgoing()->AddPublicService<CloudProvider>(
         [this](fidl::InterfaceRequest<CloudProvider> request) {
@@ -39,6 +40,7 @@ class App {
 
  private:
   async_dispatcher_t* dispatcher_;
+  rng::SystemRandom random_;
   std::unique_ptr<sys::ComponentContext> component_context_;
   std::unique_ptr<ledger::FakeCloudProvider> cloud_provider_impl_;
   fidl::BindingSet<CloudProvider> cloud_provider_bindings_;

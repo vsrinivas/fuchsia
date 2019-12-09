@@ -4,17 +4,25 @@
 
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 
+#include "peridot/lib/rng/random.h"
 #include "src/ledger/lib/convert/convert.h"
 
 namespace ledger {
 
-FakeCloudProvider::Builder::Builder(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+FakeCloudProvider::Builder::Builder(async_dispatcher_t* dispatcher, rng::Random* random)
+    : dispatcher_(dispatcher), random_(random) {}
 
 FakeCloudProvider::Builder::~Builder() = default;
 
 FakeCloudProvider::Builder& FakeCloudProvider::Builder::SetInjectNetworkError(
     InjectNetworkError inject_network_error) {
   inject_network_error_ = inject_network_error;
+  return *this;
+}
+
+FakeCloudProvider::Builder& FakeCloudProvider::Builder::SetInjectMissingDiff(
+    InjectMissingDiff inject_missing_diff) {
+  inject_missing_diff_ = inject_missing_diff;
   return *this;
 }
 
@@ -41,13 +49,15 @@ std::unique_ptr<FakeCloudProvider> FakeCloudProvider::Builder::Build() && {
 
 FakeCloudProvider::FakeCloudProvider(Builder&& builder)
     : dispatcher_(builder.dispatcher_),
+      random_(builder.random_),
       device_set_(builder.cloud_erase_on_check_, builder.cloud_erase_from_watcher_,
                   std::move(builder.on_watcher_set_)),
       page_clouds_(builder.dispatcher_),
-      inject_network_error_(builder.inject_network_error_) {}
+      inject_network_error_(builder.inject_network_error_),
+      inject_missing_diff_(builder.inject_missing_diff_) {}
 
-FakeCloudProvider::FakeCloudProvider(async_dispatcher_t* dispatcher)
-    : FakeCloudProvider(Builder(dispatcher)) {}
+FakeCloudProvider::FakeCloudProvider(async_dispatcher_t* dispatcher, rng::Random* random)
+    : FakeCloudProvider(Builder(dispatcher, random)) {}
 
 FakeCloudProvider::~FakeCloudProvider() = default;
 
@@ -61,7 +71,8 @@ void FakeCloudProvider::GetPageCloud(std::vector<uint8_t> app_id, std::vector<ui
                                      fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
                                      GetPageCloudCallback callback) {
   const std::string key = convert::ToString(app_id) + "_" + convert::ToString(page_id);
-  auto ret = page_clouds_.try_emplace(std::move(key), dispatcher_, inject_network_error_);
+  auto ret = page_clouds_.try_emplace(std::move(key), dispatcher_, random_, inject_network_error_,
+                                      inject_missing_diff_);
   ret.first->second.Bind(std::move(page_cloud));
   callback(cloud_provider::Status::OK);
 }

@@ -13,6 +13,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
@@ -38,16 +39,28 @@ cloud_provider::Commit MakeCommit(std::string id, std::optional<std::string> dif
   return commit;
 }
 
+class FakeRandom : public rng::Random {
+ public:
+  // Sets the value returned by the generator.
+  void set_value(uint8_t value) { value_ = value; }
+
+ private:
+  void InternalDraw(void* buffer, size_t buffer_size) { memset(buffer, value_, buffer_size); }
+
+  uint8_t value_ = 0;
+};
+
 class FakePageCloudTest : public gtest::TestLoopFixture {
  public:
-  FakePageCloudTest() : fake_page_cloud_(dispatcher(), InjectNetworkError::NO) {
+  FakePageCloudTest()
+      : fake_page_cloud_(dispatcher(), &fake_random_, InjectNetworkError::NO,
+                         InjectMissingDiff::YES) {
     fake_page_cloud_.Bind(page_cloud_.NewRequest());
   }
 
  protected:
   cloud_provider::PageCloudPtr page_cloud_;
-
- private:
+  FakeRandom fake_random_;
   FakePageCloud fake_page_cloud_;
 };
 
@@ -126,6 +139,73 @@ TEST_F(FakePageCloudTest, GetDiffForUnknown) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, cloud_provider::Status::NOT_FOUND);
+}
+
+TEST_F(FakePageCloudTest, AcceptDiff) {
+  // The random number generator always returns true.
+  fake_random_.set_value(255);
+
+  // Add one commit.
+  cloud_provider::Commits commits;
+  commits.commits.push_back(MakeCommit("id0", std::nullopt));
+  cloud_provider::CommitPack commit_pack;
+  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
+  cloud_provider::Status status;
+  bool called;
+  page_cloud_->AddCommits(std::move(commit_pack),
+                          callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  ASSERT_EQ(status, cloud_provider::Status::OK);
+
+  // Get its diff.
+  std::unique_ptr<cloud_provider::DiffPack> diff_pack;
+  page_cloud_->GetDiff(convert::ToArray("id0"), {},
+                       callback::Capture(callback::SetWhenCalled(&called), &status, &diff_pack));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  ASSERT_EQ(status, cloud_provider::Status::OK);
+  ASSERT_TRUE(diff_pack);
+
+  // The diff should be from the empty page.
+  cloud_provider::Diff diff;
+  ASSERT_TRUE(ledger::DecodeFromBuffer(diff_pack->buffer, &diff));
+  ASSERT_TRUE(diff.has_base_state());
+  EXPECT_TRUE(diff.base_state().is_empty_page());
+}
+
+TEST_F(FakePageCloudTest, DiscardDiff) {
+  // The random number generator always returns false.
+  fake_random_.set_value(0);
+
+  // Add one commit.
+  cloud_provider::Commits commits;
+  commits.commits.push_back(MakeCommit("id0", std::nullopt));
+  cloud_provider::CommitPack commit_pack;
+  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
+  cloud_provider::Status status;
+  bool called;
+  page_cloud_->AddCommits(std::move(commit_pack),
+                          callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  ASSERT_EQ(status, cloud_provider::Status::OK);
+
+  // Get its diff.
+  std::unique_ptr<cloud_provider::DiffPack> diff_pack;
+  page_cloud_->GetDiff(convert::ToArray("id0"), {},
+                       callback::Capture(callback::SetWhenCalled(&called), &status, &diff_pack));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  ASSERT_EQ(status, cloud_provider::Status::OK);
+  ASSERT_TRUE(diff_pack);
+
+  // The diff should be a null diff from the commit itself.
+  cloud_provider::Diff diff;
+  ASSERT_TRUE(ledger::DecodeFromBuffer(diff_pack->buffer, &diff));
+  ASSERT_TRUE(diff.has_base_state());
+  ASSERT_TRUE(diff.base_state().is_at_commit());
+  EXPECT_EQ(diff.base_state().at_commit(), convert::ToArray("id0"));
 }
 
 }  // namespace

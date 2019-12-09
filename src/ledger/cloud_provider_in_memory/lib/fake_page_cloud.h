@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 
+#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/cloud_provider_in_memory/lib/diff_tree.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
@@ -23,7 +24,9 @@ struct CommitRecord {
 
 class FakePageCloud : public cloud_provider::PageCloud {
  public:
-  explicit FakePageCloud(async_dispatcher_t* dispatcher, InjectNetworkError inject_network_error);
+  explicit FakePageCloud(async_dispatcher_t* dispatcher, rng::Random* random,
+                         InjectNetworkError inject_network_error,
+                         InjectMissingDiff inject_missing_diff);
   FakePageCloud(const FakePageCloud&) = delete;
   FakePageCloud& operator=(const FakePageCloud&) = delete;
   ~FakePageCloud() override;
@@ -52,8 +55,10 @@ class FakePageCloud : public cloud_provider::PageCloud {
                GetDiffCallback callback) override;
   void UpdateClock(cloud_provider::ClockPack clock, UpdateClockCallback callback) override;
 
+  rng::Random* const random_;
   InjectNetworkError inject_network_error_;
   std::map<uint64_t, size_t> remaining_errors_to_inject_;
+  InjectMissingDiff inject_missing_diff_;
 
   fidl::BindingSet<cloud_provider::PageCloud> bindings_;
   fit::closure on_discardable_;

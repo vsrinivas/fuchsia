@@ -13,6 +13,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "peridot/lib/rng/system_random.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/serialization_version.h"
@@ -123,11 +124,14 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
 
   sys::ComponentContext* component_context() { return component_context_.get(); }
 
+  rng::Random* random() { return &random_; }
+
  private:
   fuchsia::sys::ComponentControllerPtr ledger_controller_;
   std::vector<fit::function<void()>> ledger_shutdown_callbacks_;
   std::unique_ptr<sys::ComponentContext> component_context_;
   fuchsia::sys::LauncherPtr launcher_;
+  rng::SystemRandom random_;
 
  protected:
   std::unique_ptr<ledger::Platform> platform_;
@@ -258,7 +262,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   // initial check.
   bool device_set_watcher_set;
   auto cloud_provider =
-      std::move(ledger::FakeCloudProvider::Builder(dispatcher())
+      std::move(ledger::FakeCloudProvider::Builder(dispatcher(), random())
                     .SetCloudEraseOnCheck(ledger::CloudEraseOnCheck::YES)
                     .SetOnWatcherSet(callback::SetWhenCalled(&device_set_watcher_set)))
           .Build();
@@ -333,7 +337,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   // Create a cloud provider configured to trigger the cloud erase recovery
   // while Ledger is connected.
-  auto cloud_provider = std::move(ledger::FakeCloudProvider::Builder(dispatcher())
+  auto cloud_provider = std::move(ledger::FakeCloudProvider::Builder(dispatcher(), random())
                                       .SetCloudEraseFromWatcher(ledger::CloudEraseFromWatcher::YES))
                             .Build();
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
@@ -372,7 +376,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  ledger::FakeCloudProvider cloud_provider(dispatcher());
+  ledger::FakeCloudProvider cloud_provider(dispatcher(), random());
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
@@ -418,7 +422,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  ledger::FakeCloudProvider cloud_provider(dispatcher());
+  ledger::FakeCloudProvider cloud_provider(dispatcher(), random());
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),

@@ -10,6 +10,7 @@
 
 #include <functional>
 
+#include "peridot/lib/rng/random.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
 #include "src/ledger/lib/socket/strings.h"
@@ -170,9 +171,13 @@ void FakePageCloud::WatcherContainer::SendCommits(std::vector<cloud_provider::Co
                          });
 }
 
-FakePageCloud::FakePageCloud(async_dispatcher_t* dispatcher,
-                             InjectNetworkError inject_network_error)
-    : inject_network_error_(inject_network_error), containers_(dispatcher) {
+FakePageCloud::FakePageCloud(async_dispatcher_t* dispatcher, rng::Random* random,
+                             InjectNetworkError inject_network_error,
+                             InjectMissingDiff inject_missing_diff)
+    : random_(random),
+      inject_network_error_(inject_network_error),
+      inject_missing_diff_(inject_missing_diff),
+      containers_(dispatcher) {
   bindings_.set_empty_set_handler([this] {
     if (on_discardable_) {
       on_discardable_();
@@ -284,6 +289,10 @@ void FakePageCloud::AddCommits(cloud_provider::CommitPack commit_pack,
     commits_.push_back({std::move(commit_id), std::move(commit_data)});
   }
   for (auto& [commit_id, diff_base, diff_entries] : diffs_to_insert) {
+    // Randomly ignore some diffs if missing diff injection is enabled.
+    if (inject_missing_diff_ == InjectMissingDiff::YES && random_->Draw<uint8_t>() % 2 == 0) {
+      continue;
+    }
     diffs_.AddDiff(std::move(commit_id), std::move(diff_base), std::move(diff_entries));
   }
 

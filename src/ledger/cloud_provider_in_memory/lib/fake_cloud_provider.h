@@ -20,10 +20,11 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
  public:
   class Builder {
    public:
-    Builder(async_dispatcher_t* dispatcher);
+    Builder(async_dispatcher_t* dispatcher, rng::Random* random);
     ~Builder();
 
     Builder& SetInjectNetworkError(InjectNetworkError inject_network_error);
+    Builder& SetInjectMissingDiff(InjectMissingDiff inject_missing_diff);
     Builder& SetCloudEraseOnCheck(CloudEraseOnCheck cloud_erase_on_check);
     Builder& SetCloudEraseFromWatcher(CloudEraseFromWatcher cloud_erase_from_watcher);
     // |on_watcher_set| will be called every time a watcher is set.
@@ -34,14 +35,16 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
    private:
     friend FakeCloudProvider;
 
-    async_dispatcher_t* dispatcher_;
+    async_dispatcher_t* const dispatcher_;
+    rng::Random* const random_;
     InjectNetworkError inject_network_error_ = InjectNetworkError::NO;
+    InjectMissingDiff inject_missing_diff_ = InjectMissingDiff::NO;
     CloudEraseOnCheck cloud_erase_on_check_ = CloudEraseOnCheck::NO;
     CloudEraseFromWatcher cloud_erase_from_watcher_ = CloudEraseFromWatcher::NO;
     fit::closure on_watcher_set_ = nullptr;
   };
 
-  explicit FakeCloudProvider(async_dispatcher_t* dispatcher);
+  explicit FakeCloudProvider(async_dispatcher_t* dispatcher, rng::Random* random);
   explicit FakeCloudProvider(Builder&& builder);
   FakeCloudProvider(const FakeCloudProvider&) = delete;
   FakeCloudProvider& operator=(const FakeCloudProvider&) = delete;
@@ -55,13 +58,15 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
                     fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
                     GetPageCloudCallback callback) override;
 
-  async_dispatcher_t* dispatcher_;
+  async_dispatcher_t* const dispatcher_;
+  rng::Random* const random_;
 
   fidl_helpers::BoundInterfaceSet<cloud_provider::DeviceSet, FakeDeviceSet> device_set_;
 
   callback::AutoCleanableMap<std::string, FakePageCloud> page_clouds_;
 
   InjectNetworkError inject_network_error_;
+  InjectMissingDiff inject_missing_diff_;
 };
 
 }  // namespace ledger
