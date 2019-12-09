@@ -30,7 +30,8 @@
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/tests/integration/sharding.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
-#include "src/ledger/cloud_provider_memory_diff/cpp/cloud_controller_factory.h"
+#include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
+#include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
@@ -43,8 +44,6 @@
 
 namespace ledger {
 namespace {
-
-enum class InjectNetworkError { YES, NO };
 
 enum class TestDiffs {
   // Test compatibility with non diff-based sync: Ledger has compatibility enabled, and the cloud
@@ -104,7 +103,8 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
       async_dispatcher_t* services_dispatcher,
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request,
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
-      cloud_provider::CloudControllerPtr* cloud_controller,
+      fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>*
+          cloud_provider,
       std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
       fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
       fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr);
@@ -145,7 +145,8 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
   inspect_deprecated::Node top_level_inspect_node_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   async_dispatcher_t* services_dispatcher_;
-  cloud_provider::CloudControllerPtr* cloud_controller_;
+  fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>* const
+      cloud_provider_;
 
   // This must be the last field of this class.
   fxl::WeakPtrFactory<LedgerAppInstanceImpl> weak_ptr_factory_;
@@ -157,7 +158,8 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     async_dispatcher_t* services_dispatcher,
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request,
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
-    cloud_provider::CloudControllerPtr* cloud_controller,
+    fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>*
+        cloud_provider,
     std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
     fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
     fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr)
@@ -168,7 +170,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       io_loop_(std::move(io_loop)),
       environment_(std::move(environment)),
       services_dispatcher_(services_dispatcher),
-      cloud_controller_(cloud_controller),
+      cloud_provider_(cloud_provider),
       weak_ptr_factory_(this) {
   auto top_level_objects = component::Object::Make(convert::ToString(kTestTopLevelNodeName));
   auto top_level_object_dir = component::ObjectDir(top_level_objects);
@@ -188,14 +190,14 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
-  if (!cloud_controller_) {
+  if (!cloud_provider_) {
     return nullptr;
   }
   cloud_provider::CloudProviderPtr cloud_provider;
   async::PostTask(services_dispatcher_,
                   callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                                        [this, request = cloud_provider.NewRequest()]() mutable {
-                                         (*cloud_controller_)->Connect(std::move(request));
+                                         cloud_provider_->AddBinding(std::move(request));
                                        }));
   return cloud_provider;
 }
@@ -257,34 +259,22 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
                                EnableP2PMesh enable_p2p_mesh, TestDiffs test_diffs)
       : loop_controller_(&loop_),
         random_(loop_.initial_state()),
+        test_diffs_(test_diffs != TestDiffs::TEST_ANY
+                        ? test_diffs
+                        : random_.Draw<uint8_t>() % 2 == 0 ? TestDiffs::TEST_COMPATIBILITY
+                                                           : TestDiffs::TEST_NO_COMPATIBILITY),
         services_loop_(loop_controller_.StartNewLoop()),
+        cloud_provider_loop_(loop_controller_.StartNewLoop()),
+        cloud_provider_(
+            std::move(FakeCloudProvider::Builder(cloud_provider_loop_->dispatcher(), &random_)
+                          .SetInjectNetworkError(inject_network_error)
+                          .SetInjectMissingDiff(test_diffs_ == TestDiffs::TEST_COMPATIBILITY
+                                                    ? InjectMissingDiff::YES
+                                                    : InjectMissingDiff::NO))),
         overnet_factory_(services_loop_->dispatcher()),
         enable_sync_(enable_sync),
-        enable_p2p_mesh_(enable_p2p_mesh),
-        test_diffs_(test_diffs) {
-    if (test_diffs_ == TestDiffs::TEST_ANY) {
-      test_diffs_ =
-          random_.Draw<bool>() ? TestDiffs::TEST_COMPATIBILITY : TestDiffs::TEST_NO_COMPATIBILITY;
-    }
-    async_test_subloop_t* cloud_subloop = cloud_provider::NewCloudControllerFactory(
-        cloud_controller_factory_.NewRequest(), random_.Draw<uint64_t>());
-    cloud_provider_loop_ = loop_.RegisterLoop(cloud_subloop);
-    cloud_controller_factory_->Build(cloud_controller_.NewRequest());
-    if (inject_network_error == InjectNetworkError::YES) {
-      bool called;
-      cloud_controller_->SetNetworkState(cloud_provider::NetworkState::INJECT_NETWORK_ERRORS,
-                                         callback::SetWhenCalled(&called));
-      loop_.RunUntilIdle();
-      FXL_CHECK(called);
-    }
-    if (test_diffs_ == TestDiffs::TEST_COMPATIBILITY) {
-      bool called;
-      cloud_controller_->SetDiffSupport(cloud_provider::DiffSupport::ACCEPT_DIFFS_RANDOMLY,
-                                        callback::SetWhenCalled(&called));
-      loop_.RunUntilIdle();
-      FXL_CHECK(called);
-    }
-  }
+        enable_p2p_mesh_(enable_p2p_mesh) {}
+
   ~LedgerAppInstanceFactoryImpl() override;
 
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
@@ -298,16 +288,16 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   sys::testing::ComponentContextProvider component_context_provider_;
   LoopControllerTestLoop loop_controller_;
   rng::TestRandom random_;
+  const TestDiffs test_diffs_;
   // Loop on which to run services.
   std::unique_ptr<SubLoop> services_loop_;
-  std::unique_ptr<async::SubloopToken> cloud_provider_loop_;
-  cloud_provider::CloudControllerFactoryPtr cloud_controller_factory_;
-  cloud_provider::CloudControllerPtr cloud_controller_;
+  // Loop on which to run the cloud provider.
+  std::unique_ptr<SubLoop> cloud_provider_loop_;
+  fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider> cloud_provider_;
   int app_instance_counter_ = 0;
   OvernetFactory overnet_factory_;
   const EnableSync enable_sync_;
   const EnableP2PMesh enable_p2p_mesh_;
-  TestDiffs test_diffs_;
 };
 
 LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {
@@ -338,13 +328,12 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   }
   app_instance_counter_++;
 
-  cloud_provider::CloudControllerPtr* cloud_controller =
-      enable_sync_ == EnableSync::YES ? &cloud_controller_ : nullptr;
+  auto cloud_provider = enable_sync_ == EnableSync::YES ? &cloud_provider_ : nullptr;
 
   return std::make_unique<LedgerAppInstanceImpl>(
       &loop_controller_, std::move(loop), std::move(io_loop), std::move(environment),
       services_loop_->dispatcher(), std::move(repository_factory_request),
-      std::move(repository_factory_ptr), cloud_controller, std::move(user_communicator_factory),
+      std::move(repository_factory_ptr), cloud_provider, std::move(user_communicator_factory),
       std::move(inspect_request), std::move(inspect_ptr));
 }
 
