@@ -7,3 +7,4 @@
 # USB drivers
 
 * [Lifecycle of a USB request](/docs/concepts/usb/request-lifecycle.md)
+* [Testing with USB virtual bus](/docs/concepts/usb/testing.md)
