@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("callback") {
+  sources = [
+    "managed_container.cc",
+    "managed_container.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//src/lib/callback",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "managed_container_unittest.cc",
+  ]
+
+  deps = [
+    ":callback",
+    "//src/lib/callback",
+    "//third_party/googletest:gtest",
+  ]
+}

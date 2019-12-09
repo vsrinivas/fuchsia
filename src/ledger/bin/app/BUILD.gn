@@ -152,6 +152,7 @@ source_set("lib") {
     "//src/ledger/bin/sync_coordinator/public",
     "//src/ledger/bin/synchronization:completer",
     "//src/ledger/bin/synchronization:lock",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/socket",
     "//src/ledger/lib/util:ptr",

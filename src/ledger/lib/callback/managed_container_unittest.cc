@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/managed_container.h"
+#include "src/ledger/lib/callback/managed_container.h"
 
 #include "gtest/gtest.h"
 #include "src/lib/callback/set_when_called.h"
 
-namespace callback {
+namespace ledger {
 namespace {
 
 TEST(ManagedContainer, Cleanup) {
@@ -67,7 +67,7 @@ TEST(ManagedContainer, DoNotCrashIfManagerDeleted) {
 TEST(ManagedContainer, OnDiscardable) {
   ManagedContainer managed_container;
   bool called = false;
-  managed_container.SetOnDiscardable(SetWhenCalled(&called));
+  managed_container.SetOnDiscardable(callback::SetWhenCalled(&called));
   auto item1 = managed_container.Manage(true);
   auto item2 = managed_container.Manage(true);
   item1.reset();
@@ -77,4 +77,4 @@ TEST(ManagedContainer, OnDiscardable) {
 }
 
 }  // namespace
-}  // namespace callback
+}  // namespace ledger

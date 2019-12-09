@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/managed_container.h"
+#include "src/ledger/lib/callback/managed_container.h"
 
 #include <lib/fit/function.h>
 
@@ -10,7 +10,7 @@
 
 #include "src/lib/callback/scoped_callback.h"
 
-namespace callback {
+namespace ledger {
 
 ManagedContainer::ManagedContainer() : weak_ptr_factory_(this) {}
 
@@ -22,7 +22,7 @@ fit::closure ManagedContainer::ManageElement(std::unique_ptr<Element> element) {
 
   // We use a scoped callback to ManagedContainer to allow the manager to
   // be deleted.
-  return MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this, ptr]() {
+  return callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this, ptr]() {
     auto it = std::find_if(managed_elements_.begin(), managed_elements_.end(),
                            [ptr](const std::unique_ptr<Element>& c) { return c.get() == ptr; });
     FXL_DCHECK(it != managed_elements_.end());
@@ -37,4 +37,4 @@ void ManagedContainer::CheckDiscardable() {
   }
 }
 
-}  // namespace callback
+}  // namespace ledger

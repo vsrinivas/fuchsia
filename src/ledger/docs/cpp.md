@@ -181,7 +181,7 @@ to run them.
 [destruction_sentinel.h]: /src/lib/callback/destruction_sentinel.h
 [ensure_called.h]: /src/lib/callback/ensure_called.h
 [fit]: /zircon/system/ulib/fit
-[managed_container.h]: /src/lib/callback/managed_container.h
+[managed_container.h]: /src/ledger/lib/callback/managed_container.h
 [operation_serializer.h]: /src/lib/callback/operation_serializer.h
 [scoped_callback.h]: /src/lib/callback/scoped_callback.h
 [scoped_task_runner.h]: /src/lib/callback/scoped_task_runner.h

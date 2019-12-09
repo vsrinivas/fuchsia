@@ -82,6 +82,7 @@ source_set("unittests") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/encoding",
     "//src/ledger/lib/vmo",
     "//src/lib/backoff/testing",

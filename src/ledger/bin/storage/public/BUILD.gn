@@ -36,6 +36,7 @@ source_set("public") {
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/platform",
     "//src/ledger/bin/public",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/coroutine",
     "//src/ledger/lib/socket",

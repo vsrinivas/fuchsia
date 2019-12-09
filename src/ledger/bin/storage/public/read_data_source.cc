@@ -8,7 +8,7 @@
 
 namespace storage {
 
-void ReadDataSource(callback::ManagedContainer* managed_container,
+void ReadDataSource(ledger::ManagedContainer* managed_container,
                     std::unique_ptr<DataSource> data_source,
                     fit::function<void(Status, std::unique_ptr<DataSource::DataChunk>)> callback) {
   auto managed_data_source = managed_container->Manage(std::move(data_source));

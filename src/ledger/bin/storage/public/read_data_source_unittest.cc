@@ -45,7 +45,7 @@ using ReadDataSourceTest = gtest::TestLoopFixture;
 
 TEST_F(ReadDataSourceTest, ReadDataSource) {
   std::string expected_content = "Hello World";
-  callback::ManagedContainer container;
+  ledger::ManagedContainer container;
 
   bool called;
   Status status;
@@ -65,7 +65,7 @@ TEST_F(ReadDataSourceTest, DeleteContainerWhileReading) {
   Status status;
   std::unique_ptr<DataSource::DataChunk> content;
   {
-    callback::ManagedContainer container;
+    ledger::ManagedContainer container;
     ReadDataSource(&container,
                    std::make_unique<SplittingDataSource>(dispatcher(), expected_content),
                    callback::Capture(callback::SetWhenCalled(&called), &status, &content));

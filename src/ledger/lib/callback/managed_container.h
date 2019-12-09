@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_CALLBACK_MANAGED_CONTAINER_H_
-#define SRC_LIB_CALLBACK_MANAGED_CONTAINER_H_
+#ifndef SRC_LEDGER_LIB_CALLBACK_MANAGED_CONTAINER_H_
+#define SRC_LEDGER_LIB_CALLBACK_MANAGED_CONTAINER_H_
 
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
@@ -13,10 +13,9 @@
 #include <vector>
 
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace callback {
+namespace ledger {
 
 // ManagedContainer is a heterogeneous container that allows to share ownership
 // of any added element between the container and the returned managed element.
@@ -37,6 +36,8 @@ namespace callback {
 class ManagedContainer {
  public:
   ManagedContainer();
+  ManagedContainer(const ManagedContainer&) = delete;
+  ManagedContainer& operator=(const ManagedContainer&) = delete;
   ~ManagedContainer();
 
   template <typename E>
@@ -107,10 +108,8 @@ class ManagedContainer {
   std::vector<std::unique_ptr<Element>> managed_elements_;
   fit::closure on_discardable_;
   fxl::WeakPtrFactory<ManagedContainer> weak_ptr_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ManagedContainer);
 };
 
-}  // namespace callback
+}  // namespace ledger
 
-#endif  // SRC_LIB_CALLBACK_MANAGED_CONTAINER_H_
+#endif  // SRC_LEDGER_LIB_CALLBACK_MANAGED_CONTAINER_H_

@@ -11,14 +11,14 @@
 
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/callback/managed_container.h"
+#include "src/ledger/lib/callback/managed_container.h"
 
 namespace storage {
 
 // Reads the given data source, and returns a single data chunk containing its
 // content. This method will not call its |callback| if |managed_container| is
 // deleted.
-void ReadDataSource(callback::ManagedContainer* managed_container,
+void ReadDataSource(ledger::ManagedContainer* managed_container,
                     std::unique_ptr<DataSource> data_source,
                     fit::function<void(Status, std::unique_ptr<DataSource::DataChunk>)> callback);
 }  // namespace storage

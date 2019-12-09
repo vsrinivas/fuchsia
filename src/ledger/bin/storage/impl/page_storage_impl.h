@@ -21,11 +21,11 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/managed_container.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
-#include "src/lib/callback/managed_container.h"
 #include "src/lib/callback/operation_serializer.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -313,7 +313,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   // The commit pruner accesses the database, it must be destructed before |db_|.
   CommitPruner commit_pruner_;
   fxl::ObserverList<CommitWatcher> watchers_;
-  callback::ManagedContainer managed_container_;
+  ledger::ManagedContainer managed_container_;
   PageSyncDelegate* page_sync_;
   bool page_is_online_ = false;
   std::unique_ptr<ObjectIdentifier> empty_node_id_ = nullptr;

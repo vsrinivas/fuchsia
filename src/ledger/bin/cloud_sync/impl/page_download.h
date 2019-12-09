@@ -14,8 +14,8 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
+#include "src/ledger/lib/callback/managed_container.h"
 #include "src/lib/backoff/backoff.h"
-#include "src/lib/callback/managed_container.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -139,7 +139,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher {
   std::vector<cloud_provider::Commit> commits_to_download_;
   std::unique_ptr<cloud_provider::PositionToken> position_token_;
   // Container for in-progress datasource.
-  callback::ManagedContainer managed_container_;
+  ledger::ManagedContainer managed_container_;
 
   // State:
   // Commit download state.
