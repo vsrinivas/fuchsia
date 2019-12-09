@@ -56,6 +56,12 @@ macro_rules! bench_numeric_property_fn {
                     ftrace::duration!("benchmark", concat!($Property, "::drop"));
                     drop(property);
                 }
+                {
+                    ftrace::duration!(
+                        "benchmark",
+                        concat!("Node::record_", stringify!($name), "_property"));
+                    root.[<record_ $name>](NAME, 0 as $type);
+                }
             }
         }
     };
@@ -89,7 +95,7 @@ macro_rules! bench_array_fn_impls {
                         ftrace::duration!("benchmark", concat!($Array, "::drop/", $size));
                         drop(array);
                     }
-                }
+               }
             }
         )*
     };
@@ -209,6 +215,12 @@ macro_rules! bench_property_fn_impl {
                                           concat!($Property, "::drop/", $size));
                         drop(property);
                     }
+                    {
+                        ftrace::duration!(
+                            "benchmark",
+                            concat!("Node::record_", stringify!($name), "/", $size));
+                        root.[<record_ $name>](NAME, &initial_value);
+                    };
                 }
             }
         )*

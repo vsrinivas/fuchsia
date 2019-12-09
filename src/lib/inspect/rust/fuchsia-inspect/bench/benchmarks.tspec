@@ -43,6 +43,24 @@
       "event_category": "benchmark"
     },
     {
+      "output_test_name": "Node/record_int_property",
+      "event_name": "Node::record_int_property",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/record_double_property",
+      "event_name": "Node::record_double_property",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/record_uint_property",
+      "event_name": "Node::record_uint_property",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
       "output_test_name": "Node/drop",
       "event_name": "Node::drop",
       "type": "duration",
@@ -901,6 +919,12 @@
       "event_category": "benchmark"
     },
     {
+      "output_test_name": "Node/record_string/4",
+      "event_name": "Node::record_string/4",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
       "output_test_name": "StringProperty/set/4",
       "event_name": "StringProperty::set/4",
       "type": "duration",
@@ -921,6 +945,12 @@
     {
       "output_test_name": "Node/create_bytes/4",
       "event_name": "Node::create_bytes/4",
+      "type": "duration",
+      "event_category": "benchmark"
+    },
+    {
+      "output_test_name": "Node/record_bytes/4",
+      "event_name": "Node::record_bytes/4",
       "type": "duration",
       "event_category": "benchmark"
     },
