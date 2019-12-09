@@ -15,6 +15,8 @@ namespace {
 // instrumentation data in this kernel build, they're equal.
 extern "C" const uint8_t __llvm_profile_start[], __llvm_profile_end[];
 extern "C" const uint8_t __llvm_profile_vmo_end[];
+extern "C" const uint8_t __sancov_pc_table[], __sancov_pc_table_end[];
+extern "C" const uint8_t __sancov_pc_table_vmo_end[];
 
 constexpr struct {
   const char* announce;
@@ -31,8 +33,20 @@ constexpr struct {
     // keep the number of VMOs fixed in the ABI with userboot because the
     // way the build works, the userboot build is independent of different
     // kernel variants that might have things enabled or disabled.
-    {"LLVM Profile", "llvm-profile", "data/zircon.elf.profdata", __llvm_profile_start,
-     __llvm_profile_end, __llvm_profile_vmo_end, 1, "bytes"},
+    {"LLVM Profile", "llvm-profile", "data/zircon.elf.profdata",
+     // Linker-generated symbols.
+     __llvm_profile_start, __llvm_profile_end, __llvm_profile_vmo_end,
+     // Units.
+     1, "bytes"},
+
+    // -fsanitizer-coverage=trace-pc-guard data.  Same story.
+    {"SanitizerCoverage", "sancov",
+     // The sancov tool matches "<binaryname>" to "<binaryname>.%u.sancov".
+     "data/zircon.elf.1.sancov",
+     // Linker-generated symbols.
+     __sancov_pc_table, __sancov_pc_table_end, __sancov_pc_table_vmo_end,
+     // Units.
+     sizeof(uintptr_t), "PCs"},
 };
 
 }  // namespace

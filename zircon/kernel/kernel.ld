@@ -170,6 +170,8 @@ SECTIONS
 
     .init_array : ALIGN(8) {
         PROVIDE_HIDDEN(__init_array_start = .);
+        KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*)
+               SORT_BY_INIT_PRIORITY(.ctors.*)))
         KEEP(*(.init_array .ctors))
         PROVIDE_HIDDEN(__init_array_end = .);
     }
@@ -227,6 +229,12 @@ SECTIONS
     . = ALIGN(4096);
     PROVIDE_HIDDEN(__llvm_profile_vmo_end = .);
 
+    __sancov_guards : ALIGN(4) {
+        PROVIDE_HIDDEN(__start___sancov_guards = .);
+        *(__sancov_guards)
+        PROVIDE_HIDDEN(__stop___sancov_guards = .);
+    }
+
     .data : ALIGN(128) {
         /* Pull out any aligned data into a separate section to make sure
          * individual variables do not alias with any unaligned vars.
@@ -235,14 +243,19 @@ SECTIONS
         . = ALIGN(128);
 
         *(.data .data.* .gnu.linkonce.d.*)
-
-        /*
-         * Make sure the total file size is aligned to 8 bytes so the image
-         * can go into a ZBI container, which requires 8-byte alignment.
-         */
-        . = ALIGN(8);
-        PROVIDE_HIDDEN(__data_end = .);
     }
+
+    /*
+     * Note that this end size might not be aligned.  That's OK.  It's
+     * not the actual end of the file size, because image.S adds on here
+     * and it's responsible for ZBI item alignment at its own end.
+     *
+     * What *is* crucial here is that __data_end (i.e., .) not be advanced
+     * without adding initialized data to fill!  Everything depends on the
+     * __data_end address exactly matching the end of the raw kernel's
+     * load image for relative address arithmetic.
+     */
+    PROVIDE_HIDDEN(__data_end = .);
 
     /*
      * Any writable orphan sections would be inserted here.
@@ -287,6 +300,16 @@ SECTIONS
         ASSERT(kcounters_arena_end - kcounters_arena ==
                (kcountdesc_end - kcountdesc_begin) * 8 * SMP_MAX_CPUS / 64,
                "kcounters_arena size mismatch");
+
+        /*
+         * Keep this page-aligned/rounded so it can be exported as a VMO.
+         */
+        . = ALIGN(4096);
+        PROVIDE_HIDDEN(__sancov_pc_table = .);
+        . += (__stop___sancov_guards - __start___sancov_guards) / 4 * 8;
+        PROVIDE_HIDDEN(__sancov_pc_table_end = .);
+        . = ALIGN(4096);
+        PROVIDE_HIDDEN(__sancov_pc_table_vmo_end = .);
 
         *(.bss*)
         *(.gnu.linkonce.b.*)

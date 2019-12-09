@@ -346,27 +346,43 @@ standard_variants += [
     }
   },
   {
-    # Note there is no plain "sancov" variant because there is no
-    # standalone runtime for sancov.  The sancov runtime is included in all
-    # the other sanitizer runtimes.  Since ubsan is the lowest-impact
-    # sanitizer, ubsan-sancov stands in for "plain" sancov.
     variant = {
-      name = "ubsan-sancov"
-      bases = [ "ubsan" ]
+      name = "sancov"
+      configs = [ "$zx/public/gn/config/instrumentation:sancov" ]
 
       # The "sancov" tag is important: see $zx/system/ulib/c/sanitizers.
-      configs = [ "$zx/public/gn/config/instrumentation:sancov" ]
-      tags = [ "sancov" ]
+      tags = [
+        "instrumented",
+        "sancov",
+      ]
+
+      # When no other sanitizer is enabled, clang links in the ubsan
+      # runtime to provide the sancov runtime.
+      toolchain_vars = {
+        runtime_deps_cflags = [ "-fsanitize=undefined" ]
+      }
+    }
+  },
+  {
+    variant = {
+      name = "ubsan-sancov"
+      bases = [
+        "ubsan",
+        "sancov",
+      ]
     }
   },
   {
     variant = {
       name = "ubsan-sancov-full"
-      bases = [ "ubsan" ]
-
-      # The "sancov" tag is important: see $zx/system/ulib/c/sanitizers.
+      bases = [
+        "ubsan",
+        "sancov",
+      ]
       configs = [ "$zx/public/gn/config/instrumentation:sancov-full" ]
-      tags = [ "sancov" ]
+
+      # The kernel provides runtime for sancov but not for sancov-full.
+      tags = [ "useronly" ]
     }
   },
 ]

@@ -2,10 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-_profile_config = [ "$zx/public/gn/config/instrumentation:profile" ]
-is_profile =
-    toolchain.configs + _profile_config - _profile_config != toolchain.configs
-
 zx_library("instrumentation") {
   kernel = true
   sources = []
@@ -15,10 +11,11 @@ zx_library("instrumentation") {
   if (is_kernel) {
     sources += [ "vmo.cc" ]
     deps = [
+      ":profile",
+      ":sancov",
       "$zx/kernel/object",
       "$zx/system/ulib/fbl",
     ]
-    deps += [ ":profile" ]
   }
 }
 
@@ -31,14 +28,27 @@ zx_library("instrumentation") {
 # so a symbol by that name must be defined at link time regardless; this file
 # also defines it.
 source_set("profile") {
-  if (current_os == "win") {
-    # The LLVM header file describing the instrumentation data tests this.
-    defines = [ "_WIN32" ]
-  }
-  if (is_profile) {
+  _profile_config = [ "$zx/public/gn/config/instrumentation:profile" ]
+  if (toolchain.configs + _profile_config - _profile_config !=
+      toolchain.configs) {
     sources = [
       "profile.cc",
     ]
     include_dirs = [ "$zx/../garnet/third_party/llvm/include" ]
+
+    if (current_os == "win") {
+      # The LLVM header file describing the instrumentation data tests this.
+      defines = [ "_WIN32" ]
+    }
+  }
+}
+
+source_set("sancov") {
+  _sancov_config = [ "$zx/public/gn/config/instrumentation:sancov" ]
+  if (configs + _sancov_config - _sancov_config != configs) {
+    configs -= _sancov_config
+    sources = [
+      "sancov.cc",
+    ]
   }
 }

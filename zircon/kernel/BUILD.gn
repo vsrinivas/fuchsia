@@ -185,6 +185,26 @@ if (current_toolchain == default_toolchain) {
       ldflags += [ "-Wl,--no-pie" ]
     }
 
+    if (!is_gcc) {
+      # Disable the implicit addition of toolchain-provided libraries to
+      # the link by the compiler driver.  No toolchain-provided library is
+      # compatible with the kernel's internal ABI.
+      #
+      # TODO(27356): Clang doesn't have a single straightforward switch to
+      # disable all such libraries, though it certainly should.  It
+      # provides separate switches to disable the profiling/coverage
+      # runtime and to disable all the flavors of runtime implied by
+      # -fsanitize=... switches (including any such defaults).  It will
+      # still provide other incompatible libraries to the link, but they
+      # won't have any effect since they don't define any symbols the link
+      # needs.  However, this is a fragile situation that could easily
+      # break.
+      ldflags += [
+        "-noprofilelib",
+        "-fno-sanitize-link-runtime",
+      ]
+    }
+
     configs = [ "$zx/public/gn/config:no_exceptions" ]
   }
 
