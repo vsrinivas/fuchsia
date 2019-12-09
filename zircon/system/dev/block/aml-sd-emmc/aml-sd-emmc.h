@@ -2,21 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BLOCK_AML_SD_EMMC_AML_SD_EMMC_H_
+#define ZIRCON_SYSTEM_DEV_BLOCK_AML_SD_EMMC_AML_SD_EMMC_H_
+
+#include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/interrupt.h>
+#include <threads.h>
 
 #include <ddk/phys-iter.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/pwm.h>
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/auto_lock.h>
 #include <fbl/span.h>
-#include <lib/mmio/mmio.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/interrupt.h>
+#include <soc/aml-common/aml-pwm-regs.h>
 #include <soc/aml-common/aml-sd-emmc.h>
-#include <threads.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 namespace sdmmc {
 
@@ -74,6 +78,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   enum {
     COMPONENT_PDEV,
     COMPONENT_GPIO_RESET,
+    COMPONENT_PWM_E,
     COMPONENT_COUNT,
   };
 
@@ -129,3 +134,5 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
 };
 
 }  // namespace sdmmc
+
+#endif  // ZIRCON_SYSTEM_DEV_BLOCK_AML_SD_EMMC_AML_SD_EMMC_H_

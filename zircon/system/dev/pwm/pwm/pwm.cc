@@ -59,7 +59,7 @@ zx_status_t PwmDevice::Create(void* ctx, zx_device_t* parent) {
         {BIND_PWM_ID, 0, pwm_id.id},
     };
 
-    status = dev->DdkAdd(name, 0, props, countof(props));
+    status = dev->DdkAdd(name, DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props, countof(props));
     if (status != ZX_OK) {
       return status;
     }

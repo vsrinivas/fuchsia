@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/serial/c/fidl.h>
+#include <lib/mmio/mmio.h>
 #include <unistd.h>
 
 #include <ddk/debug.h>
@@ -10,9 +12,7 @@
 #include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/serial.h>
-#include <fuchsia/hardware/serial/c/fidl.h>
 #include <hw/reg.h>
-#include <lib/mmio/mmio.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
@@ -90,23 +90,6 @@ zx_status_t Sherlock::EnableWifi32K() {
     zxlogf(ERROR, "%s: GetBti failed: %d\n", __func__, status);
     return status;
   }
-
-  std::optional<ddk::MmioBuffer> pwm_base;
-
-  // Please do not use get_root_resource() in new code. See ZX-1467.
-  zx::unowned_resource resource(get_root_resource());
-  status = ddk::MmioBuffer::Create(T931_PWM_EF_BASE, 0x1a000, *resource,
-                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &pwm_base);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Create(pwm_base) error: %d\n", __func__, status);
-  }
-  // these magic numbers were gleaned by instrumenting
-  // drivers/amlogic/pwm/pwm_meson.c
-  // TODO(voydanoff) write a proper PWM driver
-  pwm_base->Write32(0x016d016e, T931_PWM_PWM_E << 2);
-  pwm_base->Write32(0x016d016d, T931_PWM_E2 << 2);
-  pwm_base->Write32(0x0a0a0609, T931_PWM_TIME_EF << 2);
-  pwm_base->Write32(0x02808003, T931_PWM_MISC_REG_EF << 2);
 
   return ZX_OK;
 }

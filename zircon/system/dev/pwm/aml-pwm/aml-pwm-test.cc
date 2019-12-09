@@ -99,17 +99,16 @@ class AmlPwmDeviceTest : public zxtest::Test {
       return;
     }
 
-    // TODO (rdzhuang): uncomment in fxr/344891
-    // (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
-    // (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
-    // (*mock_mmio1_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
-    // (*mock_mmio1_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
-    // (*mock_mmio2_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
-    // (*mock_mmio2_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
-    // (*mock_mmio3_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
-    // (*mock_mmio3_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
-    // (*mock_mmio4_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
-    // (*mock_mmio4_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
+    (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+    (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
+    (*mock_mmio1_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+    (*mock_mmio1_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
+    (*mock_mmio2_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+    (*mock_mmio2_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
+    (*mock_mmio3_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+    (*mock_mmio3_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
+    (*mock_mmio4_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFDFFFFFA);  // SetMode
+    (*mock_mmio4_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFEFFFFF5);  // SetMode
     ddk::MmioBuffer mmio0(mock_mmio0_->GetMmioBuffer());
     ddk::MmioBuffer mmio1(mock_mmio1_->GetMmioBuffer());
     ddk::MmioBuffer mmio2(mock_mmio2_->GetMmioBuffer());
@@ -279,6 +278,7 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
       .mode = TWO_TIMER,
       .two_timer =
           {
+              .period_ns2 = 1000,
               .duty_cycle2 = 80.0,
               .timer1 = 3,
               .timer2 = 2,

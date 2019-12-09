@@ -33,14 +33,12 @@ class AmlPwm {
     mode_configs_[0].mode = OFF;
     mode_configs_[0].regular = {};
     configs_[0] = {false, 0, 0.0, &mode_configs_[0], sizeof(mode_config)};
-    // TODO (rdzhuang): uncomment in fxr/344891
-    // SetMode(0, OFF);
+    SetMode(0, OFF);
 
     mode_configs_[1].mode = OFF;
     mode_configs_[1].regular = {};
     configs_[1] = {false, 0, 0.0, &mode_configs_[1], sizeof(mode_config)};
-    // TODO (rdzhuang): uncomment in fxr/344891
-    // SetMode(1, OFF);
+    SetMode(1, OFF);
   }
 
   zx_status_t PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config);

@@ -115,10 +115,11 @@ zx_status_t AmlPwm::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
       en_const = (en_const || mode_cfg->two_timer.duty_cycle2 == 0 ||
                   mode_cfg->two_timer.duty_cycle2 == 100);
 
-      val_eq = (old_mode_cfg->two_timer.duty_cycle2 == mode_cfg->two_timer.duty_cycle2);
+      val_eq = (old_mode_cfg->two_timer.period_ns2 == mode_cfg->two_timer.period_ns2) &&
+               (old_mode_cfg->two_timer.duty_cycle2 == mode_cfg->two_timer.duty_cycle2);
       if (!(mode_eq && val_eq) &&
-          ((status = SetDutyCycle2(idx, config->period_ns, mode_cfg->two_timer.duty_cycle2)) !=
-           ZX_OK)) {
+          ((status = SetDutyCycle2(idx, mode_cfg->two_timer.period_ns2,
+                                   mode_cfg->two_timer.duty_cycle2)) != ZX_OK)) {
         zxlogf(ERROR, "%s: Set Duty Cycle 2 failed %d\n", __func__, status);
         PwmImplSetConfig(idx, &old_config);
         return status;
@@ -149,7 +150,8 @@ zx_status_t AmlPwm::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
     PwmImplSetConfig(idx, &old_config);
     return status;
   }
-  val_eq = (old_config.duty_cycle == config->duty_cycle);
+  val_eq =
+      (old_config.period_ns == config->period_ns) && (old_config.duty_cycle == config->duty_cycle);
   if (!(mode_eq && val_eq) &&
       ((status = SetDutyCycle(idx, config->period_ns, config->duty_cycle)) != ZX_OK)) {
     zxlogf(ERROR, "%s: Set Duty Cycle failed %d\n", __func__, status);

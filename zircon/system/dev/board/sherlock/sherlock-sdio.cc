@@ -18,6 +18,7 @@
 #include <soc/aml-common/aml-sd-emmc.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
+#include <soc/aml-t931/t931-pwm.h>
 #include <wifi/wifi-config.h>
 
 #include "sherlock.h"
@@ -176,12 +177,21 @@ constexpr zx_bind_inst_t wifi_pwren_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, T931_WIFI_REG_ON),
 };
+constexpr zx_bind_inst_t pwm_e_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
+    BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_E),
+};
 constexpr device_component_part_t wifi_pwren_gpio_component[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
 };
+constexpr device_component_part_t pwm_e_component[] = {
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(pwm_e_match), pwm_e_match},
+};
 constexpr device_component_t sdio_components[] = {
     {fbl::count_of(wifi_pwren_gpio_component), wifi_pwren_gpio_component},
+    {fbl::count_of(pwm_e_component), pwm_e_component},
 };
 
 }  // namespace
@@ -198,24 +208,6 @@ zx_status_t Sherlock::BCM43458LpoClockInit() {
     zxlogf(ERROR, "%s: GetBti() error: %d\n", __func__, status);
     return status;
   }
-
-  std::optional<ddk::MmioBuffer> buf;
-  // Please do not use get_root_resource() in new code. See ZX-1467.
-  zx::unowned_resource res(get_root_resource());
-  status = ddk::MmioBuffer::Create(T931_PWM_EF_BASE, T931_PWM_LENGTH, *res,
-                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ddk::MmioBuffer::Create() error: %d\n", __func__, status);
-    return status;
-  }
-
-  // Enable PWM_E to satisfy the 32.7KHz LPO clock source.
-  // These values were taken from:
-  //   linux/drivers/amlogic/pwm/pwm_meson.c
-  buf->Write32(0x016d016e, T931_PWM_PWM_E);
-  buf->Write32(0x016d016d, T931_PWM_E2);
-  buf->Write32(0x0a0a0609, T931_PWM_TIME_EF);
-  buf->Write32(0x02808003, T931_PWM_MISC_REG_EF);
 
   return ZX_OK;
 }

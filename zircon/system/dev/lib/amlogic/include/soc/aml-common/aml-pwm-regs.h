@@ -45,6 +45,7 @@ struct mode_config_delta_sigma {
 };
 
 struct mode_config_two_timer {
+  uint32_t period_ns2;
   float duty_cycle2;
   uint8_t timer1;
   uint8_t timer2;
