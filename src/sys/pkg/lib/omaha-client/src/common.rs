@@ -10,6 +10,7 @@ use crate::{
     state_machine::update_check::AppResponse,
     storage::Storage,
 };
+use chrono::{DateTime, Utc};
 use futures::lock::Mutex;
 use itertools::Itertools;
 use log::error;
@@ -367,7 +368,7 @@ pub struct CheckOptions {
 }
 
 /// This describes the data around the scheduling of update checks
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct UpdateCheckSchedule {
     /// When the last update check was attempted (start time of the check process).
     pub last_update_time: SystemTime,
@@ -387,6 +388,21 @@ impl Default for UpdateCheckSchedule {
             next_update_time: SystemTime::UNIX_EPOCH,
             next_update_window_start: SystemTime::UNIX_EPOCH,
         }
+    }
+}
+
+// The default Debug implementation for SystemTime will only print seconds since unix epoch, which
+// is not useful, so we implement our own Debug format with readable time string.
+impl fmt::Debug for UpdateCheckSchedule {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UpdateCheckSchedule")
+            .field("last_update_time", &DateTime::<Utc>::from(self.last_update_time).to_rfc3339())
+            .field("next_update_time", &DateTime::<Utc>::from(self.next_update_time).to_rfc3339())
+            .field(
+                "next_update_window_start",
+                &DateTime::<Utc>::from(self.next_update_window_start).to_rfc3339(),
+            )
+            .finish()
     }
 }
 
@@ -416,6 +432,7 @@ mod tests {
     use crate::{state_machine::update_check::Action, storage::MemStorage};
     use futures::executor::block_on;
     use pretty_assertions::assert_eq;
+    use std::time::Duration;
 
     #[test]
     fn test_version_display() {
@@ -834,5 +851,33 @@ mod tests {
             ]);
             assert!(!app_set.valid().await);
         });
+    }
+
+    #[test]
+    fn test_update_check_schedule_debug() {
+        assert_eq!(
+            "UpdateCheckSchedule { \
+             last_update_time: \"1970-01-01T00:00:00+00:00\", \
+             next_update_time: \"1970-01-01T00:00:00+00:00\", \
+             next_update_window_start: \"1970-01-01T00:00:00+00:00\" \
+             }",
+            format!("{:?}", UpdateCheckSchedule::default())
+        );
+
+        assert_eq!(
+            "UpdateCheckSchedule { \
+             last_update_time: \"1970-01-02T03:46:40+00:00\", \
+             next_update_time: \"1970-01-03T07:33:20+00:00\", \
+             next_update_window_start: \"1970-01-03T07:33:20+00:00\" \
+             }",
+            format!(
+                "{:?}",
+                UpdateCheckSchedule {
+                    last_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(100000),
+                    next_update_time: SystemTime::UNIX_EPOCH + Duration::from_secs(200000),
+                    next_update_window_start: SystemTime::UNIX_EPOCH + Duration::from_secs(200000),
+                }
+            )
+        );
     }
 }
