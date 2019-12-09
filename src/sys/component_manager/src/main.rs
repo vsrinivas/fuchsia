@@ -43,8 +43,8 @@ fn main() -> Result<(), Error> {
 
     let fut = async {
         match run_root(args).await {
-            Ok((model, _builtin_environment)) => {
-                model.wait_for_root_realm_stop().await;
+            Ok((_model, builtin_environment)) => {
+                builtin_environment.wait_for_root_realm_stop().await;
             }
             Err(err) => {
                 panic!("Component manager setup failed: {:?}", err);

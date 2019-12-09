@@ -175,12 +175,6 @@ pub async fn model_setup(args: &Arguments) -> Result<Arc<Model>, Error> {
         elf_runner: Arc::new(runner),
     };
     let model = Arc::new(Model::new(params));
-    let notifier_hooks = {
-        let notifier = model.notifier.lock().await;
-        let notifier = notifier.as_ref();
-        notifier.expect("Notifier must exist. Model is not created!").hooks()
-    };
-    model.root_realm.hooks.install(notifier_hooks).await;
 
     *model_for_resolver.lock().await = Some(Arc::downgrade(&model));
     Ok(model)

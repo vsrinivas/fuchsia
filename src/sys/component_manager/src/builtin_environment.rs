@@ -10,6 +10,7 @@ use {
             Model, ModelError,
         },
         process_launcher::ProcessLauncher,
+        root_realm_stop_notifier::RootRealmStopNotifier,
         runner::BuiltinRunner,
         startup::Arguments,
         system_controller::SystemController,
@@ -24,7 +25,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::*,
     fuchsia_zircon as zx,
-    futures::stream::StreamExt,
+    futures::{lock::Mutex, stream::StreamExt},
     std::sync::{Arc, Weak},
 };
 
@@ -43,6 +44,7 @@ pub struct BuiltinEnvironment {
     pub hub: Hub,
     pub elf_runner: BuiltinRunner,
     pub breakpoint_system: Option<BreakpointSystem>,
+    pub stop_notifier: Mutex<Option<RootRealmStopNotifier>>,
 }
 
 impl BuiltinEnvironment {
@@ -88,6 +90,10 @@ impl BuiltinEnvironment {
         let elf_runner = BuiltinRunner::new("elf".into(), Arc::clone(&model.elf_runner));
         model.root_realm.hooks.install(vec![elf_runner.hook()]).await;
 
+        // Set up the root realm stop notifier.
+        let stop_notifier = RootRealmStopNotifier::new();
+        model.root_realm.hooks.install(stop_notifier.hooks()).await;
+
         let breakpoint_system = {
             if args.debug {
                 Some(BreakpointSystem::new())
@@ -104,6 +110,7 @@ impl BuiltinEnvironment {
             hub,
             elf_runner,
             breakpoint_system,
+            stop_notifier: Mutex::new(Some(stop_notifier)),
         })
     }
 
@@ -199,5 +206,12 @@ impl BuiltinEnvironment {
         let hub_proxy = hub_client_end.into_proxy().unwrap();
 
         Ok(hub_proxy)
+    }
+
+    pub async fn wait_for_root_realm_stop(&self) {
+        let mut notifier = self.stop_notifier.lock().await;
+        if let Some(notifier) = notifier.take() {
+            notifier.wait_for_root_realm_stop().await;
+        }
     }
 }

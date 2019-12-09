@@ -248,14 +248,6 @@ mod tests {
         let controller_proxy =
             client_channel.into_proxy().expect("failed converting endpoint into proxy");
 
-        // Attach hooks so we can listen for stop or root realm
-        let notifier_hooks = {
-            let notifier = test.model.notifier.lock().await;
-            let notifier = notifier.as_ref();
-            notifier.expect("Notifier must exist. Model is not created!").hooks()
-        };
-        test.model.root_realm.hooks.install(notifier_hooks).await;
-
         let root_realm_info = ComponentInfo::new(test.model.root_realm.clone()).await;
         let realm_a_info = ComponentInfo::new(realm_a.clone()).await;
         let realm_b_info = ComponentInfo::new(realm_b.clone()).await;
@@ -271,7 +263,7 @@ mod tests {
 
         // Ask the SystemController to shut down the system and wait to be
         // notified that the room realm stopped.
-        let completion = test.model.wait_for_root_realm_stop();
+        let completion = test.builtin_environment.wait_for_root_realm_stop();
         controller_proxy.shutdown().await.expect("shutdown request failed");
         completion.await;
 

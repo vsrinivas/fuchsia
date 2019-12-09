@@ -3,12 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        model::{
-            AbsoluteMoniker, Event, EventPayload, ExposedDir, IncomingNamespace, ModelError, Realm,
-            RealmState, Resolver, ResolverRegistry, RoutingFacade, Runner, Runtime,
-        },
-        root_realm_stop_notifier::RootRealmStopNotifier,
+    crate::model::{
+        AbsoluteMoniker, Event, EventPayload, ExposedDir, IncomingNamespace, ModelError, Realm,
+        RealmState, Resolver, ResolverRegistry, RoutingFacade, Runner, Runtime,
     },
     cm_rust::data,
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
@@ -16,7 +13,6 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         future::{join_all, BoxFuture},
-        lock::Mutex,
         FutureExt,
     },
     std::sync::Arc,
@@ -57,7 +53,6 @@ pub struct ModelParams {
 /// `Runner` and `Resolver`.
 #[derive(Clone)]
 pub struct Model {
-    pub notifier: Arc<Mutex<Option<RootRealmStopNotifier>>>,
     pub root_realm: Arc<Realm>,
 
     /// The built-in ELF runner, used for starting components with an ELF binary.
@@ -70,22 +65,12 @@ impl Model {
     /// Creates a new component model and initializes its topology.
     pub fn new(params: ModelParams) -> Model {
         Model {
-            notifier: Arc::new(Mutex::new(Some(RootRealmStopNotifier::new()))),
             root_realm: Arc::new(Realm::new_root_realm(
                 params.root_resolver_registry,
                 params.root_component_url,
             )),
             elf_runner: params.elf_runner,
         }
-    }
-
-    pub async fn wait_for_root_realm_stop(&self) {
-        let mut notifier = self.notifier.lock().await;
-        notifier
-            .take()
-            .expect("A root realm can only be stopped once")
-            .wait_for_root_realm_stop()
-            .await;
     }
 
     /// Looks up a realm by absolute moniker. The component instance in the realm will be resolved
