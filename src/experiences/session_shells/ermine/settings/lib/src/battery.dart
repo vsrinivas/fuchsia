@@ -46,7 +46,7 @@ class Battery extends UiSpec {
   }
 
   static Spec _specForBattery(double value, bool charging) {
-    if (value.isNaN || value == 0) {
+    if (value.isNaN) {
       // Send nullSpec to hide battery settings.
       return UiSpec.nullSpec;
     }
@@ -97,9 +97,10 @@ class BatteryModel {
     BatteryManagerProxy monitor,
   })  : _binding = binding ?? BatteryInfoWatcherBinding(),
         _monitor = monitor {
-    _monitor
-      ..watch(_binding.wrap(_BatteryInfoWatcherImpl(this)))
-      ..getBatteryInfo().then(_updateBattery);
+    // Note that watcher will receive callback immediately with
+    // current battery info, so no need to make additional calls
+    // to get initial state.
+    _monitor.watch(_binding.wrap(_BatteryInfoWatcherImpl(this)));
   }
 
   void dispose() {
@@ -114,13 +115,22 @@ class BatteryModel {
   }
 
   void _updateBattery(BatteryInfo info) {
-    if (info.levelPercent.isNaN) {
-      _monitor.ctrl.close();
-      _binding.close();
-    } else {
+    // BatteryStatus.ok indicates that the battery is present and
+    // in a known state (so we can show battery info).
+    // Alternate states include:
+    //     BatteryStatus.unknown - not yet initialized
+    //                             (waiting for information from the system)
+    //     BatteryStatus.notAvailable = battery present, but possibly disabled
+    //     BatteryStatus.notPresent = batteries not included
+    if (info.status == BatteryStatus.ok) {
       final chargeStatus = info.chargeStatus;
       charging = chargeStatus == ChargeStatus.charging;
       battery = info.levelPercent;
+    } else if (info.status == BatteryStatus.notPresent) {
+      // upon receiving report of status 'notPresent' it is safe to close the
+      // connection and stop listening for battery status updates.
+      _monitor.ctrl.close();
+      _binding.close();
     }
   }
 }
