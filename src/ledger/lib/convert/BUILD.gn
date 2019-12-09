@@ -4,11 +4,7 @@
 
 import("//third_party/flatbuffers/flatbuffer.gni")
 
-visibility = [
-  "//src/modular/bin/*",
-  "//peridot/lib/*",
-  "//src/ledger/*",
-]
+visibility = [ "//src/ledger/*" ]
 
 source_set("convert") {
   sources = [
@@ -38,7 +34,6 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "collection_view_unittest.cc",
     "convert_unittest.cc",
   ]
 
