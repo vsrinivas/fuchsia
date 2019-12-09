@@ -4,7 +4,9 @@
 
 library fuchsia.bluetooth.host;
 
-using fuchsia.bluetooth;
+using fuchsia.bluetooth as bt;
+using fuchsia.bluetooth.sys as sys;
+
 using fuchsia.bluetooth.bredr;
 using fuchsia.bluetooth.control;
 using fuchsia.bluetooth.gatt;
@@ -35,8 +37,14 @@ protocol Host {
     /// terminated.
     Close();
 
-    /// Returns information about the Bluetooth adapter managed by this host.
-    GetInfo() -> (fuchsia.bluetooth.control.AdapterInfo info);
+    /// Returns information about the Bluetooth host subsystem and controller managed by this Host
+    /// instance. If there has been no change to the state since the last call to this method, the
+    /// response will be deferred until there is a change.
+    ///
+    /// The returned `info` structure will be populated with the current state of the bt-host
+    /// device. However the `active` parameter will never be populated. This field is managed
+    /// by a higher layer.
+    WatchState() -> (sys.HostInfo info);
 
     /// Assigns local data to this host.
     SetLocalData(fuchsia.bluetooth.control.HostData host_data);
@@ -57,28 +65,26 @@ protocol Host {
     /// above.
     ListDevices() -> (vector<fuchsia.bluetooth.control.RemoteDevice> devices);
 
-    /// Sets the local name for this adapter.
+    /// Sets the local name for this host device.
     SetLocalName(string local_name) -> (fuchsia.bluetooth.Status status);
 
-    /// Sets the device class for this adapter.
-    SetDeviceClass(fuchsia.bluetooth.control.DeviceClass device_class)
-        -> (fuchsia.bluetooth.Status status);
+    /// Sets the device class for this host device.
+    SetDeviceClass(bt.DeviceClass device_class) -> (fuchsia.bluetooth.Status status);
 
     /// Initiates a general discovery procedure for BR/EDR and LE devices. On success, discovered
-    /// devices will be reported via AdapterDelegate.OnDeviceDiscovered().
+    /// devices will be reported via OnDeviceUpdated events.
     ///
     /// On the LE transport, only general-discoverable and connectable peripherals will be reported.
     ///
-    /// Discovery will continue until it is terminated via StopDiscovery() or if the proxy to the
-    /// Adapter gets disconnected. If the device does not support BR/EDR, only LE
-    /// discovery will be performed.
+    /// Discovery will continue until it is terminated via StopDiscovery() or if the Host protocol
+    /// channel gets closed. If the device does not support BR/EDR, only LE discovery will be
+    /// performed.
     ///
     /// An OnDeviceUpdated event will be sent when the discovery procedures are
     /// started.
     StartDiscovery() -> (fuchsia.bluetooth.Status status);
 
-    /// Terminates discovery if one was started via StartDiscovery(). The AdapterDelegate will stop
-    /// receiving device discovery notifications.
+    /// Terminates discovery if one was started via StartDiscovery().
     ///
     /// NOTE: If another client is performing discovery (e.g. via its own le.Central interface handle),
     /// then the system will continue performing device discovery even if this method results in
@@ -154,9 +160,6 @@ protocol Host {
     AddBondedDevices(vector<fuchsia.bluetooth.control.BondingData> bonds) -> (fuchsia.bluetooth.Status status);
 
     // ===== Events =====
-
-    /// Notifies when the adapter state changes.
-    -> OnAdapterStateChanged(fuchsia.bluetooth.control.AdapterState state);
 
     /// Events that are sent when a connectable device is added, updated, or
     /// removed as a result of connection and discovery procedures.

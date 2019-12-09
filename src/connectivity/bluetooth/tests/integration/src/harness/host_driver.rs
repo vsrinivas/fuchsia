@@ -4,7 +4,7 @@
 
 use {
     failure::{err_msg, Error},
-    fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice},
+    fidl_fuchsia_bluetooth_control::RemoteDevice,
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_async as fasync,
@@ -18,7 +18,8 @@ use {
         },
         hci_emulator::Emulator,
         host,
-        util::{clone_host_info, clone_host_state, clone_remote_device},
+        types::HostInfo,
+        util::clone_remote_device,
     },
     fuchsia_zircon::{Duration, DurationNum},
     futures::{
@@ -27,9 +28,8 @@ use {
     },
     parking_lot::MappedRwLockWriteGuard,
     std::{
-        borrow::Borrow,
         collections::HashMap,
-        convert::{AsMut, AsRef},
+        convert::{AsMut, AsRef, TryInto},
         path::PathBuf,
     },
 };
@@ -43,16 +43,6 @@ const TIMEOUT_SECONDS: i64 = 10; // in seconds
 
 pub fn timeout_duration() -> Duration {
     TIMEOUT_SECONDS.seconds()
-}
-
-// Applies `delta` to `base`.
-fn apply_delta(base: AdapterState, delta: AdapterState) -> AdapterState {
-    AdapterState {
-        local_name: delta.local_name.or(base.local_name),
-        discoverable: delta.discoverable.or(base.discoverable),
-        discovering: delta.discovering.or(base.discovering),
-        local_service_uuids: delta.local_service_uuids.or(base.local_service_uuids),
-    }
 }
 
 pub fn expect_remote_device(
@@ -86,7 +76,7 @@ pub struct HostState {
     host_path: PathBuf,
 
     // Current bt-host driver state.
-    host_info: AdapterInfo,
+    host_info: HostInfo,
 
     // All known remote devices, indexed by their identifiers.
     peers: HashMap<String, RemoteDevice>,
@@ -97,7 +87,7 @@ impl Clone for HostState {
         HostState {
             emulator_state: self.emulator_state.clone(),
             host_path: self.host_path.clone(),
-            host_info: clone_host_info(&self.host_info),
+            host_info: self.host_info.clone(),
             peers: self.peers.iter().map(|(k, v)| (k.clone(), clone_remote_device(v))).collect(),
         }
     }
@@ -128,12 +118,17 @@ impl TestHarness for HostDriverHarness {
             let host_events = handle_host_events(harness.clone())
                 .map_err(|e| e.context("Error handling host events"))
                 .err_into();
+            let watch_state = watch_host_state(harness.clone())
+                .map_err(|e| e.context("Error watching host state"))
+                .err_into();
             let watch_cp = watch_controller_parameters(harness.clone())
                 .map_err(|e| e.context("Error watching controller parameters"))
                 .err_into();
             let path = harness.read().host_path;
 
-            let run = future::try_join(host_events, watch_cp).map_ok(|((), ())| ()).boxed();
+            let run = future::try_join3(host_events, watch_state, watch_cp)
+                .map_ok(|((), (), ())| ())
+                .boxed();
             Ok((harness, (path, emulator), run))
         }
         .boxed()
@@ -172,7 +167,7 @@ async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
     let fidl_handle = host::open_host_channel(&host_dev.file())?;
     let host_proxy = HostProxy::new(fasync::Channel::from_channel(fidl_handle.into())?);
 
-    let host_info = host_proxy.get_info().await?;
+    let host_info = host_proxy.watch_state().await?.try_into()?;
     let host_path = host_dev.path().to_path_buf();
     let peers = HashMap::new();
 
@@ -198,18 +193,12 @@ pub async fn expect_host_peer(
     fut.await
 }
 
-pub async fn expect_adapter_state(
+pub async fn expect_host_state(
     host: &HostDriverHarness,
-    target: Predicate<AdapterState>,
+    target: Predicate<HostInfo>,
 ) -> Result<HostState, Error> {
     let fut = host.when_satisfied(
-        Predicate::<HostState>::new(
-            move |host| match &host.host_info.state {
-                Some(state) => target.satisfied(state),
-                None => false,
-            },
-            None,
-        ),
+        Predicate::<HostState>::new(move |host| target.satisfied(&host.host_info), None),
         timeout_duration(),
     );
     fut.await
@@ -221,20 +210,6 @@ async fn handle_host_events(harness: HostDriverHarness) -> Result<(), Error> {
 
     while let Some(e) = events.try_next().await? {
         match e {
-            HostEvent::OnAdapterStateChanged { state } => {
-                let host_info = &mut harness.write_state().host_info;
-                let base = match host_info.state {
-                    Some(ref state) => clone_host_state(state.borrow()),
-                    None => AdapterState {
-                        local_name: None,
-                        discoverable: None,
-                        discovering: None,
-                        local_service_uuids: None,
-                    },
-                };
-                let new_state = apply_delta(base, state);
-                host_info.state = Some(Box::new(new_state));
-            }
             HostEvent::OnDeviceUpdated { device } => {
                 harness.write_state().peers.insert(device.identifier.clone(), device);
             }
@@ -250,4 +225,13 @@ async fn handle_host_events(harness: HostDriverHarness) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+async fn watch_host_state(harness: HostDriverHarness) -> Result<(), Error> {
+    loop {
+        let proxy = harness.aux().proxy().clone();
+        let info = proxy.watch_state().await?;
+        harness.write_state().host_info = info.try_into()?;
+        harness.notify_state_changed();
+    }
 }

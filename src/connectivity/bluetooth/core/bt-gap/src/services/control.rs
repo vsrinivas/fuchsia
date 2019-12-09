@@ -91,7 +91,7 @@ async fn handler(
             responder.send(&mut devices.iter_mut())
         }
         ControlRequest::IsBluetoothAvailable { responder } => {
-            let is_available = hd.get_active_adapter_info().is_some();
+            let is_available = hd.get_active_host_info().is_some();
             responder.send(is_available)
         }
         ControlRequest::SetPairingDelegate { delegate, responder } => {
@@ -118,8 +118,8 @@ async fn handler(
             responder.send(&mut status_response(result))
         }
         ControlRequest::GetActiveAdapterInfo { responder } => {
-            let adap = hd.get_active_adapter_info();
-            responder.send(adap.map(control::AdapterInfo::from).as_mut())
+            let host_info = hd.get_active_host_info();
+            responder.send(host_info.map(control::AdapterInfo::from).as_mut())
         }
         ControlRequest::RequestDiscovery { discovery, responder } => {
             let mut resp = if discovery {
@@ -141,6 +141,7 @@ async fn handler(
             responder.send(&mut status_response(result))
         }
         ControlRequest::SetDeviceClass { device_class, responder } => {
+            let device_class = fidl_fuchsia_bluetooth::DeviceClass { value: device_class.value };
             let result = hd.set_device_class(device_class).await;
             responder.send(&mut status_response(result))
         }

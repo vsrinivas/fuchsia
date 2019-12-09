@@ -12,21 +12,20 @@ use {
     fuchsia_bluetooth::{
         constants::HOST_DEVICE_DIR,
         device_watcher::{DeviceWatcher, WatchFilter},
-        error::Error as BtError,
         expectation::{self, asynchronous::ExpectableStateExt, peer},
         hci_emulator::Emulator,
         host,
-        types::Address,
+        types::{Address, HostInfo},
     },
     fuchsia_zircon as zx,
-    std::path::PathBuf,
+    std::{convert::TryInto, path::PathBuf},
 };
 
 use crate::harness::{
     emulator,
     expect::expect_eq,
     host_driver::{
-        expect_adapter_state, expect_host_peer, expect_no_peer, expect_remote_device,
+        expect_host_peer, expect_host_state, expect_no_peer, expect_remote_device,
         timeout_duration, HostDriverHarness,
     },
 };
@@ -54,13 +53,14 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
     // Open a host channel using a fidl call and check the device is responsive
     let handle = host::open_host_channel(bthost.file())?;
     let host = HostProxy::new(fasync::Channel::from_channel(handle.into())?);
-    let info = host
-        .get_info()
+    let info: HostInfo = host
+        .watch_state()
         .await
-        .context("Is bt-gap running? If so, try stopping it and re-running these tests")?;
+        .context("Is bt-gap running? If so, try stopping it and re-running these tests")?
+        .try_into()?;
 
     // The bt-host should have been initialized with the address that we initially configured.
-    assert_eq!(address.to_string(), info.address);
+    assert_eq!(address, info.address);
 
     // Remove the bt-hci device and check that the test device is also destroyed.
     emulator.destroy_and_wait().await?;
@@ -69,20 +69,13 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
     watcher.watch_removed(bthost.path()).await
 }
 
-// Tests that the local host driver address is 0.
-async fn test_bd_addr(test_state: HostDriverHarness) -> Result<(), Error> {
-    let fut = test_state.aux().proxy().get_info();
-    let info = fut.await.map_err(|_| BtError::new("failed to read host driver info"))?;
-    expect_eq!("00:00:00:00:00:00", info.address.as_str())
-}
-
 // Tests that the bt-host driver assigns the local name to "fuchsia" when initialized.
 async fn test_default_local_name(test_state: HostDriverHarness) -> Result<(), Error> {
     const NAME: &str = "fuchsia";
     let _ = test_state
         .when_satisfied(emulator::expectation::local_name_is(NAME), timeout_duration())
         .await?;
-    let fut = expect_adapter_state(&test_state, expectation::host_driver::name(NAME));
+    let fut = expect_host_state(&test_state, expectation::host_driver::name(NAME));
     fut.await?;
     Ok(())
 }
@@ -96,7 +89,7 @@ async fn test_set_local_name(test_state: HostDriverHarness) -> Result<(), Error>
     let _ = test_state
         .when_satisfied(emulator::expectation::local_name_is(NAME), timeout_duration())
         .await?;
-    let fut = expect_adapter_state(&test_state, expectation::host_driver::name(NAME));
+    let fut = expect_host_state(&test_state, expectation::host_driver::name(NAME));
     fut.await?;
 
     Ok(())
@@ -104,16 +97,11 @@ async fn test_set_local_name(test_state: HostDriverHarness) -> Result<(), Error>
 
 // Tests that the device class assigned to a bt-host gets propagated down to the controller.
 async fn test_set_device_class(test_state: HostDriverHarness) -> Result<(), Error> {
-    // TODO(fxb/35008): Use fidl_fuchsia_bluetooth::DeviceClass once the API has been updated.
-    let value = MAJOR_DEVICE_CLASS_TOY + 4;
-    let mut device_class = fidl_fuchsia_bluetooth_control::DeviceClass { value };
+    let mut device_class = DeviceClass { value: MAJOR_DEVICE_CLASS_TOY + 4 };
     let fut = test_state.aux().proxy().set_device_class(&mut device_class);
     fut.await?;
     let _ = test_state
-        .when_satisfied(
-            emulator::expectation::device_class_is(DeviceClass { value }),
-            timeout_duration(),
-        )
+        .when_satisfied(emulator::expectation::device_class_is(device_class), timeout_duration())
         .await?;
     Ok(())
 }
@@ -124,12 +112,12 @@ async fn test_discoverable(test_state: HostDriverHarness) -> Result<(), Error> {
     // Enable discoverable mode.
     let fut = test_state.aux().proxy().set_discoverable(true);
     fut.await?;
-    expect_adapter_state(&test_state, expectation::host_driver::discoverable(true)).await?;
+    expect_host_state(&test_state, expectation::host_driver::discoverable(true)).await?;
 
     // Disable discoverable mode
     let fut = test_state.aux().proxy().set_discoverable(false);
     fut.await?;
-    expect_adapter_state(&test_state, expectation::host_driver::discoverable(false)).await?;
+    expect_host_state(&test_state, expectation::host_driver::discoverable(false)).await?;
 
     Ok(())
 }
@@ -140,7 +128,7 @@ async fn test_discovery(test_state: HostDriverHarness) -> Result<(), Error> {
     // Start discovery. "discovering" should get set to true.
     let fut = test_state.aux().proxy().start_discovery();
     fut.await?;
-    expect_adapter_state(&test_state, expectation::host_driver::discovering(true)).await?;
+    expect_host_state(&test_state, expectation::host_driver::discovering(true)).await?;
 
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
     let fut = test_state.aux().add_le_peer_default(&address);
@@ -153,7 +141,7 @@ async fn test_discovery(test_state: HostDriverHarness) -> Result<(), Error> {
     // Stop discovery. "discovering" should get set to false.
     let fut = test_state.aux().proxy().stop_discovery();
     fut.await?;
-    expect_adapter_state(&test_state, expectation::host_driver::discovering(false)).await?;
+    expect_host_state(&test_state, expectation::host_driver::discovering(false)).await?;
 
     Ok(())
 }
@@ -168,7 +156,7 @@ async fn test_close(test_state: HostDriverHarness) -> Result<(), Error> {
     fut.await?;
     let active_state = expectation::host_driver::discoverable(true)
         .and(expectation::host_driver::discovering(true));
-    expect_adapter_state(&test_state, active_state).await?;
+    expect_host_state(&test_state, active_state).await?;
 
     // Close should cancel these procedures.
     test_state.aux().proxy().close()?;
@@ -176,7 +164,7 @@ async fn test_close(test_state: HostDriverHarness) -> Result<(), Error> {
     let closed_state_update = expectation::host_driver::discoverable(false)
         .and(expectation::host_driver::discovering(false));
 
-    expect_adapter_state(&test_state, closed_state_update).await?;
+    expect_host_state(&test_state, closed_state_update).await?;
 
     Ok(())
 }
@@ -370,7 +358,6 @@ pub fn run_all() -> Result<(), Error> {
         "bt-host driver",
         [
             test_lifecycle,
-            test_bd_addr,
             test_default_local_name,
             test_set_local_name,
             test_set_device_class,

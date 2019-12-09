@@ -4,24 +4,22 @@
 
 use {
     fidl::endpoints::ClientEnd,
+    fidl_fuchsia_bluetooth::DeviceClass,
     fidl_fuchsia_bluetooth_control::{
-        self as control, DeviceClass, HostData, InputCapabilityType, OutputCapabilityType,
-        PairingDelegateMarker,
+        self as control, HostData, InputCapabilityType, OutputCapabilityType, PairingDelegateMarker,
     },
     fidl_fuchsia_bluetooth_gatt::ClientProxy,
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_le::CentralProxy,
     fuchsia_bluetooth::{
         inspect::Inspectable,
-        types::{AdapterInfo, BondingData, Peer},
+        types::{BondingData, HostInfo, Peer},
     },
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    futures::{Future, FutureExt, StreamExt},
+    futures::{future, Future, FutureExt, StreamExt},
     parking_lot::RwLock,
-    std::collections::HashMap,
-    std::convert::TryInto,
-    std::path::PathBuf,
-    std::sync::Arc,
+    pin_utils::pin_mut,
+    std::{collections::HashMap, convert::TryInto, path::PathBuf, sync::Arc},
 };
 
 use crate::types::{self, from_fidl_status, Error};
@@ -29,7 +27,7 @@ use crate::types::{self, from_fidl_status, Error};
 pub struct HostDevice {
     pub path: PathBuf,
     host: HostProxy,
-    info: Inspectable<AdapterInfo>,
+    info: Inspectable<HostInfo>,
     gatt: HashMap<String, (CentralProxy, ClientProxy)>,
 }
 
@@ -39,7 +37,7 @@ pub struct HostDevice {
 // If they were instead declared async, the function body would not be executed until the first time
 // the future was polled.
 impl HostDevice {
-    pub fn new(path: PathBuf, host: HostProxy, info: Inspectable<AdapterInfo>) -> Self {
+    pub fn new(path: PathBuf, host: HostProxy, info: Inspectable<HostInfo>) -> Self {
         HostDevice { path, host, info, gatt: HashMap::new() }
     }
 
@@ -56,7 +54,7 @@ impl HostDevice {
         let _ = self.host.set_pairing_delegate(input, output, Some(delegate));
     }
 
-    pub fn get_info(&self) -> &AdapterInfo {
+    pub fn get_info(&self) -> &HostInfo {
         &self.info
     }
 
@@ -144,18 +142,34 @@ pub trait HostListener {
     fn on_new_host_bond(&mut self, data: BondingData) -> Self::HostBondFut;
 }
 
-pub async fn handle_events<H: HostListener>(
+// TODO(armansito): It feels odd to expose it only so it is available to test/host_device.rs. It
+// might be better to move the host_device tests into this module.
+pub async fn refresh_host_info(host: Arc<RwLock<HostDevice>>) -> types::Result<()> {
+    let proxy = host.read().host.clone();
+    let info = proxy.watch_state().await?;
+    host.write().info.update(info.try_into()?);
+    Ok(())
+}
+
+pub async fn watch_events<H: HostListener>(
+    listener: H,
+    host: Arc<RwLock<HostDevice>>,
+) -> types::Result<()> {
+    let handle_fidl = handle_fidl_events(listener, host.clone());
+    let watch_state = watch_state(host);
+    pin_mut!(handle_fidl);
+    pin_mut!(watch_state);
+    future::select(handle_fidl, watch_state).await.factor_first().0
+}
+
+async fn handle_fidl_events<H: HostListener>(
     mut listener: H,
     host: Arc<RwLock<HostDevice>>,
 ) -> types::Result<()> {
     let mut stream = host.read().host.take_event_stream();
 
     while let Some(event) = stream.next().await {
-        let host_ = host.clone();
         match event? {
-            HostEvent::OnAdapterStateChanged { ref state } => {
-                host_.write().info.update_state(Some(state.into()));
-            }
             // TODO(613): Add integration test for this.
             HostEvent::OnDeviceUpdated { device } => listener.on_peer_updated(Peer::from(device)),
             // TODO(814): Add integration test for this.
@@ -176,4 +190,10 @@ pub async fn handle_events<H: HostListener>(
         };
     }
     Ok(())
+}
+
+async fn watch_state(host: Arc<RwLock<HostDevice>>) -> types::Result<()> {
+    loop {
+        refresh_host_info(host.clone()).await?;
+    }
 }

@@ -118,29 +118,24 @@ pub mod peer {
 /// Expectations for the Bluetooth Host Driver (bt-host)
 pub mod host_driver {
     use super::Predicate;
-    use fidl_fuchsia_bluetooth::Bool;
-    use fidl_fuchsia_bluetooth_control::AdapterState;
+    use crate::types::HostInfo;
 
-    pub fn name(expected_name: &str) -> Predicate<AdapterState> {
+    pub fn name(expected_name: &str) -> Predicate<HostInfo> {
         let name = Some(expected_name.to_string());
-        Predicate::<AdapterState>::new(
+        Predicate::<HostInfo>::new(
             move |host_driver| host_driver.local_name == name,
             Some(&format!("name == {}", expected_name)),
         )
     }
-    pub fn discovering(discovering: bool) -> Predicate<AdapterState> {
-        Predicate::<AdapterState>::new(
-            move |host_driver| {
-                host_driver.discovering == Some(Box::new(Bool { value: discovering }))
-            },
+    pub fn discovering(discovering: bool) -> Predicate<HostInfo> {
+        Predicate::<HostInfo>::new(
+            move |host_driver| host_driver.discovering == discovering,
             Some(&format!("discovering == {}", discovering)),
         )
     }
-    pub fn discoverable(discoverable: bool) -> Predicate<AdapterState> {
-        Predicate::<AdapterState>::new(
-            move |host_driver| {
-                host_driver.discoverable == Some(Box::new(Bool { value: discoverable }))
-            },
+    pub fn discoverable(discoverable: bool) -> Predicate<HostInfo> {
+        Predicate::<HostInfo>::new(
+            move |host_driver| host_driver.discoverable == discoverable,
             Some(&format!("discoverable == {}", discoverable)),
         )
     }
@@ -248,5 +243,4 @@ mod test {
         let predicate = correct_name().not();
         assert!(!predicate.satisfied(&test_peer()));
     }
-
 }

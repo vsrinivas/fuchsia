@@ -3,31 +3,24 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, format_err, Error},
+    failure::{err_msg, Error},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_bluetooth_control::{AdapterState, TechnologyType},
     fidl_fuchsia_bluetooth_host::{HostControlHandle, HostMarker, HostRequest, HostRequestStream},
-    fuchsia_async::{DurationExt, TimeoutExt},
+    fidl_fuchsia_bluetooth_sys::{HostInfo as FidlHostInfo, TechnologyType},
     fuchsia_bluetooth::{
         bt_fidl_status,
         inspect::{placeholder_node, Inspectable},
-        types::{AdapterInfo, Address, BondingData, Peer},
+        types::{Address, BondingData, HostInfo, Peer},
     },
-    fuchsia_zircon::DurationNum,
-    futures::{
-        FutureExt,
-        future::{self, join3},
-        stream::StreamExt,
-    },
+    futures::{future, join, stream::StreamExt},
     parking_lot::RwLock,
     std::path::PathBuf,
     std::sync::Arc,
 };
 
 use crate::{
-    host_device::{handle_events, HostDevice, HostListener},
+    host_device::{refresh_host_info, HostDevice, HostListener},
     test::create_fidl_endpoints,
-    types,
 };
 
 // An impl that ignores all events
@@ -45,63 +38,64 @@ impl HostListener for () {
 async fn host_device_set_local_name() -> Result<(), Error> {
     let (client, server) = create_fidl_endpoints::<HostMarker>()?;
 
-    let info = AdapterInfo::new(
-        "foo".to_string(),
-        TechnologyType::DualMode,
-        Address::Public([0, 0, 0, 0, 0, 0]),
-        None,
-    );
-    let info = Inspectable::new(info, placeholder_node());
+    let info = HostInfo {
+        id: fidl_fuchsia_bluetooth::Id { value: 1 },
+        technology: TechnologyType::DualMode,
+        address: Address::Public([0, 0, 0, 0, 0, 0]),
+        local_name: None,
+        active: false,
+        discoverable: false,
+        discovering: false,
+    };
     let host = Arc::new(RwLock::new(HostDevice::new(
         PathBuf::from("/dev/class/bt-host/test"),
         client,
-        info,
+        Inspectable::new(info.clone(), placeholder_node()),
     )));
     let name = "EXPECTED_NAME".to_string();
 
-    let run_test = join3(
-        // Call set_name
-        host.write().set_name(name.clone()),
-        // Respond with the new name
-        expect_call(server, |listener, e| match e {
-            HostRequest::SetLocalName { local_name, responder } => {
-                let mut state = AdapterState {
-                    local_name: Some(local_name),
-                    discovering: None,
-                    discoverable: None,
-                    local_service_uuids: None,
-                };
-                listener.send_on_adapter_state_changed(&mut state)?;
-                responder.send(&mut bt_fidl_status!())?;
-                Ok(())
-            }
-            _ => Err(err_msg("Unexpected!")),
-        }),
-        // Receive the name update
-        handle_events((), host.clone()),
-    );
+    let info = Arc::new(RwLock::new(info));
+    let server = Arc::new(RwLock::new(server));
 
-    let timeout = 5.seconds();
-    run_test
-        .map(|r| {
-            r.0.map_err(types::Error::as_failure)
-                .and(r.1)
-                .and(r.2.map_err(types::Error::as_failure))
-        })
-        .on_timeout(timeout.after_now(), move || Err(format_err!("Timed out")))
-        .await?;
+    // Assign a name and verify that that it gets written to the bt-host over FIDL.
+    let set_name = host.write().set_name(name.clone());
+    let expect_fidl = expect_call(server.clone(), |_, e| match e {
+        HostRequest::SetLocalName { local_name, responder } => {
+            info.write().local_name = Some(local_name);
+            responder.send(&mut bt_fidl_status!())?;
+            Ok(())
+        }
+        _ => Err(err_msg("Unexpected!")),
+    });
+    let (set_name_result, expect_result) = join!(set_name, expect_fidl);
+    let _ = set_name_result.expect("failed to set name");
+    let _ = expect_result.expect("FIDL result unsatisfied");
 
-    let host_name =
-        host.read().get_info().state.as_ref().and_then(|s| s.local_name.as_ref().cloned());
+    let refresh = refresh_host_info(host.clone());
+    let expect_fidl = expect_call(server.clone(), |_, e| match e {
+        HostRequest::WatchState { responder } => {
+            responder.send(FidlHostInfo::from(info.read().clone()))?;
+            Ok(())
+        }
+        _ => Err(err_msg("Unexpected!")),
+    });
+    let (refresh_result, expect_result) = join!(refresh, expect_fidl);
+    let _ = refresh_result.expect("did not receive HostInfo update");
+    let _ = expect_result.expect("FIDL result unsatisfied");
+
+    let host_name = host.read().get_info().local_name.clone();
+    println!("name: {:?}", host_name);
     assert!(host_name == Some(name));
     Ok(())
 }
 
-async fn expect_call<F>(mut stream: HostRequestStream, f: F) -> Result<(), Error>
+// TODO(39373): Add host.fidl emulation to bt-fidl-mocks and use that instead.
+async fn expect_call<F>(stream: Arc<RwLock<HostRequestStream>>, f: F) -> Result<(), Error>
 where
     F: FnOnce(Arc<HostControlHandle>, HostRequest) -> Result<(), Error>,
 {
-    let control_handle = Arc::new(stream.control_handle());
+    let control_handle = Arc::new(stream.read().control_handle());
+    let mut stream = stream.write();
     if let Some(event) = stream.next().await {
         let event = event?;
         f(control_handle, event)

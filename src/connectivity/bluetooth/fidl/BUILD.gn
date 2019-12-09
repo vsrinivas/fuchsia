@@ -23,5 +23,6 @@ fidl("host") {
     "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.bluetooth.gatt",
     "//sdk/fidl/fuchsia.bluetooth.le",
+    "//sdk/fidl/fuchsia.bluetooth.sys",
   ]
 }

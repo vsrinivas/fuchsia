@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error},
+    failure::{err_msg, Error, ResultExt},
     fidl::endpoints::{self, ServerEnd},
-    fidl_fuchsia_bluetooth::{Appearance, Error as FidlError, ErrorCode},
+    fidl_fuchsia_bluetooth::{Appearance, DeviceClass, Error as FidlError, ErrorCode},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
-        self as control, ControlControlHandle, DeviceClass, HostData, InputCapabilityType,
-        LocalKey, OutputCapabilityType, PairingDelegateProxy,
+        self as control, ControlControlHandle, HostData, InputCapabilityType, LocalKey,
+        OutputCapabilityType, PairingDelegateProxy,
     },
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker, Server_Proxy},
     fidl_fuchsia_bluetooth_host::HostProxy,
@@ -18,7 +18,7 @@ use {
     fuchsia_bluetooth::{
         self as bt,
         inspect::{DebugExt, Inspectable, ToProperty},
-        types::{AdapterInfo, Address, BondingData, Identity, Peer, PeerId},
+        types::{Address, BondingData, HostInfo, Identity, Peer, PeerId},
     },
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
@@ -259,7 +259,7 @@ impl HostDispatcherState {
     }
 
     fn add_host(&mut self, id: String, host: Arc<RwLock<HostDevice>>) {
-        fx_log_info!("Host added: {:?}", host.read().get_info().identifier);
+        fx_log_info!("Host added: {:?}", host.read().get_info().id);
         self.host_devices.insert(id, host.clone());
 
         // Update inspect state
@@ -280,15 +280,15 @@ impl HostDispatcherState {
     fn set_active_id(&mut self, id: Option<String>) {
         fx_log_info!("New active adapter: {:?}", id);
         self.active_id = id;
-        if let Some(adapter_info) = self.get_active_adapter_info() {
-            let mut adapter_info = control::AdapterInfo::from(adapter_info);
+        if let Some(host_info) = self.get_active_host_info() {
+            let mut adapter_info = control::AdapterInfo::from(host_info);
             self.notify_event_listeners(|listener| {
                 let _res = listener.send_on_active_adapter_changed(Some(&mut adapter_info));
             })
         }
     }
 
-    pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
+    fn get_active_host_info(&mut self) -> Option<HostInfo> {
         self.get_active_host().map(|host| host.read().get_info().clone())
     }
 
@@ -326,13 +326,13 @@ impl HostDispatcher {
         let hd = HostDispatcherState {
             active_id: None,
             host_devices: HashMap::new(),
-            name: name,
-            appearance: appearance,
+            name,
+            appearance,
             input: InputCapabilityType::None,
             output: OutputCapabilityType::None,
             peers: HashMap::new(),
             gas_channel_sender,
-            stash: stash,
+            stash,
             discovery: None,
             discoverable: None,
             pairing_delegate: None,
@@ -343,8 +343,8 @@ impl HostDispatcher {
         HostDispatcher { state: Arc::new(RwLock::new(hd)) }
     }
 
-    pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
-        self.state.write().get_active_adapter_info()
+    pub fn get_active_host_info(&mut self) -> Option<HostInfo> {
+        self.state.write().get_active_host_info()
     }
 
     pub async fn when_hosts_found(&self) -> HostDispatcher {
@@ -512,7 +512,7 @@ impl HostDispatcher {
         self.state.read().host_devices.values().cloned().collect()
     }
 
-    pub async fn get_adapters(&self) -> Vec<AdapterInfo> {
+    pub async fn get_adapters(&self) -> Vec<HostInfo> {
         let hosts = self.state.read();
         hosts.host_devices.values().map(|host| host.read().get_info().clone()).collect()
     }
@@ -696,11 +696,12 @@ impl HostDispatcher {
         // Initialize bt-gap as this host's pairing delegate.
         start_pairing_delegate(self.clone(), host_device.clone())?;
 
-        let id = host_device.read().get_info().identifier.clone();
+        // TODO(fxb/36378): Remove conversions to String when fuchsia.bluetooth.sys is supported.
+        let id = host_device.read().get_info().id.value.to_string();
         self.state.write().add_host(id, host_device.clone());
 
         // Start listening to Host interface events.
-        fasync::spawn(host_device::handle_events(self.clone(), host_device.clone()).map(|r| {
+        fasync::spawn(host_device::watch_events(self.clone(), host_device.clone()).map(|r| {
             r.unwrap_or_else(|err| {
                 fx_log_warn!("Error handling host event: {:?}", err);
             })
@@ -823,14 +824,10 @@ async fn init_host(path: &Path, node: inspect::Node) -> Result<Arc<RwLock<HostDe
     let host = HostProxy::new(handle);
 
     // Obtain basic information and create and entry in the disptacher's map.
-    let adapter_info = host
-        .get_info()
-        .await
-        .map_err(|_| err_msg("failed to obtain bt-host information"))
-        .and_then(|info| AdapterInfo::try_from(info))
-        .map(|info| Inspectable::new(info, node))?;
+    let host_info = host.watch_state().await.context("failed to obtain bt-host information")?;
+    let host_info = Inspectable::new(HostInfo::try_from(host_info)?, node);
 
-    Ok(Arc::new(RwLock::new(HostDevice::new(path.to_path_buf(), host, adapter_info))))
+    Ok(Arc::new(RwLock::new(HostDevice::new(path.to_path_buf(), host, host_info))))
 }
 
 async fn try_restore_bonds(
