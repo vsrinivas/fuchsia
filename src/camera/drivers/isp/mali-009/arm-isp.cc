@@ -701,6 +701,14 @@ zx_status_t ArmIspDevice::StopStreaming() {
   return ZX_OK;
 }
 
+zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_2_t* buffer_collection,
+                                                const image_format_2_t* image_format,
+                                                const frame_rate_t* rate, stream_type_t type,
+                                                const hw_accel_frame_callback_t* frame_callback,
+                                                output_stream_protocol_t* out_s) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t ArmIspDevice::IspCreateOutputStream2(
     const buffer_collection_info_2_t* buffer_collection, const image_format_2_t* image_format,
     const frame_rate_t* rate, stream_type_t type, const output_stream_callback_t* stream,
