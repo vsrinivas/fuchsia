@@ -59,7 +59,6 @@ void BufferPool::Put(BufferPool::Framebuffer* f) {
 void BufferPool::Clear(
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller) {
   for (size_t i = 0; i < buffers_.size(); ++i) {
-    FXL_DCHECK(!used_[i]);
     if ((*display_controller)->ReleaseImage(buffers_[i].id) != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to release image id=" << buffers_[i].id;
     }
