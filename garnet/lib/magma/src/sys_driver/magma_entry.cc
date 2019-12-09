@@ -54,9 +54,18 @@ static zx_status_t device_open(void* context, zx_device_t** out, uint32_t flags)
 
 static zx_status_t device_close(void* context, uint32_t flags) { return ZX_OK; }
 
+static void device_unbind(void* context) {
+  gpu_device* gpu = static_cast<gpu_device*>(context);
+  std::unique_lock<std::mutex> lock(gpu->magma_mutex);
+  // This will tear down client connections and cause them to return errors.
+  magma_stop(gpu);
+  device_unbind_reply(gpu->zx_device);
+}
+
 static zx_status_t device_fidl_query(void* context, uint64_t query_id, fidl_txn_t* transaction) {
   DLOG("device_fidl_query");
   gpu_device* device = get_gpu_device(context);
+  DASSERT(device->magma_system_device);
 
   uint64_t result;
   switch (query_id) {
@@ -151,16 +160,17 @@ static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
 };
 
 static zx_status_t device_message(void* context, fidl_msg_t* message, fidl_txn_t* transaction) {
+  gpu_device* device = get_gpu_device(context);
+  if (!device->magma_system_device) {
+    MAGMA_LOG(WARNING, "Got message on torn-down device");
+    return ZX_ERR_BAD_STATE;
+  }
   return fuchsia_gpu_magma_Device_dispatch(context, transaction, message, &device_fidl_ops);
 }
 
 static void device_release(void* context) {
   gpu_device* device = get_gpu_device(context);
   MAGMA_LOG(INFO, "Starting device_release");
-  {
-    std::unique_lock<std::mutex> lock(device->magma_mutex);
-    magma_stop(device);
-  }
 
   delete device;
   MAGMA_LOG(INFO, "Finished device_release");
@@ -170,6 +180,7 @@ static zx_protocol_device_t device_proto = {
     .version = DEVICE_OPS_VERSION,
     .open = device_open,
     .close = device_close,
+    .unbind = device_unbind,
     .release = device_release,
     .message = device_message,
 };
