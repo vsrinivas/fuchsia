@@ -355,6 +355,17 @@ void DriverOutput::OnDriverInfoFetched() {
                            format.bytes_per_frame() * 8 / pref_chan);
   }
 
+  // Configure our mix job output format. Note we want the same format (frame rate, channelization)
+  // as our output, except output audio as FLOAT samples since that's the only output sample format
+  // the Mixer supports. The conversion to the format required by the hardware ring buffer is done
+  // after the mix is done (see FinishMixJob).
+  Format mix_format = Format(fuchsia::media::AudioStreamType{
+      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+      .channels = format.channels(),
+      .frames_per_second = format.frames_per_second(),
+  });
+  SetMixFormat(mix_format);
+
   // Tell AudioDeviceManager we are ready to be an active audio device.
   ActivateSelf();
 

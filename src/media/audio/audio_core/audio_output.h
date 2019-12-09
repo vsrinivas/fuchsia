@@ -12,7 +12,6 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_link.h"
-#include "src/media/audio/audio_core/mixer/output_producer.h"
 
 namespace media::audio {
 
@@ -67,6 +66,11 @@ class AudioOutput : public AudioDevice {
     SetNextSchedTime(now + next_sched_delay);
   }
 
+  void SetMixFormat(const Format& format) {
+    FX_CHECK(format.sample_format() == fuchsia::media::AudioSampleFormat::FLOAT);
+    mix_format_ = {format};
+  }
+
   struct FrameSpan {
     int64_t start;
     size_t length;
@@ -76,9 +80,6 @@ class AudioOutput : public AudioDevice {
   virtual void FinishMixJob(const MixJob& job)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
   void SetupMixBuffer(uint32_t max_mix_frames) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  // Details about the final output format
-  std::unique_ptr<OutputProducer> output_producer_;
 
   // Timer used to schedule periodic mixing.
   void MixTimerThunk() {
@@ -115,6 +116,7 @@ class AudioOutput : public AudioDevice {
 
   // State used by the mix task.
   MixJob cur_mix_job_;
+  std::optional<Format> mix_format_;
 
   // State used by the trim task.
   FractionalFrames<int64_t> trim_threshold_;

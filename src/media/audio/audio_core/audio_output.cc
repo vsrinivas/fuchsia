@@ -52,6 +52,7 @@ void AudioOutput::Process() {
       // large enough for the mix job we were given.
       FX_DCHECK(mix_buf_);
       FX_DCHECK(cur_mix_job_.buf_frames <= mix_buf_frames_);
+      FX_DCHECK(mix_format_);
 
       cur_mix_job_.buf = mix_buf_.get();
       cur_mix_job_.buf_frames = mix_frames->length;
@@ -59,7 +60,7 @@ void AudioOutput::Process() {
 
       // Fill the intermediate buffer with silence.
       size_t bytes_to_zero =
-          sizeof(cur_mix_job_.buf[0]) * cur_mix_job_.buf_frames * output_producer_->channels();
+          sizeof(cur_mix_job_.buf[0]) * cur_mix_job_.buf_frames * mix_format_->channels();
       std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
 
       // If we are not muted, actually do the mix.
@@ -103,8 +104,8 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
   // need a NoOp mixer (for the time being).
   std::unique_ptr<Mixer> mixer;
   auto stream = link->stream();
-  if (output_producer_ && stream) {
-    mixer = Mixer::Select(stream->format().stream_type(), output_producer_->format());
+  if (mix_format_ && stream) {
+    mixer = Mixer::Select(stream->format().stream_type(), mix_format_->stream_type());
   } else {
     mixer = std::make_unique<audio::mixer::NoOp>();
   }
@@ -140,13 +141,13 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
 // Create our intermediate accumulation buffer.
 void AudioOutput::SetupMixBuffer(uint32_t max_mix_frames) {
   TRACE_DURATION("audio", "AudioOutput::SetupMixBuffer");
-  FX_DCHECK(output_producer_->channels() > 0u);
+  FX_DCHECK(mix_format_ && mix_format_->channels() > 0u);
   FX_DCHECK(max_mix_frames > 0u);
-  FX_DCHECK(static_cast<uint64_t>(max_mix_frames) * output_producer_->channels() <=
+  FX_DCHECK(static_cast<uint64_t>(max_mix_frames) * mix_format_->channels() <=
             std::numeric_limits<uint32_t>::max());
 
   mix_buf_frames_ = max_mix_frames;
-  mix_buf_ = std::make_unique<float[]>(mix_buf_frames_ * output_producer_->channels());
+  mix_buf_ = std::make_unique<float[]>(mix_buf_frames_ * mix_format_->channels());
 }
 
 void AudioOutput::ForEachSource(TaskType task_type) {
@@ -288,7 +289,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
   // At this point we know we need to consume some source data, but we don't yet know how much.
   // Here is how many destination frames we still need to produce, for this mix job.
   uint32_t dest_frames_left = cur_mix_job_.buf_frames - cur_mix_job_.frames_produced;
-  float* buf = mix_buf_.get() + (cur_mix_job_.frames_produced * output_producer_->channels());
+  float* buf = mix_buf_.get() + (cur_mix_job_.frames_produced * mix_format_->channels());
 
   // Calculate this job's first and last sampling points, in source sub-frames. Use timestamps for
   // the first and last dest frames we need, translated into the source (frac_frame) timeline.

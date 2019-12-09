@@ -18,7 +18,7 @@ class TestAudioOutput : public AudioOutput {
 
   using AudioOutput::FrameSpan;
   using AudioOutput::MixJob;
-  using AudioOutput::output_producer_;
+  using AudioOutput::SetMixFormat;
   using AudioOutput::SetNextSchedTime;
   void Process() {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
@@ -137,7 +137,7 @@ TEST_F(AudioOutputTest, ProcessReleasesPacketsIfOutputIsMuted) {
             .length = zx::msec(1).to_msecs(),
         }};
       });
-  audio_output_->output_producer_ = OutputProducer::Select(link->stream()->format().stream_type());
+  audio_output_->SetMixFormat(link->stream()->format().stream_type());
   audio_output_->SetupMixBuffer(zx::msec(1).to_msecs());
 
   // Enqueue 2 packets:

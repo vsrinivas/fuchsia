@@ -10,6 +10,7 @@
 
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/mixer/output_producer.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 namespace media::audio {
@@ -73,6 +74,9 @@ class DriverOutput : public AudioOutput {
   GenerationId clock_mono_to_ring_buf_pos_id_;
   zx::time underflow_start_time_;
   zx::time underflow_cooldown_deadline_;
+
+  // Details about the final output format
+  std::unique_ptr<OutputProducer> output_producer_;
 
   // This atomic is only used when the final-mix wave-writer is enabled --
   // specifically to generate unique ids for each final-mix WAV file.
