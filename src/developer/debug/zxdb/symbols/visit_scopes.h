@@ -23,6 +23,9 @@ enum class VisitResult {
 
 // Calls the callback for all code blocks, going backwards in the hierarchy. The starting block is
 // called first. Stops iterating when it hits a function boundary.
+//
+// The visited blocks will normally not outlive this call. If the caller wants to get any
+// symbol objects out of the visitation callback, it should take references to it.
 VisitResult VisitLocalBlocks(const CodeBlock* starting,
                              fit::function<VisitResult(const CodeBlock*)> cb);
 

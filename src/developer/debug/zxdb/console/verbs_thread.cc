@@ -513,7 +513,9 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
   // Walk upward from the innermost lexical block for the current IP to collect local variables.
   // Using the map allows collecting only the innermost version of a given name, and sorts them as
   // we go.
-  std::map<std::string, const Variable*> vars;
+  //
+  // Need owning variable references to copy data out.
+  std::map<std::string, fxl::RefPtr<Variable>> vars;
   VisitLocalBlocks(function->GetMostSpecificChild(location.symbol_context(), location.address()),
                    [&vars](const CodeBlock* block) {
                      for (const auto& lazy_var : block->variables()) {
@@ -526,7 +528,7 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
 
                        const std::string& name = var->GetAssignedName();
                        if (vars.find(name) == vars.end())
-                         vars[name] = var;  // New one.
+                         vars[name] = RefPtrTo(var);  // New one.
                      }
                      return VisitResult::kContinue;
                    });
@@ -544,7 +546,7 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
 
     const std::string& name = var->GetAssignedName();
     if (vars.find(name) == vars.end())
-      vars[name] = var;  // New one.
+      vars[name] = RefPtrTo(var);  // New one.
   }
 
   if (vars.empty()) {
@@ -558,7 +560,8 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
 
   auto output = fxl::MakeRefCounted<AsyncOutputBuffer>();
   for (const auto& pair : vars) {
-    output->Append(FormatVariableForConsole(pair.second, options, cmd.frame()->GetEvalContext()));
+    output->Append(
+        FormatVariableForConsole(pair.second.get(), options, cmd.frame()->GetEvalContext()));
     output->Append("\n");
   }
   output->Complete();
