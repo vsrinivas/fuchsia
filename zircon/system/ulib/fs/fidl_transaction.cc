@@ -60,10 +60,8 @@ std::unique_ptr<::fidl::Transaction> FidlTransaction::TakeOwnership() {
   return std::make_unique<FidlTransaction>(std::move(*this));
 }
 
-zx_status_t FidlTransaction::status() const { return status_; }
-
 FidlTransaction::Result FidlTransaction::ToResult() {
-  if (status() != ZX_OK) {
+  if (status_ != ZX_OK) {
     binding_.reset();
     return Result::kClosed;
   }
@@ -72,20 +70,6 @@ FidlTransaction::Result FidlTransaction::ToResult() {
   }
   binding_.reset();
   return Result::kRepliedSynchronously;
-}
-
-zx_status_t CTransactionShim::Reply(fidl_txn_t* txn, const fidl_msg_t* msg) {
-  auto self = static_cast<CTransactionShim*>(txn);
-  self->transaction_->Reply(fidl::Message(
-      fidl::BytePart(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes, msg->num_bytes),
-      fidl::HandlePart(msg->handles, msg->num_handles, msg->num_handles)));
-  return self->transaction_->status();
-}
-
-void CTransactionShim::PropagateError(zx_status_t status) {
-  if (status != ZX_OK) {
-    transaction_->Close(status);
-  }
 }
 
 }  // namespace internal

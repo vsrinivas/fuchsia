@@ -30,9 +30,9 @@ Vnode::~Vnode() = default;
 
 zx_status_t Vnode::ConnectService(zx::channel channel) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t Vnode::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+void Vnode::HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) {
   zx_handle_close_many(msg->handles, msg->num_handles);
-  return ZX_ERR_NOT_SUPPORTED;
+  txn->Close(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t Vnode::WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {

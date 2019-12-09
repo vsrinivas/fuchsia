@@ -19,65 +19,11 @@
 
 #include <fbl/algorithm.h>
 
-namespace {
-
-// This adapter is necessary for going between the llcpp-style Transaction and
-// the C binding style fidl_txn_t.
-class Transaction : public fidl::Transaction {
- public:
-  explicit Transaction(fidl_txn_t* txn) : txn_(txn) {}
-
-  ~Transaction() {
-    ZX_ASSERT_MSG(status_called_,
-                  "Transaction must have it's Status() method used.  This provides "
-                  "HandleFsSpecificMessage with the correct status value.\n");
-  }
-
-  /// Status() return the internal state of the DDK transaction. This MUST be called
-  /// to bridge the Transaction and DDK dispatcher.
-  zx_status_t Status() __WARN_UNUSED_RESULT {
-    status_called_ = true;
-    return status_;
-  }
-
- protected:
-  void Reply(fidl::Message msg) final {
-    ZX_ASSERT(txn_);
-
-    const fidl_msg_t fidl_msg{
-        .bytes = msg.bytes().data(),
-        .handles = msg.handles().data(),
-        .num_bytes = static_cast<uint32_t>(msg.bytes().size()),
-        .num_handles = static_cast<uint32_t>(msg.handles().size()),
-    };
-
-    status_ = txn_->reply(txn_, &fidl_msg);
-  }
-
-  void Close(zx_status_t close_status) final { status_ = close_status; }
-
-  std::unique_ptr<fidl::Transaction> TakeOwnership() final {
-    ZX_ASSERT_MSG(false, "fs-pty Transaction cannot take ownership of the transaction.\n");
-  }
-
- private:
-  fidl_txn_t* txn_;
-  zx_status_t status_ = ZX_OK;
-  bool status_called_ = false;
-};
-
-}  // namespace
-
 namespace fs_pty::internal {
 
-zx_status_t DispatchPtyDeviceMessage(::llcpp::fuchsia::hardware::pty::Device::Interface* interface,
-                                     fidl_msg_t* msg, fidl_txn_t* txn) {
-  Transaction transaction{txn};
-  if (!::llcpp::fuchsia::hardware::pty::Device::Dispatch(interface, msg, &transaction)) {
-    __UNUSED auto ignore = transaction.Status();
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  return transaction.Status();
+void DispatchPtyDeviceMessage(::llcpp::fuchsia::hardware::pty::Device::Interface* interface,
+                              fidl_msg_t* msg, fidl::Transaction* txn) {
+  ::llcpp::fuchsia::hardware::pty::Device::Dispatch(interface, msg, txn);
 }
 
 // Return ZX_ERR_NOT_SUPPORTED for all of the PTY things we don't actually support

@@ -21,8 +21,8 @@ namespace fs_pty {
 
 namespace internal {
 
-zx_status_t DispatchPtyDeviceMessage(::llcpp::fuchsia::hardware::pty::Device::Interface* interface,
-                                     fidl_msg_t* msg, fidl_txn_t* txn);
+void DispatchPtyDeviceMessage(::llcpp::fuchsia::hardware::pty::Device::Interface* interface,
+                              fidl_msg_t* msg, fidl::Transaction* txn);
 
 }
 
@@ -61,10 +61,10 @@ class Service : public fs::Vnode {
   }
 
   // From fs::Vnode
-  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) override {
+  void HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) override {
     auto pty_device_interface =
-        static_cast<::llcpp::fuchsia::hardware::pty::Device::Interface*>(&pty_device_impl_);
-    return internal::DispatchPtyDeviceMessage(pty_device_interface, msg, txn);
+        static_cast<llcpp::fuchsia::hardware::pty::Device::Interface*>(&pty_device_impl_);
+    internal::DispatchPtyDeviceMessage(pty_device_interface, msg, txn);
   }
 
   zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,

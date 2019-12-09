@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
+#include <fuchsia/minfs/llcpp/fidl.h>
 #include <fuchsia/storage/metrics/c/fidl.h>
 #include <getopt.h>
 #include <lib/fzl/fdio.h>
@@ -26,7 +27,7 @@
 
 namespace {
 
-using MinfsFidlMetrics = fuchsia_minfs_Metrics;
+using MinfsFidlMetrics = ::llcpp::fuchsia::minfs::Metrics;
 
 int Usage() {
   fprintf(stdout, "usage: storage-metrics [ <option>* ] [paths]\n");
@@ -88,17 +89,26 @@ zx_status_t GetFsMetrics(const char* path, MinfsFidlMetrics* out_metrics) {
     return ZX_ERR_IO;
   }
 
-  zx_status_t status;
   fzl::FdioCaller caller(std::move(fd));
-  zx_status_t rc = fuchsia_minfs_MinfsGetMetrics(caller.borrow_channel(), &status, out_metrics);
-  if (status == ZX_ERR_UNAVAILABLE) {
-    fprintf(stderr, "Metrics Unavailable for %s\n", path);
-    return status;
-  } else if (rc != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "Error getting metrics for %s, status %d\n", path, (rc != ZX_OK) ? rc : status);
-    return (rc != ZX_OK) ? rc : status;
+  auto result = llcpp::fuchsia::minfs::Minfs::Call::GetMetrics(caller.channel());
+  if (!result.ok()) {
+    fprintf(stderr, "Error getting metrics for %s, status %d\n", path, result.status());
+    return result.status();
   }
-  return status;
+  if (result.value().status == ZX_ERR_UNAVAILABLE) {
+    fprintf(stderr, "Metrics Unavailable for %s\n", path);
+    return result.status();
+  }
+  if (result.value().status != ZX_OK) {
+    fprintf(stderr, "Error getting metrics for %s, status %d\n", path, result.value().status);
+    return result.value().status;
+  }
+  if (!result.value().metrics) {
+    fprintf(stderr, "Error getting metrics for %s, returned metrics was null\n", path);
+    return ZX_ERR_INTERNAL;
+  }
+  *out_metrics = *result.value().metrics;
+  return ZX_OK;
 }
 
 void PrintBlockMetrics(const char* dev, const fuchsia_hardware_block_BlockStats& stats) {

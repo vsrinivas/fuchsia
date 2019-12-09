@@ -161,7 +161,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // The default implementation just closes these handles.
   //
   // This implementation may be overridden to support additional non-fuchsia.io FIDL protocols.
-  virtual zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  virtual void HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn);
 
   // Extract handle, type, and extra info from a vnode.
   //

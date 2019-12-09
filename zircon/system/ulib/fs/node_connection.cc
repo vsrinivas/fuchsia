@@ -40,8 +40,7 @@ void NodeConnection::HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) {
   if (handled) {
     return;
   }
-  CTransactionShim shim(txn);
-  shim.PropagateError(vnode()->HandleFsSpecificMessage(msg, &shim));
+  vnode()->HandleFsSpecificMessage(msg, txn);
 }
 
 void NodeConnection::Clone(uint32_t clone_flags, zx::channel object,

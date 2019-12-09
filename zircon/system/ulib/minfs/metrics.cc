@@ -15,7 +15,7 @@
 namespace minfs {
 
 #ifdef FS_WITH_METRICS
-MinfsMetrics::MinfsMetrics(const fuchsia_minfs_Metrics* metrics)
+MinfsMetrics::MinfsMetrics(const ::llcpp::fuchsia::minfs::Metrics* metrics)
     : FsMetrics::FsMetrics(&metrics->fs_metrics) {
   initialized_vmos = metrics->initialized_vmos;
   init_dnum_count = metrics->init_dnum_count;
@@ -26,7 +26,7 @@ MinfsMetrics::MinfsMetrics(const fuchsia_minfs_Metrics* metrics)
   vnodes_opened_cache_hit = metrics->vnodes_opened_cache_hit;
 }
 
-void MinfsMetrics::CopyToFidl(fuchsia_minfs_Metrics* metrics) const {
+void MinfsMetrics::CopyToFidl(::llcpp::fuchsia::minfs::Metrics* metrics) const {
   FsMetrics::CopyToFidl(&metrics->fs_metrics);
 
   metrics->initialized_vmos = initialized_vmos.load();

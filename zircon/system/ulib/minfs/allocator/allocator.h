@@ -32,7 +32,10 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
-using BlockRegion = fuchsia_minfs_BlockRegion;
+struct BlockRegion {
+  uint64_t offset;
+  uint64_t length;
+};
 #else
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif

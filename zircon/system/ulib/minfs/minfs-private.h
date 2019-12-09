@@ -16,6 +16,7 @@
 #ifdef __Fuchsia__
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
+#include <fuchsia/minfs/llcpp/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
@@ -66,8 +67,6 @@ constexpr uint32_t kExtentCount = 6;
 
 namespace minfs {
 #ifdef __Fuchsia__
-using BlockRegion = fuchsia_minfs_BlockRegion;
-
 // Validate that |vmo| is large enough to access block |blk|,
 // relative to the start of the vmo.
 inline void ValidateVmoSize(zx_handle_t vmo, blk_t blk) {
@@ -332,13 +331,11 @@ class Minfs :
 
 #ifdef __Fuchsia__
   // Acquire a copy of the collected metrics.
-  zx_status_t GetMetrics(fuchsia_minfs_Metrics* out) const {
-#ifdef __Fuchsia__
+  zx_status_t GetMetrics(::llcpp::fuchsia::minfs::Metrics* out) const {
     if (metrics_.Enabled()) {
       metrics_.CopyToFidl(out);
       return ZX_OK;
     }
-#endif
     return ZX_ERR_UNAVAILABLE;
   }
 

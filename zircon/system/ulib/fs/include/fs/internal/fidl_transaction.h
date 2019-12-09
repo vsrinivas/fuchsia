@@ -45,8 +45,6 @@ class FidlTransaction final : public ::fidl::Transaction {
 
   std::unique_ptr<Transaction> TakeOwnership() final;
 
-  zx_status_t status() const;
-
   enum class Result {
     kRepliedSynchronously,
     kPendingAsyncReply,
@@ -68,21 +66,6 @@ class FidlTransaction final : public ::fidl::Transaction {
   zx_txid_t transaction_id_ = 0;
   std::weak_ptr<Binding> binding_;
   zx_status_t status_ = ZX_OK;
-};
-
-// A helper class exposing a C binding |fidl_txn_t| interface in front of an LLCPP transaction.
-class CTransactionShim : public fidl_txn_t {
- public:
-  explicit CTransactionShim(FidlTransaction* transaction)
-      : fidl_txn_t{&CTransactionShim::Reply}, transaction_(transaction) {}
-
-  // Propagate any error returned from the C bindings to the LLCPP transaction.
-  void PropagateError(zx_status_t status);
-
- private:
-  static zx_status_t Reply(fidl_txn_t* txn, const fidl_msg_t* msg);
-
-  FidlTransaction* transaction_;
 };
 
 }  // namespace internal

@@ -29,19 +29,17 @@ namespace blobfs {
 
 class Blobfs;
 
-using digest::Digest;
-using BlockRegion = fuchsia_blobfs_BlockRegion;
-
 // The root directory of blobfs. This directory is a flat container of all blobs in the filesystem.
+#ifdef __Fuchsia__
+class Directory final : public fs::Vnode, llcpp::fuchsia::blobfs::Blobfs::Interface {
+#else
 class Directory final : public fs::Vnode {
+#endif
  public:
   // Constructs the "directory" blob.
-  Directory(Blobfs* bs);
+  explicit Directory(Blobfs* bs);
   virtual ~Directory();
   DISALLOW_COPY_ASSIGN_AND_MOVE(Directory);
-
-  // Shim to allow GetAllocatedRegions call to blobfs.
-  zx_status_t GetAllocatedRegions(fidl_txn_t* txn) const;
 
  private:
   ////////////////
@@ -64,8 +62,8 @@ class Directory final : public fs::Vnode {
   void Sync(SyncCallback closure) final;
 
 #ifdef __Fuchsia__
-  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final;
-  static const fuchsia_blobfs_Blobfs_ops* Ops();
+  void HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) final;
+  void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync completer) final;
 #endif
 
   ////////////////

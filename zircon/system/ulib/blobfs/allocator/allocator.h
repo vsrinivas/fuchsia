@@ -32,7 +32,10 @@
 
 namespace blobfs {
 
-using BlockRegion = fuchsia_blobfs_BlockRegion;
+struct BlockRegion {
+  uint64_t offset;
+  uint64_t length;
+};
 
 // An interface which controls actual access to the underlying storage.
 class SpaceManager : public storage::VmoidRegistry {

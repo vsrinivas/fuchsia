@@ -16,11 +16,11 @@ class MinfsMetrics : public FsMetrics {
   DISALLOW_COPY_ASSIGN_AND_MOVE(MinfsMetrics);
 
   MinfsMetrics() = default;
-  explicit MinfsMetrics(const fuchsia_minfs_Metrics* metrics);
+  explicit MinfsMetrics(const ::llcpp::fuchsia::minfs::Metrics* metrics);
   ~MinfsMetrics() = default;
 
   // Copies to fields of fidl structure the corresponding fields of MinfsMetrics
-  void CopyToFidl(fuchsia_minfs_Metrics* metrics) const;
+  void CopyToFidl(::llcpp::fuchsia::minfs::Metrics* metrics) const;
 
   // Prints the fields of MinfsMetrics and FsMetrics to file |stream|. Passes
   // |success| to FsMetrics::Dump. See FsMetrics::Dump.

@@ -39,18 +39,8 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 
-const fuchsia_minfs_Minfs_ops* VnodeMinfs::Ops() {
-  using MinfsConnectionBinder = fidl::Binder<VnodeMinfs>;
-  static const fuchsia_minfs_Minfs_ops kMinfsOps = {
-      .GetMetrics = MinfsConnectionBinder::BindMember<&VnodeMinfs::GetMetrics>,
-      .ToggleMetrics = MinfsConnectionBinder::BindMember<&VnodeMinfs::ToggleMetrics>,
-      .GetAllocatedRegions = MinfsConnectionBinder::BindMember<&VnodeMinfs::GetAllocatedRegions>,
-  };
-  return &kMinfsOps;
-}
-
-zx_status_t VnodeMinfs::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* transaction) {
-  return fuchsia_minfs_Minfs_dispatch(this, transaction, msg, Ops());
+void VnodeMinfs::HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* transaction) {
+  llcpp::fuchsia::minfs::Minfs::Dispatch(this, msg, transaction);
 }
 
 #endif  // __Fuchsia__
@@ -1099,19 +1089,23 @@ zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t*
   return fs_->bc_->device()->GetDevicePath(buffer_len, out_name, out_len);
 }
 
-zx_status_t VnodeMinfs::GetMetrics(fidl_txn_t* transaction) {
-  fuchsia_minfs_Metrics metrics;
+void VnodeMinfs::GetMetrics(GetMetricsCompleter::Sync completer) {
+  ::llcpp::fuchsia::minfs::Metrics metrics;
   zx_status_t status = fs_->GetMetrics(&metrics);
-  return fuchsia_minfs_MinfsGetMetrics_reply(transaction, status,
-                                             status == ZX_OK ? &metrics : nullptr);
+  completer.Reply(status, status == ZX_OK ? &metrics : nullptr);
 }
 
-zx_status_t VnodeMinfs::ToggleMetrics(bool enable, fidl_txn_t* transaction) {
+void VnodeMinfs::ToggleMetrics(bool enable, ToggleMetricsCompleter::Sync completer) {
   fs_->SetMetrics(enable);
-  return fuchsia_minfs_MinfsToggleMetrics_reply(transaction, ZX_OK);
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t VnodeMinfs::GetAllocatedRegions(fidl_txn_t* transaction) const {
+void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync completer) {
+  static_assert(sizeof(llcpp::fuchsia::minfs::BlockRegion) == sizeof(BlockRegion));
+  static_assert(offsetof(llcpp::fuchsia::minfs::BlockRegion, offset) ==
+                offsetof(BlockRegion, offset));
+  static_assert(offsetof(llcpp::fuchsia::minfs::BlockRegion, length) ==
+                offsetof(BlockRegion, length));
   zx::vmo vmo;
   zx_status_t status = ZX_OK;
   fbl::Vector<BlockRegion> buffer = fs_->GetAllocatedRegions();
@@ -1122,9 +1116,11 @@ zx_status_t VnodeMinfs::GetAllocatedRegions(fidl_txn_t* transaction) const {
       status = vmo.write(buffer.data(), 0, sizeof(BlockRegion) * allocations);
     }
   }
-  return fuchsia_minfs_MinfsGetAllocatedRegions_reply(
-      transaction, status, status == ZX_OK ? vmo.get() : ZX_HANDLE_INVALID,
-      status == ZX_OK ? allocations : 0);
+  if (status == ZX_OK) {
+    completer.Reply(ZX_OK, std::move(vmo), allocations);
+  } else {
+    completer.Reply(status, zx::vmo(), 0);
+  };
 }
 
 #endif

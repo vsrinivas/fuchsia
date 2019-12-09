@@ -54,9 +54,16 @@ class Minfs;
 //
 // This class is capable of writing, reading, and truncating the node's data
 // in a linear block-address space.
+#ifdef __Fuchsia__
+class VnodeMinfs : public fs::Vnode,
+                   public fbl::SinglyLinkedListable<VnodeMinfs*>,
+                   public fbl::Recyclable<VnodeMinfs>,
+                   llcpp::fuchsia::minfs::Minfs::Interface {
+#else
 class VnodeMinfs : public fs::Vnode,
                    public fbl::SinglyLinkedListable<VnodeMinfs*>,
                    public fbl::Recyclable<VnodeMinfs> {
+#endif
  public:
   virtual ~VnodeMinfs();
 
@@ -92,8 +99,7 @@ class VnodeMinfs : public fs::Vnode,
 
   // fs::Vnode interface (invoked publicly).
 #ifdef __Fuchsia__
-  zx_status_t HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) final;
-  static const fuchsia_minfs_Minfs_ops* Ops();
+  void HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) final;
 #endif
   using fs::Vnode::Open;
   zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
@@ -158,9 +164,9 @@ class VnodeMinfs : public fs::Vnode,
   virtual void CancelPendingWriteback() = 0;
 
   // Minfs FIDL interface.
-  zx_status_t GetMetrics(fidl_txn_t* transaction);
-  zx_status_t ToggleMetrics(bool enabled, fidl_txn_t* transaction);
-  zx_status_t GetAllocatedRegions(fidl_txn_t* transaction) const;
+  void GetMetrics(GetMetricsCompleter::Sync completer) final;
+  void ToggleMetrics(bool enabled, ToggleMetricsCompleter::Sync completer) final;
+  void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync completer) final;
 
 #endif
   Minfs* Vfs() { return fs_; }

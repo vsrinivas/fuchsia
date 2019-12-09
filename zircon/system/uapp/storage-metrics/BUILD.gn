@@ -10,6 +10,7 @@ zx_executable("storage-metrics") {
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-minfs:c",
+    "$zx/system/fidl/fuchsia-minfs:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",

@@ -182,21 +182,16 @@ void Directory::Sync(SyncCallback closure) {
 
 #ifdef __Fuchsia__
 
-const fuchsia_blobfs_Blobfs_ops* Directory::Ops() {
-  using DirectoryConnectionBinder = fidl::Binder<Directory>;
-  static const fuchsia_blobfs_Blobfs_ops kBlobfsOps = {
-      .GetAllocatedRegions = DirectoryConnectionBinder::BindMember<&Directory::GetAllocatedRegions>,
-  };
-  return &kBlobfsOps;
+void Directory::HandleFsSpecificMessage(fidl_msg_t* msg, fidl::Transaction* txn) {
+  llcpp::fuchsia::blobfs::Blobfs::Dispatch(this, msg, txn);
 }
 
-zx_status_t Directory::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_blobfs_Blobfs_dispatch(this, txn, msg, Ops());
-}
-
-#endif  // __Fuchsia__
-
-zx_status_t Directory::GetAllocatedRegions(fidl_txn_t* txn) const {
+void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync completer) {
+  static_assert(sizeof(llcpp::fuchsia::blobfs::BlockRegion) == sizeof(BlockRegion));
+  static_assert(offsetof(llcpp::fuchsia::blobfs::BlockRegion, offset) ==
+                offsetof(BlockRegion, offset));
+  static_assert(offsetof(llcpp::fuchsia::blobfs::BlockRegion, length) ==
+                offsetof(BlockRegion, length));
   zx::vmo vmo;
   zx_status_t status = ZX_OK;
   fbl::Vector<BlockRegion> buffer = blobfs_->GetAllocator()->GetAllocatedRegions();
@@ -207,9 +202,13 @@ zx_status_t Directory::GetAllocatedRegions(fidl_txn_t* txn) const {
       status = vmo.write(buffer.data(), 0, sizeof(BlockRegion) * allocations);
     }
   }
-  return fuchsia_blobfs_BlobfsGetAllocatedRegions_reply(
-      txn, status, status == ZX_OK ? vmo.get() : ZX_HANDLE_INVALID,
-      status == ZX_OK ? allocations : 0);
+  if (status == ZX_OK) {
+    completer.Reply(ZX_OK, std::move(vmo), allocations);
+  } else {
+    completer.Reply(status, zx::vmo(), 0);
+  }
 }
+
+#endif  // __Fuchsia__
 
 }  // namespace blobfs
