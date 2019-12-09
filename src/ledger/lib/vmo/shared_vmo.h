@@ -9,7 +9,6 @@
 
 #include <mutex>
 
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
 namespace ledger {
@@ -27,7 +26,8 @@ class SharedVmo : public fxl::RefCountedThreadSafe<SharedVmo> {
   // If not zero, |map_flags| specifies the flags which should be passed to
   // |zx::vmar::map| when the VMO is mapped.
   explicit SharedVmo(zx::vmo vmo, uint32_t map_flags = 0u);
-
+  SharedVmo(const SharedVmo&) = delete;
+  SharedVmo& operator=(const SharedVmo&) = delete;
   virtual ~SharedVmo();
 
   // Gets the underlying VMO.
@@ -52,7 +52,6 @@ class SharedVmo : public fxl::RefCountedThreadSafe<SharedVmo> {
   uintptr_t mapping_ = 0u;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(SharedVmo);
-  FXL_DISALLOW_COPY_AND_ASSIGN(SharedVmo);
 };
 
 }  // namespace ledger

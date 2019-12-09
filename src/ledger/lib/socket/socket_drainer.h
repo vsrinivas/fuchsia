@@ -9,8 +9,6 @@
 #include <lib/async/default.h>
 #include <lib/zx/socket.h>
 
-#include "src/lib/fxl/macros.h"
-
 namespace ledger {
 
 class SocketDrainer {
@@ -26,6 +24,8 @@ class SocketDrainer {
 
   explicit SocketDrainer(Client* client,
                          async_dispatcher_t* dispatcher = async_get_default_dispatcher());
+  SocketDrainer(const SocketDrainer&) = delete;
+  SocketDrainer& operator=(const SocketDrainer&) = delete;
   ~SocketDrainer();
 
   void Start(zx::socket source);
@@ -39,8 +39,6 @@ class SocketDrainer {
   zx::socket source_;
   async::WaitMethod<SocketDrainer, &SocketDrainer::OnHandleReady> wait_{this};
   bool* destruction_sentinel_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SocketDrainer);
 };
 
 }  // namespace ledger
