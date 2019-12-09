@@ -36,14 +36,12 @@ if (use_prebuilt_dart_sdk) {
 
   if (current_os == "fuchsia") {
     suffix = "_fuchsia"
-  }
-  else {
+  } else {
     suffix = ""
   }
   _gen_snapshot_label =
       "//third_party/dart/runtime/bin:gen_snapshot${suffix}($host_toolchain)"
-  _gen_snapshot_product_label =
-      "//third_party/dart/runtime/bin:gen_snapshot_product${suffix}($host_toolchain)"
+  _gen_snapshot_product_label = "//third_party/dart/runtime/bin:gen_snapshot_product${suffix}($host_toolchain)"
   gen_snapshot =
       get_label_info(_gen_snapshot_label, "root_out_dir") + "/gen_snapshot"
   gen_snapshot_product =

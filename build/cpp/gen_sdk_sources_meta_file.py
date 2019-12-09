@@ -11,27 +11,16 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser('Builds a metadata file')
-    parser.add_argument('--out',
-                        help='Path to the output file',
-                        required=True)
-    parser.add_argument('--name',
-                        help='Name of the library',
-                        required=True)
-    parser.add_argument('--root',
-                        help='Root of the library in the SDK',
-                        required=True)
-    parser.add_argument('--deps',
-                        help='Path to metadata files of dependencies',
-                        nargs='*')
-    parser.add_argument('--sources',
-                        help='List of library sources',
-                        nargs='+')
-    parser.add_argument('--headers',
-                        help='List of public headers',
-                        nargs='*')
-    parser.add_argument('--include-dir',
-                        help='Path to the include directory',
-                        required=True)
+    parser.add_argument('--out', help='Path to the output file', required=True)
+    parser.add_argument('--name', help='Name of the library', required=True)
+    parser.add_argument(
+        '--root', help='Root of the library in the SDK', required=True)
+    parser.add_argument(
+        '--deps', help='Path to metadata files of dependencies', nargs='*')
+    parser.add_argument('--sources', help='List of library sources', nargs='+')
+    parser.add_argument('--headers', help='List of public headers', nargs='*')
+    parser.add_argument(
+        '--include-dir', help='Path to the include directory', required=True)
     args = parser.parse_args()
 
     metadata = {
@@ -61,8 +50,12 @@ def main():
     metadata['fidl_deps'] = fidl_deps
 
     with open(args.out, 'w') as out_file:
-        json.dump(metadata, out_file, indent=2, sort_keys=True,
-                  separators=(',', ': '))
+        json.dump(
+            metadata,
+            out_file,
+            indent=2,
+            sort_keys=True,
+            separators=(',', ': '))
 
     return 0
 

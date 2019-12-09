@@ -54,22 +54,19 @@ def get_sources(dep_files, extra_sources=None):
 def main():
     parser = argparse.ArgumentParser()
     name_group = parser.add_mutually_exclusive_group(required=True)
-    name_group.add_argument('--name',
-                            help='Name of the current library')
-    name_group.add_argument('--name-file',
-                            help='Path to a file containing the name of the current library')
-    parser.add_argument('--source-dir',
-                        help='Path to the library\'s source directory',
-                        required=True)
-    parser.add_argument('--sources',
-                        help='List of source files',
-                        nargs='*')
-    parser.add_argument('--output',
-                        help='Path to the file to generate',
-                        required=True)
-    parser.add_argument('--deps',
-                        help='Dependencies of the current library',
-                        nargs='*')
+    name_group.add_argument('--name', help='Name of the current library')
+    name_group.add_argument(
+        '--name-file',
+        help='Path to a file containing the name of the current library')
+    parser.add_argument(
+        '--source-dir',
+        help='Path to the library\'s source directory',
+        required=True)
+    parser.add_argument('--sources', help='List of source files', nargs='*')
+    parser.add_argument(
+        '--output', help='Path to the file to generate', required=True)
+    parser.add_argument(
+        '--deps', help='Dependencies of the current library', nargs='*')
     args = parser.parse_args()
     if args.name:
         name = args.name
@@ -81,9 +78,10 @@ def main():
     if args.sources:
         # TODO(BLD-228): verify that the sources are in a single folder.
         for source in args.sources:
-            current_sources.append(Source(os.path.join(name, source),
-                                          os.path.join(args.source_dir, source),
-                                          args.output))
+            current_sources.append(
+                Source(
+                    os.path.join(name, source),
+                    os.path.join(args.source_dir, source), args.output))
     else:
         current_sources.append(Source(name, args.source_dir, args.output))
     result = get_sources(args.deps, extra_sources=current_sources)

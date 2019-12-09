@@ -15,15 +15,16 @@ import sys
 # Templates that generate sdk_atom instances should generate that file
 # themselves instead.
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--file',
-                        help='A (destination <-- source) mapping',
-                        action='append',
-                        nargs=2)
-    parser.add_argument('--output',
-                        help='The API file to generate',
-                        required=True)
+    parser.add_argument(
+        '--file',
+        help='A (destination <-- source) mapping',
+        action='append',
+        nargs=2)
+    parser.add_argument(
+        '--output', help='The API file to generate', required=True)
     args = parser.parse_args()
 
     api = {}
@@ -34,8 +35,8 @@ def main():
 
     with open(args.output, 'w') as output_file:
         # Specify `separators` to prevent whitespaces at the end of lines.
-        json.dump(api, output_file, indent=2, sort_keys=True,
-                  separators=(',', ': '))
+        json.dump(
+            api, output_file, indent=2, sort_keys=True, separators=(',', ': '))
 
     return 0
 

@@ -25,23 +25,22 @@ def make_dir(path, is_dir=False):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--out-dir',
-                        help='Path to the directory where to install the SDK',
-                        required=True)
-    parser.add_argument('--stamp-file',
-                        help='Path to the victory file',
-                        required=True)
-    parser.add_argument('--manifest',
-                        help='Path to the SDK\'s manifest file',
-                        required=True)
+    parser.add_argument(
+        '--out-dir',
+        help='Path to the directory where to install the SDK',
+        required=True)
+    parser.add_argument(
+        '--stamp-file', help='Path to the victory file', required=True)
+    parser.add_argument(
+        '--manifest', help='Path to the SDK\'s manifest file', required=True)
     args = parser.parse_args()
 
     # Remove any existing output.
     shutil.rmtree(args.out_dir, True)
 
     with open(args.manifest, 'r') as manifest_file:
-        mappings = map(lambda l: l.strip().split('=', 1),
-                       manifest_file.readlines())
+        mappings = map(
+            lambda l: l.strip().split('=', 1), manifest_file.readlines())
 
     for dest, source in mappings:
         destination = os.path.join(args.out_dir, dest)

@@ -3,7 +3,8 @@
 # found in the LICENSE file.
 
 default_clang_prefix =
-    rebase_path("//prebuilt/third_party/clang/${host_platform}/bin", root_build_dir)
+    rebase_path("//prebuilt/third_party/clang/${host_platform}/bin",
+                root_build_dir)
 
 declare_args() {
   # The default clang toolchain provided by the prebuilt. This variable is

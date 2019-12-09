@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 
+
 def extract(pm, far_path, workdir):
     if not os.path.exists(workdir):
         os.makedirs(workdir)
@@ -21,7 +22,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--pm-tool', help='Path to pm tool')
     parser.add_argument('--name', help='Name of prebuilt package')
-    parser.add_argument('--archive', help='Path to archive containing prebuilt package')
+    parser.add_argument(
+        '--archive', help='Path to archive containing prebuilt package')
     parser.add_argument('--workdir', help='Path to working directory')
     parser.add_argument('--system-rsp', help='System response file to generate')
 

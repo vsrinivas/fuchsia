@@ -50,6 +50,7 @@ template("zircon_artifact") {
       "--unique",
       "--cwd",
       rebase_path(zircon_root_build_dir, root_out_dir),
+
       # "--output-cwd",
       # rebase_path(target_out_dir, root_out_dir),
       "--manifest",
@@ -58,7 +59,9 @@ template("zircon_artifact") {
   }
 
   aggregate_manifest(main_target_name) {
-    deps = [ ":$rebase_target_name" ]
+    deps = [
+      ":$rebase_target_name",
+    ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }

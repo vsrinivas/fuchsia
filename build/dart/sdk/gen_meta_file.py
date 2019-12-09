@@ -17,7 +17,6 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
 sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
 import yaml
 
-
 # The list of packages that should be pulled from a Flutter SDK instead of pub.
 FLUTTER_PACKAGES = [
     'flutter',
@@ -29,24 +28,18 @@ FLUTTER_PACKAGES = [
 
 def main():
     parser = argparse.ArgumentParser('Builds a metadata file')
-    parser.add_argument('--out',
-                        help='Path to the output file',
-                        required=True)
-    parser.add_argument('--name',
-                        help='Name of the original package',
-                        required=True)
-    parser.add_argument('--root',
-                        help='Root of the package in the SDK',
-                        required=True)
-    parser.add_argument('--specs',
-                        help='Path to spec files of dependencies',
-                        nargs='*')
-    parser.add_argument('--third-party-specs',
-                        help='Path to pubspec files of 3p dependencies',
-                        nargs='*')
-    parser.add_argument('--sources',
-                        help='List of library sources',
-                        nargs='+')
+    parser.add_argument('--out', help='Path to the output file', required=True)
+    parser.add_argument(
+        '--name', help='Name of the original package', required=True)
+    parser.add_argument(
+        '--root', help='Root of the package in the SDK', required=True)
+    parser.add_argument(
+        '--specs', help='Path to spec files of dependencies', nargs='*')
+    parser.add_argument(
+        '--third-party-specs',
+        help='Path to pubspec files of 3p dependencies',
+        nargs='*')
+    parser.add_argument('--sources', help='List of library sources', nargs='+')
     args = parser.parse_args()
 
     metadata = {
@@ -90,8 +83,12 @@ def main():
     metadata['fidl_deps'] = fidl_deps
 
     with open(args.out, 'w') as out_file:
-        json.dump(metadata, out_file, indent=2, sort_keys=True,
-                  separators=(',', ': '))
+        json.dump(
+            metadata,
+            out_file,
+            indent=2,
+            sort_keys=True,
+            separators=(',', ': '))
 
     return 0
 

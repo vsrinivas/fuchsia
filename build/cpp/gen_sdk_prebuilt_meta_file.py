@@ -18,46 +18,43 @@ import binaries
 
 def main():
     parser = argparse.ArgumentParser('Builds a metadata file')
-    parser.add_argument('--out',
-                        help='Path to the output file',
-                        required=True)
-    parser.add_argument('--name',
-                        help='Name of the library',
-                        required=True)
-    parser.add_argument('--format',
-                        help='Format of the library',
-                        choices=['shared', 'static'],
-                        required=True)
-    parser.add_argument('--root',
-                        help='Root of the library in the SDK',
-                        required=True)
-    parser.add_argument('--deps',
-                        help='Path to metadata files of dependencies',
-                        nargs='*')
-    parser.add_argument('--headers',
-                        help='List of public headers',
-                        nargs='*')
-    parser.add_argument('--include-dir',
-                        help='Path to the include directory',
-                        required=True)
-    parser.add_argument('--arch',
-                        help='Name of the target architecture',
-                        required=True)
-    parser.add_argument('--lib-link',
-                        help='Path to the link-time library in the SDK',
-                        required=True)
-    parser.add_argument('--lib-dist',
-                        help='Path to the library to add to Fuchsia packages in the SDK',
-                        required=False)
-    parser.add_argument('--dist-path',
-                        help='Path to the library in Fuchsia packages',
-                        required=False)
-    parser.add_argument('--lib-debug-file',
-                        help='Path to the source debug version of the library',
-                        required=False)
-    parser.add_argument('--debug-mapping',
-                        help='Path to the file where to write the file mapping for the debug library',
-                        required=False)
+    parser.add_argument('--out', help='Path to the output file', required=True)
+    parser.add_argument('--name', help='Name of the library', required=True)
+    parser.add_argument(
+        '--format',
+        help='Format of the library',
+        choices=['shared', 'static'],
+        required=True)
+    parser.add_argument(
+        '--root', help='Root of the library in the SDK', required=True)
+    parser.add_argument(
+        '--deps', help='Path to metadata files of dependencies', nargs='*')
+    parser.add_argument('--headers', help='List of public headers', nargs='*')
+    parser.add_argument(
+        '--include-dir', help='Path to the include directory', required=True)
+    parser.add_argument(
+        '--arch', help='Name of the target architecture', required=True)
+    parser.add_argument(
+        '--lib-link',
+        help='Path to the link-time library in the SDK',
+        required=True)
+    parser.add_argument(
+        '--lib-dist',
+        help='Path to the library to add to Fuchsia packages in the SDK',
+        required=False)
+    parser.add_argument(
+        '--dist-path',
+        help='Path to the library in Fuchsia packages',
+        required=False)
+    parser.add_argument(
+        '--lib-debug-file',
+        help='Path to the source debug version of the library',
+        required=False)
+    parser.add_argument(
+        '--debug-mapping',
+        help=
+        'Path to the file where to write the file mapping for the debug library',
+        required=False)
     args = parser.parse_args()
 
     metadata = {
@@ -99,8 +96,12 @@ def main():
     metadata['deps'] = sorted(deps)
 
     with open(args.out, 'w') as out_file:
-        json.dump(metadata, out_file, indent=2, sort_keys=True,
-                  separators=(',', ': '))
+        json.dump(
+            metadata,
+            out_file,
+            indent=2,
+            sort_keys=True,
+            separators=(',', ': '))
 
     return 0
 

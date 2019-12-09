@@ -16,16 +16,18 @@ template("banjo_library") {
   target_type = "banjo"
   if (string_replace("//$target_name", "//ddk.protocol.", "") ==
       "//$target_name" &&
-      string_replace("//$target_name", "//ddk.hw.", "") ==
-      "//$target_name") {
+      string_replace("//$target_name", "//ddk.hw.", "") == "//$target_name") {
     target_type = "banjo_dummy"
   }
 
   target(target_type, main_target_name) {
-    forward_variables_from(invoker, "*", [
-      "deps",
-      "public_deps",
-      "sdk" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "deps",
+                             "public_deps",
+                             "sdk",
+                           ])
 
     name = main_target_name
 

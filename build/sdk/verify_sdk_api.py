@@ -11,18 +11,16 @@ import sys
 def main():
     parser = argparse.ArgumentParser()
     # TODO(DX-685): make this argument required.
-    parser.add_argument('--reference',
-                        help='Path to the golden API file',
-                        required=False)
-    parser.add_argument('--manifest',
-                        help='Path to the SDK manifest',
-                        required=True)
-    parser.add_argument('--updated',
-                        help='Path to the API file to compute',
-                        required=True)
-    parser.add_argument('--warn',
-                        help='Whether API changes should only cause warnings',
-                        action='store_true')
+    parser.add_argument(
+        '--reference', help='Path to the golden API file', required=False)
+    parser.add_argument(
+        '--manifest', help='Path to the SDK manifest', required=True)
+    parser.add_argument(
+        '--updated', help='Path to the API file to compute', required=True)
+    parser.add_argument(
+        '--warn',
+        help='Whether API changes should only cause warnings',
+        action='store_true')
     args = parser.parse_args()
 
     if not args.reference:

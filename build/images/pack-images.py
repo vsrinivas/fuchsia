@@ -19,16 +19,16 @@ def generate_script(images, board_name, type, additional_bootserver_arguments):
     # The bootserver must be in there or we lose.
     # TODO(mcgrathr): Multiple bootservers for different platforms
     # and switch in the script.
-    [bootserver] = [image['path'] for image in images
-                    if image['name'] == 'bootserver']
+    [bootserver
+    ] = [image['path'] for image in images if image['name'] == 'bootserver']
     script = '''\
 #!/bin/sh
 dir="$(dirname "$0")"
 set -x
 '''
-    switches = dict((switch, '"$dir/%s"' % image['path'])
-                    for image in images if type in image
-                    for switch in image[type])
+    switches = dict(
+        (switch, '"$dir/%s"' % image['path']) for image in images
+        if type in image for switch in image[type])
     cmd = ['exec', '"$dir/%s"' % bootserver]
     if board_name:
         cmd += ['--board_name', '"%s"' % board_name]
@@ -117,19 +117,22 @@ class NilArchiver(object):
 
     def add_path(self, path, name, executable):
         # Check that the source path exists.
-        assert(os.path.exists(path))
+        assert (os.path.exists(path))
 
     def add_contents(self, contents, name, executable):
         pass
 
 
 def format_archiver(outfile, format):
-    return {'tgz': TGZArchiver,
-            'zip': ZipArchiver,
-            'nil': NilArchiver}[format](outfile)
+    return {
+        'tgz': TGZArchiver,
+        'zip': ZipArchiver,
+        'nil': NilArchiver
+    }[format](outfile)
 
 
-def write_archive(outfile, format, images, board_name, additional_bootserver_arguments):
+def write_archive(
+        outfile, format, images, board_name, additional_bootserver_arguments):
     # Synthesize a sanitized form of the input.
     path_images = []
     for image in images:
@@ -141,36 +144,44 @@ def write_archive(outfile, format, images, board_name, additional_bootserver_arg
 
     # Generate scripts that use the sanitized file names.
     content_images = [
-        (generate_script([image for path, image in path_images], board_name,
-                                 'bootserver_pave', additional_bootserver_arguments), {
-            'name': 'pave',
-            'type': 'sh',
-            'path': 'pave.sh'
-        }),
-        (generate_script([image for path, image in path_images], board_name,
-                         'bootserver_pave_zedboot',
-                         additional_bootserver_arguments + " --allow-zedboot-version-mismatch"), {
-            'name': 'pave-zedboot',
-            'type': 'sh',
-            'path': 'pave-zedboot.sh'
-        }),
-        (generate_script([image for path, image in path_images], board_name,
-                                 'bootserver_netboot', additional_bootserver_arguments), {
-            'name': 'netboot',
-            'type': 'sh',
-            'path': 'netboot.sh'
-        })
+        (
+            generate_script(
+                [image for path, image in path_images], board_name,
+                'bootserver_pave', additional_bootserver_arguments), {
+                    'name': 'pave',
+                    'type': 'sh',
+                    'path': 'pave.sh'
+                }),
+        (
+            generate_script(
+                [image for path, image in path_images], board_name,
+                'bootserver_pave_zedboot', additional_bootserver_arguments +
+                " --allow-zedboot-version-mismatch"), {
+                    'name': 'pave-zedboot',
+                    'type': 'sh',
+                    'path': 'pave-zedboot.sh'
+                }),
+        (
+            generate_script(
+                [image for path, image in path_images], board_name,
+                'bootserver_netboot', additional_bootserver_arguments), {
+                    'name': 'netboot',
+                    'type': 'sh',
+                    'path': 'netboot.sh'
+                })
     ]
 
     # Self-reference.
     content_images.append(
-        (json.dumps([image for _, image in (path_images + content_images)],
-                            indent=2, sort_keys=True),
-         {
-             'name': 'images',
-             'type': 'json',
-             'path': 'images.json',
-         }))
+        (
+            json.dumps(
+                [image for _, image in (path_images + content_images)],
+                indent=2,
+                sort_keys=True), {
+                    'name': 'images',
+                    'type': 'json',
+                    'path': 'images.json',
+                }))
 
     # Canonicalize the order of the files in the archive.
     path_images = sorted(path_images, key=lambda pair: pair[1]['path'])
@@ -184,7 +195,6 @@ def write_archive(outfile, format, images, board_name, additional_bootserver_arg
             archiver.add_path(path, image['path'], is_executable(image))
         for contents, image in content_images:
             archiver.add_contents(contents, image['path'], is_executable(image))
-
 
 
 def write_symbol_archive(outfile, format, ids_file, files_read):
@@ -211,7 +221,8 @@ def archive_format(args, outfile):
         return 'tgz'
     if outfile.endswith('.nil'):
         return 'nil'
-    sys.stderr.write('''\
+    sys.stderr.write(
+        '''\
 Cannot guess archive format from file name %r; use --format.
 ''' % outfile)
     sys.exit(1)
@@ -219,55 +230,60 @@ Cannot guess archive format from file name %r; use --format.
 
 def main():
     parser = argparse.ArgumentParser(description='Pack Fuchsia build images.')
-    parser.add_argument('--depfile',
-                        metavar='FILE',
-                        help='Write Ninja dependencies file')
-    parser.add_argument('json', nargs='+',
-                        metavar='FILE',
-                        help='Read JSON image list from FILE')
-    parser.add_argument('--pave',
-                        metavar='FILE',
-                        help='Write paving bootserver script to FILE')
-    parser.add_argument('--pave_zedboot',
-                        metavar='FILE',
-                        help='Write zedboot paving bootserver script to FILE')
-    parser.add_argument('--netboot',
-                        metavar='FILE',
-                        help='Write netboot bootserver script to FILE')
-    parser.add_argument('--archive',
-                        metavar='FILE',
-                        help='Write archive to FILE')
-    parser.add_argument('--symbol-archive',
-                        metavar='FILE',
-                        help='Write symbol archive to FILE')
-    parser.add_argument('--format', choices=['tgz', 'zip', 'nil'],
-                        help='Archive format (default: from FILE suffix)')
-    parser.add_argument('--board_name',
-                        help='Board name images were built for')
-    parser.add_argument('--additional_bootserver_arguments', action='append', default=[],
-                        help='additional arguments to pass to bootserver in generated scripts')
+    parser.add_argument(
+        '--depfile', metavar='FILE', help='Write Ninja dependencies file')
+    parser.add_argument(
+        'json',
+        nargs='+',
+        metavar='FILE',
+        help='Read JSON image list from FILE')
+    parser.add_argument(
+        '--pave', metavar='FILE', help='Write paving bootserver script to FILE')
+    parser.add_argument(
+        '--pave_zedboot',
+        metavar='FILE',
+        help='Write zedboot paving bootserver script to FILE')
+    parser.add_argument(
+        '--netboot',
+        metavar='FILE',
+        help='Write netboot bootserver script to FILE')
+    parser.add_argument(
+        '--archive', metavar='FILE', help='Write archive to FILE')
+    parser.add_argument(
+        '--symbol-archive', metavar='FILE', help='Write symbol archive to FILE')
+    parser.add_argument(
+        '--format',
+        choices=['tgz', 'zip', 'nil'],
+        help='Archive format (default: from FILE suffix)')
+    parser.add_argument('--board_name', help='Board name images were built for')
+    parser.add_argument(
+        '--additional_bootserver_arguments',
+        action='append',
+        default=[],
+        help='additional arguments to pass to bootserver in generated scripts')
     args = parser.parse_args()
 
     # Keep track of every input file for the depfile.
     files_read = set()
+
     def read_json_file(filename):
         files_read.add(filename)
         with open(filename, 'r') as f:
             return json.load(f)
 
-    images = reduce(operator.add,
-                    (read_json_file(file) for file in args.json),
-                    [])
+    images = reduce(
+        operator.add, (read_json_file(file) for file in args.json), [])
 
     outfile = None
 
     # Write an executable script into outfile for the given bootserver mode.
     def write_script_for(outfile, mode):
         with os.fdopen(os.open(outfile, os.O_CREAT | os.O_TRUNC | os.O_WRONLY,
-                               0o777),
-                       'w') as script_file:
-            script_file.write(generate_script(images, args.board_name, mode,
-                                              ' '.join(args.additional_bootserver_arguments)))
+                               0o777), 'w') as script_file:
+            script_file.write(
+                generate_script(
+                    images, args.board_name, mode,
+                    ' '.join(args.additional_bootserver_arguments)))
 
     # First write the local scripts that work relative to the build directory.
     if args.pave:
@@ -282,21 +298,26 @@ def main():
 
     if args.archive:
         outfile = args.archive
-        archive_images = [image for image in images
-                          if (image.get('archive', False) or
-                              'bootserver_pave' in image or
-                              'bootserver_pave_zedboot' in image or
-                              'bootserver_netboot' in image)]
+        archive_images = [
+            image for image in images if (
+                image.get('archive', False) or 'bootserver_pave' in image or
+                'bootserver_pave_zedboot' in image or
+                'bootserver_netboot' in image)
+        ]
         files_read |= set(image['path'] for image in archive_images)
-        write_archive(outfile, archive_format(args, outfile), archive_images,
-                      args.board_name, ' '.join(args.additional_bootserver_arguments))
+        write_archive(
+            outfile, archive_format(args, outfile), archive_images,
+            args.board_name, ' '.join(args.additional_bootserver_arguments))
 
     if args.symbol_archive:
         outfile = args.symbol_archive
-        [ids_file] = [image['path'] for image in images
-                      if image['name'] == 'build-id' and image['type'] == 'txt']
-        write_symbol_archive(outfile, archive_format(args, outfile),
-                             ids_file, files_read)
+        [ids_file] = [
+            image['path']
+            for image in images
+            if image['name'] == 'build-id' and image['type'] == 'txt'
+        ]
+        write_symbol_archive(
+            outfile, archive_format(args, outfile), ids_file, files_read)
 
     if outfile and args.depfile:
         with open(args.depfile, 'w') as depfile:

@@ -36,7 +36,7 @@ foreach(image, zircon_images) {
 template("zircon_extras_manifest") {
   assert(defined(invoker.manifest), "Parameter 'manifest' is required")
   assert(invoker.manifest == "image" || invoker.manifest == "tests",
-      "Parameter 'manifest' can only be 'image' or 'tests'")
+         "Parameter 'manifest' can only be 'image' or 'tests'")
 
   manifest_deps = [
     "//build/unification/images:legacy-${invoker.manifest}",

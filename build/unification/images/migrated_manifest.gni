@@ -19,10 +19,14 @@
 template("migrated_manifest") {
   assert(is_fuchsia, "Migrated manifests only target Fuchsia")
   assert(defined(invoker.deps) && invoker.deps != [],
-      "Need deps to generate a manifest for")
+         "Need deps to generate a manifest for")
 
   generated_file(target_name) {
-    forward_variables_from(invoker, [ "deps", "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
 
     deps += [
       # Add sysroot-provided elements by default.
@@ -34,6 +38,8 @@ template("migrated_manifest") {
 
     # Use the same naming scheme as for other unification manifest templates,
     # this makes them interoperable.
-    outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
+    outputs = [
+      "$target_out_dir/$target_name.unification.manifest",
+    ]
   }
 }

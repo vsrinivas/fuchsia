@@ -25,13 +25,19 @@ assert(current_os == "fuchsia")
 template("driver_module") {
   loadable_module(target_name) {
     _target_type = "driver_module"
+
     # Save the target name as forward_variables_from below might override it.
     _target_name = target_name
 
     # Explicitly forward visibility, implicitly forward everything else.
     # See comment in //build/config/BUILDCONFIG.gn for details on this pattern.
     forward_variables_from(invoker, [ "visibility" ])
-    forward_variables_from(invoker, "*", [ "test", "visibility" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "test",
+                             "visibility",
+                           ])
 
     # Restore the target name.
     target_name = _target_name
@@ -58,9 +64,8 @@ template("driver_module") {
     }
 
     metadata = {
-      migrated_manifest_lines = [
-        "$_dest_dir/$_output_file_name=$_rebased_output_file",
-      ]
+      migrated_manifest_lines =
+          [ "$_dest_dir/$_output_file_name=$_rebased_output_file" ]
     }
   }
 }

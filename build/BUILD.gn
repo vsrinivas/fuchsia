@@ -84,6 +84,7 @@ group("deprecated_shell_allowlist") {
     "//src/sys/tools/run/test:run_tests",
     "//garnet/bin/run_test_component/test:run_test_component_test",
     "//garnet/bin/sl4f:sl4f",
+
     # Needs access to /system/data/static_packages. See fxb/22779 for more details.
     "//garnet/bin/system-update-checker:system-update-checker",
     "//garnet/bin/sshd-host:sshd-host",

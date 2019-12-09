@@ -12,10 +12,10 @@ dart_tool("detect_api_changes") {
   output_name = "detect_api_changes"
 
   sources = [
-              "analyze.dart",
-              "diff.dart",
-              "src/visitor.dart",
-            ]
+    "analyze.dart",
+    "diff.dart",
+    "src/visitor.dart",
+  ]
 
   deps = [
     "//third_party/dart-pkg/pub/analyzer",

@@ -57,9 +57,7 @@ recovery_packages += [
 assemble_system("recovery") {
   base_packages = recovery_packages
   netboot = true
-  devmgr_config = [
-                    "virtcon.disable=true",
-                  ] + zedboot_devmgr_config
+  devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
   cmdline = [ "netsvc.disable=false" ] + zedboot_cmdline_args +
             board_zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files

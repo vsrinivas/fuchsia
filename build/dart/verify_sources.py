@@ -16,16 +16,24 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
 sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
 import yaml
 
+
 def main():
-    parser = argparse.ArgumentParser('Verifies that all .dart files are included in sources');
-    parser.add_argument('--package_root', help='Path to the directory hosting the library',
-                        required=True)
-    parser.add_argument('--source_dir', help='Path to the directory containing the package sources',
-                        required=True)
-    parser.add_argument('--stamp', help='File to touch when source checking succeeds',
-                        required=True)
-    parser.add_argument('sources', help='source files',
-                        nargs=argparse.REMAINDER)
+    parser = argparse.ArgumentParser(
+        'Verifies that all .dart files are included in sources')
+    parser.add_argument(
+        '--package_root',
+        help='Path to the directory hosting the library',
+        required=True)
+    parser.add_argument(
+        '--source_dir',
+        help='Path to the directory containing the package sources',
+        required=True)
+    parser.add_argument(
+        '--stamp',
+        help='File to touch when source checking succeeds',
+        required=True)
+    parser.add_argument(
+        'sources', help='source files', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     if "third_party" in args.package_root:
@@ -48,7 +56,9 @@ def main():
 
     # We found one or more source files in the directory that was not included in sources.
     if missing_sources:
-        print('Source files found that were missing from the "sources" parameter:')
+        print(
+            'Source files found that were missing from the "sources" parameter:'
+        )
         for source in missing_sources:
             print('"%s",' % source)
         return 1

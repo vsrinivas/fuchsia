@@ -14,36 +14,26 @@ from sdk_common import Atom, detect_category_violations, detect_collisions, gath
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--id',
-                        help='The atom\'s identifier',
-                        required=True)
-    parser.add_argument('--out',
-                        help='Path to the output file',
-                        required=True)
-    parser.add_argument('--depfile',
-                        help='Path to the depfile',
-                        required=True)
-    parser.add_argument('--deps',
-                        help='List of manifest paths for dependencies',
-                        nargs='*')
-    parser.add_argument('--file',
-                        help='A (destination <-- source) mapping',
-                        action='append',
-                        nargs=2)
-    parser.add_argument('--file-list',
-                        help='A file containing destination=source mappings')
-    parser.add_argument('--gn-label',
-                        help='GN label of the atom',
-                        required=True)
-    parser.add_argument('--category',
-                        help='Publication level',
-                        required=True)
-    parser.add_argument('--meta',
-                        help='Path to the atom\'s metadata file in the SDK',
-                        required=True)
-    parser.add_argument('--type',
-                        help='Type of the atom',
-                        required=True)
+    parser.add_argument('--id', help='The atom\'s identifier', required=True)
+    parser.add_argument('--out', help='Path to the output file', required=True)
+    parser.add_argument('--depfile', help='Path to the depfile', required=True)
+    parser.add_argument(
+        '--deps', help='List of manifest paths for dependencies', nargs='*')
+    parser.add_argument(
+        '--file',
+        help='A (destination <-- source) mapping',
+        action='append',
+        nargs=2)
+    parser.add_argument(
+        '--file-list', help='A file containing destination=source mappings')
+    parser.add_argument(
+        '--gn-label', help='GN label of the atom', required=True)
+    parser.add_argument('--category', help='Publication level', required=True)
+    parser.add_argument(
+        '--meta',
+        help='Path to the atom\'s metadata file in the SDK',
+        required=True)
+    parser.add_argument('--type', help='Type of the atom', required=True)
     args = parser.parse_args()
 
     # Gather the definitions of other atoms this atom depends on.
@@ -53,20 +43,31 @@ def main():
     extra_files = []
     if args.file_list:
         with open(args.file_list, 'r') as file_list_file:
-            extra_files = [line.strip().split('=', 1)
-                           for line in file_list_file.readlines()]
+            extra_files = [
+                line.strip().split('=', 1)
+                for line in file_list_file.readlines()
+            ]
     files = dict(itertools.chain(args.file, extra_files))
 
-    atoms.update([Atom({
-        'id': args.id,
-        'meta': args.meta,
-        'gn-label': args.gn_label,
-        'category': args.category,
-        'deps': sorted(list(deps)),
-        'files': [{'source': source, 'destination': destination}
-                  for destination, source in files.iteritems()],
-        'type': args.type,
-    })])
+    atoms.update(
+        [
+            Atom(
+                {
+                    'id': args.id,
+                    'meta': args.meta,
+                    'gn-label': args.gn_label,
+                    'category': args.category,
+                    'deps': sorted(list(deps)),
+                    'files':
+                        [
+                            {
+                                'source': source,
+                                'destination': destination
+                            } for destination, source in files.iteritems()
+                        ],
+                    'type': args.type,
+                })
+        ])
 
     if detect_collisions(atoms):
         print('Name collisions detected!')
@@ -81,8 +82,8 @@ def main():
     }
 
     with open(os.path.abspath(args.out), 'w') as out:
-        json.dump(manifest, out, indent=2, sort_keys=True,
-                  separators=(',', ': '))
+        json.dump(
+            manifest, out, indent=2, sort_keys=True, separators=(',', ': '))
 
     with open(args.depfile, 'w') as dep_file:
         dep_file.write(args.out + ': ')

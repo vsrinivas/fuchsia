@@ -2,7 +2,6 @@
 # Copyright 2016 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """Converts a given gypi file to a python scope and writes the result to stdout.
 
 HOW TO USE
@@ -76,97 +75,107 @@ import gn_helpers
 from optparse import OptionParser
 import sys
 
+
 def LoadPythonDictionary(path):
-  file_string = open(path).read()
-  try:
-    file_data = eval(file_string, {'__builtins__': None}, None)
-  except SyntaxError, e:
-    e.filename = path
-    raise
-  except Exception, e:
-    raise Exception("Unexpected error while reading %s: %s" % (path, str(e)))
+    file_string = open(path).read()
+    try:
+        file_data = eval(file_string, {'__builtins__': None}, None)
+    except SyntaxError, e:
+        e.filename = path
+        raise
+    except Exception, e:
+        raise Exception(
+            "Unexpected error while reading %s: %s" % (path, str(e)))
 
-  assert isinstance(file_data, dict), "%s does not eval to a dictionary" % path
+    assert isinstance(
+        file_data, dict), "%s does not eval to a dictionary" % path
 
-  # Flatten any variables to the top level.
-  if 'variables' in file_data:
-    file_data.update(file_data['variables'])
-    del file_data['variables']
+    # Flatten any variables to the top level.
+    if 'variables' in file_data:
+        file_data.update(file_data['variables'])
+        del file_data['variables']
 
-  # Strip all elements that this script can't process.
-  elements_to_strip = [
-    'conditions',
-    'target_conditions',
-    'target_defaults',
-    'targets',
-    'includes',
-    'actions',
-  ]
-  for element in elements_to_strip:
-    if element in file_data:
-      del file_data[element]
+    # Strip all elements that this script can't process.
+    elements_to_strip = [
+        'conditions',
+        'target_conditions',
+        'target_defaults',
+        'targets',
+        'includes',
+        'actions',
+    ]
+    for element in elements_to_strip:
+        if element in file_data:
+            del file_data[element]
 
-  return file_data
+    return file_data
 
 
 def ReplaceSubstrings(values, search_for, replace_with):
-  """Recursively replaces substrings in a value.
+    """Recursively replaces substrings in a value.
 
   Replaces all substrings of the "search_for" with "repace_with" for all
   strings occurring in "values". This is done by recursively iterating into
   lists as well as the keys and values of dictionaries."""
-  if isinstance(values, str):
-    return values.replace(search_for, replace_with)
+    if isinstance(values, str):
+        return values.replace(search_for, replace_with)
 
-  if isinstance(values, list):
-    return [ReplaceSubstrings(v, search_for, replace_with) for v in values]
+    if isinstance(values, list):
+        return [ReplaceSubstrings(v, search_for, replace_with) for v in values]
 
-  if isinstance(values, dict):
-    # For dictionaries, do the search for both the key and values.
-    result = {}
-    for key, value in values.items():
-      new_key = ReplaceSubstrings(key, search_for, replace_with)
-      new_value = ReplaceSubstrings(value, search_for, replace_with)
-      result[new_key] = new_value
-    return result
+    if isinstance(values, dict):
+        # For dictionaries, do the search for both the key and values.
+        result = {}
+        for key, value in values.items():
+            new_key = ReplaceSubstrings(key, search_for, replace_with)
+            new_value = ReplaceSubstrings(value, search_for, replace_with)
+            result[new_key] = new_value
+        return result
 
-  # Assume everything else is unchanged.
-  return values
+    # Assume everything else is unchanged.
+    return values
+
 
 def main():
-  parser = OptionParser()
-  parser.add_option("-r", "--replace", action="append",
-    help="Replaces substrings. If passed a=b, replaces all substrs a with b.")
-  (options, args) = parser.parse_args()
+    parser = OptionParser()
+    parser.add_option(
+        "-r",
+        "--replace",
+        action="append",
+        help="Replaces substrings. If passed a=b, replaces all substrs a with b."
+    )
+    (options, args) = parser.parse_args()
 
-  if len(args) != 1:
-    raise Exception("Need one argument which is the .gypi file to read.")
+    if len(args) != 1:
+        raise Exception("Need one argument which is the .gypi file to read.")
 
-  data = LoadPythonDictionary(args[0])
-  if options.replace:
-    # Do replacements for all specified patterns.
-    for replace in options.replace:
-      split = replace.split('=')
-      # Allow "foo=" to replace with nothing.
-      if len(split) == 1:
-        split.append('')
-      assert len(split) == 2, "Replacement must be of the form 'key=value'."
-      data = ReplaceSubstrings(data, split[0], split[1])
+    data = LoadPythonDictionary(args[0])
+    if options.replace:
+        # Do replacements for all specified patterns.
+        for replace in options.replace:
+            split = replace.split('=')
+            # Allow "foo=" to replace with nothing.
+            if len(split) == 1:
+                split.append('')
+            assert len(
+                split) == 2, "Replacement must be of the form 'key=value'."
+            data = ReplaceSubstrings(data, split[0], split[1])
 
-  # Sometimes .gypi files use the GYP syntax with percents at the end of the
-  # variable name (to indicate not to overwrite a previously-defined value):
-  #   'foo%': 'bar',
-  # Convert these to regular variables.
-  for key in data:
-    if len(key) > 1 and key[len(key) - 1] == '%':
-      data[key[:-1]] = data[key]
-      del data[key]
+    # Sometimes .gypi files use the GYP syntax with percents at the end of the
+    # variable name (to indicate not to overwrite a previously-defined value):
+    #   'foo%': 'bar',
+    # Convert these to regular variables.
+    for key in data:
+        if len(key) > 1 and key[len(key) - 1] == '%':
+            data[key[:-1]] = data[key]
+            del data[key]
 
-  print gn_helpers.ToGNString(data)
+    print gn_helpers.ToGNString(data)
+
 
 if __name__ == '__main__':
-  try:
-    main()
-  except Exception, e:
-    print str(e)
-    sys.exit(1)
+    try:
+        main()
+    except Exception, e:
+        print str(e)
+        sys.exit(1)

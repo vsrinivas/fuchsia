@@ -11,21 +11,13 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser('Builds a metadata file')
-    parser.add_argument('--out',
-                        help='Path to the output file',
-                        required=True)
-    parser.add_argument('--name',
-                        help='Name of the library',
-                        required=True)
-    parser.add_argument('--root',
-                        help='Root of the library in the SDK',
-                        required=True)
-    parser.add_argument('--specs',
-                        help='Path to spec files of dependencies',
-                        nargs='*')
-    parser.add_argument('--sources',
-                        help='List of library sources',
-                        nargs='+')
+    parser.add_argument('--out', help='Path to the output file', required=True)
+    parser.add_argument('--name', help='Name of the library', required=True)
+    parser.add_argument(
+        '--root', help='Root of the library in the SDK', required=True)
+    parser.add_argument(
+        '--specs', help='Path to spec files of dependencies', nargs='*')
+    parser.add_argument('--sources', help='List of library sources', nargs='+')
     args = parser.parse_args()
 
     metadata = {
@@ -48,8 +40,12 @@ def main():
     metadata['deps'] = deps
 
     with open(args.out, 'w') as out_file:
-        json.dump(metadata, out_file, indent=2, sort_keys=True,
-                  separators=(',', ': '))
+        json.dump(
+            metadata,
+            out_file,
+            indent=2,
+            sort_keys=True,
+            separators=(',', ': '))
 
     return 0
 

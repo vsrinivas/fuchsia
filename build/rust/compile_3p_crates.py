@@ -13,15 +13,18 @@ ROOT_PATH = os.path.abspath(__file__ + "/../../..")
 sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
 import pytoml
 
+
 # "foo" from "foo 0.1.0 (//path/to/crate)"
 def package_name_from_crate_id(crate_id):
     return crate_id.split(" ")[0]
+
 
 # Removes the (//path/to/crate) from the crate id "foo 0.1.0 (//path/to/crate)"
 # This is necessary in order to support locally-patched (mirrored) crates
 def pathless_crate_id(crate_id):
     split_id = crate_id.split(" ")
     return split_id[0] + " " + split_id[1]
+
 
 # Creates the directory containing the given file.
 def create_base_directory(file):
@@ -32,12 +35,14 @@ def create_base_directory(file):
         # Already existed.
         pass
 
+
 # Runs the given command and returns its return code and output.
 def run_command(args, env, cwd):
-    job = subprocess.Popen(args, env=env, cwd=cwd, stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
+    job = subprocess.Popen(
+        args, env=env, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = job.communicate()
     return (job.returncode, stdout, stderr)
+
 
 def configure_triple(triple, args, clang_c_compiler, env):
     rustflags = [
@@ -49,12 +54,14 @@ def configure_triple(triple, args, clang_c_compiler, env):
         if triple.startswith("aarch64"):
             rustflags += ["-Clink-arg=--fix-cortex-a53-843419"]
         rustflags += [
-            "-L", os.path.join(args.sysroot, "lib"),
+            "-L",
+            os.path.join(args.sysroot, "lib"),
             "-Clink-arg=--pack-dyn-relocs=relr",
             "-Clink-arg=--threads",
             "-Clink-arg=--icf=all",
             "-Clink-arg=-L%s" % os.path.join(args.sysroot, "lib"),
-            "-Clink-arg=-L%s" % os.path.join(args.clang_resource_dir, triple, "lib"),
+            "-Clink-arg=-L%s" %
+            os.path.join(args.clang_resource_dir, triple, "lib"),
         ]
         if args.sysroot:
             rustflags.append("-Clink-arg=--sysroot=" + args.sysroot)
@@ -66,71 +73,78 @@ def configure_triple(triple, args, clang_c_compiler, env):
         if triple.endswith("linux-gnu"):
             rustflags += ["-Clink-arg=-Wl,--build-id"]
         if not triple.endswith("darwin"):
-            rustflags += ["-Clink-arg=-Wl,--threads", "-Clink-arg=-Wl,--icf=all"]
+            rustflags += [
+                "-Clink-arg=-Wl,--threads", "-Clink-arg=-Wl,--icf=all"
+            ]
         env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
         env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
-        env["CARGO_TARGET_%s_LINKER" % triple.replace("-", "_").upper()] = clang_c_compiler
+        env["CARGO_TARGET_%s_LINKER" %
+            triple.replace("-", "_").upper()] = clang_c_compiler
         rustflags += ["-Clink-arg=--target=" + triple]
 
     if args.mmacosx_version_min:
-        rustflags += ["-Clink-arg=-mmacosx-version-min=%s" % args.mmacosx_version_min]
-    env["CARGO_TARGET_%s_RUSTFLAGS" % triple.replace("-", "_").upper()] = (
-        ' '.join(rustflags)
-    )
+        rustflags += [
+            "-Clink-arg=-mmacosx-version-min=%s" % args.mmacosx_version_min
+        ]
+    env["CARGO_TARGET_%s_RUSTFLAGS" %
+        triple.replace("-", "_").upper()] = (' '.join(rustflags))
+
 
 def main():
     parser = argparse.ArgumentParser("Compiles all third-party Rust crates")
-    parser.add_argument("--rustc",
-                        help="Path to rustc",
-                        required=True)
-    parser.add_argument("--cargo",
-                        help="Path to the cargo tool",
-                        required=True)
-    parser.add_argument("--crate-root",
-                        help="Path to the crate root",
-                        required=True)
-    parser.add_argument("--opt-level",
-                        help="Optimization level",
-                        required=True,
-                        choices=["0", "1", "2", "3", "s", "z"])
-    parser.add_argument("--symbol-level",
-                        help="Symbols to include (0=none, 1=minimal, 2=full)",
-                        choices=["0", "1", "2"],
-                        required=True)
-    parser.add_argument("--out-dir",
-                        help="Path at which the output libraries should be stored",
-                        required=True)
-    parser.add_argument("--out-deps-data",
-                        help="File in which data about the dependencies should be stored",
-                        required=True)
-    parser.add_argument("--target",
-                        help="Target for which this crate is being compiled",
-                        required=True)
-    parser.add_argument("--host",
-                        help="Triple for the host which is building right now",
-                        required=True)
-    parser.add_argument("--cmake-dir",
-                        help="Path to the directory containing cmake",
-                        required=True)
-    parser.add_argument("--clang_prefix",
-                        help="Path to the clang prefix",
-                        required=True)
-    parser.add_argument("--clang-resource-dir",
-                        help="Path to the clang resource dir",
-                        required=True)
-    parser.add_argument("--mmacosx-version-min",
-                        help="Select macosx framework version",
-                        required=False)
-    parser.add_argument("--sysroot",
-                        help="Path to the sysroot",
-                        required=True)
-    parser.add_argument("--lib-dir",
-                        help="Path to the location of shared libraries",
-                        action='append', default=[])
+    parser.add_argument("--rustc", help="Path to rustc", required=True)
+    parser.add_argument("--cargo", help="Path to the cargo tool", required=True)
+    parser.add_argument(
+        "--crate-root", help="Path to the crate root", required=True)
+    parser.add_argument(
+        "--opt-level",
+        help="Optimization level",
+        required=True,
+        choices=["0", "1", "2", "3", "s", "z"])
+    parser.add_argument(
+        "--symbol-level",
+        help="Symbols to include (0=none, 1=minimal, 2=full)",
+        choices=["0", "1", "2"],
+        required=True)
+    parser.add_argument(
+        "--out-dir",
+        help="Path at which the output libraries should be stored",
+        required=True)
+    parser.add_argument(
+        "--out-deps-data",
+        help="File in which data about the dependencies should be stored",
+        required=True)
+    parser.add_argument(
+        "--target",
+        help="Target for which this crate is being compiled",
+        required=True)
+    parser.add_argument(
+        "--host",
+        help="Triple for the host which is building right now",
+        required=True)
+    parser.add_argument(
+        "--cmake-dir",
+        help="Path to the directory containing cmake",
+        required=True)
+    parser.add_argument(
+        "--clang_prefix", help="Path to the clang prefix", required=True)
+    parser.add_argument(
+        "--clang-resource-dir",
+        help="Path to the clang resource dir",
+        required=True)
+    parser.add_argument(
+        "--mmacosx-version-min",
+        help="Select macosx framework version",
+        required=False)
+    parser.add_argument("--sysroot", help="Path to the sysroot", required=True)
+    parser.add_argument(
+        "--lib-dir",
+        help="Path to the location of shared libraries",
+        action='append',
+        default=[])
     # This forces a recompile when the CIPD version changes. The value is unused.
-    parser.add_argument("--cipd-version",
-                        help="CIPD version of Rust toolchain",
-                        required=False)
+    parser.add_argument(
+        "--cipd-version", help="CIPD version of Rust toolchain", required=False)
     parser.add_argument
     args = parser.parse_args()
 
@@ -148,8 +162,9 @@ def main():
     env["RUST_BACKTRACE"] = "1"
     env["CC"] = clang_c_compiler
     if args.sysroot:
-        env["CFLAGS"] = " ".join(["--sysroot=" + args.sysroot] +
-                                 ["-L" + dir for dir in args.lib_dir])
+        env["CFLAGS"] = " ".join(
+            ["--sysroot=" + args.sysroot] +
+            ["-L" + dir for dir in args.lib_dir])
     env["CXX"] = os.path.join(args.clang_prefix, "clang++")
     env["AR"] = os.path.join(args.clang_prefix, "llvm-ar")
     env["RANLIB"] = os.path.join(args.clang_prefix, "llvm-ranlib")
@@ -260,7 +275,9 @@ def main():
                     crate_name = crate_info["crate_name"]
                     package_name = package_name_from_crate_id(crate_id)
                     if package_name in cargo_dependencies:
-                        crate_info["cargo_dependency_toml"] = cargo_dependencies[package_name]
+                        crate_info[
+                            "cargo_dependency_toml"] = cargo_dependencies[
+                                package_name]
 
                         # Move the library into the top level out_dir at:
                         # `{out_dir}/lib{crate_name}-{package_name}.{ext}`
@@ -283,14 +300,17 @@ def main():
                             old_meta_path = old_path_prefix + ".rmeta"
                             if os.path.exists(old_meta_path):
                                 new_meta_name = "lib" + crate_name + "-" + package_name + ".rmeta"
-                                new_meta_path = os.path.join(args.out_dir, new_meta_name)
+                                new_meta_path = os.path.join(
+                                    args.out_dir, new_meta_name)
                                 os.rename(old_meta_path, new_meta_path)
 
                         crate_info["lib_path"] = new_lib_path
 
                         crates[package_name] = crate_info
                     elif package_name not in other_target_deps:
-                        print (package_name + " not found in Cargo.toml dependencies section")
+                        print(
+                            package_name +
+                            " not found in Cargo.toml dependencies section")
                         return 1
 
     # normalize paths for patches
@@ -298,16 +318,22 @@ def main():
     for patch in patches:
         path = patches[patch]["path"]
         path = os.path.join(args.crate_root, path)
-        patches[patch] = { "path": path }
+        patches[patch] = {"path": path}
 
     create_base_directory(args.out_deps_data)
     with open(args.out_deps_data, "w") as file:
-        file.write(json.dumps({
-            "crates": crates,
-            "deps_folders": list(deps_folders),
-            "patches": patches,
-            "cargo_args": cargo_args
-        }, sort_keys=True, indent=4, separators=(",", ": "))) # for humans
+        file.write(
+            json.dumps(
+                {
+                    "crates": crates,
+                    "deps_folders": list(deps_folders),
+                    "patches": patches,
+                    "cargo_args": cargo_args
+                },
+                sort_keys=True,
+                indent=4,
+                separators=(",", ": ")))  # for humans
+
 
 if __name__ == '__main__':
     sys.exit(main())

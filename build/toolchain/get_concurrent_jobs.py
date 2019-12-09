@@ -14,18 +14,18 @@ import re
 import subprocess
 import sys
 
-
 UNITS = {'B': 1, 'KB': 2**10, 'MB': 2**20, 'GB': 2**30, 'TB': 2**40}
 
 
 def parse_size(string):
-    i = next(i for (i,  c) in enumerate(string) if not c.isdigit())
+    i = next(i for (i, c) in enumerate(string) if not c.isdigit())
     number = string[:i].strip()
     unit = string[i:].strip()
-    return int(float(number)*UNITS[unit])
+    return int(float(number) * UNITS[unit])
 
 
 class ParseSize(argparse.Action):
+
     def __call__(self, parser, args, values, option_string=None):
         sizes = getattr(args, self.dest, [])
         for value in values:
@@ -54,7 +54,8 @@ def get_total_memory():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--memory-per-job", action=ParseSize, default=[], nargs='*')
+    parser.add_argument(
+        "--memory-per-job", action=ParseSize, default=[], nargs='*')
     parser.add_argument("--reserve-memory", type=parse_size, default=0)
     args = parser.parse_args()
 

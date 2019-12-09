@@ -320,6 +320,7 @@ template("fidl_cpp") {
             "FIDL protocol fuzzers must set protocol: the fully-qualified name of the protocol to be fuzzed.")
 
         protocol_suffix = "_" + string_replace(fuzzer.protocol, ".", "_")
+
         # Every loop of this foreach needs a fresh library_defines list. It is necessary to
         # overwrite with an empty list first or else gn will report the following error:
         #

@@ -18,8 +18,8 @@ class MappingAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
         if nargs is not None:
             raise ValueError("nargs is not allowed")
-        super(MappingAction, self).__init__(option_strings, dest, nargs=2,
-                                            **kwargs)
+        super(MappingAction, self).__init__(
+            option_strings, dest, nargs=2, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         mappings = getattr(namespace, 'mappings', None)
@@ -31,21 +31,21 @@ class MappingAction(argparse.Action):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--manifest',
-                        help='Path to the SDK\'s manifest file',
-                        required=True)
-    parser.add_argument('--mapping',
-                        help='Extra files to add to the archive',
-                        action=MappingAction)
-    parser.add_argument('--output',
-                        help='Path to the output file manifest',
-                        required=True)
+    parser.add_argument(
+        '--manifest', help='Path to the SDK\'s manifest file', required=True)
+    parser.add_argument(
+        '--mapping',
+        help='Extra files to add to the archive',
+        action=MappingAction)
+    parser.add_argument(
+        '--output', help='Path to the output file manifest', required=True)
     args = parser.parse_args()
 
     with open(args.manifest, 'r') as manifest_file:
         manifest = json.load(manifest_file)
 
     all_files = {}
+
     def add(dest, src):
         if dest in all_files:
             print('Error: multiple entries for %s' % dest)

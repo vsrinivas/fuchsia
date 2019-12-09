@@ -11,15 +11,20 @@ import shlex
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Create trampolines and a manifest for a set of shell commands',
+        description=
+        'Create trampolines and a manifest for a set of shell commands',
         fromfile_prefix_chars='@')
     parser.convert_arg_line_to_args = shlex.split
-    parser.add_argument('--trampoline-dir', required=True,
-                        help='Directory in which to create trampolines')
-    parser.add_argument('--output-manifest', required=True,
-                        help='Output manifest path')
-    parser.add_argument('--command-list', required=True,
-                        help='A file containing a list of command URI')
+    parser.add_argument(
+        '--trampoline-dir',
+        required=True,
+        help='Directory in which to create trampolines')
+    parser.add_argument(
+        '--output-manifest', required=True, help='Output manifest path')
+    parser.add_argument(
+        '--command-list',
+        required=True,
+        help='A file containing a list of command URI')
 
     args = parser.parse_args()
 

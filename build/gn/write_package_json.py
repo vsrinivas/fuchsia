@@ -17,7 +17,10 @@ def main():
 
     with open(args.path, 'w') as f:
         json.dump(
-            {'name': args.name, 'version': args.version},
+            {
+                'name': args.name,
+                'version': args.version
+            },
             f,
             separators=(',', ':'),
             sort_keys=True)

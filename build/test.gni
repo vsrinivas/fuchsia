@@ -40,6 +40,7 @@ template("test") {
     # TODO(3367): remove `test_group` once all ZN tests are using test packages
     # instead.
     forward_variables_from(invoker, "*", [ "test_group" ])
+
     # TODO(3367): always force `testonly` once all ZN tests are moved to
     # packages.
     if (!defined(testonly)) {
@@ -71,9 +72,8 @@ template("test") {
     }
 
     metadata = {
-      migrated_manifest_lines = [
-        "test/$_test_group/$_output_name=$_output_file",
-      ]
+      migrated_manifest_lines =
+          [ "test/$_test_group/$_output_name=$_output_file" ]
     }
   }
 }

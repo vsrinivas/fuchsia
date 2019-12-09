@@ -11,20 +11,19 @@ import sys
 # Verifies if the API for an atom has changed.
 # This is done with a simple file comparison of the API file version.
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--reference',
-                        help='Path to the golden API file',
-                        required=True)
-    parser.add_argument('--current',
-                        help='Path to the local API file',
-                        required=True)
-    parser.add_argument('--stamp',
-                        help='Path to the victory file',
-                        required=True)
-    parser.add_argument('--warn',
-                        help='Whether API changes should only cause warnings',
-                        action='store_true')
+    parser.add_argument(
+        '--reference', help='Path to the golden API file', required=True)
+    parser.add_argument(
+        '--current', help='Path to the local API file', required=True)
+    parser.add_argument(
+        '--stamp', help='Path to the victory file', required=True)
+    parser.add_argument(
+        '--warn',
+        help='Whether API changes should only cause warnings',
+        action='store_true')
     args = parser.parse_args()
 
     if args.reference:

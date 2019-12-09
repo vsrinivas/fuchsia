@@ -99,6 +99,7 @@ def detect_category_violations(category, atoms):
     for atom in atoms:
         if index_for_category(atom.category) < category_index:
             has_violations = True
-            print('%s has publication level %s, incompatible with %s' % (
-                    atom, atom.category, category))
+            print(
+                '%s has publication level %s, incompatible with %s' %
+                (atom, atom.category, category))
     return has_violations

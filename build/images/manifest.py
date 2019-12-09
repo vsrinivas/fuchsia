@@ -12,18 +12,19 @@ import shlex
 import shutil
 import sys
 
-
-manifest_entry = namedtuple('manifest_entry', [
-    'group',
-    'target',
-    'source',
-    'manifest',
-])
+manifest_entry = namedtuple(
+    'manifest_entry', [
+        'group',
+        'target',
+        'source',
+        'manifest',
+    ])
 
 
 def format_manifest_entry(entry):
-    return (('' if entry.group is None else '{' + entry.group + '}') +
-            entry.target + '=' + entry.source)
+    return (
+        ('' if entry.group is None else '{' + entry.group + '}') +
+        entry.target + '=' + entry.source)
 
 
 def format_manifest_file(manifest):
@@ -49,8 +50,8 @@ def read_manifest_lines(sep, lines, title, manifest_cwd, result_cwd):
 
         if manifest_cwd != result_cwd:
             # Expand the path based on the cwd presumed in the manifest.
-            build_file = os.path.normpath(os.path.join(manifest_cwd,
-                                                       build_file))
+            build_file = os.path.normpath(
+                os.path.join(manifest_cwd, build_file))
             # Make it relative to the cwd we want to work from.
             build_file = os.path.relpath(build_file, result_cwd)
 
@@ -68,16 +69,19 @@ def partition_manifest(manifest, select, selected_group, unselected_group):
     return selected, unselected
 
 
-def ingest_manifest_lines(sep, lines, title, in_cwd, groups, out_cwd, output_group):
+def ingest_manifest_lines(
+        sep, lines, title, in_cwd, groups, out_cwd, output_group):
     groups_seen = set()
+
     def select(group):
         groups_seen.add(group)
         if isinstance(groups, bool):
             return groups
         return group in groups
+
     selected, unselected = partition_manifest(
-        read_manifest_lines(sep, lines, title, in_cwd, out_cwd),
-        select, output_group, None)
+        read_manifest_lines(sep, lines, title, in_cwd, out_cwd), select,
+        output_group, None)
     return selected, unselected, groups_seen
 
 
@@ -92,8 +96,7 @@ def apply_rewrites(sep, rewrites, entry):
     for pattern, line in rewrites:
         if fnmatch.fnmatchcase(entry.target, pattern):
             [new_entry] = read_manifest_lines(
-                sep,
-                [line.format(**entry._asdict()) + '\n'], entry.manifest,
+                sep, [line.format(**entry._asdict()) + '\n'], entry.manifest,
                 os.path.dirname(entry.manifest),
                 os.path.dirname(entry.manifest))
             entry = new_entry._replace(group=entry.group)
@@ -107,6 +110,7 @@ def contents_entry(entry):
 
 
 class input_action_base(argparse.Action):
+
     def __init__(self, *args, **kwargs):
         super(input_action_base, self).__init__(*args, **kwargs)
 
@@ -127,8 +131,9 @@ class input_action_base(argparse.Action):
         elif namespace.groups == 'all':
             groups = True
         else:
-            groups = set(group if group else None
-                         for group in namespace.groups.split(','))
+            groups = set(
+                group if group else None
+                for group in namespace.groups.split(','))
 
         cwd = getattr(namespace, 'cwd', '')
 
@@ -144,42 +149,50 @@ class input_action_base(argparse.Action):
         include_source = getattr(namespace, 'include_source', [])
         exclude = getattr(namespace, 'exclude', [])
         if include or exclude or include_source:
+
             def included(entry):
+
                 def matches(file, patterns):
-                    return any(fnmatch.fnmatch(file, pattern)
-                               for pattern in patterns)
+                    return any(
+                        fnmatch.fnmatch(file, pattern) for pattern in patterns)
+
                 if matches(entry.target, exclude):
                     return False
                 if include and not matches(entry.target, include):
                     return False
-                return (not include_source or
-                        matches(entry.source, include_source))
+                return (
+                    not include_source or matches(entry.source, include_source))
+
             unselected += filter(lambda entry: not included(entry), selected)
             selected = filter(included, selected)
 
         if getattr(namespace, 'contents', False):
-            selected = map(contents_entry, selected);
-            unselected = map(contents_entry, unselected);
+            selected = map(contents_entry, selected)
+            unselected = map(contents_entry, unselected)
 
         sep = getattr(namespace, 'separator', '=')
-        rewrites = [entry.split('=', 1)
-                     for entry in getattr(namespace, 'rewrite', [])]
+        rewrites = [
+            entry.split('=', 1) for entry in getattr(namespace, 'rewrite', [])
+        ]
         selected = [apply_rewrites(sep, rewrites, entry) for entry in selected]
-        unselected = [apply_rewrites(sep, rewrites, entry) for entry in unselected]
+        unselected = [
+            apply_rewrites(sep, rewrites, entry) for entry in unselected
+        ]
 
         if not isinstance(groups, bool):
             unused_groups = groups - groups_seen - set([None])
             if unused_groups:
                 raise Exception(
-                    '%s not found in %r; try one of: %s' %
-                    (', '.join(map(repr, unused_groups)), values,
-                     ', '.join(map(repr, groups_seen - groups))))
+                    '%s not found in %r; try one of: %s' % (
+                        ', '.join(map(repr, unused_groups)), values, ', '.join(
+                            map(repr, groups_seen - groups))))
 
         all_selected += selected
         all_unselected += unselected
 
 
 class input_manifest_action(input_action_base):
+
     def __init__(self, *args, **kwargs):
         super(input_manifest_action, self).__init__(*args, **kwargs)
 
@@ -190,94 +203,148 @@ class input_manifest_action(input_action_base):
             setattr(namespace, 'manifest', all_inputs)
         all_inputs.append(filename)
         with open(filename, 'r') as file:
-            return ingest_manifest_lines(getattr(namespace, 'separator', '='),
-                                         file, file.name, *args)
+            return ingest_manifest_lines(
+                getattr(namespace, 'separator', '='), file, file.name, *args)
 
 
 class input_entry_action(input_action_base):
+
     def __init__(self, *args, **kwargs):
         super(input_entry_action, self).__init__(*args, **kwargs)
 
     def get_manifest_lines(self, namespace, entry, *args):
         return ingest_manifest_lines(
-            getattr(namespace, 'separator', '='),
-            [entry + '\n'], namespace.entry_manifest, *args)
+            getattr(namespace, 'separator', '='), [entry + '\n'],
+            namespace.entry_manifest, *args)
 
 
 def common_parse_args(parser):
-    parser.fromfile_prefix_chars='@'
+    parser.fromfile_prefix_chars = '@'
     parser.convert_arg_line_to_args = shlex.split
-    parser.add_argument('--output', action='append', required=True,
-                        metavar='FILE',
-                        help='Output file')
-    parser.add_argument('--output-cwd', default='',
-                        metavar='DIRECTORY',
-                        help='Emit source paths relative to DIRECTORY')
-    parser.add_argument('--absolute', action='store_true', default=False,
-                        help='Output source file names as absolute paths')
-    parser.add_argument('--cwd', default='',
-                        metavar='DIRECTORY',
-                        help='Input entries are relative to this directory')
-    parser.add_argument('--groups', default='all',
-                        metavar='GROUP_LIST',
-                        help='"all" or comma-separated groups to include')
-    parser.add_argument('--manifest', action=input_manifest_action,
-                        metavar='FILE', default=[],
-                        help='Input manifest file (must exist)')
-    parser.add_argument('--entry', action=input_entry_action,
-                        metavar='PATH=FILE',
-                        help='Add a single entry as if from an input manifest')
-    parser.add_argument('--entry-manifest', default='<command-line --entry>',
-                        metavar='TITLE',
-                        help=('Title in lieu of manifest file name for' +
-                              ' subsequent --entry arguments'))
-    parser.add_argument('--include', action='append', default=[],
-                        metavar='TARGET',
-                        help='Include only input entries matching TARGET'),
-    parser.add_argument('--include-source', action='append', default=[],
-                        metavar='SOURCE',
-                        help='Include only input entries matching SOURCE'),
-    parser.add_argument('--reset-include',
-                        action='store_const', const=[], dest='include',
-                        help='Reset previous --include')
-    parser.add_argument('--exclude', action='append', default=[],
-                        metavar='TARGET',
-                        help='Ignore input entries matching TARGET'),
-    parser.add_argument('--reset-exclude',
-                        action='store_const', const=[], dest='exclude',
-                        help='Reset previous --exclude')
-    parser.add_argument('--separator', default='=',
-                        metavar='SEP',
-                        help='Use SEP between TARGET and SOURCE in entries')
+    parser.add_argument(
+        '--output',
+        action='append',
+        required=True,
+        metavar='FILE',
+        help='Output file')
+    parser.add_argument(
+        '--output-cwd',
+        default='',
+        metavar='DIRECTORY',
+        help='Emit source paths relative to DIRECTORY')
+    parser.add_argument(
+        '--absolute',
+        action='store_true',
+        default=False,
+        help='Output source file names as absolute paths')
+    parser.add_argument(
+        '--cwd',
+        default='',
+        metavar='DIRECTORY',
+        help='Input entries are relative to this directory')
+    parser.add_argument(
+        '--groups',
+        default='all',
+        metavar='GROUP_LIST',
+        help='"all" or comma-separated groups to include')
+    parser.add_argument(
+        '--manifest',
+        action=input_manifest_action,
+        metavar='FILE',
+        default=[],
+        help='Input manifest file (must exist)')
+    parser.add_argument(
+        '--entry',
+        action=input_entry_action,
+        metavar='PATH=FILE',
+        help='Add a single entry as if from an input manifest')
+    parser.add_argument(
+        '--entry-manifest',
+        default='<command-line --entry>',
+        metavar='TITLE',
+        help=(
+            'Title in lieu of manifest file name for' +
+            ' subsequent --entry arguments'))
+    parser.add_argument(
+        '--include',
+        action='append',
+        default=[],
+        metavar='TARGET',
+        help='Include only input entries matching TARGET'),
+    parser.add_argument(
+        '--include-source',
+        action='append',
+        default=[],
+        metavar='SOURCE',
+        help='Include only input entries matching SOURCE'),
+    parser.add_argument(
+        '--reset-include',
+        action='store_const',
+        const=[],
+        dest='include',
+        help='Reset previous --include')
+    parser.add_argument(
+        '--exclude',
+        action='append',
+        default=[],
+        metavar='TARGET',
+        help='Ignore input entries matching TARGET'),
+    parser.add_argument(
+        '--reset-exclude',
+        action='store_const',
+        const=[],
+        dest='exclude',
+        help='Reset previous --exclude')
+    parser.add_argument(
+        '--separator',
+        default='=',
+        metavar='SEP',
+        help='Use SEP between TARGET and SOURCE in entries')
     return parser.parse_args()
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Read manifest files.')
-    parser.add_argument('--copy-contentaddr', action='store_true', default=False,
-                        help='Copy to content-addressed targets, not manifest')
-    parser.add_argument('--sources', action='store_true', default=False,
-                        help='Write source file per line, not manifest entry')
-    parser.add_argument('--contents',
-                        action='store_true', default=False,
-                        help='Replace each source file name with its contents')
-    parser.add_argument('--no-contents',
-                        action='store_false', dest='contents',
-                        help='Reset previous --contents')
     parser.add_argument(
-        '--rewrite', action='append', default=[],
+        '--copy-contentaddr',
+        action='store_true',
+        default=False,
+        help='Copy to content-addressed targets, not manifest')
+    parser.add_argument(
+        '--sources',
+        action='store_true',
+        default=False,
+        help='Write source file per line, not manifest entry')
+    parser.add_argument(
+        '--contents',
+        action='store_true',
+        default=False,
+        help='Replace each source file name with its contents')
+    parser.add_argument(
+        '--no-contents',
+        action='store_false',
+        dest='contents',
+        help='Reset previous --contents')
+    parser.add_argument(
+        '--rewrite',
+        action='append',
+        default=[],
         metavar='PATTERN=ENTRY',
         help='Replace entries whose target matches PATTERN with ENTRY,'
         ' which can use {source} and {target} substitutions'),
-    parser.add_argument('--reset-rewrite', dest='rewrite',
-                        action='store_const', const=[],
-                        help='Reset previous --rewrite')
-    parser.add_argument('--unique',
-                        action='store_true', default=False,
-                        help='Elide duplicates even with different sources')
-    parser.add_argument('--stamp',
-                        metavar='FILE',
-                        help='Touch FILE at the end.')
+    parser.add_argument(
+        '--reset-rewrite',
+        dest='rewrite',
+        action='store_const',
+        const=[],
+        help='Reset previous --rewrite')
+    parser.add_argument(
+        '--unique',
+        action='store_true',
+        default=False,
+        help='Elide duplicates even with different sources')
+    parser.add_argument(
+        '--stamp', metavar='FILE', help='Touch FILE at the end.')
     args = common_parse_args(parser)
     if args.copy_contentaddr:
         if args.contents:
@@ -317,9 +384,12 @@ def main():
                 shutil.copyfile(source, target_path)
         else:
             with open(output_filename, 'w') as file:
-                file.write(''.join(sorted(
-                    line + '\n' for line in
-                    (output_set.itervalues() if args.unique else output_set))))
+                file.write(
+                    ''.join(
+                        sorted(
+                            line + '\n' for line in (
+                                output_set.itervalues() if args.
+                                unique else output_set))))
     if args.stamp:
         with open(args.stamp, 'w') as file:
             os.utime(file.name, None)

@@ -25,12 +25,13 @@ def rewrite(debug, manifest):
     manifest[id_path] = debug
     return id_path
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', help='Input JSON file', required=True)
     parser.add_argument('--output', help='Output JSON file', required=True)
-    parser.add_argument('--manifest', help='Output manifest file',
-                        required=True)
+    parser.add_argument(
+        '--manifest', help='Output manifest file', required=True)
     parser.add_argument('--location', help='JSON pointer', required=True)
     args = parser.parse_args()
 

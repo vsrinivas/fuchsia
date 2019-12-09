@@ -26,14 +26,27 @@ def write_libraries(libraries_path, libraries):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate response file for Banjo frontend")
-    parser.add_argument("--out-response-file", help="The path for for the response file to generate", required=True)
-    parser.add_argument("--out-libraries", help="The path for for the libraries file to generate", required=True)
-    parser.add_argument("--backend", help="The path for the C simple client file to generate, if any")
-    parser.add_argument("--output", help="The path for the C++ header file to generate, if any")
-    parser.add_argument("--name", help="The name for the generated Banjo library, if any")
-    parser.add_argument("--sources", help="List of Banjo source files", nargs="*")
-    parser.add_argument("--dep-libraries", help="List of dependent libraries", nargs="*")
+    parser = argparse.ArgumentParser(
+        description="Generate response file for Banjo frontend")
+    parser.add_argument(
+        "--out-response-file",
+        help="The path for for the response file to generate",
+        required=True)
+    parser.add_argument(
+        "--out-libraries",
+        help="The path for for the libraries file to generate",
+        required=True)
+    parser.add_argument(
+        "--backend",
+        help="The path for the C simple client file to generate, if any")
+    parser.add_argument(
+        "--output", help="The path for the C++ header file to generate, if any")
+    parser.add_argument(
+        "--name", help="The name for the generated Banjo library, if any")
+    parser.add_argument(
+        "--sources", help="List of Banjo source files", nargs="*")
+    parser.add_argument(
+        "--dep-libraries", help="List of dependent libraries", nargs="*")
     args = parser.parse_args()
 
     target_libraries = []
@@ -60,7 +73,8 @@ def main():
     if args.output:
         response_file.append("--output %s" % args.output)
 
-    response_file.extend(["--files %s" % library for library in target_libraries])
+    response_file.extend(
+        ["--files %s" % library for library in target_libraries])
 
     with open(args.out_response_file, "w+") as f:
         f.write(" ".join(response_file))
@@ -68,4 +82,4 @@ def main():
 
 
 if __name__ == "__main__":
-  sys.exit(main())
+    sys.exit(main())

@@ -80,6 +80,7 @@ test_platforms = [
     cpu = "x64"
     pool = "fuchsia.tests.connectivity"
   },
+
   # The platforms below are experimental and may not yet be targeted.
   # See fxb/IN-1393
   {

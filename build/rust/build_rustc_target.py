@@ -12,6 +12,7 @@ import sys
 TERM_COLOR_RED = '\033[91m'
 TERM_COLOR_END = '\033[0m'
 
+
 # Updates the path of the main target in the depfile to the relative path
 # from base_path build_output_path
 def fix_depfile(depfile_path, base_path, build_output_path):
@@ -23,6 +24,7 @@ def fix_depfile(depfile_path, base_path, build_output_path):
     with open(depfile_path, "w") as depfile:
         depfile.write(new_content)
 
+
 # Creates the directory containing the given file.
 def create_base_directory(file):
     path = os.path.dirname(file)
@@ -32,116 +34,132 @@ def create_base_directory(file):
         # Already existed.
         pass
 
+
 # Starts the given command and returns the newly created job.
 def start_command(args, env):
-    return subprocess.Popen(args, env=env, stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
+    return subprocess.Popen(
+        args, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
 
 def main():
     parser = argparse.ArgumentParser("Compiles a Rust crate")
-    parser.add_argument("--rustc",
-                        help="Path to rustc",
-                        required=True)
+    parser.add_argument("--rustc", help="Path to rustc", required=True)
     # This forces a recompile when the CIPD version changes. The value is unused.
-    parser.add_argument("--cipd-version",
-                        help="CIPD version of Rust toolchain",
-                        required=False)
-    parser.add_argument("--crate-root",
-                        help="Path to source directory",
-                        required=True)
-    parser.add_argument("--crate-type",
-                        help="Type of crate to build",
-                        required=True,
-                        choices=["bin", "rlib", "staticlib", "proc-macro"])
-    parser.add_argument("--crate-name",
-                        help="Name of crate to build",
-                        required=True)
-    parser.add_argument("--edition",
-                        help="Edition of rust to use when compiling the crate",
-                        required=True,
-                        choices=["2015", "2018"])
-    parser.add_argument("--opt-level",
-                        help="Optimization level",
-                        required=True,
-                        choices=["0", "1", "2", "3", "s", "z"])
-    parser.add_argument("--lto",
-                        help="Use LTO",
-                        required=False,
-                        choices=["thin", "fat"])
-    parser.add_argument("--output-file",
-                        help="Path at which the output file should be stored",
-                        required=True)
-    parser.add_argument("--depfile",
-                        help="Path at which the output depfile should be stored",
-                        required=True)
-    parser.add_argument("--test",
-                        action="store_true",
-                        help="Whether to build the target in test configuration",
-                        default=False)
-    parser.add_argument("--root-out-dir",
-                        help="Root output dir on which depfile paths should be rebased",
-                        required=True)
-    parser.add_argument("--target",
-                        help="Target for which this crate is being compiled",
-                        required=True)
-    parser.add_argument("--cmake-dir",
-                        help="Path to the directory containing cmake",
-                        required=True)
-    parser.add_argument("--clang_prefix",
-                        help="Path to the clang prefix",
-                        required=True)
-    parser.add_argument("--clang-resource-dir",
-                        help="Path to the clang resource dir",
-                        required=True)
-    parser.add_argument("--sysroot",
-                        help="Path to the sysroot",
-                        required=True)
-    parser.add_argument("--lib-dir",
-                        help="Link path for binary libraries",
-                        action='append', default=[])
-    parser.add_argument("--lib-dir-file",
-                        help="File of --lib-dir directory names, one per line")
-    parser.add_argument("--first-party-crate-root",
-                        help="Path to directory containing the libs for first-party dependencies",
-                        required=True)
-    parser.add_argument("--third-party-crate-root",
-                        help="Path to directory containing the libs for third-party dependencies",
-                        required=True)
-    parser.add_argument("--dep-data",
-                        action="append",
-                        help="Path to metadata from a crate dependency",
-                        required=False)
-    parser.add_argument("--mmacosx-version-min",
-                        help="Select macosx framework version",
-                        required=False)
-    parser.add_argument("--symbol-level",
-                        help="Symbols to include (0=none, 1=minimal, 2=full)",
-                        choices=["0", "1", "2"],
-                        required=True)
-    parser.add_argument("--cap-lints",
-                        help="Maximum error promotion for lints",
-                        choices=["deny", "allow", "warn"],
-                        required=True)
-    parser.add_argument("--unstable-rust-feature",
-                        help="Unstable Rust feature to allow",
-                        action="append",
-                        dest="unstable_rust_features",
-                        required=False)
-    parser.add_argument("--feature",
-                        help="Feature to enable",
-                        action="append",
-                        dest="features",
-                        required=False)
-    parser.add_argument("--remap-path-prefix",
-                        help="Remap source names in output",
-                        action="append",
-                        required=False)
-    parser.add_argument("--mac-host",
-                        help="Whether or not the host is a Mac",
-                        default=False,
-                        action="store_true",
-                        required=False)
-
+    parser.add_argument(
+        "--cipd-version", help="CIPD version of Rust toolchain", required=False)
+    parser.add_argument(
+        "--crate-root", help="Path to source directory", required=True)
+    parser.add_argument(
+        "--crate-type",
+        help="Type of crate to build",
+        required=True,
+        choices=["bin", "rlib", "staticlib", "proc-macro"])
+    parser.add_argument(
+        "--crate-name", help="Name of crate to build", required=True)
+    parser.add_argument(
+        "--edition",
+        help="Edition of rust to use when compiling the crate",
+        required=True,
+        choices=["2015", "2018"])
+    parser.add_argument(
+        "--opt-level",
+        help="Optimization level",
+        required=True,
+        choices=["0", "1", "2", "3", "s", "z"])
+    parser.add_argument(
+        "--lto", help="Use LTO", required=False, choices=["thin", "fat"])
+    parser.add_argument(
+        "--output-file",
+        help="Path at which the output file should be stored",
+        required=True)
+    parser.add_argument(
+        "--depfile",
+        help="Path at which the output depfile should be stored",
+        required=True)
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Whether to build the target in test configuration",
+        default=False)
+    parser.add_argument(
+        "--root-out-dir",
+        help="Root output dir on which depfile paths should be rebased",
+        required=True)
+    parser.add_argument(
+        "--target",
+        help="Target for which this crate is being compiled",
+        required=True)
+    parser.add_argument(
+        "--cmake-dir",
+        help="Path to the directory containing cmake",
+        required=True)
+    parser.add_argument(
+        "--clang_prefix", help="Path to the clang prefix", required=True)
+    parser.add_argument(
+        "--clang-resource-dir",
+        help="Path to the clang resource dir",
+        required=True)
+    parser.add_argument("--sysroot", help="Path to the sysroot", required=True)
+    parser.add_argument(
+        "--lib-dir",
+        help="Link path for binary libraries",
+        action='append',
+        default=[])
+    parser.add_argument(
+        "--lib-dir-file",
+        help="File of --lib-dir directory names, one per line")
+    parser.add_argument(
+        "--first-party-crate-root",
+        help=
+        "Path to directory containing the libs for first-party dependencies",
+        required=True)
+    parser.add_argument(
+        "--third-party-crate-root",
+        help=
+        "Path to directory containing the libs for third-party dependencies",
+        required=True)
+    parser.add_argument(
+        "--dep-data",
+        action="append",
+        help="Path to metadata from a crate dependency",
+        required=False)
+    parser.add_argument(
+        "--mmacosx-version-min",
+        help="Select macosx framework version",
+        required=False)
+    parser.add_argument(
+        "--symbol-level",
+        help="Symbols to include (0=none, 1=minimal, 2=full)",
+        choices=["0", "1", "2"],
+        required=True)
+    parser.add_argument(
+        "--cap-lints",
+        help="Maximum error promotion for lints",
+        choices=["deny", "allow", "warn"],
+        required=True)
+    parser.add_argument(
+        "--unstable-rust-feature",
+        help="Unstable Rust feature to allow",
+        action="append",
+        dest="unstable_rust_features",
+        required=False)
+    parser.add_argument(
+        "--feature",
+        help="Feature to enable",
+        action="append",
+        dest="features",
+        required=False)
+    parser.add_argument(
+        "--remap-path-prefix",
+        help="Remap source names in output",
+        action="append",
+        required=False)
+    parser.add_argument(
+        "--mac-host",
+        help="Whether or not the host is a Mac",
+        default=False,
+        action="store_true",
+        required=False)
 
     parser.add_argument
     args = parser.parse_args()
@@ -162,18 +180,14 @@ def main():
             args.lib_dir += [line.strip() for line in f.readlines()]
 
     call_args = [
-        args.rustc,
-        args.crate_root,
-        "-Dwarnings",
-        "--cap-lints",
+        args.rustc, args.crate_root, "-Dwarnings", "--cap-lints",
         args.cap_lints,
         "--edition=%s" % args.edition,
         "--crate-type=%s" % args.crate_type,
         "--crate-name=%s" % args.crate_name,
         "--target=%s" % args.target,
         "-Copt-level=%s" % args.opt_level,
-        "-Cdebuginfo=%s" % args.symbol_level,
-        "--color=always",
+        "-Cdebuginfo=%s" % args.symbol_level, "--color=always",
         "-Zallow-features=%s" % ",".join(args.unstable_rust_features or [])
     ]
 
@@ -194,12 +208,14 @@ def main():
 
     if args.target.endswith("fuchsia"):
         call_args += [
-            "-L", os.path.join(args.sysroot, "lib"),
+            "-L",
+            os.path.join(args.sysroot, "lib"),
             "-Clinker=%s" % os.path.join(args.clang_prefix, "lld"),
             "-Clink-arg=--pack-dyn-relocs=relr",
             "-Clink-arg=--sysroot=%s" % args.sysroot,
             "-Clink-arg=-L%s" % os.path.join(args.sysroot, "lib"),
-            "-Clink-arg=-L%s" % os.path.join(args.clang_resource_dir, args.target, "lib"),
+            "-Clink-arg=-L%s" %
+            os.path.join(args.clang_resource_dir, args.target, "lib"),
             "-Clink-arg=--threads",
             "-Clink-arg=-dynamic-linker=ld.so.1",
             "-Clink-arg=--icf=all",
@@ -216,7 +232,9 @@ def main():
         if args.target.endswith("linux-gnu"):
             call_args += ["-Clink-arg=-Wl,--build-id"]
         if not args.target.endswith("darwin"):
-            call_args += ["-Clink-arg=-Wl,--threads", "-Clink-arg=-Wl,--icf=all"]
+            call_args += [
+                "-Clink-arg=-Wl,--threads", "-Clink-arg=-Wl,--icf=all"
+            ]
 
     if args.mmacosx_version_min:
         call_args += [
@@ -239,13 +257,18 @@ def main():
     ]
     # add in e.g. x86_64-unknown-linux/release/deps
     for target in targets:
-        search_path_suffixes += [os.path.join(target, suffix) for suffix in search_path_suffixes]
+        search_path_suffixes += [
+            os.path.join(target, suffix) for suffix in search_path_suffixes
+        ]
 
     search_paths = [
         args.first_party_crate_root,
         args.third_party_crate_root,
     ]
-    search_paths += [os.path.join(args.third_party_crate_root, suffix) for suffix in search_path_suffixes]
+    search_paths += [
+        os.path.join(args.third_party_crate_root, suffix)
+        for suffix in search_path_suffixes
+    ]
 
     for path in search_paths:
         call_args += ["-L", "dependency=%s" % path]
@@ -320,6 +343,7 @@ def main():
         print(stdout + stderr)
     if build_job.returncode != 0:
         return build_job.returncode
+
 
 if __name__ == '__main__':
     sys.exit(main())

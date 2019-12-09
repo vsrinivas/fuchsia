@@ -52,7 +52,7 @@ template("aggregate_manifest") {
       ]
     }
 
-    args = [ "@{{response_file_name}}"]
+    args = [ "@{{response_file_name}}" ]
 
     deps = invoker.deps
   }
@@ -65,12 +65,14 @@ template("aggregate_manifest") {
     foreach(image, zircon_images) {
       if (image.type == "manifest") {
         if (image.name == reference) {
-          assert(reference_manifest == false, "Duplicate manifest for $reference")
+          assert(reference_manifest == false,
+                 "Duplicate manifest for $reference")
           reference_manifest = "$zircon_root_build_dir/${image.path}"
         }
       }
     }
-    assert(reference_manifest != false, "Could not find manifest for $reference")
+    assert(reference_manifest != false,
+           "Could not find manifest for $reference")
 
     normalize_target_name = "$target_name.normalize"
     compare_target_name = "$target_name.compare"
@@ -81,9 +83,13 @@ template("aggregate_manifest") {
     action(normalize_target_name) {
       script = "//build/images/manifest.py"
 
-      inputs = [ reference_manifest ]
+      inputs = [
+        reference_manifest,
+      ]
 
-      outputs = [ normalized_manifest ]
+      outputs = [
+        normalized_manifest,
+      ]
 
       args = [
         "--output",

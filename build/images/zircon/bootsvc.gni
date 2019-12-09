@@ -14,7 +14,7 @@ foreach(image, zircon_images) {
       {
         name = _name
         path = image.path
-      }
+      },
     ]
   }
 }

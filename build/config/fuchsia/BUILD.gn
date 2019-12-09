@@ -74,8 +74,9 @@ config("toolchain_version_stamp") {
     # We want to force a recompile and relink of the world whenever our toolchain changes since
     # artifacts from an older version of the toolchain may or may not be compatible with newer ones.
     # To achieve this, we insert a synthetic define into the compile line.
-    cipd_version =
-        read_file("//prebuilt/third_party/clang/${host_platform}/.versions/clang.cipd_version", "json")
+    cipd_version = read_file(
+            "//prebuilt/third_party/clang/${host_platform}/.versions/clang.cipd_version",
+            "json")
     defines = [ "TOOLCHAIN_VERSION=${cipd_version.instance_id}" ]
   }
 }
@@ -141,12 +142,14 @@ config("compiler_sysroot") {
 # This target is used to expose sysroot-supplied binaries for system assembly.
 group("sysroot_metadata") {
   metadata = {
-      migrated_manifest_lines = []
+    migrated_manifest_lines = []
   }
   foreach(entry, zircon_legacy_sysroot) {
     if (defined(entry.libc_dist)) {
-      assert(metadata.migrated_manifest_lines == [], "Multiple libc's in sysroot")
-      location = rebase_path(entry.libc_dist, root_build_dir, zircon_root_build_dir)
+      assert(metadata.migrated_manifest_lines == [],
+             "Multiple libc's in sysroot")
+      location =
+          rebase_path(entry.libc_dist, root_build_dir, zircon_root_build_dir)
       metadata.migrated_manifest_lines += [ "lib/ld.so.1=$location" ]
     }
   }

@@ -4,13 +4,14 @@
 
 import("//build/config/fuchsia/zircon.gni")
 
-manifests = read_file("$zircon_root_build_dir/legacy_unification-$target_cpu.json", "json")
+manifests =
+    read_file("$zircon_root_build_dir/legacy_unification-$target_cpu.json",
+              "json")
 zircon_artifacts = []
 
 foreach(manifest, manifests) {
-  if (manifest.cpu == target_cpu &&
-      manifest.os == target_os) {
-      # manifest.toolchain == "//public/gn/toolchain:user-$target_cpu-clang") {
+  if (manifest.cpu == target_cpu && manifest.os == target_os) {
+    # manifest.toolchain == "//public/gn/toolchain:user-$target_cpu-clang") {
     _manifest_file = "$zircon_root_build_dir/${manifest.path}"
     _lines = []
     _lines = read_file(_manifest_file, "list lines")
@@ -26,10 +27,12 @@ foreach(manifest, manifests) {
         _manifest_lines += [ line ]
       }
     }
-    zircon_artifacts += [{
-      name = manifest.name
-      deps = _manifest_deps
-      lines = _manifest_lines
-    }]
+    zircon_artifacts += [
+      {
+        name = manifest.name
+        deps = _manifest_deps
+        lines = _manifest_lines
+      },
+    ]
   }
 }

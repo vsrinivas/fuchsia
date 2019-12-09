@@ -11,13 +11,15 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--headers',
-                        help='The list of header files to check',
-                        default=[],
-                        nargs='*')
-    parser.add_argument('--stamp',
-                        help='The path to the stamp file in case of success',
-                        required=True)
+    parser.add_argument(
+        '--headers',
+        help='The list of header files to check',
+        default=[],
+        nargs='*')
+    parser.add_argument(
+        '--stamp',
+        help='The path to the stamp file in case of success',
+        required=True)
     args = parser.parse_args()
 
     has_errors = False
