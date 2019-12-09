@@ -5,7 +5,8 @@
 #ifndef FS_PSEUDO_FILE_H_
 #define FS_PSEUDO_FILE_H_
 
-#include <fbl/function.h>
+#include <lib/fit/function.h>
+
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
@@ -41,10 +42,10 @@ namespace fs {
 class PseudoFile : public Vnode {
  public:
   // Handler called to read from the pseudo-file.
-  using ReadHandler = fbl::Function<zx_status_t(fbl::String* output)>;
+  using ReadHandler = fit::function<zx_status_t(fbl::String* output)>;
 
   // Handler called to write into the pseudo-file.
-  using WriteHandler = fbl::Function<zx_status_t(fbl::StringPiece input)>;
+  using WriteHandler = fit::function<zx_status_t(fbl::StringPiece input)>;
 
   ~PseudoFile() override;
 

@@ -10,7 +10,6 @@
 
 #include <type_traits>
 
-#include <fbl/function.h>
 #include <fs/internal/connection.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>

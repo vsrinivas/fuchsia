@@ -26,7 +26,7 @@ class RemoteDir : public Vnode {
  public:
   // Binds to a remotely hosted directory using the specified FIDL client
   // channel endpoint.  The channel must be valid.
-  RemoteDir(zx::channel remote_dir_client);
+  explicit RemoteDir(zx::channel remote_dir_client);
 
   // Releases the remotely hosted directory.
   ~RemoteDir() override;

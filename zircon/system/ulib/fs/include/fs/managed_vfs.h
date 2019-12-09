@@ -14,7 +14,6 @@
 #include <atomic>
 #include <memory>
 
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fs/internal/connection.h>
@@ -30,7 +29,7 @@ namespace fs {
 class ManagedVfs : public Vfs {
  public:
   ManagedVfs();
-  ManagedVfs(async_dispatcher_t* dispatcher);
+  explicit ManagedVfs(async_dispatcher_t* dispatcher);
 
   // The ManagedVfs destructor is only safe to execute if
   // no connections are actively registered.
@@ -45,7 +44,7 @@ class ManagedVfs : public Vfs {
   // It is safe to delete ManagedVfs from within the closure.
   //
   // It is unsafe to call Shutdown multiple times.
-  virtual void Shutdown(ShutdownCallback handler) override __TA_EXCLUDES(lock_);
+  void Shutdown(ShutdownCallback handler) override __TA_EXCLUDES(lock_);
 
  private:
   // Posts the task for OnShutdownComplete if it is safe to do so.

@@ -22,7 +22,7 @@ namespace fs {
 #ifdef FS_WITH_METRICS
 
 // Helper class for getting the duration of events.
-typedef zx::ticks Duration;
+using Duration = zx::ticks;
 
 class Ticker {
  public:

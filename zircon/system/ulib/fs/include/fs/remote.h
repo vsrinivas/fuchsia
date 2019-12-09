@@ -16,7 +16,7 @@ namespace fs {
 // RemoteContainer adds support for mounting remote handles on nodes.
 class RemoteContainer {
  public:
-  constexpr RemoteContainer() {}
+  constexpr RemoteContainer() = default;
   bool IsRemote() const;
   zx::channel DetachRemote();
   zx_handle_t GetRemote() const;

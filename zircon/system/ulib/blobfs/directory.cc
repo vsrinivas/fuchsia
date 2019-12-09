@@ -167,7 +167,7 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
 }
 
 void Directory::Sync(SyncCallback closure) {
-  blobfs_->Sync([this, cb = std::move(closure)](zx_status_t status) {
+  blobfs_->Sync([this, cb = std::move(closure)](zx_status_t status) mutable {
     if (status != ZX_OK) {
       cb(status);
       return;

@@ -5,7 +5,6 @@
 #ifndef FS_LAZY_DIR_H_
 #define FS_LAZY_DIR_H_
 
-#include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>

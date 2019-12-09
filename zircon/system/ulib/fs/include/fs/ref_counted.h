@@ -21,8 +21,8 @@ template <typename T, bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED
 class VnodeRefCounted
     : private ::fbl::internal::RefCountedUpgradeableBase<EnableAdoptionValidator> {
  public:
-  constexpr VnodeRefCounted() {}
-  ~VnodeRefCounted() {}
+  constexpr VnodeRefCounted() = default;
+  ~VnodeRefCounted() = default;
 
   using ::fbl::internal::RefCountedBase<EnableAdoptionValidator>::AddRef;
   using ::fbl::internal::RefCountedBase<EnableAdoptionValidator>::Release;

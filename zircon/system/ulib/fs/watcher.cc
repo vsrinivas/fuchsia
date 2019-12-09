@@ -154,7 +154,8 @@ void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
     return;
   }
 
-  uint8_t msg[sizeof(vfs_watch_msg_t) + name.length()];
+  uint8_t msg[sizeof(vfs_watch_msg_t) + fio::MAX_FILENAME];
+  size_t msg_length = sizeof(vfs_watch_msg_t) + name.length();
   vfs_watch_msg_t* vmsg = reinterpret_cast<vfs_watch_msg_t*>(msg);
   vmsg->event = static_cast<uint8_t>(event);
   vmsg->len = static_cast<uint8_t>(name.length());
@@ -166,7 +167,7 @@ void WatcherContainer::Notify(fbl::StringPiece name, unsigned event) {
       continue;
     }
 
-    zx_status_t status = it->h.write(0, msg, static_cast<uint32_t>(sizeof(msg)), nullptr, 0);
+    zx_status_t status = it->h.write(0, msg, static_cast<uint32_t>(msg_length), nullptr, 0);
     if (status < 0) {
       // Lazily remove watchers when their handles cannot accept incoming
       // watch messages.

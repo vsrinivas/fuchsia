@@ -33,7 +33,7 @@ bool DoDot(vdircookie_t* cookie) {
 }
 }  // namespace
 
-LazyDir::LazyDir() {}
+LazyDir::LazyDir() = default;
 LazyDir::~LazyDir() = default;
 
 VnodeProtocolSet LazyDir::GetProtocols() const { return VnodeProtocol::kDirectory; }

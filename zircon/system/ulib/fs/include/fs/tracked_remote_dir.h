@@ -22,7 +22,7 @@ namespace fs {
 class TrackedRemoteDir : public RemoteDir {
  public:
   // Create a directory which is accessed remotely through |remote|.
-  TrackedRemoteDir(zx::channel remote);
+  explicit TrackedRemoteDir(zx::channel remote);
 
   // Adds |this| as an entry to |container| with the label |name|.
   //

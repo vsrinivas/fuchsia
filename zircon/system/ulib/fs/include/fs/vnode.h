@@ -7,6 +7,7 @@
 
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
+#include <lib/fit/function.h>
 #include <lib/fit/result.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -19,7 +20,6 @@
 #include <type_traits>
 #include <utility>
 
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
@@ -39,7 +39,7 @@
 namespace fs {
 
 class Vfs;
-typedef struct vdircookie vdircookie_t;
+struct vdircookie_t;
 
 inline bool vfs_valid_name(fbl::StringPiece name) {
   return name.length() <= NAME_MAX && memchr(name.data(), '/', name.length()) == nullptr &&
@@ -229,7 +229,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Syncs the vnode with its underlying storage.
   //
   // Returns the result status through a closure.
-  using SyncCallback = fbl::Function<void(zx_status_t status)>;
+  using SyncCallback = fit::callback<void(zx_status_t status)>;
   virtual void Sync(SyncCallback closure);
 
   // Read directory entries of vn, error if not a directory.

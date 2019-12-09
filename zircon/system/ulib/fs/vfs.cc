@@ -579,7 +579,7 @@ zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out_vn, fbl::St
     if (next_path == nullptr) {
       // Final path segment.
       *out_vn = vn;
-      *out_path = std::move(path);
+      *out_path = path;
       return ZX_OK;
     }
 

@@ -12,6 +12,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/result.h>
+#include <lib/fit/function.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/event.h>
 #include <stdint.h>
@@ -159,14 +160,14 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   void NodeClone(uint32_t flags, zx::channel channel);
   Result<> NodeClose();
   Result<VnodeRepresentation> NodeDescribe();
-  void NodeSync(fbl::Function<void(zx_status_t)> callback);
+  void NodeSync(fit::callback<void(zx_status_t)> callback);
   Result<VnodeAttributes> NodeGetAttr();
   Result<> NodeSetAttr(uint32_t flags, const llcpp::fuchsia::io::NodeAttributes& attributes);
   Result<uint32_t> NodeNodeGetFlags();
   Result<> NodeNodeSetFlags(uint32_t flags);
 
   // Implements |fuchsia.io/DirectoryAdmin.Unmount|.
-  void UnmountAndShutdown(fbl::Function<void(zx_status_t)> callback);
+  void UnmountAndShutdown(fit::callback<void(zx_status_t)> callback);
 
  private:
   // The contract of the Vnode API is that there should be a balancing |Close| call

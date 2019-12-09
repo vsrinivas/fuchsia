@@ -5,9 +5,9 @@
 #ifndef FS_SERVICE_H_
 #define FS_SERVICE_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
-#include <fbl/function.h>
 #include <fbl/macros.h>
 
 #include "vnode.h"
@@ -21,7 +21,7 @@ class Service : public Vnode {
  public:
   // Handler called to bind the provided channel to an implementation
   // of the service.
-  using Connector = fbl::Function<zx_status_t(zx::channel channel)>;
+  using Connector = fit::function<zx_status_t(zx::channel channel)>;
 
   // Creates a service with the specified connector.
   //

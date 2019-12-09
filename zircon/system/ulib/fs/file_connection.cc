@@ -116,7 +116,7 @@ void FileConnection::Read(uint64_t count, ReadCompleter::Sync completer) {
   if (count > fio::MAX_BUF) {
     return completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
   }
-  uint8_t data[count];
+  uint8_t data[fio::MAX_BUF];
   size_t actual = 0;
   zx_status_t status = vnode()->Read(data, count, offset_, &actual);
   if (status == ZX_OK) {
@@ -138,7 +138,7 @@ void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sy
   if (count > fio::MAX_BUF) {
     return completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
   }
-  uint8_t data[count];
+  uint8_t data[fio::MAX_BUF];
   size_t actual = 0;
   zx_status_t status = vnode()->Read(data, count, offset, &actual);
   if (status == ZX_OK) {

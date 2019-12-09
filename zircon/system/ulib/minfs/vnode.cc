@@ -1252,7 +1252,7 @@ zx_status_t VnodeMinfs::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtoco
 
 void VnodeMinfs::Sync(SyncCallback closure) {
   TRACE_DURATION("minfs", "VnodeMinfs::Sync");
-  fs_->Sync([this, cb = std::move(closure)](zx_status_t status) {
+  fs_->Sync([this, cb = std::move(closure)](zx_status_t status) mutable {
     if (status != ZX_OK) {
       cb(status);
       return;

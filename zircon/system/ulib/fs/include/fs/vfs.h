@@ -24,6 +24,7 @@
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/io.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
@@ -37,7 +38,6 @@
 #include <utility>
 #include <variant>
 
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
@@ -61,12 +61,12 @@ class Vnode;
 //
 // TODO(smklein): To implement seekdir and telldir, the size
 // of this vdircookie may need to shrink to a 'long'.
-typedef struct vdircookie {
-  void Reset() { memset(this, 0, sizeof(struct vdircookie)); }
+struct vdircookie_t {
+  void Reset() { memset(this, 0, sizeof(vdircookie_t)); }
 
   uint64_t n;
   void* p;
-} vdircookie_t;
+};
 
 // The Vfs object contains global per-filesystem state, which
 // may be valid across a collection of Vnodes.
@@ -165,7 +165,7 @@ class Vfs {
   void SetReadonly(bool value) FS_TA_EXCLUDES(vfs_lock_);
 
 #ifdef __Fuchsia__
-  using ShutdownCallback = fbl::Function<void(zx_status_t status)>;
+  using ShutdownCallback = fit::callback<void(zx_status_t status)>;
 
   // Unmounts the underlying filesystem. The result of shutdown is delivered via
   // calling |closure|.
@@ -191,7 +191,7 @@ class Vfs {
   zx_status_t Readdir(Vnode* vn, vdircookie_t* cookie, void* dirents, size_t len,
                       size_t* out_actual) FS_TA_EXCLUDES(vfs_lock_);
 
-  Vfs(async_dispatcher_t* dispatcher);
+  explicit Vfs(async_dispatcher_t* dispatcher);
 
   async_dispatcher_t* dispatcher() { return dispatcher_; }
   void SetDispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }

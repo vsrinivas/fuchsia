@@ -13,7 +13,6 @@
 
 #include <memory>
 
-#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fs/internal/connection.h>
 #include <fs/vfs.h>
@@ -34,7 +33,7 @@ namespace fs {
 class SynchronousVfs : public Vfs {
  public:
   SynchronousVfs();
-  SynchronousVfs(async_dispatcher_t* dispatcher);
+  explicit SynchronousVfs(async_dispatcher_t* dispatcher);
 
   // The SynchronousVfs destructor terminates all open
   // connections.

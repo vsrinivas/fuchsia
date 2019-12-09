@@ -129,7 +129,7 @@ class VnodeProtocolSet {
       : protocol_bits_(1 << static_cast<uint32_t>(protocol)) {}
 
   // Union operator.
-  constexpr VnodeProtocolSet operator|(VnodeProtocolSet other) {
+  constexpr VnodeProtocolSet operator|(VnodeProtocolSet other) const {
     return VnodeProtocolSet(protocol_bits_ | other.protocol_bits_);
   }
 
