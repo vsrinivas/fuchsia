@@ -30,7 +30,8 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   void set_format(fbl::RefPtr<Format> format) { format_ = std::move(format); }
 
   // Enqueues a packet that has all samples initialized to |sample| and lasts for |duration|.
-  void EnqueueAudioPacket(float sample, zx::duration duration = zx::msec(1));
+  void EnqueueAudioPacket(float sample, zx::duration duration = zx::msec(1),
+                          fit::closure callback = nullptr);
 
   // |media::audio::AudioObject|
   const fbl::RefPtr<Format>& format() const override { return format_; }

@@ -31,9 +31,9 @@ class DriverOutput : public AudioOutput {
   // AudioOutput implementation
   zx_status_t Init() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
-  bool StartMixJob(MixJob* job, zx::time process_start)
+  std::optional<FrameSpan> StartMixJob(MixJob* job, zx::time process_start)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
-  bool FinishMixJob(const MixJob& job) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
+  void FinishMixJob(const MixJob& job) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
 
   // AudioDevice implementation
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override;
@@ -68,7 +68,6 @@ class DriverOutput : public AudioOutput {
   zx::channel initial_stream_channel_;
 
   int64_t frames_sent_ = 0;
-  uint32_t frames_to_mix_ = 0;
   int64_t low_water_frames_ = 0;
   TimelineFunction clock_mono_to_ring_buf_pos_frames_;
   GenerationId clock_mono_to_ring_buf_pos_id_;

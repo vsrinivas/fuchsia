@@ -207,6 +207,7 @@ executable("unittest_bin") {
     "audio_device_settings_unittest.cc",
     "audio_driver_unittest.cc",
     "audio_link_unittest.cc",
+    "audio_output_unittest.cc",
     "audio_plug_detector_impl_unittest.cc",
     "audio_renderer_impl_unittest.cc",
     "command_line_options_unittest.cc",

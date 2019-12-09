@@ -28,11 +28,13 @@ class AudioOutput : public AudioDevice {
   zx::duration min_lead_time() const override { return min_lead_time_; }
 
  protected:
+  friend class AudioOutputTest;
+
   AudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry);
 
   struct MixJob {
     // Job state set up once by an output implementation, used by all renderers.
-    void* buf;
+    float* buf;
     uint32_t buf_frames;
     int64_t start_pts_of;  // start PTS, expressed in output frames.
     uint32_t local_to_output_gen;
@@ -65,9 +67,13 @@ class AudioOutput : public AudioDevice {
     SetNextSchedTime(now + next_sched_delay);
   }
 
-  virtual bool StartMixJob(MixJob* job, zx::time process_start)
+  struct FrameSpan {
+    int64_t start;
+    size_t length;
+  };
+  virtual std::optional<FrameSpan> StartMixJob(MixJob* job, zx::time process_start)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
-  virtual bool FinishMixJob(const MixJob& job)
+  virtual void FinishMixJob(const MixJob& job)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
   void SetupMixBuffer(uint32_t max_mix_frames) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 

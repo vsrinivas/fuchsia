@@ -42,7 +42,7 @@ class ThrottleOutput : public AudioOutput {
     }
   }
 
-  bool StartMixJob(MixJob* job, zx::time process_start) override {
+  std::optional<FrameSpan> StartMixJob(MixJob* job, zx::time process_start) override {
     // Compute the next callback time; check whether trimming is falling behind.
     last_sched_time_ = last_sched_time_ + TRIM_PERIOD;
     if (process_start > last_sched_time_) {
@@ -63,13 +63,12 @@ class ThrottleOutput : public AudioOutput {
     // pipeline by holding AudioPacket references until they are presented. We
     // only need to schedule our next callback to keep things running, and let
     // the base class implementation handle trimming the output.
-    return false;
+    return std::nullopt;
   }
 
-  bool FinishMixJob(const MixJob& job) override {
+  void FinishMixJob(const MixJob& job) override {
     // Since we never start any jobs, this should never be called.
     FX_DCHECK(false);
-    return false;
   }
 
   // AudioDevice implementation.

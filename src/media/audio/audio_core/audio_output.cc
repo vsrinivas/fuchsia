@@ -28,8 +28,8 @@ AudioOutput::AudioOutput(ThreadingModel* threading_model, DeviceRegistry* regist
 
 void AudioOutput::Process() {
   TRACE_DURATION("audio", "AudioOutput::Process");
-  bool mixed = false;
   auto now = async::Now(mix_domain().dispatcher());
+  bool needs_trim = true;
 
   // At this point, we should always know when our implementation would like to be called to do some
   // mixing work next. If we do not know, then we should have already shut down.
@@ -44,38 +44,37 @@ void AudioOutput::Process() {
 
     // As long as our implementation wants to mix more and has not run into a problem trying to
     // finish the mix job, mix some more.
-    do {
-      memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
+    memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
-      if (!StartMixJob(&cur_mix_job_, now)) {
-        break;
-      }
-
-      // If we have a mix job, then we must have an output producer, and an intermediate buffer
-      // allocated, and it must be large enough for the mix job we were given.
+    auto mix_frames = StartMixJob(&cur_mix_job_, now);
+    if (mix_frames) {
+      // If we have a mix job, then we must have an intermediate buffer allocated, and it must be
+      // large enough for the mix job we were given.
       FX_DCHECK(mix_buf_);
-      FX_DCHECK(output_producer_);
       FX_DCHECK(cur_mix_job_.buf_frames <= mix_buf_frames_);
 
-      // If we are not muted, actually do the mix. Otherwise, just fill the final buffer with
-      // silence. Do not set the 'mixed' flag if we are muted. This is our signal that we still need
-      // to trim our sources (something that happens automatically if we mix).
-      if (!cur_mix_job_.sw_output_muted) {
-        // Fill the intermediate buffer with silence.
-        size_t bytes_to_zero =
-            sizeof(mix_buf_[0]) * cur_mix_job_.buf_frames * output_producer_->channels();
-        std::memset(mix_buf_.get(), 0, bytes_to_zero);
+      cur_mix_job_.buf = mix_buf_.get();
+      cur_mix_job_.buf_frames = mix_frames->length;
+      cur_mix_job_.start_pts_of = mix_frames->start;
 
-        // Mix each renderer into the intermediate accumulator buffer, then reformat (and clip) into
-        // the final output buffer.
+      // Fill the intermediate buffer with silence.
+      size_t bytes_to_zero =
+          sizeof(cur_mix_job_.buf[0]) * cur_mix_job_.buf_frames * output_producer_->channels();
+      std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
+
+      // If we are not muted, actually do the mix.
+      if (!cur_mix_job_.sw_output_muted) {
         ForEachSource(TaskType::Mix);
-        output_producer_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf, cur_mix_job_.buf_frames);
-        mixed = true;
-      } else {
-        output_producer_->FillWithSilence(cur_mix_job_.buf, cur_mix_job_.buf_frames);
+        // If we mix we don't need to trim, since any packets will be released by the mix loop.
+        needs_trim = false;
       }
 
-    } while (FinishMixJob(cur_mix_job_));
+      FinishMixJob(cur_mix_job_);
+    }
+  }
+
+  if (needs_trim) {
+    ForEachSource(TaskType::Trim);
   }
 
   if (!next_sched_time_known_) {
@@ -84,20 +83,12 @@ void AudioOutput::Process() {
     return;
   }
 
-  // If we mixed nothing this time, make sure that we trim all of our renderer queues. No matter
-  // what is going on with the output hardware, we are not allowed to hold onto the queued data past
-  // its presentation time.
-  if (!mixed) {
-    ForEachSource(TaskType::Trim);
-  }
-
   // Figure out when we should wake up to do more work again. No matter how long our implementation
   // wants to wait, we need to make sure to wake up and periodically trim our input queues.
   auto max_sched_time = now + kMaxTrimPeriod;
   if (next_sched_time_ > max_sched_time) {
     next_sched_time_ = max_sched_time;
   }
-
   zx_status_t status = mix_timer_.PostForTime(mix_domain().dispatcher(), next_sched_time_);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to schedule mix";

@@ -86,13 +86,14 @@ void DriverOutput::OnWakeup() {
   state_ = State::FetchingFormats;
 }
 
-bool DriverOutput::StartMixJob(MixJob* job, zx::time process_start) {
+std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job,
+                                                                zx::time process_start) {
   TRACE_DURATION("audio", "DriverOutput::StartMixJob");
   if (state_ != State::Started) {
     FX_LOGS(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
     state_ = State::Shutdown;
     ShutdownSelf();
-    return false;
+    return std::nullopt;
   }
 
   // TODO(mpuryear): Depending on policy, use send appropriate commands to the
@@ -128,119 +129,122 @@ bool DriverOutput::StartMixJob(MixJob* job, zx::time process_start) {
   const auto& rb = *driver_ring_buffer();
   uint32_t fifo_frames = driver()->fifo_depth_frames();
 
-  // If frames_to_mix_ is 0, then this is the start of a new mix. Ensure we have not underflowed
-  // while sleeping, then compute how many frames to mix during this wakeup cycle, and return a job
-  // containing the largest contiguous buffer we can mix during this phase of this cycle.
-  if (!frames_to_mix_) {
-    // output_frames_consumed is the number of frames that the audio output device has read so far.
-    // output_frames_emitted is the slightly-smaller number of frames that have physically exited
-    // the device itself (the number of frames that have "made sound" so far);
-    int64_t output_frames_consumed = cm2rd_pos.Apply(uptime.get());
-    int64_t output_frames_emitted = output_frames_consumed - fifo_frames;
+  // output_frames_consumed is the number of frames that the audio output device has read so far.
+  // output_frames_emitted is the slightly-smaller number of frames that have physically exited
+  // the device itself (the number of frames that have "made sound" so far);
+  int64_t output_frames_consumed = cm2rd_pos.Apply(uptime.get());
+  int64_t output_frames_emitted = output_frames_consumed - fifo_frames;
 
-    if (output_frames_consumed >= frames_sent_) {
-      if (!underflow_start_time_.get()) {
-        // If this was the first time we missed our limit, log a message, mark the start time of the
-        // underflow event, and fill our entire ring buffer with silence.
-        int64_t output_underflow_frames = output_frames_consumed - frames_sent_;
-        int64_t low_water_frames_underflow = output_underflow_frames + low_water_frames_;
+  if (output_frames_consumed >= frames_sent_) {
+    if (!underflow_start_time_.get()) {
+      // If this was the first time we missed our limit, log a message, mark the start time of the
+      // underflow event, and fill our entire ring buffer with silence.
+      int64_t output_underflow_frames = output_frames_consumed - frames_sent_;
+      int64_t low_water_frames_underflow = output_underflow_frames + low_water_frames_;
 
-        zx::duration output_underflow_duration =
-            zx::nsec(cm2frames.Inverse().Scale(output_underflow_frames));
-        FX_CHECK(output_underflow_duration.get() >= 0);
+      zx::duration output_underflow_duration =
+          zx::nsec(cm2frames.Inverse().Scale(output_underflow_frames));
+      FX_CHECK(output_underflow_duration.get() >= 0);
 
-        zx::duration output_variance_from_expected_wakeup =
-            zx::nsec(cm2frames.Inverse().Scale(low_water_frames_underflow));
+      zx::duration output_variance_from_expected_wakeup =
+          zx::nsec(cm2frames.Inverse().Scale(low_water_frames_underflow));
 
-        FX_LOGS(ERROR) << "OUTPUT UNDERFLOW: Missed mix target by (worst-case, expected) = ("
-                       << std::setprecision(4)
-                       << static_cast<double>(output_underflow_duration.to_nsecs()) / ZX_MSEC(1)
-                       << ", " << output_variance_from_expected_wakeup.to_msecs()
-                       << ") ms. Cooling down for " << kUnderflowCooldown.to_msecs()
-                       << " milliseconds.";
+      FX_LOGS(ERROR) << "OUTPUT UNDERFLOW: Missed mix target by (worst-case, expected) = ("
+                     << std::setprecision(4)
+                     << static_cast<double>(output_underflow_duration.to_nsecs()) / ZX_MSEC(1)
+                     << ", " << output_variance_from_expected_wakeup.to_msecs()
+                     << ") ms. Cooling down for " << kUnderflowCooldown.to_msecs()
+                     << " milliseconds.";
 
-        // Use our Reporter to log this to Cobalt, if enabled.
-        REP(OutputUnderflow(output_underflow_duration, uptime));
+      // Use our Reporter to log this to Cobalt, if enabled.
+      REP(OutputUnderflow(output_underflow_duration, uptime));
 
-        underflow_start_time_ = uptime;
-        output_producer_->FillWithSilence(rb.virt(), rb.frames());
-        zx_cache_flush(rb.virt(), rb.size(), ZX_CACHE_FLUSH_DATA);
+      underflow_start_time_ = uptime;
+      output_producer_->FillWithSilence(rb.virt(), rb.frames());
+      zx_cache_flush(rb.virt(), rb.size(), ZX_CACHE_FLUSH_DATA);
 
-        wav_writer_.Close();
-      }
-
-      // Regardless of whether this was the first or a subsequent underflow,
-      // update the cooldown deadline (the time at which we will start producing
-      // frames again, provided we don't underflow again)
-      underflow_cooldown_deadline_ = zx::deadline_after(kUnderflowCooldown);
+      wav_writer_.Close();
     }
 
-    int64_t fill_target =
-        cm2rd_pos.Apply((uptime + kDefaultHighWaterNsec).get()) + driver()->fifo_depth_frames();
-
-    // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
-    if (underflow_start_time_.get()) {
-      if (uptime < underflow_cooldown_deadline_) {
-        // Looks like we have not recovered yet.  Pretend to have produced the
-        // frames we were going to produce and schedule the next wakeup time.
-        frames_sent_ = fill_target;
-        ScheduleNextLowWaterWakeup();
-        return false;
-      } else {
-        // Looks like we recovered.  Log and go back to mixing.
-        FX_LOGS(WARNING) << "OUTPUT UNDERFLOW: Recovered after "
-                         << (uptime - underflow_start_time_).to_msecs() << " ms.";
-        underflow_start_time_ = zx::time(0);
-        underflow_cooldown_deadline_ = zx::time(0);
-      }
-    }
-
-    int64_t frames_in_flight = frames_sent_ - output_frames_emitted;
-    FX_DCHECK((frames_in_flight >= 0) && (frames_in_flight <= rb.frames()));
-    FX_DCHECK(frames_sent_ <= fill_target);
-    int64_t desired_frames = fill_target - frames_sent_;
-
-    // If we woke up too early to have any work to do, just get out now.
-    if (desired_frames == 0) {
-      return false;
-    }
-
-    uint32_t rb_space = rb.frames() - static_cast<uint32_t>(frames_in_flight);
-    if (desired_frames > rb.frames()) {
-      FX_LOGS(ERROR) << "OUTPUT UNDERFLOW: want to produce " << desired_frames
-                     << " but the ring buffer is only " << rb.frames() << " frames long.";
-      return false;
-    }
-
-    frames_to_mix_ = static_cast<uint32_t>(std::min<int64_t>(rb_space, desired_frames));
+    // Regardless of whether this was the first or a subsequent underflow,
+    // update the cooldown deadline (the time at which we will start producing
+    // frames again, provided we don't underflow again)
+    underflow_cooldown_deadline_ = zx::deadline_after(kUnderflowCooldown);
   }
 
-  uint32_t to_mix = frames_to_mix_;
-  uint32_t wr_ptr = frames_sent_ % rb.frames();
-  uint32_t contig_space = rb.frames() - wr_ptr;
+  int64_t fill_target =
+      cm2rd_pos.Apply((uptime + kDefaultHighWaterNsec).get()) + driver()->fifo_depth_frames();
 
-  if (to_mix > contig_space) {
-    to_mix = contig_space;
+  // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
+  if (underflow_start_time_.get()) {
+    if (uptime < underflow_cooldown_deadline_) {
+      // Looks like we have not recovered yet.  Pretend to have produced the
+      // frames we were going to produce and schedule the next wakeup time.
+      frames_sent_ = fill_target;
+      ScheduleNextLowWaterWakeup();
+      return std::nullopt;
+    } else {
+      // Looks like we recovered.  Log and go back to mixing.
+      FX_LOGS(WARNING) << "OUTPUT UNDERFLOW: Recovered after "
+                       << (uptime - underflow_start_time_).to_msecs() << " ms.";
+      underflow_start_time_ = zx::time(0);
+      underflow_cooldown_deadline_ = zx::time(0);
+    }
   }
 
-  job->buf = rb.virt() + (rb.frame_size() * wr_ptr);
-  job->buf_frames = to_mix;
-  job->start_pts_of = frames_sent_;
+  int64_t frames_in_flight = frames_sent_ - output_frames_emitted;
+  FX_DCHECK((frames_in_flight >= 0) && (frames_in_flight <= rb.frames()));
+  FX_DCHECK(frames_sent_ <= fill_target);
+  int64_t desired_frames = fill_target - frames_sent_;
+
+  // If we woke up too early to have any work to do, just get out now.
+  if (desired_frames == 0) {
+    return std::nullopt;
+  }
+
+  uint32_t rb_space = rb.frames() - static_cast<uint32_t>(frames_in_flight);
+  if (desired_frames > rb.frames()) {
+    FX_LOGS(ERROR) << "OUTPUT UNDERFLOW: want to produce " << desired_frames
+                   << " but the ring buffer is only " << rb.frames() << " frames long.";
+    return std::nullopt;
+  }
+
+  uint32_t frames_to_mix = static_cast<uint32_t>(std::min<int64_t>(rb_space, desired_frames));
+
   job->local_to_output = &cm2rd_pos;
   job->local_to_output_gen = clock_mono_to_ring_buf_pos_id_.get();
-
-  return true;
+  return {FrameSpan{
+      .start = frames_sent_,
+      .length = frames_to_mix,
+  }};
 }
 
-bool DriverOutput::FinishMixJob(const MixJob& job) {
+void DriverOutput::FinishMixJob(const MixJob& job) {
   TRACE_DURATION("audio", "DriverOutput::FinishMixJob");
   const auto& rb = driver_ring_buffer();
   FX_DCHECK(rb != nullptr);
-  size_t buf_len = job.buf_frames * rb->frame_size();
 
-  wav_writer_.Write(job.buf, buf_len);
-  wav_writer_.UpdateHeader();
-  zx_cache_flush(job.buf, buf_len, ZX_CACHE_FLUSH_DATA);
+  int32_t frames_left = job.buf_frames;
+  size_t job_buf_offset = 0;
+  while (frames_left > 0) {
+    uint32_t wr_ptr = frames_sent_ % rb->frames();
+    uint32_t contig_space = rb->frames() - wr_ptr;
+    uint32_t to_send = frames_left;
+    if (to_send > contig_space) {
+      to_send = contig_space;
+    }
+    void* dest_buf = rb->virt() + (rb->frame_size() * wr_ptr);
+    output_producer_->ProduceOutput(job.buf + job_buf_offset, dest_buf, to_send);
+
+    size_t dest_buf_len = to_send * rb->frame_size();
+    wav_writer_.Write(dest_buf, dest_buf_len);
+    wav_writer_.UpdateHeader();
+    zx_cache_flush(dest_buf, dest_buf_len, ZX_CACHE_FLUSH_DATA);
+
+    frames_left -= to_send;
+    frames_sent_ += to_send;
+    job_buf_offset += (to_send * output_producer_->channels());
+  }
 
   if (VERBOSE_TIMING_DEBUG) {
     const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
@@ -253,16 +257,7 @@ bool DriverOutput::FinishMixJob(const MixJob& job) {
                   << playback_lead_end << "]";
   }
 
-  FX_DCHECK(frames_to_mix_ >= job.buf_frames);
-  frames_sent_ += job.buf_frames;
-  frames_to_mix_ -= job.buf_frames;
-
-  if (!frames_to_mix_) {
-    ScheduleNextLowWaterWakeup();
-    return false;
-  }
-
-  return true;
+  ScheduleNextLowWaterWakeup();
 }
 
 void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {
@@ -445,7 +440,6 @@ void DriverOutput::OnDriverStartComplete() {
   uint32_t fd_frames = driver()->fifo_depth_frames();
   low_water_frames_ = fd_frames + trans.rate().Scale(kDefaultLowWaterNsec.get());
   frames_sent_ = low_water_frames_;
-  frames_to_mix_ = 0;
 
   if (VERBOSE_TIMING_DEBUG) {
     FX_LOGS(INFO) << "Audio output: FIFO depth (" << fd_frames << " frames " << std::fixed

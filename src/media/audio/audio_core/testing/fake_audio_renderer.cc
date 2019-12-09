@@ -37,7 +37,8 @@ FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher)
   FX_CHECK(status == ZX_OK);
 }
 
-void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) {
+void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration,
+                                           fit::closure callback) {
   FX_CHECK(format_valid());
   uint32_t frame_count = format()->frames_per_ns().Scale(duration.to_nsecs());
   size_t payload_offset = buffer_offset_;
@@ -64,7 +65,7 @@ void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) 
 
   auto packet_ref =
       fbl::MakeRefCounted<Packet>(vmo_ref_, payload_offset, FractionalFrames<uint32_t>(frame_count),
-                                  next_pts_, nullptr, nullptr);
+                                  next_pts_, dispatcher_, std::move(callback));
   next_pts_ = packet_ref->end();
   for (auto& [_, packet_queue] : packet_queues_) {
     packet_queue->PushPacket(packet_ref);
