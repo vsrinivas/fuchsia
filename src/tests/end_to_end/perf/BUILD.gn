@@ -5,26 +5,41 @@
 import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 
-dart_test("perf_test") {
-  sources = [
-    "perf_test.dart",
-  ]
+# This directory contains Dart wrappers for running performance tests
+# that are defined elsewhere in the Fuchsia tree.
+#
+# The test wrappers in this directory are split into multiple test
+# executables (dart_test targets here) because the Fuchsia Infra tools
+# for retrying tests and tracking flakes operate on the granularity of
+# test executables.
 
-  deps = [
-    "//sdk/testing/sl4f/client",
-    "//third_party/dart-pkg/pub/test",
-  ]
+test_list = [
+  "ledger_perf_test",
+  "microbenchmarks_test",
+  "tspec_example_test",
+]
+foreach(target_name, test_list) {
+  dart_test(target_name) {
+    sources = [
+      "$target_name.dart",
+    ]
 
-  non_dart_deps = [ ":runtime_deps" ]
+    deps = [
+      "//sdk/testing/sl4f/client",
+      "//third_party/dart-pkg/pub/test",
+    ]
 
-  environments = [
-    # Runs on "main" builders (try and ci) in NUC environments.
-    {
-      dimensions = {
-        device_type = "Intel NUC Kit NUC7i5DNHE"
-      }
-    },
-  ]
+    non_dart_deps = [ ":runtime_deps" ]
+
+    environments = [
+      # Runs on "main" builders (try and ci) in NUC environments.
+      {
+        dimensions = {
+          device_type = "Intel NUC Kit NUC7i5DNHE"
+        }
+      },
+    ]
+  }
 }
 
 copy("runtime_deps") {
@@ -51,6 +66,8 @@ group("test") {
   testonly = true
 
   deps = [
-    ":perf_test($host_toolchain)",
+    ":ledger_perf_test($host_toolchain)",
+    ":microbenchmarks_test($host_toolchain)",
+    ":tspec_example_test($host_toolchain)",
   ]
 }
