@@ -1772,13 +1772,13 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
       return status;
     }
 
-    // If ARM and not fully cached, clean/invalidate the page after zeroing it. Since
-    // clones must be cached, we only need to check this here.
-#if ARCH_ARM64
+    // This is the only path where we can allocate a new page without being a clone (clones are
+    // always cached). So we check here if we are not fully cached and if so perform a
+    // clean/invalidate to flush our zeroes. After doing this we will not touch the page via the
+    // physmap and so we can pretend there isn't an aliased mapping.
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
       arch_clean_invalidate_cache_range((addr_t)paddr_to_physmap(res_page->paddr()), PAGE_SIZE);
     }
-#endif
   } else {
     // We need a writable page; let ::CloneCowPageLocked handle inserting one.
     res_page = CloneCowPageLocked(offset, free_list, static_cast<VmObjectPaged*>(page_owner), p,
