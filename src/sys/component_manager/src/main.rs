@@ -13,7 +13,7 @@ use {
         startup,
     },
     failure::{Error, ResultExt},
-    fuchsia_async as fasync,
+    fuchsia_async as fasync, fuchsia_trace_provider as trace_provider,
     log::*,
     std::{panic, process, sync::Arc},
 };
@@ -38,6 +38,9 @@ fn main() -> Result<(), Error> {
     };
 
     info!("Component manager is starting up...");
+
+    // Enable tracing in Component Manager
+    trace_provider::trace_provider_create_with_fdio();
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
 

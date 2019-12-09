@@ -6,6 +6,7 @@ use {
     crate::{capability::*, model::*},
     by_addr::ByAddr,
     cm_rust::{ComponentDecl, UseDecl},
+    fuchsia_trace as trace,
     futures::{future::BoxFuture, lock::Mutex},
     std::{
         collections::HashMap,
@@ -179,6 +180,16 @@ impl Hooks {
 
     pub fn dispatch<'a>(&'a self, event: &'a Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
+            // Trace event dispatch
+            let event_type = format!("{:?}", event.payload.type_());
+            let target_moniker = event.target_realm.abs_moniker.to_string();
+            trace::duration!(
+                "component_manager",
+                "hooks:dispatch",
+                "event_type" => event_type.as_str(),
+                "target_moniker" => target_moniker.as_str()
+            );
+
             let hooks = {
                 // We must upgrade our weak references to hooks to strong ones before we can
                 // call out to them. While we're upgrading references, we dedup references

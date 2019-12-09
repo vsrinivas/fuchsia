@@ -31,6 +31,7 @@ rustc_library("lib") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-trace",
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
@@ -69,6 +70,11 @@ rustc_library("lib") {
     "//garnet/examples/fidl/services:echo-rustc",
   ]
 
+  non_rust_deps = [
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider-with-fdio",
+  ]
+
   # Test-only deps. Prefer adding deps used only in tests here instead of
   # above, which has the benefit of keeping unneeded deps out of the production
   # binary and allows depending on 'testonly' targets.
@@ -100,6 +106,7 @@ rustc_binary("bin") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-trace-provider",
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",

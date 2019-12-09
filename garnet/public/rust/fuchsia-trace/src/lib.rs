@@ -206,9 +206,8 @@ pub fn counter(category: &'static CStr, name: &'static CStr, counter_id: u64, ar
     // See unsafety justification in `instant`
     unsafe {
         let mut category_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
-        let context = sys::trace_acquire_context_for_category(
-            category.as_ptr(), category_ref.as_mut_ptr()
-        );
+        let context =
+            sys::trace_acquire_context_for_category(category.as_ptr(), category_ref.as_mut_ptr());
         if context != ptr::null() {
             let helper = EventHelper::new(context, name);
             sys::trace_context_write_counter_event_record(
@@ -252,7 +251,8 @@ impl<'a> Drop for DurationScope<'a> {
             let DurationScope { category, name, args, start_time } = self;
             let mut category_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
             let context = sys::trace_acquire_context_for_category(
-                category.as_ptr(), category_ref.as_mut_ptr()
+                category.as_ptr(),
+                category_ref.as_mut_ptr(),
             );
             if context != ptr::null() {
                 let helper = EventHelper::new(context, name);
@@ -696,6 +696,18 @@ mod sys {
         pub encoded_value: trace_encoded_string_ref_t,
         pub inline_string: *const libc::c_char,
     }
+
+    // A trace_string_ref_t object is created from a string slice.
+    // The trace_string_ref_t object is contained inside an Arg object.
+    // whose lifetime matches the string slice to ensure that the memory
+    // cannot be de-allocated during the trace.
+    //
+    // trace_string_ref_t is safe for Send + Sync because the memory that
+    // inline_string points to is guaranteed to be valid throughout the trace.
+    //
+    // For more information, see the ArgValue implementation for &str in this file.
+    unsafe impl Send for trace_string_ref_t {}
+    unsafe impl Sync for trace_string_ref_t {}
 
     #[repr(C)]
     pub struct trace_thread_ref_t {

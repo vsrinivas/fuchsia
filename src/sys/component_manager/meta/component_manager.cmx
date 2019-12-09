@@ -9,7 +9,8 @@
         "services": [
             "fuchsia.sys.Loader",
             "fuchsia.process.Launcher",
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }
