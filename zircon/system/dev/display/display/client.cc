@@ -1274,7 +1274,6 @@ void Client::HandleStartCapture(const fuchsia_hardware_display_ControllerStartCa
   capture_fence_id_ = req->signal_event_id;
   auto status = controller_->dc_capture()->StartCapture(image->info().handle);
   if (status == ZX_OK) {
-    fbl::AutoLock lock(controller_->mtx());
     proxy_->EnableCapture(true);
   } else {
     resp->result.tag = fuchsia_hardware_display_Controller_StartCapture_ResultTag_err;
@@ -2056,7 +2055,7 @@ void ClientProxy::ReapplyConfig() {
 }
 
 zx_status_t ClientProxy::OnCaptureComplete() {
-  ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+  fbl::AutoLock lock(mtx());
   if (enable_capture_) {
     handler_.CaptureCompleted();
   }
@@ -2065,7 +2064,7 @@ zx_status_t ClientProxy::OnCaptureComplete() {
 
 zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                                         uint64_t* image_ids, size_t count) {
-  ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+  fbl::AutoLock lock(mtx());
 
   if (!enable_vsync_) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -2171,7 +2170,9 @@ ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id)
     : ClientParent(controller->zxdev()),
       controller_(controller),
       is_vc_(is_vc),
-      handler_(controller_, this, is_vc_, client_id) {}
+      handler_(controller_, this, is_vc_, client_id) {
+  mtx_init(&mtx_, mtx_plain);
+}
 
 ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
                          zx::channel server_channel)
@@ -2179,7 +2180,9 @@ ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
       controller_(controller),
       is_vc_(is_vc),
       server_channel_(std::move(server_channel)),
-      handler_(controller_, this, is_vc_, server_channel_.get(), client_id) {}
+      handler_(controller_, this, is_vc_, server_channel_.get(), client_id) {
+  mtx_init(&mtx_, mtx_plain);
+}
 
 ClientProxy::~ClientProxy() {}
 

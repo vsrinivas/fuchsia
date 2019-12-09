@@ -374,19 +374,25 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
   if (display_info_actual)
     *display_info_actual = added_success_count;
 
-  task->set_handler([this, added_ptr = added_success.release(), removed_ptr = removed.release(),
+  task->set_handler([this, added_ptr = std::move(added_success), removed_ptr = std::move(removed),
                      added_success_count, removed_count](async_dispatcher_t* dispatcher,
                                                          async::Task* task, zx_status_t status) {
-    if (status == ZX_OK) {
-      for (unsigned i = 0; i < added_success_count; i++) {
-        if (added_ptr[i]->has_edid) {
-          PopulateDisplayTimings(added_ptr[i]);
-        }
-      }
-      fbl::AutoLock lock(mtx());
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to dispatch display change task %d\n", status);
+      delete task;
+      return;
+    }
 
-      uint64_t added_ids[added_success_count];
-      uint32_t final_added_success_count = 0;
+    for (unsigned i = 0; i < added_success_count; i++) {
+      if (added_ptr[i]->has_edid) {
+        PopulateDisplayTimings(added_ptr[i]);
+      }
+    }
+
+    uint64_t added_ids[added_success_count];
+    uint32_t final_added_success_count = 0;
+    {
+      fbl::AutoLock lock(mtx());
       for (unsigned i = 0; i < added_success_count; i++) {
         // Dropping some add events can result in spurious removes, but
         // those are filtered out in the clients.
@@ -397,21 +403,17 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
           zxlogf(WARN, "Ignoring display with no compatible edid timings\n");
         }
       }
-
-      if (vc_client_ && vc_ready_) {
-        vc_client_->OnDisplaysChanged(added_ids, final_added_success_count, removed_ptr,
-                                      removed_count);
-      }
-      if (primary_client_ && primary_ready_) {
-        primary_client_->OnDisplaysChanged(added_ids, final_added_success_count, removed_ptr,
-                                           removed_count);
-      }
-    } else {
-      zxlogf(ERROR, "Failed to dispatch display change task %d\n", status);
     }
+    fbl::AutoLock lock(&client_mtx_);
 
-    delete[] added_ptr;
-    delete[] removed_ptr;
+    if (vc_client_ && vc_ready_) {
+      vc_client_->OnDisplaysChanged(added_ids, final_added_success_count, removed_ptr.get(),
+                                    removed_count);
+    }
+    if (primary_client_ && primary_ready_) {
+      primary_client_->OnDisplaysChanged(added_ids, final_added_success_count, removed_ptr.get(),
+                                         removed_count);
+    }
     delete task;
   });
   task.release()->Post(loop_.dispatcher());
@@ -422,7 +424,7 @@ void Controller::DisplayCaptureInterfaceOnCaptureComplete() {
   fbl::AutoLock lock(mtx());
   task->set_handler([this](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
     if (status == ZX_OK) {
-      fbl::AutoLock lock(mtx());
+      fbl::AutoLock lock(&client_mtx_);
       if (vc_client_ && vc_ready_) {
         vc_client_->OnCaptureComplete();
       }
@@ -437,6 +439,56 @@ void Controller::DisplayCaptureInterfaceOnCaptureComplete() {
   task.release()->Post(loop_.dispatcher());
 }
 
+void Controller::ApplyPendingChanges(DisplayInfo* info, const uint64_t* handles,
+                                     size_t handle_count) {
+  if (!info->pending_layer_change) {
+    return;
+  }
+  // See ::ApplyConfig for more explanation of how vsync image tracking works.
+  //
+  // If there's a pending layer change, don't process any present/retire actions
+  // until the change is complete.
+  bool done;
+  if (handle_count != info->vsync_layer_count) {
+    if (handles != nullptr && handle_count == 0) {
+      // Buggy display driver
+      zxlogf(TRACE, "Buggy display driver sent handles array with 0 count\n");
+      done = true;
+    } else {
+      // There's an unexpected number of layers, so wait until the next vsync.
+      done = false;
+    }
+  } else if (list_is_empty(&info->images)) {
+    // If the images list is empty, then we can't have any pending layers and
+    // the change is done when there are no handles being displayed.
+    ZX_ASSERT(info->vsync_layer_count == 0);
+    done = handle_count == 0;
+  } else {
+    // Otherwise the change is done when the last handle_count==info->layer_count
+    // images match the handles in the correct order.
+    auto node = list_peek_tail_type(&info->images, image_node_t, link);
+    ssize_t handle_idx = handle_count - 1;
+    while (handle_idx >= 0 && node != nullptr) {
+      if (handles[handle_idx] != node->self->info().handle) {
+        break;
+      }
+      node = list_prev_type(&info->images, &node->link, image_node_t, link);
+      handle_idx--;
+    }
+    done = handle_idx == -1;
+  }
+
+  fbl::AutoLock lock(&client_mtx_);
+  if (done) {
+    info->pending_layer_change = false;
+    info->switching_client = false;
+
+    if (active_client_ && info->delayed_apply) {
+      active_client_->ReapplyConfig();
+    }
+  }
+}
+
 void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
                                                           const uint64_t* handles,
                                                           size_t handle_count) {
@@ -444,122 +496,84 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   // that Trace Viewer looks for in its "Highlight VSync" feature.
   TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
   TRACE_DURATION("gfx", "Display::Controller::OnDisplayVsync", "display_id", display_id);
-  fbl::AutoLock lock(mtx());
-  DisplayInfo* info = nullptr;
-  for (auto& display_config : displays_) {
-    if (display_config.id == display_id) {
-      info = &display_config;
-      break;
-    }
-  }
-
-  if (!info) {
-    return;
-  }
-
-  // See ::ApplyConfig for more explanation of how vsync image tracking works.
-  //
-  // If there's a pending layer change, don't process any present/retire actions
-  // until the change is complete.
-  if (info->pending_layer_change) {
-    bool done;
-    if (handle_count != info->vsync_layer_count) {
-      if (handles != nullptr && handle_count == 0) {
-        // Buggy display driver
-        zxlogf(TRACE, "Buggy display driver sent handles array with 0 count\n");
-        done = true;
-      } else {
-        // There's an unexpected number of layers, so wait until the next vsync.
-        done = false;
-      }
-    } else if (list_is_empty(&info->images)) {
-      // If the images list is empty, then we can't have any pending layers and
-      // the change is done when there are no handles being displayed.
-      ZX_ASSERT(info->vsync_layer_count == 0);
-      done = handle_count == 0;
-    } else {
-      // Otherwise the change is done when the last handle_count==info->layer_count
-      // images match the handles in the correct order.
-      auto node = list_peek_tail_type(&info->images, image_node_t, link);
-      ssize_t handle_idx = handle_count - 1;
-      while (handle_idx >= 0 && node != nullptr) {
-        if (handles[handle_idx] != node->self->info().handle) {
-          break;
-        }
-        node = list_prev_type(&info->images, &node->link, image_node_t, link);
-        handle_idx--;
-      }
-      done = handle_idx == -1;
-    }
-
-    if (done) {
-      info->pending_layer_change = false;
-      info->switching_client = false;
-
-      if (active_client_ && info->delayed_apply) {
-        active_client_->ReapplyConfig();
-      }
-    }
-  }
-
-  if (!info->pending_layer_change) {
-    // Since we know there are no pending layer changes, we know that every layer (i.e z_index)
-    // has an image. So every image either matches a handle (in which case it's being
-    // displayed), is older than its layer's image (i.e. in front of in the queue) and can be
-    // retired, or is newer than its layer's image (i.e. behind in the queue) and has yet to be
-    // presented.
-    uint32_t z_indices[handle_count];
-    for (unsigned i = 0; i < handle_count; i++) {
-      z_indices[i] = UINT32_MAX;
-    }
-    image_node_t* cur;
-    image_node_t* tmp;
-    list_for_every_entry_safe (&info->images, cur, tmp, image_node_t, link) {
-      bool z_already_matched = false;
-      for (unsigned i = 0; i < handle_count; i++) {
-        if (handles[i] == cur->self->info().handle) {
-          z_indices[i] = cur->self->z_index();
-          z_already_matched = true;
-          break;
-        } else if (z_indices[i] == cur->self->z_index()) {
-          z_already_matched = true;
-          break;
-        }
-      }
-
-      // Retire any images for which we don't already have a z-match, since
-      // those are older than whatever is currently in their layer.
-      if (!z_already_matched) {
-        list_delete(&cur->link);
-        AssertMtxAliasHeld(cur->self->mtx());
-        cur->self->OnRetire();
-        // Older images may not be presented. Ending their flows here
-        // ensures the sanity of traces.
-        //
-        // NOTE: If changing this flow name or ID, please also do so in the
-        // corresponding FLOW_BEGIN in display_swapchain.cc.
-        TRACE_FLOW_END("gfx", "present_image", cur->self->id);
-        cur->self.reset();
-      }
-    }
-  }
-
   uint64_t images[handle_count];
-  image_node_t* cur;
-  list_for_every_entry (&info->images, cur, image_node_t, link) {
-    for (unsigned i = 0; i < handle_count; i++) {
-      if (handles[i] == cur->self->info().handle) {
-        // End of the flow for the image going to be presented.
-        //
-        // NOTE: If changing this flow name or ID, please also do so in the
-        // corresponding FLOW_BEGIN in display_swapchain.cc.
-        TRACE_FLOW_END("gfx", "present_image", cur->self->id);
-        images[i] = cur->self->id;
+
+  {
+    fbl::AutoLock lock(mtx());
+    DisplayInfo* info = nullptr;
+    for (auto& display_config : displays_) {
+      if (display_config.id == display_id) {
+        info = &display_config;
         break;
       }
     }
+
+    if (!info) {
+      return;
+    }
+
+    ApplyPendingChanges(info, handles, handle_count);
+
+    if (!info->pending_layer_change) {
+      // Since we know there are no pending layer changes, we know that every layer (i.e z_index)
+      // has an image. So every image either matches a handle (in which case it's being
+      // displayed), is older than its layer's image (i.e. in front of in the queue) and can be
+      // retired, or is newer than its layer's image (i.e. behind in the queue) and has yet to be
+      // presented.
+      uint32_t z_indices[handle_count];
+      for (unsigned i = 0; i < handle_count; i++) {
+        z_indices[i] = UINT32_MAX;
+      }
+      image_node_t* cur;
+      image_node_t* tmp;
+      list_for_every_entry_safe (&info->images, cur, tmp, image_node_t, link) {
+        bool z_already_matched = false;
+        for (unsigned i = 0; i < handle_count; i++) {
+          if (handles[i] == cur->self->info().handle) {
+            z_indices[i] = cur->self->z_index();
+            z_already_matched = true;
+            break;
+          } else if (z_indices[i] == cur->self->z_index()) {
+            z_already_matched = true;
+            break;
+          }
+        }
+
+        // TODO(fxb/42686): retain a list of images to retire and handle this outside of mtx().
+        // Retire any images for which we don't already have a z-match, since
+        // those are older than whatever is currently in their layer.
+        if (!z_already_matched) {
+          list_delete(&cur->link);
+          AssertMtxAliasHeld(cur->self->mtx());
+          cur->self->OnRetire();
+          // Older images may not be presented. Ending their flows here
+          // ensures the sanity of traces.
+          //
+          // NOTE: If changing this flow name or ID, please also do so in the
+          // corresponding FLOW_BEGIN in display_swapchain.cc.
+          TRACE_FLOW_END("gfx", "present_image", cur->self->id);
+          cur->self.reset();
+        }
+      }
+    }
+
+    image_node_t* cur;
+    list_for_every_entry (&info->images, cur, image_node_t, link) {
+      for (unsigned i = 0; i < handle_count; i++) {
+        if (handles[i] == cur->self->info().handle) {
+          // End of the flow for the image going to be presented.
+          //
+          // NOTE: If changing this flow name or ID, please also do so in the
+          // corresponding FLOW_BEGIN in display_swapchain.cc.
+          TRACE_FLOW_END("gfx", "present_image", cur->self->id);
+          images[i] = cur->self->id;
+          break;
+        }
+      }
+    }
   }
 
+  fbl::AutoLock lock(&client_mtx_);
   if (vc_applied_ && vc_client_) {
     vc_client_->OnDisplayVsync(display_id, timestamp, images, handle_count);
   } else if (!vc_applied_ && primary_client_) {
@@ -602,6 +616,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
   uint32_t display_count = 0;
   {
     fbl::AutoLock lock(mtx());
+    fbl::AutoLock client_lock(&client_mtx_);
     // The fact that there could already be a vsync waiting to be handled when a config
     // is applied means that a vsync with no handle for a layer could be interpreted as either
     // nothing in the layer has been presented or everything in the layer can be retired. To
@@ -699,7 +714,7 @@ void Controller::ReleaseCaptureImage(Image* image) {
 }
 
 void Controller::SetVcMode(uint8_t vc_mode) {
-  fbl::AutoLock lock(mtx());
+  fbl::AutoLock lock(&client_mtx_);
   vc_mode_ = vc_mode;
   HandleClientOwnershipChanges();
 }
@@ -726,10 +741,13 @@ void Controller::HandleClientOwnershipChanges() {
 
 void Controller::OnClientDead(ClientProxy* client) {
   zxlogf(TRACE, "Client %d dead\n", client->id());
-  fbl::AutoLock lock(mtx());
-  if (unbinding_) {
-    return;
+  {
+    fbl::AutoLock lock(mtx());
+    if (unbinding_) {
+      return;
+    }
   }
+  fbl::AutoLock lock(&client_mtx_);
   if (client == vc_client_) {
     vc_client_ = nullptr;
     vc_mode_ = fuchsia_hardware_display_VirtconMode_INACTIVE;
@@ -816,11 +834,15 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
     return ZX_ERR_NO_MEMORY;
   }
 
-  fbl::AutoLock lock(mtx());
-  if (unbinding_) {
-    zxlogf(TRACE, "Client connected during unbind\n");
-    return ZX_ERR_UNAVAILABLE;
+  {
+    fbl::AutoLock lock(mtx());
+    if (unbinding_) {
+      zxlogf(TRACE, "Client connected during unbind\n");
+      return ZX_ERR_UNAVAILABLE;
+    }
   }
+
+  fbl::AutoLock lock(&client_mtx_);
 
   if ((is_vc && vc_client_) || (!is_vc && primary_client_)) {
     zxlogf(TRACE, "Already bound\n");
@@ -862,29 +884,33 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
 
   task->set_handler(
       [this, client_ptr](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
-        if (status == ZX_OK) {
-          fbl::AutoLock lock(mtx());
-          if (unbinding_) {
-            return;
-          }
-          if (client_ptr == vc_client_ || client_ptr == primary_client_) {
-            // Add all existing displays to the client
-            if (displays_.size() > 0) {
-              uint64_t current_displays[displays_.size()];
-              int idx = 0;
-              for (const DisplayInfo& display : displays_) {
-                if (display.init_done) {
-                  current_displays[idx++] = display.id;
-                }
+        if (status != ZX_OK) {
+          delete task;
+          return;
+        }
+        fbl::AutoLock lock(mtx());
+        if (unbinding_) {
+          delete task;
+          return;
+        }
+        fbl::AutoLock client_lock(&client_mtx_);
+        if (client_ptr == vc_client_ || client_ptr == primary_client_) {
+          // Add all existing displays to the client
+          if (displays_.size() > 0) {
+            uint64_t current_displays[displays_.size()];
+            int idx = 0;
+            for (const DisplayInfo& display : displays_) {
+              if (display.init_done) {
+                current_displays[idx++] = display.id;
               }
-              client_ptr->OnDisplaysChanged(current_displays, idx, nullptr, 0);
             }
+            client_ptr->OnDisplaysChanged(current_displays, idx, nullptr, 0);
+          }
 
-            if (vc_client_ == client_ptr) {
-              vc_ready_ = true;
-            } else {
-              primary_ready_ = true;
-            }
+          if (vc_client_ == client_ptr) {
+            vc_ready_ = true;
+          } else {
+            primary_ready_ = true;
           }
         }
         delete task;
@@ -966,6 +992,7 @@ void Controller::DdkRelease() {
 Controller::Controller(zx_device_t* parent)
     : ControllerParent(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   mtx_init(&mtx_, mtx_plain);
+  mtx_init(&client_mtx_, mtx_plain);
 }
 
 // ControllerInstance methods
