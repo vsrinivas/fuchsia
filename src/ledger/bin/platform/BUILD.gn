@@ -9,6 +9,7 @@ source_set("platform") {
     "detached_path.cc",
     "detached_path.h",
     "platform.h",
+    "scoped_tmp_dir.h",
   ]
 
   public_deps = [
@@ -24,6 +25,7 @@ source_set("implementation") {
   sources = [
     "fuchsia_platform.cc",
     "fuchsia_platform.h",
+    "fuchsia_scoped_tmp_dir.h",
   ]
 
   public_deps = [

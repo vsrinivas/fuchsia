@@ -10,6 +10,7 @@
 
 #include "leveldb/env.h"
 #include "src/ledger/bin/platform/detached_path.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 
 namespace ledger {
 
@@ -64,6 +65,11 @@ class FileSystem {
   // current path (e.g. ".") and the parent path (e.g. "..") are not included in the result. Returns
   // true on success or false otherwise.
   virtual bool GetDirectoryContents(DetachedPath path, std::vector<std::string>* dir_contents) = 0;
+
+  // Creates a new ScopedTmpDir under the given |parent_path|.
+  virtual std::unique_ptr<ScopedTmpDir> CreateScopedTmpDir(DetachedPath parent_path) = 0;
+
+  // Paths.
 
   // Deletes the file or empty directory at the given |path|. If the |path| refers to a non-empty
   // directory, the operation fails. Returns true on success or false otherwise.

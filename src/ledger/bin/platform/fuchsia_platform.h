@@ -33,6 +33,7 @@ class FuchsiaFileSystem : public FileSystem {
   bool CreateDirectory(DetachedPath path) override;
   bool IsDirectory(DetachedPath path) override;
   bool GetDirectoryContents(DetachedPath path, std::vector<std::string>* dir_contents) override;
+  std::unique_ptr<ScopedTmpDir> CreateScopedTmpDir(DetachedPath parent_path) override;
   bool DeletePath(DetachedPath path) override;
   bool DeletePathRecursively(DetachedPath path) override;
   bool Rename(DetachedPath origin, DetachedPath destination) override;

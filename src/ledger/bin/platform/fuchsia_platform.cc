@@ -7,10 +7,12 @@
 
 #include <stdio.h>
 
+#include "src/ledger/bin/platform/fuchsia_scoped_tmp_dir.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/files/unique_fd.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "util/env_fuchsia.h"
@@ -100,6 +102,10 @@ bool FuchsiaFileSystem::GetDirectoryContents(DetachedPath path,
   FXL_DCHECK(it != dir_contents->end());
   dir_contents->erase(it);
   return true;
+}
+
+std::unique_ptr<ScopedTmpDir> FuchsiaFileSystem::CreateScopedTmpDir(DetachedPath parent_path) {
+  return std::make_unique<FuchsiaScopedTmpDir>(parent_path);
 }
 
 bool FuchsiaFileSystem::DeletePath(DetachedPath path) {
