@@ -38,7 +38,7 @@ bool PipelineManager::IsStreamAlreadyCreated(PipelineInfo* info, ProcessNode* no
 
 // NOTE: This API currently supports only single consumer node use cases.
 fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManager::GetBuffers(
-    const InternalConfigNode& producer, PipelineInfo* info) {
+    const InternalConfigNode& producer, PipelineInfo* info, ProcessNode* producer_graph_node) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   auto consumer = GetNextNodeInPipeline(info, producer);
   if (!consumer) {
@@ -48,22 +48,32 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManage
 
   // If the consumer is the client, we use the client buffers
   if (consumer->type == kOutputStream) {
-    buffers = std::move(info->output_buffers);
-  } else {
-    // We need to allocate memory using sysmem
-    // TODO(braval): Add support for the case of two consumer nodes, which will be needed for the
-    // video conferencing config.
-    std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
-    constraints.push_back(producer.output_constraints);
-    constraints.push_back(consumer->input_constraints);
+    return fit::ok(std::move(info->output_buffers));
+  }
 
-    auto status = memory_allocator_.AllocateSharedMemory(constraints, &buffers);
+  // The controller will  need to allocate memory using sysmem.
+  // TODO(braval): Add support for the case of two consumer nodes, which will be needed for the
+  // video conferencing config.
+  if (producer_graph_node) {
+    // The controller already has allocated an output buffer for this producer,
+    // so we just need to use that buffer
+    auto status = fidl::Clone(producer_graph_node->output_buffer_collection(), &buffers);
     if (status != ZX_OK) {
       FX_LOGST(ERROR, TAG) << "Failed to allocate shared memory";
       return fit::error(status);
     }
+    return fit::ok(std::move(buffers));
   }
 
+  std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
+  constraints.push_back(producer.output_constraints);
+  constraints.push_back(consumer->input_constraints);
+
+  auto status = memory_allocator_.AllocateSharedMemory(constraints, &buffers);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to allocate shared memory";
+    return fit::error(status);
+  }
   return fit::ok(std::move(buffers));
 }
 
@@ -79,7 +89,7 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
-  auto result = GetBuffers(info->node, info);
+  auto result = GetBuffers(info->node, info, nullptr);
   if (result.is_error()) {
     FX_PLOGST(ERROR, TAG, result.error()) << "Failed to get buffers";
     return fit::error(result.error());
@@ -191,9 +201,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGraph(
       }
       break;
     }
-    default: {
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
-    }
+    default: { return fit::error(ZX_ERR_NOT_SUPPORTED); }
   }
   return result;
 }
@@ -357,9 +365,7 @@ void PipelineManager::OnClientStreamDisconnect(PipelineInfo* info) {
       downscaled_resolution_stream_ = nullptr;
       break;
     }
-    default: {
-      ZX_ASSERT_MSG(false, "Invalid input stream type\n");
-    }
+    default: { ZX_ASSERT_MSG(false, "Invalid input stream type\n"); }
   }
 }
 

@@ -75,9 +75,15 @@ class PipelineManager {
   const InternalConfigNode* GetNextNodeInPipeline(PipelineInfo* info,
                                                   const InternalConfigNode& node);
 
-  // Gets the right buffercollection for the producer-consumer combination
+  // Gets the right buffercollection for the producer-consumer combination.
+  // |producer| - Internal node for the producer.
+  // |info| - Info about the stream to be created & the client buffer collection.
+  // |producer_graph_node| - If this is nullptr, this API would allocate new buffers
+  //                         If this is a valid node, then we would use the output
+  //                         buffer collection of that node. This is needed for streams
+  //                         which have one parent.
   fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
-      const InternalConfigNode& producer, PipelineInfo* info);
+      const InternalConfigNode& producer, PipelineInfo* info, ProcessNode* producer_graph_node);
 
   fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
       const camera::GdcConfig& config_type);
