@@ -74,11 +74,6 @@ burden of writing IPC bindings by hand. Moreover, the FIDL code generator can
 produce different bindings to suit the needs of different audiences and their
 idioms.
 
-TODO: express goal of meeting the needs of different audiences using
-appropriately tailored bindings, eg. system programming native vs. event-driven
-dispatch vs. async calls, etc... say more things about FIDL as our system API,
-SDK concerns, etc.
-
 # Requirements
 
 ## Purpose
