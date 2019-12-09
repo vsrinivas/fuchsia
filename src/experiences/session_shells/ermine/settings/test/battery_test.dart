@@ -13,11 +13,13 @@ void main() {
     final monitorProxy = MockMonitorProxy();
     final binding = MockBinding();
 
-    when(monitorProxy.getBatteryInfo()).thenAnswer((_) =>
-        Future<BatteryInfo>.value(
-            _buildStats(5, BatteryStatus.ok, ChargeStatus.charging)));
-
     Battery battery = Battery(monitor: monitorProxy, binding: binding);
+
+    final BatteryInfoWatcher watcher =
+        verify(binding.wrap(captureAny)).captured.single;
+    await watcher.onChangeBatteryInfo(
+        _buildStats(5, BatteryStatus.ok, ChargeStatus.charging));
+
     final spec = await battery.getSpec();
 
     TextValue text = spec.groups.first.values
@@ -33,11 +35,13 @@ void main() {
     final monitorProxy = MockMonitorProxy();
     final binding = MockBinding();
 
-    when(monitorProxy.getBatteryInfo()).thenAnswer((_) =>
-        Future<BatteryInfo>.value(
-            _buildStats(5, BatteryStatus.ok, ChargeStatus.charging)));
-
     Battery battery = Battery(monitor: monitorProxy, binding: binding);
+
+    final BatteryInfoWatcher watcher =
+        verify(binding.wrap(captureAny)).captured.single;
+    await watcher.onChangeBatteryInfo(
+        _buildStats(5, BatteryStatus.ok, ChargeStatus.charging));
+
     final spec = await battery.getSpec();
 
     TextValue text = spec.groups.first.values
@@ -49,8 +53,6 @@ void main() {
     expect(text?.text, '5%');
 
     // Change battery level
-    final BatteryInfoWatcher watcher =
-        verify(binding.wrap(captureAny)).captured.single;
     await watcher.onChangeBatteryInfo(
         _buildStats(6, BatteryStatus.ok, ChargeStatus.notCharging));
 
@@ -69,11 +71,13 @@ void main() {
     final monitorProxy = MockMonitorProxy();
     final binding = MockBinding();
 
-    when(monitorProxy.getBatteryInfo()).thenAnswer((_) =>
-        Future<BatteryInfo>.value(
-            _buildStats(50, BatteryStatus.ok, ChargeStatus.notCharging)));
-
     Battery battery = Battery(monitor: monitorProxy, binding: binding);
+
+    final BatteryInfoWatcher watcher =
+        verify(binding.wrap(captureAny)).captured.single;
+    await watcher.onChangeBatteryInfo(
+        _buildStats(50, BatteryStatus.ok, ChargeStatus.notCharging));
+
     Spec spec = await battery.getSpec();
 
     TextValue text = spec.groups.first.values
@@ -88,8 +92,6 @@ void main() {
     expect(hasIcon, isFalse);
 
     // Change charging status
-    final BatteryInfoWatcher watcher =
-        verify(binding.wrap(captureAny)).captured.single;
     await watcher.onChangeBatteryInfo(
         _buildStats(51, BatteryStatus.ok, ChargeStatus.charging));
 
@@ -110,11 +112,13 @@ void main() {
     final monitorProxy = MockMonitorProxy();
     final binding = MockBinding();
 
-    when(monitorProxy.getBatteryInfo()).thenAnswer((_) =>
-        Future<BatteryInfo>.value(
-            _buildStats(50, BatteryStatus.ok, ChargeStatus.notCharging)));
-
     Battery battery = Battery(monitor: monitorProxy, binding: binding);
+
+    final BatteryInfoWatcher watcher =
+        verify(binding.wrap(captureAny)).captured.single;
+    await watcher.onChangeBatteryInfo(
+        _buildStats(50, BatteryStatus.ok, ChargeStatus.notCharging));
+
     Spec spec = await battery.getSpec();
 
     TextValue text = spec.groups.first.values
@@ -129,8 +133,6 @@ void main() {
     expect(hasIcon, isFalse);
 
     // Change charge to <10% (low status)
-    final BatteryInfoWatcher watcher =
-        verify(binding.wrap(captureAny)).captured.single;
     await watcher.onChangeBatteryInfo(
         _buildStats(9, BatteryStatus.ok, ChargeStatus.notCharging));
 
@@ -151,11 +153,13 @@ void main() {
     final monitorProxy = MockMonitorProxy();
     final binding = MockBinding();
 
-    when(monitorProxy.getBatteryInfo()).thenAnswer((_) =>
-        Future<BatteryInfo>.value(
-            _buildStats(50, BatteryStatus.ok, ChargeStatus.notCharging)));
-
     Battery battery = Battery(monitor: monitorProxy, binding: binding);
+
+    final BatteryInfoWatcher watcher =
+        verify(binding.wrap(captureAny)).captured.single;
+    await watcher.onChangeBatteryInfo(
+        _buildStats(50, BatteryStatus.ok, ChargeStatus.notCharging));
+
     Spec spec = await battery.getSpec();
 
     TextValue text = spec.groups.first.values
@@ -170,8 +174,6 @@ void main() {
     expect(hasIcon, isFalse);
 
     // Change charge to 100% (full)
-    final BatteryInfoWatcher watcher =
-        verify(binding.wrap(captureAny)).captured.single;
     await watcher.onChangeBatteryInfo(
         _buildStats(100, BatteryStatus.ok, ChargeStatus.notCharging));
 
