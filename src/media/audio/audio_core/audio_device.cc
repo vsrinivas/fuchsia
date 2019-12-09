@@ -27,6 +27,9 @@ std::string AudioDeviceUniqueIdToString(const audio_stream_unique_id_t& id) {
            d[14], d[15]);
   return std::string(buf, sizeof(buf) - 1);
 }
+
+constexpr float kDefaultDeviceGain = 0.;
+
 }  // namespace
 
 AudioDevice::AudioDevice(AudioObject::Type type, ThreadingModel* threading_model,
@@ -134,7 +137,16 @@ void AudioDevice::ActivateSelf() {
     // from persistent storage for us when it gets our activation message.
     FX_DCHECK(device_settings_ == nullptr);
     FX_DCHECK(driver() != nullptr);
-    device_settings_ = AudioDeviceSettings::Create(*driver(), is_input());
+
+    HwGainState gain_state = driver()->hw_gain_state();
+
+    // We disregard the device's gain at the time of connection and set it to 0,
+    // pending restoration of device_settings.
+    gain_state.cur_gain = kDefaultDeviceGain;
+
+    const auto id = driver()->persistent_unique_id();
+
+    device_settings_ = fbl::MakeRefCounted<AudioDeviceSettings>(id, gain_state, is_input());
 
     // Now poke our manager.
     threading_model().FidlDomain().PostTask(
