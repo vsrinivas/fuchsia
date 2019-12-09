@@ -1,0 +1,148 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan.spinel;
+
+const uint32 MAX_FRAME_SIZE = 4096;
+
+enum Error : int32 {
+    /// An unspecified error has occurred. This error type should be
+    /// avoided unless the use of a more specific error would be misleading.
+    ///
+    /// If this error is emitted, it is expected that a more descriptive error
+    /// will be present in the logs.
+    ///
+    /// Run-time Remediation: Close and re-open the device and attempt to use it.
+    /// If the error persists, indicate trouble to a higher level and stop.
+    UNSPECIFIED = 1;
+
+    /// `SendFrame()` was called with a frame that was larger than what
+    /// `GetMaxFrameSize()` indicated to be the maximum frame size.
+    ///
+    /// Note that `MAX_FRAME_SIZE` indicates the largest frame size supported
+    /// by this protocol, whereas `GetMaxFrameSize()` returns the largest
+    /// frame size supported by the Device.
+    ///
+    /// This error typically indicates a bug or logic-error in the use of the
+    /// `fuchsia.lowpan.spinel::Device` protocol.
+    ///
+    /// This error is only emitted via `->OnError()`.
+    OUTBOUND_FRAME_TOO_LARGE = 2;
+
+    /// The remote device tried to send us a frame that was too large.
+    ///
+    /// This error typically indicates either frame corruption or a
+    /// misconfiguration of some sort.
+    ///
+    /// Run-time Remediation: The device should be reset and re-initialized.
+    ///
+    /// This error is only emitted via `->OnError()`.
+    INBOUND_FRAME_TOO_LARGE = 3;
+
+    /// Garbage-bytes/corruption detected on inbound frame.
+    ///
+    /// This error typically indicates that the connection between
+    /// the host and the Spinel device is unreliable. This may be caused
+    /// by hardware problems or implementation bugs.
+    ///
+    /// Run-time Remediation: The device should be reset (by sending a
+    /// spinel reset frame or by closing and re-opening) and then
+    /// re-initialized.
+    ///
+    /// This error is only emitted via `->OnError()`.
+    INBOUND_FRAME_CORRUPT = 4;
+
+    /// An I/O error has occurred.
+    ///
+    /// When this error is encountered, the device automatically closes.
+    ///
+    /// Run-time Remediation: Re-open the device and attempt to use it. If
+    /// the error persists, indicate trouble to a higher level (for example,
+    /// presenting a UI message indicating a malfunction) and stop.
+    IO_ERROR = 5;
+
+    /// This operation cannot be performed while the Spinel device is closed.
+    ///
+    /// This error typically indicates a bug or logic-error in the use of the
+    /// `fuchsia.lowpan.spinel::Device` protocol.
+    ///
+    /// This error is only emitted via `->OnError()`.
+    CLOSED = 6;
+};
+
+protocol Device {
+    /// Opens the Spinel connection and performs initialization.
+    ///
+    /// This method will block until the Device is ready to use or
+    /// an error has been encountered. If an error is indicated,
+    /// the device is still considered closed.
+    ///
+    /// Calling this method will typically induce reset if
+    /// supported by the underlying hardware. It may be called
+    /// while the device is already open in order to trigger a
+    /// reset.
+    ///
+    /// Possible error codes:
+    ///
+    /// * `Error::IO_ERROR`: An IO error occurred.
+    /// * `Error::UNSPECIFIED`: An unspecified error occurred.
+    ///                         See logs for more details.
+    Open() -> () error Error;
+
+    /// Close the Spinel connection.
+    ///
+    /// This method will block until the Device has successfully
+    /// been put into a closed (preferably low-power) state. An
+    /// error may be indicated if a problem was encountered that
+    /// may indicate the device did not close cleanly.
+    ///
+    /// Calling this method will always cause this interface to be
+    /// closed, even if an error is reported. Thus, the error may
+    /// be simply ignored or logged.
+    ///
+    /// Calling this method when the device is already closed
+    /// will do nothing.
+    ///
+    /// Possible error codes:
+    ///
+    /// * `Error::IO_ERROR`: An IO error occurred.
+    /// * `Error::UNSPECIFIED`: An unspecified error occurred.
+    ///                         See logs for more details.
+    Close() -> () error Error;
+
+    /// Fetch the max frame size.
+    ///
+    /// This method may be called at any time. The returned
+    /// value is an implementation-specific constant.
+    ///
+    /// @return The size of the largest frame that this implementation
+    /// supports being passed into `SendFrame()`.
+    GetMaxFrameSize() -> (uint32 size);
+
+    /// Sends a Spinel-formatted frame to the device.
+    ///
+    /// Calling this method while the device is closed will cause
+    /// the frame to be dropped and `->OnError()` to emit `Error::CLOSED`.
+    SendFrame(bytes:MAX_FRAME_SIZE data) -> ();
+
+    /// Indicates the that the caller is ready for `->OnReceiveFrame()` to
+    /// be called. It must be called once before each received frame.
+    ReadyToReceiveFrame();
+
+    /// The callback used to pass incoming Spinel frames to the LoWPAN
+    /// host stack.
+    ///
+    /// This method will not be called until `ReadyToReceiveFrame()`
+    /// was called beforehand. There is a strict relationship of
+    /// one call to `ReadyToReceiveFrame()` to one call to `->OnReceiveFrame()`.
+    ///
+    /// See `ReadyToReceiveFrame()` for flow-control considerations.
+    -> OnReceiveFrame(bytes:MAX_FRAME_SIZE data);
+
+    /// The callback used to indicate that an error has occurred.
+    ///
+    /// If the resulting error caused the device to automatically close,
+    /// this is indicated via the `did_close` argument.
+    -> OnError(Error error, bool did_close);
+};
