@@ -74,7 +74,6 @@ AudioCapturerImpl::AudioCapturerImpl(
     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
     StreamVolumeManager* volume_manager)
     : AudioObject(Type::AudioCapturer),
-      usage_(fuchsia::media::AudioCaptureUsage::FOREGROUND),
       binding_(this, std::move(audio_capturer_request)),
       threading_model_(*threading_model),
       mix_domain_(threading_model_.AcquireMixDomain()),
@@ -92,13 +91,6 @@ AudioCapturerImpl::AudioCapturerImpl(
   FX_DCHECK(admin);
   FX_DCHECK(mix_domain_);
   REP(AddingCapturer(*this));
-
-  std::vector<fuchsia::media::AudioCaptureUsage> allowed_usages;
-  allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::FOREGROUND);
-  allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::BACKGROUND);
-  allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::COMMUNICATION);
-  allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
-  allowed_usages_ = std::move(allowed_usages);
 
   volume_manager_.AddStream(this);
 
@@ -919,28 +911,22 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   if (usage == usage_) {
     return;
   }
-  for (auto allowed : allowed_usages_) {
-    if (allowed == usage) {
-      ReportStop();
-      usage_ = usage;
-      volume_manager_.NotifyStreamChanged(this);
-      State state = state_.load();
-      route_graph_.SetCapturerRoutingProfile(
-          this, {.routable = StateIsRoutable(state_), .usage = GetStreamUsage()});
-      if (state == State::OperatingAsync) {
-        ReportStart();
-      }
-      if (state == State::OperatingSync) {
-        std::lock_guard<std::mutex> pending_lock(pending_lock_);
-        if (!pending_capture_buffers_.is_empty()) {
-          ReportStart();
-        }
-      }
-      return;
+
+  ReportStop();
+  usage_ = usage;
+  volume_manager_.NotifyStreamChanged(this);
+  State state = state_.load();
+  route_graph_.SetCapturerRoutingProfile(
+      this, {.routable = StateIsRoutable(state_), .usage = GetStreamUsage()});
+  if (state == State::OperatingAsync) {
+    ReportStart();
+  }
+  if (state == State::OperatingSync) {
+    std::lock_guard<std::mutex> pending_lock(pending_lock_);
+    if (!pending_capture_buffers_.is_empty()) {
+      ReportStart();
     }
   }
-  FX_LOGS(ERROR) << "Disallowed or unknown usage - terminating the stream";
-  BeginShutdown();
 }
 
 void AudioCapturerImpl::OverflowOccurred(FractionalFrames<int64_t> frac_source_start,

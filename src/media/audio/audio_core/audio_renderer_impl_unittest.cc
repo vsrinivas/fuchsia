@@ -197,9 +197,9 @@ TEST_F(AudioRendererImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
   RunLoopUntilIdle();
 
   route_graph_.AddRenderer(renderer_);
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
   fidl_renderer_->SetPcmStreamType(stream_type_);
   fidl_renderer_->AddPayloadBuffer(0, std::move(duplicate));
-  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
 
   RunLoopUntilIdle();
   EXPECT_EQ(renderer_->dest_link_count(), 1u);

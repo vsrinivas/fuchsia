@@ -4,7 +4,7 @@
   "fidl/fuchsia.media/audio_consumer.fidl": "5af9528b4641e8ba81fb992f2bc89452",
   "fidl/fuchsia.media/audio_core.fidl": "ae4ae5d3c6404115f7630dc6a8372d3b",
   "fidl/fuchsia.media/audio_device_enumerator.fidl": "b7f62a1393701c146ee1a6d95b2322e9",
-  "fidl/fuchsia.media/audio_renderer.fidl": "c046f11ff6de095b924a45e4ecf737b6",
+  "fidl/fuchsia.media/audio_renderer.fidl": "a4d436007816beea238c5e72107786ec",
   "fidl/fuchsia.media/metadata.fidl": "b9960fdbc41d5c2d5a56ebb8c68091cb",
   "fidl/fuchsia.media/stream.fidl": "889a1a68bb4082833da8a8621b67ac48",
   "fidl/fuchsia.media/stream_common.fidl": "65611e4b7c3ceed6ecf2ec9358eca183",

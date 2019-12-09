@@ -57,7 +57,6 @@ AudioRendererImpl::AudioRendererImpl(
     async_dispatcher_t* dispatcher, RouteGraph* route_graph, AudioAdmin* admin,
     fbl::RefPtr<fzl::VmarManager> vmar, StreamVolumeManager* volume_manager)
     : AudioObject(Type::AudioRenderer),
-      usage_(fuchsia::media::AudioRenderUsage::MEDIA),
       dispatcher_(dispatcher),
       route_graph_(*route_graph),
       admin_(*admin),
@@ -73,14 +72,6 @@ AudioRendererImpl::AudioRendererImpl(
   FX_DCHECK(route_graph);
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
-
-  std::vector<fuchsia::media::AudioRenderUsage> allowed_usages;
-  allowed_usages.push_back(fuchsia::media::AudioRenderUsage::MEDIA);
-  allowed_usages.push_back(fuchsia::media::AudioRenderUsage::BACKGROUND);
-  allowed_usages.push_back(fuchsia::media::AudioRenderUsage::COMMUNICATION);
-  allowed_usages.push_back(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
-  allowed_usages.push_back(fuchsia::media::AudioRenderUsage::INTERRUPTION);
-  allowed_usages_ = std::move(allowed_usages);
 
   volume_manager_.AddStream(this);
 
@@ -148,23 +139,11 @@ void AudioRendererImpl::RecomputeMinLeadTime() {
 
 void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetUsage");
-  if (usage == usage_) {
+  if (format_) {
+    route_graph_.RemoveRenderer(this);
     return;
   }
-  for (auto allowed : allowed_usages_) {
-    if (allowed == usage) {
-      ReportStop();
-      usage_ = usage;
-      volume_manager_.NotifyStreamChanged(this);
-      route_graph_.SetRendererRoutingProfile(
-          this, {.routable = format_valid(), .usage = GetStreamUsage()});
-      if (IsOperating())
-        ReportStart();
-      return;
-    }
-  }
-  FX_LOGS(ERROR) << "Disallowed or unknown usage - terminating the stream";
-  route_graph_.RemoveRenderer(this);
+  usage_ = usage;
 }
 
 // IsOperating is true any time we have any packets in flight. Configuration functions cannot be

@@ -271,8 +271,8 @@ protocol AudioRenderer {
     /// Binds to the gain control for this AudioRenderer.
     BindGainControl(request<fuchsia.media.audio.GainControl> gain_control_request);
 
-    /// Sets the usage of the render stream.  This may be changed on the fly, but
-    /// packets in flight may be affected by the new usage.
+    /// Sets the usage of the render stream. This must be called before a call to
+    /// |SetPcmStreamType|.
     SetUsage(AudioRenderUsage usage);
 
     // /////////////////////////////////////////////////////////////////////////

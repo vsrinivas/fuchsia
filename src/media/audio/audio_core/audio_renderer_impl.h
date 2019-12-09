@@ -84,8 +84,7 @@ class AudioRendererImpl : public AudioObject,
 
   fbl::RefPtr<Format> format_;
 
-  std::vector<fuchsia::media::AudioRenderUsage> allowed_usages_;
-  fuchsia::media::AudioRenderUsage usage_;
+  fuchsia::media::AudioRenderUsage usage_ = fuchsia::media::AudioRenderUsage::MEDIA;
 
   float stream_gain_db_ = 0.0;
   bool mute_ = false;

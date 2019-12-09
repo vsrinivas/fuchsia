@@ -154,8 +154,7 @@ class AudioCapturerImpl : public AudioObject,
 
   friend PcbAllocator;
 
-  std::vector<fuchsia::media::AudioCaptureUsage> allowed_usages_;
-  fuchsia::media::AudioCaptureUsage usage_;
+  fuchsia::media::AudioCaptureUsage usage_ = fuchsia::media::AudioCaptureUsage::FOREGROUND;
 
   AudioCapturerImpl(bool loopback,
                     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,

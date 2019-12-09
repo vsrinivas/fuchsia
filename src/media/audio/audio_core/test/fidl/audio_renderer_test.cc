@@ -644,4 +644,13 @@ TEST_F(AudioRendererTest, PauseNoReplyWithoutFormat) {
   ExpectDisconnect();
 }
 
+TEST_F(AudioRendererTest, SetUsageAfterSetPcmStreamTypeCausesDisconnect) {
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+  AssertConnectedAndDiscardAllPackets();
+
+  audio_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION);
+  ExpectDisconnect();
+}
+
 }  // namespace media::audio::test
