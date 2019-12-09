@@ -65,7 +65,7 @@ void AudioOutput::Process() {
 
       // If we are not muted, actually do the mix.
       if (!cur_mix_job_.sw_output_muted) {
-        ForEachSource(TaskType::Mix);
+        ForEachSource(TaskType::Mix, now);
         // If we mix we don't need to trim, since any packets will be released by the mix loop.
         needs_trim = false;
       }
@@ -75,7 +75,7 @@ void AudioOutput::Process() {
   }
 
   if (needs_trim) {
-    ForEachSource(TaskType::Trim);
+    ForEachSource(TaskType::Trim, now);
   }
 
   if (!next_sched_time_known_) {
@@ -150,7 +150,7 @@ void AudioOutput::SetupMixBuffer(uint32_t max_mix_frames) {
   mix_buf_ = std::make_unique<float[]>(mix_buf_frames_ * mix_format_->channels());
 }
 
-void AudioOutput::ForEachSource(TaskType task_type) {
+void AudioOutput::ForEachSource(TaskType task_type, zx::time ref_time) {
   TRACE_DURATION("audio", "AudioOutput::ForEachSource");
   // Make a copy of our currently active set of links so that we don't have to hold onto mutex_ for
   // the entire mix operation.
@@ -213,7 +213,7 @@ void AudioOutput::ForEachSource(TaskType task_type) {
         if (task_type == TaskType::Mix) {
           SetupMix(mixer);
         } else {
-          SetupTrim(mixer);
+          SetupTrim(mixer, ref_time);
         }
         setup_done = true;
       }
@@ -454,13 +454,11 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
   return consumed_source;
 }
 
-void AudioOutput::SetupTrim(Mixer* mixer) {
+void AudioOutput::SetupTrim(Mixer* mixer, zx::time now) {
   TRACE_DURATION("audio", "AudioOutput::SetupTrim");
   // Compute the cutoff time used to decide whether to trim packets. ForEachSource has already
   // updated our transformation, no need for us to do so here.
   FX_DCHECK(mixer);
-
-  auto now = async::Now(mix_domain().dispatcher());
   int64_t local_now_ticks = (now - zx::time(0)).to_nsecs();
 
   // RateControlBase guarantees that the transformation into the media timeline is never singular.

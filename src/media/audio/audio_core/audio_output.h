@@ -94,13 +94,15 @@ class AudioOutput : public AudioDevice {
  private:
   enum class TaskType { Mix, Trim };
 
-  void ForEachSource(TaskType task_type) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  void ForEachSource(TaskType task_type, zx::time ref_time)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   void SetupMix(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   bool ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,
                   const Stream::Buffer& buffer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
-  void SetupTrim(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  void SetupTrim(Mixer* mixer, zx::time trim_point)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   bool ProcessTrim(const Stream::Buffer& buffer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   zx::time next_sched_time_;

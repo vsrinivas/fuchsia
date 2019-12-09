@@ -87,7 +87,7 @@ void DriverOutput::OnWakeup() {
 }
 
 std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job,
-                                                                zx::time process_start) {
+                                                                zx::time uptime) {
   TRACE_DURATION("audio", "DriverOutput::StartMixJob");
   if (state_ != State::Started) {
     FX_LOGS(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
@@ -123,7 +123,6 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job,
   }
 
   FX_DCHECK(driver_ring_buffer() != nullptr);
-  auto uptime = async::Now(mix_domain().dispatcher());
   const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
   const auto& cm2frames = cm2rd_pos.rate();
   const auto& rb = *driver_ring_buffer();
