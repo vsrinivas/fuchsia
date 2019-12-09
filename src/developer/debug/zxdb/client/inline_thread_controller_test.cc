@@ -161,8 +161,8 @@ std::vector<std::unique_ptr<MockFrame>> InlineThreadControllerTest::GetStack() {
   AddressRange top_inline_range = kTopInlineFunctionRange;
   auto top_frame = GetTopFrame(top_inline_range.begin());
 
-  AddressRange top_middle_inline2_range = kMiddleInline2FunctionRange;
-  auto middle_frame = GetMiddleFrame(top_middle_inline2_range.begin());
+  AddressRange middle_inline2_range = kMiddleInline2FunctionRange;
+  auto middle_frame = GetMiddleFrame(middle_inline2_range.begin());
 
   std::vector<std::unique_ptr<MockFrame>> frames;
   frames.push_back(GetTopInlineFrame(top_inline_range.begin(), top_frame.get()));
@@ -170,8 +170,8 @@ std::vector<std::unique_ptr<MockFrame>> InlineThreadControllerTest::GetStack() {
   // These inlined functions in the middle of the stack must not be ambiguous because the stack will
   // never generate ambiguous inlined functions for anything but the top frame. To do this, the
   // address bust be after the beginning of the code range.
-  frames.push_back(GetMiddleInline2Frame(top_middle_inline2_range.begin() + 1, middle_frame.get()));
-  frames.push_back(GetMiddleInline1Frame(top_middle_inline2_range.begin() + 1, middle_frame.get()));
+  frames.push_back(GetMiddleInline2Frame(middle_inline2_range.begin() + 1, middle_frame.get()));
+  frames.push_back(GetMiddleInline1Frame(middle_inline2_range.begin() + 1, middle_frame.get()));
   frames.push_back(std::move(middle_frame));
   frames.push_back(GetBottomFrame(0x100000000));
 

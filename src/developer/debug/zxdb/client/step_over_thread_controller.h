@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/step_mode.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
+#include "src/developer/debug/zxdb/common/address_ranges.h"
 #include "src/developer/debug/zxdb/symbols/file_line.h"
 
 namespace zxdb {
@@ -72,6 +73,10 @@ class StepOverThreadController : public ThreadController {
   // IMPORTANT: This class should not perform logic or comparisons on this value. Reasoning about
   // the file/line in the current stack frame should be delegated to the StepThreadController.
   FileLine file_line_;
+
+  // When construction_mode_ == kAddressRange, this represents the address range we're stepping
+  // over.
+  AddressRanges address_ranges_;
 
   // The fingerprint of the frame we're stepping in. Anything newer than this is a child frame we
   // should step through, and anything older than this means we exited the function and should stop

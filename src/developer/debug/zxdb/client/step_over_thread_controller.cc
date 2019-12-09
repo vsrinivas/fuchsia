@@ -22,22 +22,23 @@ StepOverThreadController::StepOverThreadController(StepMode mode)
   FXL_DCHECK(mode != StepMode::kAddressRange);
 }
 
-StepOverThreadController::StepOverThreadController(AddressRanges range)
+StepOverThreadController::StepOverThreadController(AddressRanges ranges)
     : step_mode_(StepMode::kAddressRange),
-      step_into_(std::make_unique<StepThreadController>(std::move(range))) {}
+      address_ranges_(ranges),
+      step_into_(std::make_unique<StepThreadController>(std::move(ranges))) {}
 
 StepOverThreadController::~StepOverThreadController() = default;
 
 void StepOverThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
   SetThread(thread);
 
-  if (thread->GetStack().empty()) {
+  Stack& stack = thread->GetStack();
+  if (stack.empty()) {
     cb(Err("Can't step, no frames."));
     return;
   }
 
   // Save the info for the frame we're stepping inside of for future possible stepping out.
-  Stack& stack = thread->GetStack();
   frame_fingerprint_ = stack.GetFrameFingerprint(0);
   if (step_mode_ == StepMode::kSourceLine) {
     // Always take the file/line from the frame rather than from LineDetails. In the case of
@@ -80,24 +81,32 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     }
   }
 
-  // If we just stepped into and out of a function, we could end up on the same line as we started
-  // on and the user expects "step over" to keep going in that case.
+  // If we just stepped into and out of a function, we could end up on the same line or in the same
+  // address range as we started on and the user expects "step over" to keep going in that case.
   Stack& stack = thread()->GetStack();
-  FrameFingerprint current_fingerprint = thread()->GetStack().GetFrameFingerprint(0);
-  if (step_mode_ == StepMode::kSourceLine && current_fingerprint == frame_fingerprint_) {
+  FrameFingerprint current_fingerprint = stack.GetFrameFingerprint(0);
+  if (step_mode_ != StepMode::kInstruction && current_fingerprint == frame_fingerprint_) {
     // Same stack frame, do "step into" for the line again. This doesn't check the current line
     // itself since there is some special handling for things like "line 0" which we keep
     // encapsulated in the StepThreadController.
     Log("Doing a new StepController to keep going.");
-    step_into_ = std::make_unique<StepThreadController>(file_line_);
+    if (step_mode_ == StepMode::kSourceLine) {
+      step_into_ = std::make_unique<StepThreadController>(file_line_);
+    } else if (step_mode_ == StepMode::kAddressRange) {
+      step_into_ = std::make_unique<StepThreadController>(address_ranges_);
+    } else {
+      FXL_NOTREACHED();
+    }
+
     step_into_->InitWithThread(thread(), [](const Err&) {});
+
     // Pass no exception type or breakpoints because we just want the step controller to evaluate
     // the current position regardless of how we got here.
     if (auto op = step_into_->OnThreadStop(debug_ipc::ExceptionType::kNone, {}); op != kStopDone)
       return op;
 
     // The step controller may have tweaked the stack, recompute the current fingerprint.
-    current_fingerprint = thread()->GetStack().GetFrameFingerprint(0);
+    current_fingerprint = stack.GetFrameFingerprint(0);
   }
 
   // If we get here the thread is no longer in range but could be in a sub-
