@@ -1,0 +1,49 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+enum Error : int32 {
+    /// An unspecified error has occurred. This error type should be
+    /// avoided unless the use of a more specific error would be misleading.
+    UNSPECIFIED = 1;
+
+    /// One or more of the arguments to the method contained invalid values.
+    INVALID_ARGUMENT = 2;
+
+    /// The requested operation cannot be completed because the
+    /// interface was disabled.
+    INTERFACE_DISABLED = 3;
+
+    /// The requested operation cannot be completed because the
+    /// interface was not in the prerequisite state.
+    WRONG_STATE = 4;
+
+    /// The requested operation cannot be completed because the
+    /// interface is busy performing a mutually exclusive operation.
+    /// Try again later.
+    INTERFACE_BUSY = 9;
+};
+
+enum ProvisionError : int32 {
+    /// An unspecified error has occurred. This error type should be
+    /// avoided unless the use of a more specific error would be misleading.
+    UNSPECIFIED = 1;
+
+    /// Provisioning did not successfully complete because the
+    /// operation was canceled.
+    CANCELLED = 5;
+
+    /// Provisioning did not successfully complete because the
+    /// credential was rejected. For example, the key was incorrect.
+    CREDENTIAL_REJECTED = 6;
+
+    /// Provisioning did not successfully complete because the
+    /// no peers on the requested network are in range.
+    NETWORK_NOT_FOUND = 7;
+
+    /// Forming a new network did not successfully complete because the
+    /// a peer with the requested network identity is in range.
+    NETWORK_ALREADY_EXISTS = 8;
+};

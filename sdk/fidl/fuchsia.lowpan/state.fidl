@@ -1,0 +1,81 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+enum State : int32 {
+    /// Offline state.
+    ///
+    /// This is the initial state of the LoWPAN
+    /// interface when the underlying driver starts.
+    /// In this state the NCP is idle and not
+    /// connected to any network.
+    ///
+    /// This state can be explicitly entered by
+    /// calling `Reset`, `Leave`, or `setUp(false)`,
+    /// with the later two only working if we were not
+    /// previously in `State::FAULT`.
+    OFFLINE = 1;
+
+    /// Attaching state.
+    ///
+    /// The interface enters this state when it starts
+    /// the process of trying to find other nodes so
+    /// that it can attach to any pre-existing network
+    /// fragment, or when it is in the process of
+    /// calculating the optimal values for unspecified
+    /// parameters when forming a new network.
+    ///
+    /// The interface may stay in this state for a
+    /// prolonged period of time (or may spontaneously
+    /// enter this state from `State::ATTACHED` if the
+    /// underlying network technology is hierarchical
+    /// (like ZigBee IP) or if the device role is that
+    /// of an "end-device" (`Role::END_DEVICE`). This
+    /// is because such roles cannot create their own
+    /// network fragments.
+    ATTACHING = 2;
+
+    /// Attached state.
+    ///
+    /// This state indicates that we are an active
+    /// participant on a network that has at least one
+    /// other peer node in range.
+    ///
+    /// The Interface can enter this state from
+    /// `State::ATTACHING`.
+    ATTACHED = 3;
+
+    /// Isolated state.
+    ///
+    /// This state indicates that there are no nearby
+    /// nodes for the provisioned network in range.
+    /// Once other nodes come into range, the
+    /// interface will automatically switch to
+    /// `State::ATTACHED`.
+    ///
+    /// The interface can enter this state from either
+    /// `State::ATTACHING` or `State::ATTACHED`.
+    ISOLATED = 4;
+
+    /// Fault state.
+    ///
+    /// The interface will enter this state when
+    /// the driver has detected some sort of problem
+    /// from which it was not immediately able to
+    /// recover.
+    ///
+    /// This state can be entered spontaneously from
+    /// any other state. Calling `Reset` will cause
+    /// the device to return to `State::OFFLINE`.
+    FAULT = 5;
+
+    /// Commissioning state.
+    ///
+    /// The interface enters this state after a call
+    /// to `startCommissioningSession(LowpanBeaconInfo)`.
+    /// This state may only be entered directly from
+    /// `State::OFFLINE`.
+    COMMISSIONING = 6;
+};

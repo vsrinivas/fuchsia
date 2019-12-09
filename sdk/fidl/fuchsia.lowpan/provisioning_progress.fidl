@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+protocol ProvisioningProgress {
+    /// Reports an error durring provisioning
+    -> OnError(ProvisionError error);
+
+    /// Indicates the success of the provisioning process.
+    -> OnSuccess(Identity identity);
+};

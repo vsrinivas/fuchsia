@@ -1,0 +1,29 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.lowpan") {
+  sdk_category = "internal"
+
+  sources = [
+    "beacon_info.fidl",
+    "channel_info.fidl",
+    "const.fidl",
+    "credential.fidl",
+    "device.fidl",
+    "energy_scan_result.fidl",
+    "energy_scanner.fidl",
+    "error.fidl",
+    "identity.fidl",
+    "network_scanner.fidl",
+    "provisioning_params.fidl",
+    "provisioning_progress.fidl",
+    "role.fidl",
+    "service.fidl",
+    "state.fidl",
+  ]
+
+  public_deps = []
+}

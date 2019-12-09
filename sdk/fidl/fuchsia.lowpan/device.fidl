@@ -1,0 +1,156 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+protocol Device {
+    /// Provision the interface for the network
+    /// described by identity and credential. This
+    /// is similar to `Join`, except that (assuming
+    /// the identity and credential are valid) it
+    /// will always succeed, even if there are no
+    /// peers nearby.
+    ///
+    /// This method returns immediately. You can be
+    /// notified when this process is complete by
+    /// adding a callback and handling the following:
+    ///
+    /// * `Listener::OnProvisionException`, which is called
+    ///   to report errors.
+    /// * `Listener::OnStateChanged`, which will transition
+    ///   to `State::ATTACHED` upon success.
+    Provision(ProvisioningParams params) -> () error Error;
+
+    /// Bring down the network interface and forget
+    /// all non-volatile details about the current network.
+    ///
+    /// This method returns immediately. You can be notified
+    /// when this process is complete by adding a callback
+    /// and handling the following:
+    ///
+    /// * `Listener::OnStateChanged`, which will transition
+    ///   to `State::OFFLINE`.
+    /// * `Listener::OnIdentityChanged`, which will be called
+    ///   with an identity of `null`/`None`.
+    ///
+    /// If the interface was not previously provisioned,
+    /// calling this method does nothing.
+    Leave();
+
+    /// Resets this network interface, returning
+    /// all volatile state to default values. Any
+    /// information stored in non-volatile memory
+    /// is preserved. If the interface was attached
+    /// to a network, this method will cause the
+    /// interface to detach. In that case, once the
+    /// interface has finished initialization the
+    /// interface will attempt to reattach to the
+    /// previous network.
+    ///
+    /// This method is the only way to clear `State::FAULT`.
+    ///
+    /// This method returns immediately. You can be
+    /// notified when this process is complete by
+    /// adding a listener and handling the following:
+    ///
+    /// * `Listener::OnStateChanged`, which will
+    ///   indicate various state changes after reset.
+    Reset();
+
+    /// Enables or disables the interface.
+    SetEnabled(bool enabled);
+
+    /// Returns the types of networks supported by this interface.
+    GetSupportedNetworkTypes()
+        -> (vector<string:MAX_NET_TYPE_LEN>:16 network_types) error Error;
+
+    /// Returns a vector of information about the
+    /// channels supported by this interface.
+    ///
+    /// If the returned array is empty, this interface does not
+    /// support additional channel information.
+    GetSupportedChannels()
+        -> (vector<ChannelInfo>:MAX_CHANNELS channels_info) error Error;
+
+    RegisterObserver(DeviceObserver observer);
+};
+
+protocol DeviceObserver {
+    OnStateChanged(State role);
+
+    OnRoleChanged(Role role);
+
+    OnEnabledChanged(bool is_enabled);
+
+    OnProvisionedChanged(bool is_provisioned);
+};
+
+protocol DeviceExtra {
+    // *****************************************************
+    // ALL METHODS IN THIS CLASS DEAL WITH PII.
+    // *****************************************************
+
+    /// Forms a new network with the given network
+    /// information optional credential. Unspecified
+    /// fields in the network information will be
+    /// filled in with reasonable values. If the network
+    /// credential is unspecified, one will be generated
+    /// automatically.
+    ///
+    /// Upon success, the interface will be up and
+    /// attached to the newly formed network.
+    ///
+    /// This method returns immediately. You can be
+    /// notified when this process is complete by
+    /// adding a listener and handling the following:
+    ///
+    /// * `Listener::OnProvisionException`, which is called
+    ///   to report errors.
+    /// * `Listener::OnStateChanged`, which will transition
+    ///   to `State::ATTACHED` upon success.
+    Form(ProvisioningParams params, request<ProvisioningProgress> progress)
+        -> () error Error;
+
+    /// Attempts to join a pre-existing nearby network
+    /// with the given provisioning parameters.
+    ///
+    /// Upon success, the interface will be up and
+    /// attached to the newly joined network.
+    ///
+    /// This method returns immediately. You can be
+    /// notified when this process is complete by
+    /// adding a callback and handling the following:
+    ///
+    /// * `Listener::OnProvisionException`, which is called
+    ///   to report errors.
+    /// * `Listener::OnStateChanged`, which will transition
+    ///   to `State::ATTACHED` upon success.
+    Join(ProvisioningParams params, request<ProvisioningProgress> progress)
+        -> () error Error;
+
+    /// Fetches the current credential, if any.
+    GetCredential()
+        -> (Credential? predential) error Error;
+
+    /// Sets up a new `NetworkScanner` for this interface, which
+    /// is used to scan for nearby networks.
+    ///
+    /// This will expose coarse location information.
+    CreateNetworkScanner(request<NetworkScanner> scanner);
+
+    /// Sets up a new `EnergyScanner` for this interface, which
+    /// is used to coarsely determine which channels might be
+    /// appropriate to use.
+    CreateEnergyScanner(request<EnergyScanner> scanner);
+
+    RegisterObserver(DeviceExtraObserver observer);
+};
+
+protocol DeviceExtraObserver {
+    // *****************************************************
+    // ALL METHODS IN THIS CLASS DEAL WITH PII.
+    // *****************************************************
+
+    -> OnIdentityChanged(Identity identity);
+};

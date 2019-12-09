@@ -1,0 +1,38 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+table Identity {
+    /// The raw bytes for the network name.
+    /// This is typically a [StringPrep'd][1] UTF8 encoding.
+    ///
+    /// Note that extra care must be taken when displaying
+    /// this value to users, since there are many ways
+    /// to make visually similar UTF8 strings that
+    /// have differing bytecode representations.
+    ///
+    /// [1]: https://tools.ietf.org/html/rfc3454
+    1: bytes:63 raw_name;
+
+    /// Extended PANID.
+    2: bytes:8 xpanid;
+
+    /// String identifying the type of network.
+    ///
+    /// Well-known protocol ids are associated with
+    /// specific string values (like "org.threadgroup.std.thread"
+    /// or "org.zigbee.std.zigbee-ip"). For unknown protocol ids,
+    /// the string will map to something like
+    /// `fuchsia.lowpan.net_type.802.15.4.pid.XX`, where `XX` is
+    /// the value of the protocol id from a 802.14.5 beacon.
+    /// This field is optional when joining, forming, or provisioning.
+    3: string:MAX_NET_TYPE_LEN net_type;
+
+    /// Channel Index.
+    4: uint16 channel;
+
+    /// PANID for 802.14.5-based networks (or the equivalent).
+    5: uint16 panid;
+};

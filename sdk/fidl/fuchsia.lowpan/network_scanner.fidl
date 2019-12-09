@@ -1,0 +1,44 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+protocol BeaconInfoStream {
+    /// Called to fetch the next set of received beacons.
+    ///
+    /// The last set will have zero items. Once all received
+    /// beacons have been returned, this channel will close.
+    Next() -> (vector<BeaconInfo>:MAX_STREAM_SET_SIZE beacons) error Error;
+};
+
+/// Protocol for performing active network scans.
+protocol NetworkScanner {
+    /// Sets which channels will be used for scanning.
+    ///
+    /// If empty, all available channels will be scanned.
+    SetChannels(vector<uint16>:MAX_CHANNELS channel_indexes);
+
+    /// Gets the list of channels that will be scanned.
+    GetChannels() -> (vector<uint16>:MAX_CHANNELS channel_indexes);
+
+    /// Changes the transmit power (in dBm) to the
+    /// antenna for transmitting beacon requests.
+    ///
+    /// Note that the actual transmit
+    /// power may differ in a way that is less than
+    /// the amount specified. Call `GetTxPower` to get
+    /// the actual transmit power.
+    SetTxPower(int32 power);
+
+    /// Gets the transmit power (in dBm) that will be
+    /// used for transmitting beacon requests.
+    GetTxPower() -> (int32 tx_power);
+
+    /// Starts a network scan operation.
+    ///
+    /// If this method is called while a scan is in progress,
+    /// the error `INTERFACE_BUSY` will be returned by the
+    /// first call to `stream.Next()`.
+    StartScan(request<BeaconInfoStream> stream);
+};

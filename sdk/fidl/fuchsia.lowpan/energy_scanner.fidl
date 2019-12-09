@@ -1,0 +1,45 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+protocol EnergyScanResultStream {
+    /// Called to fetch the next set of energy scan results.
+    ///
+    /// The last set will have zero items. Once results for all
+    /// indicated channels have been returned, this channel will close.
+    Next() -> (vector<EnergyScanResult>:MAX_STREAM_SET_SIZE results) error Error;
+};
+
+protocol EnergyScanner {
+    /// Sets which channels will be used for scanning.
+    ///
+    /// If empty, all available channels will be scanned.
+    SetChannels(vector<uint16>:MAX_CHANNELS channel_indexes);
+
+    /// Gets the list of channels that will be scanned.
+    GetChannels() -> (vector<uint16>:MAX_CHANNELS channel_indexes);
+
+    /// Changes the approximate dwell time per-channel for the
+    /// energy scan, measured in milliseconds.
+    ///
+    /// Note that this duration is approximate and may
+    /// differ significantly. In some cases setting this
+    /// duration may not be supported, in which case the value
+    /// is ignored.
+    ///
+    /// Setting a value outside of the supported range of
+    /// values for this device will result in the value being
+    /// clamped to the closest valid value, so setting a value of zero
+    /// would request the smallest energy scan duration the device
+    /// is capable of.
+    SetChannelDuration(int32 ms);
+
+    /// Starts a energy scan operation.
+    ///
+    /// If this method is called while a scan is in progress,
+    /// the error `INTERFACE_BUSY` will be returned by the
+    /// first call to `stream.Next()`.
+    StartScan(request<EnergyScanResultStream> stream);
+};

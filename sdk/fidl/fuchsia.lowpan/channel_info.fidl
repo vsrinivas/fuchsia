@@ -1,0 +1,70 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+struct ChannelInfo {
+    /// Human-readable identifier for channel.
+    ///
+    /// For most network types, this is just
+    /// the string representation of the index.
+    /// However, some network types might have
+    /// non-integer ways of identifying specific
+    /// channels. This field allows the application
+    /// to display the name of the channel correctly
+    /// under such circumstances.
+    ///
+    /// The allowed characters include:
+    ///
+    ///  * Dash (`-`), Underscore (`_`), Plus(`+`), Semicolon(`:`)
+    ///  * Numbers (`0`-`9`)
+    ///  * Letters (`a`-`z`, `A`-`Z`)
+    ///
+    string:16 id;
+
+    /// The index used by the interface to identify
+    /// this channel.
+    uint16 index;
+
+    /// The maximum transmit power allowed on
+    /// this channel, in dBm.
+    int32 max_transmit_power;
+
+    /// The center RF frequency of this channel, in Hz.
+    ///
+    /// For example, 802.15.4 has the following values:
+    ///
+    /// Channel | Center Frequency (Hz)
+    /// --------|----------------------
+    /// 11      | 2,405,000,000
+    /// 12      | 2,410,000,000
+    /// 13      | 2,415,000,000
+    /// 14      | 2,420,000,000
+    /// 15      | 2,425,000,000
+    /// 16      | 2,430,000,000
+    /// 17      | 2,435,000,000
+    /// 18      | 2,440,000,000
+    /// 19      | 2,445,000,000
+    /// 20      | 2,450,000,000
+    /// 21      | 2,455,000,000
+    /// 22      | 2,460,000,000
+    /// 23      | 2,465,000,000
+    /// 24      | 2,470,000,000
+    /// 25      | 2,475,000,000
+    /// 26      | 2,480,000,000
+    uint64 spectrum_center_frequency;
+
+    /// The RF spectrum bandwidth used by this
+    /// channel where the power level is expected to
+    /// be higher than -20dBr, in Hz.
+    ///
+    /// For example, 802.15.4 channels 11 thru 26 would
+    /// have the value 2,000,000 (2 MHz).
+    uint64 spectrum_bandwidth;
+
+    /// Indicates if this channel is masked by the
+    /// current regulatory domain and is thus unable
+    /// to be used.
+    bool masked_by_regulatory_domain;
+};

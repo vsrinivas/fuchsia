@@ -1,0 +1,14 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+/// Describes the result from one channel of an energy scan.
+struct EnergyScanResult {
+    int32 channel_index;
+
+    int32 max_rssi;
+
+    int32 min_rssi;
+};

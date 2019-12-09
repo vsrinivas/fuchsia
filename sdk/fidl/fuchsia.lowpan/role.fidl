@@ -1,0 +1,65 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+enum Role : int32 {
+    /// Detached role. The interface is not
+    /// currently participating on the network,
+    /// either because it cannot find a parent
+    //// or the interface is not currently provisioned.
+    DETACHED = 1;
+
+    /// End-device role. End devices do not route
+    /// traffic on behalf of other nodes.
+    END_DEVICE = 2;
+
+    /// Router role. Routers help route traffic
+    /// around the mesh network.
+    ///
+    /// Note that this role is independent of the
+    /// device being a "border router".
+    ///
+    /// Not all network types support this role.
+    ROUTER = 3;
+
+    /// Sleepy End-Device role.
+    ///
+    /// End devices with this role are nominally asleep,
+    /// waking up periodically to check in with their
+    /// parent to see if there are packets destined for
+    /// them. Such devices are capable of extraordinarily
+    /// low power consumption, but packet latency can be
+    /// on the order of dozens of seconds(depending on how
+    /// the node is configured). Not all network types
+    /// support this role.
+    ///
+    /// Not all network types support this role.
+    SLEEPY_END_DEVICE = 4;
+
+    /// Sleepy-router role.
+    ///
+    /// Routers with this role are nominally asleep,
+    /// waking up periodically to check in with
+    /// other routers and their children.
+    ///
+    /// Not all network types support this role.
+    SLEEPY_ROUTER = 5;
+
+    /// Leader role.
+    ///
+    /// On Thread networks, for each partition/fragment
+    /// one router is designated as the "leader", which
+    /// means that it is considered authoritative for
+    /// all network data. In most cases this role can be
+    /// considered as a synonym to Role::ROUTER.
+    ///
+    /// Not all network types support this role.
+    LEADER = 6;
+
+    /// Coordinator role.
+    ///
+    /// Not all network types support this role.
+    COORDINATOR = 7;
+};

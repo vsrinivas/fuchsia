@@ -1,0 +1,69 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+using interface_name = string:32;
+
+const int32 MAX_LOWPAN_DEVICES = 8;
+
+enum ServiceError : int32 {
+    /// An unspecified internal error in the LoWPAN service has occurred.
+    ///
+    /// This error almost always indicates a software bug of some sort.
+    INTERNAL_SERVICE_ERROR = 1;
+
+    /// One of the arguments to this method was invalid.
+    ///
+    /// This error is only returned if none of the other
+    /// error codes would be a better description.
+    INVALID_ARGUMENT = 2;
+
+    /// A device with this interface name has not been registered.
+    DEVICE_NOT_FOUND = 3;
+
+    /// A device with this interface name has already been registered.
+    DEVICE_ALREADY_EXISTS = 4;
+
+    /// The given interface name was invalid.
+    ///
+    /// This could be due to any of the following reasons:
+    ///
+    /// * The interface name was too short. (<= 2 characters)
+    /// * The interface name was too long. (> 32 characters)
+    /// * The interface name contained invalid characters.
+    ///
+    /// Interface name regex: `^[a-z_][-_.+0-9a-z]{1,31}$`
+    INVALID_INTERFACE_NAME = 5;
+};
+
+[Discoverable]
+protocol LowpanLookup {
+    /// Looks up the LoWPAN device with the given interface name,
+    /// or the last device registered if no interface name is given.
+    Lookup(interface_name? name, request<Device> device) -> () error ServiceError;
+
+    /// Returns the list of all registered LoWPAN device interface names.
+    GetDevices() -> (vector<interface_name>:MAX_LOWPAN_DEVICES device_names);
+
+    /// Called when a new LoWPAN device has been registered.
+    -> OnDeviceAdded(interface_name name);
+
+    /// Called when an existing LoWPAN device has been removed.
+    -> OnDeviceRemoved(interface_name name);
+};
+
+[Discoverable]
+protocol LowpanRegistry {
+    /// Registers the given LoWPAN device with the LoWPAN Service
+    /// using the given interface name. If no interface name is given,
+    /// then the registry will pick one. The actual interface name
+    /// for the device is returned.
+    Register(interface_name? name, Device device) -> (interface_name name) error ServiceError;
+};
+
+service LowpanService {
+    LowpanLookup lowpan;
+    LowpanRegistry registry;
+};

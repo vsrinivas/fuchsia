@@ -1,0 +1,18 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.lowpan;
+
+const uint8 LQI_UNSPECIFIED = 0;
+const int8 RSSI_UNSPECIFIED = -128;
+const uint16 CHANNEL_UNSPECIFIED = 65535;
+
+const uint16 MAX_CHANNELS = 100;
+const uint16 MAX_NET_TYPE_LEN = 64;
+const uint16 MAX_STREAM_SET_SIZE = 32;
+
+const string NET_TYPE_THREAD_1_X = "org.threadgroup.std.thread.1";
+const string NET_TYPE_ZIGBEE_IP_1_X = "org.zigbee.std.zigbee-ip.1";
+const string NET_TYPE_UNKNOWN_802_15_4_PID = "fuchsia.lowpan.net_type.802.15.4.pid";
+const string NET_TYPE_RAW_6LOWPAN = "fuchsia.lowpan.net_type.6lowpan";

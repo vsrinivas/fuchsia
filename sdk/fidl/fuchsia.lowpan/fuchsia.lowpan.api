@@ -1,0 +1,18 @@
+{
+  "fidl/fuchsia.lowpan/beacon_info.fidl": "13f4fcf7171fcf7330e3766c14849df6",
+  "fidl/fuchsia.lowpan/channel_info.fidl": "d532b1924f1a011639b38e7ebd934141",
+  "fidl/fuchsia.lowpan/const.fidl": "b70f478bcb75bb28c6250bdc3c6e85cf",
+  "fidl/fuchsia.lowpan/credential.fidl": "b1ad4f10aa4df3b41475afb3edd68b00",
+  "fidl/fuchsia.lowpan/device.fidl": "9ce5a841d28e7714b46d97077ca4d696",
+  "fidl/fuchsia.lowpan/energy_scan_result.fidl": "41803bd6f69d6cb08cc4fee40a7deb5c",
+  "fidl/fuchsia.lowpan/energy_scanner.fidl": "affbeecd702647cfb46d2b79c5869657",
+  "fidl/fuchsia.lowpan/error.fidl": "2c22d5cd7bc7754044ce1bc5c84835a1",
+  "fidl/fuchsia.lowpan/identity.fidl": "c3e0c164fcaa90e85ee8a01143d68a33",
+  "fidl/fuchsia.lowpan/key_value.fidl": "208c2ec79c1154e42682b148f4bdd590",
+  "fidl/fuchsia.lowpan/network_scanner.fidl": "86f126d0f6ec5bea5111ab4f5b0f7701",
+  "fidl/fuchsia.lowpan/provisioning_params.fidl": "ac7f883836fc15f7f0c68769c101b2f6",
+  "fidl/fuchsia.lowpan/provisioning_progress.fidl": "fb910f8d14b81f77888074441caf0313",
+  "fidl/fuchsia.lowpan/role.fidl": "09fcb27c7b5aef6268400c1efde6f99f",
+  "fidl/fuchsia.lowpan/service.fidl": "bf785dd6414ce4b4fe485ca2a2acc40a",
+  "fidl/fuchsia.lowpan/state.fidl": "4379aaea76e1c7eca549c81be8a643b4"
+}
