@@ -70,8 +70,8 @@ class DriverOutput : public AudioOutput {
 
   int64_t frames_sent_ = 0;
   int64_t low_water_frames_ = 0;
-  TimelineFunction clock_mono_to_ring_buf_pos_frames_;
-  GenerationId clock_mono_to_ring_buf_pos_id_;
+  TimelineFunction clock_monotonic_to_output_frame_;
+  GenerationId clock_monotonic_to_output_frame_generation_;
   zx::time underflow_start_time_;
   zx::time underflow_cooldown_deadline_;
 

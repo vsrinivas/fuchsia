@@ -123,15 +123,15 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job,
   }
 
   FX_DCHECK(driver_ring_buffer() != nullptr);
-  const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
-  const auto& cm2frames = cm2rd_pos.rate();
+  const auto& clock_monotonic_to_output_frame = clock_monotonic_to_output_frame_;
+  const auto& output_frames_per_monotonic_tick = clock_monotonic_to_output_frame.rate();
   const auto& rb = *driver_ring_buffer();
   uint32_t fifo_frames = driver()->fifo_depth_frames();
 
   // output_frames_consumed is the number of frames that the audio output device has read so far.
   // output_frames_emitted is the slightly-smaller number of frames that have physically exited
   // the device itself (the number of frames that have "made sound" so far);
-  int64_t output_frames_consumed = cm2rd_pos.Apply(uptime.get());
+  int64_t output_frames_consumed = clock_monotonic_to_output_frame.Apply(uptime.get());
   int64_t output_frames_emitted = output_frames_consumed - fifo_frames;
 
   if (output_frames_consumed >= frames_sent_) {
@@ -142,11 +142,11 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job,
       int64_t low_water_frames_underflow = output_underflow_frames + low_water_frames_;
 
       zx::duration output_underflow_duration =
-          zx::nsec(cm2frames.Inverse().Scale(output_underflow_frames));
+          zx::nsec(output_frames_per_monotonic_tick.Inverse().Scale(output_underflow_frames));
       FX_CHECK(output_underflow_duration.get() >= 0);
 
       zx::duration output_variance_from_expected_wakeup =
-          zx::nsec(cm2frames.Inverse().Scale(low_water_frames_underflow));
+          zx::nsec(output_frames_per_monotonic_tick.Inverse().Scale(low_water_frames_underflow));
 
       FX_LOGS(ERROR) << "OUTPUT UNDERFLOW: Missed mix target by (worst-case, expected) = ("
                      << std::setprecision(4)
@@ -172,7 +172,8 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job,
   }
 
   int64_t fill_target =
-      cm2rd_pos.Apply((uptime + kDefaultHighWaterNsec).get()) + driver()->fifo_depth_frames();
+      clock_monotonic_to_output_frame.Apply((uptime + kDefaultHighWaterNsec).get()) +
+      driver()->fifo_depth_frames();
 
   // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
   if (underflow_start_time_.get()) {
@@ -210,8 +211,8 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job,
 
   uint32_t frames_to_mix = static_cast<uint32_t>(std::min<int64_t>(rb_space, desired_frames));
 
-  job->local_to_output = &cm2rd_pos;
-  job->local_to_output_gen = clock_mono_to_ring_buf_pos_id_.get();
+  job->reference_clock_to_destination_frame = &clock_monotonic_to_output_frame;
+  job->reference_clock_to_destination_frame_gen = clock_monotonic_to_output_frame_generation_.get();
   return {FrameSpan{
       .start = frames_sent_,
       .length = frames_to_mix,
@@ -246,9 +247,9 @@ void DriverOutput::FinishMixJob(const MixJob& job) {
   }
 
   if (VERBOSE_TIMING_DEBUG) {
-    const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
+    const auto& reference_clock_to_ring_buffer_frame = clock_monotonic_to_output_frame_;
     auto now = async::Now(mix_domain().dispatcher());
-    int64_t output_frames_consumed = cm2rd_pos.Apply(now.get());
+    int64_t output_frames_consumed = reference_clock_to_ring_buffer_frame.Apply(now.get());
     int64_t playback_lead_start = frames_sent_ - output_frames_consumed;
     int64_t playback_lead_end = playback_lead_start + job.buf_frames;
 
@@ -278,9 +279,9 @@ void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, u
 void DriverOutput::ScheduleNextLowWaterWakeup() {
   TRACE_DURATION("audio", "DriverOutput::ScheduleNextLowWaterWakeup");
   // Schedule next callback for the low water mark behind the write pointer.
-  const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
+  const auto& reference_clock_to_ring_buffer_frame = clock_monotonic_to_output_frame_;
   int64_t low_water_frames = frames_sent_ - low_water_frames_;
-  int64_t low_water_time = cm2rd_pos.ApplyInverse(low_water_frames);
+  int64_t low_water_time = reference_clock_to_ring_buffer_frame.ApplyInverse(low_water_frames);
   SetNextSchedTime(zx::time(low_water_time));
 }
 
@@ -443,10 +444,10 @@ void DriverOutput::OnDriverStartComplete() {
   const TimelineFunction bytes_to_frames(0, offset, 1, bytes_per_frame);
   const TimelineFunction& t_bytes = driver_clock_mono_to_ring_pos_bytes();
 
-  clock_mono_to_ring_buf_pos_frames_ = TimelineFunction::Compose(bytes_to_frames, t_bytes);
-  clock_mono_to_ring_buf_pos_id_.Next();
+  clock_monotonic_to_output_frame_ = TimelineFunction::Compose(bytes_to_frames, t_bytes);
+  clock_monotonic_to_output_frame_generation_.Next();
 
-  const TimelineFunction& trans = clock_mono_to_ring_buf_pos_frames_;
+  const TimelineFunction& trans = clock_monotonic_to_output_frame_;
   uint32_t fd_frames = driver()->fifo_depth_frames();
   low_water_frames_ = fd_frames + trans.rate().Scale(kDefaultLowWaterNsec.get());
   frames_sent_ = low_water_frames_;

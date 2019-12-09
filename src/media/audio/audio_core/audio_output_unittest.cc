@@ -130,8 +130,8 @@ TEST_F(AudioOutputTest, ProcessReleasesPacketsIfOutputIsMuted) {
         audio_output->SetNextSchedTime(now + zx::msec(1));
         static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
         mix_job->sw_output_muted = true;
-        mix_job->local_to_output = &kOneFramePerMs;
-        mix_job->local_to_output_gen = 1;
+        mix_job->reference_clock_to_destination_frame = &kOneFramePerMs;
+        mix_job->reference_clock_to_destination_frame_gen= 1;
         return {FrameSpan{
             .start = (now - zx::time(0)).to_msecs(),
             .length = zx::msec(1).to_msecs(),

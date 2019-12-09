@@ -416,7 +416,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
       info.gain.GetScaleArray(
           info.scale_arr.get(),
           std::min(dest_frames_left - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
-          cur_mix_job_.local_to_output->rate());
+          cur_mix_job_.reference_clock_to_destination_frame->rate());
     }
 
     {
@@ -434,7 +434,8 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
 
     // If src is ramping, advance by delta of dest_offset
     if (ramping) {
-      info.gain.Advance(dest_offset - prev_dest_offset, cur_mix_job_.local_to_output->rate());
+      info.gain.Advance(dest_offset - prev_dest_offset,
+                        cur_mix_job_.reference_clock_to_destination_frame->rate());
     }
   } else {
     // This packet was initially within our mix window. After realigning our sampling point to the
@@ -500,11 +501,11 @@ void AudioOutput::UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk) {
   TRACE_DURATION("audio", "AudioOutput::UpdateDestTrans");
   // We should only be here if we have a valid mix job. This means a job which supplies a valid
   // transformation from local time to output frames.
-  FX_DCHECK(job.local_to_output);
-  FX_DCHECK(job.local_to_output_gen != kInvalidGenerationId);
+  FX_DCHECK(job.reference_clock_to_destination_frame);
+  FX_DCHECK(job.reference_clock_to_destination_frame_gen != kInvalidGenerationId);
 
   // If generations match, don't re-compute -- just use what we have already.
-  if (bk->dest_trans_gen_id == job.local_to_output_gen) {
+  if (bk->dest_trans_gen_id == job.reference_clock_to_destination_frame_gen) {
     return;
   }
 
@@ -515,7 +516,7 @@ void AudioOutput::UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk) {
   // local-to-input-subframe, to produce a transformation which maps from output frames to
   // fractional input frames.
   TimelineFunction& dest = bk->dest_frames_to_frac_source_frames;
-  dest = bk->clock_mono_to_frac_source_frames * job.local_to_output->Inverse();
+  dest = bk->clock_mono_to_frac_source_frames * job.reference_clock_to_destination_frame->Inverse();
 
   // Finally, compute the step size in subframes. IOW, every time we move forward one output frame,
   // how many input subframes should we consume. Don't bother doing the multiplications if already
@@ -536,7 +537,7 @@ void AudioOutput::UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk) {
   }
 
   // Done, update our dest_trans generation.
-  bk->dest_trans_gen_id = job.local_to_output_gen;
+  bk->dest_trans_gen_id = job.reference_clock_to_destination_frame_gen;
 }
 
 void AudioOutput::Cleanup() {

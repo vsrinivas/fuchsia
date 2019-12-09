@@ -36,9 +36,9 @@ class AudioOutput : public AudioDevice {
     float* buf;
     uint32_t buf_frames;
     int64_t start_pts_of;  // start PTS, expressed in output frames.
-    uint32_t local_to_output_gen;
+    uint32_t reference_clock_to_destination_frame_gen;
     bool accumulate;
-    const TimelineFunction* local_to_output;
+    const TimelineFunction* reference_clock_to_destination_frame;
 
     bool sw_output_muted;
 

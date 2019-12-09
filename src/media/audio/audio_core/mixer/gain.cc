@@ -39,7 +39,7 @@ void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
   }
 }
 
-void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
+void Gain::Advance(uint32_t num_frames, const TimelineRate& destination_frames_per_reference_tick) {
   TRACE_DURATION("audio", "Gain::Advance");
   if (!IsRamping() || num_frames == 0) {
     return;
@@ -47,10 +47,11 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
 
   // If the output device's clock is not running, then it isn't possible to
   // convert from output frames to wallclock (local) time.
-  FX_CHECK(local_to_output.invertible()) << "Output clock must be running!";
+  FX_CHECK(destination_frames_per_reference_tick.invertible()) << "Output clock must be running!";
 
   frames_ramped_ += num_frames;
-  zx::duration advance_duration = zx::nsec(local_to_output.Inverse().Scale(frames_ramped_));
+  zx::duration advance_duration =
+      zx::nsec(destination_frames_per_reference_tick.Inverse().Scale(frames_ramped_));
   float src_gain_db;
 
   if (source_ramp_duration_ > advance_duration) {
@@ -78,7 +79,7 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
 
 // Populate an array of gain scales. Currently we handle only SCALE_LINEAR ramps
 void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
-                         const TimelineRate& local_to_output) {
+                         const TimelineRate& destination_frames_per_reference_tick) {
   TRACE_DURATION("audio", "Gain::GetScaleArray");
   if (num_frames == 0) {
     return;
@@ -96,10 +97,10 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
   } else {
     // If the output device's clock is not running, then it isn't possible to
     // convert from output frames to wallclock (local) time.
-    FX_CHECK(local_to_output.invertible()) << "Output clock must be running!";
+    FX_CHECK(destination_frames_per_reference_tick.invertible()) << "Output clock must be running!";
 
     // Compose the ramp, in pieces
-    TimelineRate output_to_local = local_to_output.Inverse();
+    TimelineRate output_to_local = destination_frames_per_reference_tick.Inverse();
     AScale dest_scale = DbToScale(target_dest_gain_db_.load());
     AScale start_scale = start_src_scale_ * dest_scale;
     AScale end_scale = end_src_scale_ * dest_scale;
