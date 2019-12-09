@@ -700,15 +700,17 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
   frame->AddTimestamp("started debug render pass");
 
   auto& output_image = frame_data_->output_image;
-  auto layout = output_image->swapchain_layout();
+  auto initial_layout = output_image->layout();
+  auto target_layout = output_image->swapchain_layout();
 
-  if (layout == vk::ImageLayout::eUndefined) {
-    FXL_LOG(WARNING) << "EXITING DUE TO UNDEFINED SWAPCHAIN LAYOUT";
+  if (target_layout == vk::ImageLayout::eUndefined) {
+    FXL_LOG(WARNING) << "PaperRenderer::GenerateDebugCommands(): "
+                        "exiting due to undefined swapchain layout.";
     return;
   }
 
   cmd_buf->ImageBarrier(
-      output_image, layout, vk::ImageLayout::eTransferDstOptimal,
+      output_image, initial_layout, vk::ImageLayout::eTransferDstOptimal,
       vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer,
       vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite,
       vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite);
@@ -724,7 +726,7 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
   }
 
   cmd_buf->ImageBarrier(
-      output_image, vk::ImageLayout::eTransferDstOptimal, layout,
+      output_image, vk::ImageLayout::eTransferDstOptimal, target_layout,
       vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite,
       vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer,
       vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite);
