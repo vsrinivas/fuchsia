@@ -11,7 +11,8 @@ class DemoHarnessLinux : public DemoHarness {
  public:
   DemoHarnessLinux(WindowParams window_params);
 
-  void Run(Demo* demo) override;
+  // So that it can be called from GLFW callback.
+  using DemoHarness::HandleKeyPress;
 
  private:
   // |DemoHarness|
@@ -24,8 +25,13 @@ class DemoHarnessLinux : public DemoHarness {
   void AppendPlatformSpecificInstanceExtensionNames(InstanceParams* params) override;
   void AppendPlatformSpecificDeviceExtensionNames(std::set<std::string>* names) override;
 
+  // |DemoHarness|
   // Called by Shutdown().
   void ShutdownWindowSystem() override;
+
+  // |DemoHarness|
+  // Called by Run().
+  void RunForPlatform(Demo* demo) override;
 };
 
 #endif  // SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_

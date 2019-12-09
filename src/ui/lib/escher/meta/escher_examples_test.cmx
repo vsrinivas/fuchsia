@@ -1,0 +1,25 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/escher_examples_test"
+    },
+    "sandbox": {
+        "features": [
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

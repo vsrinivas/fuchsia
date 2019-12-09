@@ -335,6 +335,15 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
   vk::DebugReportObjectTypeEXT object_type(
       static_cast<vk::DebugReportObjectTypeEXT>(object_type_in));
 
+// Macro to facilitate matching messages.  Example usage:
+//  if (VK_MATCH_REPORT(DescriptorSet, 0, "VUID-VkWriteDescriptorSet-descriptorType-01403")) {
+//    FXL_LOG(INFO) << "ignoring descriptor set problem: " << pMessage << "\n\n";
+//    return false;
+//  }
+#define VK_MATCH_REPORT(OTYPE, CODE, X)                                                 \
+  ((object_type == vk::DebugReportObjectTypeEXT::e##OTYPE) && (message_code == CODE) && \
+   (0 == strncmp(pMessage + 3, X, strlen(X) - 1)))
+
 #define VK_DEBUG_REPORT_MESSAGE                                                                \
   pMessage << " (layer: " << pLayerPrefix << "  code: " << message_code                        \
            << "  object-type: " << vk::to_string(object_type) << "  object: " << object << ")" \

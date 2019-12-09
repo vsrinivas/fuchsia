@@ -12,7 +12,6 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/ui/examples/escher/common/demo.h"
-#include "src/ui/examples/escher/common/demo_harness.h"
 #include "src/ui/examples/escher/waterfall/scenes/scene.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/forward_declarations.h"
@@ -32,7 +31,7 @@ class WaterfallDemo : public Demo {
     kNumShadowModes,
   };
 
-  WaterfallDemo(DemoHarness* harness, int argc, char** argv);
+  WaterfallDemo(escher::EscherWeakPtr escher, int argc, char** argv);
   virtual ~WaterfallDemo();
 
   bool HandleKeyPress(std::string key) override;
@@ -40,17 +39,23 @@ class WaterfallDemo : public Demo {
   void DrawFrame(const escher::FramePtr& frame, const escher::ImagePtr& output_image,
                  const escher::SemaphorePtr& framebuffer_acquired) override;
 
+  escher::PaperRenderer* renderer() const { return renderer_.get(); }
+
  private:
   void ProcessCommandLineArgs(int argc, char** argv);
 
-  void InitializePaperScene(const DemoHarness::WindowParams& window_params);
-  void InitializeDemoScenes();
+  void SetWindowSize(vk::Extent2D window_size);
 
-  double ComputeFps();
+  void InitializeDemoScenes();
+  void CycleNumLights();
+
+  // See |animation_state_| comment below.
+  void CycleAnimationState();
 
   escher::PaperRendererConfig renderer_config_;
   escher::PaperRendererPtr renderer_;
 
+  vk::Extent2D window_size_ = {0, 0};
   escher::PaperScenePtr paper_scene_;
 
   // 4 camera projection modes:
@@ -63,13 +68,12 @@ class WaterfallDemo : public Demo {
   int current_scene_ = 0;
   std::vector<std::unique_ptr<Scene>> demo_scenes_;
 
-  // Used for FPS calculations and animating lighting params.
-  escher::Stopwatch stopwatch_;
-  // Used for animating object shapes and positions.
-  escher::Stopwatch animation_stopwatch_;
-
-  uint64_t frame_count_ = 0;
-  uint64_t first_frame_microseconds_;
+  // 0 - both lights and objects animating.
+  // 1 - only lights animating.
+  // 2 - neither lights nor objects animating.
+  uint32_t animation_state_ = 0;
+  escher::Stopwatch object_stopwatch_;
+  escher::Stopwatch lighting_stopwatch_;
 
   // Toggle debug overlays.
   bool show_debug_info_ = false;

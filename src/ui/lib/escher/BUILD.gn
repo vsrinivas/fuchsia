@@ -17,11 +17,16 @@ config("use_runtime_glsl_config") {
 test_package("escher_tests") {
   deps = [
     "test:escher_unittests",
+    "//src/ui/examples/escher/test:escher_examples_test",
   ]
 
   tests = [
     {
       name = "escher_unittests"
+      environments = basic_envs + magma_libvulkan_hardware_envs
+    },
+    {
+      name = "escher_examples_test"
       environments = basic_envs + magma_libvulkan_hardware_envs
     },
   ]

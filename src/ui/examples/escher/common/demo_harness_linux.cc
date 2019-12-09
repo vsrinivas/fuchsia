@@ -4,16 +4,16 @@
 
 #include "src/ui/examples/escher/common/demo_harness_linux.h"
 
-#include <GLFW/glfw3.h>
-
 #include <chrono>
 #include <thread>
+
+#include <GLFW/glfw3.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/ui/examples/escher/common/demo.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 
-static DemoHarness* g_harness = nullptr;
+static DemoHarnessLinux* g_harness = nullptr;
 static GLFWwindow* g_window;
 // Current mouse position.
 static double g_x_pos = 0.0;
@@ -26,22 +26,18 @@ static void DemoGlfwErrorCallback(int err_code, const char* err_desc) {
 }
 
 static void DemoGlfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-  auto demo = g_harness->GetRunningDemo();
-  if (!demo)
-    return;
-
   // We only care about presses, not releases.
   if (action == GLFW_PRESS) {
     switch (key) {
       case GLFW_KEY_ESCAPE:
-        demo->HandleKeyPress("ESCAPE");
+        g_harness->HandleKeyPress("ESCAPE");
         break;
       case GLFW_KEY_SPACE:
-        demo->HandleKeyPress("SPACE");
+        g_harness->HandleKeyPress("SPACE");
         break;
       case GLFW_KEY_ENTER:
       case GLFW_KEY_KP_ENTER:
-        demo->HandleKeyPress("RETURN");
+        g_harness->HandleKeyPress("RETURN");
         break;
       case GLFW_KEY_0:
       case GLFW_KEY_1:
@@ -54,7 +50,7 @@ static void DemoGlfwKeyCallback(GLFWwindow* window, int key, int scancode, int a
       case GLFW_KEY_8:
       case GLFW_KEY_9: {
         char digit = '0' + (key - GLFW_KEY_0);
-        demo->HandleKeyPress(std::string(1, digit));
+        g_harness->HandleKeyPress(std::string(1, digit));
         break;
       }
       case GLFW_KEY_A:
@@ -84,7 +80,7 @@ static void DemoGlfwKeyCallback(GLFWwindow* window, int key, int scancode, int a
       case GLFW_KEY_Y:
       case GLFW_KEY_Z: {
         char letter = 'A' + (key - GLFW_KEY_A);
-        demo->HandleKeyPress(std::string(1, letter));
+        g_harness->HandleKeyPress(std::string(1, letter));
         break;
       }
       default:
@@ -185,12 +181,9 @@ void DemoHarnessLinux::ShutdownWindowSystem() {
   glfwTerminate();
 }
 
-void DemoHarnessLinux::Run(Demo* demo) {
-  FXL_CHECK(!demo_);
-  demo_ = demo;
-
+void DemoHarnessLinux::RunForPlatform(Demo* demo) {
   while (!this->ShouldQuit()) {
-    if (!demo_->MaybeDrawFrame()) {
+    if (!MaybeDrawFrame()) {
       // Too many frames already in flight.  Sleep for a moment before trying
       // again.
       static constexpr int kTooManyFramesInFlightSleepMilliseconds = 4;
@@ -201,6 +194,4 @@ void DemoHarnessLinux::Run(Demo* demo) {
   }
   device().waitIdle();
   glfwSetWindowShouldClose(g_window, GLFW_TRUE);
-
-  demo_ = nullptr;
 }

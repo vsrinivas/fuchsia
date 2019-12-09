@@ -6,10 +6,10 @@ import("//src/lib/vulkan/image_pipe_swapchain.gni")
 
 static_library("common") {
   sources = [
-    "demo.cc",
     "demo_harness.cc",
   ]
   deps = [
+    ":demo_base",
     "//src/lib/fxl",
     "//third_party/glslang:glslang_default_resource_limits_sources",
     "//third_party/glslang:glslang_sources",
@@ -37,6 +37,18 @@ static_library("common") {
   }
 }
 
+# "class Demo" is the base class for all demos that can be run by DemoHarness.
+# Split into a separate source_set so that it can be used in tests that don't use DemoHarness.
+source_set("demo_base") {
+  sources = [
+    "demo.cc",
+    "demo.h",
+  ]
+  public_deps = [
+    "//src/ui/lib/escher:escher",
+  ]
+}
+
 source_set("demo_harness_fuchsia") {
   visibility = [ ":*" ]
   sources = [
@@ -52,6 +64,7 @@ source_set("demo_harness_fuchsia") {
     "//zircon/public/lib/trace-provider-with-fdio",
   ]
   public_deps = [
+    ":demo_base",
     ":headers",
     "//src/ui/lib/input_reader",
   ]
@@ -67,6 +80,7 @@ source_set("demo_harness_linux") {
     "//third_party/glfw",
   ]
   public_deps = [
+    ":demo_base",
     ":headers",
   ]
 }
@@ -74,7 +88,6 @@ source_set("demo_harness_linux") {
 source_set("headers") {
   visibility = [ ":*" ]
   sources = [
-    "demo.h",
     "demo_harness.h",
   ]
   public_deps = [

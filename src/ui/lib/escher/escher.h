@@ -27,7 +27,7 @@ namespace escher {
 //
 // Escher is currently not thread-safe; it (and all objects obtained from it)
 // must be used from a single thread.
-class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
+class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
  public:
   // Escher does not take ownership of the objects in the Vulkan context.  It is
   // up to the application to eventually destroy them, and also to ensure that

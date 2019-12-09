@@ -25,9 +25,10 @@ using namespace escher;
 
 static constexpr float kNear = 1.f;
 static constexpr float kFar = -200.f;
+static constexpr size_t kMaxNumPointLights = 2;
 
-WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
-    : Demo(harness, "Waterfall Demo") {
+WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, int argc, char** argv)
+    : Demo(std::move(escher_in), "Waterfall Demo") {
   ProcessCommandLineArgs(argc, argv);
 
   // Initialize filesystem with files before creating renderer; it will use them
@@ -40,35 +41,34 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
   renderer_config_.debug_frame_number = true;
   renderer_config_.shadow_type = PaperRendererShadowType::kShadowVolume;
   renderer_config_.msaa_sample_count = 2;
-  renderer_config_.num_depth_buffers = harness->GetVulkanSwapchain().images.size();
+  renderer_config_.num_depth_buffers = 2;
   renderer_config_.depth_stencil_format = escher()->device()->caps().GetMatchingDepthStencilFormat(
       {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
 
   renderer_->SetConfig(renderer_config_);
 
-  InitializePaperScene(harness->GetWindowParams());
+  // Start with 1 light.  Number of lights can be cycled via CycleNumLights().  Light positions and
+  // colors are animated by UpdateLighting().
+  paper_scene_ = fxl::MakeRefCounted<PaperScene>();
+  paper_scene_->point_lights.resize(1);
+}
+
+WaterfallDemo::~WaterfallDemo() {}
+
+void WaterfallDemo::SetWindowSize(vk::Extent2D window_size) {
+  FXL_CHECK(paper_scene_);
+  if (window_size_ == window_size)
+    return;
+
+  window_size_ = window_size;
+  paper_scene_->bounding_box =
+      escher::BoundingBox(vec3(0.f, 0.f, kFar), vec3(window_size.width, window_size.height, kNear));
+
   InitializeDemoScenes();
 }
 
-WaterfallDemo::~WaterfallDemo() {
-  FXL_LOG(INFO) << "Average frame rate: " << ComputeFps();
-  FXL_LOG(INFO) << "First frame took: " << first_frame_microseconds_ / 1000.0 << " milliseconds";
-
-  escher()->Cleanup();
-}
-
-void WaterfallDemo::InitializePaperScene(const DemoHarness::WindowParams& window_params) {
-  paper_scene_ = fxl::MakeRefCounted<PaperScene>();
-
-  // Number of lights can be cycled via keyboard event.  Light positions and
-  // colors are animated by UpdateLighting().
-  paper_scene_->point_lights.resize(1);
-
-  paper_scene_->bounding_box = escher::BoundingBox(
-      vec3(0.f, 0.f, kFar), vec3(window_params.width, window_params.height, kNear));
-}
-
 void WaterfallDemo::InitializeDemoScenes() {
+  demo_scenes_.clear();
   demo_scenes_.emplace_back(new PaperDemoScene1(this));
   demo_scenes_.emplace_back(new PaperDemoScene2(this));
   for (auto& scene : demo_scenes_) {
@@ -86,11 +86,36 @@ void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {
   }
 }
 
+void WaterfallDemo::CycleNumLights() {
+  uint32_t num_point_lights = (paper_scene_->num_point_lights() + 1) % (kMaxNumPointLights + 1);
+  paper_scene_->point_lights.resize(num_point_lights);
+  FXL_LOG(INFO) << "WaterfallDemo number of point lights: " << num_point_lights;
+}
+
+void WaterfallDemo::CycleAnimationState() {
+  animation_state_ = (animation_state_ + 1) % 3;
+  switch (animation_state_) {
+    case 0:
+      object_stopwatch_.Start();
+      lighting_stopwatch_.Start();
+      break;
+    case 1:
+      object_stopwatch_.Stop();
+      lighting_stopwatch_.Start();
+      break;
+    case 2:
+      object_stopwatch_.Stop();
+      lighting_stopwatch_.Stop();
+      break;
+    default:
+      FXL_CHECK(false) << "animation_state_ must be 0-2, is: " << animation_state_;
+  }
+}
+
 bool WaterfallDemo::HandleKeyPress(std::string key) {
   if (key.size() > 1) {
     if (key == "SPACE") {
-      // Start/stop the animation stopwatch.
-      animation_stopwatch_.Toggle();
+      CycleAnimationState();
       return true;
     }
     return Demo::HandleKeyPress(key);
@@ -117,10 +142,7 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
         return true;
       }
       case 'L': {
-        uint32_t num_point_lights = (paper_scene_->num_point_lights() + 1) % 3;
-        paper_scene_->point_lights.resize(num_point_lights);
-        FXL_LOG(INFO) << "WaterfallDemo number of point lights: "
-                      << paper_scene_->num_point_lights();
+        CycleNumLights();
         return true;
       }
       // Cycle through MSAA sample counts.
@@ -293,23 +315,11 @@ static void UpdateLighting(PaperScene* paper_scene, const escher::Stopwatch& sto
   }
 }
 
-double WaterfallDemo::ComputeFps() {
-  // Omit the first frame when computing the average, because it is generating
-  // pipelines.  We subtract 2 instead of 1 because we just incremented it in
-  // DrawFrame().
-  //
-  // TODO(ES-157): This could be improved.  For example, when called from the
-  // destructor we don't know how much time has elapsed since the last
-  // DrawFrame(); it might be more accurate to subtract 1 instead of 2.  Also,
-  // on Linux the swapchain allows us to queue up many DrawFrame() calls so if
-  // we quit after a short time then the FPS will be artificially high.
-  auto microseconds = stopwatch_.GetElapsedMicroseconds();
-  return (frame_count_ - 2) * 1000000.0 / (microseconds - first_frame_microseconds_);
-}
-
 void WaterfallDemo::DrawFrame(const FramePtr& frame, const ImagePtr& output_image,
                               const escher::SemaphorePtr& framebuffer_acquired) {
   TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame");
+
+  SetWindowSize({output_image->width(), output_image->height()});
 
   frame->cmds()->AddWaitSemaphore(framebuffer_acquired,
                                   vk::PipelineStageFlagBits::eColorAttachmentOutput);
@@ -318,7 +328,7 @@ void WaterfallDemo::DrawFrame(const FramePtr& frame, const ImagePtr& output_imag
       GenerateCameras(camera_projection_mode_, ViewingVolume(paper_scene_->bounding_box), frame);
 
   // Animate light positions and intensities.
-  UpdateLighting(paper_scene_.get(), stopwatch_, renderer_config_.shadow_type);
+  UpdateLighting(paper_scene_.get(), lighting_stopwatch_, renderer_config_.shadow_type);
 
   auto gpu_uploader =
       std::make_shared<BatchGpuUploader>(escher()->GetWeakPtr(), frame->frame_number());
@@ -326,26 +336,14 @@ void WaterfallDemo::DrawFrame(const FramePtr& frame, const ImagePtr& output_imag
   renderer_->BeginFrame(frame, gpu_uploader, paper_scene_, std::move(cameras), output_image);
   {
     TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame[scene]");
-    demo_scenes_[current_scene_]->Update(animation_stopwatch_, frame_count(), paper_scene_.get(),
-                                         renderer_.get());
+    demo_scenes_[current_scene_]->Update(object_stopwatch_, paper_scene_.get(), renderer_.get());
   }
   renderer_->FinalizeFrame();
-  auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
-  gpu_uploader->AddSignalSemaphore(upload_semaphore);
+  escher::SemaphorePtr upload_semaphore;
+  if (gpu_uploader->HasContentToUpload()) {
+    upload_semaphore = escher::Semaphore::New(escher()->vk_device());
+    gpu_uploader->AddSignalSemaphore(upload_semaphore);
+  }
   gpu_uploader->Submit();
   renderer_->EndFrame(std::move(upload_semaphore));
-
-  if (++frame_count_ == 1) {
-    first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();
-    stopwatch_.Reset();
-  } else if (frame_count_ % 200 == 0) {
-    set_enable_gpu_logging(true);
-
-    // Print out FPS and memory stats.
-    FXL_LOG(INFO) << "---- Average frame rate: " << ComputeFps();
-    FXL_LOG(INFO) << "---- Total GPU memory: " << (escher()->GetNumGpuBytesAllocated() / 1024)
-                  << "kB";
-  } else {
-    set_enable_gpu_logging(false);
-  }
 }

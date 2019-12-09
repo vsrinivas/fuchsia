@@ -4,13 +4,11 @@
 
 executable("waterfall") {
   sources = [
-    "waterfall_demo.cc",
-    "waterfall_demo.h",
     "waterfall_main.cc",
   ]
 
   deps = [
-    ":scenes",
+    ":waterfall_demo",
     "//src/ui/examples/escher/common",
     "//src/ui/lib/escher:vulkan",
   ]
@@ -26,7 +24,20 @@ executable("waterfall") {
   }
 }
 
-source_set("scenes") {
+source_set("waterfall_demo") {
+  sources = [
+    "waterfall_demo.cc",
+    "waterfall_demo.h",
+  ]
+
+  deps = [
+    ":waterfall_scenes",
+    "//src/ui/examples/escher/common:demo_base",
+    "//src/ui/lib/escher:vulkan",
+  ]
+}
+
+source_set("waterfall_scenes") {
   sources = [
     "scenes/paper_demo_scene1.cc",
     "scenes/paper_demo_scene1.h",
@@ -37,6 +48,6 @@ source_set("scenes") {
   ]
 
   deps = [
-    "//src/ui/examples/escher/common",
+    "//src/ui/examples/escher/common:demo_base",
   ]
 }

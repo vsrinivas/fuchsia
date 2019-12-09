@@ -14,8 +14,8 @@ void PaperDemoScene2::Init(escher::PaperScene* scene) {}
 
 PaperDemoScene2::~PaperDemoScene2() {}
 
-void PaperDemoScene2::Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
-                             escher::PaperScene* scene, escher::PaperRenderer* renderer) {
+void PaperDemoScene2::Update(const escher::Stopwatch& stopwatch, escher::PaperScene* scene,
+                             escher::PaperRenderer* renderer) {
   // Draws graph outline
   renderer->DrawDebugGraph("TIME", "FRAMES", escher::DebugRects::kWhite);
 

@@ -11,11 +11,16 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/examples/escher/common/demo.h"
 #include "src/ui/lib/escher/escher_process_init.h"
+#include "src/ui/lib/escher/renderer/frame.h"
+#include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
 
 #define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
+
+static constexpr uint64_t kLogGpuTimestampsEveryNFrames = 200;
 
 DemoHarness::DemoHarness(WindowParams window_params) : window_params_(window_params) {
   // Init() is called by DemoHarness::New().
@@ -35,16 +40,24 @@ void DemoHarness::Init(InstanceParams instance_params) {
   AppendPlatformSpecificDeviceExtensionNames(&device_extension_names);
   CreateDeviceAndQueue({std::move(device_extension_names), {}, surface});
 
-  CreateSwapchain();
   escher::GlslangInitializeProcess();
+  CreateEscher();
+
+  CreateSwapchain();
 }
 
 void DemoHarness::Shutdown() {
   FXL_DCHECK(!shutdown_complete_);
   shutdown_complete_ = true;
 
-  escher::GlslangFinalizeProcess();
+  escher()->vk_device().waitIdle();
+  escher()->Cleanup();
+
   DestroySwapchain();
+
+  escher::GlslangFinalizeProcess();
+  DestroyEscher();
+
   DestroyDevice();
   DestroyInstance();
   ShutdownWindowSystem();
@@ -74,8 +87,6 @@ void DemoHarness::CreateDeviceAndQueue(escher::VulkanDeviceQueues::Params params
 void DemoHarness::CreateSwapchain() {
   FXL_CHECK(!swapchain_.swapchain);
   FXL_CHECK(swapchain_.images.empty());
-  FXL_CHECK(!swapchain_image_owner_);
-  swapchain_image_owner_ = std::make_unique<SwapchainImageOwner>();
 
   vk::SurfaceCapabilitiesKHR surface_caps;
   {
@@ -224,16 +235,29 @@ void DemoHarness::CreateSwapchain() {
       image_info.height = swapchain_extent.height;
       image_info.usage = kImageUsageFlags;
 
-      auto escher_image = escher::Image::WrapVkImage(swapchain_image_owner_.get(), image_info, im);
+      auto escher_image = escher::Image::WrapVkImage(escher()->resource_recycler(), image_info, im);
       FXL_CHECK(escher_image);
       escher_images.push_back(escher_image);
     }
     swapchain_ = escher::VulkanSwapchain(swapchain, escher_images, swapchain_extent.width,
                                          swapchain_extent.height, format, color_space);
   }
+
+  // Create swapchain helper.
+  swapchain_helper_ = std::make_unique<escher::VulkanSwapchainHelper>(swapchain_, device(),
+                                                                      GetVulkanContext().queue);
 }
 
+void DemoHarness::CreateEscher() {
+  FXL_CHECK(!escher_);
+  escher_ = std::make_unique<escher::Escher>(device_queues_, filesystem_);
+}
+
+void DemoHarness::DestroyEscher() { escher_.reset(); }
+
 void DemoHarness::DestroySwapchain() {
+  swapchain_helper_.reset();
+
   swapchain_.images.clear();
 
   FXL_CHECK(swapchain_.swapchain);
@@ -260,6 +284,15 @@ VkBool32 DemoHarness::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
 
   bool fatal = false;
 
+// Macro to facilitate matching messages.  Example usage:
+//  if (MATCH_REPORT(DescriptorSet, 0, "VUID-VkWriteDescriptorSet-descriptorType-01403")) {
+//    FXL_LOG(INFO) << "ignoring descriptor set problem: " << pMessage << "\n\n";
+//    return false;
+//  }
+#define MATCH_REPORT(OTYPE, CODE, X)                                                    \
+  ((object_type == vk::DebugReportObjectTypeEXT::e##OTYPE) && (message_code == CODE) && \
+   (0 == strncmp(pMessage + 3, X, strlen(X) - 1)))
+
   if (flags == vk::DebugReportFlagBitsEXT::eInformation) {
     // Paranoid check that there aren't multiple flags.
     FXL_DCHECK(flags == vk::DebugReportFlagBitsEXT::eInformation);
@@ -283,8 +316,8 @@ VkBool32 DemoHarness::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
   }
 
   std::cerr << pMessage << " (layer: " << pLayerPrefix << "  code: " << message_code
-            << "  object-type: " << vk::to_string(object_type) << "  object: " << object << ")"
-            << std::endl;
+            << "  object-type: " << vk::to_string(object_type) << "  object: " << object
+            << "  location: " << location << ")" << std::endl;
 
   // Crash immediately on fatal errors.
   FXL_CHECK(!fatal);
@@ -294,11 +327,134 @@ VkBool32 DemoHarness::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
 
 escher::VulkanContext DemoHarness::GetVulkanContext() { return device_queues_->GetVulkanContext(); }
 
-DemoHarness::SwapchainImageOwner::SwapchainImageOwner()
-    : escher::ResourceManager(escher::EscherWeakPtr()) {}
+bool DemoHarness::MaybeDrawFrame() {
+  static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 
-void DemoHarness::SwapchainImageOwner::OnReceiveOwnable(
-    std::unique_ptr<escher::Resource> resource) {
-  FXL_DCHECK(resource->IsKindOf<escher::Image>());
-  FXL_LOG(INFO) << "Destroying Image for swapchain image";
+  if (run_offscreen_benchmark_) {
+    TRACE_DURATION("gfx", "escher::DemoHarness::MaybeDrawFrame (benchmarking)");
+
+    run_offscreen_benchmark_ = false;
+
+    Demo::RunOffscreenBenchmark(demo_, swapchain_.width, swapchain_.height, swapchain_.format,
+                                kOffscreenBenchmarkFrameCount);
+
+    // Guarantee that there are no frames in flight.
+    escher()->vk_device().waitIdle();
+    FXL_CHECK(escher()->Cleanup());
+    outstanding_frames_ = 0;
+  }
+
+  if (IsAtMaxOutstandingFrames()) {
+    // Try clean up; maybe a frame is actually already finished.
+    escher()->Cleanup();
+    if (IsAtMaxOutstandingFrames()) {
+      // Still too many frames in flight.  Try again later.
+      return false;
+    }
+  }
+
+  {
+    TRACE_DURATION("gfx", "escher::DemoHarness::MaybeDrawFrame (drawing)");
+    auto frame = escher()->NewFrame(demo_->name(), frame_count_, enable_gpu_logging_);
+    OnFrameCreated();
+
+    swapchain_helper_->DrawFrame([&, this](const escher::ImagePtr& output_image,
+                                           const escher::SemaphorePtr& framebuffer_acquired,
+                                           const escher::SemaphorePtr& render_finished) {
+      if (output_image->layout() != output_image->swapchain_layout()) {
+        // No need to synchronize, because the entire command buffer is synchronized via
+        // |framebuffer_acquired|.  Would be nice to roll this barrier into |swapchain_helper_|,
+        // but then it would need to know about the command buffer, which may not be desirable.
+        frame->cmds()->ImageBarrier(output_image, output_image->layout(),
+                                    output_image->swapchain_layout(),
+                                    vk::PipelineStageFlagBits::eBottomOfPipe, vk::AccessFlags(),
+                                    vk::PipelineStageFlagBits::eTopOfPipe, vk::AccessFlags());
+      }
+
+      demo_->DrawFrame(frame, output_image, framebuffer_acquired);
+      frame->EndFrame(render_finished, [this]() { OnFrameDestroyed(); });
+    });
+  }
+
+  if (++frame_count_ == 1) {
+    first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();
+    stopwatch_.Reset();
+  } else if (frame_count_ % kLogGpuTimestampsEveryNFrames == 0) {
+    enable_gpu_logging_ = true;
+
+    // Print out FPS and memory stats.
+    FXL_LOG(INFO) << "---- Average frame rate: " << ComputeFps();
+    FXL_LOG(INFO) << "---- Total GPU memory: " << (escher()->GetNumGpuBytesAllocated() / 1024)
+                  << "kB";
+  } else {
+    enable_gpu_logging_ = false;
+  }
+
+  escher()->Cleanup();
+  return true;
+}
+
+bool DemoHarness::HandleKeyPress(std::string key) {
+  if (key == "ESCAPE") {
+    SetShouldQuit();
+    return true;
+  }
+  if (demo_) {
+    return demo_->HandleKeyPress(std::move(key));
+  }
+  return false;
+}
+
+bool DemoHarness::IsAtMaxOutstandingFrames() {
+  FXL_DCHECK(outstanding_frames_ <= Demo::kMaxOutstandingFrames);
+  return outstanding_frames_ >= Demo::kMaxOutstandingFrames;
+}
+
+void DemoHarness::OnFrameCreated() {
+  FXL_DCHECK(!IsAtMaxOutstandingFrames());
+  ++outstanding_frames_;
+}
+
+void DemoHarness::OnFrameDestroyed() {
+  FXL_DCHECK(outstanding_frames_ > 0);
+  --outstanding_frames_;
+  FXL_DCHECK(!IsAtMaxOutstandingFrames());
+}
+
+void DemoHarness::Run(Demo* demo) {
+  BeginRun(demo);
+  RunForPlatform(demo);
+  EndRun();
+}
+
+void DemoHarness::BeginRun(Demo* demo) {
+  FXL_CHECK(demo);
+  FXL_CHECK(!demo_);
+  demo_ = demo;
+  frame_count_ = 0;
+  first_frame_microseconds_ = 0;
+  stopwatch_.Reset();
+}
+
+void DemoHarness::EndRun() {
+  FXL_CHECK(demo_);
+  demo_ = nullptr;
+
+  FXL_LOG(INFO) << "Average frame rate: " << ComputeFps();
+  FXL_LOG(INFO) << "First frame took: " << first_frame_microseconds_ / 1000.0 << " milliseconds";
+  escher()->Cleanup();
+}
+
+double DemoHarness::ComputeFps() {
+  // Omit the first frame when computing the average, because it is generating
+  // pipelines.  We subtract 2 instead of 1 because we just incremented it in
+  // DrawFrame().
+  //
+  // TODO(ES-157): This could be improved.  For example, when called from the
+  // destructor we don't know how much time has elapsed since the last
+  // DrawFrame(); it might be more accurate to subtract 1 instead of 2.  Also,
+  // on Linux the swapchain allows us to queue up many DrawFrame() calls so if
+  // we quit after a short time then the FPS will be artificially high.
+  auto microseconds = stopwatch_.GetElapsedMicroseconds();
+  return (frame_count_ - 2) * 1000000.0 / (microseconds - first_frame_microseconds_);
 }

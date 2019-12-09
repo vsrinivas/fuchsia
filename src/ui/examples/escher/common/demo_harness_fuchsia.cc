@@ -4,12 +4,13 @@
 
 #include "src/ui/examples/escher/common/demo_harness_fuchsia.h"
 
-#include <hid/usages.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
 
 #include <memory>
+
+#include <hid/usages.h>
 
 #include "lib/vfs/cpp/pseudo_dir.h"
 #include "src/ui/examples/escher/common/demo.h"
@@ -19,7 +20,9 @@ namespace {
 
 class DemoKeyDispatcher : public fuchsia::ui::input::InputDevice {
  public:
-  DemoKeyDispatcher(Demo* demo) : demo_(demo) {}
+  using Callback = fit::function<void(std::string)>;
+
+  DemoKeyDispatcher(Callback callback) : callback_(std::move(callback)) {}
 
  private:
   // |fuchsia::ui::input::InputDevice|
@@ -43,24 +46,24 @@ class DemoKeyDispatcher : public fuchsia::ui::input::InputDevice {
 
   void DispatchKey(uint32_t hid) {
     if (hid >= HID_USAGE_KEY_A && hid <= HID_USAGE_KEY_Z) {
-      demo_->HandleKeyPress(std::string(1, 'A' + hid - HID_USAGE_KEY_A));
+      callback_(std::string(1, 'A' + hid - HID_USAGE_KEY_A));
     } else if (hid >= HID_USAGE_KEY_1 && hid <= HID_USAGE_KEY_9) {
-      demo_->HandleKeyPress(std::string(1, '1' + hid - HID_USAGE_KEY_1));
+      callback_(std::string(1, '1' + hid - HID_USAGE_KEY_1));
     } else {
       switch (hid) {
         // Unlike ASCII, HID_USAGE_KEY_0 comes after 9.
         case HID_USAGE_KEY_0:
-          demo_->HandleKeyPress("0");
+          callback_("0");
           break;
         case HID_USAGE_KEY_ENTER:
         case HID_USAGE_KEY_KP_ENTER:
-          demo_->HandleKeyPress("RETURN");
+          callback_("RETURN");
           break;
         case HID_USAGE_KEY_ESC:
-          demo_->HandleKeyPress("ESCAPE");
+          callback_("ESCAPE");
           break;
         case HID_USAGE_KEY_SPACE:
-          demo_->HandleKeyPress("SPACE");
+          callback_("SPACE");
           break;
         default:
           break;
@@ -68,7 +71,7 @@ class DemoKeyDispatcher : public fuchsia::ui::input::InputDevice {
     }
   }
 
-  Demo* demo_;
+  Callback callback_;
   std::vector<uint32_t> pressed_keys_;
 };
 
@@ -126,10 +129,8 @@ void DemoHarnessFuchsia::AppendPlatformSpecificDeviceExtensionNames(std::set<std
 
 void DemoHarnessFuchsia::ShutdownWindowSystem() {}
 
-void DemoHarnessFuchsia::Run(Demo* demo) {
-  FXL_CHECK(!demo_);
-  demo_ = demo;
-  async::PostTask(loop_->dispatcher(), [this] { this->RenderFrameOrQuit(); });
+void DemoHarnessFuchsia::RunForPlatform(Demo* demo) {
+  async::PostTask(loop_->dispatcher(), [this, demo] { this->RenderFrameOrQuit(demo); });
   loop_->Run();
 }
 
@@ -137,18 +138,20 @@ void DemoHarnessFuchsia::RegisterDevice(
     fuchsia::ui::input::DeviceDescriptor descriptor,
     fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device) {
   if (descriptor.keyboard) {
-    input_devices_.AddBinding(std::make_unique<DemoKeyDispatcher>(demo_), std::move(input_device));
+    input_devices_.AddBinding(std::make_unique<DemoKeyDispatcher>([this](std::string key) {
+                                this->HandleKeyPress(std::move(key));
+                              }),
+                              std::move(input_device));
   }
 }
 
-void DemoHarnessFuchsia::RenderFrameOrQuit() {
-  FXL_CHECK(demo_);  // Must be running.
+void DemoHarnessFuchsia::RenderFrameOrQuit(Demo* demo) {
   if (ShouldQuit()) {
     loop_->Quit();
     device().waitIdle();
   } else {
-    demo_->MaybeDrawFrame();
+    MaybeDrawFrame();
     async::PostDelayedTask(
-        loop_->dispatcher(), [this] { this->RenderFrameOrQuit(); }, zx::msec(1));
+        loop_->dispatcher(), [this, demo] { this->RenderFrameOrQuit(demo); }, zx::msec(1));
   }
 }

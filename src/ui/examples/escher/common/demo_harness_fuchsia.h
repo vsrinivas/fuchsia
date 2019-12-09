@@ -21,9 +21,6 @@ class DemoHarnessFuchsia : public DemoHarness, fuchsia::ui::input::InputDeviceRe
  public:
   DemoHarnessFuchsia(async::Loop* loop, WindowParams window_params);
 
-  // |DemoHarness|
-  void Run(Demo* demo) override;
-
   sys::ComponentContext* component_context() { return component_context_.get(); }
 
  private:
@@ -41,12 +38,16 @@ class DemoHarnessFuchsia : public DemoHarness, fuchsia::ui::input::InputDeviceRe
   // Called by Shutdown().
   void ShutdownWindowSystem() override;
 
+  // |DemoHarness|
+  // Called by Run().
+  void RunForPlatform(Demo* demo) override;
+
   // |fuchsia::ui::input::InputDeviceRegistry|
   void RegisterDevice(
       fuchsia::ui::input::DeviceDescriptor descriptor,
       fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device) override;
 
-  void RenderFrameOrQuit();
+  void RenderFrameOrQuit(Demo* demo);
 
   // DemoHarnessFuchsia can work with a pre-existing message loop, and also
   // create its own if necessary.

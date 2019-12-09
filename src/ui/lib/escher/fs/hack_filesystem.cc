@@ -36,6 +36,11 @@ HackFileContents HackFilesystem::ReadFile(const HackFilePath& path) const {
 }
 
 void HackFilesystem::WriteFile(const HackFilePath& path, HackFileContents new_contents) {
+  auto it = files_.find(path);
+  if (it != files_.end() && it->second == new_contents) {
+    // Avoid invalidation if the contents don't change.
+    return;
+  }
   files_[path] = std::move(new_contents);
   InvalidateFile(path);
 }

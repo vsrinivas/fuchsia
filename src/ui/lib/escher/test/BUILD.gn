@@ -6,15 +6,24 @@ import("//build/test.gni")
 import("//src/ui/lib/escher/build_args.gni")
 
 if (is_mac) {
-  test("escher_unittests") {
-    # Escher cannot be built on macOS, as the latter does not
-    # support Vulkan. So that we may include Escher host tests in
-    # the default build, we substitute in a dummy no-op test in the
-    # case of a mac build.
+  # Escher cannot be built for macOS, as the latter does not
+  # support Vulkan. So that we may include Escher host tests in
+  # the default build, we substitute in a dummy no-op test in the
+  # case of a mac build.
+  source_set("no_op_mac_unittest") {
+    testonly = true
+
     sources = [
       "no_op_mac_unittest.cc",
     ]
     deps = [
+      "//third_party/googletest:gtest",
+    ]
+  }
+
+  test("escher_unittests") {
+    deps = [
+      ":no_op_mac_unittest",
       "//src/lib/fxl/test:gtest_main",
     ]
   }
@@ -167,28 +176,52 @@ source_set("gtest_vulkan") {
 # functions are in namespace escher.
 source_set("gtest_escher") {
   testonly = true
-
-  public_deps = [
-    ":gtest_vulkan",
-  ]
   if (escher_use_runtime_glsl) {
-    public_deps += [ "//src/ui/lib/escher" ]
+    public_deps = [
+      ":gtest_escher_with_runtime_glsl",
+    ]
   } else {
-    public_deps += [ "//src/ui/lib/escher:escher_no_glslang" ]
+    public_deps = [
+      ":gtest_escher_no_runtime_glsl",
+    ]
   }
+}
 
-  sources = [
-    "gtest_escher.cc",
-    "gtest_escher.h",
-    "test_with_vk_validation_layer.cc",
-    "test_with_vk_validation_layer.h",
-    "test_with_vk_validation_layer_macros.h",
-    "test_with_vk_validation_layer_macros_internal.h",
-    "vk_debug_report_callback_registry.cc",
-    "vk_debug_report_callback_registry.h",
-    "vk_debug_report_collector.cc",
-    "vk_debug_report_collector.h",
-  ]
+template("gtest_escher_library") {
+  source_set(target_name) {
+    testonly = true
+
+    forward_variables_from(invoker, "*")
+
+    sources = [
+      "gtest_escher.cc",
+      "gtest_escher.h",
+      "test_with_vk_validation_layer.cc",
+      "test_with_vk_validation_layer.h",
+      "test_with_vk_validation_layer_macros.h",
+      "test_with_vk_validation_layer_macros_internal.h",
+      "vk_debug_report_callback_registry.cc",
+      "vk_debug_report_callback_registry.h",
+      "vk_debug_report_collector.cc",
+      "vk_debug_report_collector.h",
+    ]
+    public_deps = [
+      ":gtest_vulkan",
+    ]
+    if (gtest_escher_library_use_runtime_glsl) {
+      public_deps += [ "//src/ui/lib/escher" ]
+    } else {
+      public_deps += [ "//src/ui/lib/escher:escher_no_glslang" ]
+    }
+  }
+}
+
+gtest_escher_library("gtest_escher_no_runtime_glsl") {
+  gtest_escher_library_use_runtime_glsl = false
+}
+
+gtest_escher_library("gtest_escher_with_runtime_glsl") {
+  gtest_escher_library_use_runtime_glsl = true
 }
 
 # Guarantees that buildbots at least build the Escher examples on Linux,

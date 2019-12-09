@@ -194,6 +194,7 @@ group("process") {
 group("escher") {
   testonly = true
   public_deps = [
+    "//src/ui/examples/escher/test:escher_examples_test($host_toolchain)",
     "//src/ui/lib/escher:escher_tests",
     "//src/ui/lib/escher/test:escher_unittests($host_toolchain)",
   ]

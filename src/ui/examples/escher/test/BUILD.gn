@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//src/ui/lib/escher/build_args.gni")
+
+if (is_mac) {
+  # Escher cannot be built for macOS, as the latter does not
+  # support Vulkan. So that we may include Escher host tests in
+  # the default build, we substitute in a dummy no-op test in the
+  # case of a mac build.
+  test("escher_examples_test") {
+    deps = [
+      "//src/lib/fxl/test:gtest_main",
+      "//src/ui/lib/escher/test:no_op_mac_unittest",
+    ]
+  }
+} else {
+  test("escher_examples_test") {
+    sources = [
+      "run_all_unittests.cc",
+      "waterfall_smoke_test.cc",
+    ]
+
+    deps = [
+      "//src/lib/fxl",
+      "//src/ui/examples/escher/waterfall:waterfall_demo",
+      "//src/ui/lib/escher/test:gtest_escher_with_runtime_glsl",
+    ]
+  }
+}

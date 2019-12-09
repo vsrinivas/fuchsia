@@ -9,8 +9,8 @@
 #include "src/ui/examples/escher/common/demo_harness.h"
 #include "src/ui/examples/escher/waterfall/waterfall_demo.h"
 
-std::unique_ptr<DemoHarness> CreateHarnessDemo(std::string demo_name, uint32_t width,
-                                               uint32_t height, int argc, char** argv) {
+std::unique_ptr<DemoHarness> CreateHarnessForDemo(std::string demo_name, uint32_t width,
+                                                  uint32_t height, int argc, char** argv) {
   bool use_fullscreen = false;
   for (int i = 1; i < argc; ++i) {
     if (!strcmp("--fullscreen", argv[i])) {
@@ -29,10 +29,10 @@ std::unique_ptr<DemoHarness> CreateHarnessDemo(std::string demo_name, uint32_t w
 }
 
 int main(int argc, char** argv) {
-  auto harness = CreateHarnessDemo("Escher Waterfall Demo", WaterfallDemo::kDemoWidth,
-                                   WaterfallDemo::kDemoHeight, argc, argv);
+  auto harness = CreateHarnessForDemo("Escher Waterfall Demo", WaterfallDemo::kDemoWidth,
+                                      WaterfallDemo::kDemoHeight, argc, argv);
   {
-    WaterfallDemo demo(harness.get(), argc, argv);
+    WaterfallDemo demo(harness->escher()->GetWeakPtr(), argc, argv);
     harness->Run(&demo);
   }
   harness->Shutdown();
