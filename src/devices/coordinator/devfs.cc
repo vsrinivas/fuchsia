@@ -28,6 +28,7 @@
 
 #include "async-loop-owned-rpc-handler.h"
 #include "coordinator.h"
+#include "lib/fidl/cpp/message_part.h"
 #include "log.h"
 
 namespace devmgr {
@@ -39,6 +40,16 @@ struct OnOpenMsg {
   fuchsia_io_NodeOnOpenEvent primary;
   fuchsia_io_NodeInfo extra;
 };
+
+zx_status_t SendOnOpenEvent(zx_handle_t ch, OnOpenMsg msg, zx_handle_t* handles,
+                            uint32_t num_handles) {
+  msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+  auto contains_nodeinfo = bool(msg.primary.info);
+  uint32_t msg_size = contains_nodeinfo ? sizeof(msg) : sizeof(msg.primary);
+  fidl::Message fidl_msg(fidl::BytePart(reinterpret_cast<uint8_t*>(&msg), msg_size, msg_size),
+                         fidl::HandlePart(handles, num_handles, num_handles));
+  return fidl_msg.WriteTransformV1(ch, 0, &fuchsia_io_NodeOnOpenEventTable);
+}
 
 uint64_t next_ino = 2;
 
@@ -163,11 +174,11 @@ void prepopulate_protocol_dirs() {
 }
 
 void describe_error(zx::channel h, zx_status_t status) {
-  fuchsia_io_NodeOnOpenEvent msg;
+  OnOpenMsg msg;
   memset(&msg, 0, sizeof(msg));
-  fidl_init_txn_header(&msg.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
-  msg.s = status;
-  h.write(0, &msg, sizeof(msg), nullptr, 0);
+  fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
+  msg.primary.s = status;
+  SendOnOpenEvent(h.get(), msg, nullptr, 0);
 }
 
 // A devnode is a directory (from stat's perspective) if
@@ -434,13 +445,14 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
       OnOpenMsg msg;
       memset(&msg, 0, sizeof(msg));
       fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
+      msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
       msg.primary.s = ZX_OK;
       msg.primary.info = (fuchsia_io_NodeInfo*)FIDL_ALLOC_PRESENT;
       msg.extra.tag = fuchsia_io_NodeInfoTag_directory;
 
-      // This is safe because this is executing on the same thread as the
-      // DcAsyncLoop(), so the handle can't be closed underneath us.
-      unowned_ipc->write(0, &msg, sizeof(msg), nullptr, 0);
+      // Writing to unowned_ipc is safe because this is executing on the same
+      // thread as the DcAsyncLoop(), so the handle can't be closed underneath us.
+      SendOnOpenEvent(unowned_ipc->get(), msg, nullptr, 0);
     }
     return;
   }

@@ -7,6 +7,7 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message_part.h>
+#include <lib/fidl/transformer.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
 
@@ -15,6 +16,18 @@
 namespace fidl {
 
 const fidl_type_t get_alt_type(const fidl_type_t* type);
+
+// This is a higher level wrapper around fidl_transform that is responsible for
+// allocating memory for the transformed bytes, then calls the provided callback
+// on the transformed bytes.
+//
+// This function will avoid calling fidl_transform whenever possible by checking
+// the fidl_type_t's contains_union field, and will also stack or heap allocate
+// depending on the possible size of the output bytes.
+zx_status_t FidlTransformWithCallback(
+    fidl_transformation_t transformation, const fidl_type_t* type, const uint8_t* src_bytes,
+    uint32_t src_num_bytes, const char** out_error_msg,
+    const std::function<zx_status_t(const uint8_t* dst_bytes, uint32_t dst_num_bytes)>& callback);
 
 // A FIDL message.
 //
@@ -135,6 +148,15 @@ class Message {
   // If this method returns ZX_OK, handles() will be empty because they were
   // consumed by this operation.
   zx_status_t Write(zx_handle_t channel, uint32_t flags);
+
+  // Writes a message to the given channel, possibly transforming it first.
+  //
+  // This method is similar to Write, but also takes in a fidl_type_t
+  // to transform the message (if it contains a union) to the v1 wire format
+  // before sending it. Since FIDL bindings automatically do this, the
+  // WriteTransform method is intended primarily for usecases where FIDL messages
+  // must be send manually.
+  zx_status_t WriteTransformV1(zx_handle_t channel, uint32_t flags, const fidl_type_t* type);
 
   // Issues a synchronous send and receive transaction on the given channel.
   //

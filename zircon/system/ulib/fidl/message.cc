@@ -10,10 +10,96 @@
 #include <string.h>
 
 #ifdef __Fuchsia__
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #endif
 
 namespace fidl {
+
+namespace {
+
+constexpr uint32_t kMaxStackAllocSize = 256;
+
+// This is analogous to ClampedMessageSize in traits.h, but does its work at
+// runtime instead of at compile time and is only called on v1 wire format types
+// in the sending direction.
+uint32_t ClampedMessageSize(const FidlCodedStruct& type) {
+  // convert these to u64 before summing
+  auto primary = static_cast<uint64_t>(type.size);
+  auto max_out_of_line = static_cast<uint64_t>(type.max_out_of_line);
+  uint64_t total_size = primary + max_out_of_line;
+  if (total_size > ZX_CHANNEL_MAX_MSG_BYTES) {
+    return ZX_CHANNEL_MAX_MSG_BYTES;
+  } else {
+    return static_cast<uint32_t>(total_size);
+  }
+}
+
+// RAII managed heap allocated storage for raw message bytes. Used to hold
+// the temporary output of fidl_transform (see ValidateV1Bytes)
+struct HeapAllocatedMessage {
+  explicit HeapAllocatedMessage(uint32_t size) : data(static_cast<uint8_t*>(malloc(size))) {}
+  ~HeapAllocatedMessage() { free(data); }
+
+  uint8_t* data;
+};
+
+}  // namespace
+
+const fidl_type_t get_alt_type(const fidl_type_t* type) {
+  switch (type->type_tag) {
+    case kFidlTypePrimitive:
+    case kFidlTypeEnum:
+    case kFidlTypeBits:
+    case kFidlTypeString:
+    case kFidlTypeHandle:
+      return *type;
+    case kFidlTypeStruct:
+      return fidl_type_t(*type->coded_struct.alt_type);
+    case kFidlTypeUnion:
+      return fidl_type_t(*type->coded_union.alt_type);
+    case kFidlTypeArray:
+      return fidl_type_t(*type->coded_array.alt_type);
+    case kFidlTypeVector:
+      return fidl_type_t(*type->coded_vector.alt_type);
+    default:
+      assert(false && "cannot get alt type of a type that lacks an alt type");
+      return *type;
+  }
+}
+
+zx_status_t FidlTransformWithCallback(
+    fidl_transformation_t transformation, const fidl_type_t* type, const uint8_t* src_bytes,
+    uint32_t src_num_bytes, const char** out_error_msg,
+    const std::function<zx_status_t(const uint8_t* dst_bytes, uint32_t dst_num_bytes)>& callback) {
+  if (type->type_tag != fidl::kFidlTypeStruct) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  auto struct_type = type->coded_struct;
+  if (!struct_type.contains_union) {
+    return callback(src_bytes, src_num_bytes);
+  }
+
+  auto msg_size = ClampedMessageSize(get_alt_type(type).coded_struct);
+  uint32_t dst_num_bytes;
+  if (msg_size <= kMaxStackAllocSize) {
+    auto dst_bytes = static_cast<uint8_t*>(alloca(msg_size));
+    zx_status_t status = fidl_transform(transformation, type, src_bytes, src_num_bytes, dst_bytes,
+                                        msg_size, &dst_num_bytes, out_error_msg);
+    if (status != ZX_OK) {
+      return status;
+    }
+    return callback(dst_bytes, dst_num_bytes);
+  } else {
+    HeapAllocatedMessage dst_bytes(msg_size);
+    zx_status_t status = fidl_transform(transformation, type, src_bytes, src_num_bytes,
+                                        dst_bytes.data, msg_size, &dst_num_bytes, out_error_msg);
+    if (status != ZX_OK) {
+      return status;
+    }
+    return callback(dst_bytes.data, dst_num_bytes);
+  }
+}
 
 Message::Message() = default;
 
@@ -46,28 +132,6 @@ zx_status_t Message::Encode(const fidl_type_t* type, const char** error_msg_out)
   if (status == ZX_OK)
     handles_.set_actual(actual_handles);
   return status;
-}
-
-const fidl_type_t get_alt_type(const fidl_type_t* type) {
-  switch (type->type_tag) {
-    case kFidlTypePrimitive:
-    case kFidlTypeEnum:
-    case kFidlTypeBits:
-    case kFidlTypeString:
-    case kFidlTypeHandle:
-      return *type;
-    case kFidlTypeStruct:
-      return fidl_type_t(*type->coded_struct.alt_type);
-    case kFidlTypeUnion:
-      return fidl_type_t(*type->coded_union.alt_type);
-    case kFidlTypeArray:
-      return fidl_type_t(*type->coded_array.alt_type);
-    case kFidlTypeVector:
-      return fidl_type_t(*type->coded_vector.alt_type);
-    default:
-      assert(false && "cannot get alt type of a type that lacks an alt type");
-      return *type;
-  }
 }
 
 zx_status_t Message::Decode(const fidl_type_t* type, const char** error_msg_out) {
@@ -124,6 +188,20 @@ zx_status_t Message::Write(zx_handle_t channel, uint32_t flags) {
                                         handles_.data(), handles_.actual());
   ClearHandlesUnsafe();
   return status;
+}
+
+zx_status_t Message::WriteTransformV1(zx_handle_t channel, uint32_t flags,
+                                      const fidl_type_t* type) {
+  auto src_data = bytes().data();
+  auto src_num_bytes = bytes().actual();
+  auto callback = [&](const uint8_t* dst_bytes, uint32_t dst_num_bytes) -> zx_status_t {
+    zx_status_t status = zx_channel_write(channel, flags, dst_bytes, dst_num_bytes, handles_.data(),
+                                          handles_.actual());
+    ClearHandlesUnsafe();
+    return status;
+  };
+  return FidlTransformWithCallback(FIDL_TRANSFORMATION_OLD_TO_V1, type, src_data, src_num_bytes,
+                                   nullptr, callback);
 }
 
 zx_status_t Message::Call(zx_handle_t channel, uint32_t flags, zx_time_t deadline,

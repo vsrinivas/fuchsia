@@ -51,6 +51,16 @@ struct OnOpenMsg {
   fuchsia_io_NodeInfo extra;
 };
 
+zx_status_t SendOnOpenEvent(zx_handle_t ch, OnOpenMsg msg, zx_handle_t* handles,
+                            uint32_t num_handles) {
+  msg.primary.hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+  auto contains_nodeinfo = bool(msg.primary.info);
+  uint32_t msg_size = contains_nodeinfo ? sizeof(msg) : sizeof(msg.primary);
+  fidl::Message fidl_msg(fidl::BytePart(reinterpret_cast<uint8_t*>(&msg), msg_size, msg_size),
+                         fidl::HandlePart(handles, num_handles, num_handles));
+  return fidl_msg.WriteTransformV1(ch, 0, &fuchsia_io_NodeOnOpenEventTable);
+}
+
 }  // namespace
 
 #define ZXDEBUG 0
@@ -59,11 +69,11 @@ struct OnOpenMsg {
 #define CAN_READ(conn) (conn->flags & ZX_FS_RIGHT_READABLE)
 
 void describe_error(zx::channel h, zx_status_t status) {
-  fuchsia_io_NodeOnOpenEvent msg;
+  OnOpenMsg msg;
   memset(&msg, 0, sizeof(msg));
-  fidl_init_txn_header(&msg.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
-  msg.s = status;
-  h.write(0, &msg, sizeof(msg), nullptr, 0);
+  fidl_init_txn_header(&msg.primary.hdr, 0, fuchsia_io_NodeOnOpenOrdinal);
+  msg.primary.s = status;
+  SendOnOpenEvent(h.get(), msg, nullptr, 0);
 }
 
 static zx_status_t create_description(const fbl::RefPtr<zx_device_t>& dev, OnOpenMsg* msg,
@@ -125,7 +135,8 @@ zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t
     zx_handle_t raw_handles[] = {
         handle.release(),
     };
-    r = rh.write(0, &info, sizeof(info), raw_handles, hcount);
+
+    r = SendOnOpenEvent(rh.get(), info, raw_handles, hcount);
     if (r != ZX_OK) {
       goto fail_open;
     }

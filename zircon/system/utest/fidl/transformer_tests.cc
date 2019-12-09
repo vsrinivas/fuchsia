@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/cpp/message.h>
 #include <lib/fidl/transformer.h>
 
 #include <cstring>
@@ -10,6 +11,8 @@
 #include <unittest/unittest.h>
 
 #include "generated/transformer_tables.test.h"
+#include "zircon/errors.h"
+#include "zircon/types.h"
 
 namespace {
 
@@ -4276,6 +4279,49 @@ bool fails_if_does_not_read_src_num_bytes() {
   END_TEST;
 }
 
+bool transform_with_callback_noop() {
+  BEGIN_TEST;
+
+  const auto& src_bytes = simpletablearraystruct_v1_and_old;
+  uint32_t src_num_bytes = sizeof(simpletablearraystruct_v1_and_old);
+  uint32_t num_called = 0;
+  auto callback = [&](const uint8_t* dst_bytes, uint32_t dst_num_bytes) -> zx_status_t {
+    num_called++;
+    // since this struct does not contain any unions, dst_bytes should be
+    // the same as the input
+    if (dst_bytes == src_bytes) {
+      return ZX_OK;
+    }
+    // return a special value to distinguish from transformer errors
+    return 1;
+  };
+
+  ASSERT_EQ(ZX_OK, fidl::FidlTransformWithCallback(FIDL_TRANSFORMATION_OLD_TO_V1,
+                                                   &example_SimpleTableArrayStructTable, src_bytes,
+                                                   src_num_bytes, nullptr, callback));
+  ASSERT_EQ(num_called, 1);
+  END_TEST;
+}
+
+bool transform_with_callback() {
+  BEGIN_TEST;
+
+  uint32_t num_called = 0;
+  auto callback = [&](const uint8_t* dst_bytes, uint32_t dst_num_bytes) -> zx_status_t {
+    num_called++;
+    if (cmp_payload(dst_bytes, dst_num_bytes, sandwich1_case1_v1, sizeof(sandwich1_case1_v1))) {
+      return ZX_OK;
+    }
+    return 1;
+  };
+
+  ASSERT_EQ(ZX_OK, fidl::FidlTransformWithCallback(FIDL_TRANSFORMATION_OLD_TO_V1,
+                                                   &example_Sandwich1Table, sandwich1_case1_old,
+                                                   sizeof(sandwich1_case1_old), nullptr, callback));
+  ASSERT_EQ(num_called, 1);
+  END_TEST;
+}
+
 }  // namespace
 
 // The commented-out tests below currently don't pass.
@@ -4359,4 +4405,6 @@ RUN_TEST(regression10_v1)
 RUN_TEST(regression10_v2)
 RUN_TEST(regression10_v3)
 RUN_TEST(regression11_unknown_content)
+RUN_TEST(transform_with_callback_noop)
+RUN_TEST(transform_with_callback)
 END_TEST_CASE(transformer)

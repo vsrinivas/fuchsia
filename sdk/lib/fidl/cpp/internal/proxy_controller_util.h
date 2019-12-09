@@ -17,6 +17,7 @@ namespace internal {
 // fidl_transform to write the message bytes into the old format and then call
 // fidl_validate on it, which also serves to validate the message bytes in the v1
 // format.
+// TODO(fxb/42311) Remove or rewrite using fidl_transform_with_callback
 zx_status_t ValidateV1Bytes(const fidl_type_t* type, const Message& message, const char* error_msg);
 
 }  // namespace internal
