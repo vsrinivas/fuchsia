@@ -5,10 +5,15 @@
 #include "platform-bus.h"
 
 #include <assert.h>
+#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/boot/driver-config.h>
+#include <zircon/process.h>
+#include <zircon/syscalls/iommu.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -18,11 +23,6 @@
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fuchsia/boot/c/fidl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
-#include <zircon/boot/driver-config.h>
-#include <zircon/process.h>
-#include <zircon/syscalls/iommu.h>
 
 #include "cpu-trace.h"
 
@@ -42,11 +42,10 @@ zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* pro
   }
 
   switch (proto_id) {
-  // DO NOT ADD ANY MORE PROTOCOLS HERE.
-  // SYSMEM is needed for the x86 board driver and GPIO_IMPL is needed for board driver pinmuxing.
-  // IOMMU is for potential future use.
-  // CLOCK_IMPL and POWER_IMPL are needed by the mt8167s board driver.
-  // Use of this mechanism for all other protocols has been deprecated.
+      // DO NOT ADD ANY MORE PROTOCOLS HERE.
+      // SYSMEM is needed for the x86 board driver and GPIO_IMPL is needed for board driver
+      // pinmuxing. IOMMU is for potential future use. CLOCK_IMPL and POWER_IMPL are needed by the
+      // mt8167s board driver. Use of this mechanism for all other protocols has been deprecated.
     case ZX_PROTOCOL_CLOCK_IMPL: {
       clock_ = ddk::ClockImplProtocolClient(static_cast<const clock_impl_protocol_t*>(protocol));
       break;
@@ -233,11 +232,10 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
 
 zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
   switch (proto_id) {
-  // DO NOT ADD ANY MORE PROTOCOLS HERE.
-  // SYSMEM is needed for the x86 board driver and GPIO_IMPL is needed for board driver pinmuxing.
-  // IOMMU is for potential future use.
-  // CLOCK_IMPL and POWER_IMPL are needed by the mt8167s board driver.
-  // Use of this mechanism for all other protocols has been deprecated.
+      // DO NOT ADD ANY MORE PROTOCOLS HERE.
+      // SYSMEM is needed for the x86 board driver and GPIO_IMPL is needed for board driver
+      // pinmuxing. IOMMU is for potential future use. CLOCK_IMPL and POWER_IMPL are needed by the
+      // mt8167s board driver. Use of this mechanism for all other protocols has been deprecated.
     case ZX_PROTOCOL_PBUS: {
       auto proto = static_cast<pbus_protocol_t*>(out);
       proto->ctx = this;
@@ -313,14 +311,16 @@ typedef struct {
   void* pbus_instance;
 } sysdev_suspend_t;
 
-static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) {
+static zx_status_t sys_device_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
+                                      uint8_t suspend_reason, uint8_t* out_state) {
   auto* p = reinterpret_cast<sysdev_suspend_t*>(ctx);
   auto* pbus = reinterpret_cast<class PlatformBus*>(p->pbus_instance);
 
   if (pbus != nullptr) {
     pbus_sys_suspend_t suspend_cb = pbus->suspend_cb();
     if (suspend_cb.callback != nullptr) {
-      return suspend_cb.callback(suspend_cb.ctx, flags);
+      return suspend_cb.callback(suspend_cb.ctx, requested_state, enable_wake, suspend_reason,
+                                 out_state);
     }
   }
   return ZX_ERR_NOT_SUPPORTED;
@@ -353,7 +353,7 @@ static zx_protocol_device_t sys_device_proto = []() {
   zx_protocol_device_t result = {};
 
   result.version = DEVICE_OPS_VERSION;
-  result.suspend = sys_device_suspend;
+  result.suspend_new = sys_device_suspend;
   result.release = sys_device_release;
   return result;
 }();
@@ -538,10 +538,8 @@ zx_status_t PlatformBus::Init() {
   }
 
   // Publish board revision to sysinfo driver
-  status = device_publish_metadata(parent(), "/dev/misc/sysinfo",
-                                   DEVICE_METADATA_BOARD_REVISION,
-                                   &board_info_.board_revision,
-                                   sizeof(board_info_.board_revision));
+  status = device_publish_metadata(parent(), "/dev/misc/sysinfo", DEVICE_METADATA_BOARD_REVISION,
+                                   &board_info_.board_revision, sizeof(board_info_.board_revision));
   if (status != ZX_OK) {
     zxlogf(ERROR, "device_publish_metadata(board_revision) failed: %d\n", status);
     return status;

@@ -81,7 +81,8 @@ struct PbusBoardInfo {
 
 [Layout = "ddk-callback"]
 protocol PbusSysSuspend {
-    Callback(uint32 flags) -> (zx.status out_status);
+    Callback(uint8 requested_state, bool enable_wake,
+             uint8 suspend_reason) -> (zx.status out_status, uint8 out_state);
 };
 
 

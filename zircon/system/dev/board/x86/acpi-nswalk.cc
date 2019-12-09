@@ -695,16 +695,17 @@ out:
   return AE_OK;
 }
 
-zx_status_t acpi_suspend(uint32_t flags) {
-  switch (flags & DEVICE_SUSPEND_REASON_MASK) {
-    case DEVICE_SUSPEND_FLAG_MEXEC: {
+zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
+                         uint8_t* out_state) {
+  switch (suspend_reason & DEVICE_MASK_SUSPEND_REASON) {
+    case DEVICE_SUSPEND_REASON_MEXEC: {
       AcpiTerminate();
       return ZX_OK;
     }
-    case DEVICE_SUSPEND_FLAG_REBOOT:
-      if (flags == DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER) {
+    case DEVICE_SUSPEND_REASON_REBOOT:
+      if (suspend_reason == DEVICE_SUSPEND_REASON_REBOOT_BOOTLOADER) {
         reboot_bootloader();
-      } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY) {
+      } else if (suspend_reason == DEVICE_SUSPEND_REASON_REBOOT_RECOVERY) {
         reboot_recovery();
       } else {
         reboot();
@@ -712,10 +713,10 @@ zx_status_t acpi_suspend(uint32_t flags) {
       // Kill this driver so that the IPC channel gets closed; devmgr will
       // perform a fallback that should shutdown or reboot the machine.
       exit(0);
-    case DEVICE_SUSPEND_FLAG_POWEROFF:
+    case DEVICE_SUSPEND_REASON_POWEROFF:
       poweroff();
       exit(0);
-    case DEVICE_SUSPEND_FLAG_SUSPEND_RAM:
+    case DEVICE_SUSPEND_REASON_SUSPEND_RAM:
       return suspend_to_ram();
     default:
       return ZX_ERR_NOT_SUPPORTED;
