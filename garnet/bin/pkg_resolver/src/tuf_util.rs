@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Temporarily allow deprecated functions while rust-tuf is updated
+#![allow(deprecated)]
+
 use {
     crate::cache::MerkleForError,
     chrono::{DateTime, Utc},
