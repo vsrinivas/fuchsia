@@ -17,6 +17,7 @@
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
 #include "src/connectivity/bluetooth/hci/emulator/log.h"
 
+namespace fbt = fuchsia::bluetooth;
 namespace ftest = fuchsia::bluetooth::test;
 
 using bt::DeviceAddress;
@@ -132,6 +133,8 @@ zx_status_t Device::Bind() {
   }
 
   fake_device_ = fbl::AdoptRef(new FakeController());
+  fake_device_->set_controller_parameters_callback(
+      fit::bind_member(this, &Device::OnControllerParametersChanged));
   fake_device_->set_advertising_state_callback(
       fit::bind_member(this, &Device::OnLegacyAdvertisingStateChanged));
   fake_device_->set_connection_state_callback(
@@ -315,6 +318,11 @@ void Device::AddBredrPeer(ftest::BredrPeerParameters params,
   callback(std::move(fidl_result));
 }
 
+void Device::WatchControllerParameters(WatchControllerParametersCallback callback) {
+  logf(TRACE, "HciEmulator.WatchControllerParameters\n");
+  controller_parameters_getter_.Watch(std::move(callback));
+}
+
 void Device::WatchLeScanStates(WatchLeScanStatesCallback callback) {
   // TODO(BT-229): Implement
 }
@@ -328,6 +336,22 @@ void Device::AddPeer(std::unique_ptr<Peer> peer) {
   auto address = peer->address();
   peer->set_closed_callback([this, address] { peers_.erase(address); });
   peers_[address] = std::move(peer);
+}
+
+void Device::OnControllerParametersChanged() {
+  logf(TRACE, "HciEmulator.OnControllerParametersChanged\n");
+
+  ftest::ControllerParameters fidl_value;
+  fidl_value.set_local_name(fake_device_->local_name());
+
+  const auto& device_class_bytes = fake_device_->device_class().bytes();
+  uint32_t device_class = 0;
+  device_class |= device_class_bytes[0];
+  device_class |= static_cast<uint32_t>(device_class_bytes[1]) << 8;
+  device_class |= static_cast<uint32_t>(device_class_bytes[2]) << 16;
+  fidl_value.set_device_class(fbt::DeviceClass{device_class});
+
+  controller_parameters_getter_.Set(std::move(fidl_value));
 }
 
 void Device::OnLegacyAdvertisingStateChanged() {

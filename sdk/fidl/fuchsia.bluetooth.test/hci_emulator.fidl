@@ -165,6 +165,12 @@ protocol HciEmulator {
     /// requests.
     AddBredrPeer(BredrPeerParameters parameters, request<Peer> peer) -> () error EmulatorPeerError;
 
+    /// Returns the current controller parameter state. If the parameters have not changed since the
+    /// last time this message was received, then this method does not return until there is a
+    /// change.
+    /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
+    WatchControllerParameters() -> (ControllerParameters parameters);
+
     /// Returns the most recent set of state transitions for the link layer LE scan procedure. This
     /// method returns when there has been a state change since the last invocation of this method
     /// by this client.

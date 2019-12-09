@@ -71,7 +71,10 @@ use {
     },
     fuchsia_bluetooth::{
         expectation::asynchronous::ExpectableState,
-        types::{emulator::LegacyAdvertisingState, Address},
+        types::{
+            emulator::{ControllerParameters, LegacyAdvertisingState},
+            Address,
+        },
     },
     futures::Future,
     parking_lot::MappedRwLockWriteGuard,
@@ -83,6 +86,9 @@ use {
 /// used in test harness auxiliary types.
 #[derive(Clone)]
 pub struct EmulatorState {
+    /// Most recently observed controller parameters.
+    pub controller_parameters: Option<ControllerParameters>,
+
     /// Observed changes to the controller's advertising state and parameters.
     pub advertising_state_changes: Vec<LegacyAdvertisingState>,
 
@@ -92,7 +98,11 @@ pub struct EmulatorState {
 
 impl Default for EmulatorState {
     fn default() -> EmulatorState {
-        EmulatorState { advertising_state_changes: vec![], connection_states: HashMap::new() }
+        EmulatorState {
+            controller_parameters: None,
+            advertising_state_changes: vec![],
+            connection_states: HashMap::new(),
+        }
     }
 }
 
@@ -211,6 +221,19 @@ pub trait EmulatorHarness: ExpectableState + Send + Sync {
     fn state(&self) -> MappedRwLockWriteGuard<'_, <Self as EmulatorHarness>::State>;
 }
 
+/// Watch for updates to controller parameters and record the latest snapshot. The asynchronous
+/// execution doesn't complete until the emulator channel gets closed or a FIDL error occurs.
+pub async fn watch_controller_parameters<H>(harness: H) -> Result<(), Error>
+where
+    H: EmulatorHarness,
+{
+    loop {
+        let cp = harness.emulator().watch_controller_parameters().await?;
+        harness.state().as_mut().controller_parameters = Some(cp.into());
+        harness.notify_state_changed();
+    }
+}
+
 /// Record advertising state changes. The asynchronous execution doesn't complete until the
 /// emulator channel gets closed or a FIDL error occurs.
 pub async fn watch_advertising_states<H>(harness: H) -> Result<(), Error>
@@ -259,9 +282,46 @@ where
 pub mod expectation {
     use {
         super::EmulatorHarnessState,
+        fidl_fuchsia_bluetooth::DeviceClass,
         fidl_fuchsia_bluetooth_test::{ConnectionState, LegacyAdvertisingType},
         fuchsia_bluetooth::{expectation::Predicate, types::Address},
     };
+
+    pub fn local_name_is<S>(name: &'static str) -> Predicate<S>
+    where
+        S: 'static + EmulatorHarnessState,
+    {
+        let descr = format!("local name is \"{}\"", name);
+        Predicate::new(
+            move |state: &S| -> bool {
+                state
+                    .as_ref()
+                    .controller_parameters
+                    .as_ref()
+                    .map(move |cp| cp.local_name == Some(name.to_string()))
+                    .unwrap_or(false)
+            },
+            Some(&descr),
+        )
+    }
+
+    pub fn device_class_is<S>(device_class: DeviceClass) -> Predicate<S>
+    where
+        S: 'static + EmulatorHarnessState,
+    {
+        let descr = format!("device class is \"{:#?}\"", device_class);
+        Predicate::new(
+            move |state: &S| -> bool {
+                state
+                    .as_ref()
+                    .controller_parameters
+                    .as_ref()
+                    .map(|s| s.device_class == Some(device_class))
+                    .unwrap_or(false)
+            },
+            Some(&descr),
+        )
+    }
 
     pub fn advertising_is_enabled<S>(enabled: bool) -> Predicate<S>
     where

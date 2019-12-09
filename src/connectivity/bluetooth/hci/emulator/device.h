@@ -66,12 +66,14 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   void AddBredrPeer(fuchsia::bluetooth::test::BredrPeerParameters params,
                     fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
                     AddBredrPeerCallback callback) override;
+  void WatchControllerParameters(WatchControllerParametersCallback callback) override;
   void WatchLeScanStates(WatchLeScanStatesCallback callback) override;
   void WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback callback) override;
 
   // Helper function used to initialize BR/EDR and LE peers.
   void AddPeer(std::unique_ptr<Peer> peer);
 
+  void OnControllerParametersChanged();
   void OnLegacyAdvertisingStateChanged();
 
   // Remove the bt-hci device.
@@ -118,6 +120,8 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   // List of active peers that have been registered with us.
   std::unordered_map<bt::DeviceAddress, std::unique_ptr<Peer>> peers_;
 
+  bt_lib_fidl::HangingGetter<fuchsia::bluetooth::test::ControllerParameters>
+      controller_parameters_getter_;
   bt_lib_fidl::HangingVectorGetter<fuchsia::bluetooth::test::LegacyAdvertisingState>
       legacy_adv_state_getter_;
 };

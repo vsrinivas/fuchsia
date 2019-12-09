@@ -4,6 +4,7 @@
 
 use {
     failure::{err_msg, Error, ResultExt},
+    fidl_fuchsia_bluetooth::{DeviceClass, MAJOR_DEVICE_CLASS_TOY},
     fidl_fuchsia_bluetooth_control::TechnologyType,
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciError, PeerProxy},
@@ -12,7 +13,7 @@ use {
         constants::HOST_DEVICE_DIR,
         device_watcher::{DeviceWatcher, WatchFilter},
         error::Error as BtError,
-        expectation::{self, peer},
+        expectation::{self, asynchronous::ExpectableStateExt, peer},
         hci_emulator::Emulator,
         host,
         types::Address,
@@ -22,10 +23,11 @@ use {
 };
 
 use crate::harness::{
+    emulator,
     expect::expect_eq,
     host_driver::{
         expect_adapter_state, expect_host_peer, expect_no_peer, expect_remote_device,
-        HostDriverHarness,
+        timeout_duration, HostDriverHarness,
     },
 };
 
@@ -69,25 +71,50 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
 
 // Tests that the local host driver address is 0.
 async fn test_bd_addr(test_state: HostDriverHarness) -> Result<(), Error> {
-    let fut = test_state
-        .aux()
-        .proxy()
-        .get_info();
-    let info = fut
-        .await
-        .map_err(|_| BtError::new("failed to read host driver info"))?;
+    let fut = test_state.aux().proxy().get_info();
+    let info = fut.await.map_err(|_| BtError::new("failed to read host driver info"))?;
     expect_eq!("00:00:00:00:00:00", info.address.as_str())
 }
 
-// Tests that setting the local name succeeds.
-// TODO(armansito): Test for FakeHciDevice state changes.
-async fn test_set_local_name(test_state: HostDriverHarness) -> Result<(), Error> {
-    let name = "test1234";
-    let fut = test_state.aux().proxy().set_local_name(&name);
+// Tests that the bt-host driver assigns the local name to "fuchsia" when initialized.
+async fn test_default_local_name(test_state: HostDriverHarness) -> Result<(), Error> {
+    const NAME: &str = "fuchsia";
+    let _ = test_state
+        .when_satisfied(emulator::expectation::local_name_is(NAME), timeout_duration())
+        .await?;
+    let fut = expect_adapter_state(&test_state, expectation::host_driver::name(NAME));
     fut.await?;
-    let fut = expect_adapter_state(&test_state, expectation::host_driver::name(name));
+    Ok(())
+}
+
+// Tests that the local name assigned to a bt-host is reflected in `AdapterState` and propagated
+// down to the controller.
+async fn test_set_local_name(test_state: HostDriverHarness) -> Result<(), Error> {
+    const NAME: &str = "test1234";
+    let fut = test_state.aux().proxy().set_local_name(NAME);
+    fut.await?;
+    let _ = test_state
+        .when_satisfied(emulator::expectation::local_name_is(NAME), timeout_duration())
+        .await?;
+    let fut = expect_adapter_state(&test_state, expectation::host_driver::name(NAME));
     fut.await?;
 
+    Ok(())
+}
+
+// Tests that the device class assigned to a bt-host gets propagated down to the controller.
+async fn test_set_device_class(test_state: HostDriverHarness) -> Result<(), Error> {
+    // TODO(fxb/35008): Use fidl_fuchsia_bluetooth::DeviceClass once the API has been updated.
+    let value = MAJOR_DEVICE_CLASS_TOY + 4;
+    let mut device_class = fidl_fuchsia_bluetooth_control::DeviceClass { value };
+    let fut = test_state.aux().proxy().set_device_class(&mut device_class);
+    fut.await?;
+    let _ = test_state
+        .when_satisfied(
+            emulator::expectation::device_class_is(DeviceClass { value }),
+            timeout_duration(),
+        )
+        .await?;
     Ok(())
 }
 
@@ -344,7 +371,9 @@ pub fn run_all() -> Result<(), Error> {
         [
             test_lifecycle,
             test_bd_addr,
+            test_default_local_name,
             test_set_local_name,
+            test_set_device_class,
             test_discoverable,
             test_discovery,
             test_close,

@@ -29,3 +29,15 @@ impl From<fidl::LegacyAdvertisingState> for LegacyAdvertisingState {
         }
     }
 }
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ControllerParameters {
+    pub local_name: Option<String>,
+    pub device_class: Option<fidl_fuchsia_bluetooth::DeviceClass>,
+}
+
+impl From<fidl::ControllerParameters> for ControllerParameters {
+    fn from(src: fidl::ControllerParameters) -> ControllerParameters {
+        ControllerParameters { local_name: src.local_name, device_class: src.device_class }
+    }
+}

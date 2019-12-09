@@ -11,9 +11,9 @@ fidl("fuchsia.bluetooth.test") {
   excluded_checks = [ "vector-bounds-not-specified" ]
 
   sources = [
+    "controller_states.fidl",
     "hci_emulator.fidl",
     "hci_errors.fidl",
-    "le_procedures.fidl",
   ]
 
   public_deps = [

@@ -6,8 +6,26 @@ library fuchsia.bluetooth.test;
 
 using fuchsia.bluetooth as bt;
 
+/// The maximum size (in bytes) of a local name assigned using the HCI_Write_Local_Name command
+/// (see Core Specification v5.1, Vol 2, Part E, 7.3.11).
+const uint8 MAX_LOCAL_NAME_LENGTH = 248;
+
+/// Advertising data MTUs for legacy (4.x) and extended (5.x) advertising PDU types
+/// (see Core Specification v5.1, Vol 2, Part E, sections 7.3.11 & 7.8.54).
 const uint8 MAX_LEGACY_ADVERTISING_DATA_LENGTH = 31;
 const uint8 MAX_EXTENDED_ADVERTISING_DATA_LENGTH = 251;
+
+/// Contains Bluetooth controller & baseband parameters that are writable by the host but don't
+/// fall under a particular procedural category (as are those defined below).
+table ControllerParameters {
+    /// The local name used for the Link Layer name discovery procedure. This parameter only applies
+    /// for the BR/EDR transport. In LE, the local name is provided as an advertising parameter and
+    /// via GATT.
+    1: string:MAX_LOCAL_NAME_LENGTH local_name;
+
+    /// The local "Class of Device" used during the BR/EDR inquiry procedure.
+    2: bt.DeviceClass device_class;
+};
 
 /// LE legacy advertising types from Bluetooth Core Specification 5.1 Vol 2, Part E, Section 7.8.5.
 enum LegacyAdvertisingType : uint8 {
