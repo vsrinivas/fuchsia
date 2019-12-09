@@ -42,19 +42,25 @@ type LLVMSymbolizeResult struct {
 }
 
 type LLVMSymbolizer struct {
-	path       string
-	stdin      io.WriteCloser
-	stdout     io.ReadCloser
-	symbolizer *exec.Cmd
-	input      chan llvmSymboArgs
-	cache      cache.Cache
+	path            string
+	stdin           io.WriteCloser
+	stdout          io.ReadCloser
+	symbolizer      *exec.Cmd
+	input           chan llvmSymboArgs
+	cache           cache.Cache
+	restartInterval uint
+	restartCounter  uint
 }
 
-func NewLLVMSymbolizer(llvmSymboPath string) *LLVMSymbolizer {
+func NewLLVMSymbolizer(llvmSymboPath string, restartInterval uint) *LLVMSymbolizer {
 	var out LLVMSymbolizer
 	out.path = llvmSymboPath
 	out.input = make(chan llvmSymboArgs)
 	out.cache = &cache.LRUCache{Size: maxCacheSize}
+	// TODO(42018): llvm-symbolizer can use *tons* of memory so we restart it.
+	// Once it no longer uses up so much memory, remove this.
+	out.restartInterval = restartInterval
+	out.restartCounter = 0
 	return &out
 }
 
@@ -65,7 +71,7 @@ func unknownStr(str string) OptStr {
 	return NewOptStr(str)
 }
 
-func (s *LLVMSymbolizer) restart() error {
+func restartSymbolizerImpl(s *LLVMSymbolizer) error {
 	if err := s.stdin.Close(); err != nil {
 		return err
 	}
@@ -75,13 +81,29 @@ func (s *LLVMSymbolizer) restart() error {
 	return s.start()
 }
 
-func (s *LLVMSymbolizer) handle(ctx context.Context) {
-	for {
-		// TODO(42018): llvm-symbolizer can use *tons* of memory so we restart it every time
-		// right now. Once it no longer uses up so much memory, remove this.
-		if err := s.restart(); err != nil {
+// Indirection for testability
+var restartSymbolizer = restartSymbolizerImpl
+
+func (s *LLVMSymbolizer) restartIfNeeded() bool {
+	if s.restartInterval == 0 {
+		return false
+	}
+	restarted := false
+	if s.restartCounter == s.restartInterval-1 {
+		if err := restartSymbolizer(s); err != nil {
 			panic("restarting llvm-symbolizer failed: " + fmt.Sprintf("%v", err))
 		}
+		restarted = true
+	}
+	s.restartCounter = (s.restartCounter + 1) % s.restartInterval
+
+	return restarted
+}
+
+func (s *LLVMSymbolizer) handle(ctx context.Context) {
+	for {
+		s.restartIfNeeded()
+
 		select {
 		case <-ctx.Done():
 			return
