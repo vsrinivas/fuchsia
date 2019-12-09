@@ -10,7 +10,6 @@
 #endif
 
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/fidl-utils/bind.h>
 
 #include <fs/internal/connection.h>
 #include <fs/vfs.h>
