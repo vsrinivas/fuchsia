@@ -18,7 +18,6 @@ group("all") {
     "//src/ledger/bin",
     "//src/ledger/bin/tests/benchmark:ledger_benchmarks",
     "//src/ledger/cloud_provider_in_memory/bin",
-    "//src/ledger/cloud_provider_memory_diff",
     "//src/lib/inspect/rust:benchmarks",
     "//src/modular/bin/basemgr",
     "//src/modular/bin/basemgr:auto_login_base_shell",

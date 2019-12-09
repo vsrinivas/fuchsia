@@ -44,18 +44,3 @@ source_set("syncable") {
 
   configs += [ "//src/ledger:ledger_config" ]
 }
-
-fidl("cloud-test") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "too-many-nested-libraries" ]
-
-  name = "fuchsia.ledger.cloud.test"
-
-  sources = [
-    "cloud_controller.fidl",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.ledger.cloud",
-  ]
-}

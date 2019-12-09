@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/cloud_provider_memory_diff_lib_lib_test"
-    }
-}
