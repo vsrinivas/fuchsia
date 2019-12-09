@@ -18,8 +18,9 @@ use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::service_context::ServiceContext;
 use crate::switchboard::base::{
-    IntlInfo, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
+    Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
 };
+use crate::switchboard::intl_types::IntlInfo;
 
 type IntlStorage = Arc<Mutex<DeviceStorage<IntlInfo>>>;
 
@@ -27,7 +28,7 @@ impl DeviceStorageCompatible for IntlInfo {
     const KEY: &'static str = "intl_info";
 
     fn default_value() -> Self {
-        IntlInfo { time_zone_id: None }
+        IntlInfo { locales: None, temperature_unit: None, time_zone_id: None }
     }
 }
 
@@ -132,7 +133,7 @@ impl IntlController {
         }
 
         self.write_intl_info_to_service(info.clone());
-        self.write_time_zone_to_local_storage(info.clone(), responder);
+        self.write_intl_info_to_local_storage(info.clone(), responder);
     }
 
     /// Checks if the given IntlInfo is valid.
@@ -178,23 +179,18 @@ impl IntlController {
     /// Writes the intl info to persistent storage and updates our local copy.
     ///
     /// TODO(fxb/41639): inline this method into set_time_zone
-    fn write_time_zone_to_local_storage(
+    fn write_intl_info_to_local_storage(
         &mut self,
         info: IntlInfo,
         responder: SettingRequestResponder,
     ) {
         let old_value = self.stored_value.clone();
 
-        let time_zone_id = match info.time_zone_id {
-            Some(id) => id,
-            None => return,
-        };
-
-        // Save the value locally.
-        self.stored_value.time_zone_id = Some(time_zone_id);
+        self.stored_value = info.merge(self.stored_value.clone());
 
         if old_value == self.stored_value {
             // Value unchanged, no need to persist or notify listeners.
+            responder.send(Ok(None)).ok();
             return;
         }
 

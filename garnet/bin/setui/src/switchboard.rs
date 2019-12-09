@@ -15,3 +15,6 @@ pub mod hanging_get_handler;
 
 /// This mod provides the service's internal representations of accessibility info.
 pub mod accessibility_types;
+
+/// This mod provides the service's internal representations of internationalization info.
+pub mod intl_types;

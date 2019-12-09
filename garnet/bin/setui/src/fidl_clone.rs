@@ -119,6 +119,22 @@ impl FIDLClone for CaptionsSettings {
     }
 }
 
+impl FIDLClone for fidl_fuchsia_settings::IntlSettings {
+    fn clone(&self) -> Self {
+        let mut settings = fidl_fuchsia_settings::IntlSettings::empty();
+        settings.locales = match &self.locales {
+            Some(locales) => Some(locales.clone()),
+            None => None,
+        };
+        settings.temperature_unit = self.temperature_unit;
+        settings.time_zone_id = match &self.time_zone_id {
+            Some(time_zone_id) => Some(time_zone_id.clone()),
+            None => None,
+        };
+        settings
+    }
+}
+
 impl FIDLClone for CaptionFontStyle {
     fn clone(&self) -> Self {
         let mut style = CaptionFontStyle::empty();

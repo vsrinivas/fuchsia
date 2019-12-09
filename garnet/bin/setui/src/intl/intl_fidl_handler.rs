@@ -14,11 +14,9 @@ use futures::lock::Mutex;
 use futures::TryStreamExt;
 use parking_lot::RwLock;
 
-use fidl_fuchsia_intl::TimeZoneId;
-
 use crate::switchboard::base::{
-    FidlResponseErrorLogger, IntlInfo, SettingRequest, SettingResponse, SettingResponseResult,
-    SettingType, Switchboard,
+    FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
+    Switchboard,
 };
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 
@@ -33,13 +31,7 @@ impl Sender<IntlSettings> for IntlWatchResponder {
 impl From<SettingResponse> for IntlSettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Intl(info) = response {
-            let mut intl_settings = IntlSettings::empty();
-
-            if let Some(time_zone_id) = info.time_zone_id {
-                intl_settings.time_zone_id = Some(TimeZoneId { id: time_zone_id });
-            }
-
-            return intl_settings;
+            return info.into();
         }
 
         panic!("incorrect value sent to intl");
@@ -48,9 +40,7 @@ impl From<SettingResponse> for IntlSettings {
 
 impl From<IntlSettings> for SettingRequest {
     fn from(settings: IntlSettings) -> Self {
-        SettingRequest::SetIntlInfo(IntlInfo {
-            time_zone_id: settings.time_zone_id.map_or(None, |tz| Some(tz.id)),
-        })
+        SettingRequest::SetIntlInfo(settings.into())
     }
 }
 
@@ -126,28 +116,43 @@ impl IntlFidlHandler {
 
 #[cfg(test)]
 mod tests {
+    use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
+
     use super::*;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_request_from_settings_empty() {
         let request = SettingRequest::from(IntlSettings::empty());
 
-        assert_eq!(request, SettingRequest::SetIntlInfo(IntlInfo { time_zone_id: None }));
+        assert_eq!(
+            request,
+            SettingRequest::SetIntlInfo(IntlInfo {
+                locales: None,
+                temperature_unit: None,
+                time_zone_id: None,
+            })
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_request_from_settings() {
         const TIME_ZONE_ID: &'static str = "PDT";
 
-        let mut intl_settings = IntlSettings::empty();
-        intl_settings.time_zone_id =
-            Some(fidl_fuchsia_intl::TimeZoneId { id: TIME_ZONE_ID.to_string() });
+        let intl_settings = IntlSettings {
+            locales: Some(vec![fidl_fuchsia_intl::LocaleId { id: "blah".into() }]),
+            temperature_unit: Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
+            time_zone_id: Some(fidl_fuchsia_intl::TimeZoneId { id: TIME_ZONE_ID.to_string() }),
+        };
 
         let request = SettingRequest::from(intl_settings);
 
         assert_eq!(
             request,
-            SettingRequest::SetIntlInfo(IntlInfo { time_zone_id: Some(TIME_ZONE_ID.to_string()) })
+            SettingRequest::SetIntlInfo(IntlInfo {
+                locales: Some(vec![LocaleId { id: "blah".into() }]),
+                temperature_unit: Some(TemperatureUnit::Celsius),
+                time_zone_id: Some(TIME_ZONE_ID.to_string()),
+            })
         );
     }
 }

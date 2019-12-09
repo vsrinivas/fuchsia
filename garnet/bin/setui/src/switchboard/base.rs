@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::switchboard::accessibility_types::AccessibilityInfo;
+use crate::switchboard::intl_types::IntlInfo;
 use bitflags::bitflags;
 use failure::Error;
 use fuchsia_syslog::fx_log_warn;
@@ -13,6 +14,12 @@ use std::collections::HashSet;
 
 pub type SettingResponseResult = Result<Option<SettingResponse>, Error>;
 pub type SettingRequestResponder = Sender<SettingResponseResult>;
+
+/// A trait for structs where all fields are options. Recursively performs
+/// [Option::or](std::option::Option::or) on each field in the struct and substructs.
+pub trait Merge {
+    fn merge(&self, other: Self) -> Self;
+}
 
 /// The setting types supported by the messaging system. This is used as a key
 /// for listening to change notifications and sending requests.
@@ -172,11 +179,6 @@ impl DoNotDisturbInfo {
     pub const fn new(user_dnd: bool, night_mode_dnd: bool) -> DoNotDisturbInfo {
         DoNotDisturbInfo { user_dnd: user_dnd, night_mode_dnd: night_mode_dnd }
     }
-}
-
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub struct IntlInfo {
-    pub time_zone_id: Option<String>,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

@@ -2,13 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::switchboard::base::Merge;
 use serde_derive::{Deserialize, Serialize};
-
-/// A trait for structs where all fields are options. Recursively performs Option.or on each field
-/// in the struct and substructs.
-pub trait Merge {
-    fn merge(&self, other: Self) -> Self;
-}
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AccessibilityInfo {

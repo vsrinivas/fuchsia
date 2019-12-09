@@ -5,9 +5,9 @@
 use {
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
-    crate::switchboard::accessibility_types::{AccessibilityInfo, Merge},
+    crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
-        SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
+        Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
     },
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,

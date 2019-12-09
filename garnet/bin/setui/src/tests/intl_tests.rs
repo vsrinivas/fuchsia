@@ -20,7 +20,8 @@ use {
     std::sync::Arc,
 };
 
-use crate::switchboard::base::IntlInfo;
+use crate::fidl_clone::FIDLClone;
+use crate::switchboard::intl_types::IntlInfo;
 
 const ENV_NAME: &str = "settings_service_intl_test_environment";
 
@@ -83,23 +84,21 @@ async fn test_intl_e2e() {
     assert_eq!(settings.time_zone_id, None);
 
     // Set new values.
-    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
-    let updated_timezone = "GMT";
-    intl_settings.time_zone_id =
-        Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
-    intl_service.set(intl_settings).await.expect("set completed").expect("set successful");
+    let intl_settings = fidl_fuchsia_settings::IntlSettings {
+        locales: Some(vec![fidl_fuchsia_intl::LocaleId { id: "blah".into() }]),
+        temperature_unit: Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
+        time_zone_id: Some(fidl_fuchsia_intl::TimeZoneId { id: "GMT".to_string() }),
+    };
+    intl_service.set(intl_settings.clone()).await.expect("set completed").expect("set successful");
 
     // Verify the values we set are returned when watching.
     let settings = intl_service.watch().await.expect("watch completed").expect("watch successful");
-    assert_eq!(
-        settings.time_zone_id,
-        Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() })
-    );
+    assert_eq!(settings, intl_settings.clone());
 
     // Verify the value we set is persisted in DeviceStorage.
     let mut store_lock = store.lock().await;
     let retrieved_struct = store_lock.get().await;
-    assert_eq!(retrieved_struct.time_zone_id.unwrap(), updated_timezone);
+    assert_eq!(retrieved_struct, intl_settings.clone().into());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

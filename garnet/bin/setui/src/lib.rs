@@ -198,7 +198,7 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
                 switchboard::base::SettingType::Intl,
                 IntlController::spawn(
                     service_context_handle.clone(),
-                    unboxed_storage_factory.get_store::<switchboard::base::IntlInfo>(),
+                    unboxed_storage_factory.get_store::<switchboard::intl_types::IntlInfo>(),
                 )
                 .unwrap(),
             )
