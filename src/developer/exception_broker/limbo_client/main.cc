@@ -8,7 +8,10 @@
 #include <stdio.h>
 #include <zircon/status.h>
 
+#include <iostream>
+
 #include "src/developer/exception_broker/limbo_client/limbo_client.h"
+#include "src/developer/exception_broker/limbo_client/options.h"
 
 using namespace fuchsia::exception;
 
@@ -20,7 +23,12 @@ void PrintError(zx_status_t status) {
 
 };  // namespace
 
-int main() {
+int main(int argc, const char* argv[]) {
+  OptionFunction func = ParseArgs(argc, argv, std::cout);
+  if (!func)
+    return EXIT_FAILURE;
+
+  // Create the client.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();
@@ -32,7 +40,9 @@ int main() {
     return EXIT_FAILURE;
   }
 
-  printf("Is limbo active? %d\n", client.active());
+  if (client.active())
+    printf("Limbo is ENABLED\n");
 
-  return EXIT_SUCCESS;
+  // Call the parsed function.
+  return func(&client, std::cout) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

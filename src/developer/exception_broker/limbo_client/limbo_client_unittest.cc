@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/exception_broker/limbo_client/options.h"
 #include "src/lib/fxl/logging.h"
 
 namespace fuchsia {
@@ -23,6 +24,7 @@ namespace {
 class StubProcessLimbo : public ProcessLimbo {
  public:
   void set_active(bool active) { active_ = active; }
+  bool active_call() const { return active_call_; }
 
   void AppendException(zx_koid_t process_koid, zx_koid_t thread_koid, zx_excp_type_t exception) {
     exceptions_.push_back({process_koid, thread_koid, exception});
@@ -31,7 +33,8 @@ class StubProcessLimbo : public ProcessLimbo {
   // ProcessLimbo implementation.
 
   void SetActive(bool active, SetActiveCallback cb) override {
-    FXL_NOTREACHED() << "Not needed for tests.";
+    active_call_ = active;
+    cb();
   }
 
   void WatchActive(WatchActiveCallback callback) override { callback(active_); }
@@ -90,6 +93,8 @@ class StubProcessLimbo : public ProcessLimbo {
 
  private:
   bool active_ = false;
+  bool active_call_ = false;
+
   std::vector<std::string> filters_;
   std::vector<std::tuple<zx_koid_t, zx_koid_t, zx_excp_type_t>> exceptions_;
 
@@ -197,6 +202,31 @@ TEST(LimboClient, ListProcesses) {
     EXPECT_EQ(processes[1].thread_name, "process-limbo-thread");
     EXPECT_EQ(processes[1].exception, kException2);
   }
+}
+
+TEST(LimboClient, InvalidOption) {
+  std::stringstream ss;
+  ASSERT_EQ(ParseArgs(1, nullptr, ss), nullptr);
+
+  const char* kArgs[] = {"limbo.cmx", "<invalid>"};
+  ASSERT_EQ(ParseArgs(2, kArgs, ss), nullptr);
+}
+
+TEST(LimboClient, Enable) {
+  TestContext context;
+  context.process_limbo.set_active(false);
+
+  LimboClient client(context.services.service_directory());
+  ASSERT_ZX_EQ(client.Init(), ZX_OK);
+
+  std::stringstream ss;
+
+  const char* kArgs[] = {"limbo.cmx", "enable"};
+  OptionFunction function = ParseArgs(2, kArgs, ss);
+  ASSERT_TRUE(function);
+
+  ASSERT_ZX_EQ(function(&client, ss), ZX_OK);
+  ASSERT_TRUE(context.process_limbo.active_call());
 }
 
 }  // namespace

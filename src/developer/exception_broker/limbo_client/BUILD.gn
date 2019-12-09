@@ -10,6 +10,8 @@ source_set("lib") {
   sources = [
     "limbo_client.cc",
     "limbo_client.h",
+    "options.cc",
+    "options.h",
   ]
 
   deps = [

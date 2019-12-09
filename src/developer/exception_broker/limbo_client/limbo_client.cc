@@ -30,6 +30,12 @@ zx_status_t LimboClient::Init() {
   return ZX_OK;
 }
 
+zx_status_t LimboClient::SetActive(bool active) {
+  if (!connection_)
+    return ZX_ERR_UNAVAILABLE;
+  return connection_->SetActive(active);
+}
+
 zx_status_t LimboClient::ListProcesses(std::vector<ProcessDescription>* processes) {
   if (!connection_)
     return ZX_ERR_UNAVAILABLE;

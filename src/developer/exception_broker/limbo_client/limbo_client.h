@@ -20,6 +20,8 @@ class LimboClient {
 
   bool active() const { return active_; }
 
+  zx_status_t SetActive(bool active);
+
   struct ProcessDescription {
     zx_koid_t process_koid;
     zx_koid_t thread_koid;
