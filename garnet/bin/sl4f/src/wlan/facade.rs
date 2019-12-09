@@ -39,6 +39,14 @@ impl WlanFacade {
         Ok(WlanFacade { wlan_svc, inner: RwLock::new(InnerWlanFacade { scan_results: false }) })
     }
 
+    /// Gets the list of wlan interface IDs.
+    pub async fn get_iface_id_list(&self) -> Result<Vec<u16>, Error> {
+        let wlan_iface_ids = wlan_service_util::get_iface_list(&self.wlan_svc)
+            .await
+            .context("Get Iface Id List: failed to get wlan iface list")?;
+        Ok(wlan_iface_ids)
+    }
+
     pub async fn scan(&self) -> Result<Vec<String>, Error> {
         // get iface info
         let wlan_iface_ids = wlan_service_util::get_iface_list(&self.wlan_svc)
@@ -83,6 +91,18 @@ impl WlanFacade {
             .context("Connect: failed to get iface sme proxy")?;
 
         wlan_service_util::connect_to_network(&sme_proxy, target_ssid, target_pwd).await
+    }
+
+    /// Destroys a WLAN interface by input interface ID.
+    ///
+    /// # Arguments
+    /// * `iface_id` - The u16 interface id.
+    pub async fn destroy_iface(&self, iface_id: u16) -> Result<(), Error> {
+        wlan_service_util::destroy_iface(&self.wlan_svc, iface_id)
+            .await
+            .context("Destroy: Failed to destroy iface")?;
+
+        Ok(())
     }
 
     pub async fn disconnect(&self) -> Result<(), Error> {

@@ -16,7 +16,9 @@ pub async fn get_iface_ap_sme_proxy(
     iface_id: u16,
 ) -> Result<fidl_sme::ApSmeProxy, Error> {
     let (sme_proxy, sme_remote) = endpoints::create_proxy()?;
-    let status = wlan_svc.get_ap_sme(iface_id, sme_remote).await
+    let status = wlan_svc
+        .get_ap_sme(iface_id, sme_remote)
+        .await
         .context("error sending GetApSme request")?;
     if status == zx::sys::ZX_OK {
         Ok(sme_proxy)

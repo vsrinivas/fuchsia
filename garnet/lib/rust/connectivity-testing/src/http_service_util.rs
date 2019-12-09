@@ -8,7 +8,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx,
-    futures::io::{AllowStdIo, copy},
+    futures::io::{copy, AllowStdIo},
 };
 
 pub fn create_url_request<S: ToString>(url_string: S) -> http::UrlRequest {

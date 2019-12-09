@@ -7,9 +7,11 @@ use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::stream::TryStreamExt;
+
+use fidl_fuchsia_wlan_device_service::{self as wlan_service};
 
 type WlanService = DeviceServiceProxy;
 
@@ -211,6 +213,17 @@ pub async fn get_wlan_mac_addr(
 ) -> Result<[u8; 6], Error> {
     let (_status, resp) = wlan_svc.query_iface(iface_id).await?;
     Ok(resp.ok_or(format_err!("No valid iface response"))?.mac_addr)
+}
+
+pub async fn destroy_iface(wlan_svc: &DeviceServiceProxy, iface_id: u16) -> Result<(), Error> {
+    let mut req = wlan_service::DestroyIfaceRequest { iface_id };
+
+    let response = wlan_svc.destroy_iface(&mut req).await.context("Error destroying iface")?;
+    match zx::Status::ok(response) {
+        Ok(()) => fx_log_info!("Destroyed iface {:?}", iface_id),
+        Err(s) => bail!("Error destroying iface: {:?}", s),
+    };
+    Ok(())
 }
 
 #[cfg(test)]
@@ -915,5 +928,38 @@ mod tests {
         let err_str = assert_variant!(exec.run_until_stalled(&mut mac_addr_fut),
                                       Poll::Ready(Err(e)) => format !("{}", e));
         assert!(err_str.contains("PEER_CLOSED"));
+    }
+
+    fn send_destroy_iface_response(
+        exec: &mut Executor,
+        server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
+        status: zx::Status,
+    ) {
+        let responder = match poll_device_service_req(exec, server) {
+            Poll::Ready(DeviceServiceRequest::DestroyIface { responder, .. }) => responder,
+            Poll::Pending => panic!("expected a request to be available"),
+            _ => panic!("expected a destroy iface request"),
+        };
+
+        // now send the response back
+        let _result = responder.send(status.into_raw());
+    }
+
+    #[test]
+    fn test_destroy_single_iface_ok() {
+        let mut exec = Executor::new().expect("failed to create an executor");
+        let (wlan_service, server) = create_wlan_service_util();
+        let mut next_device_service_req = server.into_future();
+
+        let fut = destroy_iface(&wlan_service, 0);
+        pin_mut!(fut);
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+        send_destroy_iface_response(&mut exec, &mut next_device_service_req, zx::Status::OK);
+
+        match exec.run_until_stalled(&mut fut) {
+            Poll::Ready(Ok(_)) => (),
+            _ => panic!("Expected a status response"),
+        };
     }
 }

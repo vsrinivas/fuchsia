@@ -11,6 +11,8 @@ use serde_json::{to_value, Value};
 // Testing helper methods
 use crate::wlan::facade::WlanFacade;
 
+use crate::common_utils::common::parse_u64_identifier;
+
 impl Facade for WlanFacade {
     fn handle_request(
         &self,
@@ -64,6 +66,17 @@ async fn wlan_method_to_fidl(
             fx_log_info!(tag: "WlanFacade", "performing wlan connect to SSID: {:?}", target_ssid);
             let results = wlan_facade.connect(target_ssid, target_pwd).await?;
             to_value(results).map_err(|e| format_err!("error handling connection result: {}", e))
+        }
+        "get_iface_id_list" => {
+            fx_log_info!(tag: "WlanFacade", "Getting the interface id list.");
+            let result = wlan_facade.get_iface_id_list().await?;
+            to_value(result).map_err(|e| format_err!("error handling get_iface_id_list: {}", e))
+        }
+        "destroy_iface" => {
+            fx_log_info!(tag: "WlanFacade", "Performing wlan destroy_iface");
+            let iface_id = parse_u64_identifier(args.clone())?;
+            wlan_facade.destroy_iface(iface_id as u16).await?;
+            to_value(true).map_err(|e| format_err!("error handling destroy_iface: {}", e))
         }
         "disconnect" => {
             fx_log_info!(tag: "WlanFacade", "performing wlan disconnect");
