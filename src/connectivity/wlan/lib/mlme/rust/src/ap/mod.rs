@@ -285,8 +285,6 @@ impl Ap {
     }
 }
 
-// TODO(37891): Add test for MLME-START.request when everything is hooked up.
-// TODO(37891): Add test for MLME-STOP.request when everything is hooked up.
 #[cfg(test)]
 mod tests {
     use {

@@ -62,8 +62,6 @@ enum State {
     Deauthenticated,
 }
 
-// TODO(37891): Use this code.
-#[allow(dead_code)]
 impl State {
     fn max_frame_class(&self) -> FrameClass {
         match self {
@@ -74,8 +72,6 @@ impl State {
     }
 }
 
-// TODO(37891): Use this code.
-#[allow(dead_code)]
 pub struct RemoteClient {
     pub addr: MacAddr,
     state: StateMachine<State>,
@@ -132,12 +128,8 @@ pub enum ClientEvent {
     BssIdleTimeout,
 }
 
-// TODO(37891): Use this code.
-//
 // TODO(37891): Implement capability negotiation in MLME-ASSOCIATE.response.
-// TODO(37891): Implement inactivity timeout.
 // TODO(37891): Implement action frame handling.
-#[allow(dead_code)]
 impl RemoteClient {
     pub fn new(addr: MacAddr) -> Self {
         Self { addr, state: StateMachine::new(State::Authenticating) }
@@ -589,6 +581,7 @@ impl RemoteClient {
     }
 
     /// Handles PS-Poll (IEEE Std 802.11-2016, 9.3.1.5) from the PHY.
+    #[allow(dead_code)]
     fn handle_ps_poll(&mut self, _ctx: &mut Context) -> Result<(), ClientRejection> {
         // TODO(37891): Implement me!
         Ok(())
@@ -816,7 +809,6 @@ impl RemoteClient {
     }
 }
 
-// TODO(37891): Test handle_mlme_setkeys_request.
 #[cfg(test)]
 mod tests {
     use {
@@ -1223,11 +1215,6 @@ mod tests {
             // Data
             1, 2, 3,
         ][..]);
-    }
-
-    #[test]
-    fn handle_mlme_setkeys_req() {
-        // TODO(37891): Implement me!
     }
 
     #[test]
