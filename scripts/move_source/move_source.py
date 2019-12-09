@@ -415,7 +415,7 @@ build graph.
 
 
 def extract_build_graph(label_or_pattern='//*'):
-    out_dir = os.path.join(fuchsia_root, 'out', 'default')
+    out_dir = subprocess.check_output(['fx', 'get-build-dir']).strip()
 
     args = ['fx', 'gn', 'desc', out_dir, label_or_pattern, '--format=json',
             '--all-toolchains']
