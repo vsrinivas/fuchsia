@@ -17,6 +17,8 @@
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
@@ -25,7 +27,6 @@
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
@@ -72,10 +73,11 @@ class GetEntryBenchmark {
 
   async::Loop* const loop_;
   rng::TestRandom random_;
-  files::ScopedTempDir tmp_dir_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
   std::unique_ptr<sys::ComponentContext> component_context_;
+  std::unique_ptr<Platform> platform_;
+  std::unique_ptr<ScopedTmpDir> tmp_dir_;
   const size_t entry_count_;
   const size_t key_size_;
   const size_t value_size_;
@@ -93,10 +95,12 @@ GetEntryBenchmark::GetEntryBenchmark(async::Loop* loop,
                                      bool use_inline)
     : loop_(loop),
       random_(0),
-      tmp_dir_(convert::ToString(kStoragePath)),
       generator_(&random_),
       page_data_generator_(&random_),
       component_context_(std::move(component_context)),
+      platform_(MakePlatform()),
+      tmp_dir_(platform_->file_system()->CreateScopedTmpDir(
+          DetachedPath(convert::ToString(kStoragePath)))),
       entry_count_(entry_count),
       key_size_(key_size),
       value_size_(value_size),
@@ -109,8 +113,8 @@ GetEntryBenchmark::GetEntryBenchmark(async::Loop* loop,
 
 void GetEntryBenchmark::Run() {
   Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
-                            "", "get_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-                            &ledger_, kDefaultGarbageCollectionPolicy);
+                            "", "get_entry", tmp_dir_->path(), QuitLoopClosure(), &ledger_,
+                            kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }

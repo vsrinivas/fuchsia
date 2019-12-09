@@ -14,11 +14,11 @@
 #include <string>
 #include <vector>
 
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -120,20 +120,22 @@ void LedgerStorageImpl::DeletePageStorage(PageIdView page_id,
           callback(Status::PAGE_NOT_FOUND);
           return;
         }
-        files::ScopedTempDirAt tmp_directory(staging_dir.root_fd(), staging_dir.path());
-        std::string destination = tmp_directory.path() + "/graveyard";
+        std::unique_ptr<ledger::ScopedTmpDir> tmp_directory =
+            file_system->CreateScopedTmpDir(staging_dir);
+        ledger::DetachedPath tmp_directory_path = tmp_directory->path();
+        std::string destination = tmp_directory_path.path() + "/graveyard";
 
         // <storage_dir_>/<base64(page)> becomes
         // <storage_dir_>/staging/<random_temporary_name>/graveyard/<base64(page)>
-        if (file_system->Rename(path, ledger::DetachedPath(tmp_directory.root_fd(), destination)) !=
-            0) {
+        if (file_system->Rename(
+                path, ledger::DetachedPath(tmp_directory_path.root_fd(), destination)) != 0) {
           FXL_LOG(ERROR) << "Unable to move local page storage to " << destination << ".";
           callback(Status::IO_ERROR);
           return;
         }
 
         if (!file_system->DeletePathRecursively(
-                ledger::DetachedPath(tmp_directory.root_fd(), destination))) {
+                ledger::DetachedPath(tmp_directory_path.root_fd(), destination))) {
           FXL_LOG(ERROR) << "Unable to delete local staging storage at: " << destination;
           callback(Status::IO_ERROR);
           return;

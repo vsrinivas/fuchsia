@@ -21,7 +21,6 @@
 #include "src/lib/callback/cancellable_helper.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/files/scoped_temp_dir.h"
 
 namespace ledger {
 namespace {

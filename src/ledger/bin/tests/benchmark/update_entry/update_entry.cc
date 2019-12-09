@@ -17,6 +17,8 @@
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
@@ -24,7 +26,6 @@
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
@@ -71,8 +72,9 @@ class UpdateEntryBenchmark {
   rng::TestRandom random_;
   DataGenerator generator_;
 
-  files::ScopedTempDir tmp_dir_;
   std::unique_ptr<sys::ComponentContext> component_context_;
+  std::unique_ptr<Platform> platform_;
+  std::unique_ptr<ScopedTmpDir> tmp_dir_;
   const int entry_count_;
   const int transaction_size_;
   const int key_size_;
@@ -89,8 +91,10 @@ UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop,
     : loop_(loop),
       random_(0),
       generator_(&random_),
-      tmp_dir_(convert::ToString(kStoragePath)),
       component_context_(std::move(component_context)),
+      platform_(MakePlatform()),
+      tmp_dir_(platform_->file_system()->CreateScopedTmpDir(
+          DetachedPath(convert::ToString(kStoragePath)))),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(kKeySize),
@@ -105,8 +109,8 @@ UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop,
 void UpdateEntryBenchmark::Run() {
   FXL_LOG(INFO) << "--entry-count=" << entry_count_ << " --transaction-size=" << transaction_size_;
   Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
-                            "", "update_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-                            &ledger_, kDefaultGarbageCollectionPolicy);
+                            "", "update_entry", tmp_dir_->path(), QuitLoopClosure(), &ledger_,
+                            kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }

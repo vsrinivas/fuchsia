@@ -19,6 +19,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/get_directory_content_size.h"
 #include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 #include "src/ledger/bin/testing/page_data_generator.h"
@@ -26,7 +27,6 @@
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
@@ -88,11 +88,11 @@ class DiskSpaceBenchmark {
 
   async::Loop* const loop_;
   rng::TestRandom random_;
-  files::ScopedTempDir tmp_dir_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
   std::unique_ptr<sys::ComponentContext> component_context_;
   std::unique_ptr<Platform> platform_;
+  std::unique_ptr<ScopedTmpDir> tmp_dir_;
   const size_t page_count_;
   const size_t unique_key_count_;
   const size_t commit_count_;
@@ -109,11 +109,12 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop,
                                        size_t commit_count, size_t key_size, size_t value_size)
     : loop_(loop),
       random_(0),
-      tmp_dir_(convert::ToString(kStoragePath)),
       generator_(&random_),
       page_data_generator_(&random_),
       component_context_(std::move(component_context)),
       platform_(MakePlatform()),
+      tmp_dir_(platform_->file_system()->CreateScopedTmpDir(
+          DetachedPath(convert::ToString(kStoragePath)))),
       page_count_(page_count),
       unique_key_count_(unique_key_count),
       commit_count_(commit_count),
@@ -129,8 +130,8 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop,
 
 void DiskSpaceBenchmark::Run() {
   Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
-                            "", "disk_space", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-                            &ledger_, kDefaultGarbageCollectionPolicy);
+                            "", "disk_space", tmp_dir_->path(), QuitLoopClosure(), &ledger_,
+                            kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
@@ -184,8 +185,7 @@ void DiskSpaceBenchmark::ShutDownAndRecord() {
   loop_->Quit();
 
   uint64_t tmp_dir_size = 0;
-  FXL_CHECK(GetDirectoryContentSize(platform_->file_system(), DetachedPath(tmp_dir_.path()),
-                                    &tmp_dir_size));
+  FXL_CHECK(GetDirectoryContentSize(platform_->file_system(), tmp_dir_->path(), &tmp_dir_size));
   TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size", TA_UINT64(tmp_dir_size));
 }
 

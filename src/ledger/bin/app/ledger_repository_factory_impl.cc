@@ -32,13 +32,13 @@
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 #include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
@@ -446,21 +446,22 @@ void LedgerRepositoryFactoryImpl::OnVersionMismatch(RepositoryInformation reposi
 
 void LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
     const RepositoryInformation& repository_information) {
-  files::ScopedTempDirAt tmp_directory(repository_information.staging_path.root_fd(),
-                                       repository_information.staging_path.path());
-  std::string destination = tmp_directory.path() + "/graveyard";
+  FileSystem* file_system = environment_->file_system();
+  std::unique_ptr<ScopedTmpDir> tmp_directory =
+      file_system->CreateScopedTmpDir(repository_information.staging_path);
+  DetachedPath tmp_directory_path = tmp_directory->path();
+  std::string destination = tmp_directory_path.path() + "/graveyard";
 
   // <base_path>/<serialization_version> becomes
   // <base_path>/<random temporary name>/graveyard/<serialization_version>
-  if (environment_->file_system()->Rename(repository_information.content_path,
-                                          DetachedPath(tmp_directory.root_fd(), destination)) !=
-      0) {
+  if (file_system->Rename(repository_information.content_path,
+                          DetachedPath(tmp_directory_path.root_fd(), destination)) != 0) {
     FXL_LOG(ERROR) << "Unable to move repository local storage to " << destination
                    << ". Error: " << strerror(errno);
     return;
   }
-  if (!environment_->file_system()->DeletePathRecursively(
-          DetachedPath(tmp_directory.root_fd(), destination))) {
+  if (!file_system->DeletePathRecursively(
+          DetachedPath(tmp_directory_path.root_fd(), destination))) {
     FXL_LOG(ERROR) << "Unable to delete repository staging storage at " << destination;
     return;
   }

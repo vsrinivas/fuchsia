@@ -17,6 +17,8 @@
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
@@ -25,7 +27,6 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
@@ -82,9 +83,10 @@ class GetPageBenchmark {
 
   async::Loop* const loop_;
   rng::TestRandom random_;
-  files::ScopedTempDir tmp_dir_;
   DataGenerator generator_;
   std::unique_ptr<sys::ComponentContext> component_context_;
+  std::unique_ptr<Platform> platform_;
+  std::unique_ptr<ScopedTmpDir> tmp_dir_;
   const size_t requests_count_;
   const bool reuse_;
   const bool wait_for_cached_page_;
@@ -101,9 +103,11 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop,
                                    bool clear_pages)
     : loop_(loop),
       random_(0),
-      tmp_dir_(convert::ToString(kStoragePath)),
       generator_(&random_),
       component_context_(std::move(component_context)),
+      platform_(MakePlatform()),
+      tmp_dir_(platform_->file_system()->CreateScopedTmpDir(
+          DetachedPath(convert::ToString(kStoragePath)))),
       requests_count_(requests_count),
       reuse_(reuse),
       wait_for_cached_page_(wait_for_cached_page),
@@ -115,8 +119,8 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop,
 
 void GetPageBenchmark::Run() {
   Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
-                            "", "get_page", DetachedPath(tmp_dir_.path()), QuitLoopClosure(),
-                            &ledger_, kDefaultGarbageCollectionPolicy);
+                            "", "get_page", tmp_dir_->path(), QuitLoopClosure(), &ledger_,
+                            kDefaultGarbageCollectionPolicy);
 
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
