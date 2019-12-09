@@ -117,9 +117,9 @@ unsafe fn clone_from_ptr<T>(ptr: *const T) -> Rc<T> {
 
 #[cfg(not(feature = "lib"))]
 #[repr(C)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct RawBuffer {
-    pub buffer_ptr: *const *mut u8,
+    pub buffer: *mut u8,
     pub stride: usize,
     pub format: PixelFormat,
 }
@@ -140,7 +140,7 @@ impl ColorBuffer for RawBuffer {
     }
 
     unsafe fn write_at(&mut self, offset: usize, src: *const u8, len: usize) {
-        let dst = (*self.buffer_ptr).add(offset);
+        let dst = self.buffer.add(offset);
         ptr::copy_nonoverlapping(src, dst, len);
     }
 }
@@ -154,7 +154,6 @@ pub struct Context {
     path_index: u32,
     rasters: HashMap<u32, (Rc<RasterInner>, usize)>,
     raster_index: u32,
-    raw_buffer: RawBuffer,
     old_prints: HashSet<u32>,
     new_prints: HashSet<u32>,
 }
@@ -228,7 +227,7 @@ impl Context {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct RenderSubmit {
-    pub ext: *mut (),
+    pub ext: *mut std::ffi::c_void,
     pub styling: StylingPtr,
     pub composition: CompositionPtr,
     pub tile_clip: [u32; 4],
@@ -254,17 +253,13 @@ pub type StylingPtr = *const RefCell<Styling>;
 #[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
-pub unsafe extern "C" fn mold_context_create(
-    context_ptr: *mut ContextPtr,
-    raw_buffer: *const RawBuffer,
-) {
+pub unsafe extern "C" fn mold_context_create(context_ptr: *mut ContextPtr) {
     let context = Context {
         map: None,
         paths: HashMap::new(),
         path_index: 0,
         rasters: HashMap::new(),
         raster_index: 0,
-        raw_buffer: (*raw_buffer).clone(),
         old_prints: HashSet::new(),
         new_prints: HashSet::new(),
     };
@@ -911,6 +906,8 @@ pub unsafe extern "C" fn spn_render(context: ContextPtr, submit: *const RenderSu
 
     let mut context = (*context).borrow_mut();
 
+    let raw_buffer: *const RawBuffer = std::mem::transmute(submit.ext);
+
     let mut map = context
         .map
         .take()
@@ -929,7 +926,7 @@ pub unsafe extern "C" fn spn_render(context: ContextPtr, submit: *const RenderSu
     context.old_prints.clear();
     context.swap_prints();
 
-    map.render(context.raw_buffer.clone());
+    map.render(*raw_buffer);
 
     context.map = Some(map);
 
@@ -990,12 +987,8 @@ mod tests {
             let height = 3;
             let buffer_size = width * height;
             let mut buffer: Vec<u32> = Vec::with_capacity(buffer_size);
-            let buffer_ptr: *mut u8 = mem::transmute(buffer.as_mut_ptr());
 
-            let raw_buffer =
-                RawBuffer { buffer_ptr: &buffer_ptr, stride: 3, format: PixelFormat::RGBA8888 };
-
-            let context = init(move |ptr| mold_context_create(ptr, &raw_buffer));
+            let context = init(move |ptr| mold_context_create(ptr));
             let path_builder = init(|ptr| spn_path_builder_create(context, ptr));
 
             let band_top = band(path_builder, 1.0, 3.0, 1.0, 3.0);
@@ -1050,8 +1043,13 @@ mod tests {
             layer_cmds = layer_cmds.add(3);
             layer_cmds.write(SPN_STYLING_OPCODE_BLEND_OVER);
 
+            let target = RawBuffer {
+                buffer: std::mem::transmute(buffer.as_mut_ptr()),
+                stride: width,
+                format: mold::PixelFormat::RGBA8888,
+            };
             let submit = RenderSubmit {
-                ext: ptr::null_mut(),
+                ext: std::mem::transmute(&target),
                 styling,
                 composition,
                 tile_clip: [0, 0, width as u32, height as u32],
@@ -1083,7 +1081,6 @@ mod tests {
 
             // No writing to the buffer when rendering the same thing.
             assert_eq!(buffer, vec![0; buffer_size]);
-
 
             spn_styling_release(styling);
             spn_composition_release(composition);

@@ -55,7 +55,7 @@ unsafe fn spn_to_tile_ops(cmds: &Vec<u32>) -> Vec<Op> {
                 cmds.next();
             }
             SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE => (),
-            SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY => unimplemented!(),
+            SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY => (),
             SPN_STYLING_OPCODE_COLOR_ILL_ZERO => unimplemented!(),
             SPN_STYLING_OPCODE_COLOR_ILL_COPY_ACC => unimplemented!(),
             SPN_STYLING_OPCODE_COLOR_ACC_MULTIPLY_ILL => unimplemented!(),
