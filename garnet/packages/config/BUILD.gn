@@ -79,14 +79,6 @@ group("shortcut") {
   ]
 }
 
-# TODO(dalesat): Part of soft transition...remove
-group("virtual_audio") {
-  testonly = true
-  public_deps = [
-    "//src/media/audio/virtual_audio_service:virtual_audio_config",
-  ]
-}
-
 group("factory_reset") {
   testonly = true
   public_deps = [

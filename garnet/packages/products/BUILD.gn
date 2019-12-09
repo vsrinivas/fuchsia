@@ -12,16 +12,6 @@ group("interactive_minimal") {
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/products:graphical",
     "//src/fonts",
-
-    # TODO(dalesat): Part of soft transition...remove.
-    "//src/media/playback/bundles:services",
-
-    # TODO(dalesat): Part of soft transition...remove.
-    "//src/media/sessions/bundles:services",
-    "//src/media/sessions/bundles:config",
-
-    # TODO(dalesat): Part of soft transition...remove.
-    "//src/media/codec/bundles:codec_factory",
     "//src/ui/a11y",
   ]
 }

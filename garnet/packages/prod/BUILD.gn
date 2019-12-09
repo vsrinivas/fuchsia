@@ -455,32 +455,6 @@ group("cobalt_client") {
   ]
 }
 
-# TODO(dalesat): Part of soft transition...remove.
-group("media_codec_factory") {
-  testonly = true
-  public_deps = [
-    "//src/media/codec:codec_factory",
-  ]
-}
-
-# TODO(dalesat): Part of soft transition...remove.
-group("media_codec_sw_aac") {
-  testonly = true
-  public_deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec:codec_runner_sw_aac",
-  ]
-}
-
-# TODO(dalesat): Part of soft transition...remove.
-group("media_codec_sw_sbc") {
-  testonly = true
-  public_deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec:codec_runner_sw_sbc",
-  ]
-}
-
 group("log_listener") {
   testonly = true
   public_deps = [
@@ -563,14 +537,6 @@ group("timezone") {
   testonly = true
   public_deps = [
     "//garnet/bin/timezone",
-  ]
-}
-
-# TODO(dalesat): Part of soft transition...remove.
-group("virtual_audio_driver") {
-  testonly = true
-  public_deps = [
-    "//src/media/audio/drivers/virtual_audio",
   ]
 }
 
