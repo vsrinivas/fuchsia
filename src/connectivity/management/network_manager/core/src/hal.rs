@@ -88,7 +88,7 @@ impl PortId {
 }
 
 /// Route table entry.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Route {
     /// Target network address.
     pub target: LifIpAddr,

@@ -75,6 +75,7 @@ mod tests {
     use fidl_fuchsia_netstack as netstack;
     use fuchsia_async as fasync;
     use fuchsia_async::TimeoutExt;
+    use reachability_core::Pinger;
 
     /// log::Log implementation that uses stdout.
     ///
@@ -114,11 +115,38 @@ mod tests {
         }
     }
 
+    struct Ping<'a> {
+        gateway_url: &'a str,
+        gateway_response: bool,
+        internet_url: &'a str,
+        internet_response: bool,
+        default_response: bool,
+    }
+
+    impl Pinger for Ping<'_> {
+        fn ping(&self, url: &str) -> bool {
+            if self.gateway_url == url {
+                return self.gateway_response;
+            }
+            if self.internet_url == url {
+                return self.internet_response;
+            }
+            self.default_response
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_events_are_received() {
         let (event_send, event_recv) = futures::channel::mpsc::unbounded::<Event>();
 
-        let mut monitor = Monitor::new().unwrap();
+        let mut monitor = Monitor::new(Box::new(Ping {
+            gateway_url: "1.2.3.1",
+            gateway_response: true,
+            internet_url: "8.8.8.8",
+            internet_response: false,
+            default_response: false,
+        }))
+        .unwrap();
         let streams = monitor.take_event_streams();
         let event_worker = EventWorker;
         event_worker.spawn(streams, event_send.clone());

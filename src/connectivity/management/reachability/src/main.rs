@@ -8,7 +8,7 @@
 extern crate fuchsia_syslog as syslog;
 #[macro_use]
 extern crate log;
-use reachability_core::Monitor;
+use reachability_core::{IcmpPinger, Monitor};
 
 mod eventloop;
 mod worker;
@@ -26,7 +26,7 @@ fn main() -> Result<(), failure::Error> {
     let mut executor = fuchsia_async::Executor::new()?;
 
     info!("collecting initial state.");
-    let mut monitor = Monitor::new()?;
+    let mut monitor = Monitor::new(Box::new(IcmpPinger))?;
     executor.run_singlethreaded(monitor.populate_state())?;
 
     info!("monitoring");

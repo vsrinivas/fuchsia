@@ -1,6 +1,9 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+pub mod ping;
+
 #[macro_use]
 extern crate log;
 use failure::Error;
@@ -9,7 +12,10 @@ use fidl_fuchsia_netstack as netstack;
 use network_manager_core::error;
 use network_manager_core::hal;
 use network_manager_core::lifmgr::{subnet_mask_to_prefix_length, to_ip_addr, LifIpAddr};
+pub use ping::{IcmpPinger, Pinger};
 use std::collections::HashMap;
+
+const INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "8.8.8.8";
 
 /// `Stats` keeps the monitoring service statistic counters.
 #[derive(Debug, Default, Clone, Copy)]
@@ -89,6 +95,7 @@ pub struct Monitor {
     hal: hal::NetCfg,
     state_info: StateInfo,
     stats: Stats,
+    pinger: Box<dyn Pinger>,
 }
 
 #[derive(Debug)]
@@ -100,9 +107,9 @@ enum Event {
 
 impl Monitor {
     /// Create the monitoring service.
-    pub fn new() -> Result<Self, Error> {
+    pub fn new(pinger: Box<dyn Pinger>) -> Result<Self, Error> {
         let hal = hal::NetCfg::new()?;
-        Ok(Monitor { hal, state_info: HashMap::new(), stats: Default::default() })
+        Ok(Monitor { hal, state_info: HashMap::new(), stats: Default::default(), pinger })
     }
 
     /// `stats` returns monitoring service statistic counters.
@@ -141,7 +148,7 @@ impl Monitor {
 
         debug!("update_state ->  event: {:?}, interface_info: {:?}", event, interface_info);
         let routes = self.hal.routes().await;
-        if let Some(new_info) = compute_state(&event, interface_info, routes) {
+        if let Some(new_info) = compute_state(&event, interface_info, routes, &*self.pinger).await {
             if let Some(info) = self.state_info.get(&interface_info.id) {
                 if info == &new_info {
                     // State has not changed, nothing to do.
@@ -207,10 +214,11 @@ impl Monitor {
 
 /// `compute_state` processes an event and computes the reachability based on the event and
 /// system observations.
-fn compute_state(
+async fn compute_state(
     event: &Event,
     interface_info: &hal::Interface,
     routes: Option<Vec<hal::Route>>,
+    pinger: &dyn Pinger,
 ) -> Option<ReachabilityInfo> {
     let port_type = port_type(interface_info);
     if port_type == PortType::Loopback {
@@ -255,7 +263,8 @@ fn compute_state(
     new_info.v4.state = State::LinkLayerUp;
     new_info.v6.state = State::LinkLayerUp;
 
-    new_info.v4.state = network_layer_state(ipv4_address.into_iter(), &routes, &new_info.v4);
+    new_info.v4.state =
+        network_layer_state(ipv4_address.into_iter(), &routes, &new_info.v4, &*pinger).await;
 
     // TODO(dpradilla): Add support for IPV6
 
@@ -312,10 +321,11 @@ fn port_type(interface_info: &hal::Interface) -> PortType {
 }
 
 // `network_layer_state` determines the L3 reachability state.
-fn network_layer_state<'a>(
+async fn network_layer_state(
     mut addresses: impl Iterator<Item = LifIpAddr>,
     routes: &Option<Vec<hal::Route>>,
     info: &NetworkInfo,
+    p: &dyn Pinger,
 ) -> State {
     // This interface is not configured for L3, Nothing to check.
     if !info.is_l3 {
@@ -332,32 +342,41 @@ fn network_layer_state<'a>(
         return info.state;
     }
 
-    let mut new_state = State::Local;
-
     let route_table = match routes {
         Some(r) => r,
-        _ => return new_state,
+        _ => return State::Local,
     };
 
     // Has local gateway.
-    let gw = local_routes(&address.unwrap(), &route_table);
-    if gw.is_empty() {
-        return new_state;
+    let rs = local_routes(&address.unwrap(), &route_table);
+    if rs.is_empty() {
+        return State::Local;
     }
 
-    // TODO(dpradilla): verify local gateways are reachable
-    new_state = State::Gateway;
+    let mut gateway_active = false;
+    for r in rs.iter() {
+        if let Some(gw_ip) = r.gateway {
+            if p.ping(&gw_ip.to_string()) {
+                gateway_active = true;
+                break;
+            }
+        }
+    }
+    if !gateway_active {
+        return State::Local;
+    }
 
-    // TODO(dpradilla) Check for internet connectivity and set new_state =State::Internet on
-    // success.
-
-    new_state
+    if !p.ping(INTERNET_CONNECTIVITY_CHECK_ADDRESS) {
+        return State::Gateway;
+    }
+    State::Internet
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use fidl_fuchsia_net_ext::IpAddress;
+    use ping::IcmpPinger;
 
     #[test]
     fn test_has_local_neighbors() {
@@ -469,10 +488,30 @@ mod tests {
         assert_eq!(got, want, "route via local network not present.");
     }
 
-    #[test]
-    fn test_network_layer_state() {
+    struct FakePing<'a> {
+        gateway_url: &'a str,
+        gateway_response: bool,
+        internet_url: &'a str,
+        internet_response: bool,
+        default_response: bool,
+    }
+
+    impl Pinger for FakePing<'_> {
+        fn ping(&self, url: &str) -> bool {
+            if self.gateway_url == url {
+                return self.gateway_response;
+            }
+            if self.internet_url == url {
+                return self.internet_response;
+            }
+            self.default_response
+        }
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_network_layer_state() {
         let address = Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 });
-        let route_table = vec![
+        let route_table = &vec![
             hal::Route {
                 gateway: Some("1.2.3.1".parse().unwrap()),
                 metric: None,
@@ -510,19 +549,65 @@ mod tests {
         assert_eq!(
             network_layer_state(
                 address.into_iter(),
-                &Some(route_table),
+                &Some(route_table.to_vec()),
                 &NetworkInfo { is_default: false, is_l3: true, state: State::LinkLayerUp },
-            ),
+                &FakePing {
+                    gateway_url: "1.2.3.1",
+                    gateway_response: true,
+                    internet_url: "8.8.8.8",
+                    internet_response: true,
+                    default_response: true
+                },
+            )
+            .await,
+            State::Internet,
+            "All is good. Can reach internet"
+        );
+
+        assert_eq!(
+            network_layer_state(
+                address.into_iter(),
+                &Some(route_table.to_vec()),
+                &NetworkInfo { is_default: false, is_l3: true, state: State::LinkLayerUp },
+                &FakePing {
+                    gateway_url: "1.2.3.1",
+                    gateway_response: true,
+                    internet_url: "8.8.8.8",
+                    internet_response: false,
+                    default_response: true
+                },
+            )
+            .await,
             State::Gateway,
-            "All is good"
+            "Can reach gateway"
+        );
+
+        assert_eq!(
+            network_layer_state(
+                address.into_iter(),
+                &Some(route_table.to_vec()),
+                &NetworkInfo { is_default: false, is_l3: true, state: State::LinkLayerUp },
+                &FakePing {
+                    gateway_url: "1.2.3.1",
+                    gateway_response: false,
+                    internet_url: "8.8.8.8",
+                    internet_response: false,
+                    default_response: true
+                },
+            )
+            .await,
+            State::Local,
+            "Local only, Cannot reach gateway"
         );
 
         assert_eq!(
             network_layer_state(
                 address.into_iter(),
                 &None,
-                &NetworkInfo { is_default: false, is_l3: true, state: State::LinkLayerUp }
-            ),
+                &NetworkInfo { is_default: false, is_l3: true, state: State::LinkLayerUp },
+                &IcmpPinger {},
+            )
+            .await,
             State::Local,
             "No routes"
         );
@@ -531,18 +616,17 @@ mod tests {
             network_layer_state(
                 None.into_iter(),
                 &Some(route_table_2),
-                &NetworkInfo { is_default: false, is_l3: true, state: State::NetworkLayerUp }
-            ),
+                &NetworkInfo { is_default: false, is_l3: true, state: State::NetworkLayerUp },
+                &IcmpPinger {},
+            )
+            .await,
             State::NetworkLayerUp,
             "default route is not local"
         );
-
-        // TODO(dpradilla): Add tests that veryfy the rest of the states can be reached when the
-        // right conditions are present. To be done when that functionality is implemented.
     }
 
-    #[test]
-    fn test_compute_state() {
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_compute_state() {
         let got = compute_state(
             &Event::None,
             &hal::Interface {
@@ -553,7 +637,15 @@ mod tests {
                 dhcp_client_enabled: false,
             },
             None,
-        );
+            &FakePing {
+                gateway_url: "1.2.3.1",
+                gateway_response: true,
+                internet_url: "8.8.8.8",
+                internet_response: false,
+                default_response: false,
+            },
+        )
+        .await;
         assert_eq!(got, None, "not and ethernet interface");
 
         let got = compute_state(
@@ -566,7 +658,15 @@ mod tests {
                 dhcp_client_enabled: false,
             },
             None,
-        );
+            &FakePing {
+                gateway_url: "1.2.3.1",
+                gateway_response: true,
+                internet_url: "8.8.8.8",
+                internet_response: false,
+                default_response: false,
+            },
+        )
+        .await;
         assert_eq!(got, None, "ethernet interface, but not a valid event");
 
         let got = compute_state(
@@ -590,7 +690,15 @@ mod tests {
                 dhcp_client_enabled: false,
             },
             None,
-        );
+            &FakePing {
+                gateway_url: "1.2.3.1",
+                gateway_response: true,
+                internet_url: "8.8.8.8",
+                internet_response: false,
+                default_response: false,
+            },
+        )
+        .await;
         let want = Some(ReachabilityInfo {
             port_type: PortType::Ethernet,
             v4: NetworkInfo { is_default: false, is_l3: true, state: State::Down },
@@ -619,7 +727,15 @@ mod tests {
                 dhcp_client_enabled: false,
             },
             None,
-        );
+            &FakePing {
+                gateway_url: "1.2.3.1",
+                gateway_response: true,
+                internet_url: "8.8.8.8",
+                internet_response: false,
+                default_response: false,
+            },
+        )
+        .await;
         let want = Some(ReachabilityInfo {
             port_type: PortType::Ethernet,
             v4: NetworkInfo { is_default: false, is_l3: true, state: State::Local },
@@ -653,7 +769,15 @@ mod tests {
                 port_id: Some(hal::PortId::from(1)),
                 target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
             }]),
-        );
+            &FakePing {
+                gateway_url: "1.2.3.1",
+                gateway_response: true,
+                internet_url: "8.8.8.8",
+                internet_response: false,
+                default_response: false,
+            },
+        )
+        .await;
         let want = Some(ReachabilityInfo {
             port_type: PortType::Ethernet,
             v4: NetworkInfo { is_default: false, is_l3: true, state: State::Local },
@@ -690,7 +814,15 @@ mod tests {
                 port_id: Some(hal::PortId::from(1)),
                 target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
             }]),
-        );
+            &FakePing {
+                gateway_url: "1.2.3.1",
+                gateway_response: true,
+                internet_url: "8.8.8.8",
+                internet_response: false,
+                default_response: false,
+            },
+        )
+        .await;
         let want = Some(ReachabilityInfo {
             port_type: PortType::Ethernet,
             v4: NetworkInfo { is_default: false, is_l3: true, state: State::Gateway },
@@ -722,12 +854,62 @@ mod tests {
                 dhcp_client_enabled: false,
             },
             Some(vec![hal::Route {
+                gateway: Some("1.2.3.1".parse().unwrap()),
+                metric: None,
+                port_id: Some(hal::PortId::from(1)),
+                target: LifIpAddr { address: "0.0.0.0".parse().unwrap(), prefix: 0 },
+            }]),
+            &FakePing {
+                gateway_url: "1.2.3.1",
+                gateway_response: true,
+                internet_url: "8.8.8.8",
+                internet_response: true,
+                default_response: false,
+            },
+        )
+        .await;
+        let want = Some(ReachabilityInfo {
+            port_type: PortType::Ethernet,
+            v4: NetworkInfo { is_default: false, is_l3: true, state: State::Internet },
+            v6: NetworkInfo { is_default: false, is_l3: false, state: State::LinkLayerUp },
+        });
+        assert_eq!(got, want, "ethernet interface, ipv4 configured, interface up, with internet");
+
+        let got = compute_state(
+            &Event::NetStack(fidl_fuchsia_netstack::NetInterface {
+                id: 1,
+                flags: netstack::NET_INTERFACE_FLAG_UP,
+                features: 0,
+                configuration: 0,
+                name: "eth0".to_string(),
+                addr: IpAddress("1.2.3.4".parse().unwrap()).into(),
+                netmask: IpAddress("255.255.255.0".parse().unwrap()).into(),
+                broadaddr: IpAddress("1.2.3.255".parse().unwrap()).into(),
+                ipv6addrs: vec![],
+                hwaddr: vec![0, 0, 0, 0, 0, 0],
+            }),
+            &hal::Interface {
+                id: hal::PortId::from(1),
+                name: "ethernet/eth0".to_string(),
+                addr: None,
+                enabled: false,
+                dhcp_client_enabled: false,
+            },
+            Some(vec![hal::Route {
                 gateway: Some("fe80::2aad:3fe0:7436:5677".parse().unwrap()),
                 metric: None,
                 port_id: Some(hal::PortId::from(1)),
                 target: LifIpAddr { address: "::".parse().unwrap(), prefix: 0 },
             }]),
-        );
+            &FakePing {
+                gateway_url: "1.2.3.1",
+                gateway_response: true,
+                internet_url: "8.8.8.8",
+                internet_response: false,
+                default_response: false,
+            },
+        )
+        .await;
         let want = Some(ReachabilityInfo {
             port_type: PortType::Ethernet,
             v4: NetworkInfo { is_default: false, is_l3: true, state: State::Local },
@@ -737,7 +919,5 @@ mod tests {
             got, want,
             "ethernet interface, ipv4 configured, interface up, no local gateway"
         );
-
-        // TODO(dpradilla): Add test cases to cover functionality that is not yet implemented.
     }
 }

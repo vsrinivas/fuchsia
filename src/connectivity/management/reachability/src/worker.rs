@@ -35,7 +35,7 @@ impl EventWorker {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|err: Error| error!("Sending event error {:?}", err)),
+            .unwrap_or_else(|err: Error| error!("Sending event error {:?}", err)),
         );
     }
 }

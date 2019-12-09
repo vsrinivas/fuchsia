@@ -6,7 +6,9 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.stack.Stack",
-            "fuchsia.netstack.Netstack"
+            "fuchsia.netstack.Netstack",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.net.NameLookup"
         ]
     }
 }

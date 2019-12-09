@@ -5,7 +5,9 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.netemul.sandbox.Sandbox"
+            "fuchsia.netemul.sandbox.Sandbox",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.net.NameLookup"
         ]
     }
 }

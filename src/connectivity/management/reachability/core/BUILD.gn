@@ -10,6 +10,8 @@ rustc_library("lib") {
   edition = "2018"
   with_unit_tests = true
 
+  non_rust_deps = [ ":ext_ping" ]
+
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
@@ -30,4 +32,13 @@ rustc_library("lib") {
   ]
 
   test_deps = [ "//garnet/public/lib/fidl/rust/fidl" ]
+}
+
+static_library("ext_ping") {
+  sources = [
+    "src/ping.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/zx",
+  ]
 }
