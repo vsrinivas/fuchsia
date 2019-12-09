@@ -22,7 +22,6 @@ package fidl_test
 
 import (
 	"testing"
-	"reflect"
 
 	"syscall/zx/fidl/conformance"
 	"syscall/zx/fidl"
@@ -168,6 +167,9 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		valueBuild := valueBuilder.String()
 		valueVar := valueBuilder.lastVar
 		for _, encoding := range encodeSuccess.Encodings {
+			if encoding.WireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
 				Name:       testCaseName(encodeSuccess.Name, encoding.WireFormat),
 				Context:    marshalerContext(encoding.WireFormat),
@@ -196,6 +198,9 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		valueBuild := valueBuilder.String()
 		valueVar := valueBuilder.lastVar
 		for _, encoding := range decodeSuccess.Encodings {
+			if encoding.WireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
 				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
 				Context:    marshalerContext(encoding.WireFormat),
@@ -228,6 +233,9 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 		valueBuild := valueBuilder.String()
 		valueVar := valueBuilder.lastVar
 		for _, wireFormat := range encodeFailure.WireFormats {
+			if wireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:       testCaseName(encodeFailure.Name, wireFormat),
 				Context:    marshalerContext(wireFormat),
@@ -250,6 +258,9 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 
 		valueType := goType(decodeFailure.Type)
 		for _, encoding := range decodeFailure.Encodings {
+			if encoding.WireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 				Name:      testCaseName(decodeFailure.Name, encoding.WireFormat),
 				Context:   marshalerContext(encoding.WireFormat),

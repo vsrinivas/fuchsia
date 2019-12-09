@@ -137,6 +137,9 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		valueStr := visit(encodeSuccess.Value, decl)
 		valueType := typeName(decl.(*gidlmixer.StructDecl))
 		for _, encoding := range encodeSuccess.Encodings {
+			if encoding.WireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
 				EncoderName: encoderName(encoding.WireFormat),
 				Name:        testCaseName(encodeSuccess.Name, encoding.WireFormat),
@@ -162,6 +165,9 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		valueStr := visit(decodeSuccess.Value, decl)
 		valueType := typeName(decl.(*gidlmixer.StructDecl))
 		for _, encoding := range decodeSuccess.Encodings {
+			if encoding.WireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
 				DecoderName: decoderName(encoding.WireFormat),
 				Name:        testCaseName(decodeSuccess.Name, encoding.WireFormat),
@@ -191,6 +197,9 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 		valueStr := visit(encodeFailure.Value, decl)
 		valueType := typeName(decl.(*gidlmixer.StructDecl))
 		for _, wireFormat := range encodeFailure.WireFormats {
+			if wireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				EncoderName: encoderName(wireFormat),
 				Name:        testCaseName(encodeFailure.Name, wireFormat),
@@ -212,6 +221,9 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure) ([]decodeFail
 		}
 		valueType := dartTypeName(decodeFailure.Type)
 		for _, encoding := range decodeFailure.Encodings {
+			if encoding.WireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 				DecoderName: decoderName(encoding.WireFormat),
 				Name:        testCaseName(decodeFailure.Name, encoding.WireFormat),
