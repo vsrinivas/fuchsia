@@ -157,3 +157,29 @@ async fn set_output_device_gain() -> Result<()> {
     })
     .await
 }
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn output_devices_initialize_to_unity_gain() -> Result<()> {
+    with_connected_device(|assets: DeviceTestAssets<OutputProxy>| {
+        async move {
+            let (_, gain_info) = assets.enumerator.get_device_gain(assets.token).await?;
+            assert!((0. - gain_info.gain_db).abs() < std::f32::EPSILON);
+            Ok(())
+        }
+    })
+    .await
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn input_devices_initialize_to_unity_gain() -> Result<()> {
+    with_connected_device(|assets: DeviceTestAssets<InputProxy>| {
+        async move {
+            let (_, gain_info) = assets.enumerator.get_device_gain(assets.token).await?;
+            assert!((0. - gain_info.gain_db).abs() < std::f32::EPSILON);
+            Ok(())
+        }
+    })
+    .await
+}

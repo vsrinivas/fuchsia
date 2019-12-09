@@ -112,15 +112,6 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
     return;
   }
 
-  if (device->is_output()) {
-    constexpr float kDefaultDeviceGain = -12.0;
-    constexpr uint32_t set_flags =
-        fuchsia::media::SetAudioGainFlag_GainValid | fuchsia::media::SetAudioGainFlag_MuteValid;
-    fuchsia::media::AudioGainInfo set_cmd = {kDefaultDeviceGain, 0u};
-    REP(SettingDeviceGainInfo(*device, set_cmd, set_flags));
-    device->SetGainInfo(set_cmd, set_flags);
-  }
-
   // Determine whether this device's persistent settings are actually unique,
   // or if they collide with another device's unique ID.
   //
