@@ -29,7 +29,6 @@ bool _isNullOrEmpty(String str) => str == null || str.isEmpty;
 /// Handles the SL4F server and communication with it.
 class Sl4f {
   static const diagnostics = {
-    'iquery': 'iquery --report',
     'kstats': 'kstats -c -m -n 1',
     'net-if': 'net if list',
     'ps': 'ps -T',
