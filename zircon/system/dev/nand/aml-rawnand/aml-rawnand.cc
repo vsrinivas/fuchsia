@@ -312,7 +312,7 @@ zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
       if (!controller_params_.rand_mode) {
         zxlogf(ERROR, "%s: ECC failure (non-randomized)@%u\n", __func__, nand_page);
         stats.failed++;
-        return ZX_ERR_IO;
+        return ZX_ERR_IO_DATA_INTEGRITY;
       }
       // Why are we checking for zero_bits here ?
       // To deal with blank NAND pages. A blank page is entirely 0xff.
@@ -332,7 +332,7 @@ zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
         zxlogf(ERROR, "%s: ECC failure (randomized)@%u zero_bits=%u\n", __func__, nand_page,
                zero_bits);
         stats.failed++;
-        return ZX_ERR_IO;
+        return ZX_ERR_IO_DATA_INTEGRITY;
       }
       zxlogf(INFO, "%s: Blank Page@%u\n", __func__, nand_page);
       continue;

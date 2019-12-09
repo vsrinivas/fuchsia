@@ -150,6 +150,10 @@ int NandDriverImpl::NandRead(uint32_t start_page, uint32_t page_count, void* pag
 
   zxlogf(SPEW, "FTL: Read page, start %d, len %d\n", start_page, page_count);
   status = operation.Execute(&parent_);
+  if (status == ZX_ERR_IO_DATA_INTEGRITY) {
+    return ftl::kNdmUncorrectableEcc;
+  }
+
   if (status != ZX_OK) {
     zxlogf(ERROR, "FTL: Read failed: %d\n", status);
     return ftl::kNdmFatalError;
@@ -161,10 +165,6 @@ int NandDriverImpl::NandRead(uint32_t start_page, uint32_t page_count, void* pag
 
   if (oob_buffer) {
     memcpy(oob_buffer, operation.buffer() + data_size, oob_size);
-  }
-
-  if (op->rw.corrected_bit_flips > info_.ecc_bits) {
-    return ftl::kNdmUncorrectableEcc;
   }
 
   // This threshold is somewhat arbitrary, and should be adjusted if we deal

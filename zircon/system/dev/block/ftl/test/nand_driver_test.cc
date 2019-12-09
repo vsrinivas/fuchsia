@@ -204,7 +204,7 @@ TEST_F(NandDriverTest, ReadEccFailure) {
   fbl::Array<uint8_t> data(new uint8_t[kPageSize * 2], kPageSize * 2);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
 
-  nand()->set_ecc_bits(kEccBits + 1);
+  nand()->set_result(ZX_ERR_IO_DATA_INTEGRITY);
   ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(5, 2, data.data(), oob.data()));
 }
 
