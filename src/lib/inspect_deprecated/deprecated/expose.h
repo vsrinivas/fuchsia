@@ -343,11 +343,18 @@ class Object : public fuchsia::inspect::deprecated::Inspect {
   // Returns the names of this Object's children in a vector.
   StringOutputVector GetChildren();
 
- private:
+ protected:
   // Constructs a new |Object| with the given name.
   // Every object requires a name, and names for children must be unique.
   explicit Object(std::string name);
 
+  // Drop all bindings to this Object, for testing.
+  void DropBindings() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    bindings_.CloseAll();
+  }
+
+ private:
   // The common implementation of the two AddBinding overloads.
   void InnerAddBinding(fidl::InterfaceRequest<Inspect> chan) __TA_REQUIRES(mutex_);
 

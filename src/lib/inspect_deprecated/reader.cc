@@ -215,7 +215,7 @@ fit::promise<ObjectHierarchy> ReadFromFidl(ObjectReader reader, int depth) {
         .and_then([reader](std::tuple<fit::result<fuchsia::inspect::deprecated::Object>,
                                       fit::result<std::vector<ObjectHierarchy>>>& result) mutable
                   -> fit::result<ObjectHierarchy> {
-          if (!std::get<0>(result).is_ok() || !std::get<0>(result).is_ok()) {
+          if (!std::get<0>(result).is_ok() || !std::get<1>(result).is_ok()) {
             return fit::error();
           }
           return fit::ok(ObjectHierarchy(FidlObjectToNode(std::get<0>(result).take_value()),

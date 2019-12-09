@@ -279,4 +279,56 @@ TEST_F(TestHierarchy, ObjectHierarchyDirectLimitDepth) {
   EXPECT_THAT(*hierarchy_b, ChildrenMatch(IsEmpty()));
 }
 
+// Construct and expect this hierarchy for the following tests:
+//
+// objects:
+//   child a (faulty object that fails to list its children)
+//   child b:
+//     value = 2u
+class TestHierarchyFailure : public TestReader {
+ public:
+  TestHierarchyFailure() {
+    auto faulty = std::make_shared<FaultyObject>("child a");
+    root_object_.object_dir().set_child(faulty);
+    child_b_ = root_object_.CreateChild("child b");
+    metric_b_ = child_b_.CreateUIntMetric("value", 2);
+  }
+
+  void ExpectHierarchy(const inspect_deprecated::ObjectHierarchy& hierarchy) {
+    EXPECT_THAT(hierarchy.node(), AllOf(NameMatches(kObjectsName)));
+    EXPECT_THAT(
+        hierarchy.children(),
+        UnorderedElementsAre(AllOf(NodeMatches(AllOf(
+            NameMatches("child b"), MetricList(UnorderedElementsAre(UIntMetricIs("value", 2))))))));
+  };
+
+ private:
+  // A faulty object that fails to successfully list children.
+  class FaultyObject : public component::Object {
+   public:
+    FaultyObject(std::string name) : Object(std::move(name)) {}
+
+    // Inject a failure into ListChildren by dropping all bindings.
+    void ListChildren(ListChildrenCallback callback) override { DropBindings(); }
+  };
+
+  inspect_deprecated::Node child_b_;
+  inspect_deprecated::UIntMetric metric_b_;
+};
+
+TEST_F(TestHierarchyFailure, ObjectHierarchy) {
+  fit::result<inspect_deprecated::ObjectHierarchy> result;
+  SchedulePromise(
+      inspect_deprecated::ReadFromFidl(inspect_deprecated::ObjectReader(std::move(client_)))
+          .then([&](fit::result<inspect_deprecated::ObjectHierarchy>& res) {
+            result = std::move(res);
+          }));
+
+  RunLoopUntil([&] { return !!result; });
+
+  auto hierarchy = result.take_value();
+
+  ExpectHierarchy(hierarchy);
+}
+
 }  // namespace
