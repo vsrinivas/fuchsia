@@ -35,7 +35,7 @@ impl ControlChannelHandler {
         }
     }
 
-    fn handle_notify_vendor_command(&self, _inner: &Arc<PeerManagerInner>, command: &AvcCommand) {
+    fn handle_notify_vendor_command(&self, command: &AvcCommand) {
         let packet_body = command.body();
 
         let preamble = match VendorDependentPreamble::decode(packet_body) {
@@ -158,7 +158,6 @@ impl ControlChannelHandler {
         &self,
         remote_peer: &Arc<RwLock<RemotePeer>>,
         command: &AvcCommand,
-        pmi: &Arc<PeerManagerInner>,
     ) -> Result<(), Error> {
         let packet_body = command.body();
         let preamble = match VendorDependentPreamble::decode(packet_body) {
@@ -201,7 +200,7 @@ impl ControlChannelHandler {
         match command.avc_header().packet_type() {
             AvcPacketType::Command(AvcCommandType::Notify) => {
                 fx_vlog!(tag: "avrcp", 2, "Received ctype=notify command {:?}", pdu_id);
-                self.handle_notify_vendor_command(pmi, &command);
+                self.handle_notify_vendor_command(&command);
                 Ok(())
             }
             AvcPacketType::Command(AvcCommandType::Status) => {
@@ -303,17 +302,13 @@ impl ControlChannelHandler {
         }
     }
 
-    pub fn handle_command(
-        &self,
-        command: AvcCommand,
-        pmi: Arc<PeerManagerInner>,
-    ) -> Result<(), Error> {
+    pub fn handle_command(&self, command: AvcCommand) -> Result<(), Error> {
         match Weak::upgrade(&self.remote_peer) {
             Some(remote_peer) => {
                 fx_vlog!(tag: "avrcp", 2, "received command {:#?}", command);
                 match command.avc_header().op_code() {
                     &AvcOpCode::VendorDependent => {
-                        self.handle_vendor_command(&remote_peer, &command, &pmi)
+                        self.handle_vendor_command(&remote_peer, &command)
                     }
                     &AvcOpCode::Passthrough => {
                         match self.handle_passthrough_command(&remote_peer, &command) {
