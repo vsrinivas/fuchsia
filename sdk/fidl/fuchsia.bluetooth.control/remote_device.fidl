@@ -11,7 +11,7 @@ using fuchsia.bluetooth;
 /// device at a high level.
 /// (See the Bluetooth assigned-numbers document:
 /// https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.gap.appearance.xml)
-enum Appearance {
+enum Appearance : uint16 {
     UNKNOWN = 0;
     PHONE = 64;
     COMPUTER = 128;

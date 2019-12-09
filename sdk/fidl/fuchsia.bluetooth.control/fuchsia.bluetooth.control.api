@@ -2,5 +2,5 @@
   "fidl/fuchsia.bluetooth.control/bonding.fidl": "e5c92b52bb7b86e400ce7be974869990",
   "fidl/fuchsia.bluetooth.control/control.fidl": "2969dc8f00b51d862888e2ebce30703e",
   "fidl/fuchsia.bluetooth.control/pairing_delegate.fidl": "f01da2776b54ace6176e95dcec3d86e5",
-  "fidl/fuchsia.bluetooth.control/remote_device.fidl": "a70b67afb0eb585b040932f221e35b5b"
+  "fidl/fuchsia.bluetooth.control/remote_device.fidl": "1616348f350640e6f3bc1994096ed332"
 }

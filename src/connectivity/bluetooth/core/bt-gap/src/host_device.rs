@@ -13,13 +13,13 @@ use {
     fidl_fuchsia_bluetooth_le::CentralProxy,
     fuchsia_bluetooth::{
         inspect::Inspectable,
-        types::{BondingData, HostInfo, Peer},
+        types::{BondingData, HostInfo, Peer, PeerId},
     },
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::{future, Future, FutureExt, StreamExt},
     parking_lot::RwLock,
     pin_utils::pin_mut,
-    std::{collections::HashMap, convert::TryInto, path::PathBuf, sync::Arc},
+    std::{collections::HashMap, convert::TryInto, path::PathBuf, str::FromStr, sync::Arc},
 };
 
 use crate::types::{self, from_fidl_status, Error};
@@ -136,7 +136,7 @@ impl HostDevice {
 
 pub trait HostListener {
     fn on_peer_updated(&mut self, peer: Peer);
-    fn on_peer_removed(&mut self, identifier: String);
+    fn on_peer_removed(&mut self, id: PeerId);
 
     type HostBondFut: Future<Output = Result<(), failure::Error>>;
     fn on_new_host_bond(&mut self, data: BondingData) -> Self::HostBondFut;
@@ -171,9 +171,11 @@ async fn handle_fidl_events<H: HostListener>(
     while let Some(event) = stream.next().await {
         match event? {
             // TODO(613): Add integration test for this.
-            HostEvent::OnDeviceUpdated { device } => listener.on_peer_updated(Peer::from(device)),
+            HostEvent::OnDeviceUpdated { device } => listener.on_peer_updated(device.try_into()?),
             // TODO(814): Add integration test for this.
-            HostEvent::OnDeviceRemoved { identifier } => listener.on_peer_removed(identifier),
+            HostEvent::OnDeviceRemoved { identifier } => {
+                listener.on_peer_removed(PeerId::from_str(&identifier)?)
+            }
             HostEvent::OnNewBondingData { data } => {
                 fx_log_info!("Received bonding data");
                 let data: BondingData = match data.try_into() {

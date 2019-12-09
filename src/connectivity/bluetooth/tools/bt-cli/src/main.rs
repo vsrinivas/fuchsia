@@ -113,8 +113,8 @@ async fn set_adapter_device_class<'a>(
 }
 
 fn match_peer<'a>(pattern: &'a str, peer: &Peer) -> bool {
-    peer.identifier.contains(pattern)
-        || peer.address.contains(pattern)
+    peer.id.to_string().contains(pattern)
+        || peer.address.to_string().contains(pattern)
         || peer.name.as_ref().map_or(false, |p| p.contains(pattern))
 }
 
@@ -166,8 +166,8 @@ fn to_identifier(state: &Mutex<State>, key: &str) -> Option<String> {
             .lock()
             .peers
             .values()
-            .find(|peer| peer.address == key)
-            .map(|peer| peer.identifier.clone())
+            .find(|peer| peer.address.to_string() == key)
+            .map(|peer| peer.id.to_string())
     } else {
         Some(key.to_string())
     }
@@ -281,9 +281,9 @@ async fn run_listeners(mut stream: ControlEventStream, state: &Mutex<State>) -> 
                 println!("Adapter {} removed", identifier);
             }
             ControlEvent::OnDeviceUpdated { device } => {
-                let peer = Peer::from(device);
+                let peer = Peer::try_from(device).context("Malformed FIDL peer")?;
                 print_peer_state_updates(&state.lock(), &peer);
-                state.lock().peers.insert(peer.identifier.clone(), peer);
+                state.lock().peers.insert(peer.id.to_string(), peer);
             }
             ControlEvent::OnDeviceRemoved { identifier } => {
                 state.lock().peers.remove(&identifier);
@@ -295,12 +295,12 @@ async fn run_listeners(mut stream: ControlEventStream, state: &Mutex<State>) -> 
 
 fn print_peer_state_updates(state: &State, peer: &Peer) {
     if let Some(msg) = peer_state_updates(state, peer) {
-        println!("{} {} {}", peer.identifier, peer.address, msg)
+        println!("{} {} {}", peer.id, peer.address, msg)
     }
 }
 
 fn peer_state_updates(state: &State, peer: &Peer) -> Option<String> {
-    let previous = state.peers.get(&peer.identifier);
+    let previous = state.peers.get(&peer.id.to_string());
     let was_connected = previous.map_or(false, |p| p.connected);
     let was_bonded = previous.map_or(false, |p| p.bonded);
 
@@ -328,10 +328,17 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(devs: Vec<fidl_fuchsia_bluetooth_control::RemoteDevice>) -> Arc<Mutex<State>> {
-        let peers: HashMap<_, _> =
-            devs.into_iter().map(|d| (d.identifier.clone(), Peer::from(d))).collect();
-        Arc::new(Mutex::new(State { peers }))
+    pub fn new(
+        devs: Vec<fidl_fuchsia_bluetooth_control::RemoteDevice>,
+    ) -> Result<Arc<Mutex<State>>, Error> {
+        use std::convert::TryInto;
+
+        let mut peers = HashMap::new();
+        for d in devs {
+            peers.insert(d.identifier.clone(), d.try_into()?);
+        }
+
+        Ok(Arc::new(Mutex::new(State { peers })))
     }
 }
 
@@ -476,29 +483,27 @@ async fn run_repl(bt_svc: ControlProxy, state: Arc<Mutex<State>>) -> Result<(), 
     Ok(())
 }
 
-fn main() -> Result<(), Error> {
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     let bt_svc = connect_to_service::<ControlMarker>()
         .context("failed to connect to bluetooth control interface")?;
-    let bt_svc_thread = bt_svc.clone();
-    let evt_stream = bt_svc_thread.take_event_stream();
+    let evt_stream = bt_svc.take_event_stream();
 
-    let fut = async {
-        let devices = bt_svc.get_known_remote_devices().await.unwrap_or(vec![]);
-        let state = State::new(devices);
-        let repl = run_repl(bt_svc, state.clone())
-            .unwrap_or_else(|e| println!("REPL failed unexpectedly {:?}", e));
-        let listeners = run_listeners(evt_stream, &state)
-            .unwrap_or_else(|e| println!("Failed to subscribe to bluetooth events {:?}", e));
-        pin_mut!(repl);
-        pin_mut!(listeners);
-        select! {
-            () = repl.fuse() => (),
-            () = listeners.fuse() => (),
-        };
-    };
-    exec.run_singlethreaded(fut);
-    Ok(())
+    let devices = bt_svc
+        .get_known_remote_devices()
+        .await
+        .context("failed to obtain list of remote devices")?;
+    let state = State::new(devices)?;
+    let repl =
+        run_repl(bt_svc, state.clone()).map_err(|e| e.context("REPL failed unexpectedly").into());
+    let listeners = run_listeners(evt_stream, &state)
+        .map_err(|e| e.context("Failed to subscribe to bluetooth events").into());
+    pin_mut!(repl);
+    pin_mut!(listeners);
+    select! {
+        r = repl.fuse() => r,
+        l = listeners.fuse() => l,
+    }
 }
 
 #[cfg(test)]
@@ -507,61 +512,69 @@ mod tests {
     use {
         bt_fidl_mocks::control::ControlMock,
         failure::err_msg,
-        fidl_fuchsia_bluetooth_control as control,
-        fuchsia_bluetooth::bt_fidl_status,
+        fidl_fuchsia_bluetooth as fbt, fidl_fuchsia_bluetooth_sys as fsys,
+        fuchsia_bluetooth::{
+            bt_fidl_status,
+            types::{Address, PeerId},
+        },
         fuchsia_zircon::{Duration, DurationNum},
         futures::join,
         parking_lot::Mutex,
     };
 
     fn peer(connected: bool, bonded: bool) -> Peer {
-        control::RemoteDevice {
-            identifier: "peer".to_string(),
-            address: "00:00:00:00:00:01".to_string(),
-            technology: control::TechnologyType::LowEnergy,
-            name: None,
-            appearance: control::Appearance::Phone,
-            rssi: None,
-            tx_power: None,
+        Peer {
+            id: PeerId(0xdeadbeef),
+            address: Address::Public([1, 0, 0, 0, 0, 0]),
+            technology: fsys::TechnologyType::LowEnergy,
             connected,
             bonded,
-            service_uuids: vec![],
-        }
-        .into()
-    }
-
-    fn named_peer(identifier: &str, address: &str, name: Option<String>) -> Peer {
-        control::RemoteDevice {
-            identifier: identifier.to_string(),
-            address: address.to_string(),
-            technology: control::TechnologyType::LowEnergy,
-            name,
-            appearance: control::Appearance::Phone,
+            name: None,
+            appearance: Some(fbt::Appearance::Phone),
+            device_class: None,
             rssi: None,
             tx_power: None,
+            services: vec![],
+        }
+    }
+
+    fn named_peer(id: PeerId, address: Address, name: Option<String>) -> Peer {
+        Peer {
+            id,
+            address,
+            technology: fsys::TechnologyType::LowEnergy,
             connected: false,
             bonded: false,
-            service_uuids: vec![],
+            name,
+            appearance: Some(fbt::Appearance::Phone),
+            device_class: None,
+            rssi: None,
+            tx_power: None,
+            services: vec![],
         }
-        .into()
     }
 
     fn state_with(p: Peer) -> State {
         let mut peers = HashMap::new();
-        peers.insert(p.identifier.clone(), p);
+        peers.insert(p.id.to_string(), p);
         State { peers }
     }
 
     #[test]
     fn test_match_peer() {
-        let nameless_peer = named_peer("Fuchsia", "01:23:45:67:89:AB", None);
-        let named_peer = named_peer("Fuchsia2", "AD:DE:7E:55:00:11", Some("Sapphire".to_string()));
+        let nameless_peer =
+            named_peer(PeerId(0xabcd), Address::Public([0xAB, 0x89, 0x67, 0x45, 0x23, 0x01]), None);
+        let named_peer = named_peer(
+            PeerId(0xbeef),
+            Address::Public([0x11, 0x00, 0x55, 0x7E, 0xDE, 0xAD]),
+            Some("Sapphire".to_string()),
+        );
 
         assert!(match_peer("23", &nameless_peer));
         assert!(!match_peer("23", &named_peer));
 
-        assert!(match_peer("sia", &nameless_peer));
-        assert!(match_peer("sia", &named_peer));
+        assert!(match_peer("cd", &nameless_peer));
+        assert!(match_peer("bee", &named_peer));
 
         assert!(!match_peer("Sapphire", &nameless_peer));
         assert!(match_peer("Sapphire", &named_peer));
@@ -573,10 +586,17 @@ mod tests {
     #[test]
     fn test_get_peers() {
         let mut state = State { peers: HashMap::new() };
-        state.peers.insert("Fuchsia".to_string(), named_peer("Fuchsia", "01:23:45:67:89:AB", None));
         state.peers.insert(
-            "Fuchsia2".to_string(),
-            named_peer("Fuchsia2", "AD:DE:7E:55:00:11", Some("Sapphire".to_string())),
+            "abcd".to_string(),
+            named_peer(PeerId(0xabcd), Address::Public([0xAB, 0x89, 0x67, 0x45, 0x23, 0x01]), None),
+        );
+        state.peers.insert(
+            "beef".to_string(),
+            named_peer(
+                PeerId(0xbeef),
+                Address::Public([0x11, 0x00, 0x55, 0x7E, 0xDE, 0xAD]),
+                Some("Sapphire".to_string()),
+            ),
         );
         let state = Mutex::new(state);
 
@@ -593,8 +613,8 @@ mod tests {
         // We can match either one
         assert!(get_peers(&["01:23"], &state).contains("1/2 peers"));
         assert!(get_peers(&["01:23"], &state).contains("01:23:45"));
-        assert!(get_peers(&["Fuchsia2"], &state).contains("1/2 peers"));
-        assert!(get_peers(&["Fuchsia2"], &state).contains("AD:DE:7E"));
+        assert!(get_peers(&["abcd"], &state).contains("1/2 peers"));
+        assert!(get_peers(&["beef"], &state).contains("AD:DE:7E"));
     }
 
     #[test]
@@ -649,14 +669,14 @@ mod tests {
         let state = Mutex::new(state_with(peer(true, false)));
         let cases = vec![
             // valid peer id
-            ("disconnect peer", Ok("peer".to_string())),
+            ("disconnect deadbeef", Ok("deadbeef".to_string())),
             // unknown address
             (
                 "disconnect 00:00:00:00:00:00",
                 Err("Unable to disconnect: Unknown address 00:00:00:00:00:00".to_string()),
             ),
             // known address
-            ("disconnect 00:00:00:00:00:01", Ok("peer".to_string())),
+            ("disconnect 00:00:00:00:00:01", Ok("00000000deadbeef".to_string())),
             // no id param
             ("disconnect", Err(format!("usage: {}", Cmd::Disconnect.cmd_help()))),
         ];
@@ -683,7 +703,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_disconnect() {
         let peer = peer(true, false);
-        let peer_id = peer.identifier.clone();
+        let peer_id = peer.id.to_string();
 
         let args = vec![peer_id.as_str()];
         let state = Mutex::new(state_with(peer));
@@ -700,7 +720,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_disconnect_error() {
         let peer = peer(true, false);
-        let peer_id = peer.identifier.clone();
+        let peer_id = peer.id.to_string();
 
         let args = vec![peer_id.as_str()];
         let state = Mutex::new(state_with(peer));
@@ -719,7 +739,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_forget() {
         let peer = peer(true, false);
-        let peer_id = peer.identifier.clone();
+        let peer_id = peer.id.to_string();
 
         let args = vec![peer_id.as_str()];
         let state = Mutex::new(state_with(peer));
@@ -736,7 +756,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_forget_error() {
         let peer = peer(true, false);
-        let peer_id = peer.identifier.clone();
+        let peer_id = peer.id.to_string();
 
         let args = vec![peer_id.as_str()];
         let state = Mutex::new(state_with(peer));

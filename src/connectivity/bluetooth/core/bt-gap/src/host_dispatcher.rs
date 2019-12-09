@@ -126,8 +126,6 @@ impl HostDispatcherInspect {
     }
 }
 
-type DeviceId = String;
-
 /// The HostDispatcher acts as a proxy aggregating multiple HostAdapters
 /// It appears as a Host to higher level systems, and is responsible for
 /// routing commands to the appropriate HostAdapter
@@ -145,7 +143,7 @@ struct HostDispatcherState {
     discoverable: Option<Weak<DiscoverableRequestToken>>,
     pub input: InputCapabilityType,
     pub output: OutputCapabilityType,
-    peers: HashMap<DeviceId, Inspectable<Peer>>,
+    peers: HashMap<PeerId, Inspectable<Peer>>,
 
     // Sender end of a futures::mpsc channel to send LocalServiceDelegateRequests
     // to Generic Access Service. When a new host adapter is recognized, we create
@@ -582,21 +580,21 @@ impl HostDispatcher {
         });
 
         let mut state = self.state.write();
-        let node = state.inspect.peers().create_child(format!("peer {}", peer.identifier));
+        let node = state.inspect.peers().create_child(format!("peer {}", peer.id));
         let peer = Inspectable::new(peer, node);
-        let _drop_old_value = state.peers.insert(peer.identifier.clone(), peer);
+        let _drop_old_value = state.peers.insert(peer.id.clone(), peer);
         state.inspect.peer_count.set(state.peers.len() as u64);
     }
 
-    pub fn on_device_removed(&self, identifier: String) {
+    pub fn on_device_removed(&self, id: PeerId) {
         {
             let mut state = self.state.write();
-            state.peers.remove(&identifier);
+            state.peers.remove(&id);
             state.inspect.peer_count.set(state.peers.len() as u64)
         }
         self.notify_event_listeners(|listener| {
             let _res = listener
-                .send_on_device_removed(&identifier)
+                .send_on_device_removed(&id.to_string())
                 .map_err(|e| fx_log_err!("Failed to send device removed event: {:?}", e));
         })
     }
@@ -748,8 +746,8 @@ impl HostListener for HostDispatcher {
     fn on_peer_updated(&mut self, peer: Peer) {
         self.on_device_updated(peer)
     }
-    fn on_peer_removed(&mut self, identifier: String) {
-        self.on_device_removed(identifier)
+    fn on_peer_removed(&mut self, id: PeerId) {
+        self.on_device_removed(id)
     }
     type HostBondFut = futures::future::BoxFuture<'static, Result<(), failure::Error>>;
     fn on_new_host_bond(&mut self, data: BondingData) -> Self::HostBondFut {
@@ -905,23 +903,28 @@ fn start_pairing_delegate(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::store::stash::Stash;
-    use fuchsia_async as fasync;
-    use fuchsia_bluetooth::types::Peer;
-    use fuchsia_inspect::{self as inspect, assert_inspect_tree};
+    use {
+        crate::store::stash::Stash,
+        fidl_fuchsia_bluetooth::Appearance,
+        fidl_fuchsia_bluetooth_sys::TechnologyType,
+        fuchsia_async as fasync,
+        fuchsia_bluetooth::types::{Peer, PeerId},
+        fuchsia_inspect::{self as inspect, assert_inspect_tree},
+    };
 
-    fn peer(id: &str) -> Peer {
+    fn peer(id: PeerId) -> Peer {
         Peer {
-            identifier: id.into(),
-            address: "12:34:56:78:90:AB".into(),
-            technology: control::TechnologyType::LowEnergy,
+            id: id.into(),
+            address: Address::Public([1, 2, 3, 4, 5, 6]),
+            technology: TechnologyType::LowEnergy,
             name: Some("Peer Name".into()),
-            appearance: control::Appearance::Unknown,
+            appearance: Some(Appearance::Watch),
+            device_class: None,
             rssi: None,
             tx_power: None,
             connected: false,
             bonded: false,
-            service_uuids: vec![],
+            services: vec![],
         }
     }
 
@@ -940,7 +943,7 @@ mod tests {
             system_inspect,
             gas_channel_sender,
         );
-        let peer_id = "id".to_string();
+        let peer_id = PeerId(1);
 
         // assert inspect tree is in clean state
         assert_inspect_tree!(inspector, root: {
@@ -951,12 +954,12 @@ mod tests {
         });
 
         // add new peer and assert inspect tree is updated
-        dispatcher.on_device_updated(peer(&peer_id));
+        dispatcher.on_device_updated(peer(peer_id));
         assert_inspect_tree!(inspector, root: {
             system: contains {
                 peer_count: 1u64,
                 peers: {
-                    "peer id": contains {
+                    "peer 0000000000000001": contains {
                         technology: "LowEnergy"
                     }
                 }

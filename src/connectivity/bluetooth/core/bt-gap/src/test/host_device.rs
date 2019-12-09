@@ -10,7 +10,7 @@ use {
     fuchsia_bluetooth::{
         bt_fidl_status,
         inspect::{placeholder_node, Inspectable},
-        types::{Address, BondingData, HostInfo, Peer},
+        types::{Address, BondingData, HostInfo, Peer, PeerId},
     },
     futures::{future, join, stream::StreamExt},
     parking_lot::RwLock,
@@ -26,7 +26,7 @@ use crate::{
 // An impl that ignores all events
 impl HostListener for () {
     fn on_peer_updated(&mut self, _peer: Peer) {}
-    fn on_peer_removed(&mut self, _identifier: String) {}
+    fn on_peer_removed(&mut self, _id: PeerId) {}
     type HostBondFut = future::Ready<Result<(), failure::Error>>;
     fn on_new_host_bond(&mut self, _data: BondingData) -> Self::HostBondFut {
         future::ok(())

@@ -144,7 +144,9 @@ impl Completer for CmdHelper {
                 // connect and peer have 'id|addr' arguments
                 // can match against peer identifier or address
                 for peer in peers.values() {
-                    for key in &[&peer.identifier, &peer.address] {
+                    let id = peer.id.to_string();
+                    let addr = peer.address.to_string();
+                    for key in &[&id, &addr] {
                         if key.starts_with(partial_argument) {
                             candidates.push(format!("{} {}", command, key));
                         }
