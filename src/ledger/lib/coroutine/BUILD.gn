@@ -16,6 +16,7 @@ source_set("coroutine") {
   public_deps = [
     "//src/lib/callback",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 
   deps = [

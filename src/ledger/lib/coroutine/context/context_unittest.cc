@@ -8,8 +8,8 @@
 #include <string.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace context {
 
@@ -135,7 +135,7 @@ __NO_SAFESTACK intptr_t GetSafeStackPointer() {
 #if __has_feature(safe_stack)
 // Force to set the pointed address to 1. This must be no-inline to prevent the
 // compiler to optimize away the set.
-FXL_NOINLINE void ForceSet(volatile char* addr) { *addr = 1; }
+ABSL_ATTRIBUTE_NOINLINE void ForceSet(volatile char* addr) { *addr = 1; }
 
 // Write some data to the unsafe stack.
 void TrashStack(void* context) {

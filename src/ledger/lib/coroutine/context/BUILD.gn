@@ -34,6 +34,7 @@ source_set("unittests") {
   deps = [
     ":context",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
   ]

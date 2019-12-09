@@ -10,6 +10,7 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/callback/operation_serializer.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace lock {
 // A lock. As long as this object lives, OperationSerializer blocks all other
@@ -24,7 +25,7 @@ class Lock {
 // Returns OK if the lock is acquired (meaning the coroutine is now running as
 // a serialized operation of |serializer|), and INTERRUPTED if the coroutine
 // stack must be unwound immediately (see coroutine::SyncCall for this case).
-FXL_WARN_UNUSED_RESULT coroutine::ContinuationStatus AcquireLock(
+ABSL_MUST_USE_RESULT coroutine::ContinuationStatus AcquireLock(
     coroutine::CoroutineHandler* handler, callback::OperationSerializer* serializer,
     std::unique_ptr<Lock>* lock);
 

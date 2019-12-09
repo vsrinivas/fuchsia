@@ -50,6 +50,7 @@
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -566,7 +567,7 @@ class PageStorageTest : public StorageTest {
   }
 
   // Returns an empty pointer if |CommitJournal| times out.
-  FXL_WARN_UNUSED_RESULT std::unique_ptr<const Commit> TryCommitJournal(
+  ABSL_MUST_USE_RESULT std::unique_ptr<const Commit> TryCommitJournal(
       std::unique_ptr<Journal> journal, Status expected_status) {
     bool called;
     Status status;
@@ -583,8 +584,8 @@ class PageStorageTest : public StorageTest {
   }
 
   // Returns an empty pointer if |TryCommitJournal| failed.
-  FXL_WARN_UNUSED_RESULT std::unique_ptr<const Commit> TryCommitFromLocal(int keys,
-                                                                          size_t min_key_size = 0) {
+  ABSL_MUST_USE_RESULT std::unique_ptr<const Commit> TryCommitFromLocal(int keys,
+                                                                        size_t min_key_size = 0) {
     std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
 
     for (int i = 0; i < keys; ++i) {

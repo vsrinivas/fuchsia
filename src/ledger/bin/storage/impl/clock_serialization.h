@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "src/ledger/bin/storage/public/types.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace storage {
 
@@ -17,15 +18,14 @@ namespace storage {
 std::string SerializeDeviceId(const clocks::DeviceId& device_id);
 
 // Extracts a clocks::DeviceId from storage.
-FXL_WARN_UNUSED_RESULT bool ExtractDeviceIdFromStorage(std::string data,
-                                                       clocks::DeviceId* device_id);
+ABSL_MUST_USE_RESULT bool ExtractDeviceIdFromStorage(std::string data, clocks::DeviceId* device_id);
 
 // Serializes a |Clock| into a |data| string suitable for storage.
 std::string SerializeClock(const Clock& entry);
 
 // Extracts from the clock entry in storage, the list of known devices and their corresponding clock
 // entry
-FXL_WARN_UNUSED_RESULT bool ExtractClockFromStorage(std::string data, Clock* clock);
+ABSL_MUST_USE_RESULT bool ExtractClockFromStorage(std::string data, Clock* clock);
 
 }  // namespace storage
 

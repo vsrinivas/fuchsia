@@ -16,6 +16,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace storage {
@@ -63,8 +64,8 @@ std::string SerializeDeviceId(const clocks::DeviceId& device_id) {
 }
 
 // Extracts a clocks::DeviceId from storage.
-FXL_WARN_UNUSED_RESULT bool ExtractDeviceIdFromStorage(std::string data,
-                                                       clocks::DeviceId* device_id) {
+ABSL_MUST_USE_RESULT bool ExtractDeviceIdFromStorage(std::string data,
+                                                     clocks::DeviceId* device_id) {
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(data.data()), data.size());
   if (!verifier.VerifyBuffer<DeviceIdStorage>(nullptr)) {
     return false;

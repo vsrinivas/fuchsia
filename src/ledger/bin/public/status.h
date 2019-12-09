@@ -9,13 +9,13 @@
 
 #include <ostream>
 
-#include "src/lib/fxl/compiler_specific.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
 // Internal Status for the ledger codebase.
-enum class FXL_WARN_UNUSED_RESULT Status {
+enum class ABSL_MUST_USE_RESULT Status {
   // Temporary status or status for tests. This is the first value as 0 is the
   // most probable value a non initialized variable will have.
   NOT_IMPLEMENTED = 0,

@@ -12,9 +12,9 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/dispatcher_checker.h"
-#include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace storage {
 
@@ -76,9 +76,9 @@ class ObjectIdentifierFactoryImpl : public ObjectIdentifierFactory {
                                             ObjectIdentifier* object_identifier) override;
   std::string ObjectIdentifierToStorageBytes(const ObjectIdentifier& identifier) override;
 
-  FXL_WARN_UNUSED_RESULT bool TrackDeletion(const ObjectDigest& object_digest) override;
+  ABSL_MUST_USE_RESULT bool TrackDeletion(const ObjectDigest& object_digest) override;
 
-  FXL_WARN_UNUSED_RESULT bool UntrackDeletion(const ObjectDigest& object_digest) override;
+  ABSL_MUST_USE_RESULT bool UntrackDeletion(const ObjectDigest& object_digest) override;
 
  private:
   // Marks the deletion of |object_digest| as aborted if the object is currently pending deletion.

@@ -12,6 +12,8 @@
 #include <ostream>
 #include <string>
 
+#include "third_party/abseil-cpp/absl/base/attributes.h"
+
 // gtest matchers are in gmock.
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -59,8 +61,8 @@ class RecordingClient : public P2PProvider::Client {
     messages.push_back(Message{device_name, convert::ToString(message)});
   }
 
-  FXL_WARN_UNUSED_RESULT bool HasDevicesChanges(size_t new_device_count,
-                                                size_t deleted_device_count) {
+  ABSL_MUST_USE_RESULT bool HasDevicesChanges(size_t new_device_count,
+                                              size_t deleted_device_count) {
     std::cout << device_change_new.size() << " " << device_change_deleted.size() << "\n";
     return device_change_new.size() == new_device_count &&
            device_change_deleted.size() == deleted_device_count;

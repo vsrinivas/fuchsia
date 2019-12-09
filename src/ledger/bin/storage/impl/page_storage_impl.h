@@ -30,6 +30,7 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/observer_list.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -156,12 +157,11 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
                          fit::function<void(Status, std::unique_ptr<const Object>)>)>;
 
   // Marks all pieces needed for the given objects as local.
-  FXL_WARN_UNUSED_RESULT Status
-  MarkAllPiecesLocal(coroutine::CoroutineHandler* handler, PageDb::Batch* batch,
-                     std::vector<ObjectIdentifier> object_identifiers);
+  ABSL_MUST_USE_RESULT Status MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
+                                                 PageDb::Batch* batch,
+                                                 std::vector<ObjectIdentifier> object_identifiers);
 
-  FXL_WARN_UNUSED_RESULT Status ContainsCommit(coroutine::CoroutineHandler* handler,
-                                               CommitIdView id);
+  ABSL_MUST_USE_RESULT Status ContainsCommit(coroutine::CoroutineHandler* handler, CommitIdView id);
 
   bool IsFirstCommit(CommitIdView id);
 
@@ -239,57 +239,57 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   void ScheduleObjectGarbageCollection(const ObjectDigest& object_digest);
 
   // Synchronous versions of API methods using coroutines.
-  FXL_WARN_UNUSED_RESULT Status SynchronousInit(coroutine::CoroutineHandler* handler,
-                                                clocks::DeviceIdManager* device_id_manager);
+  ABSL_MUST_USE_RESULT Status SynchronousInit(coroutine::CoroutineHandler* handler,
+                                              clocks::DeviceIdManager* device_id_manager);
 
-  FXL_WARN_UNUSED_RESULT Status SynchronousGetCommit(coroutine::CoroutineHandler* handler,
-                                                     CommitId commit_id,
-                                                     std::unique_ptr<const Commit>* commit);
+  ABSL_MUST_USE_RESULT Status SynchronousGetCommit(coroutine::CoroutineHandler* handler,
+                                                   CommitId commit_id,
+                                                   std::unique_ptr<const Commit>* commit);
 
   // Adds the given locally created |commit| in this |PageStorage|.
-  FXL_WARN_UNUSED_RESULT Status SynchronousAddCommitFromLocal(
+  ABSL_MUST_USE_RESULT Status SynchronousAddCommitFromLocal(
       coroutine::CoroutineHandler* handler, std::unique_ptr<const Commit> commit,
       std::vector<ObjectIdentifier> new_objects);
 
-  FXL_WARN_UNUSED_RESULT Status
+  ABSL_MUST_USE_RESULT Status
   SynchronousAddCommitsFromSync(coroutine::CoroutineHandler* handler,
                                 std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source);
 
-  FXL_WARN_UNUSED_RESULT Status
+  ABSL_MUST_USE_RESULT Status
   SynchronousGetUnsyncedCommits(coroutine::CoroutineHandler* handler,
                                 std::vector<std::unique_ptr<const Commit>>* unsynced_commits);
 
-  FXL_WARN_UNUSED_RESULT Status SynchronousMarkCommitSynced(coroutine::CoroutineHandler* handler,
-                                                            const Commit& commit);
+  ABSL_MUST_USE_RESULT Status SynchronousMarkCommitSynced(coroutine::CoroutineHandler* handler,
+                                                          const Commit& commit);
 
-  FXL_WARN_UNUSED_RESULT Status SynchronousMarkCommitSyncedInBatch(
+  ABSL_MUST_USE_RESULT Status SynchronousMarkCommitSyncedInBatch(
       coroutine::CoroutineHandler* handler, PageDb::Batch* batch, const CommitId& commit_id);
 
-  FXL_WARN_UNUSED_RESULT Status SynchronousAddCommits(
+  ABSL_MUST_USE_RESULT Status SynchronousAddCommits(
       coroutine::CoroutineHandler* handler, std::vector<std::unique_ptr<const Commit>> commits,
       ChangeSource source, std::vector<ObjectIdentifier> new_objects);
 
-  FXL_WARN_UNUSED_RESULT Status SynchronousAddPiece(coroutine::CoroutineHandler* handler,
-                                                    const Piece& piece, ChangeSource source,
-                                                    IsObjectSynced is_object_synced,
-                                                    ObjectReferencesAndPriority references);
+  ABSL_MUST_USE_RESULT Status SynchronousAddPiece(coroutine::CoroutineHandler* handler,
+                                                  const Piece& piece, ChangeSource source,
+                                                  IsObjectSynced is_object_synced,
+                                                  ObjectReferencesAndPriority references);
 
-  FXL_WARN_UNUSED_RESULT Status SynchronousDownloadDiff(coroutine::CoroutineHandler* handler,
-                                                        CommitId target_commit_id);
+  ABSL_MUST_USE_RESULT Status SynchronousDownloadDiff(coroutine::CoroutineHandler* handler,
+                                                      CommitId target_commit_id);
 
   // Synchronous helper methods.
 
   // Marks this page as online.
-  FXL_WARN_UNUSED_RESULT Status SynchronousMarkPageOnline(coroutine::CoroutineHandler* handler,
-                                                          PageDb::Batch* batch);
+  ABSL_MUST_USE_RESULT Status SynchronousMarkPageOnline(coroutine::CoroutineHandler* handler,
+                                                        PageDb::Batch* batch);
 
   // Updates the given |empty_node_id| to point to the empty node's
   // ObjectIdentifier.
-  FXL_WARN_UNUSED_RESULT Status SynchronousGetEmptyNodeIdentifier(
+  ABSL_MUST_USE_RESULT Status SynchronousGetEmptyNodeIdentifier(
       coroutine::CoroutineHandler* handler, ObjectIdentifier** empty_node_id);
 
   // Returns the root identifier of the base parent of |commit|.
-  FXL_WARN_UNUSED_RESULT Status
+  ABSL_MUST_USE_RESULT Status
   GetBaseParentRootIdentifier(coroutine::CoroutineHandler* handler, const Commit& commit,
                               ObjectIdentifier* base_parent_root_identifier);
 

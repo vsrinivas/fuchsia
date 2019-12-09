@@ -10,7 +10,7 @@
 #include <utility>
 
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/fxl/compiler_specific.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 
 // Utilities to interact with coroutines and callback::Waiter.
 
@@ -23,8 +23,8 @@ namespace coroutine {
 // coroutine's stack.
 
 template <typename A, typename... Args>
-FXL_WARN_UNUSED_RESULT ContinuationStatus Wait(coroutine::CoroutineHandler* handler, A waiter,
-                                               Args... parameters) {
+ABSL_MUST_USE_RESULT ContinuationStatus Wait(coroutine::CoroutineHandler* handler, A waiter,
+                                             Args... parameters) {
   auto cleanup = fit::defer([&waiter] { waiter->Cancel(); });
   return coroutine::SyncCall(
       handler, [&waiter](auto callback) { waiter->Finalize(std::move(callback)); },

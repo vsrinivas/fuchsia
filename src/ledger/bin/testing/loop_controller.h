@@ -11,8 +11,8 @@
 #include <memory>
 
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace ledger {
 // Helper class for waiting for asynchronous event.
@@ -32,7 +32,7 @@ class CallbackWaiter {
   CallbackWaiter() = default;
   virtual ~CallbackWaiter() = default;
   virtual fit::function<void()> GetCallback() = 0;
-  virtual bool RunUntilCalled() FXL_WARN_UNUSED_RESULT = 0;
+  virtual bool RunUntilCalled() ABSL_MUST_USE_RESULT = 0;
   // Returns whether the next expected calback has not already been called. If
   // |false|, |RunUntilCalled| will return immediately.
   virtual bool NotCalledYet() = 0;

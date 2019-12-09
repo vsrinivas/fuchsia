@@ -14,7 +14,7 @@
 #include "src/ledger/bin/clocks/public/types.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/compiler_specific.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -161,12 +161,12 @@ class ObjectIdentifierFactory {
   // Registers |object_digest| as pending deletion and returns true if there is currently no object
   // identifier for this digest and it is not already pending deletion. Returns false otherwise
   // (which means that deletion cannot proceed safely).
-  FXL_WARN_UNUSED_RESULT virtual bool TrackDeletion(const ObjectDigest& object_digest) = 0;
+  ABSL_MUST_USE_RESULT virtual bool TrackDeletion(const ObjectDigest& object_digest) = 0;
 
   // Marks the deletion of |object_digest| as complete and returns true if the object was currently
   // pending deletion and the deletion was not aborted already. Returns false otherwise (which means
   // that deletion cannot proceed safely).
-  FXL_WARN_UNUSED_RESULT virtual bool UntrackDeletion(const ObjectDigest& object_digest) = 0;
+  ABSL_MUST_USE_RESULT virtual bool UntrackDeletion(const ObjectDigest& object_digest) = 0;
 };
 
 // Object-object references, for garbage collection.

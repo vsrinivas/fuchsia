@@ -14,6 +14,7 @@ source_set("lock") {
     "//src/ledger/lib/coroutine",
     "//src/lib/callback",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

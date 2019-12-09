@@ -13,6 +13,7 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 
 // This Coroutine library allows to use coroutines. A coroutine is a function
 // that can interrupt itself by yielding, and the computation will resume at the
@@ -42,7 +43,7 @@ class CoroutineHandler {
   // Yield the current coroutine. This must only be called from inside the
   // coroutine associated with this handler. If Yield returns |INTERRUPTED|, the
   // coroutine must unwind its stack and terminate.
-  FXL_WARN_UNUSED_RESULT virtual ContinuationStatus Yield() = 0;
+  ABSL_MUST_USE_RESULT virtual ContinuationStatus Yield() = 0;
 
   // Restarts the computation of the coroutine associated with this handler.
   // This must only be called outside of the coroutine when it is yielded. If
@@ -103,8 +104,8 @@ class CoroutineService {
 // FXL_LOG(INFO) << "Some background task computed: " << s << " " << i;
 //
 template <typename A, typename... Args>
-FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler, A async_call,
-                                                   Args*... parameters) {
+ABSL_MUST_USE_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler, A async_call,
+                                                 Args*... parameters) {
   class TerminationSentinel : public fxl::RefCountedThreadSafe<TerminationSentinel> {
    public:
     bool terminated = false;

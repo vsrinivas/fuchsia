@@ -56,6 +56,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "third_party/abseil-cpp/absl/base/attributes.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -1949,7 +1950,7 @@ Status PageStorageImpl::SynchronousMarkPageOnline(coroutine::CoroutineHandler* h
   return status;
 }
 
-FXL_WARN_UNUSED_RESULT Status PageStorageImpl::SynchronousGetEmptyNodeIdentifier(
+ABSL_MUST_USE_RESULT Status PageStorageImpl::SynchronousGetEmptyNodeIdentifier(
     coroutine::CoroutineHandler* handler, ObjectIdentifier** empty_node_id) {
   if (!empty_node_id_) {
     // Get the empty node identifier and cache it.
@@ -1970,7 +1971,7 @@ FXL_WARN_UNUSED_RESULT Status PageStorageImpl::SynchronousGetEmptyNodeIdentifier
   return Status::OK;
 }
 
-FXL_WARN_UNUSED_RESULT Status PageStorageImpl::GetBaseParentRootIdentifier(
+ABSL_MUST_USE_RESULT Status PageStorageImpl::GetBaseParentRootIdentifier(
     coroutine::CoroutineHandler* handler, const Commit& commit,
     ObjectIdentifier* base_parent_root) {
   std::unique_ptr<const Commit> base_parent;
