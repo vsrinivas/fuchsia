@@ -4,6 +4,29 @@
 
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 
+# Generates a text file containing the revision ID (e.g. "2019c") of the time
+# zone resource files.
+#
+# The resulting file is ASCII-encoded and contains a single unquoted string
+# without any line breaks. It is written to
+# `out/default/gen/src/lib/icu/tzdata/revision.txt`.
+action("revision") {
+  zoneinfo64_path = "//third_party/icu/tzres/zoneinfo64.res"
+  output_path = "${target_gen_dir}/revision.txt"
+
+  script = "extract_revision.sh"
+  sources = [
+    zoneinfo64_path,
+  ]
+  outputs = [
+    output_path,
+  ]
+  args = [
+    rebase_path(zoneinfo64_path),
+    rebase_path(output_path),
+  ]
+}
+
 # Template applies exactly the same tzdata settings for several sibling
 # packages.  The config name for target "foo" will be "icu_tzdata_for_foo".
 template("_default_icu_tzdata") {

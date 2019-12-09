@@ -6,18 +6,22 @@ import("//build/config.gni")
 
 # Provide ICU time zone resource files to the given package.
 #
-# Please see the `README.md` for documentation.
+# The following files will be available in the component's namespace:
+#
+# * /config/data/tzdata/revision.txt
+# * /config/data/tzdata/icu/44/le/metaZones.res
+# * /config/data/tzdata/icu/44/le/timezoneTypes.res
+# * /config/data/tzdata/icu/44/le/zoneinfo64.res
+#
+# Please see `README.md` for detailed documentation.
 template("icu_tzdata_config_data") {
-  config_data(target_name) {
+  _resources_label = "_${target_name}_resources"
+  config_data(_resources_label) {
     forward_variables_from(invoker,
-                           "*",
                            [
                              "for_pkg",
                              "testonly",
-                             "visibility",
                            ])
-
-    for_pkg = invoker.for_pkg
 
     data_version = "44"
     if (defined(invoker.data_version)) {
@@ -32,14 +36,53 @@ template("icu_tzdata_config_data") {
     assert(data_version == "44" && format == "le",
            "Unsupported data version or format")
 
+    deps = [
+      "//src/lib/icu/tzdata:revision",
+    ]
+
     outputs = [
       "tzdata/icu/${data_version}/${format}/{{source_file_part}}",
     ]
 
     sources = [
-      "//third_party/icu/tzres/metaZones.res",
-      "//third_party/icu/tzres/timezoneTypes.res",
-      "//third_party/icu/tzres/zoneinfo64.res",
+                "//third_party/icu/tzres/metaZones.res",
+                "//third_party/icu/tzres/timezoneTypes.res",
+                "//third_party/icu/tzres/zoneinfo64.res",
+              ] + get_target_outputs("//src/lib/icu/tzdata:revision")
+
+    # //src/lib/icu/tzdata:revision will be found in the build directory at
+    #`out/default/gen/src/lib/icu/tzdata/revision.txt`
+  }
+
+  _revision_label = "_${target_name}_revision"
+  config_data(_revision_label) {
+    forward_variables_from(invoker,
+                           [
+                             "for_pkg",
+                             "testonly",
+                           ])
+    deps = [
+      "//src/lib/icu/tzdata:revision",
+    ]
+
+    outputs = [
+      "tzdata/{{source_file_part}}",
+    ]
+
+    # //src/lib/icu/tzdata:revision will be found in the build directory at
+    # `out/default/gen/src/lib/icu/tzdata/revision.txt`
+    sources = get_target_outputs("//src/lib/icu/tzdata:revision")
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [
+      ":${_resources_label}",
+      ":${_revision_label}",
     ]
   }
 }
