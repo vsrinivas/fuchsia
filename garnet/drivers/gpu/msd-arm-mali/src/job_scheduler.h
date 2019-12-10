@@ -58,6 +58,8 @@ class JobScheduler {
   // Used to fake out time for tests.
   void set_clock_callback(const ClockCallback& clock_callback) { clock_callback_ = clock_callback; }
 
+  std::vector<std::string> DumpStatus();
+
  private:
   MsdArmAtom* executing_atom() const { return executing_atoms_[0].get(); }
   void ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom);

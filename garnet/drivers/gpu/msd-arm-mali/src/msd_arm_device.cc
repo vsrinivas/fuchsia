@@ -841,6 +841,12 @@ magma::Status MsdArmDevice::ProcessDumpStatusToLog() {
   for (auto& str : dump) {
     MAGMA_LOG(INFO, "%s", str.c_str());
   }
+
+  std::vector<std::string> job_information = scheduler_->DumpStatus();
+  for (auto& str : job_information) {
+    MAGMA_LOG(INFO, "%s", str.c_str());
+  }
+
   return MAGMA_STATUS_OK;
 }
 

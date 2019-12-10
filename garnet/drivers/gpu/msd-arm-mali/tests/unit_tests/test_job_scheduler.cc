@@ -702,6 +702,31 @@ class TestJobScheduler {
     EXPECT_EQ(atom7.get(), owner.run_list().back());
     EXPECT_TRUE(owner.IsInProtectedMode());
   }
+
+  void TestDumpStatus() {
+    TestOwner owner;
+    TestConnectionOwner connection_owner;
+    std::shared_ptr<MsdArmConnection> connection = MsdArmConnection::Create(7, &connection_owner);
+
+    JobScheduler scheduler(&owner, 2);
+    auto atom1 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 5, magma_arm_mali_user_data(), 0);
+    scheduler.EnqueueAtom(atom1);
+
+    auto dump = scheduler.DumpStatus();
+    uint32_t found_queue_message = 0xffffffff;
+    for (uint32_t i = 0; i < dump.size(); i++) {
+      if (dump[i] == "Queued atoms:") {
+        found_queue_message = i;
+        break;
+      }
+    }
+    ASSERT_NE(0xffffffff, found_queue_message);
+    EXPECT_GT(dump.size(), found_queue_message + 1);
+    EXPECT_EQ(
+        "Atom gpu_va 0x1 number 5 slot 0 client_id 7 flags 0x0 priority 0 hard_stop 0 soft_stop 0, "
+        "address slot -1",
+        dump[found_queue_message + 1]);
+  }
 };
 
 TEST(JobScheduler, RunBasic) { TestJobScheduler().TestRunBasic(); }
@@ -735,3 +760,5 @@ TEST(JobScheduler, PreemptionNormalCompletionEqualPriority) {
 }
 
 TEST(JobScheduler, ProtectedMode) { TestJobScheduler().TestProtectedMode(); }
+
+TEST(JobScheduler, DumpStatus) { TestJobScheduler().TestDumpStatus(); }

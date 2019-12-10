@@ -4,6 +4,8 @@
 
 #include "job_scheduler.h"
 
+#include <fbl/string_printf.h>
+
 #include "magma_util/dlog.h"
 #include "msd_arm_connection.h"
 #include "msd_defs.h"
@@ -441,4 +443,35 @@ void JobScheduler::UpdatePowerManager() {
       active = true;
   }
   owner_->UpdateGpuActive(active);
+}
+
+static void AppendTo(std::vector<std::string>&& input, std::vector<std::string>* in_out) {
+  in_out->reserve(input.size() + in_out->size());
+  for (auto& input_string : input) {
+    in_out->emplace_back(std::move(input_string));
+  }
+}
+
+std::vector<std::string> JobScheduler::DumpStatus() {
+  std::vector<std::string> result;
+  for (uint32_t i = 0; i < job_slots_; ++i) {
+    result.push_back(fbl::StringPrintf("Job slot %d", i).c_str());
+    if (executing_atoms_[i]) {
+      result.push_back("Executing atom:");
+      AppendTo(executing_atoms_[i]->DumpInformation(), &result);
+    }
+    result.push_back("Runnable atoms:");
+    for (auto& atom : runnable_atoms_[i]) {
+      AppendTo(atom->DumpInformation(), &result);
+    }
+  }
+  result.push_back("Queued atoms:");
+  for (auto& atom : atoms_) {
+    AppendTo(atom->DumpInformation(), &result);
+  }
+  result.push_back("Waiting atoms:");
+  for (auto& atom : waiting_atoms_) {
+    AppendTo(atom->DumpInformation(), &result);
+  }
+  return result;
 }

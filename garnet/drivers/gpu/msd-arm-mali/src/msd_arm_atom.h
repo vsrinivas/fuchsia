@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "address_space.h"
@@ -112,6 +113,8 @@ class MsdArmAtom {
   // without this hack. (PT-110)
   uint64_t slot_id() { return slot_ * 2000; }
 
+  virtual std::vector<std::string> DumpInformation();
+
  private:
   // The following data is immmutable after construction.
   const uint64_t trace_nonce_;
@@ -158,6 +161,7 @@ class MsdArmSoftAtom : public MsdArmAtom {
   }
 
   bool is_soft_atom() const override { return true; }
+  virtual std::vector<std::string> DumpInformation() override;
 
  private:
   // Immutable after construction.

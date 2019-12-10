@@ -4,7 +4,10 @@
 
 #include "msd_arm_atom.h"
 
+#include <fbl/string_printf.h>
+
 #include "magma_util/macros.h"
+#include "msd_arm_connection.h"
 #include "platform_trace.h"
 
 MsdArmAtom::MsdArmAtom(std::weak_ptr<MsdArmConnection> connection, uint64_t gpu_address,
@@ -64,4 +67,37 @@ void MsdArmAtom::set_address_slot_mapping(
     DASSERT(connection_.lock() == address_slot_mapping->connection());
   }
   address_slot_mapping_ = address_slot_mapping;
+}
+
+std::vector<std::string> MsdArmAtom::DumpInformation() {
+  auto locked_connection = connection_.lock();
+  uint64_t client_id = locked_connection ? locked_connection->client_id() : 0;
+  uint32_t address_slot = address_slot_mapping_ ? address_slot_mapping_->slot_number() : UINT32_MAX;
+  std::vector<std::string> result;
+  result.push_back(fbl::StringPrintf("Atom gpu_va 0x%lx number %d slot %d client_id %ld flags 0x%x "
+                                     "priority %d hard_stop %d soft_stop %d, address slot %d",
+                                     gpu_address_, atom_number_, slot_, client_id, flags_,
+                                     priority_, hard_stopped_, soft_stopped_, address_slot)
+                       .c_str());
+  for (auto dependency : dependencies_) {
+    if (dependency.atom) {
+      result.push_back(fbl::StringPrintf("  Dependency on atom number %d type %d (result %d)",
+                                         dependency.atom->atom_number(), dependency.type,
+                                         dependency.atom->result_code())
+                           .c_str());
+    } else {
+      result.push_back(fbl::StringPrintf("  Dependency on saved result 0x%x type %d",
+                                         dependency.saved_result, dependency.type)
+                           .c_str());
+    }
+  }
+
+  return result;
+}
+
+std::vector<std::string> MsdArmSoftAtom::DumpInformation() {
+  std::vector<std::string> result = MsdArmAtom::DumpInformation();
+
+  result.push_back(fbl::StringPrintf("  Semaphore koid %ld", platform_semaphore_->id()).c_str());
+  return result;
 }
