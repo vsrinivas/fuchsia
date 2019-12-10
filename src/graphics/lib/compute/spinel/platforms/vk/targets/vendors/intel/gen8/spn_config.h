@@ -165,11 +165,7 @@
 #define SPN_DEVICE_RENDER_TTCKS_USE_SHUFFLE
 #define SPN_DEVICE_RENDER_STYLING_CMDS_USE_SHUFFLE
 
-#if 1
-#define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT32                 // temporary until extensions are enabled
-#else
 #define SPN_DEVICE_RENDER_TILE_CHANNEL_IS_FLOAT16                 // GEN8+ supports fp16x2
-#endif
 
 // expecting VK_FORMAT_R8G8B8A8_UNORM or equivalent
 #define SPN_DEVICE_RENDER_SURFACE_TYPE                            rgba8

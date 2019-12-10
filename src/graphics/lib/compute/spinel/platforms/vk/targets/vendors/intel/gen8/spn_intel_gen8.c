@@ -66,7 +66,7 @@ static struct spn_vk_target const target =
         .scalarBlockLayout                = 1
       },
       .ShaderFloat16Int8FeaturesKHR = {
-        .shaderFloat16                    = 0,
+        .shaderFloat16                    = 1,
       },
       .SubgroupSizeControlFeaturesEXT = {
         .subgroupSizeControl              = 1,
