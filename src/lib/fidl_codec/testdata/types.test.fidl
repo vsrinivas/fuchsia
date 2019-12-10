@@ -212,7 +212,8 @@ bits I64Bits : uint64 {
 table ValueTable {
     1: int16 first_int16;
     2: TwoStringStruct second_struct;
-    3: IntStructUnion third_union;
+    3: reserved;
+    4: IntStructUnion third_union;
 };
 
 struct HandleStruct {
