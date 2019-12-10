@@ -25,20 +25,16 @@ also provides core drivers and Fuchsia's libc implementation.
 
 ## Framework
 
- - [Overview][framework-overview]
  - [Core Libraries](/docs/concepts/framework/core_libraries.md)
  - Application model
    - [Interface definition language (FIDL)][FIDL]
    - Services
    - Environments
  - [Boot sequence](/docs/concepts/framework/boot_sequence.md)
- - Device, user, and story runners
- - Components
+ - [Components][framework-components]
+ - Sessions
  - [Namespaces](/docs/concepts/framework/namespaces.md)
  - [Sandboxing](/docs/concepts/framework/sandboxing.md)
- - [Story][framework-story]
- - [Module][framework-module]
- - [Agent][framework-agent]
 
 ## Storage
 
@@ -69,24 +65,13 @@ also provides core drivers and Fuchsia's libc implementation.
 
 ## Components
 
- - [Component framework](/docs/concepts/components/README.md)
+ - [Component framework][framework-components]
 
 ## Media
 
  - Audio
  - Video
  - DRM
-
-## Intelligence
-
- - Context
- - Agent Framework
- - Suggestions
-
-## User interface
-
- - Device, user, and story shells
- - Stories and modules
 
 ## Backwards compatibility
 
@@ -104,10 +89,7 @@ also provides core drivers and Fuchsia's libc implementation.
 [zircon-vdso]: /docs/concepts/kernel/vdso.md
 [zircon-ddk]: /docs/concepts/drivers/overview.md
 [FIDL]: /docs/development/languages/fidl/README.md
-[framework-overview]: /docs/concepts/modular/overview.md
-[framework-story]: /docs/concepts/modular/story.md
-[framework-module]: /docs/concepts/modular/module.md
-[framework-agent]: /docs/concepts/modular/agent.md
+[framework-components]: /docs/concepts/components/README.md
 [ledger]: /src/ledger/docs/README.md
 [bluetooth]: /garnet/bin/bluetooth/README.md
 [telephony]: /src/connectivity/telephony/
