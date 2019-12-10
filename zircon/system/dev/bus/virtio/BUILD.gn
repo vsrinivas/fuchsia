@@ -4,9 +4,6 @@
 
 zx_driver("virtio") {
   sources = [
-    "backends/pci.cc",
-    "backends/pci_legacy.cc",
-    "backends/pci_modern.cc",
     "block.cc",
     "console.cc",
     "ethernet.cc",
@@ -21,11 +18,12 @@ zx_driver("virtio") {
     ":common",
     "$zx/system/banjo/ddk.protocol.ethernet",
     "$zx/system/banjo/ddk.protocol.hidbus",
-    "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/operation",
     "$zx/system/fidl/fuchsia-hardware-pty:c",
     "$zx/system/fidl/fuchsia-hardware-virtioconsole:llcpp",
     "$zx/system/fidl/fuchsia-hardware-vsock:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fs:static",
     "$zx/system/ulib/fs-pty:static",
     "$zx/system/ulib/hid",
@@ -38,6 +36,9 @@ zx_driver("virtio") {
 source_set("common") {
   visibility = [ ":*" ]
   sources = [
+    "backends/pci.cc",
+    "backends/pci_legacy.cc",
+    "backends/pci_modern.cc",
     "device.cc",
     "gpu.cc",
     "ring.cc",
@@ -49,11 +50,9 @@ source_set("common") {
     "$zx/system/banjo/ddk.protocol.pci",
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-pci",
+    "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/scsi",
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -78,6 +77,8 @@ zx_test("virtio-test") {
     ":common",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/unittest",
