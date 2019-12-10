@@ -53,7 +53,7 @@ Database::Database(std::unique_ptr<crashpad::CrashReportDatabase> database,
       max_crashpad_database_size_in_kb_(max_crashpad_database_size_in_kb),
       info_(std::move(info_context)) {
   FXL_DCHECK(database_);
-  info_.LogMaxCrashpadDatabaseSizei(max_crashpad_database_size_in_kb_);
+  info_.LogMaxCrashpadDatabaseSize(max_crashpad_database_size_in_kb_);
 }
 
 bool Database::MakeNewReport(const std::map<std::string, fuchsia::mem::Buffer>& attachments,

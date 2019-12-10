@@ -56,9 +56,9 @@ class Database {
   bool Archive(const crashpad::UUID& local_report_id);
 
   // Deletes oldest (determined by creation_time) crash reports to keep |database_| under a maximum
-  // size and removes expired lockfiles, metadata without report files, report
-  // files without metadata from |database_|, and orphaned attachments. Removes all data from
-  // |additional_data_| that is not in |database_|.
+  // size and removes expired lockfiles, metadata without report files, report files without
+  // metadata from |database_|, and orphaned attachments. Removes all data from |additional_data_|
+  // that is not in |database_|.
   //
   // Return the number of reports that are removed from |database_|.
   size_t GarbageCollect();

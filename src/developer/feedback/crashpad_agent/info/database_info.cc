@@ -17,7 +17,7 @@ DatabaseInfo::DatabaseInfo(std::shared_ptr<InfoContext> context) : context_(cont
   FXL_CHECK(context);
 }
 
-void DatabaseInfo::LogMaxCrashpadDatabaseSizei(uint64_t max_crashpad_database_size_in_kb) {
+void DatabaseInfo::LogMaxCrashpadDatabaseSize(uint64_t max_crashpad_database_size_in_kb) {
   context_->InspectManager().ExposeDatabase(max_crashpad_database_size_in_kb);
 }
 void DatabaseInfo::MarkReportAsUploaded(const std::string& local_report_id,
