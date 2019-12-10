@@ -67,8 +67,8 @@ func (od OutDirectory) AddDebug(name string, n Node) {
 	od.getMapDirectory("debug")[name] = n
 }
 
-func (od OutDirectory) AddObjects(name string, n Node) {
-	od.getMapDirectory("objects")[name] = n
+func (od OutDirectory) AddDiagnostics(name string, n Node) {
+	od.getMapDirectory("diagnostics")[name] = n
 }
 
 func (od OutDirectory) AddService(name string, stub fidl.Stub, addFn addFn) {

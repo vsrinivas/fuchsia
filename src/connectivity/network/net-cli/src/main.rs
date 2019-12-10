@@ -387,7 +387,7 @@ async fn do_stat(cmd: opts::StatEnum) -> Result<(), Error> {
             .iter()
             .map(|prefix| {
                 format!(
-                    "{}/c/netstack.cmx/*/out/objects/counters/{}",
+                    "{}/c/netstack.cmx/*/out/diagnostics/counters/{}",
                     prefix,
                     <inspect::InspectMarker as fidl::endpoints::ServiceMarker>::NAME
                 )

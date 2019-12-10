@@ -155,7 +155,7 @@ func Main() {
 	}
 
 	var inspectService inspect.InspectService
-	ctx.OutgoingService.AddObjects("counters", &appcontext.DirectoryWrapper{
+	ctx.OutgoingService.AddDiagnostics("counters", &appcontext.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &statCounterInspectImpl{
@@ -166,7 +166,7 @@ func Main() {
 			}).asService,
 		},
 	})
-	ctx.OutgoingService.AddObjects("interfaces", &appcontext.DirectoryWrapper{
+	ctx.OutgoingService.AddDiagnostics("interfaces", &appcontext.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			// asService is late-bound so that each call retrieves fresh NIC info.
 			asService: func() *appcontext.Service {
@@ -178,7 +178,7 @@ func Main() {
 		},
 	})
 
-	ctx.OutgoingService.AddObjects("sockets", &appcontext.DirectoryWrapper{
+	ctx.OutgoingService.AddDiagnostics("sockets", &appcontext.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &socketInfoMapInspectImpl{

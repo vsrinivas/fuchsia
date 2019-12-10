@@ -206,7 +206,7 @@ async fn inspect_objects() -> Result {
                 fidl::endpoints::create_proxy::<fidl_fuchsia_inspect_deprecated::InspectMarker>()
                     .context("failed to create proxy")?;
 
-            let path = format!("objects/{}/inspect", path);
+            let path = format!("diagnostics/{}/inspect", path);
             let () = netstack
                 .pass_to_named_service(&path, server.into_channel())
                 .with_context(|_| format!("failed to connect to {}", path))?;
