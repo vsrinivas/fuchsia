@@ -93,17 +93,17 @@ table CreateContextParams {
     /// Service directory to be used by the context. The following services must be present in the
     /// directory:
     /// - [`fuchsia.accessibility.semantics.SemanticsManager`]
-    /// - [`fuchsia.deprecatedtimezone.Timezone`]
     /// - [`fuchsia.device.NameProvider`]
     /// - [`fuchsia.fonts.Provider`]
+    /// - [`fuchsia.intl.PropertyProvider`]
     /// - [`fuchsia.logger.LogSink`]
     /// - [`fuchsia.process.Launcher`]
     ///
     /// The following services must be present in order to present web content in a Scenic view
     /// using [`fuchsia.web.Frame/CreateView`]:
-    /// - [`fuchsia.ui.scenic.Scenic`]
     /// - [`fuchsia.ui.input.ImeService`]
     /// - [`fuchsia.ui.input.ImeVisibilityService`]
+    /// - [`fuchsia.ui.scenic.Scenic`]
     1: fuchsia.io.Directory service_directory;
 
     /// Handle to the directory that will contain the [`fuchsia.web.Context`]'s persistent data. If
