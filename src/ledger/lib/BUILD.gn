@@ -8,6 +8,7 @@ group("lib") {
     ":ledger_lib_unittests",
     "convert",
     "coroutine",
+    "logging",
     "socket",
     "vmo",
   ]
@@ -22,6 +23,7 @@ executable("ledger_lib_unittests") {
     "//src/ledger/lib/coroutine:unittests",
     "//src/ledger/lib/coroutine/context:unittests",
     "//src/ledger/lib/encoding:unittests",
+    "//src/ledger/lib/logging:unittests",
     "//src/ledger/lib/socket:unittests",
     "//src/ledger/lib/vmo:unittests",
     "//src/lib/fxl/test:gtest_main",

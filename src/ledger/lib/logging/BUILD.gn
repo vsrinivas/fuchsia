@@ -1,0 +1,28 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("logging") {
+  sources = [
+    "logging.cc",
+    "logging.h",
+  ]
+  public_deps = [
+    "//third_party/abseil-cpp",
+  ]
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "logging_unittest.cc",
+  ]
+  deps = [
+    ":logging",
+    "//third_party/abseil-cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+  configs += [ "//src/ledger:ledger_config" ]
+}
