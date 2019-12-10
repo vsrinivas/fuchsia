@@ -52,7 +52,7 @@ TEST_F(RealmTest, ReplaceAsExecPolicyPresent) {
   // Stub out a dispatcher.  We won't actually run anything on it, but some
   // things in Realm assert they can grab the implicit default eventloop, so
   // keep them happy.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
@@ -73,7 +73,7 @@ TEST_F(RealmTest, ReplaceAsExecPolicyAbsent) {
   // Stub out a dispatcher.  We won't actually run anything on it, but some
   // things in Realm assert they can grab the implicit default eventloop, so
   // keep them happy.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));

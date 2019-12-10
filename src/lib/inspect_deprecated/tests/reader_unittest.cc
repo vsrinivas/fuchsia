@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/async/default.h>
 #include <lib/fit/bridge.h>
 #include <lib/gtest/real_loop_fixture.h>
 

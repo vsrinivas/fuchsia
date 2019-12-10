@@ -6,6 +6,7 @@
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "amlogic-video.h"
 #include "video_decoder.h"
@@ -16,7 +17,7 @@
 class TestFrameAllocator {
  public:
   explicit TestFrameAllocator(AmlogicVideo* video)
-      : video_(video), loop_(&kAsyncLoopConfigNoAttachToThread), prng_(rd_()) {
+      : video_(video), loop_(&kAsyncLoopConfigNoAttachToCurrentThread), prng_(rd_()) {
     loop_.StartThread();
   }
 

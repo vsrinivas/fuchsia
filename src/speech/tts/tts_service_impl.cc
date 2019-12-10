@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/speech/tts/tts_service_impl.h"
+
+#include <lib/async/default.h>
 #include <lib/fit/defer.h>
 
-#include "src/speech/tts/tts_service_impl.h"
 #include "src/speech/tts/tts_speaker.h"
 #include "third_party/flite/include/flite_fuchsia.h"
 
