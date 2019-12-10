@@ -130,18 +130,19 @@ Err ModuleSymbolsImpl::Load(bool create_index) {
   DEBUG_LOG(Session) << "Loading " << binary_name_ << " (" << name_ << ").";
 
   if (auto debug = elflib::ElfLib::Create(name_)) {
+    std::map<std::string, uint64_t> plt_syms;
+    std::optional<std::map<std::string, llvm::ELF::Elf64_Sym>> opt_syms;
     if (debug->ProbeHasProgramBits()) {
       // Found in ".debug" file.
-      plt_locations_ = debug->GetPLTOffsets();
-      if (auto syms = debug->GetAllSymbols())
-        FillElfSymbols(*syms);
+      plt_syms = debug->GetPLTOffsets();
+      opt_syms = debug->GetAllSymbols();
     } else if (auto elf = elflib::ElfLib::Create(binary_name_)) {
       // Found in binary file.
-      if (elf->SetDebugData(std::move(debug)))
-        plt_locations_ = elf->GetPLTOffsets();
-      if (auto syms = elf->GetAllSymbols())
-        FillElfSymbols(*syms);
+      plt_syms = elf->GetPLTOffsets();
+      opt_syms = elf->GetAllSymbols();
     }
+
+    FillElfSymbols(opt_syms ? *opt_syms : std::map<std::string, llvm::ELF::Elf64_Sym>(), plt_syms);
   }
 
   llvm::Expected<llvm::object::OwningBinary<llvm::object::Binary>> bin_or_err =
@@ -331,15 +332,8 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
   // Special-case for PLT functions.
-  if (auto plt_name = GetPLTInputLocation(input_location)) {
-    auto found = plt_locations_.find(*plt_name);
-    if (found == plt_locations_.end())
-      return {};
-
-    // TODO: We should have a location type that can properly hold names and sizes for PLT entries
-    // and other weird symbol-adjacent bits of code.
-    return {Location(Location::State::kAddress, symbol_context.RelativeToAbsolute(found->second))};
-  }
+  if (auto plt_name = GetPLTInputLocation(input_location))
+    return ResolvePltName(symbol_context, *plt_name);
 
   std::vector<Location> result;
 
@@ -390,16 +384,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     // is not a high priority.
     //
     // TODO(bug 41928) make Identifier support function parameters.
-    std::string symbol_to_find_str = symbol_to_find.GetFullNameNoQual();
-    auto found_elf = std::lower_bound(
-        elf_symbols_by_name_.begin(), elf_symbols_by_name_.end(), symbol_to_find_str,
-        [](const ElfSymbolRecord& r, const std::string& s) { return r.linkage_name < s; });
-    if (found_elf != elf_symbols_by_name_.end() && found_elf->linkage_name == symbol_to_find_str) {
-      result.emplace_back(symbol_context.RelativeToAbsolute(found_elf->relative_address),
-                          FileLine(), 0, symbol_context,
-                          fxl::MakeRefCounted<ElfSymbol>(
-                              const_cast<ModuleSymbolsImpl*>(this)->GetWeakPtr(), *found_elf));
-    }
+    return ResolveElfName(symbol_context, symbol_to_find.GetFullNameNoQual());
   }
 
   return result;
@@ -424,8 +409,8 @@ Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_conte
   if (auto dwarf_loc =
           DwarfLocationForAddress(symbol_context, absolute_address, options, optional_func))
     return std::move(*dwarf_loc);
-  if (auto elf_loc = ElfLocationForAddress(symbol_context, absolute_address, options))
-    return std::move(*elf_loc);
+  if (auto elf_locs = ElfLocationForAddress(symbol_context, absolute_address, options))
+    return std::move(*elf_locs);
 
   // Not symbolizable, return an "address" with no symbol information. Mark it symbolized to record
   // that we tried and failed.
@@ -511,27 +496,24 @@ std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
 std::optional<Location> ModuleSymbolsImpl::ElfLocationForAddress(
     const SymbolContext& symbol_context, uint64_t absolute_address,
     const ResolveOptions& options) const {
-  if (elf_symbols_by_address_.empty())
+  if (elf_addresses_.empty())
     return std::nullopt;
 
   // TODO(bug 42243) make sure the address is inside the library. Otherwise this will match
   // random addresses for the largest ELF symbol.
   uint64_t relative_addr = symbol_context.AbsoluteToRelative(absolute_address);
   auto found = LargestLessOrEqual(
-      elf_symbols_by_address_.begin(), elf_symbols_by_address_.end(), relative_addr,
-      [this](size_t left_i, uint64_t addr) {
-        return elf_symbols_by_name_[left_i].relative_address < addr;
-      },
-      [this](size_t left_i, uint64_t addr) {
-        return elf_symbols_by_name_[left_i].relative_address == addr;
-      });
-  if (found == elf_symbols_by_address_.end())
+      elf_addresses_.begin(), elf_addresses_.end(), relative_addr,
+      [](const ElfSymbolRecord* r, uint64_t addr) { return r->relative_address < addr; },
+      [](const ElfSymbolRecord* r, uint64_t addr) { return r->relative_address == addr; });
+  if (found == elf_addresses_.end())
     return std::nullopt;
 
-  const ElfSymbolRecord& record = elf_symbols_by_name_[*found];
+  // There could theoretically be multiple matches for this address, but we return only the first.
+  const ElfSymbolRecord* record = *found;
   return Location(
       absolute_address, FileLine(), 0, symbol_context,
-      fxl::MakeRefCounted<ElfSymbol>(const_cast<ModuleSymbolsImpl*>(this)->GetWeakPtr(), record));
+      fxl::MakeRefCounted<ElfSymbol>(const_cast<ModuleSymbolsImpl*>(this)->GetWeakPtr(), *record));
 }
 
 Location ModuleSymbolsImpl::LocationForVariable(const SymbolContext& symbol_context,
@@ -559,6 +541,35 @@ Location ModuleSymbolsImpl::LocationForVariable(const SymbolContext& symbol_cont
   // definition of the variable. Currently Variables don't provide that (even though it's usually in
   // the DWARF symbols).
   return Location(eval.GetResult(), FileLine(), 0, symbol_context, std::move(variable));
+}
+
+std::vector<Location> ModuleSymbolsImpl::ResolvePltName(const SymbolContext& symbol_context,
+                                                        const std::string& mangled_name) const {
+  // There can theoretically be multiple symbols with the given name, some might be PLT symbols,
+  // some might not be. Check all name matches for a PLT one.
+  auto cur = mangled_elf_symbols_.lower_bound(mangled_name);
+  while (cur != mangled_elf_symbols_.end() && cur->first == mangled_name) {
+    if (cur->second.type == ElfSymbolType::kPlt)
+      return {MakeElfSymbolLocation(symbol_context, std::nullopt, cur->second)};
+    ++cur;
+  }
+
+  // No PLT locations found for this name.
+  return {};
+}
+
+std::vector<Location> ModuleSymbolsImpl::ResolveElfName(const SymbolContext& symbol_context,
+                                                        const std::string& mangled_name) const {
+  std::vector<Location> result;
+
+  // There can theoretically be multiple symbols with the given name.
+  auto cur = mangled_elf_symbols_.lower_bound(mangled_name);
+  while (cur != mangled_elf_symbols_.end() && cur->first == mangled_name) {
+    result.push_back(MakeElfSymbolLocation(symbol_context, std::nullopt, cur->second));
+    ++cur;
+  }
+
+  return result;
 }
 
 // To a first approximation we just look up the line in the line table for each compilation unit
@@ -615,15 +626,32 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& sym
   }
 }
 
-void ModuleSymbolsImpl::FillElfSymbols(
-    const std::map<std::string, llvm::ELF::Elf64_Sym>& elf_syms) {
-  FXL_DCHECK(elf_symbols_by_name_.empty());
-  FXL_DCHECK(elf_symbols_by_address_.empty());
+Location ModuleSymbolsImpl::MakeElfSymbolLocation(const SymbolContext& symbol_context,
+                                                  std::optional<uint64_t> relative_address,
+                                                  const ElfSymbolRecord& record) const {
+  uint64_t absolute_address;
+  if (relative_address) {
+    // Caller specified a more specific address (normally inside the ELF symbol).
+    absolute_address = symbol_context.RelativeToAbsolute(*relative_address);
+  } else {
+    // Take address from the ELF symbol.
+    absolute_address = symbol_context.RelativeToAbsolute(record.relative_address);
+  }
 
+  return Location(
+      absolute_address, FileLine(), 0, symbol_context,
+      fxl::MakeRefCounted<ElfSymbol>(const_cast<ModuleSymbolsImpl*>(this)->GetWeakPtr(), record));
+}
+
+void ModuleSymbolsImpl::FillElfSymbols(const std::map<std::string, llvm::ELF::Elf64_Sym>& elf_syms,
+                                       const std::map<std::string, uint64_t>& plt_syms) {
+  FXL_DCHECK(mangled_elf_symbols_.empty());
+  FXL_DCHECK(elf_addresses_.empty());
+
+  // Insert the regular symbols.
+  //
   // The |st_value| is the relative virtual address we want to index. Potentially we might want to
   // save more flags and expose them in the ElfSymbol class.
-  elf_symbols_by_name_.reserve(elf_syms.size());
-  elf_symbols_by_address_.resize(elf_syms.size());
   for (const auto& [name, sym] : elf_syms) {
     // The symbol type is the low 4 bits. The higher bits encode the visibility which we don't
     // care about. We only need to index objects and code.
@@ -635,16 +663,27 @@ void ModuleSymbolsImpl::FillElfSymbols(
     if (sym.st_value == 0)
       continue;  // No address for this symbol. Probably imported.
 
-    size_t index = elf_symbols_by_name_.size();
-    elf_symbols_by_address_[index] = index;
-    elf_symbols_by_name_.emplace_back(sym.st_value, name);
+    auto inserted = mangled_elf_symbols_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(name),
+        std::forward_as_tuple(ElfSymbolType::kNormal, sym.st_value, name));
+
+    // Append all addresses for now, this will be sorted at the bottom.
+    elf_addresses_.push_back(&inserted->second);
   }
 
-  std::sort(elf_symbols_by_address_.begin(), elf_symbols_by_address_.end(),
-            [this](size_t left_i, size_t right_i) {
-              const ElfSymbolRecord& left = elf_symbols_by_name_[left_i];
-              const ElfSymbolRecord& right = elf_symbols_by_name_[right_i];
-              return left.relative_address < right.relative_address;
+  // Insert PLT symbols.
+  for (const auto& [name, addr] : plt_syms) {
+    auto inserted =
+        mangled_elf_symbols_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
+                                     std::forward_as_tuple(ElfSymbolType::kPlt, addr, name));
+
+    // Append all addresses for now, this will be sorted at the bottom.
+    elf_addresses_.push_back(&inserted->second);
+  }
+
+  std::sort(elf_addresses_.begin(), elf_addresses_.end(),
+            [](const ElfSymbolRecord* left, const ElfSymbolRecord* right) {
+              return left->relative_address < right->relative_address;
             });
 }
 

@@ -10,7 +10,7 @@ namespace zxdb {
 
 TEST(ElfSymbolRecord, Demangle) {
   const char kMangled[] = "_ZN3fxl10LogMessage6streamEv";
-  ElfSymbolRecord a(0x1234u, kMangled);
+  ElfSymbolRecord a(ElfSymbolType::kNormal, 0x1234u, kMangled);
   EXPECT_EQ(0x1234u, a.relative_address);
   EXPECT_EQ(kMangled, a.linkage_name);
   EXPECT_EQ("fxl::LogMessage::stream()", a.unmangled_name);
@@ -19,7 +19,7 @@ TEST(ElfSymbolRecord, Demangle) {
 TEST(ElfSymbolRecord, NonMangled) {
   // Given a non-mangled name.
   const char kNonMangled[] = "_FooBar";
-  ElfSymbolRecord b(0x5678u, kNonMangled);
+  ElfSymbolRecord b(ElfSymbolType::kNormal, 0x5678u, kNonMangled);
   EXPECT_EQ(0x5678u, b.relative_address);
   EXPECT_EQ(kNonMangled, b.linkage_name);
   EXPECT_EQ(kNonMangled, b.unmangled_name);

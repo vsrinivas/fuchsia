@@ -8,8 +8,9 @@
 
 namespace zxdb {
 
-ElfSymbolRecord::ElfSymbolRecord(uint64_t relative_address, const std::string& linkage_name)
-    : relative_address(relative_address), linkage_name(linkage_name) {
+ElfSymbolRecord::ElfSymbolRecord(ElfSymbolType t, uint64_t relative_address,
+                                 const std::string& linkage_name)
+    : type(t), relative_address(relative_address), linkage_name(linkage_name) {
   // TODO(brettw) use "demangled = llvm::demangle() when we roll LLVM. It avoids the buffer
   // allocation problem.
   int demangle_status = llvm::demangle_unknown_error;

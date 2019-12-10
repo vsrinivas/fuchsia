@@ -75,8 +75,8 @@ class Location {
   const FileLine& file_line() const { return file_line_; }
   int column() const { return column_; }
 
-  // The symbol associated with this address, if any. In the case of code this will normally be a
-  // Function. It will not be the code block inside the function (code wanting lexical blocks can
+  // The symbol associated with this address, if any. In the case of code this will most commonly be
+  // a Function. It will not be the code block inside the function (code wanting lexical blocks can
   // look inside the function's children as needed). It could also be a variable symbol
   // corresponding to a global or static variable or an ELF symbol.
   //

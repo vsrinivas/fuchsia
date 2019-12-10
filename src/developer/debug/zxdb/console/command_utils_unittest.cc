@@ -18,6 +18,7 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
@@ -159,7 +160,7 @@ TEST(CommandUtils, FormatInputLocations) {
   EXPECT_EQ("Foo, Bar", FormatInputLocations(input).AsString());
 }
 
-TEST(CommandUtils, FormatLocation) {
+TEST(CommandUtils, FormatLocation_Function) {
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
   FormatLocationOptions no_addrs_no_params;
@@ -201,7 +202,7 @@ TEST(CommandUtils, FormatLocation) {
   EXPECT_EQ("Func() + 0x34", FormatLocation(func_loc, no_file_line).AsString());
 
   // File/line-only location.
-  EXPECT_EQ("/path/foo.cc:21",
+  EXPECT_EQ("0x1234 • /path/foo.cc:21",
             FormatLocation(Location(0x1234, FileLine("/path/foo.cc", 21), 0, symbol_context),
                            no_addrs_no_params)
                 .AsString());
@@ -225,6 +226,30 @@ TEST(CommandUtils, FormatLocation) {
   // Use the same parameters but force showing the whole path.
   with_target.show_file_path = true;
   EXPECT_EQ("Func() • /path/foo.cc:21", FormatLocation(loc, with_target).AsString());
+}
+
+TEST(CommandUtils, FormatLocation_ELF) {
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  FormatLocationOptions options;
+  options.always_show_addresses = false;
+  options.show_params = false;
+
+  // Address exactly at the beginning of the ELF symbol.
+  constexpr uint64_t kFunctionAddress = 0x1000;
+  fxl::RefPtr<ElfSymbol> elf_symbol(fxl::MakeRefCounted<ElfSymbol>(
+      fxl::WeakPtr<ModuleSymbols>(),
+      ElfSymbolRecord(ElfSymbolType::kPlt, kFunctionAddress, "memset")));
+  EXPECT_EQ(
+      "memset",
+      FormatLocation(Location(kFunctionAddress, FileLine(), 0, symbol_context, elf_symbol), options)
+          .AsString());
+
+  // Address with an offset from the beginning.
+  EXPECT_EQ("memset + 0x6",
+            FormatLocation(
+                Location(kFunctionAddress + 6, FileLine(), 0, symbol_context, elf_symbol), options)
+                .AsString());
 }
 
 TEST(CommandUtils, FormatBreakpoint) {

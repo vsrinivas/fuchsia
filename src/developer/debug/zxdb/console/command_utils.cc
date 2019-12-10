@@ -37,6 +37,7 @@
 #include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
@@ -387,8 +388,9 @@ OutputBuffer FormatLocation(const Location& loc, const FormatLocationOptions& op
 
   bool show_file_line = opts.show_file_line && loc.file_line().is_valid();
 
-  const Function* func = loc.symbol().Get()->AsFunction();
-  if (func) {
+  const Symbol* symbol = loc.symbol().Get();
+  if (const Function* func = symbol->AsFunction()) {
+    // Regular function.
     OutputBuffer func_output = FormatFunctionName(func, opts.func);
     if (!func_output.empty()) {
       result.Append(std::move(func_output));
@@ -408,6 +410,40 @@ OutputBuffer FormatLocation(const Location& loc, const FormatLocationOptions& op
         }
       }
     }
+  } else if (const ElfSymbol* elf_symbol = symbol->AsElfSymbol()) {
+    // ELF symbol.
+    FormatIdentifierOptions opts;
+    opts.show_global_qual = false;
+    opts.bold_last = true;
+    result.Append(FormatIdentifier(symbol->GetIdentifier(), opts));
+
+    // The address might not be at the beginning of the symbol.
+    if (uint64_t offset =
+            loc.address() - loc.symbol_context().RelativeToAbsolute(elf_symbol->relative_address()))
+      result.Append(fxl::StringPrintf(" + 0x%" PRIx64, offset));
+  } else {
+    // All other symbol types. This case must handle all other symbol types, some of which might
+    // not have identifiers.
+    bool printed_name = false;
+    if (!symbol->GetIdentifier().empty()) {
+      FormatIdentifierOptions opts;
+      opts.show_global_qual = false;
+      opts.bold_last = true;
+      result.Append(FormatIdentifier(symbol->GetIdentifier(), opts));
+      printed_name = true;
+    } else if (!symbol->GetFullName().empty()) {
+      // Fall back on the name.
+      result.Append(symbol->GetFullName());
+      printed_name = true;
+    } else if (!opts.always_show_addresses) {
+      // Unnamed symbol, use the address (unless it was printed above already).
+      result.Append(fxl::StringPrintf("0x%" PRIx64, loc.address()));
+      printed_name = true;
+    }
+
+    // Separator between function and file/line.
+    if (printed_name && show_file_line)
+      result.Append(" " + GetBullet() + " ");
   }
 
   if (show_file_line) {

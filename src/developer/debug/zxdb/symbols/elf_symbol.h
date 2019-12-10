@@ -18,6 +18,8 @@ class ElfSymbol : public Symbol {
  public:
   // Construct via fxl::MakeRefCounted.
 
+  ElfSymbolType elf_type() const { return record_.type; }
+
   // The linkage name is the raw name from the ELF file. For C++ programs this will be "mangled".
   // The "full name" and "identifier" will be unmangled if possible.
   const std::string& linkage_name() const { return record_.linkage_name; }

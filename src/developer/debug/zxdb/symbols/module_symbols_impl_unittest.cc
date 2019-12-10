@@ -293,16 +293,34 @@ TEST(ModuleSymbols, ResolvePLTEntry) {
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
-  auto addrs = module_symbols->ResolveInputLocation(
+  ResolveOptions options;
+  options.symbolize = true;
+
+  // Name->PLT symbol.
+  auto result = module_symbols->ResolveInputLocation(
       symbol_context,
       InputLocation(Identifier(
           IdentifierComponent(std::string(TestSymbolModule::kPltFunctionName) + "@plt"))),
-      ResolveOptions());
+      options);
 
-  ASSERT_EQ(1u, addrs.size());
-  EXPECT_TRUE(addrs[0].is_valid());
-  EXPECT_FALSE(addrs[0].is_symbolized());
-  EXPECT_EQ(TestSymbolModule::kPltFunctionOffset, addrs[0].address());
+  ASSERT_EQ(1u, result.size());
+  EXPECT_TRUE(result[0].is_valid());
+  EXPECT_EQ(TestSymbolModule::kPltFunctionOffset, result[0].address());
+
+  const ElfSymbol* elf_symbol = result[0].symbol().Get()->AsElfSymbol();
+  ASSERT_TRUE(elf_symbol);
+  EXPECT_EQ(ElfSymbolType::kPlt, elf_symbol->elf_type());
+  EXPECT_EQ(TestSymbolModule::kPltFunctionName, elf_symbol->linkage_name());
+
+  // Now look up the address and expect to get the symbol back.
+  result = module_symbols->ResolveInputLocation(
+      symbol_context, InputLocation(TestSymbolModule::kPltFunctionOffset), options);
+  ASSERT_EQ(1u, result.size());
+
+  elf_symbol = result[0].symbol().Get()->AsElfSymbol();
+  ASSERT_TRUE(elf_symbol);
+  EXPECT_EQ(ElfSymbolType::kPlt, elf_symbol->elf_type());
+  EXPECT_EQ(TestSymbolModule::kPltFunctionName, elf_symbol->linkage_name());
 }
 
 TEST(ModuleSymbols, ResolveMainFunction) {

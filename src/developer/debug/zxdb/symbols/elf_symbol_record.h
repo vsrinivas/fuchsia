@@ -11,14 +11,27 @@
 
 namespace zxdb {
 
+enum class ElfSymbolType {
+  // Normal ELF symbol.
+  kNormal,
+
+  // "PLT" addresses are the thunk used for jumping to imported functions in other modules.
+  kPlt,
+};
+
 // Represents a symbol read from the ELF file. This holds the mangled and unmangled names for
 // convenience for the index. Normal external users will use the ElfSymbol class which is
 // constructed from this structure.
+//
+// TODO(bug 42747): It would be nice to report the size of a symbol.
 struct ElfSymbolRecord {
   ElfSymbolRecord() = default;
 
   // Automatically sets both the linkage name and unmangled name.
-  explicit ElfSymbolRecord(uint64_t relative_address, const std::string& linkage_name);
+  explicit ElfSymbolRecord(ElfSymbolType type, uint64_t relative_address,
+                           const std::string& linkage_name);
+
+  ElfSymbolType type = ElfSymbolType::kNormal;
 
   // Address relative to the beginning of the associated module of this symbol.
   uint64_t relative_address = 0;

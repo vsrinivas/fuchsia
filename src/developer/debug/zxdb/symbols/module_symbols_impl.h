@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MODULE_SYMBOLS_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_MODULE_SYMBOLS_IMPL_H_
 
+#include <map>
+
 #include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 #include "gtest/gtest_prod.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -113,6 +115,15 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   void AppendLocationForFunction(const SymbolContext& symbol_context, const ResolveOptions& options,
                                  const Function* func, std::vector<Location>* result) const;
 
+  // Looks up a PLT symbol. The symbol name only matches the mangled names and must not include
+  // "@plt" at the end. Returns a vector of one entry if found, an empty vector if not.
+  std::vector<Location> ResolvePltName(const SymbolContext& symbol_context,
+                                       const std::string& mangled_name) const;
+
+  // Does an ELF name lookup. There can be multiple matches.
+  std::vector<Location> ResolveElfName(const SymbolContext& symbol_context,
+                                       const std::string& mangled_name) const;
+
   // Resolves the line number information for the given file, which must be an exact match. This is
   // a helper function for ResolveLineInputLocation().
   //
@@ -122,7 +133,20 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                                        const ResolveOptions& options,
                                        std::vector<Location>* output) const;
 
-  void FillElfSymbols(const std::map<std::string, llvm::ELF::Elf64_Sym>& elf_syms);
+  // Constructs an ElfSymbol object for the given record.
+  //
+  // Lookup for an address wants to return a Location identifying that exact location, even if
+  // the address in question isn't at the beginning of the symbol. Such callers can specify the
+  // relative address that the returned Location should have. If nullopt, the address for the
+  // location will be the beginning of the ELF symbol.
+  Location MakeElfSymbolLocation(const SymbolContext& symbol_context,
+                                 std::optional<uint64_t> relative_address,
+                                 const ElfSymbolRecord& record) const;
+
+  // Given the records from PLT symbols and regular ELF symbols, fills the forward and backward
+  // indices for ELF symbols.
+  void FillElfSymbols(const std::map<std::string, llvm::ELF::Elf64_Sym>& elf_syms,
+                      const std::map<std::string, uint64_t>& plt_syms);
 
   const std::string name_;
   const std::string binary_name_;
@@ -138,15 +162,16 @@ class ModuleSymbolsImpl : public ModuleSymbols {
 
   Index index_;
 
-  std::map<std::string, uint64_t> plt_locations_;
+  // Maps the mangled symbol name to the elf symbol record. There can technically be more than
+  // one entry for a name.
+  //
+  // This structure is also the canonical storage for ElfSymbolRecords used by elf_addresses_.
+  using ElfSymbolMap = std::multimap<std::string, const ElfSymbolRecord>;
+  ElfSymbolMap mangled_elf_symbols_;
 
-  // Sorted list of ELF symbols by mangled name. See also elf_symbols_by_address vector.
-  std::vector<ElfSymbolRecord> elf_symbols_by_name_;
-
-  // List of all ELF symbols sorted by address. There is nothing ensuring the addresses are unique
-  // so code should take care to allow for multiple matches. These indices refer to items inside the
-  // elf_symbols_by_name vector.
-  std::vector<size_t> elf_symbols_by_address_;
+  // All symbols in the mangled_elf_symbols_ map (pointers owned by that structure) sorted by the
+  // relative address. Theoretically there can be more than one symbol for the same address.
+  std::vector<const ElfSymbolRecord*> elf_addresses_;
 
   fxl::RefPtr<DwarfSymbolFactory> symbol_factory_;
 
