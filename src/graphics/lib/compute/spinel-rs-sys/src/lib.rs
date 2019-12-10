@@ -24,13 +24,21 @@ pub struct SpnVkTarget {
 }
 
 #[repr(C)]
+#[allow(non_snake_case)]
+pub struct PhysicalDeviceFeatures2 {
+    pub sType: vk::StructureType,
+    pub pNext: *mut raw::c_void,
+    pub features: vk::PhysicalDeviceFeatures,
+}
+
+#[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct SpnVkTargetRequirements {
     pub qci_count: u32,
     pub qcis: *mut vk::DeviceQueueCreateInfo,
     pub ext_name_count: u32,
     pub ext_names: *mut *const raw::c_char,
-    pub pdf: *mut vk::PhysicalDeviceFeatures,
+    pub pdf2: *mut PhysicalDeviceFeatures2,
 }
 
 #[repr(C)]

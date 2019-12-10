@@ -39,9 +39,10 @@ struct spn_vk_target_config
   //
   // target requirements
   //
-  enum  spn_vk_target_queueing_e  queueing;   // queueing discipline
-  union spn_vk_target_extensions  extensions; // required device extensions
-  union spn_vk_target_features    features;   // required device features
+  enum  spn_vk_target_queueing_e         queueing;   // queueing discipline
+  union spn_vk_target_extensions         extensions; // required device extensions
+  union spn_vk_target_features           features;   // required device features
+  union spn_vk_target_feature_structures structures; // required device feature structures
 
   //
   // host allocators

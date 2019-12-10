@@ -14,19 +14,6 @@
 //
 // TARGET PROPERTIES: VULKAN
 //
-// Yields the queues, extensions and features required by a Spinel
-// target.
-//
-// If either .qcis or .ext_names are NULL then the respective count will
-// be initialized.
-//
-// It is an error to provide a count that is too small.
-//
-
-//
-// FIXME(allanmac): IMPLEMENT SIMILAR FUNCTIONALITY IN HOTSORT
-// (.shaderInt64) ONCE WE STOP USING float64/int64
-//
 
 spn_result_t
 spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
@@ -39,6 +26,11 @@ spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
     {
       return SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS;
     }
+
+  //
+  //
+  //
+  bool is_success = true;
 
   //
   // QUEUES
@@ -61,12 +53,14 @@ spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
     if (requirements->qcis == NULL)
       {
         requirements->qci_count = ARRAY_LENGTH_MACRO(qis);
+
+        is_success = false;
       }
     else
       {
         if (requirements->qci_count < ARRAY_LENGTH_MACRO(qis))
           {
-            return SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS;
+            is_success = false;
           }
         else
           {
@@ -78,7 +72,7 @@ spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
   }
 
   //
-  // REQUIRED EXTENSIONS
+  // EXTENSIONS
   //
   {
     //
@@ -94,12 +88,14 @@ spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
     if (requirements->ext_names == NULL)
       {
         requirements->ext_name_count = ext_count;
+
+        is_success = false;
       }
     else
       {
         if (requirements->ext_name_count < ext_count)
           {
-            return SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS;
+            is_success = false;
           }
         else
           {
@@ -133,30 +129,91 @@ spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
   }
 
   //
-  // REQUIRED FEATURES
+  // FEATURES
   //
-  {
-    if (requirements->pdf != NULL)
-      {
-        //
-        // Let's always have this on during debug
-        //
+  if (requirements->pdf2 == NULL)
+    {
+      is_success = false;
+    }
+  else
+    {
+      //
+      // Let's always have this on during debug
+      //
 #ifndef NDEBUG
-        requirements->pdf->robustBufferAccess = true;
+      requirements->pdf2->features.robustBufferAccess = true;
 #endif
-        //
-        // Enable target features
-        //
+      //
+      // Enable target features
+      //
 #undef SPN_VK_TARGET_FEATURE
 #define SPN_VK_TARGET_FEATURE(feature_)                                                            \
   if (target->config.features.named.feature_)                                                      \
-    requirements->pdf->feature_ = true;
+    requirements->pdf2->features.feature_ = true;
 
-        SPN_VK_TARGET_FEATURES()
-      }
-  }
+      SPN_VK_TARGET_FEATURES()
+    }
 
-  return SPN_SUCCESS;
+  //
+  // FEATURES2
+  //
+  // Ensure that *all* of the required feature flags are enabled
+  //
+  union spn_vk_target_feature_structures structures = target->config.structures;
+
+  VkPhysicalDeviceFeatures2 * const pdf2 = requirements->pdf2;
+
+  if (pdf2 == NULL)
+    {
+      is_success = false;
+    }
+  else
+    {
+      VkBaseOutStructure * bos = pdf2->pNext;
+
+      while (bos != NULL)
+        {
+#undef SPN_VK_TARGET_FEATURE_STRUCTURE_MEMBER_X
+#define SPN_VK_TARGET_FEATURE_STRUCTURE_MEMBER_X(feature_, bX_)                                    \
+  ((VkPhysicalDevice##feature_ *)bos)->bX_ |= structures.named.feature_.bX_;                       \
+  structures.named.feature_.bX_ = 0;
+
+#undef SPN_VK_TARGET_FEATURE_STRUCTURE
+#define SPN_VK_TARGET_FEATURE_STRUCTURE(feature_, stype_, ...)                                     \
+  case stype_:                                                                                     \
+    SPN_VK_TARGET_FEATURE_STRUCTURE_MEMBERS(feature_, __VA_ARGS__)                                 \
+    break;
+
+          switch (bos->sType)
+            {
+              SPN_VK_TARGET_FEATURE_STRUCTURES()
+
+              default:
+                break;
+            }
+
+          bos = bos->pNext;
+        }
+
+      //
+      // It's an error if any bit is still lit -- we can't reliably execute
+      // the Spinel target unless the VkDevice is intialized with all
+      // required feature structure members.
+      //
+      for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(structures.bitmap); ii++)
+        {
+          if (structures.bitmap[ii] != 0)
+            {
+              is_success = false;
+              break;
+            }
+        }
+    }
+
+  //
+  //
+  //
+  return is_success ? SPN_SUCCESS : SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS;
 }
 
 //

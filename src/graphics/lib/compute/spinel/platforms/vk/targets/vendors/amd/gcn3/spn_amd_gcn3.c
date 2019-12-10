@@ -53,7 +53,7 @@ static struct spn_vk_target const target =
     .queueing                             = SPN_VK_TARGET_QUEUEING_SIMPLE,
 
     .extensions.named = {
-      .AMD_gpu_shader_half_float          = 1,
+      .AMD_gpu_shader_half_float          = 1, // NOTE(allanmac): this extension is deprecated but may be still necessary for pre-GCN5/AMDVLK
       .AMD_shader_info                    = 1,
       .KHR_shader_float16_int8            = 1,
     },
@@ -62,10 +62,22 @@ static struct spn_vk_target const target =
       .shaderInt64                        = 1,
     },
 
-    //
-    //
-    //
+    .structures.named = {
+      .ScalarBlockLayoutFeaturesEXT = {
+        .scalarBlockLayout                = 1
+      },
+      .ShaderFloat16Int8FeaturesKHR = {
+        .shaderFloat16                    = 1, // NOTE(allanmac): Mesa differs from AMDVLK on pre-GCN5
+      },
+      .SubgroupSizeControlFeaturesEXT = {
+        .subgroupSizeControl              = 1,
+        .computeFullSubgroups             = 1
+      }
+    },
 
+    //
+    //
+    //
     .allocator = {
       .host = {
         .perm = {

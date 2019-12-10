@@ -50,7 +50,7 @@ struct spn_vk_target;
 
 //
 // If you want to see what's happening here with all of the descriptor
-// layout expansions, run target.c through the preprocessor:
+// layout expansions, run vk.c through the preprocessor:
 //
 // clang -I $VULKAN_SDK/include  -I ../.. -I ../../.. -I ../../include/spinel -E  vk.c | clang-format > vk_clang.c
 // cl    -I %VULKAN_SDK%\include -I ..\.. -I ..\..\.. -I ..\..\include\spinel -EP vk.c | clang-format > vk_msvc.c

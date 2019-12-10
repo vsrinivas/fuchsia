@@ -27,11 +27,11 @@ extern "C" {
 
 struct spn_vk_target_requirements
 {
-  uint32_t                   qci_count;
-  VkDeviceQueueCreateInfo *  qcis;
-  uint32_t                   ext_name_count;
-  char const **              ext_names;
-  VkPhysicalDeviceFeatures * pdf;
+  uint32_t                    qci_count;
+  VkDeviceQueueCreateInfo *   qcis;
+  uint32_t                    ext_name_count;
+  char const **               ext_names;
+  VkPhysicalDeviceFeatures2 * pdf2;
 };
 
 //
@@ -106,7 +106,7 @@ typedef enum spn_vk_render_submit_ext_type_e
 // semaphores are available and this interface will be replaced.
 //
 // FIXME(allanmac): We probably want to submit the layout transition
-// immediately after acquiring the image and not including it in the
+// immediately after acquiring the image and not include it in the
 // executable command buffer submitted by the callback.
 //
 typedef void (*spn_vk_render_submit_ext_image_render_pfn_t)(VkQueue               queue,

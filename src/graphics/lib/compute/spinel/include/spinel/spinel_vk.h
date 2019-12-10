@@ -23,13 +23,33 @@ extern "C" {
 #endif
 
 //
-// Yields the queues, extensions and features required by a Spinel
-// target.
+// A Spinel context must be created with a VkDevice that is intialized
+// with all of the target's required queues, extensions and features.
 //
-// If either .qcis or .ext_names are NULL then only the respective
-// counts will be initialized.
+// This function yields the queue creation info structures, extensions,
+// initialized feature flags and initialized feature structs required by
+// a Spinel target.
 //
-// It is an error to provide a count that is too small.
+// If either the .qcis or .ext_names member is NULL, the respective
+// count member will be initialized.
+//
+// The following VkPhysicalDevice feature structures should appear in
+// the VkPhysicalDeviceFeatures2.pNext list:
+//
+//   * HostQueryResetFeaturesEXT
+//   * PipelineExecutablePropertiesFeaturesKHR
+//   * ScalarBlockLayoutFeaturesEXT
+//   * ShaderFloat16Int8FeaturesKHR
+//   * SubgroupSizeControlFeaturesEXT
+//
+// SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS will be returned if:
+//
+//   * The .qcis or .ext_names member is NULL
+//   * The .qci_count or .ext_name_count member is too small
+//   * The .pdf2 member is NULL
+//   * The .pdf2->pNext list doesn't contain an expected feature struct
+//
+// Otherwise, SPN_SUCCESS will be returned.
 //
 
 struct spn_vk_target;

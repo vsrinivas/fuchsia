@@ -15,7 +15,7 @@ use {
     },
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, prelude::*},
-    spinel_rs_sys::{SpnCommand, SpnResult::SpnSuccess, *},
+    spinel_rs_sys::{SpnCommand, SpnResult::*, *},
     std::{
         cell::RefCell,
         collections::{BTreeMap, HashSet},
@@ -582,6 +582,55 @@ extern "C" {
     ) -> vk::PFN_vkVoidFunction;
 }
 
+const STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2: u32 = 1000059000;
+const STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT: u32 = 1000261000;
+const STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR: u32 = 1000269000;
+const STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES_EXT: u32 = 1000221000;
+const STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR: u32 = 1000082000;
+const STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES_EXT: u32 = 1000225002;
+
+#[repr(C)]
+#[allow(non_snake_case)]
+struct PhysicalDeviceHostQueryResetFeaturesEXT {
+    sType: vk::StructureType,
+    pNext: *const c_void,
+    hostQueryReset: vk::Bool32,
+}
+
+#[repr(C)]
+#[allow(non_snake_case)]
+struct PhysicalDevicePipelineExecutablePropertiesFeaturesKHR {
+    sType: vk::StructureType,
+    pNext: *const c_void,
+    pipelineExecutableInfo: vk::Bool32,
+}
+
+#[repr(C)]
+#[allow(non_snake_case)]
+struct PhysicalDeviceScalarBlockLayoutFeaturesEXT {
+    sType: vk::StructureType,
+    pNext: *const c_void,
+    scalarBlockLayout: vk::Bool32,
+}
+
+#[repr(C)]
+#[allow(non_snake_case)]
+struct VkPhysicalDeviceShaderFloat16Int8FeaturesKHR {
+    sType: vk::StructureType,
+    pNext: *const c_void,
+    shaderFloat16: vk::Bool32,
+    shaderInt8: vk::Bool32,
+}
+
+#[repr(C)]
+#[allow(non_snake_case)]
+struct VkPhysicalDeviceSubgroupSizeControlFeaturesEXT {
+    sType: vk::StructureType,
+    pNext: *const c_void,
+    subgroupSizeControl: vk::Bool32,
+    computeFullSubgroups: vk::Bool32,
+}
+
 struct VulkanImage {
     device: vk::Device,
     image: vk::Image,
@@ -977,19 +1026,13 @@ impl SpinelContext {
         let mut spn_tr = unsafe {
             let mut output = mem::MaybeUninit::zeroed();
             let status = spn_vk_target_get_requirements(spn_target, output.as_mut_ptr());
-            assert_eq!(status, SpnSuccess);
+            assert_eq!(status, SpnErrorPartialTargetRequirements);
             output.assume_init()
         };
-
         let mut hs_tr = unsafe {
             let mut output = mem::MaybeUninit::zeroed();
             let status = hotsort_vk_target_get_requirements(hs_target, output.as_mut_ptr());
             assert_eq!(status, true);
-            output.assume_init()
-        };
-
-        let mut pdf = unsafe {
-            let output = mem::MaybeUninit::zeroed();
             output.assume_init()
         };
         let mut qcis = unsafe {
@@ -1006,10 +1049,48 @@ impl SpinelContext {
         };
         ext_names[0] = BUFFER_COLLECTION_EXTENSION_NAME.as_ptr() as *const c_char;
 
+        let mut feature1 = unsafe {
+            let output = mem::MaybeUninit::<PhysicalDeviceHostQueryResetFeaturesEXT>::zeroed();
+            output.assume_init()
+        };
+        feature1.sType = STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT;
+        let mut feature2 = unsafe {
+            let output =
+                mem::MaybeUninit::<PhysicalDevicePipelineExecutablePropertiesFeaturesKHR>::zeroed();
+            output.assume_init()
+        };
+        feature2.sType = STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR;
+        let mut feature3 = unsafe {
+            let output = mem::MaybeUninit::<PhysicalDeviceScalarBlockLayoutFeaturesEXT>::zeroed();
+            output.assume_init()
+        };
+        feature3.sType = STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES_EXT;
+        let mut feature4 = unsafe {
+            let output = mem::MaybeUninit::<VkPhysicalDeviceShaderFloat16Int8FeaturesKHR>::zeroed();
+            output.assume_init()
+        };
+        feature4.sType = STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR;
+        let mut feature5 = unsafe {
+            let output =
+                mem::MaybeUninit::<VkPhysicalDeviceSubgroupSizeControlFeaturesEXT>::zeroed();
+            output.assume_init()
+        };
+        feature5.sType = STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES_EXT;
+        feature1.pNext = &mut feature2 as *mut _ as *mut c_void;
+        feature2.pNext = &mut feature3 as *mut _ as *mut c_void;
+        feature3.pNext = &mut feature4 as *mut _ as *mut c_void;
+        feature4.pNext = &mut feature5 as *mut _ as *mut c_void;
+        let mut pdf2 = unsafe {
+            let output = mem::MaybeUninit::<PhysicalDeviceFeatures2>::zeroed();
+            output.assume_init()
+        };
+        pdf2.sType = STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        pdf2.pNext = &mut feature1 as *mut _ as *mut c_void;
+
         spn_tr.qcis = qcis.as_mut_ptr();
         spn_tr.ext_names =
             if spn_tr.ext_name_count > 0 { &mut ext_names[1] } else { ptr::null_mut() };
-        spn_tr.pdf = &mut pdf;
+        spn_tr.pdf2 = &mut pdf2;
         unsafe {
             let status = spn_vk_target_get_requirements(spn_target, &mut spn_tr);
             assert_eq!(status, SpnSuccess);
@@ -1019,7 +1100,7 @@ impl SpinelContext {
         } else {
             ptr::null_mut()
         };
-        hs_tr.pdf = &mut pdf;
+        hs_tr.pdf = &mut pdf2.features;
         unsafe {
             let status = hotsort_vk_target_get_requirements(hs_target, &mut hs_tr);
             assert_eq!(status, true);
@@ -1028,7 +1109,7 @@ impl SpinelContext {
         let device = unsafe {
             let info = vk::DeviceCreateInfo {
                 sType: vk::STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-                pNext: ptr::null(),
+                pNext: pdf2.pNext,
                 flags: 0,
                 queueCreateInfoCount: qcis.len() as u32,
                 pQueueCreateInfos: qcis.as_ptr(),
@@ -1036,7 +1117,7 @@ impl SpinelContext {
                 ppEnabledLayerNames: ptr::null(),
                 enabledExtensionCount: ext_names.len() as u32,
                 ppEnabledExtensionNames: ext_names.as_ptr(),
-                pEnabledFeatures: &pdf,
+                pEnabledFeatures: &pdf2.features,
             };
 
             let mut output = mem::MaybeUninit::uninit();

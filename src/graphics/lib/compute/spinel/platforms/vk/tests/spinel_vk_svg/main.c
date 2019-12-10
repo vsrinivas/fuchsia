@@ -408,30 +408,57 @@ main(int argc, char const * argv[])
   //
   struct spn_vk_target_requirements spn_tr = { 0 };
 
-  spn(vk_target_get_requirements(spn_target, &spn_tr));
+  spn_vk_target_get_requirements(spn_target, &spn_tr);
 
   //
   // probe HotSort device requirements for this target
   //
   struct hotsort_vk_target_requirements hs_tr = { 0 };
 
-  if (!hotsort_vk_target_get_requirements(hs_target, &hs_tr))
-    return EXIT_FAILURE;
+  hotsort_vk_target_get_requirements(hs_target, &hs_tr);
 
   //
   // populate accumulated device requirements
   //
-  uint32_t const           ext_name_count = spn_tr.ext_name_count + hs_tr.ext_name_count;
-  VkDeviceQueueCreateInfo  qcis[spn_tr.qci_count];
-  char const *             ext_names[ext_name_count];
-  VkPhysicalDeviceFeatures pdf = { false };
+  uint32_t const          ext_name_count = spn_tr.ext_name_count + hs_tr.ext_name_count;
+  VkDeviceQueueCreateInfo qcis[spn_tr.qci_count];
+  char const *            ext_names[ext_name_count];
+
+  //
+  // feature structures
+  //
+  struct
+  {
+    VkPhysicalDeviceHostQueryResetFeaturesEXT               a;
+    VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR b;
+    VkPhysicalDeviceScalarBlockLayoutFeaturesEXT            c;
+    VkPhysicalDeviceShaderFloat16Int8FeaturesKHR            d;
+    VkPhysicalDeviceSubgroupSizeControlFeaturesEXT          e;
+  } features = {
+    .a.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT,
+    .b.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR,
+    .c.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES_EXT,
+    .d.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR,
+    .e.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES_EXT,
+  };
+
+  features.a.pNext = &features.b;
+  features.b.pNext = &features.c;
+  features.c.pNext = &features.d;
+  features.d.pNext = &features.e;
+  features.e.pNext = NULL;
+
+  VkPhysicalDeviceFeatures2 pdf2 = {
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+    .pNext = &features.a,
+  };
 
   //
   // populate Spinel device requirements
   //
   spn_tr.qcis      = qcis;
   spn_tr.ext_names = ext_names;
-  spn_tr.pdf       = &pdf;
+  spn_tr.pdf2      = &pdf2;
 
   spn(vk_target_get_requirements(spn_target, &spn_tr));
 
@@ -439,30 +466,18 @@ main(int argc, char const * argv[])
   // populate HotSort device requirements
   //
   hs_tr.ext_names = ext_names + spn_tr.ext_name_count;
-  hs_tr.pdf       = &pdf;
+  hs_tr.pdf       = &pdf2.features;
 
   if (!hotsort_vk_target_get_requirements(hs_target, &hs_tr))
     return EXIT_FAILURE;
 
-    //
-    // create VkDevice
-    //
-#if 0
   //
-  // This feature is missing from our prebuilt Vulkan SDK. Enable as
-  // soon as the prebuilt SDK is updated.
+  // create VkDevice
   //
-  VkPhysicalDeviceShaderFloat16Int8FeaturesKHR const shaderFloat16Int8 = {
-    .sType         = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR,
-    .shaderFloat16 = true,
-    .shaderInt8    = true
-  };
-#endif
-
   VkDeviceCreateInfo const device_info = {
 
     .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-    .pNext                   = NULL,  // &shaderFloat16Int8,
+    .pNext                   = pdf2.pNext,
     .flags                   = 0,
     .queueCreateInfoCount    = spn_tr.qci_count,
     .pQueueCreateInfos       = qcis,
@@ -470,7 +485,7 @@ main(int argc, char const * argv[])
     .ppEnabledLayerNames     = NULL,
     .enabledExtensionCount   = ext_name_count,
     .ppEnabledExtensionNames = ext_names,
-    .pEnabledFeatures        = &pdf
+    .pEnabledFeatures        = &pdf2.features
   };
 
   vk(CreateDevice(environment.pd, &device_info, NULL, &environment.d));

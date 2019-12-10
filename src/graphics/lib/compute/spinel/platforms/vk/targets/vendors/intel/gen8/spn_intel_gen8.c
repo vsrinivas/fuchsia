@@ -58,13 +58,25 @@ static struct spn_vk_target const target =
     },
 
     .features.named = {
-      .shaderInt64                        = 1,
+      .shaderInt64                        = 1
+    },
+
+    .structures.named = {
+      .ScalarBlockLayoutFeaturesEXT = {
+        .scalarBlockLayout                = 1
+      },
+      .ShaderFloat16Int8FeaturesKHR = {
+        .shaderFloat16                    = 0,
+      },
+      .SubgroupSizeControlFeaturesEXT = {
+        .subgroupSizeControl              = 1,
+        .computeFullSubgroups             = 1
+      }
     },
 
     //
     //
     //
-
     .allocator = {
       .host = {
         .perm = {

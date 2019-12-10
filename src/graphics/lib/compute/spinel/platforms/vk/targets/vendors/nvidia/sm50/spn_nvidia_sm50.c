@@ -60,10 +60,15 @@ static struct spn_vk_target const target =
       .shaderInt64                        = 1,
     },
 
-    //
-    //
-    //
+    .structures.named = {
+      .ScalarBlockLayoutFeaturesEXT = {
+        .scalarBlockLayout                = 1
+      },
+    },
 
+    //
+    //
+    //
     .allocator = {
       .host = {
         .perm = {
