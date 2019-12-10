@@ -388,7 +388,7 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
 }
 
 /**
- * brcmf_fweh_process_event() - process netbuf as firmware event.
+ * brcmf_fweh_process_event() - process firmware event.
  *
  * @drvr: driver information object.
  * @event_packet: event packet to process.
@@ -396,15 +396,35 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp) {
  * If the packet buffer contains a firmware event message it will
  * dispatch the event to a registered handler (using worker).
  */
-void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_packet,
+void brcmf_fweh_process_event(struct brcmf_pub* drvr, const struct brcmf_event* event_packet,
                               uint32_t packet_len) {
   enum brcmf_fweh_event_code code;
   struct brcmf_fweh_info* fweh = &drvr->fweh;
   struct brcmf_fweh_queue_item* event;
-  void* data;
+  uint16_t usr_stype;
+  const void* data;
   uint32_t datalen;
 
-  // BRCMF_DBG(TEMP, "Enter");
+  if (packet_len < sizeof(*event_packet)) {
+    return;
+  }
+
+  /* only process events when protocol matches */
+  if (event_packet->eth.h_proto != htobe16(ETH_P_LINK_CTL)) {
+    return;
+  }
+
+  /* check for BRCM oui match */
+  if (memcmp(BRCM_OUI, &event_packet->hdr.oui[0], sizeof(event_packet->hdr.oui))) {
+    return;
+  }
+
+  /* final match on usr_subtype */
+  usr_stype = be16toh(event_packet->hdr.usr_subtype);
+  if (usr_stype != BCMILCP_BCM_SUBTYPE_EVENT) {
+    return;
+  }
+
   /* get event info */
   code = static_cast<brcmf_fweh_event_code>(be32toh(event_packet->msg.event_type));
   datalen = be32toh(event_packet->msg.datalen);

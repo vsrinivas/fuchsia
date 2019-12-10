@@ -306,7 +306,8 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
 }
 
 void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
-  if (netbuf->pkt_type == ADDRESSED_TO_MULTICAST) {
+  const ethhdr* const eh = reinterpret_cast<const ethhdr*>(netbuf->data);
+  if (address_is_multicast(eh->h_dest) && !address_is_broadcast(eh->h_dest)) {
     ifp->ndev->stats.multicast++;
   }
 
@@ -318,7 +319,7 @@ void brcmf_netif_rx(struct brcmf_if* ifp, struct brcmf_netbuf* netbuf) {
   ifp->ndev->stats.rx_bytes += netbuf->len;
   ifp->ndev->stats.rx_packets++;
 
-  BRCMF_DBG(DATA, "rx proto=0x%X len %d\n", be16toh(netbuf->protocol), netbuf->len);
+  BRCMF_DBG(DATA, "rx proto=0x%X len %d\n", be16toh(eh->h_proto), netbuf->len);
   brcmf_cfg80211_rx(ifp, netbuf);
 }
 
@@ -337,30 +338,6 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
     return ZX_ERR_IO;
   }
 
-  // TODO(cphoenix): Double-check (be paranoid) that these side effects of eth_type_trans()
-  // are not used in this code.
-  // - netbuf->dev
-  // Also double-check that we're not using DSA in our net device (whatever that is)
-  // and that we don't worry about "older Novell" IPX.
-  // TODO(cphoenix): This is an ugly hack, probably buggy, to replace some of eth_type_trans.
-  // See https://elixir.bootlin.com/linux/v4.17-rc7/source/net/ethernet/eth.c#L156
-  if (address_is_multicast(netbuf->data)) {
-    if (address_is_broadcast(netbuf->data)) {
-      netbuf->pkt_type = ADDRESSED_TO_BROADCAST;
-    } else {
-      netbuf->pkt_type = ADDRESSED_TO_MULTICAST;
-    }
-  } else if (memcmp(netbuf->data, (*ifp)->ndev->dev_addr, 6)) {
-    netbuf->pkt_type = ADDRESSED_TO_OTHER_HOST;
-  }
-  struct ethhdr* header = (struct ethhdr*)netbuf->data;
-  if (header->h_proto >= ETH_P_802_3_MIN) {
-    netbuf->protocol = header->h_proto;
-  } else {
-    netbuf->protocol = htobe16(ETH_P_802_2);
-  }
-  netbuf->eth_header = netbuf->data;
-  // netbuf->protocol = eth_type_trans(netbuf, (*ifp)->ndev);
   return ZX_OK;
 }
 
@@ -379,7 +356,8 @@ void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
   } else {
     /* Process special event packets */
     if (handle_event) {
-      brcmf_fweh_process_netbuf(ifp->drvr, netbuf);
+      brcmf_fweh_process_event(ifp->drvr, reinterpret_cast<brcmf_event*>(netbuf->data),
+                               netbuf->len);
     }
 
     brcmf_netif_rx(ifp, netbuf);
@@ -395,7 +373,7 @@ void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* netbuf) {
     return;
   }
 
-  brcmf_fweh_process_netbuf(ifp->drvr, netbuf);
+  brcmf_fweh_process_event(ifp->drvr, reinterpret_cast<brcmf_event*>(netbuf->data), netbuf->len);
   brcmu_pkt_buf_free_netbuf(netbuf);
 }
 

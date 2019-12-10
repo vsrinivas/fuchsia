@@ -27,8 +27,6 @@
 #define _ALL_SOURCE
 #include <threads.h>
 
-enum { ADDRESSED_TO_MULTICAST = 1, ADDRESSED_TO_BROADCAST, ADDRESSED_TO_OTHER_HOST };
-
 // Purpose of this library:
 //
 // Store packet data (network or firmware-control packets) in buffers that can be queued, and
@@ -38,20 +36,16 @@ enum { ADDRESSED_TO_MULTICAST = 1, ADDRESSED_TO_BROADCAST, ADDRESSED_TO_OTHER_HO
 /*
  * Fields:
  *
- * protocol - Set on RX from the 2 bytes following the MAC addresses in the Ethernet-format packet.
  * priority - The priority of this packet
  * len - The length of data stored
  * data - Pointer to the start of data - may be moved by shrink_head/grow_head
  * listnode - Used to maintain queues of brcmf_netbuf
  * workspace - Reserved for use by the driver (a holdover from Linux-style architecture)
- * pkt_type - Set based on MAC address bits to track statistics. See above.
  * ip_summed - Unclear - TODO: maybe delete after FIDL interfaces is finalized
  * allocated_buffer - Pointer to the allocated buffer
  * allocated_size - Size of the allocated buffer
- * eth_header - Is set to the start of the Ethernet header
  */
 struct brcmf_netbuf {
-  uint16_t protocol;
   int priority;
   uint32_t len;
   uint8_t* data;
@@ -61,11 +55,9 @@ struct brcmf_netbuf {
   // The driver uses it to associate state / information with the packet.
   // Code above and below the driver, and the netbuf library, should not modify this area.
   uint8_t workspace[48];
-  uint32_t pkt_type;
   uint32_t ip_summed;
   uint8_t* allocated_buffer;
   uint32_t allocated_size;
-  void* eth_header;
 };
 
 // The list-head for queues of buffers.

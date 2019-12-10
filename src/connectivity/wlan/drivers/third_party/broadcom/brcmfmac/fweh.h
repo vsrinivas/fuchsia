@@ -22,7 +22,6 @@
 #include <zircon/listnode.h>
 
 #include "linuxisms.h"
-#include "netbuf.h"
 #include "workqueue.h"
 
 /* formward declarations */
@@ -330,36 +329,9 @@ zx_status_t brcmf_fweh_register(struct brcmf_pub* drvr, enum brcmf_fweh_event_co
                                                        void* data));
 void brcmf_fweh_unregister(struct brcmf_pub* drvr, enum brcmf_fweh_event_code code);
 zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp);
-void brcmf_fweh_process_event(struct brcmf_pub* drvr, struct brcmf_event* event_packet,
+void brcmf_fweh_process_event(struct brcmf_pub* drvr, const struct brcmf_event* event_packet,
                               uint32_t packet_len);
 void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing);
 void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* emsg, void* data);
-
-static inline void brcmf_fweh_process_netbuf(struct brcmf_pub* drvr, struct brcmf_netbuf* netbuf) {
-  struct brcmf_event* event_packet;
-  uint16_t usr_stype;
-
-  /* only process events when protocol matches */
-  if (netbuf->protocol != htobe16(ETH_P_LINK_CTL)) {
-    return;
-  }
-
-  if ((netbuf->len + ETH_HLEN) < sizeof(*event_packet)) {
-    return;
-  }
-
-  /* check for BRCM oui match */
-  event_packet = (struct brcmf_event*)(netbuf->eth_header);
-  if (memcmp(BRCM_OUI, &event_packet->hdr.oui[0], sizeof(event_packet->hdr.oui))) {
-    return;
-  }
-
-  /* final match on usr_subtype */
-  usr_stype = be16toh(event_packet->hdr.usr_subtype);
-  if (usr_stype != BCMILCP_BCM_SUBTYPE_EVENT) {
-    return;
-  }
-  brcmf_fweh_process_event(drvr, event_packet, netbuf->len + ETH_HLEN);
-}
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWEH_H_
