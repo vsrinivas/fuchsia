@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
+    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
     failure::{bail, format_err, Error},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
@@ -25,7 +25,7 @@ pub fn construct_bss_description(
     beacon_interval: TimeUnit,
     capability_info: CapabilityInfo,
     ies: &[u8],
-    rx_info: RxInfo,
+    rx_info: banjo_wlan_mac::WlanRxInfo,
 ) -> Result<fidl_mlme::BssDescription, Error> {
     use wlan_common::ie;
     let mut ssid = None;
@@ -130,7 +130,7 @@ pub fn construct_bss_description(
         chan,
         rssi_dbm: rx_info.rssi_dbm,
         rcpi_dbmh: rx_info.rcpi_dbmh,
-        rsni_dbh: rx_info.rsni_dbh,
+        rsni_dbh: rx_info.snr_dbh,
     })
 }
 
@@ -145,35 +145,24 @@ fn get_bss_type(capability_info: CapabilityInfo) -> fidl_mlme::BssTypes {
     }
 }
 
-/// Placeholder struct, to be replaced with banjo version
-#[derive(Clone, Debug, PartialEq)]
-pub struct RxInfo {
-    pub rx_flags: u32,
-    pub valid_fields: u32,
-    pub phy: u16,
-    pub data_rate: u32,
-    pub chan: WlanChannel,
-    pub mcs: u8,
-
-    pub rssi_dbm: i8,
-    pub rcpi_dbmh: i16,
-    pub rsni_dbh: i16,
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, banjo_ddk_protocol_wlan_info as banjo_wlan_info};
 
     const BSSID: Bssid = Bssid([0x33; 6]);
     const TIMESTAMP: u64 = 364983910445;
     const BEACON_INTERVAL: u16 = 100;
     // Capability information: ESS, privacy, spectrum mgmt, radio msmt
     const CAPABILITY_INFO: CapabilityInfo = CapabilityInfo(0x1111);
-    const RX_INFO: RxInfo = RxInfo {
-        chan: WlanChannel { primary: 11, cbw: WlanChannelBandwidth::_20, secondary80: 0 },
+    const RX_INFO: banjo_wlan_mac::WlanRxInfo = banjo_wlan_mac::WlanRxInfo {
+        chan: banjo_wlan_info::WlanChannel {
+            primary: 11,
+            cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+            secondary80: 0,
+        },
         rssi_dbm: -40,
         rcpi_dbmh: 30,
-        rsni_dbh: 35,
+        snr_dbh: 35,
 
         // Unused fields
         rx_flags: 0,
@@ -310,7 +299,7 @@ mod tests {
                 })),
                 rssi_dbm: RX_INFO.rssi_dbm,
                 rcpi_dbmh: RX_INFO.rcpi_dbmh,
-                rsni_dbh: RX_INFO.rsni_dbh,
+                rsni_dbh: RX_INFO.snr_dbh,
                 chan: fidl_common::WlanChan {
                     primary: 140,
                     cbw: fidl_common::Cbw::Cbw40,

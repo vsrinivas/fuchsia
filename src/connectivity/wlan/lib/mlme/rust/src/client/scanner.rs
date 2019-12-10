@@ -7,7 +7,7 @@ use {
         buffer::{BufferProvider, OutBuf},
         client::{
             channel_scheduler::{self, ChannelListener, ChannelScheduler},
-            convert_beacon::{construct_bss_description, RxInfo},
+            convert_beacon::construct_bss_description,
             frame_writer::write_probe_req_frame,
             TimedEvent,
         },
@@ -15,12 +15,9 @@ use {
         error::Error,
         timer::{EventId, Timer},
     },
-    banjo_ddk_hw_wlan_wlaninfo::{WlanInfoDriverFeature, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS},
-    banjo_ddk_protocol_wlan_info::{
-        WlanChannel, WlanChannelBandwidth, WlanSsid, WLAN_MAX_SSID_LEN,
-    },
-    banjo_ddk_protocol_wlan_mac::{WlanHwScan, WlanHwScanConfig, WlanHwScanType},
-    failure::Fail,
+    banjo_ddk_hw_wlan_wlaninfo as banjo_hw_wlaninfo,
+    banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
+    failure::{format_err, Fail},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, warn},
     std::{
@@ -30,9 +27,7 @@ use {
     wlan_common::{
         buffer_writer::BufferWriter,
         frame_len,
-        ie::{
-            parse_ht_capabilities, parse_vht_capabilities, IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN,
-        },
+        ie::{self, IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
         mac::{self, Bssid, CapabilityInfo, MacAddr},
         sequence::SequenceManager,
         time::TimeUnit,
@@ -141,7 +136,7 @@ impl Scanner {
             send_scan_end(req.txn_id, fidl_mlme::ScanResultCodes::InvalidArgs, &mut self.device);
             return Err(ScanError::EmptyChannelList);
         }
-        if channel_list.len() > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS {
+        if channel_list.len() > banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS {
             send_scan_end(req.txn_id, fidl_mlme::ScanResultCodes::InvalidArgs, &mut self.device);
             return Err(ScanError::ChannelListTooLarge);
         }
@@ -149,30 +144,32 @@ impl Scanner {
             send_scan_end(req.txn_id, fidl_mlme::ScanResultCodes::InvalidArgs, &mut self.device);
             return Err(ScanError::MaxChannelTimeLtMin);
         }
-        if req.ssid.len() > WLAN_MAX_SSID_LEN as usize {
+        if req.ssid.len() > banjo_wlan_info::WLAN_MAX_SSID_LEN as usize {
             send_scan_end(req.txn_id, fidl_mlme::ScanResultCodes::InvalidArgs, &mut self.device);
             return Err(ScanError::SsidTooLong);
         }
 
         let mut chan_sched_req_id = None;
         let wlan_info = self.device.wlan_info().ifc_info;
-        let hw_scan = (wlan_info.driver_features & WlanInfoDriverFeature::SCAN_OFFLOAD).0 > 0;
+        let hw_scan =
+            (wlan_info.driver_features & banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD).0
+                > 0;
         if hw_scan {
             let scan_type = if req.scan_type == fidl_mlme::ScanTypes::Active {
-                WlanHwScanType::ACTIVE
+                banjo_wlan_mac::WlanHwScanType::ACTIVE
             } else {
-                WlanHwScanType::PASSIVE
+                banjo_wlan_mac::WlanHwScanType::PASSIVE
             };
-            let mut channels = [0; WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS];
+            let mut channels = [0; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS];
             channels[..channel_list.len()].copy_from_slice(channel_list);
-            let mut ssid = [0; WLAN_MAX_SSID_LEN as usize];
+            let mut ssid = [0; banjo_wlan_info::WLAN_MAX_SSID_LEN as usize];
             ssid[..req.ssid.len()].copy_from_slice(&req.ssid[..]);
 
-            let config = WlanHwScanConfig {
+            let config = banjo_wlan_mac::WlanHwScanConfig {
                 scan_type,
                 num_channels: channel_list.len() as u8,
                 channels,
-                ssid: WlanSsid { len: req.ssid.len() as u8, ssid },
+                ssid: banjo_wlan_info::WlanSsid { len: req.ssid.len() as u8, ssid },
             };
             if let Err(status) = self.device.start_hw_scan(&config) {
                 send_scan_end(
@@ -185,9 +182,9 @@ impl Scanner {
         } else {
             let channels = channel_list
                 .iter()
-                .map(|c| WlanChannel {
+                .map(|c| banjo_wlan_info::WlanChannel {
                     primary: *c,
-                    cbw: WlanChannelBandwidth::_20,
+                    cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
                     secondary80: 0,
                 })
                 .collect();
@@ -215,7 +212,7 @@ impl Scanner {
         beacon_interval: TimeUnit,
         capability_info: CapabilityInfo,
         ies: &[u8],
-        rx_info: RxInfo,
+        rx_info: banjo_wlan_mac::WlanRxInfo,
     ) {
         let mut seen_bss = match &mut self.ongoing_scan_req {
             Some(req) => &mut req.seen_bss,
@@ -285,7 +282,7 @@ impl Scanner {
     }
 
     /// Notify scanner about end of probe-delay timeout so that it sends out probe request.
-    pub fn handle_probe_delay_timeout(&mut self, channel: WlanChannel) {
+    pub fn handle_probe_delay_timeout(&mut self, channel: banjo_wlan_info::WlanChannel) {
         let ssid = match &self.ongoing_scan_req {
             Some(OngoingScanRequest { req, .. }) => req.ssid.clone(),
             None => return,
@@ -295,7 +292,7 @@ impl Scanner {
         }
     }
 
-    pub fn handle_hw_scan_complete(&mut self, status: WlanHwScan) {
+    pub fn handle_hw_scan_complete(&mut self, status: banjo_wlan_mac::WlanHwScan) {
         let req = match self.ongoing_scan_req.take() {
             Some(req) => req,
             None => {
@@ -304,7 +301,7 @@ impl Scanner {
             }
         };
 
-        if status == WlanHwScan::SUCCESS {
+        if status == banjo_wlan_mac::WlanHwScan::SUCCESS {
             send_results_and_end(req, &mut self.device);
         } else {
             send_scan_end(
@@ -317,7 +314,7 @@ impl Scanner {
 
     /// Called after switching to a requested channel from a scan request. It's primarily to
     /// send out, or schedule to send out, a probe request in an active scan.
-    pub fn begin_requested_channel_time(&mut self, channel: WlanChannel) {
+    pub fn begin_requested_channel_time(&mut self, channel: banjo_wlan_info::WlanChannel) {
         let (req, probe_delay_timeout_id) = match &mut self.ongoing_scan_req {
             Some(req) => (&req.req, &mut req.probe_delay_timeout_id),
             None => return,
@@ -339,22 +336,30 @@ impl Scanner {
         }
     }
 
-    fn send_probe_req(&mut self, ssid: &[u8], _channel: WlanChannel) -> Result<(), Error> {
-        // TODO(29063): get actual value from `device`
-        let rates = [0xb0, 0x48, 0x60, 0x6c];
-        let ht_cap = &[][..];
-        let vht_cap = &[][..];
+    fn send_probe_req(
+        &mut self,
+        ssid: &[u8],
+        channel: banjo_wlan_info::WlanChannel,
+    ) -> Result<(), Error> {
+        let iface_info = self.device.wlan_info().ifc_info;
+        let band_info = get_band_info(&iface_info, channel)
+            .ok_or(format_err!("no band found for chan {:?}", channel.primary))?;
+        let rates: Vec<u8> = band_info.rates.iter().cloned().filter(|r| *r > 0).collect();
 
         let mgmt_hdr_len = frame_len!(mac::MgmtHdr);
         let ssid_len = IE_PREFIX_LEN + ssid.len();
         let rates_len = (IE_PREFIX_LEN + rates.len())
             + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
-        let ht_cap_len = if ht_cap.is_empty() { 0 } else { IE_PREFIX_LEN + ht_cap.len() };
-        let vht_cap_len = if vht_cap.is_empty() { 0 } else { IE_PREFIX_LEN + vht_cap.len() };
-
-        let ht_cap = if ht_cap.is_empty() { None } else { Some(*parse_ht_capabilities(ht_cap)?) };
-        let vht_cap =
-            if vht_cap.is_empty() { None } else { Some(*parse_vht_capabilities(vht_cap)?) };
+        let (ht_cap, ht_cap_len) = if band_info.ht_supported {
+            (Some(band_info.ht_caps.into()), IE_PREFIX_LEN + frame_len!(ie::HtCapabilities))
+        } else {
+            (None, 0)
+        };
+        let (vht_cap, vht_cap_len) = if band_info.vht_supported {
+            (Some(band_info.vht_caps.into()), IE_PREFIX_LEN + frame_len!(ie::VhtCapabilities))
+        } else {
+            (None, 0)
+        };
 
         let frame_len = mgmt_hdr_len + ssid_len + rates_len + ht_cap_len + vht_cap_len;
         let mut buf = self.buf_provider.get_buffer(frame_len)?;
@@ -402,6 +407,20 @@ impl Scanner {
             None => None,
         }
     }
+}
+
+fn get_band_info(
+    iface_info: &banjo_hw_wlaninfo::WlanInfo,
+    channel: banjo_wlan_info::WlanChannel,
+) -> Option<&banjo_hw_wlaninfo::WlanInfoBandInfo> {
+    const _2GHZ_BAND_HIGHEST_CHANNEL: u8 = 14;
+    iface_info.bands[..iface_info.bands_count]
+        .iter()
+        .filter(|b| match channel.primary {
+            x if x > _2GHZ_BAND_HIGHEST_CHANNEL => b.band == banjo_hw_wlaninfo::WlanInfoBand::_5GHZ,
+            _ => b.band == banjo_hw_wlaninfo::WlanInfoBand::_2GHZ,
+        })
+        .next()
 }
 
 fn send_results_and_end(mut scan_req: OngoingScanRequest, device: &mut Device) {
@@ -459,17 +478,21 @@ mod tests {
     const BSSID: Bssid = Bssid([6u8; 6]);
     const IFACE_MAC: MacAddr = [7u8; 6];
     // Original channel set by FakeDevice
-    const ORIGINAL_CHAN: WlanChannel = chan(0);
+    const ORIGINAL_CHAN: banjo_wlan_info::WlanChannel = chan(0);
 
     const TIMESTAMP: u64 = 364983910445;
     // Capability information: ESS
     const CAPABILITY_INFO: CapabilityInfo = CapabilityInfo(1);
     const BEACON_INTERVAL: u16 = 100;
-    const RX_INFO: RxInfo = RxInfo {
-        chan: WlanChannel { primary: 11, cbw: WlanChannelBandwidth::_20, secondary80: 0 },
+    const RX_INFO: banjo_wlan_mac::WlanRxInfo = banjo_wlan_mac::WlanRxInfo {
+        chan: banjo_wlan_info::WlanChannel {
+            primary: 11,
+            cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+            secondary80: 0,
+        },
         rssi_dbm: -40,
         rcpi_dbmh: 30,
-        rsni_dbh: 35,
+        snr_dbh: 35,
 
         // Unused fields
         rx_flags: 0,
@@ -547,8 +570,15 @@ mod tests {
             // IEs
             0, 4, // SSID id and length
             115, 115, 105, 100, // SSID
-            1, 4, // supp_rates id and length
-            0xb0, 0x48, 0x60, 0x6c, // supp_rates
+            1, 6, // supp_rates id and length
+            12, 24, 48, 54, 96, 108, // supp_rates
+            // HT cap header
+            45, 26,
+            // HT cap body
+            0x63, 0x00, 0x17,
+            0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x01, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ][..]);
     }
 
@@ -590,8 +620,15 @@ mod tests {
             // IEs
             0, 4, // SSID id and length
             115, 115, 105, 100, // SSID
-            1, 4, // supp_rates id and length
-            0xb0, 0x48, 0x60, 0x6c, // supp_rates
+            1, 6, // supp_rates id and length
+            12, 24, 48, 54, 96, 108, // supp_rates
+            // HT cap header
+            45, 26,
+            // HT cap body
+            0x63, 0x00, 0x17,
+            0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x01, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ][..]);
     }
 
@@ -716,7 +753,8 @@ mod tests {
     #[test]
     fn test_start_hw_scan_success() {
         let mut m = MockObjects::new();
-        m.fake_device.info.ifc_info.driver_features |= WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.info.ifc_info.driver_features |=
+            banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
         let mut scanner = m.create_scanner();
 
         scanner
@@ -725,16 +763,16 @@ mod tests {
 
         // Verify that hw-scan is requested
         assert_variant!(m.fake_device.hw_scan_req, Some(config) => {
-            assert_eq!(config.scan_type, WlanHwScanType::PASSIVE);
+            assert_eq!(config.scan_type, banjo_wlan_mac::WlanHwScanType::PASSIVE);
             assert_eq!(config.num_channels, 1);
 
-            let mut channels = [0u8; WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS];
+            let mut channels = [0u8; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS];
             channels[..1].copy_from_slice(&[6]);
             assert_eq!(&config.channels[..], &channels[..]);
 
-            let mut ssid = [0; WLAN_MAX_SSID_LEN as usize];
+            let mut ssid = [0; banjo_wlan_info::WLAN_MAX_SSID_LEN as usize];
             ssid[..4].copy_from_slice(b"ssid");
-            assert_eq!(config.ssid, WlanSsid { len: 4, ssid });
+            assert_eq!(config.ssid, banjo_wlan_info::WlanSsid { len: 4, ssid });
         }, "HW scan not initiated");
 
         // Verify that software scan is not scheduled
@@ -744,7 +782,7 @@ mod tests {
         handle_beacon(&mut scanner, TIMESTAMP, &beacon_ies()[..]);
 
         // Verify scan results are sent on hw scan complete
-        scanner.handle_hw_scan_complete(WlanHwScan::SUCCESS);
+        scanner.handle_hw_scan_complete(banjo_wlan_mac::WlanHwScan::SUCCESS);
         m.fake_device.next_mlme_msg::<fidl_mlme::ScanResult>().expect("error reading ScanResult");
         let scan_end = m
             .fake_device
@@ -759,7 +797,8 @@ mod tests {
     #[test]
     fn test_start_hw_scan_fails() {
         let mut m = MockObjects::new();
-        m.fake_device.info.ifc_info.driver_features |= WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.info.ifc_info.driver_features |=
+            banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
         let mut scanner = Scanner::new(
             m.fake_device.as_device_fail_start_hw_scan(),
             FakeBufferProvider::new(),
@@ -786,7 +825,8 @@ mod tests {
     #[test]
     fn test_start_hw_scan_aborted() {
         let mut m = MockObjects::new();
-        m.fake_device.info.ifc_info.driver_features |= WlanInfoDriverFeature::SCAN_OFFLOAD;
+        m.fake_device.info.ifc_info.driver_features |=
+            banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD;
         let mut scanner = m.create_scanner();
 
         scanner
@@ -802,7 +842,7 @@ mod tests {
         handle_beacon(&mut scanner, TIMESTAMP, &beacon_ies()[..]);
 
         // Verify scan results are sent on hw scan complete
-        scanner.handle_hw_scan_complete(WlanHwScan::ABORTED);
+        scanner.handle_hw_scan_complete(banjo_wlan_mac::WlanHwScan::ABORTED);
         let scan_end = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
@@ -852,7 +892,7 @@ mod tests {
                     vht_op: None,
                     rssi_dbm: RX_INFO.rssi_dbm,
                     rcpi_dbmh: RX_INFO.rcpi_dbmh,
-                    rsni_dbh: RX_INFO.rsni_dbh,
+                    rsni_dbh: RX_INFO.snr_dbh,
                     chan: fidl_common::WlanChan {
                         primary: RX_INFO.chan.primary,
                         cbw: fidl_common::Cbw::Cbw20,
@@ -1017,8 +1057,12 @@ mod tests {
         );
     }
 
-    const fn chan(primary: u8) -> WlanChannel {
-        WlanChannel { primary, cbw: WlanChannelBandwidth::_20, secondary80: 0 }
+    const fn chan(primary: u8) -> banjo_wlan_info::WlanChannel {
+        banjo_wlan_info::WlanChannel {
+            primary,
+            cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+            secondary80: 0,
+        }
     }
 
     fn beacon_ies() -> Vec<u8> {

@@ -7,6 +7,7 @@ use {
         buffer_reader::BufferReader, mac::MacAddr, mac::ReasonCode, organization::Oui,
         unaligned_view::UnalignedView,
     },
+    banjo_ddk_hw_wlan_ieee80211 as banjo_80211,
     std::mem::size_of,
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
@@ -67,6 +68,24 @@ pub struct HtCapabilities {
     pub ht_ext_cap: HtExtCapabilities, // u16
     pub txbf_cap: TxBfCapability,      // u32
     pub asel_cap: AselCapability,      // u8
+}
+
+impl From<banjo_80211::Ieee80211HtCapabilities> for HtCapabilities {
+    fn from(cap: banjo_80211::Ieee80211HtCapabilities) -> Self {
+        // Safe to access `fields` because its value is read as raw bytes
+        let sms = unsafe { cap.supported_mcs_set.fields };
+        let mcs_set = (sms.rx_mcs_head as u128)
+            | (sms.rx_mcs_tail as u128) << 64
+            | (sms.tx_mcs as u128) << 96;
+        Self {
+            ht_cap_info: HtCapabilityInfo(cap.ht_capability_info),
+            ampdu_params: AmpduParams(cap.ampdu_params),
+            mcs_set: SupportedMcsSet(mcs_set),
+            ht_ext_cap: HtExtCapabilities(cap.ht_ext_capabilities),
+            txbf_cap: TxBfCapability(cap.tx_beamforming_capabilities),
+            asel_cap: AselCapability(cap.asel_capabilities),
+        }
+    }
 }
 
 // IEEE Std 802.11-2016, 9.4.2.56.2
@@ -711,6 +730,15 @@ pub struct VhtCapabilities {
     pub vht_mcs_nss: VhtMcsNssSet,         // u64
 }
 
+impl From<banjo_80211::Ieee80211VhtCapabilities> for VhtCapabilities {
+    fn from(cap: banjo_80211::Ieee80211VhtCapabilities) -> Self {
+        Self {
+            vht_cap_info: VhtCapabilitiesInfo(cap.vht_capability_info),
+            vht_mcs_nss: VhtMcsNssSet(cap.supported_vht_mcs_and_nss_set),
+        }
+    }
+}
+
 // IEEE Std 802.11-2016, 9.4.2.158.2
 #[bitfield(
     0..=1   max_mpdu_len as MaxMpduLen(u8),
@@ -876,6 +904,25 @@ impl VhtChannelBandwidth {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ht_cap_mcs_set_conversion() {
+        let from = banjo_80211::Ieee80211HtCapabilities {
+            ht_capability_info: 1,
+            ampdu_params: 2,
+            supported_mcs_set: banjo_80211::Ieee80211HtCapabilitiesSupportedMcsSet {
+                bytes: [3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12],
+            },
+            ht_ext_capabilities: 0x13,
+            tx_beamforming_capabilities: 0x14,
+            asel_capabilities: 0x15,
+        };
+        let mcs_set = HtCapabilities::from(from).mcs_set;
+        assert_eq!(
+            mcs_set.as_bytes(),
+            [3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12]
+        );
+    }
 
     #[test]
     fn perr_iter_empty() {
