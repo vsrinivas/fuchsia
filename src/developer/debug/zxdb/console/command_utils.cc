@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/command_utils.h"
 
+#include <ctype.h>
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -33,6 +34,7 @@
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/format.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -505,6 +507,52 @@ Err EvalCommandAddressExpression(
         Err conversion_err = value.value().PromoteTo64(&address);
         cb(conversion_err, address, size);
       });
+}
+
+std::string FormatConsoleString(const std::string& input) {
+  // The console parser accepts two forms:
+  //  - A C-style string (raw or not) with quotes and C-style escape sequences.
+  //  - A whitespace-separated string with no escape character handling.
+
+  // Determine which of the cases is required.
+  bool has_space = false;
+  bool has_special = false;
+  bool has_quote = false;
+  for (unsigned char c : input) {
+    if (isspace(c)) {
+      has_space = true;
+    } else if (c < ' ') {
+      has_special = true;
+    } else if (c == '"') {
+      has_quote = true;
+    }
+    // We assume any high-bit characters are part of UTF-8 sequences. This isn't necessarily the
+    // case. We could validate UTF-8 sequences but currently that effort isn't worth it.
+  }
+
+  if (!has_space && !has_special && !has_quote)
+    return input;
+
+  std::string result;
+  if (has_quote && !has_special) {
+    // Raw-encode strings with embedded quotes as long as nothing else needs escaping.
+
+    // Make sure there's a unique delimiter in case the string has an embedded )".
+    std::string delim;
+    while (input.find(")" + delim + "\"") != std::string::npos)
+      delim += "*";
+
+    result = "R\"" + delim + "(";
+    result += input;
+    result += ")" + delim + "\"";
+  } else {
+    // Normal C string.
+    result = "\"";
+    for (char c : input)
+      AppendCEscapedChar(c, &result);
+    result += "\"";
+  }
+  return result;
 }
 
 }  // namespace zxdb

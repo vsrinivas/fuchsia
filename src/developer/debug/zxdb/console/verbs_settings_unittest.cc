@@ -187,13 +187,13 @@ TEST_F(VerbsSettingsTest, GetSet) {
       "New value build-dirs system-wide:\n"
       "• gldir2\n"
       "• gldir3\n"
-      "• gldir four\n",
+      "• \"gldir four\"\n",
       DoInput("set build-dirs += gldir3 \"gldir four\""));
 
   EXPECT_EQ(
       "• gldir2\n"
       "• gldir3\n"
-      "• gldir four",
+      "• \"gldir four\"",
       ExtractValuesFromGet(DoInput("global get build-dirs")));
   EXPECT_EQ("• prdir", ExtractValuesFromGet(DoInput("get build-dirs")));
 }

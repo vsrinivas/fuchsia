@@ -66,7 +66,7 @@ TEST_F(FormatSettingTest, Setting) {
       "Type: string\n"
       "\n"
       "Value(s):\n"
-      "Test string\n",
+      "\"Test string\"\n",
       out.AsString());
 }
 
@@ -130,8 +130,7 @@ TEST_F(FormatSettingTest, List) {
   std::vector<std::string> options = {
       "/some/very/long/and/annoying/path/that/actually/leads/nowhere",
       "/another/some/very/long/and/annoying/path/that/actually/leads/nowhere",
-      "/yet/another/some/very/long/and/annoying/path/that/actually/leads/"
-      "nowhere"};
+      "this path/needs\tquoting"};
 
   SettingStore store(GetSchema(), nullptr);
   Err err = store.SetList("setting-list2", std::move(options));
@@ -152,16 +151,14 @@ TEST_F(FormatSettingTest, List) {
       "\n"
       "Value(s):\n"
       "• /some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
-      "• "
-      "/another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
-      "• "
-      "/yet/another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
+      "• /another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
+      "• \"this path/needs\\tquoting\"\n"
       "\n"
       "See \"help set\" about using the set value for lists.\n"
       "To set, type: set setting-list2 "
-      "/some/very/long/and/annoying/path/that/actually/leads/nowhere:/another/"
-      "some/very/long/and/annoying/path/that/actually/leads/nowhere:/yet/"
-      "another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n",
+      "/some/very/long/and/annoying/path/that/actually/leads/nowhere "
+      "/another/some/very/long/and/annoying/path/that/actually/leads/nowhere "
+      "\"this path/needs\\tquoting\"\n",
       out.AsString());
 }
 

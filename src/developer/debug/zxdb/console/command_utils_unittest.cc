@@ -293,4 +293,22 @@ TEST(CommandUtils, DescribeFileLine) {
   EXPECT_EQ("foo.cc:21", DescribeFileLine(&setup.target(), fl));
 }
 
+TEST(CommandUtils, FormatConsoleString) {
+  EXPECT_EQ("", FormatConsoleString(""));
+
+  // Doesn't need any escaping or quoting.
+  EXPECT_EQ("foobar", FormatConsoleString("foobar"));
+  EXPECT_EQ("snowman\xe2\x98\x83!", FormatConsoleString("snowman\xe2\x98\x83!"));
+
+  // Needs normal quoting.
+  EXPECT_EQ("\"foo\\nbar\"", FormatConsoleString("foo\nbar"));
+  EXPECT_EQ("\"foo bar\"", FormatConsoleString("foo bar"));
+  EXPECT_EQ("\"f\\x01oo\"", FormatConsoleString("f\x01oo"));
+
+  // Can use raw quoting. Test making the delimiters unique.
+  EXPECT_EQ("R\"(foo \"bar\")\"", FormatConsoleString("foo \"bar\""));
+  EXPECT_EQ("R\"*(raw end )\")*\"", FormatConsoleString("raw end )\""));
+  EXPECT_EQ("R\"**(raw end )\" )*\")**\"", FormatConsoleString("raw end )\" )*\""));
+}
+
 }  // namespace zxdb

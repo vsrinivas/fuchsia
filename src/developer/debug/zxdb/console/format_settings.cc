@@ -25,23 +25,33 @@ namespace {
 
 OutputBuffer SettingValueToString(ConsoleContext* context, const SettingValue& value) {
   switch (value.type()) {
-    case SettingType::kBoolean:
+    case SettingType::kBoolean: {
       return value.get_bool() ? OutputBuffer("true") : OutputBuffer("false");
-    case SettingType::kInteger:
+    }
+    case SettingType::kInteger: {
       return fxl::StringPrintf("%d", value.get_int());
+    }
     case SettingType::kString: {
       auto string = value.get_string();
-      return string.empty() ? OutputBuffer(Syntax::kComment, "<empty>") : OutputBuffer(string);
+      return string.empty() ? OutputBuffer(Syntax::kComment, "\"\"")
+                            : OutputBuffer(FormatConsoleString(string));
     }
-    case SettingType::kList:
-      // Lists are formatted as a colon separated string.
-      // Example
-      //    list = {"first", "second", "third"} -> "first:second:third"
-      return fxl::JoinStrings(value.get_list(), ":");
-    case SettingType::kExecutionScope:
+    case SettingType::kList: {
+      const auto& list = value.get_list();
+      std::string result;
+      for (size_t i = 0; i < list.size(); i++) {
+        if (i > 0)
+          result += " ";
+        result += FormatConsoleString(list[i]);
+      }
+      return OutputBuffer(result);
+    }
+    case SettingType::kExecutionScope: {
       return ExecutionScopeToString(context, value.get_execution_scope());
-    case SettingType::kNull:
+    }
+    case SettingType::kNull: {
       return OutputBuffer(Syntax::kComment, "<null>");
+    }
   }
 }
 
@@ -49,8 +59,10 @@ std::vector<std::string> ListToBullet(const std::vector<std::string>& list) {
   std::vector<std::string> output;
   output.reserve(list.size());
   auto bullet = GetBullet();
-  for (const std::string& item : list)
-    output.emplace_back(fxl::StringPrintf("%s %s", bullet.c_str(), item.c_str()));
+  for (const std::string& item : list) {
+    output.emplace_back(
+        fxl::StringPrintf("%s %s", bullet.c_str(), FormatConsoleString(item).c_str()));
+  }
   return output;
 }
 

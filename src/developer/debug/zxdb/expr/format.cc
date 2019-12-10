@@ -50,26 +50,6 @@ bool IsPointerToFunction(const ModifiedType* pointer) {
   return !!pointer->modified().Get()->AsFunctionType();
 }
 
-// Appends the given byte to the destination, escaping as per C rules.
-void AppendEscapedChar(uint8_t ch, std::string* dest) {
-  if (ch == '\'' || ch == '\"' || ch == '\\') {
-    // These characters get backslash-escaped.
-    dest->push_back('\\');
-    dest->push_back(ch);
-  } else if (ch == '\n') {
-    dest->append("\\n");
-  } else if (ch == '\r') {
-    dest->append("\\r");
-  } else if (ch == '\t') {
-    dest->append("\\t");
-  } else if (isprint(ch)) {
-    dest->push_back(ch);
-  } else {
-    // Hex-encode everything else.
-    *dest += fxl::StringPrintf("\\x%02x", static_cast<unsigned>(ch));
-  }
-}
-
 void FormatBoolean(FormatNode* node) {
   uint64_t int_val = 0;
   Err err = node->value().PromoteTo64(&int_val);
@@ -163,7 +143,7 @@ void FormatChar(FormatNode* node) {
   }
   std::string str;
   str.push_back('\'');
-  AppendEscapedChar(node->value().data()[0], &str);
+  AppendCEscapedChar(node->value().data()[0], &str);
   str.push_back('\'');
   node->set_description(std::move(str));
 }
@@ -737,7 +717,7 @@ void FormatCharArrayNode(FormatNode* node, fxl::RefPtr<Type> char_type, const ui
   // include it.
   std::string result("\"");
   for (size_t i = 0; i < output_len; i++)
-    AppendEscapedChar(data[i], &result);
+    AppendCEscapedChar(data[i], &result);
   result.push_back('"');
 
   // Add children to the first null unless the length was known in advance.
@@ -917,6 +897,25 @@ void FormatWrapper(FormatNode* node, const std::string& description, const std::
   node->set_wrapper_suffix(suffix);
 
   node->children().push_back(std::make_unique<FormatNode>(contained_name, std::move(value_getter)));
+}
+
+void AppendCEscapedChar(uint8_t ch, std::string* dest) {
+  if (ch == '\'' || ch == '\"' || ch == '\\') {
+    // These characters get backslash-escaped.
+    dest->push_back('\\');
+    dest->push_back(ch);
+  } else if (ch == '\n') {
+    dest->append("\\n");
+  } else if (ch == '\r') {
+    dest->append("\\r");
+  } else if (ch == '\t') {
+    dest->append("\\t");
+  } else if (isprint(ch)) {
+    dest->push_back(ch);
+  } else {
+    // Hex-encode everything else.
+    *dest += fxl::StringPrintf("\\x%02x", static_cast<unsigned>(ch));
+  }
 }
 
 }  // namespace zxdb

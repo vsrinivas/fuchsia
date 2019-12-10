@@ -86,6 +86,9 @@ void FormatWrapper(FormatNode* node, const std::string& description, const std::
                    const std::string& suffix, const std::string& contained_name,
                    FormatNode::GetProgramaticValue value_getter);
 
+// Appends the given byte to the destination, escaping as necessary per C rules.
+void AppendCEscapedChar(uint8_t ch, std::string* dest);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_FORMAT_H_
