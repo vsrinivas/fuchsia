@@ -4,8 +4,6 @@
 
 #include "src/ledger/bin/p2p_provider/impl/make_client_id.h"
 
-#include <fuchsia/overnet/protocol/c/fidl.h>
-
 #include "peridot/lib/rng/random.h"
 
 namespace p2p_provider {

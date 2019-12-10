@@ -5,8 +5,6 @@
 #ifndef SRC_LEDGER_BIN_P2P_PROVIDER_IMPL_MAKE_CLIENT_ID_H_
 #define SRC_LEDGER_BIN_P2P_PROVIDER_IMPL_MAKE_CLIENT_ID_H_
 
-#include <fuchsia/overnet/protocol/cpp/fidl.h>
-
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 
