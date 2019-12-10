@@ -16,29 +16,12 @@
 //
 //
 
-static bool s_amd_statistics_enabled = false;
-
-bool
-vk_shader_info_amd_statistics_is_enabled(void)
-{
-  return s_amd_statistics_enabled;
-}
-
-void
-vk_shader_info_amd_statistics_enable(void)
-{
-  s_amd_statistics_enabled = true;
-}
-
 void
 vk_shader_info_amd_statistics(VkDevice           device,
                               VkPipeline         p[],
                               char const * const names[],
                               uint32_t const     count)
 {
-  if (!vk_shader_info_amd_statistics_is_enabled())
-    return;
-
   PFN_vkGetShaderInfoAMD vkGetShaderInfoAMD =
     (PFN_vkGetShaderInfoAMD)vkGetDeviceProcAddr(device, "vkGetShaderInfoAMD");
 
@@ -109,9 +92,6 @@ vk_shader_info_amd_disassembly(VkDevice           device,
                                char const * const names[],
                                uint32_t const     count)
 {
-  if (!vk_shader_info_amd_statistics_is_enabled())
-    return;
-
   PFN_vkGetShaderInfoAMD vkGetShaderInfoAMD =
     (PFN_vkGetShaderInfoAMD)vkGetDeviceProcAddr(device, "vkGetShaderInfoAMD");
 

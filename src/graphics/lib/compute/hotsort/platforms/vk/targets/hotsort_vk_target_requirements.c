@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include "common/macros.h"
-#include "common/vk/shader_info_amd.h"
 #include "hotsort_vk.h"
 #include "hotsort_vk_target.h"
 
@@ -86,15 +85,6 @@ hotsort_vk_target_get_requirements(struct hotsort_vk_target const * const       
     }
 
           HOTSORT_VK_TARGET_EXTENSIONS()
-
-          //
-          // FIXME(allanmac): remove this as soon as it's verified
-          // that the Intel driver does the right thing
-          //
-          if (target->config.extensions.named.AMD_shader_info)
-            {
-              vk_shader_info_amd_statistics_enable();
-            }
         }
     }
 

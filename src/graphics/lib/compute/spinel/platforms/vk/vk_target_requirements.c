@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include "common/macros.h"
-#include "common/vk/shader_info_amd.h"
 #include "spinel_vk.h"
 #include "vk_target.h"
 
@@ -115,15 +114,6 @@ spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
     }
 
             SPN_VK_TARGET_EXTENSIONS()
-
-            //
-            // FIXME(allanmac): remove this as soon as it's verified
-            // that the Intel driver does the right thing
-            //
-            if (target->config.extensions.named.AMD_shader_info)
-              {
-                vk_shader_info_amd_statistics_enable();
-              }
           }
       }
   }
