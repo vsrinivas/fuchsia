@@ -6,10 +6,11 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <threads.h>
 #include <zircon/hw/usb/hid.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+
+#include <thread>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -205,13 +206,20 @@ zx_status_t UsbHidbus::HidbusSetProtocol(uint8_t protocol) {
                           protocol, interface_, NULL, 0, NULL);
 }
 
-void UsbHidbus::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+void UsbHidbus::DdkUnbindNew(ddk::UnbindTxn txn) {
+  unbind_thread_ = std::thread([this, txn = std::move(txn)]() mutable {
+    fbl::AutoLock lock(&usb_lock_);
+    usb_.CancelAll(endpt_->bEndpointAddress);
+    txn.Reply();
+  });
+}
 
 void UsbHidbus::DdkRelease() {
   if (req_) {
     usb_request_release(req_);
   }
   usb_desc_iter_release(&desc_iter_);
+  unbind_thread_.join();
   delete this;
 }
 
@@ -250,15 +258,6 @@ zx_status_t UsbHidbus::Bind(ddk::UsbProtocolClient usbhid) {
   auto interface = *usb_interface_list_->begin();
   FindDescriptors(interface, &hid_desc, &endpt);
 
-  interface_ = info_.dev_num = interface.descriptor()->bInterfaceNumber;
-  info_.boot_device = interface.descriptor()->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
-  info_.device_class = HID_DEVICE_CLASS_OTHER;
-  if (interface.descriptor()->bInterfaceProtocol == USB_HID_PROTOCOL_KBD) {
-    info_.device_class = HID_DEVICE_CLASS_KBD;
-  } else if (interface.descriptor()->bInterfaceProtocol == USB_HID_PROTOCOL_MOUSE) {
-    info_.device_class = HID_DEVICE_CLASS_POINTER;
-  }
-
   if (!endpt) {
     status = ZX_ERR_NOT_SUPPORTED;
     return status;
@@ -269,7 +268,17 @@ zx_status_t UsbHidbus::Bind(ddk::UsbProtocolClient usbhid) {
     return status;
   }
 
+  endpt_ = endpt;
   hid_desc_ = hid_desc;
+
+  interface_ = info_.dev_num = interface.descriptor()->bInterfaceNumber;
+  info_.boot_device = interface.descriptor()->bInterfaceSubClass == USB_HID_SUBCLASS_BOOT;
+  info_.device_class = HID_DEVICE_CLASS_OTHER;
+  if (interface.descriptor()->bInterfaceProtocol == USB_HID_PROTOCOL_KBD) {
+    info_.device_class = HID_DEVICE_CLASS_KBD;
+  } else if (interface.descriptor()->bInterfaceProtocol == USB_HID_PROTOCOL_MOUSE) {
+    info_.device_class = HID_DEVICE_CLASS_POINTER;
+  }
 
   status =
       usb_request_alloc(&req_, usb_ep_max_packet(endpt), endpt->bEndpointAddress, parent_req_size_);

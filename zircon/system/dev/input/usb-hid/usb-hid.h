@@ -5,10 +5,10 @@
 #ifndef ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_H_
 #define ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_H_
 
-#include <threads.h>
 #include <zircon/hw/usb/hid.h>
 
 #include <memory>
+#include <thread>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/hidbus.h>
@@ -58,6 +58,10 @@ class UsbHidbus : public DeviceType, public ddk::HidbusProtocol<UsbHidbus, ddk::
  private:
   std::optional<usb::InterfaceList> usb_interface_list_;
 
+  // These pointers are valid as long as usb_interface_list_ is valid.
+  usb_hid_descriptor_t* hid_desc_ = nullptr;
+  usb_endpoint_descriptor_t* endpt_ = nullptr;
+
   hid_info_t info_ = {};
   usb_request_t* req_ = nullptr;
   bool req_queued_ = false;
@@ -69,8 +73,9 @@ class UsbHidbus : public DeviceType, public ddk::HidbusProtocol<UsbHidbus, ddk::
 
   uint8_t interface_ = 0;
   usb_desc_iter_t desc_iter_ = {};
-  usb_hid_descriptor_t* hid_desc_ = nullptr;
   size_t parent_req_size_ = 0;
+
+  std::thread unbind_thread_;
 };
 
 }  // namespace usb_hid
