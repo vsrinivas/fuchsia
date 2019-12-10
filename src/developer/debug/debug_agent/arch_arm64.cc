@@ -310,14 +310,45 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(const zx::thread& thread, uint64
 }
 
 WatchpointInstallationResult ArchProvider::InstallWatchpoint(const zx::thread& thread,
-                                                             const debug_ipc::AddressRange&) {
-  FXL_NOTIMPLEMENTED();
-  return WatchpointInstallationResult(ZX_ERR_NOT_SUPPORTED);
+                                                             const debug_ipc::AddressRange& range) {
+  zx_thread_state_debug_regs_t debug_regs;
+  if (zx_status_t status = ReadDebugState(thread, &debug_regs); status != ZX_OK)
+    return WatchpointInstallationResult(status);
+
+  DEBUG_LOG(Archx64) << "Before installing watchpoint: " << std::endl
+                     << DebugRegistersToString(debug_regs);
+
+  WatchpointInstallationResult result = SetupWatchpoint(&debug_regs, range, watchpoint_count());
+  if (result.status != ZX_OK)
+    return result;
+
+  DEBUG_LOG(Archx64) << "After installing watchpoint: " << std::endl
+                     << DebugRegistersToString(debug_regs);
+
+  if (zx_status_t status = WriteDebugState(thread, debug_regs); status != ZX_OK)
+    return WatchpointInstallationResult(status);
+
+  return result;
 }
 
-zx_status_t ArchProvider::UninstallWatchpoint(const zx::thread&, const debug_ipc::AddressRange&) {
-  FXL_NOTIMPLEMENTED();
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t ArchProvider::UninstallWatchpoint(const zx::thread& thread,
+                                              const debug_ipc::AddressRange& range) {
+  zx_thread_state_debug_regs_t debug_regs = {};
+  if (zx_status_t status = ReadDebugState(thread, &debug_regs); status != ZX_OK)
+    return status;
+
+  DEBUG_LOG(ArchArm64) << "Before uninstalling watchpoint: " << std::endl
+                       << DebugRegistersToString(debug_regs);
+
+  if (zx_status_t status = RemoveWatchpoint(&debug_regs, range, watchpoint_count());
+      status != ZX_OK) {
+    return status;
+  }
+
+  DEBUG_LOG(ArchArm64) << "After uninstalling watchpoint: " << std::endl
+                       << DebugRegistersToString(debug_regs);
+
+  return WriteDebugState(thread, debug_regs);
 }
 
 }  // namespace arch

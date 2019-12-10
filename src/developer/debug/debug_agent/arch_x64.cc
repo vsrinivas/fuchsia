@@ -354,7 +354,7 @@ WatchpointInstallationResult ArchProvider::InstallWatchpoint(const zx::thread& t
   DEBUG_LOG(Archx64) << "Before installing watchpoint for range " << range.ToString() << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  auto result = SetupWatchpoint(&debug_regs, range.begin(), range.size());
+  auto result = SetupWatchpoint(&debug_regs, range);
   if (result.status != ZX_OK)
     return WatchpointInstallationResult(result.status);
 
@@ -376,7 +376,7 @@ zx_status_t ArchProvider::UninstallWatchpoint(const zx::thread& thread,
                      << DebugRegistersToString(debug_regs);
 
   // x64 doesn't support ranges.
-  if (zx_status_t status = RemoveHWBreakpoint(range.begin(), &debug_regs); status != ZX_OK)
+  if (zx_status_t status = RemoveWatchpoint(&debug_regs, range); status != ZX_OK)
     return status;
 
   DEBUG_LOG(Archx64) << "After uninstalling watchpoint: " << std::endl

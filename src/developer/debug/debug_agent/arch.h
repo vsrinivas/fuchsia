@@ -125,7 +125,7 @@ class ArchProvider {
                                                          const debug_ipc::AddressRange&);
   virtual zx_status_t UninstallWatchpoint(const zx::thread&, const debug_ipc::AddressRange&);
 
- private:
+ protected:
   uint32_t hw_breakpoint_count_ = 0;
   uint32_t watchpoint_count_ = 0;
 };

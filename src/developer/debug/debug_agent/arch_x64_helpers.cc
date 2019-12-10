@@ -336,12 +336,12 @@ uint64_t GetWatchpointLength(uint64_t dr7, int slot) {
   return -1;
 }
 
-uint64_t WatchpointAddressAlign(uint64_t address, uint64_t size) {
-  switch (size) {
-    case 1: return address;
-    case 2: return address & (uint64_t)(~0b1);
-    case 4: return address & (uint64_t)(~0b11);
-    case 8: return address & (uint64_t)(~0b111);
+uint64_t WatchpointAddressAlign(const debug_ipc::AddressRange& range) {
+  switch (range.size()) {
+    case 1: return range.begin();
+    case 2: return range.begin() & (uint64_t)(~0b1);
+    case 4: return range.begin() & (uint64_t)(~0b11);
+    case 8: return range.begin() & (uint64_t)(~0b111);
   }
 
   return 0;
@@ -349,14 +349,14 @@ uint64_t WatchpointAddressAlign(uint64_t address, uint64_t size) {
 // clang-format on
 
 WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* debug_regs,
-                                             uint64_t address, uint64_t size) {
+                                             const debug_ipc::AddressRange& range) {
   // Create an aligned range that will cover the watchpoint.
-  auto aligned_range = AlignRange({address, address + size});
+  auto aligned_range = AlignRange(range);
   if (!aligned_range.has_value())
     return CreateResult(ZX_ERR_OUT_OF_RANGE);
 
-  address = aligned_range->begin();
-  size = aligned_range->end() - aligned_range->begin();
+  uint64_t address = aligned_range->begin();
+  uint64_t size = aligned_range->end() - aligned_range->begin();
 
   // Search for a free slot.
   int slot = -1;
@@ -383,9 +383,9 @@ WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* debug
   return CreateResult(ZX_OK, aligned_range.value(), slot);
 }
 
-zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* debug_regs, uint64_t address,
-                             uint64_t size) {
-  uint64_t aligned_address = WatchpointAddressAlign(address, size);
+zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* debug_regs,
+                             const debug_ipc::AddressRange& range) {
+  uint64_t aligned_address = WatchpointAddressAlign(range);
   if (!aligned_address)
     return ZX_ERR_INVALID_ARGS;
 
@@ -395,7 +395,7 @@ zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* debug_regs, uint64_t 
 
     // Both address and length should match.
     if ((debug_regs->dr[slot] != aligned_address) ||
-        GetWatchpointLength(debug_regs->dr7, slot) != size) {
+        GetWatchpointLength(debug_regs->dr7, slot) != range.size()) {
       continue;
     }
 
