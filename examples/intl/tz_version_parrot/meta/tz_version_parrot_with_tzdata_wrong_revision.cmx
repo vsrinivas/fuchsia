@@ -1,0 +1,14 @@
+{
+    "program": {
+        "args": [
+            "--use-tzdata",
+            "--tz-revision-file=/pkg/data/newer_revision.txt"
+        ],
+        "binary": "bin/tz_version_parrot"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ]
+    }
+}

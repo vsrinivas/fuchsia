@@ -25,14 +25,15 @@ The TZ Version Parrot simply announces the release version (e.g. `2015d`,
 
 In order for `tz_version_parrot_with_tzdata.cmx`, which attempts to load `.res`
 files, to work, the product being built must include those resource files using
-a `config_data` GN rule that places them in the expected location (see
-`kTzdataDir` in [`main.cc`](main.cc)).
+a `icu_tzdata_config_data` GN rule that places them in the expected location
+(see `kTzdataDir` in [`main.cc`](main.cc)).
 
-The actual `.res` files live in [`//third_party/icu/tzres`](../../../third_party/icu/tzres).
+The actual `.res` files live in
+[`//third_party/icu/tzres`](../../../third_party/icu/tzres).
 
 ## Testing
 
-To smoke-test the `icudtl.dat` case, run
+Run
 ```shell
 fx run-test tz_version_parrot_test
 ```

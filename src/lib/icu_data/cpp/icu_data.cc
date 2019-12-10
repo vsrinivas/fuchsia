@@ -7,11 +7,16 @@
 #include <lib/zx/vmar.h>
 #include <zircon/errors.h>
 
+#include <fstream>
+#include <optional>
+#include <string>
+
 #include <src/lib/files/directory.h>
 
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "third_party/icu/source/common/unicode/udata.h"
+#include "third_party/icu/source/i18n/unicode/timezone.h"
 
 namespace icu_data {
 namespace {
@@ -47,6 +52,11 @@ uintptr_t GetData(const fsl::SizedVmo& icu_data, size_t* size_out) {
 zx_status_t Initialize() { return InitializeWithTzResourceDir(nullptr); }
 
 zx_status_t InitializeWithTzResourceDir(const char tz_files_dir[]) {
+  return InitializeWithTzResourceDirAndValidate(tz_files_dir, nullptr);
+}
+
+zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
+                                                   const char tz_revision_file_path[]) {
   if (g_icu_data_ptr) {
     // Don't allow calling Initialize twice.
     return ZX_ERR_ALREADY_BOUND;
@@ -64,6 +74,21 @@ zx_status_t InitializeWithTzResourceDir(const char tz_files_dir[]) {
            /* overwrite existing env variable */ 1);
   }
 
+  std::optional<std::string> expected_tz_revision_id;
+  if (tz_revision_file_path) {
+    std::ifstream in(tz_revision_file_path);
+    if (in.fail()) {
+      return ZX_ERR_IO;
+    }
+    expected_tz_revision_id =
+        std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    if (expected_tz_revision_id->length() != 5) {
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+  } else {
+    expected_tz_revision_id = std::nullopt;
+  }
+
   fsl::SizedVmo icu_data;
   if (!fsl::VmoFromFilename(kIcuDataPath, &icu_data))
     return ZX_ERR_IO;
@@ -77,7 +102,22 @@ zx_status_t InitializeWithTzResourceDir(const char tz_files_dir[]) {
     udata_setCommonData(reinterpret_cast<const char*>(data), &err);
     g_icu_data_ptr = data;
     g_icu_data_size = data_size;
-    return (err == U_ZERO_ERROR) ? ZX_OK : ZX_ERR_INTERNAL;
+    if (err != U_ZERO_ERROR) {
+      return ZX_ERR_INTERNAL;
+    }
+
+    // Validate tz revision ID if requested
+    if (expected_tz_revision_id.has_value()) {
+      const char* actual_tz_revision_id = icu::TimeZone::getTZDataVersion(err);
+      if (err != U_ZERO_ERROR) {
+        return ZX_ERR_INTERNAL;
+      }
+      if (expected_tz_revision_id != std::string(actual_tz_revision_id, 5)) {
+        return ZX_ERR_IO_DATA_INTEGRITY;
+      }
+    }
+
+    return ZX_OK;
   } else {
     Release();
     return ZX_ERR_INTERNAL;

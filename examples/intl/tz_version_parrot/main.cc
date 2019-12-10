@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "src/lib/files/directory.h"
+#include "src/lib/fxl/command_line.h"
 #include "src/lib/icu_data/cpp/icu_data.h"
 #include "third_party/icu/source/common/unicode/utypes.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
@@ -20,25 +21,48 @@ using icu::TimeZone;
 
 // Default directory for timezone .res files that can be loaded by icu_data
 // library.
-constexpr char kTzdataDir[] = "/config/data/tzdata/icu/44/le";
+constexpr char kDefaultTzdataDir[] = "/config/data/tzdata/icu/44/le";
 
-constexpr char kUseTzdataArg[] = "--use-tzdata";
+// Path to file containing the expected time zone database revision ID.
+constexpr char kDefaultTzRevisionFilePath[] = "/config/data/tzdata/revision.txt";
+
+constexpr char kUseTzdataArg[] = "use-tzdata";
+constexpr char kTzdataDirArg[] = "tzdata-dir";
+constexpr char kTzRevisionFilePathArg[] = "tz-revision-file";
 
 int main(int argc, const char** argv) {
-  bool use_tzdata = (argc > 1 && strcmp(argv[1], kUseTzdataArg) == 0);
+  const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  const bool use_tzdata = command_line.HasOption(kUseTzdataArg);
 
   if (use_tzdata) {
-    if (!files::IsDirectory(kTzdataDir)) {
-      std::cerr
-          << "Error: tzdata directory \"" << kTzdataDir << "\" doesn't exist.\n"
-          << "Does the product you're building have a config_data rule to "
-             "supply it?"
-          << std::endl;
+    const auto tzdata_dir =
+        command_line.GetOptionValueWithDefault(kTzdataDirArg, kDefaultTzdataDir);
+    const auto tz_revision_file_path =
+        command_line.GetOptionValueWithDefault(kTzRevisionFilePathArg, kDefaultTzRevisionFilePath);
+
+    std::cout << "tzdata_dir:\t\t" << tzdata_dir << std::endl
+              << "tz_revision_file_path:\t" << tz_revision_file_path << std::endl;
+
+    if (!files::IsDirectory(tzdata_dir)) {
+      std::cerr << "Error: tzdata directory \"" << tzdata_dir << "\" doesn't exist.\n"
+                << "Does the product you're building have a config_data rule to "
+                   "supply it?"
+                << std::endl;
       return ZX_ERR_NOT_FOUND;
     }
-    ZX_ASSERT(icu_data::InitializeWithTzResourceDir(kTzdataDir) == ZX_OK);
+    const auto result = icu_data::InitializeWithTzResourceDirAndValidate(
+        tzdata_dir.c_str(), tz_revision_file_path.c_str());
+    if (result != ZX_OK) {
+      std::cerr << "icu_data::InitializeWithTzResourceDirAndValidate failed: " << result
+                << std::endl;
+      return result;
+    }
   } else {
-    ZX_ASSERT(icu_data::Initialize() == ZX_OK);
+    const auto result = icu_data::Initialize();
+    if (result != ZX_OK) {
+      std::cerr << "icu_data::Initialize failed: " << result << std::endl;
+      return result;
+    }
   }
 
   UErrorCode err = U_ZERO_ERROR;
@@ -50,8 +74,7 @@ int main(int argc, const char** argv) {
   }
 
   std::string source = use_tzdata ? "tz .res files" : "icudtl.dat";
-  std::cout << "Squawk! TZ version (from  " << source << ") is: \n"
-            << version << std::endl;
+  std::cout << "Squawk! TZ version (from  " << source << ") is: \n" << version << std::endl;
 
   return ZX_OK;
 }
