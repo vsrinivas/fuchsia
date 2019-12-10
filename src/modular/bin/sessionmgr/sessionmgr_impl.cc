@@ -391,15 +391,15 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   agent_runner_launcher_ = std::make_unique<ArgvInjectingLauncher>(
       sessionmgr_context_->svc()->Connect<fuchsia::sys::Launcher>(), argv_map);
   agent_runner_.reset(new AgentRunner(agent_runner_launcher_.get(), agent_token_manager_.get(),
-                                      startup_agent_launcher_.get(),
-                                      entity_provider_runner_.get(), &inspect_root_node_,
-                                      std::move(agent_service_index), sessionmgr_context_));
+                                      startup_agent_launcher_.get(), entity_provider_runner_.get(),
+                                      &inspect_root_node_, std::move(agent_service_index),
+                                      sessionmgr_context_));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
   ComponentContextInfo component_context_info{agent_runner_.get(), entity_provider_runner_.get()};
 
   startup_agent_launcher_->StartAgents(agent_runner_.get(), config_.session_agents(),
-                                                config_.startup_agents());
+                                       config_.startup_agents());
 
   local_module_resolver_ = std::make_unique<LocalModuleResolver>();
   AtEnd(Reset(&local_module_resolver_));
@@ -603,7 +603,7 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
   }
 
   session_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      sessionmgr_context_launcher_.get(), std::move(session_shell_config),
+      session_environment_->GetLauncher(), std::move(session_shell_config),
       /* data_origin = */ "", std::move(service_list));
 
   session_shell_app_->SetAppErrorHandler([this] {

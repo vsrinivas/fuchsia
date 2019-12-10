@@ -10,6 +10,7 @@
 #include <lib/modular/testing/cpp/fake_agent.h>
 #include <lib/modular/testing/cpp/fake_component.h>
 
+#include "gmock/gmock.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
@@ -120,6 +121,39 @@ TEST_F(SessionmgrIntegrationTest, StoryModsGetServicesFromSessionEnvironment) {
   RunLoopUntil([&] { return got_profile_callback || got_profile_error != ZX_OK; });
   ASSERT_EQ(got_profile_error, ZX_OK);
   ASSERT_EQ(fake_intl_property_provider.call_count(), 1);
+}
+
+// Launch a session shell an ensure that it receives argv configured for it in the Modular Config.
+TEST_F(SessionmgrIntegrationTest, SessionShellReceivesComponentArgsFromConfig) {
+  const std::string session_shell_url = "fuchsia-pkg://fuchsia.com/fake_shell/#fake_shell.cmx";
+
+  fuchsia::modular::testing::TestHarnessSpec spec;
+
+  fuchsia::modular::session::SessionShellMapEntry entry;
+  entry.mutable_config()->mutable_app_config()->set_url(session_shell_url);
+  spec.mutable_basemgr_config()->mutable_session_shell_map()->push_back(std::move(entry));
+
+  fuchsia::modular::testing::InterceptSpec intercept_spec;
+  intercept_spec.set_component_url(session_shell_url);
+  spec.mutable_components_to_intercept()->push_back(std::move(intercept_spec));
+
+  fuchsia::modular::session::AppConfig component_arg;
+  component_arg.set_url(session_shell_url);
+  component_arg.mutable_args()->push_back("foo");
+  spec.mutable_sessionmgr_config()->mutable_component_args()->push_back(std::move(component_arg));
+
+  bool session_shell_running = false;
+  test_harness().events().OnNewComponent =
+      [&](fuchsia::sys::StartupInfo startup_info,
+             fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
+        ASSERT_EQ(startup_info.launch_info.url, session_shell_url);
+        ASSERT_TRUE(!!startup_info.launch_info.arguments);
+        EXPECT_THAT(startup_info.launch_info.arguments.value(), ::testing::ElementsAre("foo"));
+        session_shell_running = true;
+      };
+
+  test_harness()->Run(std::move(spec));
+  RunLoopUntil([&] { return session_shell_running; });
 }
 
 TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetryLimit) {
