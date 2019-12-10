@@ -33,6 +33,8 @@ using fuchsia::intl::RegulatoryDomain;
 using fxl::SplitResult::kSplitWantNonEmpty;
 using fxl::WhiteSpaceHandling::kTrimWhitespace;
 using sys::testing::ServiceDirectoryProvider;
+using testing::Pair;
+using testing::UnorderedElementsAreArray;
 
 class ProductInfoProviderTest
     : public UnitTestFixture,
@@ -114,75 +116,76 @@ ProductInfo CreateProductInfo(const std::map<std::string, std::string>& annotati
   return info;
 }
 
-const std::map<std::string, std::string> ProductInfoValues = {
-    {kAnnotationHardwareProductSKU, "some-sku"},
-    {kAnnotationHardwareProductLanguage, "some-language"},
-    {kAnnotationHardwareProductRegulatoryDomain, "some-country-code"},
-    {kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"},
-    {kAnnotationHardwareProductName, "some-name"},
-    {kAnnotationHardwareProductModel, "some-model"},
-    {kAnnotationHardwareProductManufacturer, "some-manufacturer"},
-};
-
 TEST_F(ProductInfoProviderTest, Check_OnlyGetRequestedAnnotations) {
-  std::unique_ptr<StubProduct> product_provider =
-      std::make_unique<StubProduct>(CreateProductInfo(ProductInfoValues));
-  SetUpProductProvider(std::move(product_provider));
+  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({
+      {kAnnotationHardwareProductSKU, "some-sku"},
+      {kAnnotationHardwareProductLanguage, "some-language"},
+      {kAnnotationHardwareProductRegulatoryDomain, "some-country-code"},
+      {kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"},
+      {kAnnotationHardwareProductName, "some-name"},
+      {kAnnotationHardwareProductModel, "some-model"},
+      {kAnnotationHardwareProductManufacturer, "some-manufacturer"},
+  })));
 
-  const std::set<std::string> keys = {
+  auto product_info = GetProductInfo({
       kAnnotationHardwareProductSKU,
       kAnnotationHardwareProductModel,
-  };
-
-  auto product_info = GetProductInfo(keys);
-  EXPECT_EQ(product_info.size(), keys.size());
-  for (const auto& key : keys) {
-    EXPECT_EQ(product_info[key], ProductInfoValues.at(key));
-  }
+  });
+  EXPECT_THAT(product_info, UnorderedElementsAreArray({
+                                Pair(kAnnotationHardwareProductSKU, "some-sku"),
+                                Pair(kAnnotationHardwareProductModel, "some-model"),
+                            }));
 }
 
 TEST_F(ProductInfoProviderTest, Check_BadKeyNotInAnnotations) {
-  const std::set<std::string> keys = {
+  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({
+      {kAnnotationHardwareProductSKU, "some-sku"},
+      {kAnnotationHardwareProductLanguage, "some-language"},
+      {kAnnotationHardwareProductRegulatoryDomain, "some-country-code"},
+      {kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"},
+      {kAnnotationHardwareProductName, "some-name"},
+      {kAnnotationHardwareProductModel, "some-model"},
+      {kAnnotationHardwareProductManufacturer, "some-manufacturer"},
+  })));
+
+  auto product_info = GetProductInfo({
       kAnnotationHardwareProductSKU,
       kAnnotationHardwareProductModel,
       "bad_annotation",
-  };
+  });
 
-  std::unique_ptr<StubProduct> product_provider =
-      std::make_unique<StubProduct>(CreateProductInfo(ProductInfoValues));
-  SetUpProductProvider(std::move(product_provider));
-
-  auto product_info = GetProductInfo(keys);
-  EXPECT_EQ(product_info.size(), 2u);
-  EXPECT_EQ(product_info[kAnnotationHardwareProductSKU],
-            ProductInfoValues.at(kAnnotationHardwareProductSKU));
-  EXPECT_EQ(product_info[kAnnotationHardwareProductModel],
-            ProductInfoValues.at(kAnnotationHardwareProductModel));
+  EXPECT_THAT(product_info, UnorderedElementsAreArray({
+                                Pair(kAnnotationHardwareProductSKU, "some-sku"),
+                                Pair(kAnnotationHardwareProductModel, "some-model"),
+                            }));
 }
 
 TEST_F(ProductInfoProviderTest, Succeed_ProductInfoReturnsFewerAnnotations) {
-  const std::map<std::string, std::string> annotations = {
-      {kAnnotationHardwareProductSKU, ProductInfoValues.at(kAnnotationHardwareProductSKU)},
-      {kAnnotationHardwareProductModel, ProductInfoValues.at(kAnnotationHardwareProductModel)},
-      {kAnnotationHardwareProductName, ProductInfoValues.at(kAnnotationHardwareProductName)},
-      {kAnnotationHardwareProductLocaleList,
-       ProductInfoValues.at(kAnnotationHardwareProductLocaleList)},
-  };
+  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({
+      {kAnnotationHardwareProductSKU, "some-sku"},
+      {kAnnotationHardwareProductModel, "some-model"},
+      {kAnnotationHardwareProductName, "some-name"},
+      {kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"},
+  })));
 
-  std::unique_ptr<StubProduct> product_provider =
-      std::make_unique<StubProduct>(CreateProductInfo(annotations));
-  SetUpProductProvider(std::move(product_provider));
+  auto product_info = GetProductInfo({
+      kAnnotationHardwareProductSKU,
+      kAnnotationHardwareProductLanguage,
+      kAnnotationHardwareProductRegulatoryDomain,
+      kAnnotationHardwareProductLocaleList,
+      kAnnotationHardwareProductName,
+      kAnnotationHardwareProductModel,
+      kAnnotationHardwareProductManufacturer,
+  });
 
-  std::set<std::string> keys;
-  for (const auto& [key, _] : ProductInfoValues) {
-    keys.insert(key);
-  }
-
-  auto product_info = GetProductInfo(keys);
-  EXPECT_EQ(product_info.size(), annotations.size());
-  for (const auto& [key, value] : annotations) {
-    EXPECT_EQ(product_info[key], value);
-  }
+  EXPECT_THAT(
+      product_info,
+      UnorderedElementsAreArray({
+          Pair(kAnnotationHardwareProductSKU, "some-sku"),
+          Pair(kAnnotationHardwareProductModel, "some-model"),
+          Pair(kAnnotationHardwareProductName, "some-name"),
+          Pair(kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"),
+      }));
 }
 
 TEST_F(ProductInfoProviderTest, Fail_CallGetProductInfoTwice) {
@@ -194,6 +197,16 @@ TEST_F(ProductInfoProviderTest, Fail_CallGetProductInfoTwice) {
   ASSERT_DEATH(product_info_ptr.GetProductInfo(unused_timeout),
                testing::HasSubstr("GetProductInfo() is not intended to be called twice"));
 }
+
+const std::map<std::string, std::string> ProductInfoValues = {
+    {kAnnotationHardwareProductSKU, "some-sku"},
+    {kAnnotationHardwareProductLanguage, "some-language"},
+    {kAnnotationHardwareProductRegulatoryDomain, "some-country-code"},
+    {kAnnotationHardwareProductLocaleList, "some-locale1, some-locale2, some-locale3"},
+    {kAnnotationHardwareProductName, "some-name"},
+    {kAnnotationHardwareProductModel, "some-model"},
+    {kAnnotationHardwareProductManufacturer, "some-manufacturer"},
+};
 
 std::vector<std::map<std::string, std::string>> GetProductInfoMapsWithOneKey() {
   std::vector<std::map<std::string, std::string>> maps;

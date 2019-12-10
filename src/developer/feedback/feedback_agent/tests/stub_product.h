@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_PRODUCT_H_
 
 #include <fuchsia/hwinfo/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
 #include <string>
@@ -20,17 +20,20 @@ class StubProduct : public fuchsia::hwinfo::Product {
 
   // Returns a request handler for a binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::hwinfo::Product> GetHandler() {
-    return bindings_.GetHandler(this);
+    return [this](fidl::InterfaceRequest<fuchsia::hwinfo::Product> request) {
+      binding_ =
+          std::make_unique<fidl::Binding<fuchsia::hwinfo::Product>>(this, std::move(request));
+    };
   }
 
   // |fuchsia.hwinfo.Product|
   void GetInfo(GetInfoCallback callback) override;
 
  protected:
-  void CloseAllConnections() { bindings_.CloseAll(); }
+  void CloseConnection();
 
  private:
-  fidl::BindingSet<fuchsia::hwinfo::Product> bindings_;
+  std::unique_ptr<fidl::Binding<fuchsia::hwinfo::Product>> binding_;
   fuchsia::hwinfo::ProductInfo info_;
   bool has_been_called_ = false;
 };

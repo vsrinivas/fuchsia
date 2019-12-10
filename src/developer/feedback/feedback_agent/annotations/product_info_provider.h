@@ -46,7 +46,7 @@ namespace internal {
 // Wraps around fuchsia::hwinfo::ProductPtr to handle establishing the connection, losing
 // the connection, waiting for the callback, enforcing a timeout, etc.
 //
-// Product info will ever only make one call to fuchsia::hwinfo::Product::GetInfo.
+// Will ever only make one call to fuchsia::hwinfo::Product::GetInfo.
 class ProductInfoPtr {
  public:
   ProductInfoPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);

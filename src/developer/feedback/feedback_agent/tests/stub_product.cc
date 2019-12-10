@@ -11,9 +11,15 @@ namespace feedback {
 using fuchsia::hwinfo::ProductInfo;
 
 void StubProduct::GetInfo(GetInfoCallback callback) {
-  FXL_CHECK(!has_been_called_) << "StubProduct can only be called once";
+  FXL_CHECK(!has_been_called_) << "GetInfo() can only be called once";
   has_been_called_ = true;
   callback(std::move(info_));
+}
+
+void StubProduct::CloseConnection() {
+  if (binding_) {
+    binding_->Unbind();
+  }
 }
 
 }  // namespace feedback
