@@ -23,5 +23,14 @@ async fn main() -> Result<(), Error> {
         .await?
         .map_err(|_| format_err!("Error sending ProposeElement message"))?;
 
+    element_manager
+        .propose_element(ElementSpec {
+            component_url: Some(
+                "fuchsia-pkg://fuchsia.com/spinning_cube#meta/spinning_cube.cmx".to_string(),
+            ),
+        })
+        .await?
+        .map_err(|_| format_err!("Error launching spinning_cube.cmx"))?;
+
     Ok(())
 }

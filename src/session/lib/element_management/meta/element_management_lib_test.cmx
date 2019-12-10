@@ -1,5 +1,11 @@
 {
     "program": {
         "binary": "test/element_management_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

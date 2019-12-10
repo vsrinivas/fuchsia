@@ -35,6 +35,12 @@
             "to": [ "#session" ]
         },
         {
+            // Pass on the Launcher so that the session can launch cmx components.
+            "service_protocol": "/svc/fuchsia.sys.Launcher",
+            "from": "self",
+            "to": [ "#session" ]
+        },
+        {
             "directory": "/dev/class/input-report",
             "from": "realm",
             "to": [ "#session" ],

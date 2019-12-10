@@ -77,7 +77,7 @@ async fn handle_element_manager_requests(
 ) -> Result<(), Error> {
     let realm =
         connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
-    let element_manager = SimpleElementManager::new(realm);
+    let mut element_manager = SimpleElementManager::new(realm, None);
     while let Some(request) =
         stream.try_next().await.context("Error handling element manager request stream")?
     {

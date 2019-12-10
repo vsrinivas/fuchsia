@@ -13,6 +13,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Loader",
             "fuchsia.ui.scenic.Scenic"
