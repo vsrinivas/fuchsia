@@ -20,6 +20,7 @@ executable("semantics_manager_tests") {
     "semantic_tree_parser_test.cc",
     "semantic_tree_test.cc",
     "semantics_manager_test.cc",
+    "tree_unittest.cc",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility.semantics",
@@ -38,6 +39,7 @@ executable("semantics_manager_tests") {
     "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/tests/mocks",
+    "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]
 

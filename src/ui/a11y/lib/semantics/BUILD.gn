@@ -8,6 +8,8 @@ source_set("semantics") {
     "semantic_tree.h",
     "semantics_manager.cc",
     "semantics_manager.h",
+    "tree.cc",
+    "tree.h",
   ]
 
   public_deps = [
