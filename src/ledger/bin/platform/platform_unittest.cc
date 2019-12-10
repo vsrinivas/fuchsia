@@ -7,6 +7,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 
 namespace ledger {
 namespace {
@@ -17,9 +18,8 @@ using testing::UnorderedElementsAre;
 
 TEST(PlatformTest, WriteReadFile) {
   std::unique_ptr<Platform> platform = MakePlatform();
-
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath path(tmpfs.root_fd(), "file");
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath path = tmpfs->path().SubPath("file");
 
   EXPECT_TRUE(platform->file_system()->WriteFile(path, "content"));
 
@@ -30,9 +30,8 @@ TEST(PlatformTest, WriteReadFile) {
 
 TEST(PlatformTest, IsFile) {
   std::unique_ptr<Platform> platform = MakePlatform();
-
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath path(tmpfs.root_fd(), "file");
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath path = tmpfs->path().SubPath("file");
 
   EXPECT_TRUE(platform->file_system()->WriteFile(path, "content"));
 
@@ -41,9 +40,8 @@ TEST(PlatformTest, IsFile) {
 
 TEST(PlatformTest, GetFileSize) {
   std::unique_ptr<Platform> platform = MakePlatform();
-
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath path(tmpfs.root_fd(), "file");
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath path = tmpfs->path().SubPath("file");
 
   EXPECT_TRUE(platform->file_system()->WriteFile(path, "content"));
 
@@ -54,9 +52,8 @@ TEST(PlatformTest, GetFileSize) {
 
 TEST(PlatformTest, CreateDirectory) {
   std::unique_ptr<Platform> platform = MakePlatform();
-
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath path(tmpfs.root_fd(), "base");
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath path = tmpfs->path().SubPath("base");
 
   EXPECT_TRUE(platform->file_system()->CreateDirectory(path));
   EXPECT_TRUE(platform->file_system()->IsDirectory(path));
@@ -64,12 +61,12 @@ TEST(PlatformTest, CreateDirectory) {
 
 TEST(PlatformTest, CreateDirectoryWithSubpaths) {
   std::unique_ptr<Platform> platform = MakePlatform();
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath path = tmpfs->path().SubPath("base");
 
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath path(tmpfs.root_fd(), "base");
   DetachedPath subpath = path.SubPath("foo");
   ASSERT_EQ(subpath.root_fd(), path.root_fd());
-  ASSERT_EQ(subpath.path(), "base/foo");
+  ASSERT_EQ(subpath.path(), "./base/foo");
 
   EXPECT_TRUE(platform->file_system()->CreateDirectory(subpath));
   EXPECT_TRUE(platform->file_system()->IsDirectory(subpath));
@@ -77,24 +74,27 @@ TEST(PlatformTest, CreateDirectoryWithSubpaths) {
 
 TEST(PlatformTest, GetDirectoryContents) {
   std::unique_ptr<Platform> platform = MakePlatform();
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  std::string kFileContent = "file content";
-  ASSERT_TRUE(platform->file_system()->CreateDirectory(DetachedPath(tmpfs.root_fd(), "foo")));
-  ASSERT_TRUE(
-      platform->file_system()->WriteFile(DetachedPath(tmpfs.root_fd(), "bar"), kFileContent));
-  ASSERT_TRUE(
-      platform->file_system()->WriteFile(DetachedPath(tmpfs.root_fd(), "foo/baz"), kFileContent));
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath tmpfs_path = tmpfs->path();
+
+  DetachedPath dir_path = tmpfs_path.SubPath("foo");
+  DetachedPath file_path = tmpfs_path.SubPath("bar");
+  DetachedPath dir_sub_path = tmpfs_path.SubPath("foo/baz");
+
+  std::string file_content = "file content";
+  ASSERT_TRUE(platform->file_system()->CreateDirectory(dir_path));
+  ASSERT_TRUE(platform->file_system()->WriteFile(file_path, file_content));
+  ASSERT_TRUE(platform->file_system()->WriteFile(dir_sub_path, file_content));
 
   std::vector<std::string> contents;
-  EXPECT_TRUE(
-      platform->file_system()->GetDirectoryContents(DetachedPath(tmpfs.root_fd()), &contents));
+  EXPECT_TRUE(platform->file_system()->GetDirectoryContents(tmpfs_path, &contents));
   EXPECT_THAT(contents, UnorderedElementsAre("foo", "bar"));
 }
 
 TEST(PlatformTest, CreateScopedTmpDir) {
   std::unique_ptr<Platform> platform = MakePlatform();
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath parent_path(tmpfs.root_fd(), "foo");
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath parent_path = tmpfs->path().SubPath("foo");
   ASSERT_TRUE(platform->file_system()->CreateDirectory(parent_path));
 
   std::unique_ptr<ScopedTmpDir> tmp_dir1 = platform->file_system()->CreateScopedTmpDir(parent_path);
@@ -116,9 +116,8 @@ TEST(PlatformTest, CreateScopedTmpDir) {
 
 TEST(PlatformTest, DeletePathFile) {
   std::unique_ptr<Platform> platform = MakePlatform();
-
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath path(tmpfs.root_fd(), "file");
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath path = tmpfs->path().SubPath("file");
 
   ASSERT_TRUE(platform->file_system()->WriteFile(path, "content"));
   EXPECT_TRUE(platform->file_system()->IsFile(path));
@@ -130,12 +129,12 @@ TEST(PlatformTest, DeletePathFile) {
 
 TEST(PlatformTest, DeletePathDirectory) {
   std::unique_ptr<Platform> platform = MakePlatform();
-
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath path(tmpfs.root_fd(), "base");
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath path = tmpfs->path().SubPath("base");
   DetachedPath subpath = path.SubPath("foo");
+
   ASSERT_EQ(subpath.root_fd(), path.root_fd());
-  ASSERT_EQ(subpath.path(), "base/foo");
+  ASSERT_EQ(subpath.path(), "./base/foo");
 
   EXPECT_TRUE(platform->file_system()->CreateDirectory(subpath));
   EXPECT_TRUE(platform->file_system()->IsDirectory(path));
@@ -151,9 +150,8 @@ TEST(PlatformTest, DeletePathDirectory) {
 
 TEST(PlatformTest, DeletePathRecursivelyFile) {
   std::unique_ptr<Platform> platform = MakePlatform();
-
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath path(tmpfs.root_fd(), "file");
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath path = tmpfs->path().SubPath("file");
 
   ASSERT_TRUE(platform->file_system()->WriteFile(path, "content"));
   EXPECT_TRUE(platform->file_system()->IsFile(path));
@@ -165,12 +163,12 @@ TEST(PlatformTest, DeletePathRecursivelyFile) {
 
 TEST(PlatformTest, DeletePathRecursivelyDirectory) {
   std::unique_ptr<Platform> platform = MakePlatform();
-
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath path(tmpfs.root_fd(), "base");
+  std::unique_ptr<ScopedTmpLocation> tmpfs = platform->file_system()->CreateScopedTmpLocation();
+  DetachedPath path = tmpfs->path().SubPath("base");
   DetachedPath subpath = path.SubPath("foo");
+
   ASSERT_EQ(subpath.root_fd(), path.root_fd());
-  ASSERT_EQ(subpath.path(), "base/foo");
+  ASSERT_EQ(subpath.path(), "./base/foo");
 
   EXPECT_TRUE(platform->file_system()->CreateDirectory(subpath));
   EXPECT_TRUE(platform->file_system()->IsDirectory(path));

@@ -10,6 +10,7 @@ source_set("platform") {
     "detached_path.h",
     "platform.h",
     "scoped_tmp_dir.h",
+    "scoped_tmp_location.h",
   ]
 
   public_deps = [
@@ -26,10 +27,12 @@ source_set("implementation") {
     "fuchsia_platform.cc",
     "fuchsia_platform.h",
     "fuchsia_scoped_tmp_dir.h",
+    "fuchsia_scoped_tmp_location.h",
   ]
 
   public_deps = [
     ":platform",
+    "//peridot/lib/scoped_tmpfs",
     "//src/ledger/lib/convert",
   ]
 

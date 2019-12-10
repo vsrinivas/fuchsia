@@ -11,6 +11,7 @@
 #include "leveldb/env.h"
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 
 namespace ledger {
 
@@ -68,6 +69,9 @@ class FileSystem {
 
   // Creates a new ScopedTmpDir under the given |parent_path|.
   virtual std::unique_ptr<ScopedTmpDir> CreateScopedTmpDir(DetachedPath parent_path) = 0;
+
+  // Creates a new ScopedTmpFs.
+  virtual std::unique_ptr<ScopedTmpLocation> CreateScopedTmpLocation() = 0;
 
   // Paths.
 
