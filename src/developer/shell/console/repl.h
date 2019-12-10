@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_SHELL_LIB_REPL_H_
-#define SRC_DEVELOPER_SHELL_LIB_REPL_H_
+#ifndef SRC_DEVELOPER_SHELL_CONSOLE_REPL_H_
+#define SRC_DEVELOPER_SHELL_CONSOLE_REPL_H_
 
 #include <string>
 
@@ -35,6 +35,8 @@ class Repl {
   bool FeedInput(uint8_t* bytes, size_t num_bytes);
   // Returns the cmd stored in cur_cmd_ field
   const char* GetCmd();
+  // Returns the line stored in cur_line_ field
+  const char* GetLine();
   // Shows the prompt, and sets running_ to false
   void ShowPrompt();
   void Write(const char* output);
@@ -62,7 +64,8 @@ class Repl {
   bool running_;  // set to true at the beginning of a JS script execution, and set to false by
                   // ShowPrompt().
   std::string cur_cmd_;
+  std::string line_to_complete_;
 };
 }  // namespace shell::repl
 
-#endif  // SRC_DEVELOPER_SHELL_LIB_REPL_H_
+#endif  // SRC_DEVELOPER_SHELL_CONSOLE_REPL_H_

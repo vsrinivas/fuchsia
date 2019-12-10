@@ -16,7 +16,7 @@
 
 #include "gtest/gtest.h"
 #include "li.h"
-#include "runtime.h"
+#include "src/developer/shell/lib/runtime.h"
 #include "src/lib/line_input/line_input.h"
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
@@ -191,4 +191,60 @@ TEST(Repl, MultipleLines) {
   EXPECT_EQ(res_cmds.size(), 1);
   EXPECT_STREQ(res_cmds.front().c_str(), expected2.c_str());
 }
+
+TEST(Repl, TabCompletionAndHistory) {
+  // set up a file to output to
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+  ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/test_tmpTabCompletion"));
+  constexpr const char* name = "/test_tmpTabCompletion/tmp.XXXXXX";
+  std::unique_ptr<char[]> buffer(new char[strlen(name) + 1]);
+  strcpy(buffer.get(), name);
+  int cfd = mkstemp(buffer.get());
+  ASSERT_NE(cfd, -1);
+  std::string filename = buffer.get();
+  FILE* output_fd = fdopen(cfd, "rw+");
+
+  // set up the repl
+  shell::Runtime rt;
+  ASSERT_NE(rt.Get(), nullptr);
+  shell::Context ctx(&rt);
+  ASSERT_NE(ctx.Get(), nullptr);
+  ASSERT_NE(0, ctx.InitStd());
+  ASSERT_NE(0, ctx.InitBuiltins("/pkg/data/fidling", "/pkg/data/lib"));
+  JSContext* ctx_ptr = ctx.Get();
+  js_std_add_helpers(ctx_ptr, 0, nullptr);
+  ASSERT_NE(shell::li::LiModuleInit(ctx_ptr, "li_internal"), nullptr);
+  js_std_eval_binary(ctx_ptr, qjsc_repl_init, qjsc_repl_init_size, 0);
+
+  // uninstall repl read handler and get a pointer to the repl
+  std::string script = "os.setReadHandler(std.in.fileno(), null); repl.repl;";
+  JSValue res =
+      JS_Eval(ctx_ptr, script.c_str(), script.length(), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+  repl::Repl* repl = reinterpret_cast<repl::Repl*>(li::GetRepl(ctx_ptr, res));
+
+  repl->ChangeOutput(output_fd);
+
+  std::string test_string = "a = \"dddd\";\n";
+  repl->FeedInput(reinterpret_cast<unsigned char*>(test_string.data()), test_string.size());
+  std::string test_string2 = "b =a.le\t;\n";
+  repl->FeedInput(reinterpret_cast<unsigned char*>(test_string2.data()), test_string2.size());
+
+  fflush(output_fd);
+  std::ifstream in(filename.c_str());
+  std::string actual((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+  std::string expected("dddd\n4\n");
+  ASSERT_STREQ(expected.c_str(), actual.c_str());
+
+  // testing history, repeats the previous command
+  std::string test_string3 = "\x1b[A\n";
+  repl->FeedInput(reinterpret_cast<unsigned char*>(test_string3.data()), test_string3.size());
+
+  fflush(output_fd);
+  std::ifstream in2(filename.c_str());
+  std::string actual2((std::istreambuf_iterator<char>(in2)), std::istreambuf_iterator<char>());
+  std::string expected2("dddd\n4\n4\n");
+  ASSERT_STREQ(expected2.c_str(), actual2.c_str());
+}
+
 }  // namespace shell::repl

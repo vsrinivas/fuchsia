@@ -8,7 +8,9 @@
 
 #include <cctype>
 #include <set>
+#include <sstream>
 #include <string>
+#include <vector>
 
 namespace shell::repl {
 
@@ -19,6 +21,24 @@ Repl::Repl(JSContext* ctx, const std::string& prompt)
       exit_shell_cmd_(false),
       running_(false) {
   Write("Type \\h for help\n");
+  li_.SetAutocompleteCallback([this](std::string line_to_complete) {
+    this->line_to_complete_ = line_to_complete;
+    std::string script = "repl.autocompletionCallback();";
+    JSValue completions_as_js_str =
+        JS_Eval(ctx_, script.c_str(), script.length(), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+    const char* completions_as_cstr = JS_ToCString(ctx_, completions_as_js_str);
+    if (!completions_as_cstr) {  // completion error, return an empty vector
+      return std::vector<std::string>();
+    }
+    std::string completions_as_str(completions_as_cstr);
+    std::vector<std::string> completions;
+    std::stringstream completions_as_stream(completions_as_str);
+    std::string cur_completion;
+    while (std::getline(completions_as_stream, cur_completion, '/')) {
+      completions.push_back(line_to_complete + cur_completion);
+    }
+    return completions;
+  });
   li_.Show();
 }
 
@@ -33,6 +53,7 @@ Repl::Repl(JSContext* ctx, const std::string& prompt, fit::function<void(const s
 }
 
 void Repl::Write(const char* output) { fprintf(output_fd_, "%s", output); }
+// TODO(aparadis) take an ostringstream as argument for simpler tests
 void Repl::ChangeOutput(FILE* fd) { output_fd_ = fd; }
 
 void Repl::ShowPrompt() {
@@ -41,6 +62,8 @@ void Repl::ShowPrompt() {
 }
 
 const char* Repl::GetCmd() { return cur_cmd_.c_str(); }
+
+const char* Repl::GetLine() { return line_to_complete_.c_str(); }
 
 bool Repl::FeedInput(uint8_t* bytes, size_t num_bytes) {
   if (running_) {
@@ -77,6 +100,7 @@ void Repl::HandleLine(const std::string& line) {
     std::string open_symbols = OpenSymbols(cmd);
     if (open_symbols.empty()) {
       mexpr_ = "";
+      li_.AddToHistory(cmd);
       EvalCmd(cmd);
     } else {
       mexpr_ = cmd;

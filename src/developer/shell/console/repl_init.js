@@ -15,6 +15,7 @@ function InitRepl() {
   stdinFd = std.in.fileno();
 
   global['repl'] = {
+    autocompletionCallback,
     evalScriptAwaitsPromise,
     repl,
   };
@@ -57,6 +58,45 @@ function evalScriptAwaitsPromise() {
   } else {  // there was an error and it has been printed out by the getAndEvalCmd function
     li_internal.showPrompt(repl);
   };
+}
+
+function autocompletionCallback() {
+  let line = li_internal.getLine(repl);
+  let dot_separated_ids = line.match(/([A-Za-z0-9$_]*\.)*[A-Za-z0-9$_]*$/);
+  let list_ids = dot_separated_ids[0].split('.');
+  let incomplete_part = "";
+  if(list_ids.length > 0){
+    incomplete_part = list_ids[list_ids.length - 1];
+  }
+
+  function evalId(posId) {
+    if (posId < 0) {
+      return global;
+    }
+    if (["false", "true", "null", "this", "undefined"].includes(list_ids[posId])
+      || !isNaN(list_ids[posId])) {
+      return eval(list_ids[posId]);
+    }
+    let parent = evalId(posId - 1);
+    if (parent === null || parent === undefined){
+      return parent;
+    }
+    return parent[list_ids[posId]];
+  }
+
+  let obj = evalId(list_ids.length - 2); // as the last element of list_ids is the incomplete part
+  let property_names = [];
+  while (obj != null && obj != undefined) {
+    Object.getOwnPropertyNames(obj).forEach(name => {
+      if (name.startsWith(incomplete_part)
+        && !property_names.includes(name.substring(incomplete_part.length)))
+        property_names.push(name.substring(incomplete_part.length));
+    });
+    obj = Object.getPrototypeOf(obj);
+  }
+
+  //a / separated concatenated string of all property_names
+  return (property_names.join('/') + "/");
 }
 
 InitRepl();

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "src/developer/shell/console/command_line_options.h"
-#include "src/developer/shell/lib/li.h"
+#include "src/developer/shell/console/li.h"
 #include "src/developer/shell/lib/runtime.h"
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"

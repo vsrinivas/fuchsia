@@ -106,10 +106,20 @@ JSValue ShowPrompt(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst
   return JS_NewBool(ctx, true);
 }
 
+// Expects 1 argument: a repl::Repl object
+JSValue GetLine(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+  if (argc != 1) {
+    return JS_EXCEPTION;
+  }
+  repl::Repl *repl = reinterpret_cast<repl::Repl *>(JS_GetOpaque(argv[0], js_repl_class_id));
+  return JS_NewString(ctx, repl->GetLine());
+}
+
 const JSCFunctionListEntry js_li_funcs[] = {
     JS_CFUNC_DEF("createRepl", 0, NewRepl),    JS_CFUNC_DEF("onInput", 3, OnInput),
     JS_CFUNC_DEF("closeRepl", 1, CloseRepl),   JS_CFUNC_DEF("getAndEvalCmd", 1, GetAndEvalCmd),
-    JS_CFUNC_DEF("showPrompt", 1, ShowPrompt), JS_CFUNC_DEF("showOutput", 2, ShowOutput)};
+    JS_CFUNC_DEF("showPrompt", 1, ShowPrompt), JS_CFUNC_DEF("showOutput", 2, ShowOutput),
+    JS_CFUNC_DEF("getLine", 1, GetLine)};
 
 int LiRunOnInit(JSContext *ctx, JSModuleDef *m) {
   /* Repl Input class */

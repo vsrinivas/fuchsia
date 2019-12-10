@@ -2,15 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/quickjs/compiled_js.gni")
+
 static_library("console") {
   sources = [
     "command_line_options.cc",
     "command_line_options.h",
     "console.cc",
     "console.h",
+    "li.cc",
+    "li.h",
+    "repl.cc",
+    "repl.h",
   ]
 
   public_deps = [
+    ":repl_init",
     "//src/developer/shell/lib",
     "//third_party/quickjs:qjs-lib",
     "//third_party/quickjs:repl",
@@ -18,10 +25,20 @@ static_library("console") {
   ]
 }
 
+compiled_js("repl_init") {
+  source = "repl_init.js"
+  module = true
+  extra_args = [
+    "-M",
+    "li_internal",
+  ]
+}
+
 source_set("tests") {
   testonly = true
   sources = [
     "console_test.cc",
+    "repl_test.cc",
   ]
   deps = [
     ":console",
