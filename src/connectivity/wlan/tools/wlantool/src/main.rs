@@ -257,9 +257,10 @@ async fn do_client_status(cmd: opts::ClientStatusCmd, wlan_svc: WlanSvc) -> Resu
     match st.connected_to {
         Some(bss) => {
             println!(
-                "Connected to '{}' (bssid {})",
+                "Connected to '{}' (bssid {}) channel: {}",
                 String::from_utf8_lossy(&bss.ssid),
-                MacAddr(bss.bssid)
+                MacAddr(bss.bssid),
+                bss.channel,
             );
         }
         None => println!("Not connected to a network"),
