@@ -12,7 +12,8 @@
 #include <optional>
 #include <unordered_map>
 
-#include "src/developer/feedback/crashpad_agent/inspect_manager.h"
+#include "src/developer/feedback/crashpad_agent/info/database_info.h"
+#include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/upload_report.h"
 #include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/macros.h"
@@ -27,7 +28,7 @@ extern const uint64_t kCrashpadDatabaseMaxSizeInKb;
 class Database {
  public:
   static std::unique_ptr<Database> TryCreate(
-      InspectManager* inspect_manager, std::shared_ptr<Cobalt> cobalt,
+      std::shared_ptr<InfoContext> info_context,
       uint64_t max_crashpad_database_size_in_kb = kCrashpadDatabaseMaxSizeInKb);
 
   // Make a new report in |database_|.
@@ -55,7 +56,7 @@ class Database {
   bool Archive(const crashpad::UUID& local_report_id);
 
   // Deletes oldest (determined by creation_time) crash reports to keep |database_| under a maximum
-  // size read from |config_| and removes expired lockfiles, metadata without report files, report
+  // size and removes expired lockfiles, metadata without report files, report
   // files without metadata from |database_|, and orphaned attachments. Removes all data from
   // |additional_data_| that is not in |database_|.
   //
@@ -81,16 +82,14 @@ class Database {
   };
 
   Database(std::unique_ptr<crashpad::CrashReportDatabase> database,
-           uint64_t max_crashpad_database_size_in_kb, InspectManager* inspect_manager,
-           std::shared_ptr<Cobalt> cobalt);
+           uint64_t max_crashpad_database_size_in_kb, std::shared_ptr<InfoContext> info_context);
 
   // Removes |local_report_id| from |additional_data_|.
   void CleanUp(const crashpad::UUID& local_report_id);
 
   std::unique_ptr<crashpad::CrashReportDatabase> database_;
   const uint64_t max_crashpad_database_size_in_kb_;
-  InspectManager* inspect_manager_;
-  std::shared_ptr<Cobalt> cobalt_;
+  DatabaseInfo info_;
   std::unordered_map<crashpad::UUID, AdditionalData, UUIDHasher> additional_data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Database);

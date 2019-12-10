@@ -64,7 +64,7 @@ executable("main") {
     "//garnet/public/lib/timekeeper:system",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/feedback/crashpad_agent/info",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -73,8 +73,6 @@ executable("main") {
 
 source_set("src") {
   sources = [
-    "config.cc",
-    "config.h",
     "crash_server.cc",
     "crash_server.h",
     "crashpad_agent.cc",
@@ -83,16 +81,12 @@ source_set("src") {
     "database.h",
     "feedback_data_provider_ptr.cc",
     "feedback_data_provider_ptr.h",
-    "inspect_manager.cc",
-    "inspect_manager.h",
     "privacy_settings_ptr.cc",
     "privacy_settings_ptr.h",
     "queue.cc",
     "queue.h",
     "report_util.cc",
     "report_util.h",
-    "settings.cc",
-    "settings.h",
     "upload_report.cc",
     "upload_report.h",
   ]
@@ -101,13 +95,9 @@ source_set("src") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/developer/feedback/utils:cobalt",
-    "//src/developer/feedback/utils:inspect_node_manager",
+    "//src/developer/feedback/crashpad_agent/info",
     "//src/developer/feedback/utils:time",
     "//src/lib/fxl",
-    "//src/lib/timekeeper",
-    "//src/lib/timekeeper:system",
     "//third_party/crashpad/client",
     "//third_party/crashpad/util",
     "//zircon/public/lib/async-cpp",
@@ -119,8 +109,8 @@ source_set("src") {
 
   deps = [
     ":constants",
-    ":metrics_registry",
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
+    "//garnet/public/lib/timekeeper:system",
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",
     "//third_party/rapidjson",
@@ -130,9 +120,52 @@ source_set("src") {
   ]
 }
 
+source_set("config") {
+  public = [
+    "config.h",
+  ]
+
+  sources = [
+    "config.cc",
+    "config.h",
+  ]
+
+  deps = [
+    ":constants",
+    "//src/lib/files:files",
+    "//src/lib/syslog/cpp",
+    "//third_party/rapidjson",
+  ]
+
+  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
+}
+
 source_set("constants") {
   sources = [
     "constants.h",
+  ]
+
+  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
+}
+
+source_set("settings") {
+  public = [
+    "settings.h",
+  ]
+
+  sources = [
+    "settings.cc",
+    "settings.h",
+  ]
+
+  public_deps = [
+    ":config",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//src/lib/syslog/cpp",
   ]
 
   visibility = [ "//src/developer/feedback/crashpad_agent/*" ]

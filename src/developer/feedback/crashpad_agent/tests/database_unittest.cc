@@ -11,6 +11,7 @@
 #include <lib/timekeeper/test_clock.h>
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
+#include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
@@ -90,8 +91,7 @@ class DatabaseTest : public UnitTestFixture {
   void SetUp() override {
     clock_ = std::make_unique<timekeeper::TestClock>();
     inspector_ = std::make_unique<inspect::Inspector>();
-    inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
-    cobalt_ = std::make_shared<Cobalt>(services());
+    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(), services());
 
     SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
     SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb);
@@ -103,7 +103,7 @@ class DatabaseTest : public UnitTestFixture {
 
  protected:
   void SetUpDatabase(const uint64_t max_size_in_kb) {
-    auto new_database = Database::TryCreate(inspect_manager_.get(), cobalt_, max_size_in_kb);
+    auto new_database = Database::TryCreate(info_context_, max_size_in_kb);
     ASSERT_TRUE(new_database) << "Error creating database";
     database_ = std::move(new_database);
     attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
@@ -196,8 +196,7 @@ class DatabaseTest : public UnitTestFixture {
 
  protected:
   std::unique_ptr<timekeeper::TestClock> clock_;
-  std::unique_ptr<InspectManager> inspect_manager_;
-  std::shared_ptr<Cobalt> cobalt_;
+  std::shared_ptr<InfoContext> info_context_;
   std::string attachments_dir_;
 
  private:
@@ -491,7 +490,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
   ASSERT_TRUE(upload_report);
 
   // Add the report to Inspect.
-  EXPECT_TRUE(inspect_manager_->AddReport("program", local_report_id.ToString()));
+  EXPECT_TRUE(info_context_->InspectManager().AddReport("program", local_report_id.ToString()));
 
   // Mark the report as uploaded and check the Inspect tree.
   EXPECT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
@@ -522,7 +521,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportArchived) {
   MakeNewReportOrDie(&local_report_id);
 
   // Add the report to Inspect.
-  EXPECT_TRUE(inspect_manager_->AddReport("program", local_report_id.ToString()));
+  EXPECT_TRUE(info_context_->InspectManager().AddReport("program", local_report_id.ToString()));
 
   // Archive the report and check the Inspect tree.
   EXPECT_TRUE(database_->Archive(local_report_id));
@@ -552,7 +551,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportGarbageCollected) {
       /*attachments=*/{{kAttachmentKey, kAttachmentValue}}, &local_report_id);
 
   // Add the report to Inpsect.
-  EXPECT_TRUE(inspect_manager_->AddReport("program", local_report_id.ToString()));
+  EXPECT_TRUE(info_context_->InspectManager().AddReport("program", local_report_id.ToString()));
 
   // Check that garbage collection occurs correctly and check the Inspect tree.
   EXPECT_EQ(database_->GarbageCollect(), 1u);

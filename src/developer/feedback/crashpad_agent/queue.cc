@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <zircon/errors.h>
 
+#include "src/developer/feedback/crashpad_agent/info/queue_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -19,16 +20,16 @@ using crashpad::FileReader;
 using crashpad::UUID;
 using UploadPolicy = feedback::Settings::UploadPolicy;
 
-std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher, CrashServer* crash_server,
-                                        InspectManager* inspect_manager,
-                                        std::shared_ptr<Cobalt> cobalt) {
-  auto database = Database::TryCreate(inspect_manager, std::move(cobalt));
+std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher,
+                                        std::shared_ptr<InfoContext> info_context,
+                                        CrashServer* crash_server) {
+  auto database = Database::TryCreate(info_context);
   if (!database) {
     return nullptr;
   }
 
   return std::unique_ptr<Queue>(
-      new Queue(dispatcher, std::move(database), crash_server, inspect_manager));
+      new Queue(dispatcher, std::move(info_context), std::move(database), crash_server));
 }
 
 void Queue::WatchSettings(feedback::Settings* settings) {
@@ -36,15 +37,14 @@ void Queue::WatchSettings(feedback::Settings* settings) {
       [this](const UploadPolicy& upload_policy) { OnUploadPolicyChange(upload_policy); });
 }
 
-Queue::Queue(async_dispatcher_t* dispatcher, std::unique_ptr<Database> database,
-             CrashServer* crash_server, InspectManager* inspect_manager)
+Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<InfoContext> info_context,
+             std::unique_ptr<Database> database, CrashServer* crash_server)
     : dispatcher_(dispatcher),
       database_(std::move(database)),
       crash_server_(crash_server),
-      inspect_manager_(inspect_manager) {
+      info_(std::move(info_context)) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(database_);
-  FXL_DCHECK(inspect_manager_);
 
   ProcessAllEveryHour();
 }
@@ -63,7 +63,7 @@ bool Queue::Add(const std::string& program_name,
     return false;
   }
 
-  inspect_manager_->AddReport(program_name, local_report_id.ToString());
+  info_.LogReport(program_name, local_report_id.ToString());
 
   pending_reports_.push_back(local_report_id);
 
@@ -101,7 +101,7 @@ bool Queue::Upload(const UUID& local_report_id) {
     return true;
   }
 
-  inspect_manager_->IncrementUploadAttempt(local_report_id.ToString());
+  info_.IncrementUploadAttempt(local_report_id.ToString());
 
   std::string server_report_id;
   if (crash_server_->MakeRequest(report->GetAnnotations(), report->GetAttachments(),

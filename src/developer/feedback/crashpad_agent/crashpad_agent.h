@@ -18,11 +18,11 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
-#include "src/developer/feedback/crashpad_agent/inspect_manager.h"
+#include "src/developer/feedback/crashpad_agent/info/agent_info.h"
+#include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/privacy_settings_ptr.h"
 #include "src/developer/feedback/crashpad_agent/queue.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
-#include "src/developer/feedback/utils/cobalt.h"
 #include "src/lib/fxl/macros.h"
 
 namespace feedback {
@@ -35,23 +35,24 @@ class CrashpadAgent : public fuchsia::feedback::CrashReporter {
   // cannot be accessed.
   static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
                                                   std::shared_ptr<sys::ServiceDirectory> services,
-                                                  InspectManager* inspect_manager);
+                                                  std::shared_ptr<InfoContext> info_context);
   static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
                                                   std::shared_ptr<sys::ServiceDirectory> services,
-                                                  Config config, InspectManager* inspect_manager);
+                                                  std::shared_ptr<InfoContext> info_context,
+                                                  Config config);
   static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
                                                   std::shared_ptr<sys::ServiceDirectory> services,
+                                                  std::shared_ptr<InfoContext> info_context,
                                                   Config config,
-                                                  std::unique_ptr<CrashServer> crash_server,
-                                                  InspectManager* inspect_manager);
+                                                  std::unique_ptr<CrashServer> crash_server);
 
   // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 
  private:
   CrashpadAgent(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                Config config, std::unique_ptr<Queue> queue_, std::shared_ptr<Cobalt> cobalt,
-                std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager);
+                std::shared_ptr<InfoContext> info_context, Config config,
+                std::unique_ptr<CrashServer> crash_server, std::unique_ptr<Queue> queue);
 
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
@@ -59,8 +60,7 @@ class CrashpadAgent : public fuchsia::feedback::CrashReporter {
   const Config config_;
   const std::unique_ptr<Queue> queue_;
   const std::unique_ptr<CrashServer> crash_server_;
-  InspectManager* inspect_manager_;
-  std::shared_ptr<Cobalt> cobalt_;
+  AgentInfo info_;
   Settings settings_;
   PrivacySettingsWatcher privacy_settings_watcher_;
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/crashpad_agent/inspect_manager.h"
+#include "src/developer/feedback/crashpad_agent/info/inspect_manager.h"
 
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -12,7 +12,6 @@
 #include <utility>
 
 #include "src/developer/feedback/crashpad_agent/constants.h"
-#include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"

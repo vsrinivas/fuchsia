@@ -12,7 +12,8 @@
 
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/database.h"
-#include "src/developer/feedback/crashpad_agent/inspect_manager.h"
+#include "src/developer/feedback/crashpad_agent/info/info_context.h"
+#include "src/developer/feedback/crashpad_agent/info/queue_info.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/misc/uuid.h"
@@ -22,9 +23,9 @@ namespace feedback {
 // Queues pending reports and processes them according to its internal State.
 class Queue {
  public:
-  static std::unique_ptr<Queue> TryCreate(async_dispatcher_t* dispatcher, CrashServer* crash_server,
-                                          InspectManager* inspect_manager,
-                                          std::shared_ptr<Cobalt> cobalt);
+  static std::unique_ptr<Queue> TryCreate(async_dispatcher_t* dispatcher,
+                                          std::shared_ptr<InfoContext> info_context,
+                                          CrashServer* crash_server);
 
   // Allow the queue's functionality to change based on the upload policy.
   void WatchSettings(feedback::Settings* settings);
@@ -47,8 +48,8 @@ class Queue {
   const crashpad::UUID& LatestReport() { return pending_reports_.back(); }
 
  private:
-  Queue(async_dispatcher_t* dispatcher, std::unique_ptr<Database> database,
-        CrashServer* crash_server, InspectManager* inspect_manager);
+  Queue(async_dispatcher_t* dispatcher, std::shared_ptr<InfoContext> info_context,
+        std::unique_ptr<Database> database, CrashServer* crash_server);
 
   // How the queue should handle processing existing pending reports and new reports.
   enum class State {
@@ -79,7 +80,7 @@ class Queue {
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<Database> database_;
   CrashServer* crash_server_;
-  InspectManager* inspect_manager_;
+  QueueInfo info_;
 
   State state_ = State::LeaveAsPending;
 

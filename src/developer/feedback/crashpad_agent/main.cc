@@ -14,6 +14,7 @@
 #include <utility>
 
 #include "src/developer/feedback/crashpad_agent/crashpad_agent.h"
+#include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 int main(int argc, const char** argv) {
@@ -25,10 +26,10 @@ int main(int argc, const char** argv) {
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspect::Node& root_node = inspector->root();
   timekeeper::SystemClock clock;
-  feedback::InspectManager inspect_manager(&root_node, &clock);
+  auto info_context = std::make_shared<feedback::InfoContext>(&root_node, &clock, context->svc());
 
-  std::unique_ptr<feedback::CrashpadAgent> agent =
-      feedback::CrashpadAgent::TryCreate(loop.dispatcher(), context->svc(), &inspect_manager);
+  std::unique_ptr<feedback::CrashpadAgent> agent = feedback::CrashpadAgent::TryCreate(
+      loop.dispatcher(), context->svc(), std::move(info_context));
   if (!agent) {
     return EXIT_FAILURE;
   }

@@ -13,6 +13,7 @@
 
 #include <cstdio>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -29,8 +30,6 @@
 namespace feedback {
 namespace {
 
-using cobalt_registry::kCrashMetricId;
-using fuchsia::cobalt::ReleaseStage;
 using fuchsia::feedback::CrashReport;
 using fuchsia::feedback::Data;
 
@@ -49,7 +48,7 @@ constexpr zx::duration kFeedbackDataCollectionTimeout = zx::sec(30) + /*some sla
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    InspectManager* inspect_manager) {
+    std::shared_ptr<InfoContext> info_context) {
   Config config;
 
   // We use the default config included in the package of this component if no override config was
@@ -76,54 +75,51 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
     }
   }
 
-  return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config),
-                                  inspect_manager);
+  return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(info_context),
+                                  std::move(config));
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services, Config config,
-    InspectManager* inspect_manager) {
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    std::shared_ptr<InfoContext> info_context, Config config) {
   std::unique_ptr<CrashServer> crash_server;
   if (config.crash_server.url) {
     crash_server = std::make_unique<CrashServer>(*config.crash_server.url);
   }
-  return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(config),
-                                  std::move(crash_server), inspect_manager);
+  return CrashpadAgent::TryCreate(dispatcher, std::move(services), std::move(info_context),
+                                  std::move(config), std::move(crash_server));
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services, Config config,
-    std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager) {
-  auto cobalt = std::make_shared<Cobalt>(services);
-  auto queue = Queue::TryCreate(dispatcher, crash_server.get(), inspect_manager, cobalt);
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    std::shared_ptr<InfoContext> info_context, Config config,
+    std::unique_ptr<CrashServer> crash_server) {
+  auto queue = Queue::TryCreate(dispatcher, info_context, crash_server.get());
   if (!queue) {
     FX_LOGS(FATAL) << "Failed to set up crash reporter";
     return nullptr;
   }
   return std::unique_ptr<CrashpadAgent>(
-      new CrashpadAgent(dispatcher, std::move(services), std::move(config), std::move(queue),
-                        std::move(cobalt), std::move(crash_server), inspect_manager));
+      new CrashpadAgent(dispatcher, std::move(services), std::move(info_context), std::move(config),
+                        std::move(crash_server), std::move(queue)));
 }
 
 CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
-                             std::shared_ptr<sys::ServiceDirectory> services, Config config,
-                             std::unique_ptr<Queue> queue, std::shared_ptr<Cobalt> cobalt,
+                             std::shared_ptr<sys::ServiceDirectory> services,
+                             std::shared_ptr<InfoContext> info_context, Config config,
                              std::unique_ptr<CrashServer> crash_server,
-                             InspectManager* inspect_manager)
+                             std::unique_ptr<Queue> queue)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
       config_(std::move(config)),
       queue_(std::move(queue)),
       crash_server_(std::move(crash_server)),
-      inspect_manager_(inspect_manager),
-      cobalt_(std::move(cobalt)),
+      info_(std::move(info_context)),
       privacy_settings_watcher_(services_, &settings_) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(services_);
   FXL_DCHECK(queue_);
-  FXL_DCHECK(inspect_manager_);
-  FXL_DCHECK(cobalt_);
   if (config.crash_server.url) {
     FXL_DCHECK(crash_server_);
   }
@@ -136,15 +132,15 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
 
   queue_->WatchSettings(&settings_);
 
-  inspect_manager_->ExposeConfig(config_);
-  inspect_manager_->ExposeSettings(&settings_);
+  info_.ExposeConfig(config_);
+  info_.ExposeSettings(&settings_);
 }
 
 void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   if (!report.has_program_name()) {
     FX_LOGS(ERROR) << "Invalid crash report. No program name. Won't file.";
     callback(fit::error(ZX_ERR_INVALID_ARGS));
-    cobalt_->Log(kCrashMetricId, CrashState::Dropped);
+    info_.LogCrashState(CrashState::Dropped);
     return;
   }
   FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
@@ -168,11 +164,11 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
                        if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
                                         annotations)) {
                          FX_LOGS(ERROR) << "Error adding new report to the queue";
-                         cobalt_->Log(kCrashMetricId, CrashState::Dropped);
+                         info_.LogCrashState(CrashState::Dropped);
                          return fit::error();
                        }
 
-                       cobalt_->Log(kCrashMetricId, CrashState::Filed);
+                       info_.LogCrashState(CrashState::Filed);
                        return fit::ok();
                      })
                      .then([callback = std::move(callback)](fit::result<void>& result) {

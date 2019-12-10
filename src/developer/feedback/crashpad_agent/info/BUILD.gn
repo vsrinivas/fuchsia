@@ -1,0 +1,69 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("info") {
+  public = [
+    "agent_info.h",
+    "database_info.h",
+    "info_context.h",
+    "queue_info.h",
+  ]
+
+  sources = [
+    "agent_info.cc",
+    "agent_info.h",
+    "database_info.cc",
+    "database_info.h",
+    "info_context.h",
+    "queue_info.cc",
+    "queue_info.h",
+  ]
+
+  public_deps = [
+    ":inspect_manager",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/feedback/crashpad_agent:config",
+    "//src/developer/feedback/crashpad_agent:metrics_registry",
+    "//src/developer/feedback/crashpad_agent:settings",
+    "//src/developer/feedback/utils:cobalt",
+    "//src/lib/timekeeper",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+  ]
+
+  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
+}
+
+# Exposed for testing purposes.
+source_set("inspect_manager") {
+  public = [
+    "inspect_manager.h",
+  ]
+
+  sources = [
+    "inspect_manager.cc",
+    "inspect_manager.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/feedback/crashpad_agent:config",
+    "//src/developer/feedback/crashpad_agent:settings",
+    "//src/developer/feedback/utils:inspect_node_manager",
+    "//src/lib/fxl",
+    "//src/lib/timekeeper",
+  ]
+
+  deps = [
+    "//src/developer/feedback/crashpad_agent:constants",
+    "//src/developer/feedback/utils:time",
+    "//src/lib/files:files",
+    "//src/lib/syslog/cpp",
+  ]
+
+  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
+}

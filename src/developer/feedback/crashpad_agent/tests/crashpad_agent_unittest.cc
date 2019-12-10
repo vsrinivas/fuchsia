@@ -27,7 +27,7 @@
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
-#include "src/developer/feedback/crashpad_agent/database.h"
+#include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/metrics_registry.cb.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
@@ -119,9 +119,9 @@ class CrashpadAgentTest : public UnitTestFixture {
     attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
     inspector_ = std::make_unique<inspect::Inspector>();
     clock_ = std::make_unique<timekeeper::TestClock>();
-    inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
-    agent_ = CrashpadAgent::TryCreate(dispatcher(), services(), std::move(config),
-                                      std::move(crash_server), inspect_manager_.get());
+    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(), services());
+    agent_ = CrashpadAgent::TryCreate(dispatcher(), services(), info_context_, std::move(config),
+                                      std::move(crash_server));
     FXL_CHECK(agent_);
   }
 
@@ -430,7 +430,7 @@ class CrashpadAgentTest : public UnitTestFixture {
   std::string attachments_dir_;
   std::unique_ptr<inspect::Inspector> inspector_;
   std::unique_ptr<timekeeper::TestClock> clock_;
-  std::unique_ptr<InspectManager> inspect_manager_;
+  std::shared_ptr<InfoContext> info_context_;
 };
 
 TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReport) {

@@ -11,6 +11,7 @@
 
 #include "sdk/lib/inspect/testing/cpp/inspect.h"
 #include "src/developer/feedback/crashpad_agent/constants.h"
+#include "src/developer/feedback/crashpad_agent/info/info_context.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
@@ -90,9 +91,8 @@ class QueueTest : public UnitTestFixture {
     clock_ = std::make_unique<timekeeper::TestClock>();
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     inspector_ = std::make_unique<inspect::Inspector>();
-    inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
-    cobalt_ = std::make_shared<Cobalt>(services());
-    queue_ = Queue::TryCreate(dispatcher(), crash_server_.get(), inspect_manager_.get(), cobalt_);
+    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(), services());
+    queue_ = Queue::TryCreate(dispatcher(), info_context_, crash_server_.get());
 
     ASSERT_TRUE(queue_);
 
@@ -227,7 +227,7 @@ class QueueTest : public UnitTestFixture {
   std::unique_ptr<timekeeper::TestClock> clock_;
   std::unique_ptr<StubCrashServer> crash_server_;
   std::unique_ptr<inspect::Inspector> inspector_;
-  std::unique_ptr<InspectManager> inspect_manager_;
+  std::shared_ptr<InfoContext> info_context_;
   std::shared_ptr<Cobalt> cobalt_;
 };
 
