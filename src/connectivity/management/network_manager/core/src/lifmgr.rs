@@ -206,6 +206,21 @@ impl From<&InterfaceAddress> for LifIpAddr {
     }
 }
 
+impl From<&net::Subnet> for LifIpAddr {
+    fn from(s: &net::Subnet) -> Self {
+        match *s {
+            net::Subnet {
+                addr: net::IpAddress::Ipv4(net::Ipv4Address { addr }),
+                prefix_len: prefix,
+            } => LifIpAddr { address: addr.into(), prefix },
+            net::Subnet {
+                addr: net::IpAddress::Ipv6(net::Ipv6Address { addr }),
+                prefix_len: prefix,
+            } => LifIpAddr { address: addr.into(), prefix },
+        }
+    }
+}
+
 /// Converts a subnet mask given as a set of octets to a scalar prefix length.
 pub fn subnet_mask_to_prefix_length(addr: net::IpAddress) -> u8 {
     match addr {
@@ -809,6 +824,42 @@ mod tests {
                 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0,
             ])),
             64
+        );
+    }
+
+    #[test]
+    fn test_from_subnet_tolifipaddr() {
+        assert_eq!(
+            LifIpAddr::from(&net::Subnet {
+                addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
+                prefix_len: 32
+            }),
+            LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 32 }
+        );
+        assert_eq!(
+            LifIpAddr::from(&net::Subnet {
+                addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
+                prefix_len: 24
+            }),
+            LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }
+        );
+        assert_eq!(
+            LifIpAddr::from(&net::Subnet {
+                addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 0] }),
+                prefix_len: 24
+            }),
+            LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 24 }
+        );
+        assert_eq!(
+            LifIpAddr::from(&net::Subnet {
+                addr: net::IpAddress::Ipv6(net::Ipv6Address {
+                    addr: [
+                        0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0xfc, 0xb6, 0x5b, 0x27, 0xfd, 0x2c, 0xf, 0x12
+                    ]
+                }),
+                prefix_len: 64
+            }),
+            LifIpAddr { address: "fe80::fcb6:5b27:fd2c:f12".parse().unwrap(), prefix: 64 }
         );
     }
 
