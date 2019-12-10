@@ -507,7 +507,7 @@ declare_args() {
   devmgr_config = []
 
   # List of kernel command line arguments to bake into the boot image.
-  # See also //docs/reference/kernel/kernel_cmdline.md and
+  # See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
   # [`devmgr_config`](#devmgr_config).
   kernel_cmdline_args = []
 

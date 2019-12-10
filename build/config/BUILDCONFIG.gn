@@ -707,9 +707,9 @@ declare_args() {
   # If none of these is defined, then the selector always matches.
   #
   # The first selector in the list to match wins and then the rest of
-  # the list is ignored.  So construct more complex rules by using a
-  # "blacklist" selector with `variant=false` before a catch-all or
-  # "whitelist" selector that names a variant.
+  # the list is ignored.  To construct more complex rules, use a blocklist
+  # selector with `variant=false` before a catch-all default variant, or
+  # a list of specific variants before a catch-all false variant.
   #
   # Each "[strings]" criterion is a list of strings, and the criterion
   # is satisfied if any of the strings matches against the candidate string.

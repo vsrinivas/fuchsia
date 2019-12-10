@@ -22,9 +22,9 @@ declare_args() {
   # Sets the fuchsia toolchain target triple suffix (after arch)
   rust_toolchain_triple_suffix = "fuchsia"
 
-  # Sets whether Rust compiler warnings cause errors or not.
-  # "deny" will make all warnings into errors, "warn" presents them as warnings, while "allow" will
-  # ignore warnings
+  # Sets the maximum lint level.
+  # "deny" will make all warnings into errors, "warn" preserves them as warnings, and "allow" will
+  # ignore warnings.
   rust_cap_lints = "deny"
 
   # Overrides the optimization level for all Rust builds, regardless of
