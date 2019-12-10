@@ -69,10 +69,12 @@ VK_TEST_F(ChainedSemaphoreGeneratorTest, SequentialUpload) {
   bool image_correct = false;
   std::vector<uint8_t> color_2 = {200, 190, 180, 255};
   downloader->ScheduleReadImage(
-      image, region, [&color_2, &downloaded, &image_correct](const void* host_ptr, size_t size) {
+      image,
+      [&color_2, &downloaded, &image_correct](const void* host_ptr, size_t size) {
         downloaded = true;
         image_correct = memcmp(host_ptr, color_2.data(), image_size) == 0;
-      });
+      },
+      region);
   downloader->Submit();
   escher->vk_device().waitIdle();
   EXPECT_TRUE(escher->Cleanup());

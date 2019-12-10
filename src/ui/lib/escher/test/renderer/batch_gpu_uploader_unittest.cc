@@ -345,11 +345,14 @@ VK_TEST_F(BatchGpuUploaderTest, SubmitImageToCommandBuffer) {
   // Check if the uploaded content is correct.
   auto downloader = BatchGpuDownloader::New(escher);
   bool pixel_correct = false;
-  downloader->ScheduleReadImage(image, region, [&pixel_correct](const void* host_ptr, size_t size) {
-    const auto* pixel_downloaded = reinterpret_cast<const uint8_t*>(host_ptr);
-    pixel_correct = pixel_downloaded[0] == 150u && pixel_downloaded[1] == 88u &&
-                    pixel_downloaded[2] == 121u && pixel_downloaded[3] == 255u;
-  });
+  downloader->ScheduleReadImage(
+      image,
+      [&pixel_correct](const void* host_ptr, size_t size) {
+        const auto* pixel_downloaded = reinterpret_cast<const uint8_t*>(host_ptr);
+        pixel_correct = pixel_downloaded[0] == 150u && pixel_downloaded[1] == 88u &&
+                        pixel_downloaded[2] == 121u && pixel_downloaded[3] == 255u;
+      },
+      region);
   bool downloaded = false;
   downloader->Submit([&downloaded]() { downloaded = true; });
 

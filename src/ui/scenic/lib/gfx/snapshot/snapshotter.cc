@@ -356,24 +356,13 @@ void Snapshotter::VisitMesh(escher::MeshPtr mesh) {
 }
 
 void Snapshotter::ReadImage(const escher::ImagePtr& image,
-                            escher::BatchGpuDownloader::CallbackType callback) {
-  vk::BufferImageCopy region;
-  region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-  region.imageSubresource.mipLevel = 0;
-  region.imageSubresource.baseArrayLayer = 0;
-  region.imageSubresource.layerCount = 1;
-  region.imageExtent.width = image->width();
-  region.imageExtent.height = image->height();
-  region.imageExtent.depth = 1;
-  region.bufferOffset = 0;
-
-  gpu_downloader_->ScheduleReadImage(image, region, std::move(callback));
+                            escher::BatchGpuDownloader::Callback callback) {
+  gpu_downloader_->ScheduleReadImage(image, std::move(callback));
 }
 
 void Snapshotter::ReadBuffer(const escher::BufferPtr& buffer,
-                             escher::BatchGpuDownloader::CallbackType callback) {
-  auto region = vk::BufferCopy(/* srcOffset */ 0, /* dstOffset */ 0, /* size */ buffer->size());
-  gpu_downloader_->ScheduleReadBuffer(buffer, region, std::move(callback));
+                             escher::BatchGpuDownloader::Callback callback) {
+  gpu_downloader_->ScheduleReadBuffer(buffer, std::move(callback));
 }
 
 }  // namespace gfx

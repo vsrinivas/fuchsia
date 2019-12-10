@@ -88,8 +88,7 @@ VK_TEST_F(BatchGpuDownloaderTest, LazyInitializationTest) {
   // Read the vertex buffer.
   bool read_done = false;
   downloader->ScheduleReadBuffer(
-      vertex_buffer, {0, 0, vertex_buffer->size()},
-      [&read_done](const void* host_ptr, size_t size) { read_done = true; });
+      vertex_buffer, [&read_done](const void* host_ptr, size_t size) { read_done = true; });
 
   EXPECT_TRUE(downloader->HasContentToDownload());
 
@@ -158,27 +157,17 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadImageTest) {
   uploader.AddSignalSemaphore(sema);
   uploader.Submit();
 
-  vk::BufferImageCopy region;
-  region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-  region.imageSubresource.mipLevel = 0;
-  region.imageSubresource.baseArrayLayer = 0;
-  region.imageSubresource.layerCount = 1;
-  region.imageExtent.width = image->width();
-  region.imageExtent.height = image->height();
-  region.imageExtent.depth = 1;
-  region.bufferOffset = 0;
-
   BatchGpuDownloader downloader(escher, CommandBuffer::Type::kGraphics, 0);
   downloader.AddWaitSemaphore(sema, vk::PipelineStageFlagBits::eTransfer);
 
   bool read_image_done = false;
-  downloader.ScheduleReadImage(image, region,
-                               [&read_image_done, original = std::move(pixels),
-                                num_bytes = kWidth * kHeight](const void* host_ptr, size_t size) {
-                                 bool pixels_match = !memcmp(original.get(), host_ptr, num_bytes);
-                                 EXPECT_TRUE(pixels_match);
-                                 read_image_done = true;
-                               });
+  downloader.ScheduleReadImage(
+      image, [&read_image_done, original = std::move(pixels), num_bytes = kWidth * kHeight](
+                 const void* host_ptr, size_t size) {
+        bool pixels_match = !memcmp(original.get(), host_ptr, num_bytes);
+        EXPECT_TRUE(pixels_match);
+        read_image_done = true;
+      });
 
   bool batch_download_done = false;
   downloader.Submit([&batch_download_done]() { batch_download_done = true; });
@@ -187,6 +176,47 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadImageTest) {
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(read_image_done);
   EXPECT_TRUE(batch_download_done);
+}
+
+VK_TEST_F(BatchGpuDownloaderTest, SubmitToCommandBuffer) {
+  auto escher = test::GetEscher()->GetWeakPtr();
+
+  // Upload an image to read back.
+  constexpr uint32_t kWidth = 512;
+  constexpr uint32_t kHeight = 256;
+  auto pixels = image_utils::NewNoisePixels(kWidth, kHeight);
+  auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eR8Unorm, kWidth, kHeight);
+  BatchGpuUploader uploader(escher, 0);
+  image_utils::WritePixelsToImage(&uploader, pixels.get(), image,
+                                  vk::ImageLayout::eTransferSrcOptimal);
+  auto sema = escher::Semaphore::New(escher->vk_device());
+  uploader.AddSignalSemaphore(sema);
+  uploader.Submit();
+
+  BatchGpuDownloader downloader(escher, CommandBuffer::Type::kGraphics, 0);
+  downloader.AddWaitSemaphore(sema, vk::PipelineStageFlagBits::eTransfer);
+
+  bool read_image_done = false;
+  downloader.ScheduleReadImage(
+      image, [&read_image_done, original = std::move(pixels), num_bytes = kWidth * kHeight](
+                 const void* host_ptr, size_t size) {
+        bool pixels_match = !memcmp(original.get(), host_ptr, num_bytes);
+        EXPECT_TRUE(pixels_match);
+        read_image_done = true;
+      });
+
+  auto cmds = CommandBuffer::NewForTransfer(escher.get());
+  auto downloader_callback = downloader.GenerateCommands(cmds.get());
+  bool command_buffer_done = false;
+  cmds->Submit([downloader_callback = std::move(downloader_callback), &command_buffer_done]() {
+    downloader_callback();
+    command_buffer_done = true;
+  });
+
+  escher->vk_device().waitIdle();
+  EXPECT_TRUE(escher->Cleanup());
+  EXPECT_TRUE(read_image_done);
+  EXPECT_TRUE(command_buffer_done);
 }
 
 // For each Read() operation of BatchGpuDownloader, BatchGpuDownloader will
@@ -211,28 +241,19 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadTheSameImageTwice) {
   BatchGpuUploader uploader(escher, 0);
   image_utils::WritePixelsToImage(&uploader, pixels.get(), image,
                                   vk::ImageLayout::eTransferSrcOptimal);
-  auto sema = escher::Semaphore::New(escher->vk_device());
-  uploader.AddSignalSemaphore(sema);
+  auto uploader_signal_sem = escher::Semaphore::New(escher->vk_device());
+  uploader.AddSignalSemaphore(uploader_signal_sem);
   uploader.Submit();
 
-  vk::BufferImageCopy region;
-  region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-  region.imageSubresource.mipLevel = 0;
-  region.imageSubresource.baseArrayLayer = 0;
-  region.imageSubresource.layerCount = 1;
-  region.imageExtent.width = image->width();
-  region.imageExtent.height = image->height();
-  region.imageExtent.depth = 1;
-  region.bufferOffset = 0;
-
   // We first read the image to a buffer.
-  BatchGpuDownloader downloader(escher, CommandBuffer::Type::kGraphics, 0);
-  downloader.AddWaitSemaphore(sema, vk::PipelineStageFlagBits::eTransfer);
+  BatchGpuDownloader downloader(escher, CommandBuffer::Type::kTransfer, 0);
+  downloader.AddWaitSemaphore(uploader_signal_sem, vk::PipelineStageFlagBits::eTransfer);
+  SemaphorePtr downloader_signal_sem = Semaphore::New(escher->vk_device());
+  downloader.AddSignalSemaphore(downloader_signal_sem);
 
   bool read_image_done = false;
   downloader.ScheduleReadImage(
-      image, region,
-      [&read_image_done](const void* host_ptr, size_t size) { read_image_done = true; });
+      image, [&read_image_done](const void* host_ptr, size_t size) { read_image_done = true; });
 
   bool batch_download_done = false;
   downloader.Submit([&batch_download_done]() { batch_download_done = true; });
@@ -240,13 +261,12 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadTheSameImageTwice) {
   // After submitting the downloader command queue, read the same image again.
   // In this case BatchGpuDownloader will do eShaderReadOnlyOptimal ->
   // eTransferSrc and eTransferSrc -> eShaderReadOnlyOptimal conversion.
-  BatchGpuDownloader downloader2(escher, CommandBuffer::Type::kGraphics, 0);
-  downloader2.AddWaitSemaphore(sema, vk::PipelineStageFlagBits::eTransfer);
+  BatchGpuDownloader downloader2(escher, CommandBuffer::Type::kTransfer, 0);
+  downloader2.AddWaitSemaphore(downloader_signal_sem, vk::PipelineStageFlagBits::eTransfer);
 
   bool read_image_done_2 = false;
   downloader2.ScheduleReadImage(
-      image, region,
-      [&read_image_done_2](const void* host_ptr, size_t size) { read_image_done_2 = true; });
+      image, [&read_image_done_2](const void* host_ptr, size_t size) { read_image_done_2 = true; });
 
   bool batch_download_done_2 = false;
   downloader2.Submit([&batch_download_done_2]() { batch_download_done_2 = true; });
@@ -288,7 +308,7 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadBufferTest) {
       BatchGpuDownloader::New(escher, CommandBuffer::Type::kTransfer);
 
   bool read_buffer_done = false;
-  downloader->ScheduleReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+  downloader->ScheduleReadBuffer(vertex_buffer,
                                  [&read_buffer_done](const void* host_ptr, size_t size) {
                                    const vec3* verts = static_cast<const vec3*>(host_ptr);
                                    EXPECT_EQ(verts[0], vec3(0.f, 0.f, 0.f));
@@ -327,21 +347,21 @@ VK_TEST_F(BatchGpuDownloaderTest, MultipleReadToSameBuffer) {
 
   // Read the vertex buffer.
   bool read_callback_executed = false;
-  downloader->ScheduleReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+  downloader->ScheduleReadBuffer(vertex_buffer,
                                  [&read_callback_executed](const void* host_ptr, size_t size) {
                                    read_callback_executed = true;
                                  });
 
   // Read the *same* vertex buffer again.
   bool read2_callback_executed = false;
-  downloader->ScheduleReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+  downloader->ScheduleReadBuffer(vertex_buffer,
                                  [&read2_callback_executed](const void* host_ptr, size_t size) {
                                    read2_callback_executed = true;
                                  });
 
   // Read the *same* vertex buffer once again.
   bool read3_callback_executed = false;
-  downloader->ScheduleReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+  downloader->ScheduleReadBuffer(vertex_buffer,
                                  [&read3_callback_executed](const void* host_ptr, size_t size) {
                                    read3_callback_executed = true;
                                  });
@@ -391,8 +411,7 @@ VK_TEST_F(BatchGpuDownloaderTest, DISABLED_ReadAfterWriteSucceeds) {
 
   bool read_buffer_done = false;
   downloader->ScheduleReadBuffer(
-      vertex_buffer, {0, 0, vertex_buffer->size()},
-      [&read_buffer_done, &write_verts](const void* host_ptr, size_t size) {
+      vertex_buffer, [&read_buffer_done, &write_verts](const void* host_ptr, size_t size) {
         const vec3* read_verts = static_cast<const vec3*>(host_ptr);
         EXPECT_EQ(read_verts[0], write_verts[0]);
         EXPECT_EQ(read_verts[1], write_verts[1]);
