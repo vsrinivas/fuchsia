@@ -72,7 +72,14 @@ class SchedulerState {
   SchedWeight weight() const { return weight_; }
 
   // Returns the key used to order the run queue.
-  KeyType key() const { return {virtual_finish_time_, generation_}; }
+  KeyType key() const { return {finish_time_, generation_}; }
+
+  // Returns the generation count from the last time the thread was enqueued
+  // in the runnable tree.
+  uint64_t generation() const { return generation_; }
+
+ private:
+  friend class Scheduler;
 
   // Returns true of the task state is currently enqueued in the runnable tree.
   bool InQueue() const { return run_queue_node_.InContainer(); }
@@ -96,13 +103,6 @@ class SchedulerState {
     return was_active;
   }
 
-  // Returns the generation count from the last time the thread was enqueued
-  // in the runnable tree.
-  uint64_t generation() const { return generation_; }
-
- private:
-  friend class Scheduler;
-
   // WAVLTree node state.
   fbl::WAVLTreeNodeState<thread_t*> run_queue_node_;
 
@@ -116,16 +116,13 @@ class SchedulerState {
   // while others only while ready. Consider using a union to save space.
 
   // The virtual time of the thread's current bandwidth request.
-  SchedTime virtual_start_time_{0};
+  SchedTime start_time_{0};
 
   // The virtual finish time of the thread's current bandwidth request.
-  SchedTime virtual_finish_time_{0};
+  SchedTime finish_time_{0};
 
   // The current timeslice allocated to the thread.
   SchedDuration time_slice_ns_{0};
-
-  // The remainder of timeslice allocated to the thread when it blocked.
-  SchedDuration lag_time_ns_{0};
 
   // Takes the value of Scheduler::generation_count_ + 1 at the time this node
   // is added to the run queue.
@@ -211,6 +208,6 @@ class SchedulerState {
   uint64_t generation_{0};
 };
 
-#endif // WITH_FAIR_SCHEDULER
+#endif  // WITH_FAIR_SCHEDULER
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_SCHEDULER_STATE_H_

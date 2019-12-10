@@ -136,44 +136,46 @@ inline uint64_t FlowIdFromThreadGeneration(const thread_t* thread) {
   return rotated_tid ^ thread->scheduler_state.generation();
 }
 
-// Calculate a mask of CPUs a thread is allowed to run on, based on the thread's
-// affinity mask and what CPUs are online.
-cpu_mask_t GetAllowedCpusMask(cpu_mask_t active_mask, const thread_t* thread) {
+// Returns the effective mask of CPUs a thread is may run on, based on the
+// thread's affinity masks and available CPUs.
+cpu_mask_t GetEffectiveCpuMask(cpu_mask_t active_mask, const thread_t* thread) {
   // The thread may run on any active CPU allowed by both its hard and
   // soft CPU affinity.
   const cpu_mask_t soft_affinity = thread->soft_affinity;
   const cpu_mask_t hard_affinity = thread->hard_affinity;
   const cpu_mask_t available_mask = active_mask & soft_affinity & hard_affinity;
+
+  // Return the mask honoring soft affinity if it is viable, otherwise ignore
+  // soft affinity and honor only hard affinity.
   if (likely(available_mask != 0)) {
     return available_mask;
   }
 
-  // There is no CPU allowed by the intersection of active CPUs, the
-  // hard affinity mask, and the soft affinity mask. Ignore the soft
-  // affinity.
   return active_mask & hard_affinity;
 }
 
 }  // anonymous namespace
 
 void Scheduler::Dump() {
-  printf("\tweight_total=%#x runnable_tasks=%d vtime=%ld period=%ld\n",
+  printf("\tweight_total=%#x runnable_tasks=%d vtime=%" PRId64 " period=%" PRId64 "\n",
          static_cast<uint32_t>(weight_total_.raw_value()), runnable_task_count_,
          virtual_time_.raw_value(), scheduling_period_grans_.raw_value());
 
   if (active_thread_ != nullptr) {
     const SchedulerState* const state = &active_thread_->scheduler_state;
-    printf("\t-> name=%s weight=%#x vstart=%ld vfinish=%ld time_slice_ns=%ld\n",
+    printf("\t-> name=%s weight=%#x start=%" PRId64 " finish=%" PRId64 " time_slice_ns=%" PRId64
+           "\n",
            active_thread_->name, static_cast<uint32_t>(state->weight_.raw_value()),
-           state->virtual_start_time_.raw_value(), state->virtual_finish_time_.raw_value(),
+           state->start_time_.raw_value(), state->finish_time_.raw_value(),
            state->time_slice_ns_.raw_value());
   }
 
   for (const thread_t& thread : run_queue_) {
     const SchedulerState* const state = &thread.scheduler_state;
-    printf("\t   name=%s weight=%#x vstart=%ld vfinish=%ld time_slice_ns=%ld\n", thread.name,
-           static_cast<uint32_t>(state->weight_.raw_value()),
-           state->virtual_start_time_.raw_value(), state->virtual_finish_time_.raw_value(),
+    printf("\t   name=%s weight=%#x start=%" PRId64 " finish=%" PRId64 " time_slice_ns=%" PRId64
+           "\n",
+           thread.name, static_cast<uint32_t>(state->weight_.raw_value()),
+           state->start_time_.raw_value(), state->finish_time_.raw_value(),
            state->time_slice_ns_.raw_value());
   }
 }
@@ -221,7 +223,7 @@ thread_t* Scheduler::EvaluateNextThread(SchedTime now, thread_t* current_thread,
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(current_cpu);
   const cpu_mask_t active_mask = mp_get_active_mask();
   const bool needs_migration =
-      (GetAllowedCpusMask(active_mask, current_thread) & current_cpu_mask) == 0;
+      (GetEffectiveCpuMask(active_mask, current_thread) & current_cpu_mask) == 0;
 
   if (is_active && unlikely(needs_migration)) {
     // The current CPU is not in the thread's affinity mask, find a new CPU
@@ -272,7 +274,7 @@ cpu_num_t Scheduler::FindTargetCpu(thread_t* thread) {
   // Threads may be created and resumed before the thread init level. Work around
   // an empty active mask by assuming the current cpu is scheduleable.
   const cpu_mask_t available_mask =
-      active_mask != 0 ? GetAllowedCpusMask(active_mask, thread) : current_cpu_mask;
+      active_mask != 0 ? GetEffectiveCpuMask(active_mask, thread) : current_cpu_mask;
   DEBUG_ASSERT_MSG(available_mask != 0,
                    "thread=%s affinity=%#x soft_affinity=%#x active=%#x "
                    "idle=%#x arch_ints_disabled=%d",
@@ -445,7 +447,7 @@ void Scheduler::RescheduleCommon(SchedTime now, void* outer_trace) {
     start_of_current_time_slice_ns_ = now;
     scheduled_weight_total_ = weight_total_;
 
-    SCHED_LTRACEF("Start preemption timer: current=%s next=%s now=%ld deadline=%ld\n",
+    SCHED_LTRACEF("Start preempt timer: current=%s next=%s now=%" PRId64 " deadline=%" PRId64 "\n",
                   current_thread->name, next_thread->name, now.raw_value(),
                   absolute_deadline_ns.raw_value());
     timer_preempt_reset(absolute_deadline_ns.raw_value());
@@ -507,8 +509,9 @@ void Scheduler::UpdatePeriod() {
   // within the target latency.
   scheduling_period_grans_ = SchedDuration{num_tasks > normal_tasks ? num_tasks : normal_tasks};
 
-  SCHED_LTRACEF("num_tasks=%ld peak_tasks=%ld normal_tasks=%ld period_grans=%ld\n", num_tasks,
-                peak_tasks, normal_tasks, scheduling_period_grans_.raw_value());
+  SCHED_LTRACEF("num_tasks=%" PRId64 " peak_tasks=%" PRId64 " normal_tasks=%" PRId64
+                " period_grans=%" PRId64 "\n",
+                num_tasks, peak_tasks, normal_tasks, scheduling_period_grans_.raw_value());
 
   trace.End(Round<uint64_t>(scheduling_period_grans_), num_tasks);
 }
@@ -542,7 +545,7 @@ void Scheduler::NextThreadTimeslice(thread_t* thread) {
   SchedulerState* const state = &thread->scheduler_state;
   state->time_slice_ns_ = CalculateTimeslice(thread);
 
-  SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x time_slice_ns=%ld\n", thread->name,
+  SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x time_slice_ns=%" PRId64 "\n", thread->name,
                 static_cast<uint32_t>(weight_total_.raw_value()),
                 static_cast<uint32_t>(state->weight_.raw_value()),
                 state->time_slice_ns_.raw_value());
@@ -561,25 +564,24 @@ void Scheduler::UpdateThreadTimeline(thread_t* thread, Placement placement) {
 
   // Update virtual timeline.
   if (placement == Placement::Insertion) {
-    state->virtual_start_time_ = std::max(state->virtual_finish_time_, virtual_time_);
+    state->start_time_ = std::max(state->finish_time_, virtual_time_);
   }
 
   const SchedDuration scheduling_period_ns = scheduling_period_grans_ * minimum_granularity_ns_;
   const SchedWeight rate = kReciprocalMinWeight * state->weight_;
   const SchedDuration delta_norm = scheduling_period_ns / rate;
-  state->virtual_finish_time_ = state->virtual_start_time_ + delta_norm;
+  state->finish_time_ = state->start_time_ + delta_norm;
 
-  DEBUG_ASSERT_MSG(state->virtual_start_time_ < state->virtual_finish_time_,
-                   "vstart=%ld vfinish=%ld delta_norm=%ld\n",
-                   state->virtual_start_time_.raw_value(), state->virtual_finish_time_.raw_value(),
+  DEBUG_ASSERT_MSG(state->start_time_ < state->finish_time_,
+                   "start=%" PRId64 " finish=%" PRId64 " delta_norm=%" PRId64 "\n",
+                   state->start_time_.raw_value(), state->finish_time_.raw_value(),
                    delta_norm.raw_value());
 
-  SCHED_LTRACEF("name=%s vstart=%ld vfinish=%ld lag=%ld vtime=%ld\n", thread->name,
-                state->virtual_start_time_.raw_value(), state->virtual_finish_time_.raw_value(),
-                state->lag_time_ns_.raw_value(), virtual_time_.raw_value());
+  SCHED_LTRACEF("name=%s start=%" PRId64 " finish=%" PRId64 " vtime=%" PRId64 "\n", thread->name,
+                state->start_time_.raw_value(), state->finish_time_.raw_value(),
+                virtual_time_.raw_value());
 
-  trace.End(Round<uint64_t>(state->virtual_start_time_),
-            Round<uint64_t>(state->virtual_finish_time_));
+  trace.End(Round<uint64_t>(state->start_time_), Round<uint64_t>(state->finish_time_));
 }
 
 void Scheduler::QueueThread(thread_t* thread, Placement placement, SchedTime now) {
@@ -656,17 +658,16 @@ void Scheduler::Remove(thread_t* thread) {
 
     thread->curr_cpu = INVALID_CPU;
 
-    state->virtual_start_time_ = SchedNs(0);
-    state->virtual_finish_time_ = SchedNs(0);
+    state->start_time_ = SchedNs(0);
+    state->finish_time_ = SchedNs(0);
 
     // Factor this task out of the run queue.
     weight_total_ -= state->weight_;
     DEBUG_ASSERT(weight_total_ >= SchedWeight{0});
 
-    SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x lag_time_ns=%ld\n", thread->name,
+    SCHED_LTRACEF("name=%s weight_total=%#x weight=%#x\n", thread->name,
                   static_cast<uint32_t>(weight_total_.raw_value()),
-                  static_cast<uint32_t>(state->weight_.raw_value()),
-                  state->lag_time_ns_.raw_value());
+                  static_cast<uint32_t>(state->weight_.raw_value()));
   }
 }
 
@@ -681,7 +682,7 @@ void Scheduler::Block() {
   DEBUG_ASSERT(current_thread->state != THREAD_RUNNING);
 
   const SchedTime now = CurrentTime();
-  SCHED_LTRACEF("current=%s now=%ld\n", current_thread->name, now.raw_value());
+  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name, now.raw_value());
 
   Scheduler::Get()->RescheduleCommon(now, &trace);
 }
@@ -693,7 +694,7 @@ bool Scheduler::Unblock(thread_t* thread) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
   const SchedTime now = CurrentTime();
-  SCHED_LTRACEF("thread=%s now=%ld\n", thread->name, now.raw_value());
+  SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name, now.raw_value());
 
   const cpu_num_t target_cpu = FindTargetCpu(thread);
   Scheduler* const target = Get(target_cpu);
@@ -723,7 +724,7 @@ bool Scheduler::Unblock(list_node* list) {
     DEBUG_ASSERT(thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(!thread_is_idle(thread));
 
-    SCHED_LTRACEF("thread=%s now=%ld\n", thread->name, now.raw_value());
+    SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name, now.raw_value());
 
     const cpu_num_t target_cpu = FindTargetCpu(thread);
     Scheduler* const target = Get(target_cpu);
@@ -750,7 +751,7 @@ void Scheduler::UnblockIdle(thread_t* thread) {
   DEBUG_ASSERT(thread_is_idle(thread));
   DEBUG_ASSERT(thread->hard_affinity && (thread->hard_affinity & (thread->hard_affinity - 1)) == 0);
 
-  SCHED_LTRACEF("thread=%s now=%ld\n", thread->name, current_time());
+  SCHED_LTRACEF("thread=%s now=%" PRId64 "\n", thread->name, current_time());
 
   thread->state = THREAD_READY;
   thread->curr_cpu = lowest_cpu_set(thread->hard_affinity);
@@ -766,7 +767,7 @@ void Scheduler::Yield() {
   DEBUG_ASSERT(!thread_is_idle(current_thread));
 
   const SchedTime now = CurrentTime();
-  SCHED_LTRACEF("current=%s now=%ld\n", current_thread->name, now.raw_value());
+  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name, now.raw_value());
 
   // Update the virtual timeline in preparation for snapping the thread's
   // virtual finish time to the current virtual time.
@@ -777,7 +778,7 @@ void Scheduler::Yield() {
   // zero lag against other competing threads and may skip lower priority
   // threads with similar arrival times.
   current_thread->state = THREAD_READY;
-  current_state->virtual_finish_time_ = current->virtual_time_;
+  current_state->finish_time_ = current->virtual_time_;
   current_state->time_slice_ns_ = now - current->start_of_current_time_slice_ns_;
   DEBUG_ASSERT(current_state->time_slice_ns_ >= 0);
 
@@ -796,7 +797,7 @@ void Scheduler::Preempt() {
   DEBUG_ASSERT(current_thread->last_cpu == current_thread->curr_cpu);
 
   const SchedTime now = CurrentTime();
-  SCHED_LTRACEF("current=%s now=%ld\n", current_thread->name, now.raw_value());
+  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name, now.raw_value());
 
   current_thread->state = THREAD_READY;
   Get()->RescheduleCommon(now, &trace);
@@ -819,7 +820,7 @@ void Scheduler::Reschedule() {
   DEBUG_ASSERT(current_thread->last_cpu == current_thread->curr_cpu);
 
   const SchedTime now = CurrentTime();
-  SCHED_LTRACEF("current=%s now=%ld\n", current_thread->name, now.raw_value());
+  SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name, now.raw_value());
 
   current_thread->state = THREAD_READY;
   Get()->RescheduleCommon(now, &trace);
@@ -835,14 +836,14 @@ void Scheduler::Migrate(thread_t* thread) {
 
   if (thread->state == THREAD_RUNNING) {
     const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(thread->curr_cpu);
-    if (!(GetAllowedCpusMask(mp_get_active_mask(), thread) & thread_cpu_mask)) {
+    if (!(GetEffectiveCpuMask(mp_get_active_mask(), thread) & thread_cpu_mask)) {
       // Mark the CPU the thread is running on for reschedule. The
       // scheduler on that CPU will take care of the actual migration.
       cpus_to_reschedule_mask |= thread_cpu_mask;
     }
   } else if (thread->state == THREAD_READY) {
     const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(thread->curr_cpu);
-    if (!(GetAllowedCpusMask(mp_get_active_mask(), thread) & thread_cpu_mask)) {
+    if (!(GetEffectiveCpuMask(mp_get_active_mask(), thread) & thread_cpu_mask)) {
       Scheduler* current = Get(thread->curr_cpu);
 
       DEBUG_ASSERT(thread->scheduler_state.InQueue());
