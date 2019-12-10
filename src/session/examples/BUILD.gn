@@ -7,7 +7,6 @@ group("all") {
     "//src/session/examples/elements",
     "//src/session/examples/graphical_session:all",
     "//src/session/examples/input_session:all",
-    "//src/session/examples/touchable_session:all",
   ]
 }
 
