@@ -72,9 +72,10 @@ constexpr uint32_t kEndOfStreamHeight = 52;
 //
 // TODO(MTWN-249): Set this to ~8k or so.  For now, we boost the
 // per-packet buffer size to avoid sysmem picking the min buffer size.  The VP9
-// conformance streams have AUs that are > 512KiB, so boosting this to 4MiB
-// until the decoder handles split AUs on input.
-constexpr uint32_t kInputPerPacketBufferBytesMin = 4 * 1024 * 1024;
+// conformance streams have AUs that are > 512KiB, so boosting this to 2MiB
+// until the decoder handles split AUs on input. We need to be able to fit at
+// least 3 of these in the 8MB vdec memory.
+constexpr uint32_t kInputPerPacketBufferBytesMin = 2 * 1024 * 1024;
 // This is an arbitrary cap for now.
 constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
 
