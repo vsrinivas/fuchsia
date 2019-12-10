@@ -190,3 +190,24 @@ vk_check_image_usage_vs_format_features(VkImageUsageFlags    image_usage,
 #undef CHECK_COMBO
   return true;
 }
+
+void
+vk_submit_one(VkSemaphore          wait_semaphore,
+              VkPipelineStageFlags wait_stages,
+              VkSemaphore          signal_semaphore,
+              VkQueue              command_queue,
+              VkCommandBuffer      command_buffer,
+              VkFence              signal_fence)
+{
+  VkSubmitInfo submit_info = {
+    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .waitSemaphoreCount   = (wait_semaphore != VK_NULL_HANDLE) ? 1 : 0,
+    .pWaitSemaphores      = (wait_semaphore != VK_NULL_HANDLE) ? &wait_semaphore : NULL,
+    .pWaitDstStageMask    = (wait_semaphore != VK_NULL_HANDLE) ? &wait_stages : NULL,
+    .commandBufferCount   = (command_buffer != VK_NULL_HANDLE) ? 1 : 0,
+    .pCommandBuffers      = (command_buffer != VK_NULL_HANDLE) ? &command_buffer : NULL,
+    .signalSemaphoreCount = (signal_semaphore != VK_NULL_HANDLE) ? 1 : 0,
+    .pSignalSemaphores    = (signal_semaphore != VK_NULL_HANDLE) ? &signal_semaphore : NULL,
+  };
+  vk(QueueSubmit(command_queue, 1, &submit_info, signal_fence));
+}

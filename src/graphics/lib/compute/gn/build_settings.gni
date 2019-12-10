@@ -24,3 +24,8 @@ graphics_compute_clang_format_host_tool = "$clang_prefix/clang-format"
 # graphics_compute_gtest_main_target, which is defined differently for the
 # host and Fuchsia builds.
 graphics_compute_gtest_target = "//third_party/googletest:gtest"
+
+# A GN target that provides the GoogleMock library, which is not part of
+# GoogleTest. To be used as a dependency in source sets that include
+# <gmock/gmock.h>.
+graphics_compute_gmock_target = "//third_party/googletest:gmock"

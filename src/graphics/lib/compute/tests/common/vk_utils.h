@@ -126,6 +126,21 @@ extern bool
 vk_check_image_usage_vs_format_features(VkImageUsageFlags    image_usage,
                                         VkFormatFeatureFlags format_features);
 
+// Helper function to perform a single submit on |command_queue|.
+// |wait_semaphore| is either null or a valid semaphore handle to wait for.
+// |wait_stages| is pipeline stage mask, used only if |wait_semaphore| is not null.
+// |signal_semaphore| is either null or a valid semaphore handle to signal.
+// |command_queue| is the queue where the submit happens.
+// |command_buffer| is either null or a valid command buffer handle.
+// |signal_fence| is either null or a fence to signal on completion.
+extern void
+vk_submit_one(VkSemaphore          wait_semaphore,
+              VkPipelineStageFlags wait_stages,
+              VkSemaphore          signal_semaphore,
+              VkQueue              command_queue,
+              VkCommandBuffer      command_buffer,
+              VkFence              signal_fence);
+
 #ifdef __cplusplus
 }
 #endif

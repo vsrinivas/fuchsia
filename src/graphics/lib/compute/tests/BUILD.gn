@@ -36,13 +36,28 @@ source_set("common") {
   public_configs = [ ":common_public_config" ]
 }
 
+source_set("spinel_test_utils") {
+  sources = [
+    "common/spinel/spinel_test_utils.cc",
+    "common/spinel/spinel_test_utils.h",
+  ]
+  public_configs = [ ":common_public_config" ]
+  public_deps = [
+    "${graphics_compute_dir}/spinel:spinel_headers",
+    graphics_compute_gtest_target,
+  ]
+  testonly = true
+}
+
 graphics_compute_unittests("common_unittests") {
   sources = [
     "common/argparse_unittest.cc",
     "common/fps_counter_unittest.cc",
+    "common/spinel/spinel_test_utils_unittest.cc",
   ]
   deps = [
     ":common",
+    ":spinel_test_utils",
   ]
 }
 

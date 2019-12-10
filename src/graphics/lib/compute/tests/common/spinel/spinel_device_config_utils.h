@@ -10,14 +10,14 @@
 #include "tests/common/vk_app_state.h"
 
 #ifdef __cplusplus
-extern "C"
+extern "C" {
 #endif
 
-  //
-  //
-  //
+//
+//
+//
 
-  struct spn_vk_target;
+struct spn_vk_target;
 struct hotsort_vk_target;
 
 // A small structure describing Spinel and hotsort device configuration.

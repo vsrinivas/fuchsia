@@ -81,7 +81,10 @@ template("graphics_compute_unittests") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ graphics_compute_gtest_target ]
+    deps += [
+      graphics_compute_gmock_target,
+      graphics_compute_gtest_target,
+    ]
   }
 }
 

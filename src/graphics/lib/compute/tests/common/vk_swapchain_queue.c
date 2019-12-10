@@ -222,19 +222,13 @@ vk_swapchain_queue_submit_and_present_image_wait_one(vk_swapchain_queue_t * queu
         signal_semaphores,
         image->fence);
 
-  const VkSubmitInfo submitInfo = {
-    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-    .waitSemaphoreCount   = (wait_semaphore != VK_NULL_HANDLE) ? 1 : 0,
-    .pWaitSemaphores      = (wait_semaphore != VK_NULL_HANDLE) ? &wait_semaphore : NULL,
-    .pWaitDstStageMask    = (wait_semaphore != VK_NULL_HANDLE) ? &wait_stages : NULL,
-    .commandBufferCount   = 1,
-    .pCommandBuffers      = &image->command_buffer,
-    .signalSemaphoreCount = 1,
-    .pSignalSemaphores    = &signal_semaphore,
-  };
-
   //printf("SUBMIT(f%u,i%u)!", current_frame, image_index); fflush(stdout);
-  vk(QueueSubmit(queue->command_queue, 1, &submitInfo, image->fence));
+  vk_submit_one(wait_semaphore,
+                wait_stages,
+                signal_semaphore,
+                queue->command_queue,
+                image->command_buffer,
+                image->fence);
 
   PRINT("#%2u: SUBMITTED cmd_buffer=%p\n", image_number, image->command_buffer);
 
