@@ -4,7 +4,6 @@
             {
                 "interface": {
                     "config": {
-                        "enabled": true,
                         "name": "lan",
                         "type": "IF_ROUTED_VLAN"
                     },
@@ -14,8 +13,7 @@
                         "ipv4": {
                             "addresses": [
                                 {
-                                    "address_family": "V4",
-                                    "ip": "192.168.0.1",
+                                    "ip": "192.168.51.1",
                                     "prefix_length": 32
                                 }
                             ]
@@ -26,25 +24,20 @@
             {
                 "interface": {
                     "config": {
-                        "enabled": true,
                         "name": "wan",
-                        "type": "IF_ETHERNET"
+                        "type": "IF_UPLINK"
                     },
+                    "device_id": "00:1f.6",
                     "oper_state": "UP",
                     "subinterfaces": [
                         {
-                            "subinterface": {
-                                "config": {
-                                    "enabled": true,
-                                    "admin_state": "UP"
-                                },
-                                "ipv4": {
-                                    "addresses": [
-                                        {
-                                            "dhcp_client": true
-                                        }
-                                    ]
-                                }
+                            "admin_state": "UP",
+                            "ipv4": {
+                                "addresses": [
+                                    {
+                                        "dhcp_client": true
+                                    }
+                                ]
                             }
                         }
                     ],
@@ -61,10 +54,10 @@
             {
                 "interface": {
                     "config": {
-                        "enabled": true,
                         "name": "eth1",
                         "type": "IF_ETHERNET"
                     },
+                    "device_id": "02:00.0",
                     "oper_state": "UP",
                     "switched_vlan" : {
                         "interface_mode" : "ACCESS",
@@ -83,10 +76,10 @@
             {
                 "interface": {
                     "config": {
-                        "enabled": true,
                         "name": "eth2",
                         "type": "IF_ETHERNET"
                     },
+                    "device_id": "03:00.0",
                     "oper_state": "UP",
                     "switched_vlan": {
                         "interface_mode": "ACCESS",
@@ -105,10 +98,10 @@
             {
                 "interface": {
                     "config": {
-                        "enabled": true,
                         "name": "eth3",
                         "type": "IF_ETHERNET"
                     },
+                    "device_id": "04:00.0",
                     "oper_state": "UP",
                     "switched_vlan": {
                         "interface_mode": "ACCESS",
@@ -127,36 +120,28 @@
             {
                 "interface": {
                     "config": {
-                        "enabled": true,
                         "name": "lo0",
                         "type": "IF_LOOPBACK"
                     },
                     "oper_state": "UP",
                     "subinterfaces": [
                         {
-                            "subinterface": {
-                                "config": {
-                                    "enabled": true,
-                                    "admin_state": "UP"
-                                },
-                                "ipv4": {
-                                    "addresses": [
-                                        {
-                                            "address_family": "V4",
-                                            "ip": "127.0.0.1",
-                                            "prefix_length": 8
-                                        }
-                                    ]
-                                },
-                                "ipv6": {
-                                    "addresses": [
-                                        {
-                                            "address_family": "V6",
-                                            "ip": "::1",
-                                            "prefix_length": 128
-                                        }
-                                    ]
-                                }
+                            "admin_state": "UP",
+                            "ipv4": {
+                                "addresses": [
+                                    {
+                                        "ip": "127.0.0.1",
+                                        "prefix_length": 8
+                                    }
+                                ]
+                            },
+                            "ipv6": {
+                                "addresses": [
+                                    {
+                                        "ip": "::1",
+                                        "prefix_length": 128
+                                    }
+                                ]
                             }
                         }
                     ]
@@ -164,6 +149,9 @@
             }
         ],
         "services": {
+            "ip_forwarding": {
+                "enabled": true
+            },
             "dhcp_server": {
                 "enabled": true,
                 "dhcp_pool": {

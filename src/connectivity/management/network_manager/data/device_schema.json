@@ -3,7 +3,7 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "$id": "https://fuchsia.dev/network_manager",
   "title": "Network Manager Device Schema for configuration data.",
-  "additionalProperties": false,
+
   "definitions": {
     "admin_states": {
       "type": "string",
@@ -12,7 +12,7 @@
         "DOWN",
         "TESTING"
       ],
-      "default": "DOWN"
+      "default": "UP"
     },
     "oper_states": {
       "type": "string",
@@ -24,7 +24,7 @@
         "NOT_PRESENT",
         "LOWER_LAYER_DOWN"
       ],
-      "default": "DOWN"
+      "default": "UP"
     },
     "interface_types": {
       "type": "string",
@@ -35,13 +35,14 @@
         "IF_ROUTED_VLAN",
         "IF_SONET",
         "IF_TUNNEL_GRE4",
-        "IF_TUNNEL_GRE6"
+        "IF_TUNNEL_GRE6",
+        "IF_UPLINK"
       ]
     },
     "dhcp_client": {
       "type": "boolean",
       "title": "Enables a DHCP client on the interface in order to request an address",
-      "default": false
+      "default": true
     },
     "ip": {
       "type": "string",
@@ -56,10 +57,6 @@
       "examples": [
         "32", "128"
       ]
-    },
-    "address_family": {
-      "type": "string",
-      "enum": ["V4", "V6"]
     },
     "ip_address_config": {
       "type": "object",
@@ -80,11 +77,8 @@
             "address": {
               "type": "object",
               "additionalProperties": false,
-              "required": [ "address_family", "ip", "prefix_length" ],
+              "required": [ "ip", "prefix_length" ],
               "properties": {
-                "address_family": {
-                  "$ref": "#/definitions/address_family"
-                },
                 "ip": {
                   "$ref": "#/definitions/ip"
                 },
@@ -104,7 +98,8 @@
       "maximum": 4096,
       "example": [
         101
-      ]
+      ],
+      "default": 0
     },
     "port_speed": {
       "type": "string",
@@ -136,26 +131,19 @@
       "$id": "/properties/device",
       "type": "object",
       "description": "Describes the configuration for a single device.",
-      "additionalProperties": false,
       "properties": {
         "interfaces": {
           "description": "Describes all interfaces on this device.",
           "type": "array",
-          "additionalItems": false,
           "items": {
-            "additionalItems": false,
             "required": [ "interface" ],
             "interface": {
               "type": "object",
-              "additionalProperties": false,
+              "required": [ "device_id" ],
               "properties": {
                 "config": {
-                  "additionalProperties": false,
+                  "type": "object",
                   "properties": {
-                    "enabled": {
-                      "type": "boolean",
-                      "description": "The desired state of this interface."
-                    },
                     "name": {
                       "type": "string",
                       "title": "Configures the name of this interface.",
@@ -168,36 +156,31 @@
                     }
                   }
                 },
+                "device_id": {
+                  "type": "string",
+                  "description": "The topological name of the physical device."
+                },
                 "oper_state": {
                   "$ref": "#/definitions/oper_states"
                 },
                 "subinterfaces": {
                   "type": "array",
-                  "additionalItems": false,
                   "required": [ "subinterface" ],
                   "items": {
                     "subinterface": {
                       "type": "object",
                       "description": "Subinterface describes a Logical Interface (LIF)",
-                      "additionalProperties": false,
                       "properties": {
-                        "config": {
-                          "description": "Describes the configuration of this subinterface.",
-                          "additionalProperties": false,
-                          "properties": {
-                            "enabled": {
-                              "type": "boolean",
-                              "default": false
-                            },
-                            "admin_state": {
-                              "$ref": "#/definitions/admin_states"
-                            }
-                          }
+                        "admin_state": {
+                          "description": "The admininistrative state of this subinterface",
+                          "$ref": "#/definitions/admin_states"
                         },
                         "ipv4": {
+                          "description": "The IPv4 configuration of this subinterface",
                           "$ref": "#/definitions/ip_address_config"
                         },
                         "ipv6": {
+                          "description": "The IPv6 configuration of this subinterface",
                           "$ref": "#/definitions/ip_address_config"
                         }
                       }
@@ -206,7 +189,6 @@
                 },
                 "switched_vlan": {
                   "type": "object",
-                  "additionalProperties": false,
                   "required": [ "interface_mode" ],
                   "properties": {
                     "interface_mode": {
@@ -218,7 +200,6 @@
                     },
                     "trunk_vlans": {
                       "type": "array",
-                      "additionalItems": false,
                       "items": {
                         "$ref": "#/definitions/vlan_id"
                       }
@@ -227,7 +208,6 @@
                 },
                 "ethernet": {
                   "type": "object",
-                  "additionalProperties": false,
                   "properties": {
                     "config": {
                       "properties": {
@@ -267,7 +247,6 @@
                 },
                 "routed_vlan": {
                   "type": "object",
-                  "additionalProperties": false,
                   "required": [ "vlan_id" ],
                   "properties": {
                     "vlan_id": {
@@ -295,6 +274,17 @@
           "description": "Configuration for additional system services",
           "additionalProperties": false,
           "properties": {
+            "ip_forwarding": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Enables IP forwarding",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
             "dhcp_server": {
               "type": "object",
               "additionalProperties": false,

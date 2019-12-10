@@ -162,6 +162,8 @@ pub enum Hal {
 /// Error type for config persistence.
 #[derive(Fail, Debug, PartialEq)]
 pub enum Config {
+    #[fail(display = "No config has been loaded yet")]
+    NoConfigLoaded,
     #[fail(display = "Device config paths have not been set up yet")]
     ConfigPathsNotSet,
     #[fail(display = "The requested config file was not found: {}", path)]
@@ -176,6 +178,12 @@ pub enum Config {
     FailedToLoadDeviceSchema { path: String, error: String },
     #[fail(display = "Failed to validate device config: {}, because: {}", path, error)]
     FailedToValidateConfig { path: String, error: String },
+    #[fail(display = "The requested config section does not exist: {}", msg)]
+    NotFound { msg: String },
+    #[fail(display = "Config is malformed: {}", msg)]
+    Malformed { msg: String },
+    #[fail(display = "Operation not supported: {}", msg)]
+    NotSupported { msg: String },
 }
 
 /// Error type for OIR.
