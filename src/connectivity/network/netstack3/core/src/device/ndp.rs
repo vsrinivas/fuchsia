@@ -244,6 +244,178 @@ const MIN_DELAY_BETWEEN_RAS: Duration = Duration::from_secs(3);
 // parameter, the `NdpContext` impls would conflict (in fact, the `StateContext`
 // and `TimerContext` impls would conflict for similar reasons).
 
+/// An NDP handler for NDP Events.
+///
+/// `NdpHandler<D>` is implemented for any type which implements [`NdpContext<D>`],
+/// and it can also be mocked for use in testing.
+pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
+    /// Cleans up state associated with the device.
+    ///
+    /// The contract is that after `deinitialize` is called, nothing else should be done
+    /// with the state.
+    fn deinitialize(&mut self, device_id: Self::DeviceId);
+
+    /// Updates the NDP Configurations for a `device_id`.
+    ///
+    /// Note, some values may not take effect immediately, and may only take effect the next time
+    /// they are used. These scenarios documented below:
+    ///
+    ///  - Updates to [`NdpConfiguration::dup_addr_detect_transmits`] will only take effect the next
+    ///    time Duplicate Address Detection (DAD) is done. Any DAD processes that have already
+    ///    started will continue using the old value.
+    ///
+    ///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only take effect the next
+    ///    time routers are explicitly solicited. Current router solicitation will continue using
+    ///    the old value.
+    fn set_configurations(&mut self, device_id: Self::DeviceId, configs: NdpConfigurations);
+
+    /// Gets the NDP Configurations for a `device_id`.
+    fn get_configurations(&self, device_id: Self::DeviceId) -> &NdpConfigurations;
+
+    /// Begin the Duplicate Address Detection process.
+    ///
+    /// If the device is configured to not do DAD, then this method will
+    /// immediately assign `tentative_addr` to the device.
+    ///
+    /// # Panics
+    ///
+    /// Panics if DAD is already being performed on this address.
+    fn start_duplicate_address_detection(
+        &mut self,
+        device_id: Self::DeviceId,
+        tentative_addr: Ipv6Addr,
+    );
+
+    /// Cancels the Duplicate Address Detection process.
+    ///
+    /// Note, the address will now be in a tentative state forever unless the
+    /// caller assigns a new address to the device (DAD will restart), explicitly
+    /// restarts DAD, or the device receives a Neighbor Solicitation or Neighbor
+    /// Advertisement message (the address will be found to be a duplicate and
+    /// unassigned from the device).
+    ///
+    /// # Panics
+    ///
+    /// Panics if we are not currently performing DAD for `tentative_addr` on `device_id`.
+    fn cancel_duplicate_address_detection(
+        &mut self,
+        device_id: Self::DeviceId,
+        tentative_addr: Ipv6Addr,
+    );
+
+    /// Start soliciting routers.
+    ///
+    /// Does nothing if a device's MAX_RTR_SOLICITATIONS parameters is `0`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if we attempt to start router solicitation as a router, or if
+    /// the device is already soliciting routers.
+    fn start_soliciting_routers(&mut self, device_id: Self::DeviceId);
+
+    /// Stop soliciting routers.
+    ///
+    /// Does nothing if the device is not soliciting routers.
+    ///
+    /// # Panics
+    ///
+    /// Panics if we attempt to stop router solicitations on a router (this should never happen
+    /// as routers should not be soliciting other routers).
+    fn stop_soliciting_routers(&mut self, device_id: Self::DeviceId);
+
+    /// Handle `device_id` becoming an advertising interface.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `device_id` does not have an assigned (non-tentative) link-local address or if it is
+    /// not configured to be an advertising interface.
+    fn start_advertising_interface(&mut self, device_id: Self::DeviceId);
+
+    /// Handle `device_id` ceasing to be an advertising interface.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `device_id` is not operating as an advertising interface.
+    fn stop_advertising_interface(&mut self, device_id: Self::DeviceId);
+
+    /// Look up the link layer address.
+    ///
+    /// Begins the address resolution process if the link layer address
+    /// for `lookup_addr` is not already known.
+    fn lookup(&mut self, device_id: Self::DeviceId, lookup_addr: Ipv6Addr) -> Option<D::Address>;
+
+    /// Handles a timer firing.
+    fn handle_timer(&mut self, id: NdpTimerId<D, Self::DeviceId>);
+
+    /// Insert a neighbor to the known neighbors table.
+    ///
+    /// This method only gets called when testing to force a neighbor
+    /// so link address lookups completes immediately without doing
+    /// address resolution.
+    #[cfg(test)]
+    fn insert_static_neighbor(&mut self, device_id: Self::DeviceId, net: Ipv6Addr, hw: D::Address);
+}
+
+impl<D: LinkDevice, C: NdpContext<D>> NdpHandler<D> for C
+where
+    D::Address: for<'a> From<&'a MulticastAddr<Ipv6Addr>>,
+{
+    fn deinitialize(&mut self, device_id: Self::DeviceId) {
+        deinitialize(self, device_id)
+    }
+
+    fn set_configurations(&mut self, device_id: Self::DeviceId, configs: NdpConfigurations) {
+        set_ndp_configurations(self, device_id, configs)
+    }
+
+    fn get_configurations(&self, device_id: Self::DeviceId) -> &NdpConfigurations {
+        get_ndp_configurations(self, device_id)
+    }
+
+    fn start_duplicate_address_detection(
+        &mut self,
+        device_id: Self::DeviceId,
+        tentative_addr: Ipv6Addr,
+    ) {
+        start_duplicate_address_detection(self, device_id, tentative_addr)
+    }
+
+    fn cancel_duplicate_address_detection(
+        &mut self,
+        device_id: Self::DeviceId,
+        tentative_addr: Ipv6Addr,
+    ) {
+        cancel_duplicate_address_detection(self, device_id, tentative_addr)
+    }
+
+    fn start_soliciting_routers(&mut self, device_id: Self::DeviceId) {
+        start_soliciting_routers(self, device_id)
+    }
+    fn stop_soliciting_routers(&mut self, device_id: Self::DeviceId) {
+        stop_soliciting_routers(self, device_id)
+    }
+
+    fn start_advertising_interface(&mut self, device_id: Self::DeviceId) {
+        start_advertising_interface(self, device_id)
+    }
+    fn stop_advertising_interface(&mut self, device_id: Self::DeviceId) {
+        stop_advertising_interface(self, device_id)
+    }
+
+    fn lookup(&mut self, device_id: Self::DeviceId, lookup_addr: Ipv6Addr) -> Option<D::Address> {
+        lookup(self, device_id, lookup_addr)
+    }
+
+    fn handle_timer(&mut self, id: NdpTimerId<D, Self::DeviceId>) {
+        handle_timer(self, id)
+    }
+
+    #[cfg(test)]
+    fn insert_static_neighbor(&mut self, device_id: Self::DeviceId, net: Ipv6Addr, hw: D::Address) {
+        insert_neighbor(self, device_id, net, hw)
+    }
+}
+
 /// The execution context for an NDP device.
 pub(crate) trait NdpContext<D: LinkDevice>:
     Sized
@@ -471,11 +643,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
     }
 }
 
-/// Cleans up state associated with the device.
-///
-/// The contract is that after deinitialize is called, nothing else should be done
-/// with the state.
-pub(crate) fn deinitialize<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::DeviceId) {
+fn deinitialize<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::DeviceId) {
     // Remove all timers associated with the device
     ctx.cancel_timers_with(|timer_id| timer_id.get_device_id() == device_id);
     // TODO(rheacock): Send any immediate packets, and potentially flag the state as uninitialized?
@@ -1308,11 +1476,7 @@ impl<D: LinkDevice, DeviceId: Copy> NdpTimerId<D, DeviceId> {
     }
 }
 
-/// Handles a timer firing.
-pub(crate) fn handle_timer<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
-    id: NdpTimerId<D, C::DeviceId>,
-) {
+fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, C::DeviceId>) {
     match id.inner {
         InnerNdpTimerId::LinkAddressResolution { neighbor_addr } => {
             let ndp_state = ctx.get_state_mut_with(id.device_id);
@@ -1411,19 +1575,7 @@ pub(crate) fn handle_timer<D: LinkDevice, C: NdpContext<D>>(
     }
 }
 
-/// Updates the NDP Configurations for a `device_id`.
-///
-/// Note, some values may not take effect immediately, and may only take effect the next time they
-/// are used. These scenarios documented below:
-///
-///  - Updates to [`NdpConfiguration::dup_addr_detect_transmits`] will only take effect the next
-///    time Duplicate Address Detection (DAD) is done. Any DAD processes that have already started
-///    will continue using the old value.
-///
-///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only take effect the next
-///    time routers are explicitly solicited. Current router solicitation will continue using the
-///    old value.
-pub(crate) fn set_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
+fn set_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
     configs: NdpConfigurations,
@@ -1499,19 +1651,14 @@ pub(crate) fn set_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
     }
 }
 
-/// Gets the NDP Configurations for a `device_id`.
-pub(crate) fn get_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
+fn get_ndp_configurations<D: LinkDevice, C: NdpContext<D>>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> &NdpConfigurations {
     &ctx.get_state_with(device_id).configs
 }
 
-/// Look up the link layer address.
-///
-/// Begins the address resolution process if the link layer address
-/// for `lookup_addr` is not already known.
-pub(crate) fn lookup<D: LinkDevice, C: NdpContext<D>>(
+fn lookup<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
     lookup_addr: Ipv6Addr,
@@ -1582,13 +1729,8 @@ where
     }
 }
 
-/// Insert a neighbor to the known neighbors table.
-///
-/// This method only gets called when testing to force a neighbor
-/// so link address lookups completes immediately without doing
-/// address resolution.
 #[cfg(test)]
-pub(crate) fn insert_neighbor<D: LinkDevice, C: NdpContext<D>>(
+fn insert_neighbor<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
     net: Ipv6Addr,
@@ -1760,13 +1902,7 @@ impl<H> Default for NeighborTable<H> {
     }
 }
 
-/// Handle `device_id` becoming an advertising interface.
-///
-/// # Panics
-///
-/// Panics if `device_id` does not have an assigned (non-tentative) link-local address or if it is
-/// not configured to be an advertising interface.
-pub(crate) fn start_advertising_interface<D: LinkDevice, C: NdpContext<D>>(
+fn start_advertising_interface<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
 ) {
@@ -1784,12 +1920,7 @@ pub(crate) fn start_advertising_interface<D: LinkDevice, C: NdpContext<D>>(
     start_periodic_router_advertisements(ctx, device_id);
 }
 
-/// Handle `device_id` ceasing to be an advertising interface.
-///
-/// # Panics
-///
-/// Panics if `device_id` is not operating as an advertising interface.
-pub(crate) fn stop_advertising_interface<D: LinkDevice, C: NdpContext<D>>(
+fn stop_advertising_interface<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
 ) {
@@ -1880,7 +2011,7 @@ fn stop_periodic_router_advertisements<D: LinkDevice, C: NdpContext<D>>(
 ///
 /// Panics if `device_id` is not operating as a router, if it is not configured to send Router
 /// Advertisements, or if it does not have an assigned (non-tentative) link-local address.
-pub(crate) fn schedule_next_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
+fn schedule_next_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
 ) {
@@ -1977,18 +2108,7 @@ fn schedule_next_router_advertisement_instant<D: LinkDevice, C: NdpContext<D>>(
     }
 }
 
-/// Start soliciting routers.
-///
-/// Does nothing if a device's MAX_RTR_SOLICITATIONS parameters is `0`.
-///
-/// # Panics
-///
-/// Panics if we attempt to start router solicitation as a router, or if
-/// the device is already soliciting routers.
-pub(crate) fn start_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-) {
+fn start_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::DeviceId) {
     // MUST NOT be a router.
     assert!(!ctx.is_router(device_id));
 
@@ -2019,18 +2139,7 @@ pub(crate) fn start_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(
     }
 }
 
-/// Stop soliciting routers.
-///
-/// Does nothing if the device is not soliciting routers.
-///
-/// # Panics
-///
-/// Panics if we attempt to stop router solicitations on a router (this should never happen
-/// as routers should not be soliciting other routers).
-pub(crate) fn stop_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-) {
+fn stop_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::DeviceId) {
     trace!("ndp::stop_soliciting_routers: stop soliciting routers for device: {:?}", device_id);
 
     assert!(!ctx.is_router(device_id));
@@ -2124,15 +2233,7 @@ fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
     }
 }
 
-/// Begin the Duplicate Address Detection process.
-///
-/// If the device is configured to not do DAD, then this method will
-/// immediately assign `tentative_addr` to the device.
-///
-/// # Panics
-///
-/// Panics if DAD is already being performed on this address.
-pub(crate) fn start_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
+fn start_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
     tentative_addr: Ipv6Addr,
@@ -2163,18 +2264,7 @@ pub(crate) fn start_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>
     }
 }
 
-/// Cancels the Duplicate Address Detection process.
-///
-/// Note, the address will now be in a tentative state forever unless the
-/// caller assigns a new address to the device (DAD will restart), explicitly
-/// restarts DAD, or the device receives a Neighbor Solicitation or Neighbor
-/// Advertisement message (the address will be found to be a duplicate and
-/// unassigned from the device).
-///
-/// # Panics
-///
-/// Panics if we are not currently performing DAD for `tentative_addr` on `device_id`.
-pub(crate) fn cancel_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
+fn cancel_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: C::DeviceId,
     tentative_addr: Ipv6Addr,

@@ -31,7 +31,7 @@ use crate::device::ethernet::{
     EthernetDeviceState, EthernetDeviceStateBuilder, EthernetLinkDevice, EthernetTimerId,
 };
 use crate::device::link::LinkDevice;
-use crate::device::ndp::NdpPacketHandler;
+use crate::device::ndp::{NdpHandler, NdpPacketHandler};
 use crate::ip::igmp::IgmpInterface;
 use crate::ip::mld::MldInterface;
 use crate::ip::socket::IpSockUpdate;
@@ -60,6 +60,7 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
 /// implementation.
 trait IpDeviceContext<D: LinkDevice, TimerId, State>:
     DeviceIdContext<D>
+    + NdpHandler<D>
     + CounterContext
     + RngContext
     + StateContext<
@@ -800,13 +801,23 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
             .get_should_send_advertisements()
         {
             match device.protocol {
-                DeviceProtocol::Ethernet => ndp::start_advertising_interface(ctx, device.id.into()),
+                DeviceProtocol::Ethernet => {
+                    <Context<_> as NdpHandler<EthernetLinkDevice>>::start_advertising_interface(
+                        ctx,
+                        device.id.into(),
+                    )
+                }
             }
         }
     } else {
         // RFC 4861 section 6.3.7, it implies only a host sends router solicitation messages.
         match device.protocol {
-            DeviceProtocol::Ethernet => ndp::start_soliciting_routers(ctx, device.id.into()),
+            DeviceProtocol::Ethernet => {
+                <Context<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(
+                    ctx,
+                    device.id.into(),
+                )
+            }
         }
     }
 
@@ -1259,7 +1270,12 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
             //               - start periodic router advertisements (if configured to do so)
 
             match device.protocol {
-                DeviceProtocol::Ethernet => ndp::stop_soliciting_routers(ctx, device.id.into()),
+                DeviceProtocol::Ethernet => {
+                    <Context<_> as NdpHandler<EthernetLinkDevice>>::stop_soliciting_routers(
+                        ctx,
+                        device.id.into(),
+                    )
+                }
             }
         }
 
@@ -1285,7 +1301,10 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
             {
                 match device.protocol {
                     DeviceProtocol::Ethernet => {
-                        ndp::start_advertising_interface(ctx, device.id.into())
+                        <Context<_> as NdpHandler<EthernetLinkDevice>>::start_advertising_interface(
+                            ctx,
+                            device.id.into(),
+                        )
                     }
                 }
             }
@@ -1307,7 +1326,10 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
             {
                 match device.protocol {
                     DeviceProtocol::Ethernet => {
-                        ndp::stop_advertising_interface(ctx, device.id.into())
+                        <Context<_> as NdpHandler<EthernetLinkDevice>>::stop_advertising_interface(
+                            ctx,
+                            device.id.into(),
+                        )
                     }
                 }
             }
@@ -1331,7 +1353,12 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
         if ip_routing {
             // On transition from router -> host, start soliciting router information.
             match device.protocol {
-                DeviceProtocol::Ethernet => ndp::start_soliciting_routers(ctx, device.id.into()),
+                DeviceProtocol::Ethernet => {
+                    <Context<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(
+                        ctx,
+                        device.id.into(),
+                    )
+                }
             }
         }
     }
@@ -1362,6 +1389,26 @@ pub(crate) fn is_router_device<D: EventDispatcher, I: Ip>(
         && crate::device::is_routing_enabled::<_, I>(ctx, device))
 }
 
+/// Insert an entry into this device's NDP table.
+///
+/// This method only gets called when testing to force set a neighbor's
+/// link address so that lookups succeed immediately, without doing
+/// address resolution.
+// TODO(rheacock): remove when this is called from non-test code
+#[cfg(test)]
+pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    addr: Ipv6Addr,
+    mac: Mac,
+) {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            self::ethernet::insert_ndp_table_entry(ctx, device.id.into(), addr, mac)
+        }
+    }
+}
+
 /// Updates the NDP Configurations for a `device`.
 ///
 /// Note, some values may not take effect immediately, and may only take effect the next time they
@@ -1382,7 +1429,13 @@ pub fn set_ndp_configurations<D: EventDispatcher>(
     configs: ndp::NdpConfigurations,
 ) {
     match device.protocol {
-        DeviceProtocol::Ethernet => ndp::set_ndp_configurations(ctx, device.id.into(), configs),
+        DeviceProtocol::Ethernet => {
+            <Context<_> as NdpHandler<EthernetLinkDevice>>::set_configurations(
+                ctx,
+                device.id.into(),
+                configs,
+            )
+        }
     }
 }
 
@@ -1392,7 +1445,12 @@ pub fn get_ndp_configurations<D: EventDispatcher>(
     device: DeviceId,
 ) -> &ndp::NdpConfigurations {
     match device.protocol {
-        DeviceProtocol::Ethernet => ndp::get_ndp_configurations(ctx, device.id.into()),
+        DeviceProtocol::Ethernet => {
+            <Context<_> as NdpHandler<EthernetLinkDevice>>::get_configurations(
+                ctx,
+                device.id.into(),
+            )
+        }
     }
 }
 

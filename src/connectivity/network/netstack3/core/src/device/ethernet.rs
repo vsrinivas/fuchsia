@@ -25,7 +25,7 @@ use crate::device::arp::{
     self, ArpContext, ArpFrameMetadata, ArpHardwareType, ArpState, ArpTimerId,
 };
 use crate::device::link::LinkDevice;
-use crate::device::ndp::{self, NdpContext, NdpState, NdpTimerId};
+use crate::device::ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId};
 #[cfg(test)]
 use crate::device::EthernetDeviceId;
 use crate::device::{
@@ -286,7 +286,7 @@ pub(super) fn handle_timer<C: EthernetIpDeviceContext>(
 ) {
     match id {
         EthernetTimerId::Arp(id) => arp::handle_timer::<EthernetLinkDevice, _, _>(ctx, id),
-        EthernetTimerId::Ndp(id) => ndp::handle_timer::<EthernetLinkDevice, _>(ctx, id),
+        EthernetTimerId::Ndp(id) => <C as NdpHandler<EthernetLinkDevice>>::handle_timer(ctx, id),
     }
 }
 
@@ -339,7 +339,7 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
     ));
 
     // Perform Duplicate Address Detection on the link-local address.
-    ndp::start_duplicate_address_detection(ctx, device_id, addr);
+    ctx.start_duplicate_address_detection(device_id, addr);
 }
 
 /// Send an IP packet in an Ethernet frame.
@@ -374,7 +374,7 @@ pub(super) fn send_ip_frame<
             }
             #[ipv6addr]
             {
-                ndp::lookup(ctx, device_id, local_addr).ok_or(IpAddr::V6(local_addr))
+                ctx.lookup(device_id, local_addr).ok_or(IpAddr::V6(local_addr))
             }
         }
     };
@@ -686,7 +686,7 @@ fn add_ip_addr_subnet_inner<C: EthernetIpDeviceContext, A: IpAddress>(
         ));
 
         // Do Duplicate Address Detection on `addr`.
-        ndp::start_duplicate_address_detection(ctx, device_id, addr);
+        ctx.start_duplicate_address_detection(device_id, addr);
     }
 
     Ok(())
@@ -762,7 +762,7 @@ fn del_ip_addr_inner<C: EthernetIpDeviceContext, A: IpAddress>(
                 // tentative, then we know that we are performing DAD on it.
                 // Given this, we know `cancel_duplicate_address_detection` will
                 // not panic.
-                ndp::cancel_duplicate_address_detection(ctx, device_id, *addr);
+                ctx.cancel_duplicate_address_detection(device_id, *addr);
             }
         } else {
             return Err(AddressError::NotFound);
@@ -1077,13 +1077,13 @@ pub(crate) fn insert_static_arp_table_entry<D: EventDispatcher>(
 /// address resolution.
 // TODO(rheacock): remove when this is called from non-test code
 #[cfg(test)]
-pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn insert_ndp_table_entry<C: EthernetIpDeviceContext>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     addr: Ipv6Addr,
     mac: Mac,
 ) {
-    ndp::insert_neighbor(ctx, device_id, addr, mac)
+    <C as NdpHandler<_>>::insert_static_neighbor(ctx, device_id, addr, mac)
 }
 
 /// Deinitializes and cleans up state for ethernet devices
@@ -1092,7 +1092,7 @@ pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
 /// nothing else should be done with the state.
 pub(super) fn deinitialize<C: EthernetIpDeviceContext>(ctx: &mut C, device_id: C::DeviceId) {
     crate::device::arp::deinitialize(ctx, device_id);
-    crate::device::ndp::deinitialize(ctx, device_id);
+    <C as NdpHandler<_>>::deinitialize(ctx, device_id);
 }
 
 impl<
