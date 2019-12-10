@@ -158,7 +158,9 @@ fx build zircon/tools
 
 If you're doing extensive edit-compile-test cycles on `fidlc`, building with no optimizations can
 make a significant difference in the build speed. To optimize the build, change the `opt_level`
-setting in `zircon/public/gn/config/levels.gni`.
+setting in `zircon/public/gn/config/levels.gni`. But be careful: the kernel is not regularly
+tested with `opt_level` below 2, and it does not support -1 at all (this setting can cause kernel
+panics from stack overflows in the kernel).
 
 To avoid accidentally committing this change, run:
 
@@ -254,6 +256,9 @@ fx qemu -kN
 $ runtests -t fidl-test
 $ runtests -t fidl-simple-test
 ```
+
+The `-k` flag enables KVM. It is not required, but the emulator is *much* slower
+without it. The `-N` flag enables networking.
 
 You might get lucky with
 ```
