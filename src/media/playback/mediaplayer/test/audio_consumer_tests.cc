@@ -54,18 +54,17 @@ class AudioConsumerTests : public sys::testing::TestWithEnvironment {
     environment_ = CreateNewEnclosingEnvironment("mediaplayer_tests", std::move(services),
                                                  {.inherit_parent_services = true});
 
+    fuchsia::media::SessionAudioConsumerFactoryPtr session_audio_consumer_factory;
     // Instantiate the audio consumer under test.
-    environment_->ConnectToService(session_audio_consumer_factory_.NewRequest());
+    environment_->ConnectToService(session_audio_consumer_factory.NewRequest());
 
     WaitForEnclosingEnvToStart(environment_.get());
 
-    session_audio_consumer_factory_.set_error_handler([this](zx_status_t status) {
-      FX_LOGS(ERROR) << "Audio consumer factory connection closed, status " << status << ".";
-      audio_consumer_connection_closed_ = true;
-      QuitLoop();
+    session_audio_consumer_factory.set_error_handler([](zx_status_t status) {
+      FX_LOGS(WARNING) << "Audio consumer factory connection closed, status " << status << ".";
     });
 
-    session_audio_consumer_factory_->CreateAudioConsumer(0, audio_consumer_.NewRequest());
+    session_audio_consumer_factory->CreateAudioConsumer(0, audio_consumer_.NewRequest());
 
     audio_consumer_.set_error_handler([this](zx_status_t status) {
       FX_LOGS(ERROR) << "Audio consumer connection closed, status " << status << ".";
@@ -76,15 +75,24 @@ class AudioConsumerTests : public sys::testing::TestWithEnvironment {
 
   void TearDown() override { EXPECT_FALSE(audio_consumer_connection_closed_); }
 
-  fuchsia::media::SessionAudioConsumerFactoryPtr session_audio_consumer_factory_;
   fuchsia::media::AudioConsumerPtr audio_consumer_;
-  bool audio_consumer_connection_closed_ = false;
+  bool audio_consumer_connection_closed_;
   bool got_status_;
 
   FakeAudio fake_audio_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   SinkFeeder sink_feeder_;
 };
+
+// Test that factory channel is closed and we still have a connection to the created AudioConsumer
+TEST_F(AudioConsumerTests, FactoryClosed) {
+  audio_consumer_.events().WatchStatus(
+      [this](fuchsia::media::AudioConsumerStatus status) { got_status_ = true; });
+
+  RunLoopUntil([this]() { return got_status_; });
+
+  EXPECT_FALSE(audio_consumer_connection_closed_);
+}
 
 // Test packet flow of AudioConsumer interface by using a synthetic environment
 // to push a packet through and checking that it is processed.
@@ -96,7 +104,7 @@ TEST_F(AudioConsumerTests, CreateStreamSink) {
   stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   bool sink_connection_closed = false;
 
-  got_status_ = true;
+  got_status_ = false;
 
   auto compression = fuchsia::media::Compression::New();
   compression->type = fuchsia::media::AUDIO_ENCODING_AACLATM;

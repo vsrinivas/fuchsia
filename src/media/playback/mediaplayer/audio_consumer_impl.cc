@@ -57,9 +57,20 @@ SessionAudioConsumerFactoryImpl::SessionAudioConsumerFactoryImpl(
 
   binding_ = std::make_unique<BindingType>(this, std::move(request));
 
-  binding_->set_error_handler([this](zx_status_t status) { quit_callback_(); });
+  binding_->set_error_handler([this](zx_status_t status) {
+    // don't quit when factory channel closes unless no audio consumers are active
+    if (audio_consumer_bindings_.size() == 0 && quit_callback_) {
+      quit_callback_();
+      quit_callback_ = nullptr;
+    }
+  });
 
-  audio_consumer_bindings_.set_empty_set_handler([this]() { quit_callback_(); });
+  audio_consumer_bindings_.set_empty_set_handler([this]() {
+    if (quit_callback_) {
+      quit_callback_();
+      quit_callback_ = nullptr;
+    }
+  });
 }
 
 void SessionAudioConsumerFactoryImpl::CreateAudioConsumer(
@@ -83,7 +94,8 @@ std::unique_ptr<AudioConsumerImpl> AudioConsumerImpl::Create(
 AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id, sys::ComponentContext* component_context)
     : dispatcher_(async_get_default_dispatcher()),
       component_context_(component_context),
-      core_(dispatcher_) {
+      core_(dispatcher_),
+      status_dirty_(true) {
   FX_DCHECK(component_context_);
 
   ThreadPriority::SetToHigh();
