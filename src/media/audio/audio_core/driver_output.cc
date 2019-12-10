@@ -86,8 +86,7 @@ void DriverOutput::OnWakeup() {
   state_ = State::FetchingFormats;
 }
 
-std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job,
-                                                                zx::time uptime) {
+std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(MixJob* job, zx::time uptime) {
   TRACE_DURATION("audio", "DriverOutput::StartMixJob");
   if (state_ != State::Started) {
     FX_LOGS(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
