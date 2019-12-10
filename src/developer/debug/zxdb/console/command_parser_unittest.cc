@@ -288,6 +288,16 @@ TEST(CommandParser, Completions) {
   comp = GetCommandCompletions("", FillCommandContextCallback());
   EXPECT_TRUE(CompletionContains(comp, "run"));
   EXPECT_TRUE(CompletionContains(comp, "quit"));
+
+  // Verb with no argument prefix
+  comp = GetCommandCompletions("set ", FillCommandContextCallback());
+  EXPECT_TRUE(CompletionContains(comp, "set pause-on-attach"));
+  EXPECT_TRUE(CompletionContains(comp, "set language"));
+
+  // Verb with argument prefix
+  comp = GetCommandCompletions("set lan", FillCommandContextCallback());
+  EXPECT_TRUE(CompletionContains(comp, "set language"));
+  EXPECT_EQ(1u, comp.size());
 }
 
 }  // namespace zxdb

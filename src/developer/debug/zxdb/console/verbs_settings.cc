@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/client/execution_scope.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/console/command.h"
@@ -611,6 +612,40 @@ bool IsSettingNameChar(const std::string& input, size_t i) {
   return false;
 }
 
+void CompleteSet(const Command& cmd, const std::string& prefix,
+                 std::vector<std::string>* completions) {
+  // Find the end of the setting name. The argument is a whole expression as one string, so if we're
+  // past the setting name we're past the part we know how to complete.
+  size_t cur;
+  for (cur = 0; cur < prefix.size() && IsSettingNameChar(prefix, cur); ++cur)
+    ;
+
+  if (cur == prefix.size()) {
+    for (const auto& [name, _] : System::GetSchema()->settings()) {
+      if (!name.compare(0, prefix.size(), prefix)) {
+        completions->push_back(name);
+      }
+    }
+
+    for (const auto& [name, _] : Target::GetSchema()->settings()) {
+      if (!name.compare(0, prefix.size(), prefix)) {
+        completions->push_back(name);
+      }
+    }
+
+    for (const auto& [name, _] : Thread::GetSchema()->settings()) {
+      if (!name.compare(0, prefix.size(), prefix)) {
+        completions->push_back(name);
+      }
+    }
+
+    // Jobs don't store their schema yet since it's empty. We'll have to update this code if they
+    // ever do.
+  }
+
+  // TODO: We need to refactor parsing a bit if we want to complete options.
+}
+
 }  // namespace
 
 // Grammar:
@@ -715,7 +750,7 @@ void AppendSettingsVerbs(std::map<Verb, VerbRecord>* verbs) {
   VerbRecord get(&DoGet, {"get"}, kGetShortHelp, kGetHelp, CommandGroup::kGeneral);
   (*verbs)[Verb::kGet] = std::move(get);
 
-  VerbRecord set(&DoSet, {"set"}, kSetShortHelp, kSetHelp, CommandGroup::kGeneral);
+  VerbRecord set(&DoSet, &CompleteSet, {"set"}, kSetShortHelp, kSetHelp, CommandGroup::kGeneral);
   set.param_type = VerbRecord::kOneParam;
   (*verbs)[Verb::kSet] = std::move(set);
 }
