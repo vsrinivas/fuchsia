@@ -38,7 +38,6 @@
 #include "src/ledger/lib/socket/strings.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fsl/handles/object_info.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
