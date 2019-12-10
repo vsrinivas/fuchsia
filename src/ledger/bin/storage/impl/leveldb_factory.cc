@@ -23,7 +23,6 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 // LevelDbFactory tries to keep an empty, initialized instance of LevelDb always
