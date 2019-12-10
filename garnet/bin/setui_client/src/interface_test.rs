@@ -4,6 +4,7 @@
 
 use {
     failure::{Error, ResultExt},
+    fidl_fuchsia_intl::{LocaleId, TemperatureUnit, TimeZoneId},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -165,8 +166,10 @@ async fn main() -> Result<(), Error> {
     validate_dnd(Some(false), Some(true)).await?;
 
     println!("intl service tests");
-    println!("  client calls set temperature unit");
-    validate_temperature_unit().await?;
+    println!("  client calls intl set");
+    validate_intl_set().await?;
+    println!("  client calls intl watch");
+    validate_intl_watch().await?;
 
     println!("privacy service tests");
     println!("  client calls privacy watch");
@@ -255,25 +258,66 @@ async fn validate_system_override() -> Result<(), Error> {
     Ok(())
 }
 
-async fn validate_temperature_unit() -> Result<(), Error> {
+async fn validate_intl_set() -> Result<(), Error> {
+    const TEST_TIME_ZONE: &str = "GMT";
+    const TEST_TEMPERATURE_UNIT: TemperatureUnit = TemperatureUnit::Celsius;
+    const TEST_LOCALE: &str = "blah";
+
     let env = create_service!(Services::Intl,
         IntlRequest::Set { settings, responder } => {
-            if let Some(temperature_unit) = settings.temperature_unit {
-            assert_eq!(
-                temperature_unit,
-                fidl_fuchsia_intl::TemperatureUnit::Celsius
-            );
+            assert_eq!(Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }), settings.time_zone_id);
+            assert_eq!(Some(TEST_TEMPERATURE_UNIT), settings.temperature_unit);
+            assert_eq!(Some(vec![LocaleId { id: TEST_LOCALE.into() }]), settings.locales);
+
             responder.send(&mut Ok(()))?;
-            } else {
-                panic!("Wrong call to set");
-            }
     });
 
     let intl_service =
         env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
 
-    intl::command(intl_service, None, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius), vec![])
-        .await?;
+    intl::command(
+        intl_service,
+        Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
+        Some(TEST_TEMPERATURE_UNIT),
+        vec![LocaleId { id: TEST_LOCALE.into() }],
+        false,
+    )
+    .await?;
+
+    Ok(())
+}
+
+async fn validate_intl_watch() -> Result<(), Error> {
+    const TEST_TIME_ZONE: &str = "GMT";
+    const TEST_TEMPERATURE_UNIT: TemperatureUnit = TemperatureUnit::Celsius;
+    const TEST_LOCALE: &str = "blah";
+
+    let env = create_service!(Services::Intl,
+        IntlRequest::Watch { responder } => {
+            responder.send(&mut Ok(IntlSettings {
+                locales: Some(vec![LocaleId { id: TEST_LOCALE.into() }]),
+                temperature_unit: Some(TEST_TEMPERATURE_UNIT),
+                time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
+            }))?;
+        }
+    );
+
+    let intl_service =
+        env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
+
+    let output = intl::command(intl_service, None, None, vec![], false).await?;
+
+    assert_eq!(
+        output,
+        format!(
+            "{:#?}",
+            IntlSettings {
+                locales: Some(vec![LocaleId { id: TEST_LOCALE.into() }]),
+                temperature_unit: Some(TEST_TEMPERATURE_UNIT),
+                time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
+            }
+        )
+    );
 
     Ok(())
 }
@@ -424,9 +468,6 @@ async fn validate_accessibility_set() -> Result<(), Error> {
             }
 
             responder.send(&mut Ok(()))?;
-        },
-        AccessibilityRequest::Watch { responder } => {
-            responder.send(&mut Ok(AccessibilitySettings::empty()))?;
         }
     );
 
@@ -443,9 +484,7 @@ async fn validate_accessibility_set() -> Result<(), Error> {
 
 async fn validate_accessibility_watch() -> Result<(), Error> {
     let env = create_service!(
-        Services::Accessibility, AccessibilityRequest::Set { settings: _, responder } => {
-            responder.send(&mut Ok(()))?;
-        },
+        Services::Accessibility,
         AccessibilityRequest::Watch { responder } => {
             responder.send(&mut Ok(AccessibilitySettings::empty()))?;
         }

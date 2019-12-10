@@ -38,12 +38,14 @@ pub enum SettingClient {
         #[structopt(short = "r", long = "remove_users")]
         remove_users: bool,
     },
+
     // Retrieves a setting value
     #[structopt(name = "get")]
     Get {
         #[structopt(short = "t", long = "type")]
         setting_type: String,
     },
+
     // Operations that use the new interfaces.
     #[structopt(name = "system")]
     System {
@@ -67,7 +69,6 @@ pub enum SettingClient {
     #[structopt(name = "device")]
     Device { build_tag: Option<String> },
 
-    // Operations that use the new interfaces.
     #[structopt(name = "display")]
     Display {
         #[structopt(short = "b", long = "brightness")]
@@ -80,7 +81,6 @@ pub enum SettingClient {
         light_sensor: bool,
     },
 
-    // Operations that use the new interfaces.
     #[structopt(name = "do_not_disturb")]
     DoNotDisturb {
         #[structopt(short = "u", long = "user_dnd")]
@@ -90,21 +90,22 @@ pub enum SettingClient {
         night_mode_dnd: Option<bool>,
     },
 
-    // Operations that use the new interfaces.
     #[structopt(name = "intl")]
     Intl {
-        #[structopt(short = "z", long = "time_zone", parse(from_str = "str_to_time_zone"))]
+        #[structopt(short = "z", long, parse(from_str = "str_to_time_zone"))]
         time_zone: Option<fidl_fuchsia_intl::TimeZoneId>,
 
-        #[structopt(
-            short = "u",
-            long = "temperature_unit",
-            parse(try_from_str = "str_to_temperature_unit")
-        )]
+        #[structopt(short = "u", long, parse(try_from_str = "str_to_temperature_unit"))]
+        // Valid options are Celsius and Fahrenheit, or just "c" and "f".
         temperature_unit: Option<fidl_fuchsia_intl::TemperatureUnit>,
 
-        #[structopt(short = "l", long = "locales", parse(from_str = "str_to_locale"))]
+        #[structopt(short, long, parse(from_str = "str_to_locale"))]
+        /// List of locales, separated by spaces.
         locales: Vec<fidl_fuchsia_intl::LocaleId>,
+
+        #[structopt(long)]
+        /// If set, this flag will set locales as an empty list. Overrides the locales arguments.
+        clear_locales: bool,
     },
 
     #[structopt(name = "privacy")]
@@ -273,10 +274,12 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = do_not_disturb::command(dnd_service, user_dnd, night_mode_dnd).await?;
             println!("DoNotDisturb: {}", output);
         }
-        SettingClient::Intl { time_zone, temperature_unit, locales } => {
+        SettingClient::Intl { time_zone, temperature_unit, locales, clear_locales } => {
             let intl_service = connect_to_service::<fidl_fuchsia_settings::IntlMarker>()
                 .context("Failed to connect to intl service")?;
-            let output = intl::command(intl_service, time_zone, temperature_unit, locales).await?;
+            let output =
+                intl::command(intl_service, time_zone, temperature_unit, locales, clear_locales)
+                    .await?;
             println!("Intl: {}", output);
         }
         SettingClient::Accessibility(accessibility_options) => {
@@ -418,11 +421,9 @@ fn str_to_edge_style(src: &str) -> Result<fidl_fuchsia_settings::EdgeStyle, &str
 }
 
 fn str_to_temperature_unit(src: &str) -> Result<fidl_fuchsia_intl::TemperatureUnit, &str> {
-    match src {
-        "C" | "c" | "celsius" | "Celsius" => Ok(fidl_fuchsia_intl::TemperatureUnit::Celsius),
-        "F" | "f" | "fahrenheit" | "Fahrenheit" => {
-            Ok(fidl_fuchsia_intl::TemperatureUnit::Fahrenheit)
-        }
+    match src.to_lowercase().as_str() {
+        "c" | "celsius" => Ok(fidl_fuchsia_intl::TemperatureUnit::Celsius),
+        "f" | "fahrenheit" => Ok(fidl_fuchsia_intl::TemperatureUnit::Fahrenheit),
         _ => Err("Couldn't parse temperature"),
     }
 }
