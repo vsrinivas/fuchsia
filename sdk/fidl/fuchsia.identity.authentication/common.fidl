@@ -4,6 +4,8 @@
 
 library fuchsia.identity.authentication;
 
+using zx;
+
 /// The maxium size of the prekey material in bytes.
 const uint32 PREKEY_MATERIAL_MAX_SIZE = 32;
 
@@ -89,7 +91,6 @@ using PrekeyMaterial = bytes:PREKEY_MATERIAL_MAX_SIZE;
 /// makes about the presence and/or engagement of an account owner, and thus
 /// affecting the entity's authentication state. The effect of an event depends
 /// on the properties of the authentication mechanism which created it.
-
 /// A positive authentication event may contribute to an increase in
 /// authentication state.
 [MaxHandles = "0"]
@@ -126,7 +127,7 @@ struct AttemptedEvent {
     /// Enrollment data which should should replace the old enrollment data upon
     /// successful authentication. This field is only populated if a
     /// change in enrollment data is required.
-    EnrollmentData updated_enrollment_data;
+    EnrollmentData? updated_enrollment_data;
 
     /// Pre-key material produced during the authentication attempt.
     PrekeyMaterial prekey_material;

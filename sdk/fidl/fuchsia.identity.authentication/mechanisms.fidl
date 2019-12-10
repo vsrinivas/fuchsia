@@ -28,7 +28,7 @@ protocol StorageUnlockMechanism {
     ///                    enrollment with said id must also be updated if the
     ///                    attempt is successful.
     Authenticate(
-        vec<Enrollment>:MAX_ENROLLMENTS enrollments,
+        vector<Enrollment>:MAX_ENROLLMENTS enrollments,
         fuchsia.auth.AuthenticationUIContext ui_context)
         -> (AttemptedEvent attempt) error Error;
 
