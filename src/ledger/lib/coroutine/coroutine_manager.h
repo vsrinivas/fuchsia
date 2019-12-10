@@ -16,6 +16,7 @@
 
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/callback/destruction_sentinel.h"
+#include "third_party/abseil-cpp/absl/utility/utility.h"
 
 namespace coroutine {
 // CoroutineManager manages the lifetime of coroutines.
@@ -97,7 +98,7 @@ class CoroutineManager {
       // handlers_ is safe to access.
       handlers_.erase(iter);
       if (!disabled_) {
-        std::apply(callback, TupleAdapter<decltype(result)>::Build(std::move(result)));
+        absl::apply(callback, TupleAdapter<decltype(result)>::Build(std::move(result)));
       }
     });
   }
@@ -171,7 +172,7 @@ class CoroutineManager {
 
  private:
   // Tuple Adapter allows to convert a single return value into a 1 element
-  // tuple to pass to std::apply.
+  // tuple to pass to absl::apply.
   template <typename T>
   class TupleAdapter {
    public:

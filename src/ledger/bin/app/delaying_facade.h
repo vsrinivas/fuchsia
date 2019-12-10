@@ -10,8 +10,8 @@
 #include <tuple>
 #include <vector>
 
-#include "src/lib/fxl/functional/apply.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/utility/utility.h"
 
 namespace ledger {
 
@@ -50,7 +50,7 @@ class DelayingFacade {
     }
     delayed_calls_.push_back(
         [function_pointer, tuple = std::make_tuple(std::forward<Args>(args)...)](A* a) mutable {
-          fxl::Apply([&](auto... args) { (a->*function_pointer)(std::forward<Args>(args)...); },
+          absl::apply([&](auto... args) { (a->*function_pointer)(std::forward<Args>(args)...); },
                      std::move(tuple));
         });
   }
