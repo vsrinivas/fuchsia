@@ -17,6 +17,8 @@
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
+static uint32_t g_gtest_iteration = 0;
+
 class SampledHasher {
  public:
   explicit SampledHasher(size_t image_size) : sample_indices_(kSampleBytes) {
@@ -56,17 +58,27 @@ class StreamProviderTest : public testing::TestWithParam<StreamProvider::Source>
  protected:
   StreamProviderTest()
       : loop_(&kAsyncLoopConfigAttachToCurrentThread), trace_provider_(loop_.dispatcher()) {}
+  ~StreamProviderTest() override {
+    if (GetParam() == StreamProvider::Source::MANAGER) {
+      ++g_gtest_iteration;
+    }
+  }
 
   virtual void SetUp() override {
+    if (g_gtest_iteration > 0) {
+      constexpr char kRepeatErrorMessage[] =
+          "This test relies on run_test_component tearing down the parent environment between "
+          "runs, which does not occur when using gtest_repeat. Run the test multiple times "
+          "manually instead.";
+      FX_LOGS(ERROR) << kRepeatErrorMessage;
+      std::cerr << kRepeatErrorMessage << std::endl;
+      std::cerr.flush();
+      std::cout.flush();
+      exit(EXIT_FAILURE);
+    }
     auto source = GetParam();
     provider_ = StreamProvider::Create(source);
-    if (provider_ == nullptr) {
-      // If CameraManager has ever been launched, Component Framework v1 requires that it never be
-      // destroyed. As a result, if it has ever connected to the controller, it won't disconnect
-      // until reboot. This means that other providers may be in use by the manager. To address
-      // this, only sources that do connect are tested for correctness.
-      GTEST_SKIP() << "This source may be in use by a parent component.";
-    }
+    ASSERT_NE(provider_, nullptr);
     RunLoopUntilIdle();
   }
 
