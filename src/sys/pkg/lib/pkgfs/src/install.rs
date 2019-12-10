@@ -39,6 +39,9 @@ pub enum BlobCreateError {
     #[fail(display = "the blob already exists and is readable")]
     AlreadyExists,
 
+    #[fail(display = "the blob is in the process of being written")]
+    ConcurrentWrite,
+
     #[fail(display = "while creating the blob: {}", _0)]
     Io(#[cause] iou::OpenError),
 }
@@ -81,6 +84,11 @@ impl Client {
                 iou::OpenError::OpenError(Status::ALREADY_EXISTS) => {
                     // Lost a race writing to blobfs, and the blob already exists.
                     BlobCreateError::AlreadyExists
+                }
+                iou::OpenError::OpenError(Status::ACCESS_DENIED) => {
+                    // Lost a race with another process writing to blobfs, and the blob is in the
+                    // process of being written.
+                    BlobCreateError::ConcurrentWrite
                 }
                 other => BlobCreateError::Io(other),
             })?;

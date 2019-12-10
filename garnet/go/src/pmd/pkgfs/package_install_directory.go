@@ -191,9 +191,16 @@ func (f *installFile) open() error {
 	// TODO(raggi): propagate flags instead to allow for resumption and so on
 	f.blob, err = f.fs.blobfs.OpenFile(f.name, os.O_WRONLY|os.O_CREATE, 0777)
 
-	// permission errors from blobfs are returned when the blob already exists and
-	// is no longer writable
-	if os.IsPermission(err) || os.IsExist(err) {
+	// When opening a blob for write, blobfs returns a permission error if
+	// the blob is in the process of being written or already exists. If we
+	// can confirm the blob is readable, report to the caller that it
+	// already exists. Otherwise, bubble the error to the caller without
+	// fulfilling the need.
+	if os.IsPermission(err) {
+		if !f.fs.blobfs.HasBlob(f.name) {
+			return goErrToFSErr(err)
+		}
+
 		// "Fulfill" any needs against the blob that was attempted to be written.
 		f.fs.index.Fulfill(f.name)
 

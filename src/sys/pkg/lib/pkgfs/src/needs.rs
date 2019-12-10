@@ -117,7 +117,7 @@ async fn enumerate_needs_dir(
 mod tests {
     use {
         super::*,
-        crate::install::{BlobKind, BlobWriteSuccess},
+        crate::install::{BlobCreateError, BlobKind, BlobWriteSuccess},
         fuchsia_pkg_testing::PackageBuilder,
         maplit::hashset,
         matches::assert_matches,
@@ -273,6 +273,80 @@ mod tests {
                 pkg_contents["data/needed"],
             }
         );
+
+        pkgfs.stop().await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn racing_blob_writes_do_not_fulfill_partial_blobs() {
+        let pkgfs = PkgfsRamdisk::start().unwrap();
+        let root = pkgfs.root_dir_proxy().unwrap();
+        let install = crate::install::Client::open_from_pkgfs_root(&root).unwrap();
+        let versions = crate::versions::Client::open_from_pkgfs_root(&root).unwrap();
+        let client = Client::open_from_pkgfs_root(&root).unwrap();
+
+        const REQUIRED_BLOB_CONTENTS: &[u8] = "don't fulfill me early please".as_bytes();
+
+        let pkg = PackageBuilder::new("partially-cached")
+            .add_resource_at("data/required", REQUIRED_BLOB_CONTENTS)
+            .build()
+            .await
+            .unwrap();
+        let pkg_contents = pkg.meta_contents().unwrap().contents().to_owned();
+
+        // write the package meta far and verify the needed blob is needed.
+        install.write_meta_far(&pkg).await;
+        let mut needs = client.list_needs(pkg.meta_far_merkle_root().to_owned()).boxed();
+        assert_matches!(
+            needs.next().await,
+            Some(Ok(needs)) if needs == hashset! {
+                pkg_contents["data/required"],
+            }
+        );
+
+        // start writing the content blob, but don't finish yet.
+        let (blob, closer) =
+            install.create_blob(pkg_contents["data/required"], BlobKind::Data).await.unwrap();
+        let blob = blob.truncate(REQUIRED_BLOB_CONTENTS.len() as u64).await.unwrap();
+        let blob = match blob.write("don't ".as_bytes()).await.unwrap() {
+            BlobWriteSuccess::MoreToWrite(blob) => blob,
+            BlobWriteSuccess::Done => unreachable!(),
+        };
+
+        // verify the blob is still needed.
+        assert_matches!(
+            needs.next().await,
+            Some(Ok(needs)) if needs == hashset! {
+                pkg_contents["data/required"],
+            }
+        );
+
+        // trying to start writing the blob again fails.
+        assert_matches!(
+            install.create_blob(pkg_contents["data/required"], BlobKind::Data).await,
+            Err(BlobCreateError::ConcurrentWrite)
+        );
+
+        // no really, the blob is still needed.
+        assert_matches!(
+            needs.next().await,
+            Some(Ok(needs)) if needs == hashset! {
+                pkg_contents["data/required"],
+            }
+        );
+
+        // finish writing the blob.
+        assert_matches!(
+            blob.write("fulfill me early please".as_bytes()).await,
+            Ok(BlobWriteSuccess::Done)
+        );
+        closer.close().await;
+
+        // verify there are no more needs and the package is readable.
+        assert_matches!(needs.next().await, None);
+        let pkg_dir =
+            versions.open_package(pkg.meta_far_merkle_root().to_owned(), None).await.unwrap();
+        pkg.verify_contents(&pkg_dir).await.unwrap();
 
         pkgfs.stop().await.unwrap();
     }

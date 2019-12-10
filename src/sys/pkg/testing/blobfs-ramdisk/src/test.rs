@@ -16,6 +16,9 @@ use {
 static BLOB_MERKLE: &str = "e5892a9b652ede2e19460a9103fd9cb3417f782a8d29f6c93ec0c31170a94af3";
 static BLOB_CONTENTS: &[u8] = b"Hello world!\n";
 
+static EMPTY_BLOB_MERKLE: &str = "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b";
+static EMPTY_BLOB_CONTENTS: &[u8] = b"";
+
 fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, Error> {
     Ok(d.map(|i| i.map(|entry| entry.file_name().to_string_lossy().into()))
         .collect::<Result<Vec<_>, _>>()?)
@@ -231,6 +234,42 @@ async fn test_open_partial_write_close_create() -> Result<(), Error> {
     Status::ok(blob.close().await?)?;
 
     create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
+
+    blobfs_server.stop().await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_create_present_blob_fails() -> Result<(), Error> {
+    let blobfs_server = BlobfsRamdisk::start()?;
+    let root_dir = blobfs_server.root_dir_proxy()?;
+
+    create_blob(&root_dir, BLOB_MERKLE, BLOB_CONTENTS).await?;
+
+    let res = open_blob(
+        &root_dir,
+        BLOB_MERKLE,
+        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+    )
+    .await;
+    assert_matches!(res, Err(zx::Status::ACCESS_DENIED));
+
+    blobfs_server.stop().await
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_create_present_empty_blob_fails() -> Result<(), Error> {
+    let blobfs_server = BlobfsRamdisk::start()?;
+    let root_dir = blobfs_server.root_dir_proxy()?;
+
+    create_blob(&root_dir, EMPTY_BLOB_MERKLE, EMPTY_BLOB_CONTENTS).await?;
+
+    let res = open_blob(
+        &root_dir,
+        EMPTY_BLOB_MERKLE,
+        fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+    )
+    .await;
+    assert_matches!(res, Err(zx::Status::ACCESS_DENIED));
 
     blobfs_server.stop().await
 }
