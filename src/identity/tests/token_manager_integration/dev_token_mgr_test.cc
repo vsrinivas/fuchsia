@@ -189,7 +189,7 @@ TEST_F(DevTokenManagerAppTest, GetIdToken) {
   RegisterUser(dev_app_config_);
   bool call_complete = false;
   ASSERT_TRUE(user_profile_id_.has_value());
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), nullptr,
                          [&](Status status, fidl::StringPtr id_token) {
                            EXPECT_EQ(Status::OK, status);
                            ASSERT_TRUE(id_token.has_value());
@@ -204,7 +204,7 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
   bool last_call_complete = false;
 
   ASSERT_TRUE(user_profile_id_.has_value());
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), nullptr,
                          [&](Status status, fidl::StringPtr id_token) {
                            EXPECT_EQ(Status::OK, status);
                            EXPECT_NE(nullptr, id_token);
@@ -221,7 +221,7 @@ TEST_F(DevTokenManagerAppTest, EraseAllTokens) {
                               [&](Status status) { EXPECT_EQ(Status::OK, status); });
 
   token_mgr_->GetIdToken(
-      dev_app_config_, user_profile_id_.value(), "",
+      dev_app_config_, user_profile_id_.value(), nullptr,
       [&](Status status, fidl::StringPtr id_token) { EXPECT_EQ(Status::USER_NOT_FOUND, status); });
 
   scopes.clear();
@@ -242,13 +242,13 @@ TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {
 
   bool last_call_complete = false;
   ASSERT_TRUE(user_profile_id_.has_value());
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), nullptr,
                          [&](Status status, fidl::StringPtr token) {
                            EXPECT_EQ(Status::OK, status);
                            id_token = std::move(token);
                          });
 
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), nullptr,
                          [&](Status status, fidl::StringPtr token) {
                            EXPECT_EQ(Status::OK, status);
                            ASSERT_TRUE(id_token.has_value());
@@ -261,7 +261,7 @@ TEST_F(DevTokenManagerAppTest, GetIdTokenFromCache) {
   fidl::StringPtr original_user_profile_id = user_profile_id_;
   RegisterUser(dev_app_config_);
   EXPECT_NE(user_profile_id_, original_user_profile_id);
-  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), "",
+  token_mgr_->GetIdToken(dev_app_config_, user_profile_id_.value(), nullptr,
                          [&](Status status, fidl::StringPtr token) {
                            EXPECT_EQ(Status::OK, status);
                            ASSERT_TRUE(id_token.has_value());

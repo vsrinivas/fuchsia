@@ -165,14 +165,10 @@ where
     async fn get_app_access_token(
         &self,
         credential: String,
-        mut client_id: Option<String>,
+        client_id: Option<String>,
         scopes: Vec<String>,
     ) -> AuthProviderResult<AuthToken> {
-        // TODO(fxb/37188): Disallow use of Some(empty string)
-        if client_id.as_ref().map(String::is_empty) == Some(true) {
-            client_id.take();
-        }
-        if credential.is_empty() {
+        if client_id.as_ref().map(String::is_empty) == Some(true) || credential.is_empty() {
             return Err(AuthProviderError::new(AuthProviderStatus::BadRequest));
         }
 
@@ -193,16 +189,9 @@ where
     async fn get_app_id_token(
         &self,
         credential: String,
-        mut audience: Option<String>,
+        audience: Option<String>,
     ) -> AuthProviderResult<AuthToken> {
-        // TODO(fxb/37188): This allows clients to pass Some(empty string) instead
-        // of None to use the default client.  Once existing clients that do this
-        // are changed, this should be explicitly disallowed by a sanity check.
-        if audience.as_ref().map(String::is_empty) == Some(true) {
-            audience.take();
-        }
-
-        if credential.is_empty() {
+        if audience.as_ref().map(String::is_empty) == Some(true) || credential.is_empty() {
             return Err(AuthProviderError::new(AuthProviderStatus::BadRequest));
         }
 
@@ -736,23 +725,6 @@ mod tests {
             })
         );
 
-        // Accept empty string client_id as if it means default - see fxb/37188
-        let http_result = "{\"access_token\": \"test-access-token\", \"expires_in\": 3600}";
-        let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::OK);
-        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
-        let (result_status, result_token) = auth_provider
-            .get_app_access_token("credential", Some(""), &mut vec![].into_iter())
-            .await?;
-        assert_eq!(result_status, AuthProviderStatus::Ok);
-        assert_eq!(
-            result_token.unwrap(),
-            Box::new(AuthToken {
-                token_type: TokenType::AccessToken,
-                token: "test-access-token".to_string(),
-                expires_in: 3600,
-            })
-        );
-
         Ok(())
     }
 
@@ -762,6 +734,14 @@ mod tests {
         let mock_http = TestHttpClient::with_error(ApiError::Internal);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
         let result = auth_provider.get_app_access_token("", None, &mut vec![].into_iter()).await?;
+        assert_eq!(result.0, AuthProviderStatus::BadRequest);
+
+        // Empty client_id string
+        let mock_http = TestHttpClient::with_error(ApiError::Internal);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+        let result = auth_provider
+            .get_app_access_token("credential", Some(""), &mut vec![].into_iter())
+            .await?;
         assert_eq!(result.0, AuthProviderStatus::BadRequest);
 
         // Error response
@@ -800,22 +780,6 @@ mod tests {
             })
         );
 
-        // Accept empty string audience as if it is default audience.  See fxb/37188
-        let http_result = "{\"id_token\": \"test-id-token\", \"expires_in\": 3600}";
-        let mock_http = TestHttpClient::with_response(Some(http_result), StatusCode::OK);
-        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
-        let (status, result_token) = auth_provider.get_app_id_token("cred", Some("")).await?;
-
-        assert_eq!(status, AuthProviderStatus::Ok);
-        assert_eq!(
-            result_token.unwrap(),
-            Box::new(AuthToken {
-                token_type: TokenType::IdToken,
-                token: "test-id-token".to_string(),
-                expires_in: 3600,
-            })
-        );
-
         Ok(())
     }
 
@@ -825,6 +789,12 @@ mod tests {
         let mock_http = TestHttpClient::with_error(ApiError::Internal);
         let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
         let result = auth_provider.get_app_id_token("", None).await?;
+        assert_eq!(result.0, AuthProviderStatus::BadRequest);
+
+        // Empty audience string
+        let mock_http = TestHttpClient::with_error(ApiError::Internal);
+        let auth_provider = get_auth_provider_proxy(None, Some(mock_http));
+        let result = auth_provider.get_app_id_token("cred", Some("")).await?;
         assert_eq!(result.0, AuthProviderStatus::BadRequest);
 
         // Error response
