@@ -155,6 +155,7 @@ impl Control {
             BrightnessControlRequest::SetBrightnessTable { table, control_handle: _ } => {
                 self.set_brightness_table(table).await;
             }
+            _ => fx_log_err!("received {:?}", request),
         }
     }
 

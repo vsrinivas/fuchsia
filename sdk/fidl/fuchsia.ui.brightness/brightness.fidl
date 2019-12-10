@@ -32,11 +32,20 @@ protocol Control {
     /// https://fuchsia.dev/fuchsia-src/development/api/fidl.md#delay-responses-using-hanging-gets
     WatchCurrentBrightness() -> (brightness value);
 
+    /// Sets the brightness offset.
+    /// This will change the built-in brightness curve by the factor of the offset.
+    /// The offset is in the range of -1.0 to 1.0.
+    SetAutoBrightnessOffset(float32 offset);
+
+    /// Gets the current auto brightness offset.
+    /// This call implements the Hanging Get protocol as detailed in
+    /// https://fuchsia.dev/fuchsia-src/development/api/fidl.md#delay-responses-using-hanging-gets
+    WatchAutoBrightnessOffset() -> (float32 offset);
+
     /// Sets the brightness curve as a set of points.
     /// This will override the built-in brightness curve.
     SetBrightnessTable(BrightnessTable table);
 };
-
 
 /// A tuple representing a point on the auto-brightness curve
 struct BrightnessPoint {
