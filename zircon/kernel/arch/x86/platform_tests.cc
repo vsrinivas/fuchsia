@@ -675,6 +675,20 @@ static bool test_hwp_init() {
   END_TEST;
 }
 
+static bool test_spectre_v2_mitigations() {
+  BEGIN_TEST;
+  bool sp_match;
+
+  // Execute x86_ras_fill and make sure %rsp is unchanged.
+  __asm__ __volatile__("mov %%rsp, %%r11\n"
+                       "call x86_ras_fill\n"
+                       "cmp %%rsp, %%r11\n"
+                       "setz %0" :  "=r"(sp_match) :: "memory", "%r11");
+  EXPECT_EQ(sp_match, true);
+
+  END_TEST;
+}
+
 }  // anonymous namespace
 
 UNITTEST_START_TESTCASE(x64_platform_tests)
@@ -692,4 +706,5 @@ UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode
 UNITTEST("test pkg power limit change", test_x64_power_limits)
 UNITTEST("test amd_platform_init", test_amd_platform_init)
 UNITTEST("test HWP init", test_hwp_init)
+UNITTEST("test spectre v2 mitigation building blocks", test_spectre_v2_mitigations)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "")

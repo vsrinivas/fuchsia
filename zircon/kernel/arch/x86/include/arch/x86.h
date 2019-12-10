@@ -417,6 +417,7 @@ void x86_mwait(uint32_t hints);
 void x86_idle(void);
 
 void mds_buff_overwrite(void);
+void x86_ras_fill(void);
 
 __END_CDECLS
 

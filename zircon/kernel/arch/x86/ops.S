@@ -127,3 +127,44 @@ FUNCTION(x86_monitor)
     monitor
     ret
 END_FUNCTION(x86_monitor)
+
+// void x86_ras_fill(void)
+// Fill/overwrite the Return Address Stack with known-good entries, to prevent:
+// 1. A RAS underflow forcing a fallback to an Indirect Branch Predictor
+//
+//    If the RAS is 'empty', the next RET-without-a-call may fall back to the
+//    (attackable) BTB/indirect prediction structures on Intel Skylake (&
+//    late-stepping Broadwells) CPUs.
+//
+//    Filling the RAS prevents that attack.
+//
+// 2. If the RAS is filled with hostile addresses, the next RET-without-a-call
+//    will speculatively vector to the hostile code, as in the ret2spec_sa
+//    Safeside example.
+//
+//    Overwriting the RAS prevents those attacks.
+FUNCTION(x86_ras_fill)
+        movq    (%rsp), %rdx
+
+        // Execute a loop of 32 calls; each call creates a return address stack
+        // (RAS/RSB) entry pointing at the predicted return address, |trap|.
+        // Any speculative returns will execute code starting at |trap|, which
+        // is an infinite loop of PAUSE-LFENCE (a "speculation trap").
+        //
+        // All known-bad x86 CPUs have a RAS with 32 entries or less. (AMD
+        // Mitigation V2-3, Intel Table 6: RSB stuffing).
+        movl    $32, %ecx
+0:      call    1f
+trap:   pause
+        lfence
+        jmp     trap
+1:      subl    $1, %ecx
+        jnz     0b
+
+        // Return to the caller without consuming a RAS entry.
+        // LFENCE ensures that the return (jmp *r64) itself cannot be attacked,
+        // see AMD Mitigation V2-2.
+        addq    $256 + 8, %rsp
+        lfence
+        jmp     *%rdx
+END_FUNCTION(x86_ras_fill)
