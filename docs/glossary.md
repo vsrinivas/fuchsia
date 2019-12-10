@@ -19,6 +19,8 @@ technical terms used in Fuchsia.
 
 #### **Agent** {#agent}
 
+This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
+
 An agent is a role a [component](#component) can play to execute in the
 background in the context of a [session](#session). An agent's life cycle is not
 tied to any [story](#story), is a singleton per session, and provides services
@@ -500,6 +502,9 @@ userspace, system calls -- features that Zircon added.
 
 #### **Module** {#module}
 
+This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
+
+
 A module is a role a [component](#Component) can play to participate in a
 [story](#Story). Every component can be be used as a module, but typically a
 module is asked to show UI. Additionally, a module can have a `module` metadata
@@ -632,6 +637,8 @@ Service capability is a [components v2](#components-v2) concept.
 
 #### **Session** {#session}
 
+This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
+
 An interactive session with one or more users. Has a
 [session shell](#session-shell), which manages the UI for the session, and zero
 or more [stories](#story). A device might have multiple sessions, for example if
@@ -639,6 +646,8 @@ users can interact with the device remotely or if the device has multiple
 terminals.
 
 #### **Session Shell** {#session-shell}
+
+This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
 
 The replaceable set of software functionality that works in conjunction with
 devices to create an environment in which people can interact with mods, agents
@@ -674,11 +683,15 @@ Storage capability is a [components v2](#components-v2) concept.
 
 #### **Story** {#story}
 
+This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
+
 A user-facing logical container encapsulating human activity, satisfied by one
 or more related modules. Stories allow users to organize activities in ways they
 find natural, without developers having to imagine all those ways ahead of time.
 
 #### **Story Shell** {#story-shell}
+
+This is a [Modular](/docs/concepts/modular/overview.md) concept that is being deprecated.
 
 The system responsible for the visual presentation of a story. Includes the
 presenter component, plus structure and state information read from each story.
