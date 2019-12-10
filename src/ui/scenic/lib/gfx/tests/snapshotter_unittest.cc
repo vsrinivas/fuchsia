@@ -119,7 +119,8 @@ class DummyProtectedImage : public Image {
     if (use_protected_memory) {
       auto image_info = image_->info();
       image_info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
-      image_ = escher::Image::WrapVkImage(resource_manager, image_info, image_->vk());
+      image_ = escher::Image::WrapVkImage(resource_manager, image_info, image_->vk(),
+                                          vk::ImageLayout::eUndefined);
     }
   }
 

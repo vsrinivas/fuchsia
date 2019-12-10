@@ -704,6 +704,19 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
     subpasses_.push_back(subpass_info);
   }
 
+  // Set |color_final_layouts_| and |depth_stencil_final_layout_| for later
+  // update of image attachment layouts in CommandQueue::BeginRenderPass.
+  for (uint32_t attachment = 0; attachment < info.num_color_attachments; ++attachment) {
+    FXL_DCHECK(attachments[attachment].finalLayout != vk::ImageLayout::eUndefined);
+    color_final_layouts_[attachment] = attachments[attachment].finalLayout;
+  }
+  if (info.depth_stencil_attachment) {
+    auto idx_depth_stencil_attachment = info.num_color_attachments;
+    FXL_DCHECK(attachments[idx_depth_stencil_attachment].finalLayout !=
+               vk::ImageLayout::eUndefined);
+    depth_stencil_final_layout_ = attachments[idx_depth_stencil_attachment].finalLayout;
+  }
+
   // Finally!  Build the render pass!!
   vk::RenderPassCreateInfo render_pass_create_info;
   render_pass_create_info.subpassCount = num_info_subpasses;

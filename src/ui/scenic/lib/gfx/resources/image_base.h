@@ -20,10 +20,11 @@ class ImageBase : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Updates the Escher image to the latest image. No-op if the image is not
-  // dirty. To get the latest image, this must be called before
-  // GetEscherImage().
-  virtual void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) = 0;
+  // Updates the Escher image to the latest image. No-op if there is no new
+  // created device image or the image is not dirty. To get the latest image,
+  // this must be called before GetEscherImage().
+  virtual void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
+                                 escher::ImageLayoutUpdater* layout_uploader) = 0;
 
   // Returns the image that should currently be presented. Can be null.
   virtual const escher::ImagePtr& GetEscherImage() = 0;

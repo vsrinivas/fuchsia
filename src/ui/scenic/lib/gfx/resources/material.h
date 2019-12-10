@@ -40,7 +40,8 @@ class Material : public Resource {
   void Accept(class ResourceVisitor* visitor) override;
 
   // Called at presentation time to allow Image(Pipes) to update current image.
-  void UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader);
+  void UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader,
+                            escher::ImageLayoutUpdater* layout_updater);
 
  private:
   escher::MaterialPtr escher_material_;

@@ -328,7 +328,8 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
 
     // escher::NaiveImage::AdoptVkImage() binds the memory to the image.
     buffer.escher_image = escher::impl::NaiveImage::AdoptVkImage(
-        environment->recycler, image_info, image_result.value, buffer.device_memory);
+        environment->recycler, image_info, image_result.value, buffer.device_memory,
+        create_info.initialLayout);
 
     if (!buffer.escher_image) {
       FXL_LOG(ERROR) << "Creating escher::EscherImage failed.";

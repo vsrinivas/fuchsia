@@ -63,7 +63,7 @@ uint32_t GetImageMemoryBits(vk::Device device) {
   // TODO(SCN-1369): Use API to coordinate this with scenic.
   info.usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
                vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
-  vk::Image image = escher::image_utils::CreateVkImage(device, info);
+  vk::Image image = escher::image_utils::CreateVkImage(device, info, vk::ImageLayout::eUndefined);
   vk::MemoryRequirements reqs = device.getImageMemoryRequirements(image);
   device.destroyImage(image);
   cached_device = device;

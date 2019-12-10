@@ -34,7 +34,9 @@ class Image : public ImageBase {
                       const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
                       ErrorReporter* error_reporter);
 
-  void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) override;
+  void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
+                         escher::ImageLayoutUpdater* layout_uploader) override;
+
   const escher::ImagePtr& GetEscherImage() override;
   bool use_protected_memory() override { return image_->use_protected_memory(); }
 

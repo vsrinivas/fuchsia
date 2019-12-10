@@ -174,8 +174,8 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
       escher_info.memory_flags |= vk::MemoryPropertyFlagBits::eProtected;
       next_image_is_protected_ = false;
     }
-    escher::ImagePtr escher_image =
-        escher::Image::WrapVkImage(fake_resource_manager_, escher_info, vk::Image());
+    escher::ImagePtr escher_image = escher::Image::WrapVkImage(
+        fake_resource_manager_, escher_info, vk::Image(), vk::ImageLayout::eUndefined);
     FXL_CHECK(escher_image);
     auto image = fxl::AdoptRef(new FakeImage(session, image_id, escher_image));
     fake_images_.push_back(image);

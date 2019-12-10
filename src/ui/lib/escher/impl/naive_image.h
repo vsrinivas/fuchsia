@@ -15,7 +15,7 @@ class NaiveImage : public Image {
   // Constructor. Claims ownership of the vk::Image, and binds it to the
   // provided GpuMemPtr.
   static ImagePtr AdoptVkImage(ResourceManager* image_owner, ImageInfo info, vk::Image image,
-                               GpuMemPtr mem);
+                               GpuMemPtr mem, vk::ImageLayout initial_layout);
 
   // Destroys image_ and releases the reference to mem_.
   ~NaiveImage() override;
@@ -27,7 +27,8 @@ class NaiveImage : public Image {
   // which should not be destroyed when this Image is destroyed (e.g. when
   // working with images associated with a vk::SwapchainKHR); this is done by
   // passing nullptr as the |mem| argument.
-  NaiveImage(ResourceManager* image_owner, ImageInfo info, vk::Image image, GpuMemPtr mem);
+  NaiveImage(ResourceManager* image_owner, ImageInfo info, vk::Image image, GpuMemPtr mem,
+             vk::ImageLayout initial_layout);
 
   const GpuMemPtr mem_;
 };

@@ -15,6 +15,7 @@
 #include "src/ui/lib/escher/scene/model.h"
 #include "src/ui/lib/escher/scene/stage.h"
 #include "src/ui/lib/escher/vk/image.h"
+#include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer_visitor.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
@@ -247,6 +248,7 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
   }
 
   auto gpu_uploader = std::make_shared<escher::BatchGpuUploader>(escher_, frame->frame_number());
+  auto layout_updater = std::make_unique<escher::ImageLayoutUpdater>(escher_);
 
   paper_renderer_->BeginFrame(
       frame, gpu_uploader, paper_scene,
@@ -256,13 +258,13 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
 
   // TODO(SCN-1256): scene-visitation should generate cameras, collect
   // lights, etc.
-
   // Using resources allocated with protected memory on non-protected CommandBuffers is not allowed.
+
   // In order to avoid breaking access rules, we should replace them with non-protected materials
   // when using a non-protected |frame|.
   const bool hide_protected_memory = !frame->use_protected_memory();
   EngineRendererVisitor visitor(
-      paper_renderer_.get(), gpu_uploader.get(), hide_protected_memory,
+      paper_renderer_.get(), gpu_uploader.get(), layout_updater.get(), hide_protected_memory,
       hide_protected_memory ? GetReplacementMaterial(gpu_uploader.get()) : nullptr);
   visitor.Visit(camera->scene().get());
 
@@ -271,13 +273,24 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
 
   paper_renderer_->FinalizeFrame();
 
-  auto upload_semaphore = escher::SemaphorePtr();
-  if (gpu_uploader->HasContentToUpload()) {
-    upload_semaphore = escher::Semaphore::New(escher_->vk_device());
-    gpu_uploader->AddSignalSemaphore(upload_semaphore);
+  escher::SemaphorePtr escher_image_updater_semaphore = escher::SemaphorePtr();
+  if (gpu_uploader->NeedsCommandBuffer() || layout_updater->NeedsCommandBuffer()) {
+    auto updater_frame =
+        escher_->NewFrame("EngineRenderer uploads and image layout updates", frame->frame_number(),
+                          /* enable_gpu_logging */ false, escher::CommandBuffer::Type::kTransfer,
+                          /* use_protected_memory */ false);
+    escher_image_updater_semaphore = escher::Semaphore::New(escher_->vk_device());
+
+    // Note that only host images (except for directly-mapped images) will be
+    // uploaded to GPU by BatchGpuUploader; and only device images (and
+    // directly-mapped host images) will be initialized by ImageLayoutUpdater;
+    // so we can submit all the commands into one single command buffer without
+    // causing any problem.
+    gpu_uploader->GenerateCommands(updater_frame->cmds());
+    layout_updater->GenerateCommands(updater_frame->cmds());
+    updater_frame->EndFrame(escher_image_updater_semaphore, []() {});
   }
-  gpu_uploader->Submit();
-  paper_renderer_->EndFrame(std::move(upload_semaphore));
+  paper_renderer_->EndFrame(std::move(escher_image_updater_semaphore));
 }
 
 escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width, uint32_t height,

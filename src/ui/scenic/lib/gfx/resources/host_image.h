@@ -46,6 +46,10 @@ class HostImage : public Image {
 
   void Accept(class ResourceVisitor* visitor) override;
 
+  // |ImageBase::UpdateEscherImage()|
+  void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
+                         escher::ImageLayoutUpdater* layout_updater) override;
+
   bool IsDirectlyMapped() { return is_directly_mapped_; }
 
  protected:

@@ -30,7 +30,8 @@ VK_TEST_F(NaiveImageTest, AdoptVkImageInsufficientMemory) {
       .usage = vk::ImageUsageFlagBits::eSampled,
       .memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal,
   };
-  vk::Image vk_image = image_utils::CreateVkImage(escher->vk_device(), large_image_info);
+  vk::Image vk_image = image_utils::CreateVkImage(escher->vk_device(), large_image_info,
+                                                  vk::ImageLayout::eUndefined);
 
   // Then we manually set the memory requirements to a small size so that it is
   // unlikely that |vk_image| can use the allocated memory.
@@ -42,7 +43,8 @@ VK_TEST_F(NaiveImageTest, AdoptVkImageInsufficientMemory) {
 
   // The size of allocated memory should be larger than the requirement of
   // |vk_image|.
-  auto naive_image = impl::NaiveImage::AdoptVkImage(recycler, large_image_info, vk_image, memory);
+  auto naive_image = impl::NaiveImage::AdoptVkImage(recycler, large_image_info, vk_image, memory,
+                                                    vk::ImageLayout::eUndefined);
   EXPECT_GT(image_required_mem_size, memory->size());
 
   // AdoptVkImage() should fail and return nullptr instead.

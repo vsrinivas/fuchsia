@@ -29,7 +29,8 @@ class BackgroundView : public TestView, private fuchsia::ui::scenic::SessionList
   // |TestView|
   void set_present_callback(Session::PresentCallback present_callback) override;
 
-  void SetHostImage(zx::vmo vmo, uint64_t size, fuchsia::images::ImageInfo info);
+  void SetImage(zx::vmo vmo, uint64_t size, fuchsia::images::ImageInfo info,
+                fuchsia::images::MemoryType memory_type);
 
   void SetBackgroundColor(Color color);
 

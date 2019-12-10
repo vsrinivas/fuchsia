@@ -398,9 +398,10 @@ ImagePipeUpdateResults ImagePipe2::Update(escher::ReleaseFenceSignaller* release
   return results;
 }
 
-void ImagePipe2::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) {
+void ImagePipe2::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
+                                   escher::ImageLayoutUpdater* layout_updater) {
   if (current_image_) {
-    current_image_->UpdateEscherImage(gpu_uploader);
+    current_image_->UpdateEscherImage(gpu_uploader, layout_updater);
   }
 }
 

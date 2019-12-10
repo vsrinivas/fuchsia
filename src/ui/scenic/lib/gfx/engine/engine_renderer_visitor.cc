@@ -29,10 +29,12 @@ namespace gfx {
 
 EngineRendererVisitor::EngineRendererVisitor(escher::PaperRenderer* renderer,
                                              escher::BatchGpuUploader* gpu_uploader,
+                                             escher::ImageLayoutUpdater* layout_updater,
                                              bool hide_protected_memory,
                                              escher::MaterialPtr replacement_material)
     : renderer_(renderer),
       gpu_uploader_(gpu_uploader),
+      layout_updater_(layout_updater),
       hide_protected_memory_(hide_protected_memory),
       replacement_material_(replacement_material) {}
 
@@ -186,7 +188,9 @@ void EngineRendererVisitor::Visit(RoundedRectangleShape* r) { FXL_CHECK(false); 
 
 void EngineRendererVisitor::Visit(MeshShape* r) { FXL_CHECK(false); }
 
-void EngineRendererVisitor::Visit(Material* r) { r->UpdateEscherMaterial(gpu_uploader_); }
+void EngineRendererVisitor::Visit(Material* r) {
+  r->UpdateEscherMaterial(gpu_uploader_, layout_updater_);
+}
 
 void EngineRendererVisitor::Visit(Camera* r) { FXL_CHECK(false); }
 

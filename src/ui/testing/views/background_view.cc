@@ -31,8 +31,9 @@ void BackgroundView::SetBackgroundColor(Color color) {
   background_material_.SetColor(color.r, color.g, color.b, color.a);
 }
 
-void BackgroundView::SetHostImage(zx::vmo vmo, uint64_t size, fuchsia::images::ImageInfo info) {
-  Memory memory(&session_, std::move(vmo), size, fuchsia::images::MemoryType::HOST_MEMORY);
+void BackgroundView::SetImage(zx::vmo vmo, uint64_t size, fuchsia::images::ImageInfo info,
+                              fuchsia::images::MemoryType memory_type) {
+  Memory memory(&session_, std::move(vmo), size, memory_type);
   Image image(&session_, memory.id(), 0, info);
   background_material_.SetTexture(image);
 }

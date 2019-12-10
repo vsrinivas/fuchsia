@@ -9,6 +9,7 @@
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer_visitor.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe2.h"
@@ -28,10 +29,13 @@ class ImagePipeRenderTest : public VkSessionHandlerTest {
   template <typename T>
   void Visit(T* t) {
     auto gpu_uploader = escher::BatchGpuUploader(escher()->GetWeakPtr(), 0);
+    auto image_layout_updater = escher::ImageLayoutUpdater(escher()->GetWeakPtr());
     EngineRendererVisitor visitor(/* paper_renderer */ nullptr, &gpu_uploader,
+                                  &image_layout_updater,
                                   /* hide_protected_memory */ false,
                                   /* replacement_material */ escher::MaterialPtr());
     visitor.Visit(t);
+    image_layout_updater.Submit();
     gpu_uploader.Submit();
   }
 };

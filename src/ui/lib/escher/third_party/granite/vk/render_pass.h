@@ -26,11 +26,11 @@
 #ifndef SRC_UI_LIB_ESCHER_THIRD_PARTY_GRANITE_VK_RENDER_PASS_H_
 #define SRC_UI_LIB_ESCHER_THIRD_PARTY_GRANITE_VK_RENDER_PASS_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
+
+#include <vulkan/vulkan.hpp>
 
 // TODO(ES-83): maybe move to .cc file, along with definitions of SubpassHas*().
 #include "src/lib/fxl/logging.h"
@@ -84,6 +84,15 @@ class RenderPass : public Resource {
 
   vk::RenderPass vk() const { return render_pass_; }
 
+  vk::ImageLayout GetColorAttachmentFinalLayout(size_t index) const {
+    FXL_DCHECK(index < num_color_attachments_);
+    return color_final_layouts_[index];
+  }
+
+  vk::ImageLayout GetDepthStencilAttachmentFinalLayout() const {
+    return depth_stencil_final_layout_;
+  }
+
   vk::SampleCountFlagBits SubpassSamples(uint32_t subpass) const;
 
   uint32_t GetColorAttachmentCountForSubpass(uint32_t subpass) const;
@@ -101,8 +110,13 @@ class RenderPass : public Resource {
  private:
   vk::RenderPass render_pass_;
   uint32_t num_color_attachments_ = 0;
+
   vk::Format color_formats_[VulkanLimits::kNumColorAttachments];
   vk::Format depth_stencil_format_;
+
+  vk::ImageLayout color_final_layouts_[VulkanLimits::kNumColorAttachments];
+  vk::ImageLayout depth_stencil_final_layout_;
+
   std::vector<SubpassInfo> subpasses_;
 };
 

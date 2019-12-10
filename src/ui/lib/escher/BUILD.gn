@@ -480,6 +480,8 @@ template("escher_library") {
       "vk/gpu_mem.h",
       "vk/image.cc",
       "vk/image.h",
+      "vk/image_layout_updater.cc",
+      "vk/image_layout_updater.h",
       "vk/image_view.cc",
       "vk/image_view.h",
       "vk/impl/descriptor_set_allocator.cc",

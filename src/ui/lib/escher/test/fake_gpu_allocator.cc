@@ -38,7 +38,9 @@ class FakeBuffer : public escher::Buffer {
 class FakeImage : public escher::Image {
  public:
   FakeImage(escher::ResourceManager* manager, escher::ImageInfo info, const escher::GpuMemPtr& mem)
-      : Image(manager, info, vk::Image(), mem->size(), mem->mapped_ptr()), memory_(mem) {}
+      : Image(manager, info, vk::Image(), mem->size(), mem->mapped_ptr(),
+              vk::ImageLayout::eUndefined),
+        memory_(mem) {}
 
  private:
   escher::GpuMemPtr memory_;

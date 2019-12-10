@@ -57,9 +57,10 @@ class VmaMappedGpuMem : public escher::GpuMem {
 class VmaImage : public escher::Image {
  public:
   VmaImage(escher::ResourceManager* manager, escher::ImageInfo image_info, vk::Image image,
-           VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo allocation_info)
+           VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo allocation_info,
+           vk::ImageLayout initial_layout)
       : Image(manager, image_info, image, allocation_info.size,
-              static_cast<uint8_t*>(allocation_info.pMappedData)),
+              static_cast<uint8_t*>(allocation_info.pMappedData), initial_layout),
         allocator_(allocator),
         allocation_(allocation) {}
 
@@ -167,8 +168,10 @@ BufferPtr VmaGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::DeviceSi
 
 ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInfo& info,
                                         GpuMemPtr* out_ptr) {
+  constexpr vk::ImageLayout kInitialLayout = vk::ImageLayout::eUndefined;
+
   // Needed so we have a pointer to the C-style type.
-  VkImageCreateInfo c_image_info = image_utils::CreateVkImageCreateInfo(info);
+  VkImageCreateInfo c_image_info = image_utils::CreateVkImageCreateInfo(info, kInitialLayout);
 
   // Check if the image create info above is valid.
   if (!impl::CheckImageCreateInfoValidity(physical_device_, c_image_info)) {
@@ -198,8 +201,8 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInf
     return nullptr;
   }
 
-  auto retval =
-      fxl::AdoptRef(new VmaImage(manager, info, image, allocator_, allocation, allocation_info));
+  auto retval = fxl::AdoptRef(
+      new VmaImage(manager, info, image, allocator_, allocation, allocation_info, kInitialLayout));
 
   if (out_ptr) {
     FXL_DCHECK(allocation_info.offset == 0);

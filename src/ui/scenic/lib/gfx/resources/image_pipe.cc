@@ -221,9 +221,11 @@ ImagePipeUpdateResults ImagePipe::Update(escher::ReleaseFenceSignaller* release_
   return results;
 }
 
-void ImagePipe::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) {
+void ImagePipe::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
+                                  escher::ImageLayoutUpdater* layout_updater) {
+  // Update current escher Image.
   if (current_image_) {
-    current_image_->UpdateEscherImage(gpu_uploader);
+    current_image_->UpdateEscherImage(gpu_uploader, layout_updater);
   }
 }
 

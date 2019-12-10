@@ -6,10 +6,13 @@
 
 #include <random>
 
+#include "src/ui/lib/escher/impl/naive_image.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image_factory.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace {
 struct RGBA {
@@ -109,7 +112,11 @@ vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format) {
   }
 }
 
-vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info) {
+vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info, vk::ImageLayout initial_layout) {
+  // Per Vulkan spec, for new images the layout should be only ePreinitialized or eUndefined.
+  FXL_CHECK(initial_layout == vk::ImageLayout::ePreinitialized ||
+            initial_layout == vk::ImageLayout::eUndefined);
+
   vk::ImageCreateInfo create_info;
   create_info.pNext = info.is_external ? &kExternalImageCreateInfo : nullptr;
   create_info.imageType = vk::ImageType::e2D;
@@ -121,7 +128,7 @@ vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info) {
   create_info.tiling = info.tiling;
   create_info.usage = info.usage;
   create_info.sharingMode = vk::SharingMode::eExclusive;
-  create_info.initialLayout = vk::ImageLayout::eUndefined;
+  create_info.initialLayout = initial_layout;
   create_info.flags =
       info.is_mutable ? vk::ImageCreateFlagBits::eMutableFormat : vk::ImageCreateFlags();
   if (info.memory_flags & vk::MemoryPropertyFlagBits::eProtected) {
@@ -130,8 +137,9 @@ vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info) {
   return create_info;
 }
 
-vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
-  vk::Image image = ESCHER_CHECKED_VK_RESULT(device.createImage(CreateVkImageCreateInfo(info)));
+vk::Image CreateVkImage(const vk::Device& device, ImageInfo info, vk::ImageLayout initial_layout) {
+  vk::Image image =
+      ESCHER_CHECKED_VK_RESULT(device.createImage(CreateVkImageCreateInfo(info, initial_layout)));
   return image;
 }
 

@@ -44,6 +44,9 @@ class GpuImage : public Image {
   static GpuImagePtr New(Session* session, ResourceId id, MemoryPtr memory,
                          vk::ImageCreateInfo create_info, ErrorReporter* error_reporter);
 
+  void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
+                         escher::ImageLayoutUpdater* layout_updater) override;
+
   void Accept(class ResourceVisitor* visitor) override;
 
  protected:
@@ -59,7 +62,7 @@ class GpuImage : public Image {
   // |vk_image| is the VkImage, whose lifetime is now controlled by this
   // object.
   GpuImage(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem, escher::ImageInfo image_info,
-           vk::Image vk_image);
+           vk::Image vk_image, vk::ImageLayout initial_layout);
 };
 
 }  // namespace gfx

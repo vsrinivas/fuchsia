@@ -11,6 +11,7 @@
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
+#include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer_visitor.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
@@ -288,10 +289,11 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
   draw_call_factory->set_track_cache_entries(true);
 
   auto gpu_uploader = std::make_shared<BatchGpuUploader>(escher, frame->frame_number());
+  auto layout_updater = std::make_unique<ImageLayoutUpdater>(escher);
 
   paper_renderer->BeginFrame(frame, gpu_uploader, paper_scene, {camera}, output_image);
 
-  EngineRendererVisitor visitor(paper_renderer.get(), gpu_uploader.get(),
+  EngineRendererVisitor visitor(paper_renderer.get(), gpu_uploader.get(), layout_updater.get(),
                                 /*hide_protected_memory=*/false, nullptr);
   visitor.Visit(scene.get());
 
@@ -340,9 +342,12 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
   // End frame
   paper_renderer->FinalizeFrame();
   auto upload_semaphore = escher::Semaphore::New(escher->vk_device());
+  auto layout_update_semaphore = escher::Semaphore::New(escher->vk_device());
   gpu_uploader->AddSignalSemaphore(upload_semaphore);
   gpu_uploader->Submit();
-  paper_renderer->EndFrame(std::move(upload_semaphore));
+  layout_updater->AddSignalSemaphore(layout_update_semaphore);
+  layout_updater->Submit();
+  paper_renderer->EndFrame({std::move(upload_semaphore), std::move(layout_update_semaphore)});
   cache.EndFrame();
 
   auto frame_done_semaphore = Semaphore::New(escher->vk_device());

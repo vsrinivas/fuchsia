@@ -28,7 +28,8 @@ class EngineRendererVisitor : public ResourceVisitor {
  public:
   // Both the renderer and gpu_uploader must outlive this visitor.
   EngineRendererVisitor(escher::PaperRenderer* renderer, escher::BatchGpuUploader* gpu_uploader,
-                        bool hide_protected_memory, escher::MaterialPtr replacement_material);
+                        escher::ImageLayoutUpdater* layout_updater, bool hide_protected_memory,
+                        escher::MaterialPtr replacement_material);
 
   // Main entry point.
   // TODO(SCN-1256): EngineRenderer should visit the whole scene-graph, not just
@@ -80,6 +81,7 @@ class EngineRendererVisitor : public ResourceVisitor {
 
   escher::PaperRenderer* const renderer_;
   escher::BatchGpuUploader* const gpu_uploader_;
+  escher::ImageLayoutUpdater* const layout_updater_;
 
   bool hide_protected_memory_ = false;
   escher::MaterialPtr replacement_material_;

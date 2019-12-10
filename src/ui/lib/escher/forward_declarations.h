@@ -29,6 +29,7 @@ class GpuMem;
 class HackFilesystem;
 class Image;
 class ImageFactory;
+class ImageLayoutUpdater;
 class ImageView;
 class MeshBuilder;
 class MeshBuilderFactory;

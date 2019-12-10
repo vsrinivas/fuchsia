@@ -13,7 +13,7 @@ namespace escher {
 namespace impl {
 
 ImagePtr NaiveImage::AdoptVkImage(ResourceManager* image_owner, ImageInfo info, vk::Image vk_image,
-                                  GpuMemPtr mem) {
+                                  GpuMemPtr mem, vk::ImageLayout initial_layout) {
   TRACE_DURATION("gfx", "escher::NaiveImage::AdoptImage (from VkImage)");
   FXL_CHECK(vk_image);
   FXL_CHECK(mem);
@@ -48,11 +48,13 @@ ImagePtr NaiveImage::AdoptVkImage(ResourceManager* image_owner, ImageInfo info, 
     return nullptr;
   }
 
-  return fxl::AdoptRef(new NaiveImage(image_owner, info, vk_image, mem));
+  return fxl::AdoptRef(new NaiveImage(image_owner, info, vk_image, mem, initial_layout));
 }
 
-NaiveImage::NaiveImage(ResourceManager* image_owner, ImageInfo info, vk::Image image, GpuMemPtr mem)
-    : Image(image_owner, info, image, mem->size(), mem->mapped_ptr()), mem_(std::move(mem)) {}
+NaiveImage::NaiveImage(ResourceManager* image_owner, ImageInfo info, vk::Image image, GpuMemPtr mem,
+                       vk::ImageLayout initial_layout)
+    : Image(image_owner, info, image, mem->size(), mem->mapped_ptr(), initial_layout),
+      mem_(std::move(mem)) {}
 
 NaiveImage::~NaiveImage() { vulkan_context().device.destroyImage(vk()); }
 

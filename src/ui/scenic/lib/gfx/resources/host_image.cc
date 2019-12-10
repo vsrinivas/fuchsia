@@ -8,6 +8,7 @@
 
 #include "lib/images/cpp/images.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
+#include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
 #include "src/ui/scenic/lib/gfx/util/image_formats.h"
@@ -107,11 +108,12 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
       // return device local memory.
       escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
+      constexpr auto kInitialLayout = vk::ImageLayout::ePreinitialized;
       vk::Image vk_image = escher::image_utils::CreateVkImage(session->resource_context().vk_device,
-                                                              escher_image_info);
+                                                              escher_image_info, kInitialLayout);
       auto escher_image = escher::impl::NaiveImage::AdoptVkImage(
           session->resource_context().escher_resource_recycler, escher_image_info, vk_image,
-          gpu_memory);
+          gpu_memory, kInitialLayout);
 
       if (!escher_image) {
         error_reporter->ERROR() << "Image::CreateFromMemory(): cannot create NaiveImage.";
@@ -121,6 +123,8 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
       auto host_image = fxl::AdoptRef(new HostImage(
           session, id, std::move(memory), std::move(escher_image), memory_offset, image_info));
       host_image->is_directly_mapped_ = true;
+      // Directly-mapped images are never dirty.
+      host_image->dirty_ = false;
       return host_image;
     }
   }
@@ -145,8 +149,31 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
   return host_image;
 }
 
+void HostImage::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
+                                  escher::ImageLayoutUpdater* layout_updater) {
+  if (is_directly_mapped_) {
+    // For directly mapped host images, the image should never be dirty, so
+    // we only update the image layout.
+    FXL_CHECK(!dirty_) << "Directly-mapped host images should never be dirty.";
+    if (!image_->is_layout_initialized()) {
+      if (layout_updater) {
+        layout_updater->ScheduleSetImageInitialLayout(image_, vk::ImageLayout::eGeneral);
+      } else {
+        FXL_LOG(WARNING) << "No ImageLayoutUpdater, cannot set up image layout.";
+      }
+    }
+  } else {
+    // We only update the pixels if image is dirty.
+    if (dirty_) {
+      dirty_ = UpdatePixels(gpu_uploader);
+    }
+  }
+}
+
 bool HostImage::UpdatePixels(escher::BatchGpuUploader* gpu_uploader) {
   if (is_directly_mapped_) {
+    // Directly-mapped images are never dirty.
+    FXL_CHECK(!is_directly_mapped_) << "Directly-mapped host images should never be dirty.";
     return false;
   }
 

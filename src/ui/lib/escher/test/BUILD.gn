@@ -86,6 +86,7 @@ if (is_mac) {
       "vk/descriptor_set_allocator_unittest.cc",
       "vk/descriptor_set_layout_unittest.cc",
       "vk/framebuffer_allocator_unittest.cc",
+      "vk/image_layout_updater_unittest.cc",
       "vk/image_view_allocator_unittest.cc",
       "vk/naive_image_unittest.cc",
       "vk/render_pass_cache_unittest.cc",

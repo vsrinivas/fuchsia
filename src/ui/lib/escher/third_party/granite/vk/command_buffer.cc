@@ -170,6 +170,17 @@ void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
     num_clear_values = info.num_color_attachments + 1;
   }
 
+  // Set the |layout_| of all color and depth stencil attachments to
+  // corresponding |finalLayout| values previously stored in render pass.
+  for (uint32_t i = 0; i < info.num_color_attachments; ++i) {
+    FXL_DCHECK(info.color_attachments[i]);
+    info.color_attachments[i]->image()->set_layout(render_pass->GetColorAttachmentFinalLayout(i));
+  }
+  if (info.depth_stencil_attachment) {
+    info.depth_stencil_attachment->image()->set_layout(
+        render_pass->GetDepthStencilAttachmentFinalLayout());
+  }
+
   vk::RenderPassBeginInfo begin_info;
   begin_info.renderPass = render_pass->vk();
   begin_info.framebuffer = framebuffer_->vk();

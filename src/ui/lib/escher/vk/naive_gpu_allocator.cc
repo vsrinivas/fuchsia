@@ -87,14 +87,16 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::Device
 
 ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInfo& info,
                                           GpuMemPtr* out_ptr) {
+  constexpr auto kInitialLayout = vk::ImageLayout::eUndefined;
+
   // Check if the image create info above is valid.
-  if (!impl::CheckImageCreateInfoValidity(physical_device_,
-                                          image_utils::CreateVkImageCreateInfo(info))) {
+  if (!impl::CheckImageCreateInfoValidity(
+          physical_device_, image_utils::CreateVkImageCreateInfo(info, kInitialLayout))) {
     FXL_LOG(ERROR) << "NaiveGpuAllocator::AllocateImage(): ImageCreateInfo invalid. Create failed.";
     return ImagePtr();
   }
 
-  vk::Image image = image_utils::CreateVkImage(device_, info);
+  vk::Image image = image_utils::CreateVkImage(device_, info, kInitialLayout);
 
   // Allocate memory and bind it to the image.
   vk::MemoryRequirements reqs = device_.getImageMemoryRequirements(image);
@@ -103,7 +105,8 @@ ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager, const ImageI
   if (out_ptr) {
     *out_ptr = mem;
   }
-  ImagePtr escher_image = impl::NaiveImage::AdoptVkImage(manager, info, image, std::move(mem));
+  ImagePtr escher_image =
+      impl::NaiveImage::AdoptVkImage(manager, info, image, std::move(mem), kInitialLayout);
   FXL_CHECK(escher_image);
   return escher_image;
 }

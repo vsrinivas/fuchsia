@@ -52,7 +52,8 @@ class Image : public Resource {
   // Constructor. Wraps an existing image without claiming ownership. Useful
   // when the image is owned/maintained by another system (e.g.,
   // vk::SwapchainKHR).
-  static ImagePtr WrapVkImage(ResourceManager* image_owner, ImageInfo info, vk::Image image);
+  static ImagePtr WrapVkImage(ResourceManager* image_owner, ImageInfo info, vk::Image image,
+                              vk::ImageLayout initial_layout);
 
   const ImageInfo& info() const { return info_; }
   vk::Image vk() const { return image_; }
@@ -92,7 +93,7 @@ class Image : public Resource {
   // working with images associated with a vk::SwapchainKHR); this is done by
   // passing nullptr as the |mem| argument.
   Image(ResourceManager* image_owner, ImageInfo info, vk::Image image, vk::DeviceSize size_,
-        uint8_t* host_ptr_);
+        uint8_t* host_ptr_, vk::ImageLayout initial_layout);
 
  private:
   friend class CommandBuffer;

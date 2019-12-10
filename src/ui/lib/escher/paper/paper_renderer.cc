@@ -243,12 +243,12 @@ void PaperRenderer::FinalizeFrame() {
   frame_data_->gpu_uploader.reset();
 }
 
-void PaperRenderer::EndFrame(SemaphorePtr upload_wait_semaphore) {
+void PaperRenderer::EndFrame(const std::vector<SemaphorePtr>& upload_wait_semaphores) {
   TRACE_DURATION("gfx", "PaperRenderer::EndFrame");
   FXL_DCHECK(frame_data_);
   FXL_DCHECK(frame_data_->scene_finalized && !frame_data_->gpu_uploader);
 
-  if (upload_wait_semaphore) {
+  for (const SemaphorePtr& upload_wait_semaphore : upload_wait_semaphores) {
     frame_data_->frame->cmds()->AddWaitSemaphore(
         std::move(upload_wait_semaphore), vk::PipelineStageFlagBits::eVertexInput |
                                               vk::PipelineStageFlagBits::eFragmentShader |

@@ -33,7 +33,7 @@ vk::Image Create1BytePerPixelSingleRowDeviceVkImageOfWidth(vk::Device device, ui
       .memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal,
       .tiling = vk::ImageTiling::eOptimal,
       .is_external = true};
-  return escher::image_utils::CreateVkImage(device, info);
+  return escher::image_utils::CreateVkImage(device, info, vk::ImageLayout::eUndefined);
 }
 
 }  // namespace

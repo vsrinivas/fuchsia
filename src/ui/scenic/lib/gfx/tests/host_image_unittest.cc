@@ -130,7 +130,8 @@ VK_TEST_F(HostImageTest, RgbaImport) {
   // Updating shouldn't crash when passesd a null gpu_uploader, but it should
   // also keep the image dirty, because the copy from CPU to GPU memory has not
   // occured yet.
-  image_resource->UpdateEscherImage(nullptr);
+  image_resource->UpdateEscherImage(/* gpu_uploader */ nullptr,
+                                    /* image_layout_uploader */ nullptr);
   // Because we did not provide a valid batch uploader, the image is still dirty
   // and in need of an update. Until that succeeds, GetEscherImage() should not
   // return a valid image.
@@ -170,13 +171,14 @@ VK_TEST_F(HostImageTest, YuvImportOnUmaPlatform) {
   ASSERT_TRUE(image_resource);
 
   EXPECT_TRUE(image_resource->IsDirectlyMapped());
-  // Even direct mapped images don't return a valid Escher image until at least
-  // one call to UpdatePixels has occured.
-  EXPECT_FALSE(image_resource->GetEscherImage());
+  // For direct mapped images, when we create the image, the Escher image will
+  // be created as well.
+  EXPECT_TRUE(image_resource->GetEscherImage());
   // Updating should be a no-op, so it shouldn't crash when passesd a null
   // gpu_uploader, but it should also remove the dirty bit, meaning there is no
   // additional work to do.
-  image_resource->UpdateEscherImage(nullptr);
+  image_resource->UpdateEscherImage(/* gpu_uploader */ nullptr,
+                                    /* image_layout_uploader */ nullptr);
   // Despite not updating, the resource should have a valid Escher image, since
   // we mapped it directly with zero copies.
   EXPECT_TRUE(image_resource->GetEscherImage());

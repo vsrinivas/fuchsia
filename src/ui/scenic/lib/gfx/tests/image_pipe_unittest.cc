@@ -10,8 +10,8 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/scenic/lib/gfx/tests/image_pipe_unittest_common.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
-#include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
+#include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -53,8 +53,8 @@ class ImagePipeThatCreatesFakeImages : public ImagePipe {
     escher::ImageInfo escher_info;
     escher_info.width = image_info.width;
     escher_info.height = image_info.height;
-    escher::ImagePtr escher_image =
-        escher::Image::WrapVkImage(fake_resource_manager_, escher_info, vk::Image());
+    escher::ImagePtr escher_image = escher::Image::WrapVkImage(
+        fake_resource_manager_, escher_info, vk::Image(), vk::ImageLayout::eUndefined);
     FXL_CHECK(escher_image);
     auto image = fxl::AdoptRef(new FakeImage(session, id, escher_image));
 

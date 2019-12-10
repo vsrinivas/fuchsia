@@ -62,7 +62,8 @@ class ImagePipe2 : public ImagePipeBase {
   // Updates the Escher image to the current frame. This should be called after
   // Update() indicates the current Image changed, and before calling
   // GetEscherImage().
-  void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) override;
+  void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
+                         escher::ImageLayoutUpdater* layout_updater) override;
 
   // ImageBase implementation
   // Returns the image that should be presented at the current time. Can be

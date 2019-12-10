@@ -4,6 +4,8 @@
 
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 
+#include "src/ui/lib/escher/impl/naive_image.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 
 namespace escher {
@@ -65,6 +67,44 @@ zx::vmo ExportMemoryAsVmo(escher::Escher* escher, const escher::GpuMemPtr& mem) 
     return zx::vmo();
   }
   return zx::vmo(result.value);
+}
+
+std::pair<escher::GpuMemPtr, escher::ImagePtr> GenerateExportableMemImage(
+    vk::Device device, escher::ResourceManager* resource_manager,
+    const escher::ImageInfo& image_info) {
+  FXL_DCHECK(device);
+  FXL_DCHECK(resource_manager);
+  FXL_DCHECK(image_info.is_external);
+
+  // Create vk::Image
+  constexpr auto kInitialLayout = vk::ImageLayout::ePreinitialized;
+  auto create_info = escher::image_utils::CreateVkImageCreateInfo(image_info, kInitialLayout);
+  vk::Image vk_image = device.createImage(create_info).value;
+
+  vk::MemoryRequirements reqs = device.getImageMemoryRequirements(vk_image);
+  uint32_t memory_type = 0;
+  for (; memory_type < 32; memory_type++) {
+    if ((reqs.memoryTypeBits & (1U << memory_type))) {
+      break;
+    }
+  }
+
+  // Allocate vk::Memory.
+  vk::MemoryDedicatedAllocateInfo dedicated_allocate_info(vk_image, vk::Buffer());
+  vk::ExportMemoryAllocateInfoKHR export_allocate_info(
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
+  export_allocate_info.setPNext(&dedicated_allocate_info);
+
+  vk::MemoryAllocateInfo alloc_info(reqs.size, memory_type);
+  alloc_info.setPNext(&export_allocate_info);
+  auto vk_memory = device.allocateMemory(alloc_info).value;
+
+  // Convert vk::DeviceMemory to escher::GpuMem, vk::Image to escher::Image
+  auto mem =
+      escher::GpuMem::AdoptVkMemory(device, vk_memory, reqs.size, false /* needs_mapped_ptr */);
+  auto image = escher::impl::NaiveImage::AdoptVkImage(resource_manager, image_info, vk_image, mem,
+                                                      kInitialLayout);
+  return std::make_pair(mem, image);
 }
 
 }  // namespace escher

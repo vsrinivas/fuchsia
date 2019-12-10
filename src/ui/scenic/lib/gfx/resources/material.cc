@@ -57,11 +57,12 @@ void Material::SetColor(float red, float green, float blue, float alpha) {
 
 void Material::SetTexture(ImageBasePtr texture_image) { texture_ = std::move(texture_image); }
 
-void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader) {
+void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader,
+                                    escher::ImageLayoutUpdater* layout_updater) {
   // Update our escher::Material if our texture's presented image changed.
   escher::ImagePtr escher_image;
   if (texture_) {
-    texture_->UpdateEscherImage(gpu_uploader);
+    texture_->UpdateEscherImage(gpu_uploader, layout_updater);
     escher_image = texture_->GetEscherImage();
   }
   const escher::TexturePtr& escher_texture = escher_material_->texture();

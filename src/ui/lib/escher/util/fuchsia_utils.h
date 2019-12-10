@@ -24,6 +24,13 @@ zx::event GetEventForSemaphore(VulkanDeviceQueues* device, const escher::Semapho
 // Export the escher::GpuMem as a zx::vmo.
 zx::vmo ExportMemoryAsVmo(escher::Escher* escher, const escher::GpuMemPtr& mem);
 
+// Generate an escher Image and GPU memory dedicated to that image.
+// The GPU memory will be exportable as a vmo object in Fuchsia by calling
+// escher::ExportMemoryAsVmo function.
+std::pair<escher::GpuMemPtr, escher::ImagePtr> GenerateExportableMemImage(
+    vk::Device device, escher::ResourceManager* resource_manager,
+    const escher::ImageInfo& image_info);
+
 }  // namespace escher
 
 #endif  // SRC_UI_LIB_ESCHER_UTIL_FUCHSIA_UTILS_H_

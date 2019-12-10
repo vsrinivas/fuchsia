@@ -30,7 +30,8 @@ class DummyImage : public ImageBase {
 
   void Accept(class ResourceVisitor*) override {}
 
-  void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) override {}
+  void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
+                         escher::ImageLayoutUpdater* layout_updater) override {}
 
   const escher::ImagePtr& GetEscherImage() override {
     static const escher::ImagePtr kNullEscherImage;

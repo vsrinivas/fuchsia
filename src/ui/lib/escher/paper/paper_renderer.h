@@ -111,7 +111,11 @@ class PaperRenderer final : public Renderer {
   // See |BeginFrame()|.  After telling the renderer to draw the scene content,
   // |EndFrame()| emits commands into a Vulkan command buffer.  Submitting this
   // command buffer causes the scene to be rendered into |output_image|.
-  void EndFrame(SemaphorePtr upload_wait_semaphore);
+  void EndFrame(const std::vector<SemaphorePtr>& upload_wait_semaphores);
+
+  void EndFrame(SemaphorePtr upload_wait_semaphore) {
+    EndFrame(std::vector{std::move(upload_wait_semaphore)});
+  }
 
   // The following methods may only be used during an unfinalized frame, i.e. between
   // calls to |BeginFrame()| and |FinalizeFrame()|.

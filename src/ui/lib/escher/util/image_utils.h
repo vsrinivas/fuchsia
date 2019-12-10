@@ -41,12 +41,12 @@ std::pair<bool, bool> IsDepthStencilFormat(vk::Format format);
 // return eColor.
 vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format);
 
-vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info);
+vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info, vk::ImageLayout initial_layout);
 
 // Helper function that creates a VkImage given the parameters in ImageInfo.
 // This does not bind the VkImage to memory; the caller must do that
 // separately after calling this function.
-vk::Image CreateVkImage(const vk::Device& device, ImageInfo info);
+vk::Image CreateVkImage(const vk::Device& device, ImageInfo info, vk::ImageLayout initial_layout);
 
 // Return a new Image that is suitable for use as a depth attachment.
 // |image_factory| is a generic interface that could be an Image cache (in which

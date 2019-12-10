@@ -33,8 +33,15 @@
 #include "src/ui/testing/views/test_view.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
+#include "src/ui/lib/escher/impl/naive_image.h"
+#include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/lib/escher/util/fuchsia_utils.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/yuv/yuv.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace {
 
@@ -145,7 +152,8 @@ TEST_F(ScenicPixelTest, NV12Texture) {
     vmo_base[i + 1] = kVValue;
   }
 
-  view.SetHostImage(std::move(image_vmo), image_vmo_bytes, image_info);
+  view.SetImage(std::move(image_vmo), image_vmo_bytes, image_info,
+                fuchsia::images::MemoryType::HOST_MEMORY);
   RunUntilIndirectPresent(&view);
 
   scenic::Screenshot screenshot = TakeScreenshot();
@@ -1274,6 +1282,87 @@ TEST_F(ScenicPixelTest, ViewHolderDetach) {
 
   Present(session);
   EXPECT_EQ(TakeScreenshot().ColorAt(.5f, .5f), scenic::Color(0, 0, 0, 0));  // Blank
+}
+
+// This test case tests if Scenic can generate and present external GPU images correctly without
+// causing any Vulkan validation errors (fxb/35652).
+//
+// This test first creates an escher Image and GPU memory bound to it, and uploaded plain color
+// pixels (#FF8000) to that image. Then we export image as a vmo object, create that image using vmo
+// directly in Scenic, and present that image.
+//
+// The image layout type should be correctly converted from eUndefined or ePreinitialized to any
+// other valid type when it is presented. Otherwise this test will crash due to validation errors in
+// gfx system.
+VK_TEST_F(ScenicPixelTest, UseExternalImage) {
+  constexpr size_t kImageSize = 256;
+  constexpr scenic::Color kImageColor = {255, 128, 0, 255};
+
+  scenic::BackgroundView view(CreatePresentationContext());
+  auto escher_ptr = escher::test::GetEscher()->GetWeakPtr();
+  auto uploader = escher::BatchGpuUploader::New(escher_ptr);
+
+  // Create a RGBA (8-bit channels) images to write to.
+  escher::ImageInfo image_info = {
+      .format = vk::Format::eB8G8R8A8Unorm,
+      .width = kImageSize,
+      .height = kImageSize,
+      .sample_count = 1,
+      .usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst |
+               vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled,
+      .memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal,
+      .tiling = vk::ImageTiling::eOptimal,
+      .is_external = true};
+  auto [gpu_mem_ptr, image] = escher::GenerateExportableMemImage(
+      escher_ptr->vk_device(), escher_ptr->resource_recycler(), image_info);
+  ASSERT_NE(gpu_mem_ptr.get(), nullptr);
+
+  // Create and upload pixels to the escher Image.
+  auto pixels = std::vector<uint8_t>(image_info.height * image_info.width * 4U);
+  for (uint32_t i = 0; i < image_info.height * image_info.width; ++i) {
+    pixels[i * 4] = kImageColor.b;
+    pixels[i * 4 + 1] = kImageColor.g;
+    pixels[i * 4 + 2] = kImageColor.r;
+    pixels[i * 4 + 3] = kImageColor.a;
+  }
+
+  // Write the pixels generated above to escher Image.
+  escher::image_utils::WritePixelsToImage(uploader.get(), pixels.data(), image);
+  uploader->Submit();
+  escher_ptr->vk_device().waitIdle();
+
+  // Export the escher image as vmo for GpuImage creation.
+  zx::vmo image_vmo = escher::ExportMemoryAsVmo(escher_ptr.get(), gpu_mem_ptr);
+  uint64_t vmo_size = 0;
+  auto get_size_result = image_vmo.get_size(&vmo_size);
+  ASSERT_TRUE(get_size_result == ZX_OK);
+
+  // Create a GPU image using the vmo exported above.
+  fuchsia::images::ImageInfo fx_image_info{
+      .width = kImageSize,
+      .height = kImageSize,
+      .stride = static_cast<uint32_t>(
+          kImageSize * images::StrideBytesPerWidthPixel(fuchsia::images::PixelFormat::BGRA_8)),
+      .pixel_format = fuchsia::images::PixelFormat::BGRA_8,
+      .tiling = fuchsia::images::Tiling::GPU_OPTIMAL,
+  };
+
+  // Present the external GPU image using BackgroundView.
+  view.SetImage(std::move(image_vmo), vmo_size, fx_image_info,
+                fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
+  RunUntilIndirectPresent(&view);
+
+  scenic::Screenshot screenshot = TakeScreenshot();
+  ASSERT_FALSE(screenshot.empty());
+
+  std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
+
+  EXPECT_GT(histogram[kImageColor], 0u);
+  histogram.erase(kImageColor);
+
+  // This assert is written this way so that, when it fails, it prints out all
+  // the unexpected colors
+  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
 }
 
 }  // namespace

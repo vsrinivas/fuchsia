@@ -6,6 +6,7 @@
 
 #include "src/ui/lib/escher/impl/naive_image.h"
 #include "src/ui/lib/escher/util/image_utils.h"
+#include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
 
@@ -16,11 +17,11 @@ const ResourceTypeInfo GpuImage::kTypeInfo = {
     ResourceType::kGpuImage | ResourceType::kImage | ResourceType::kImageBase, "GpuImage"};
 
 GpuImage::GpuImage(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
-                   escher::ImageInfo image_info, vk::Image vk_image)
+                   escher::ImageInfo image_info, vk::Image vk_image, vk::ImageLayout initial_layout)
     : Image(session, id, GpuImage::kTypeInfo) {
-  image_ =
-      escher::impl::NaiveImage::AdoptVkImage(session->resource_context().escher_resource_recycler,
-                                             image_info, vk_image, std::move(gpu_mem));
+  image_ = escher::impl::NaiveImage::AdoptVkImage(
+      session->resource_context().escher_resource_recycler, image_info, vk_image,
+      std::move(gpu_mem), initial_layout);
   FXL_CHECK(image_);
 }
 
@@ -89,8 +90,10 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   // object once we support a bitmask instead of an enum.
   escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
+  constexpr auto kInitialLayout = vk::ImageLayout::ePreinitialized;
   vk::Device vk_device = session->resource_context().vk_device;
-  vk::Image vk_image = escher::image_utils::CreateVkImage(vk_device, escher_image_info);
+  vk::Image vk_image =
+      escher::image_utils::CreateVkImage(vk_device, escher_image_info, kInitialLayout);
 
   // Make sure that the image is within range of its associated memory.
   vk::MemoryRequirements memory_reqs;
@@ -115,7 +118,8 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
           ? memory->GetGpuMem(error_reporter)->Suballocate(memory_reqs.size, memory_offset)
           : memory->GetGpuMem(error_reporter);
 
-  return fxl::AdoptRef(new GpuImage(session, id, std::move(gpu_mem), escher_image_info, vk_image));
+  return fxl::AdoptRef(
+      new GpuImage(session, id, std::move(gpu_mem), escher_image_info, vk_image, kInitialLayout));
 }
 
 GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
@@ -145,8 +149,19 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   }
   image_info.is_external = true;
 
-  return fxl::AdoptRef(
-      new GpuImage(session, id, std::move(gpu_mem), image_info, image_result.value));
+  return fxl::AdoptRef(new GpuImage(session, id, std::move(gpu_mem), image_info, image_result.value,
+                                    create_info.initialLayout));
+}
+
+void GpuImage::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
+                                 escher::ImageLayoutUpdater* layout_updater) {
+  FXL_DCHECK(layout_updater) << "Layout updater doesn't exist!";
+  if (!image_->is_layout_initialized()) {
+    // TODO(36106): Currently we only convert the layout to |eShaderReadOnlyOptimal| -- this needs
+    // to be synchronized with topaz/runtime/flutter_runner.
+    layout_updater->ScheduleSetImageInitialLayout(image_, vk::ImageLayout::eShaderReadOnlyOptimal);
+  }
+  dirty_ = UpdatePixels(gpu_uploader);
 }
 
 bool GpuImage::UpdatePixels(escher::BatchGpuUploader* uploader) { return false; }
