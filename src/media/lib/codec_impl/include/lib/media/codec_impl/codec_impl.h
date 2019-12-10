@@ -810,7 +810,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordinal);
 
   bool FixupBufferCollectionConstraintsLocked(
-      CodecPort port, const fuchsia::media::StreamBufferPartialSettings& partial_settings,
+      CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings,
       fuchsia::sysmem::BufferCollectionConstraints* buffer_collection_constraints);
 
   void OnBufferCollectionInfo(CodecPort port, uint64_t buffer_lifetime_ordinal, zx_status_t status,

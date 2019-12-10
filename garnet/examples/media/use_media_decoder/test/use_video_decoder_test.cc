@@ -14,6 +14,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/logger.h>
+#include <lib/syslog/logger.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -38,7 +40,15 @@ constexpr uint32_t kMaxPeekBytes = 8 * 1024 * 1024;
 int use_video_decoder_test(std::string input_file_path, int expected_frame_count,
                            UseVideoDecoderFunction use_video_decoder,
                            bool is_secure_output, bool is_secure_input,
+                           uint32_t min_output_buffer_count,
                            std::string golden_sha256) {
+  
+  syslog::LogSettings settings = {.fd = STDERR_FILENO, .severity = FX_LOG_INFO};
+  zx_status_t status = syslog::InitLogger(settings, {"use_video_decoder_test"});
+  ZX_ASSERT(status == ZX_OK);
+  fx_logger_t* logger = fx_log_get_logger();
+  ZX_ASSERT(logger);
+
   async::Loop fidl_loop(&kAsyncLoopConfigAttachToCurrentThread);
   thrd_t fidl_thread;
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("FIDL_thread", &fidl_thread));
@@ -73,6 +83,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
 
   if (!decode_video_stream_test(&fidl_loop, fidl_thread, component_context.get(),
                                 in_stream_peeker.get(), use_video_decoder, 0,
+                                min_output_buffer_count,
                                 is_secure_output, is_secure_input,
                                 std::move(emit_frame))) {
     printf("decode_video_stream_test() failed.\n");
@@ -153,6 +164,7 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
                               InStreamPeeker* in_stream_peeker,
                               UseVideoDecoderFunction use_video_decoder,
                               uint64_t min_output_buffer_size,
+                              uint32_t min_output_buffer_count,
                               bool is_secure_output, bool is_secure_input,
                               EmitFrame emit_frame) {
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;
@@ -169,7 +181,8 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
     input_copier = InputCopier::Create();
 
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
-                    in_stream_peeker, input_copier.get(), min_output_buffer_size, is_secure_output,
+                    in_stream_peeker, input_copier.get(), min_output_buffer_size,
+                    min_output_buffer_count, is_secure_output,
                     is_secure_input, nullptr, std::move(emit_frame));
 
   return true;

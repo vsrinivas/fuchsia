@@ -36,7 +36,7 @@ class CodecBuffer {
 
   // In buffer-per-packet mode this is equal to the corresponding packet index,
   // for purposes of mapping from packet_index to buffer_index.
-  uint32_t buffer_index();
+  uint32_t buffer_index() const;
   uint8_t* base() const { return base_; }
   size_t size_bytes() const { return size_bytes_; }
 

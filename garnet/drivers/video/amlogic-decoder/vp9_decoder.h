@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "macros.h"
 #include "registers.h"
 #include "video_decoder.h"
 
@@ -184,10 +185,13 @@ class Vp9Decoder : public VideoDecoder {
   };
 
   struct Frame {
+    Frame(Vp9Decoder* parent);
     ~Frame();
 
+    Vp9Decoder* parent = nullptr;
+
     // Index into frames_.
-    uint32_t index;
+    uint32_t index = 0;
 
     // This is the count of references from reference_frame_map_, last_frame_,
     // current_frame_, and any buffers the ultimate consumers have outstanding.
@@ -287,7 +291,18 @@ class Vp9Decoder : public VideoDecoder {
   fit::closure error_handler_;
   DecoderState state_ = DecoderState::kSwappedOut;
 
+  // While frames_ always has size() == kMaxFrames, the actual number of valid
+  // frames that are fully usable is valid_frames_count_.  For now we don't
+  // remove any Frame from frames_ after initialization, mostly for historical
+  // reasons at this point.
+  //
+  // TODO(dustingreen): Ensure we're getting all contig memory from sysmem,
+  // and/or always using non-compressed reference frames / zero per-frame contig
+  // that isn't part of the buffer collection, and if so, consider changing the
+  // size of frames_ instead of valid_frames_count_.
+  uint32_t valid_frames_count_ = 0;
   std::vector<std::unique_ptr<Frame>> frames_;
+
   Frame* last_frame_ = nullptr;
   Frame* current_frame_ = nullptr;
   std::unique_ptr<loop_filter_info_n> loop_filter_info_;

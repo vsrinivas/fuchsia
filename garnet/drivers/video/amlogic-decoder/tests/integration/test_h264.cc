@@ -120,6 +120,8 @@ class TestH264 {
     EXPECT_EQ(std::future_status::ready,
               first_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
+    DLOG("After first wait: frame_count: %u\n", frame_count);
+
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(larger_h264->ptr, larger_h264->size));
       EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(10)));
@@ -159,12 +161,14 @@ class TestH264 {
     // Guarded by decoder lock.
     std::vector<std::shared_ptr<VideoFrame>> frames_to_return;
     uint32_t frame_count = 0;
+    bool return_frames_immediately = false;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
       video->video_decoder_->SetFrameReadyNotifier(
-          [&frames_to_return, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
+          [&frames_to_return, &frame_count, &wait_valid, &return_frames_immediately, &video]
+              (std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
             EXPECT_EQ(320u, frame->display_width);
             EXPECT_EQ(180u, frame->display_height);
@@ -173,7 +177,15 @@ class TestH264 {
             constexpr uint32_t kFirstVideoFrameCount = 26;
             if (frame_count == kFirstVideoFrameCount)
               wait_valid.set_value();
-            frames_to_return.push_back(frame);
+            if (return_frames_immediately) {
+              DLOG("Before ReturnFrame()\n");
+              // video->video_decoder_lock_ already held here
+              ReturnFrame(video.get(), frame);
+            } else {
+              DLOG("Before push_back()\n");
+              frames_to_return.push_back(frame);
+            }
+            DLOG("Done with frame.\n");
           });
     }
 
@@ -199,10 +211,13 @@ class TestH264 {
     {
       DLOG("Returning frames\n");
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      return_frames_immediately = true;
       for (auto frame : frames_to_return) {
         video->video_decoder_->ReturnFrame(frame);
       }
+      frames_to_return.clear();
     }
+      DLOG("Done returning frames.\n");
     EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
     stop_parsing = true;

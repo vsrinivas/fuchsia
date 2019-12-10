@@ -22,18 +22,27 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/lib/mpsc_queue/mpsc_queue.h"
 
-// TODO(turnage): Allow a range of packet count for the client instead of
-// forcing a particular number.
-static constexpr uint32_t kPacketCountForClientForced = 5;
-static constexpr uint32_t kDefaultPacketCountForClient = kPacketCountForClientForced;
+static constexpr uint32_t kMinOutputPacketCountForClient = 1;
+static constexpr uint32_t kMaxOutputPacketCountForClient = 10;
+static constexpr uint32_t kDefaultOutputPacketCountForClient = 2;
 
-// We want at least 16 packets codec side because that's the worst case scenario
+// We want at least 17 packets codec server side because that's the worst case scenario
 // for h264 keeping frames around (if the media has set its reference frame
-// option to 16).
+// option to 16, +1 for decode-into).
 //
 // TODO(turnage): Dynamically detect how many reference frames are needed by a
 // given stream, to allow fewer buffers to be allocated.
-static constexpr uint32_t kPacketCount = kPacketCountForClientForced + 16;
+static constexpr uint32_t kMinOutputBufferCountForCamping = 17;
+static constexpr uint32_t kMaxOutputPacketCountForServer = 24;
+static constexpr uint32_t kOutputPacketCountForServerRecommended = 18;
+
+static constexpr uint32_t kMinOutputPacketCount =
+    kMinOutputPacketCountForClient + kMinOutputBufferCountForCamping;
+
+static constexpr uint32_t kMinInputBufferCountForCamping = 1;
+
+static constexpr uint32_t kMaxOutputPacketCount =
+    kMaxOutputPacketCountForClient + kMaxOutputPacketCountForServer;
 
 template <typename LocalOutput>
 class CodecAdapterSW : public CodecAdapter {
@@ -230,15 +239,13 @@ class CodecAdapterSW : public CodecAdapter {
 
     // For the moment, let's just force the client to set this exact number of
     // frames for the codec.
-    constraints->set_packet_count_for_server_min(kPacketCount - kPacketCountForClientForced);
-    constraints->set_packet_count_for_server_recommended(kPacketCount -
-                                                         kPacketCountForClientForced);
-    constraints->set_packet_count_for_server_recommended_max(kPacketCount -
-                                                             kPacketCountForClientForced);
-    constraints->set_packet_count_for_server_max(kPacketCount - kPacketCountForClientForced);
+    constraints->set_packet_count_for_server_min(kMinOutputBufferCountForCamping);
+    constraints->set_packet_count_for_server_recommended(kOutputPacketCountForServerRecommended);
+    constraints->set_packet_count_for_server_recommended_max(kMaxOutputPacketCountForServer);
+    constraints->set_packet_count_for_server_max(kMaxOutputPacketCountForServer);
 
-    constraints->set_packet_count_for_client_min(kPacketCountForClientForced);
-    constraints->set_packet_count_for_client_max(kPacketCountForClientForced);
+    constraints->set_packet_count_for_client_min(kMinOutputPacketCountForClient);
+    constraints->set_packet_count_for_client_max(kMaxOutputPacketCountForClient);
 
     constraints->set_single_buffer_mode_allowed(false);
     constraints->set_is_physically_contiguous_required(false);
@@ -248,8 +255,8 @@ class CodecAdapterSW : public CodecAdapter {
     default_settings->set_buffer_lifetime_ordinal(0);
     default_settings->set_buffer_constraints_version_ordinal(
         new_output_buffer_constraints_version_ordinal);
-    default_settings->set_packet_count_for_server(kPacketCount - kPacketCountForClientForced);
-    default_settings->set_packet_count_for_client(kDefaultPacketCountForClient);
+    default_settings->set_packet_count_for_server(kOutputPacketCountForServerRecommended);
+    default_settings->set_packet_count_for_client(kDefaultOutputPacketCountForClient);
     default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
     default_settings->set_single_buffer_mode(false);
 

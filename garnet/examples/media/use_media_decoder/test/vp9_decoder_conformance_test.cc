@@ -157,6 +157,7 @@ int main(int argc, char* argv[]) {
 
   if (!decode_video_stream_test(&fidl_loop, fidl_thread, component_context.get(),
                                 in_stream_peeker.get(), use_vp9_decoder, min_output_buffer_size,
+                                /*min_output_buffer_count=*/0,
                                 /*is_secure_output=*/false, /*is_secure_input=*/false,
                                 std::move(emit_frame))) {
     FXL_LOG(FATAL) << "decode_video_stream_test() failed";

@@ -148,6 +148,7 @@ fuchsia::sysmem::BufferCollectionConstraints
 CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
     CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
+
   fuchsia::sysmem::BufferCollectionConstraints result;
 
   // For now, we didn't report support for single_buffer_mode, and CodecImpl
@@ -157,36 +158,35 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
   // TODO(dustingreen): Support single_buffer_mode on input (only).
   ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() ||
                   !partial_settings.single_buffer_mode());
+
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
 
+  // The CodecImpl already checked that these are set and that they're
+  // consistent with packet count constraints.
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
   ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
-  uint32_t packet_count =
-      partial_settings.packet_count_for_server() + partial_settings.packet_count_for_client();
 
-  // For now this is true - when we plumb more flexible buffer count range this
-  // will change to account for a range.
-  ZX_DEBUG_ASSERT(port != kOutputPort || packet_count == packet_count_total_);
+  if (port == kInputPort) {
+    // We don't override CoreCodecBuildNewInputConstraints() for now, so pick these up from what was
+    // set by default implementation of CoreCodecBuildNewInputConstraints().
+    min_buffer_count_[kInputPort] = stream_buffer_constraints.packet_count_for_server_min();
+    max_buffer_count_[kInputPort] = stream_buffer_constraints.packet_count_for_server_max();
+  }
 
-  // TODO(MTWN-250): plumb/permit range of buffer count from further down,
-  // instead of single number frame_count, and set this to the actual
-  // stream-required # of reference frames + # that can concurrently decode.
-  // For the moment we demand that buffer_count equals packet_count equals
-  // packet_count_for_server() + packet_count_for_client(), which is too
-  // inflexible.  Also, we rely on the server setting exactly and only
-  // min_buffer_count_for_camping to packet_count_for_server() and the client
-  // setting exactly and only min_buffer_count_for_camping to
-  // packet_count_for_client().
-  result.min_buffer_count_for_camping = partial_settings.packet_count_for_server();
+  ZX_DEBUG_ASSERT(min_buffer_count_[port] != 0);
+  ZX_DEBUG_ASSERT(max_buffer_count_[port] != 0);
+
+  result.min_buffer_count_for_camping = min_buffer_count_[port];
+
   // Some slack is nice overall, but avoid having each participant ask for
   // dedicated slack.  Using sysmem the client will ask for it's own buffers for
   // camping and any slack, so the codec doesn't need to ask for any extra on
   // behalf of the client.
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
-  result.max_buffer_count = packet_count;
+  result.max_buffer_count = max_buffer_count_[port];
 
   uint32_t per_packet_buffer_bytes_min;
   uint32_t per_packet_buffer_bytes_max;
@@ -450,7 +450,6 @@ void CodecAdapterVp9::CoreCodecQueueInputFormatDetails(
   // TODO(dustingreen): Consider letting the client specify profile/level info
   // in the FormatDetails at least optionally, and possibly sizing input
   // buffer constraints and/or other buffers based on that.
-
   QueueInputItem(CodecInputItem::FormatDetails(per_stream_override_format_details));
 }
 
@@ -632,14 +631,9 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
   //
   // This decoder produces NV12.
 
-  // For the moment, this codec splits 16 into 14 for the codec and 2 for the
-  // client.
-  //
-  // TODO(dustingreen): Plumb actual frame counts.
-  constexpr uint32_t kPacketCountForClientForced = 2;
   // Fairly arbitrary.  The client should set a higher value if the client needs
   // to camp on more frames than this.
-  constexpr uint32_t kDefaultPacketCountForClient = kPacketCountForClientForced;
+  constexpr uint32_t kDefaultPacketCountForClient = 2;
 
   uint32_t per_packet_buffer_bytes = stride_ * coded_height_ * 3 / 2;
 
@@ -661,7 +655,7 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
   default_settings->set_buffer_lifetime_ordinal(0);
   default_settings->set_buffer_constraints_version_ordinal(
       new_output_buffer_constraints_version_ordinal);
-  default_settings->set_packet_count_for_server(packet_count_total_ - kPacketCountForClientForced);
+  default_settings->set_packet_count_for_server(min_buffer_count_[kOutputPort]);
   default_settings->set_packet_count_for_client(kDefaultPacketCountForClient);
   // Packed NV12 (no extra padding, min UV offset, min stride).
   default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
@@ -672,17 +666,13 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
   constraints->set_per_packet_buffer_bytes_recommended(per_packet_buffer_bytes);
   constraints->set_per_packet_buffer_bytes_max(per_packet_buffer_bytes);
 
-  // For the moment, let's just force the client to set this exact number of
-  // frames for the codec.
-  constraints->set_packet_count_for_server_min(packet_count_total_ - kPacketCountForClientForced);
-  constraints->set_packet_count_for_server_recommended(packet_count_total_ -
-                                                       kPacketCountForClientForced);
-  constraints->set_packet_count_for_server_recommended_max(packet_count_total_ -
-                                                           kPacketCountForClientForced);
-  constraints->set_packet_count_for_server_max(packet_count_total_ - kPacketCountForClientForced);
+  constraints->set_packet_count_for_server_min(min_buffer_count_[kOutputPort]);
+  constraints->set_packet_count_for_server_recommended(min_buffer_count_[kOutputPort]);
+  constraints->set_packet_count_for_server_recommended_max(max_buffer_count_[kOutputPort]);
+  constraints->set_packet_count_for_server_max(max_buffer_count_[kOutputPort]);
 
-  constraints->set_packet_count_for_client_min(kPacketCountForClientForced);
-  constraints->set_packet_count_for_client_max(kPacketCountForClientForced);
+  constraints->set_packet_count_for_client_min(0);
+  constraints->set_packet_count_for_client_max(max_buffer_count_[kOutputPort]);
 
   // False because it's not required and not encouraged for a video decoder
   // output to allow single buffer mode.
@@ -1012,7 +1002,8 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
   }
 }
 
-bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(uint32_t frame_count,
+bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_count,
+                                                            uint32_t max_frame_count,
                                                             uint32_t coded_width,
                                                             uint32_t coded_height, uint32_t stride,
                                                             uint32_t display_width,
@@ -1030,7 +1021,12 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(uint32_t frame_count
   }
   fuchsia::sysmem::BufferCollectionInfo_2& info = output_buffer_collection_info_.value();
   ZX_DEBUG_ASSERT(info.settings.has_image_format_constraints);
-  if (frame_count > info.buffer_count) {
+  if (min_frame_count > info.buffer_count) {
+    return false;
+  }
+  if (info.buffer_count > max_frame_count) {
+    // The vp9_decoder.cc won't exercise this path since the max is always the same, and we won't
+    // have allocated a collection with more than max_buffer_count.
     return false;
   }
   if (stride * coded_height * 3 / 2 > info.settings.buffer_settings.size_bytes) {
@@ -1082,7 +1078,8 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(uint32_t frame_count
   return true;
 }
 
-zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t frame_count,
+zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t min_frame_count,
+                                                     uint32_t max_frame_count,
                                                      uint32_t coded_width, uint32_t coded_height,
                                                      uint32_t stride, uint32_t display_width,
                                                      uint32_t display_height, bool has_sar,
@@ -1141,7 +1138,8 @@ zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t fra
     // For the moment, force this exact number of frames.
     //
     // TODO(dustingreen): plumb actual frame counts.
-    packet_count_total_ = frame_count;
+    min_buffer_count_[kOutputPort] = min_frame_count;
+    max_buffer_count_[kOutputPort] = max_frame_count;
     coded_width_ = coded_width;
     coded_height_ = coded_height;
     stride_ = stride;

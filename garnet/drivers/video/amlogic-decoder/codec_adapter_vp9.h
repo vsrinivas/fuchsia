@@ -72,11 +72,13 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   void QueueInputItem(CodecInputItem input_item);
   CodecInputItem DequeueInputItem();
   void ProcessInput();
-  bool IsCurrentOutputBufferCollectionUsable(uint32_t frame_count, uint32_t coded_width,
-                                             uint32_t coded_height, uint32_t stride,
-                                             uint32_t display_width, uint32_t display_height);
-  zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t frame_count, uint32_t width,
-                                      uint32_t height, uint32_t stride, uint32_t display_width,
+  bool IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_count, uint32_t max_frame_count,
+                                             uint32_t coded_width, uint32_t coded_height,
+                                             uint32_t stride, uint32_t display_width,
+                                             uint32_t display_height);
+  zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t min_frame_count,
+                                      uint32_t max_frame_count, uint32_t width, uint32_t height,
+                                      uint32_t stride, uint32_t display_width,
                                       uint32_t display_height, bool has_sar, uint32_t sar_width,
                                       uint32_t sar_height);
 
@@ -121,8 +123,8 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   std::vector<CodecPacket*> all_output_packets_;
   std::vector<uint32_t> free_output_packets_;
 
-  // >= output_buffer_collection_info_.buffer_count
-  uint32_t packet_count_total_ = 0;
+  uint32_t min_buffer_count_[kPortCount] = {};
+  uint32_t max_buffer_count_[kPortCount] = {};
   // These don't actually change, for VP9, since the SAR is at webm layer and
   // the VP9 decoder never actually sees SAR.
   bool has_sar_ = false;

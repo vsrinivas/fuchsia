@@ -13,12 +13,16 @@ constexpr uint64_t kInputBufferConstraintsVersionOrdinal = 1;
 constexpr uint64_t kInputDefaultBufferConstraintsVersionOrdinal =
     kInputBufferConstraintsVersionOrdinal;
 
-constexpr uint32_t kInputPacketCountForCodecMin = 2;
+// No particular reason to demand more than 1 input packet to camp on, since by default we'll likely
+// only be decoding from 1 at a time.  If a particular decoder really does camp on more than 1 at a
+// time for whatever reason for any significant duration, it should override this default.
+constexpr uint32_t kInputPacketCountForCodecMin = 1;
 // This is fairly arbitrary, but roughly speaking, 1 to be decoding, 1 to be in
-// flight from the client, 1 to be in flight back to the client.  We may want
-// to adjust this upward if we find it's needed to keep the HW busy when there's
-// any backlog.
-constexpr uint32_t kInputPacketCountForCodecRecommended = 3;
+// flight back to the client.  The one in-flight from the client to the codec is the client's
+// business, to avoid double-counting (or vice versa if you like - the counting doesn't care which
+// is counted as long as we're not double-counting).  Particular CodecAdapter(s) may want to
+// override this upward if we find it's needed to keep the HW busy when there's any backlog.
+constexpr uint32_t kInputPacketCountForCodecRecommended = 2;
 constexpr uint32_t kInputPacketCountForCodecRecommendedMax = 16;
 constexpr uint32_t kInputPacketCountForCodecMax = 64;
 

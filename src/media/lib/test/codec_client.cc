@@ -9,24 +9,40 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 
+#include <algorithm>
+#include <random>
+
 namespace {
 
-// The client would like there to be at least this many extra input packets in
-// addition to the bare minimum required for the codec to be able to function.
-// Using 1 or 2 here can help avoid short stalls while packets are in transit
-// even if the client doesn't actually need to hold any free input packets for
-// any significant duration for any client-specific reason.
-constexpr uint32_t kMinExtraInputPacketsForClient = 2;
-// The client would like there to be at least this many extra output packets in
-// addition to the bare minimum required for the codec to be able to function.
+// The client would like there to be at least this many input packets.  Using 1
+// or 2 here can help avoid short stalls while packets are in transit even if
+// the client doesn't actually need to hold any free input packets for any
+// significant duration for any client-specific reason.
+constexpr uint32_t kMinInputPacketsForClient = 1;
+
+// The client would like there to be at least this many output packets.
+//
 // The client _must_ use a non-zero value here if any output packets will be
 // held indefinitely (such as held until the next output packet is available),
-// since otherwise the Codec can be unable to continue processing.
-constexpr uint32_t kMinExtraOutputPacketsForClient = 2;
+// since otherwise the Codec can become stuck, unable to continue processing due
+// to all output frames used as active reference frames and no free output
+// buffer to decode into.
+constexpr uint32_t kMinOutputPacketsForClient = 1;
 
 // For input, this example doesn't re-configure input buffers, so there's only
 // one buffer_lifetime_ordinal.
 constexpr uint64_t kInputBufferLifetimeOrdinal = 1;
+
+// It's fine to increase this threshold if we add a new usage of CodecClient
+// with new StreamProcessor server that should/must have more buffers.  This is
+// here to check that we're not allocating more output buffers than expected.
+// If the various cases get further apart, it'd probably be worthwhile to plumb
+// per-case from code that's using CodecClient.  For now this is based on what
+// use_h264_decoder_test allocates (max across astro and QEMU).
+//
+// This is basically 16 max DPB for h264, 1 to decode into (assumed separate
+// from DPB for now), and 1 for the client.
+constexpr uint32_t kMaxExpectedBufferCount = 18;
 
 }  // namespace
 
@@ -83,6 +99,11 @@ void CodecClient::SetMinOutputBufferSize(uint64_t min_output_buffer_size) {
   min_output_buffer_size_ = min_output_buffer_size;
 }
 
+void CodecClient::SetMinOutputBufferCount(uint32_t min_output_buffer_count) {
+  ZX_DEBUG_ASSERT(!is_start_called_);
+  min_output_buffer_count_ = min_output_buffer_count;
+}
+
 void CodecClient::Start() {
   ZX_DEBUG_ASSERT(!is_start_called_);
   is_start_called_ = true;
@@ -127,11 +148,13 @@ void CodecClient::Start() {
   // We're not on the FIDL thread, so we need to async::PostTask() over to the
   // FIDL thread to send any FIDL message.
 
+  FX_CHECK(input_constraints_->has_packet_count_for_server_min());
   FX_CHECK(input_constraints_->has_packet_count_for_server_recommended());
   FX_CHECK(input_constraints_->has_packet_count_for_server_max());
   uint32_t packet_count_for_client =
-      std::max(kMinExtraInputPacketsForClient, input_constraints_->packet_count_for_client_min());
-  uint32_t packet_count_for_server = input_constraints_->packet_count_for_server_recommended();
+      std::max(kMinInputPacketsForClient, input_constraints_->packet_count_for_client_min());
+  // Use min to make sure decode can proceed without getting stuck while using min.
+  uint32_t packet_count_for_server = input_constraints_->packet_count_for_server_min();
   if (packet_count_for_client > input_constraints_->packet_count_for_client_max()) {
     FX_LOGS(FATAL) << "server can't accomodate "
                       "kMinExtraInputPacketsForClient - not "
@@ -148,10 +171,10 @@ void CodecClient::Start() {
     FX_LOGS(FATAL) << "ConfigurePortBufferCollection failed (input)";
   }
 
-  ZX_ASSERT(input_free_bits_.empty());
-  input_free_bits_.resize(input_packet_count, true);
-  all_input_buffers_.reserve(input_packet_count);
-  for (uint32_t i = 0; i < input_packet_count; i++) {
+  ZX_ASSERT(input_free_packet_bits_.empty());
+  input_free_packet_bits_.resize(input_packet_count, true);
+  all_input_buffers_.reserve(buffer_collection_info.buffer_count);
+  for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
     std::unique_ptr<CodecBuffer> local_buffer = CodecBuffer::CreateFromVmo(
         i, std::move(buffer_collection_info.buffers[i].vmo),
         buffer_collection_info.buffers[i].vmo_usable_start,
@@ -172,10 +195,23 @@ void CodecClient::Start() {
   // TODO(dustingreen): Have CodecClient scramble the order of packets vs.
   // buffers to check that CodecImpl is handling that correctly for input
   // packets.
-  input_free_list_.reserve(input_packet_count);
+  input_free_packet_list_.reserve(input_packet_count);
   for (uint32_t i = 0; i < input_packet_count; i++) {
-    input_free_list_.push_back(i);
+    input_free_packet_list_.push_back(i);
   }
+  input_packet_index_to_buffer_index_.resize(input_packet_count);
+  input_free_buffer_list_.reserve(buffer_collection_info.buffer_count);
+  for (uint32_t i = 0; i < buffer_collection_info.buffer_count; ++i) {
+    input_free_buffer_list_.push_back(i);
+  }
+
+  // Shuffle both free lists, so that we'll notice if a StreamProcessor server has inappropriate
+  // dependency on ordering of either list or any particular association of packet_index with
+  // buffer_index.
+  std::random_device random_device;
+  std::mt19937 prng(random_device());
+  std::shuffle(input_free_packet_list_.begin(), input_free_packet_list_.end(), prng);
+  std::shuffle(input_free_buffer_list_.begin(), input_free_buffer_list_.end(), prng);
 }
 
 bool CodecClient::CreateAndSyncBufferCollection(
@@ -227,6 +263,7 @@ bool CodecClient::CreateAndSyncBufferCollection(
 }
 
 bool CodecClient::WaitForSysmemBuffersAllocated(
+    bool is_output,
     fuchsia::sysmem::BufferCollectionSyncPtr* buffer_collection_param,
     fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info) {
   // The style guide doesn't like non-const &, but the code in this method is
@@ -250,6 +287,10 @@ bool CodecClient::WaitForSysmemBuffersAllocated(
     FX_PLOGS(ERROR, allocate_status) << "WaitForBuffersAllocated allocation failed";
     return false;
   }
+
+  // This is a little noisy, but it can be useful to see how many buffers are being used.
+  FX_LOGS(INFO) << "WaitForSysmemBuffersAllocated() done - is_output: " << is_output <<
+      " buffer_count: " << result_buffer_collection_info.buffer_count;
 
   *out_buffer_collection_info = std::move(result_buffer_collection_info);
   return true;
@@ -354,13 +395,14 @@ void CodecClient::OnInputConstraints(fuchsia::media::StreamBufferConstraints inp
 }
 
 void CodecClient::OnFreeInputPacket(fuchsia::media::PacketHeader free_input_packet) {
-  bool was_empty;
+  bool free_buffer_list_was_empty;
+  bool free_packet_list_was_empty;
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (!free_input_packet.has_packet_index()) {
       FX_LOGS(FATAL) << "OnFreeInputPacket(): Packet has no index.";
     }
-    if (input_free_bits_[free_input_packet.packet_index()]) {
+    if (input_free_packet_bits_[free_input_packet.packet_index()]) {
       // already free - a normal client wouldn't want to just exit here since
       // this is the server's fault - in this example we just care that we
       // detect it
@@ -368,34 +410,55 @@ void CodecClient::OnFreeInputPacket(fuchsia::media::PacketHeader free_input_pack
                         "packet_index: "
                      << free_input_packet.packet_index();
     }
-    was_empty = input_free_list_.empty();
-    input_free_list_.push_back(free_input_packet.packet_index());
-    input_free_bits_[free_input_packet.packet_index()] = true;
+    free_buffer_list_was_empty = input_free_buffer_list_.empty();
+    input_free_buffer_list_.push_back(
+        input_packet_index_to_buffer_index_[free_input_packet.packet_index()]);
+    free_packet_list_was_empty = input_free_packet_list_.empty();
+    input_free_packet_list_.push_back(free_input_packet.packet_index());
+    input_free_packet_bits_[free_input_packet.packet_index()] = true;
   }  // ~lock
-  if (was_empty) {
-    input_free_list_not_empty_.notify_all();
+  if (free_buffer_list_was_empty) {
+    input_free_buffer_list_not_empty_.notify_all();
+  }
+  if (free_packet_list_was_empty) {
+    input_free_packet_list_not_empty_.notify_all();
   }
 }
 
 std::unique_ptr<fuchsia::media::Packet> CodecClient::BlockingGetFreeInputPacket() {
-  uint32_t free_index;
+  uint32_t free_packet_index;
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
-    while (input_free_list_.empty()) {
-      input_free_list_not_empty_.wait(lock);
+    while (input_free_packet_list_.empty()) {
+      input_free_packet_list_not_empty_.wait(lock);
     }
-    free_index = input_free_list_.back();
-    input_free_list_.pop_back();
-    // We intentionally do not modify input_free_bits_ here, as those bits are
+    free_packet_index = input_free_packet_list_.back();
+    input_free_packet_list_.pop_back();
+    // We intentionally do not modify input_free_packet_bits_ here, as those bits are
     // tracking the protocol level free-ness, so will get updated when the
     // caller queues the input packet.
-    ZX_ASSERT(input_free_bits_[free_index]);
-  }
+    ZX_ASSERT(input_free_packet_bits_[free_packet_index]);
+  }  // ~lock
   std::unique_ptr<fuchsia::media::Packet> packet = fuchsia::media::Packet::New();
   packet->mutable_header()->set_buffer_lifetime_ordinal(kInputBufferLifetimeOrdinal);
-  packet->mutable_header()->set_packet_index(free_index);
-  packet->set_buffer_index(free_index);
+  packet->mutable_header()->set_packet_index(free_packet_index);
   return packet;
+}
+
+const CodecBuffer& CodecClient::BlockingGetFreeInputBufferForPacket(
+    fuchsia::media::Packet* packet) {
+  uint32_t free_buffer_index;
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    while (input_free_buffer_list_.empty()) {
+      input_free_buffer_list_not_empty_.wait(lock);
+    }
+    free_buffer_index = input_free_buffer_list_.back();
+    input_free_buffer_list_.pop_back();
+  }  // ~lock
+  input_packet_index_to_buffer_index_[packet->header().packet_index()] = free_buffer_index;
+  packet->set_buffer_index(free_buffer_index);
+  return *all_input_buffers_[free_buffer_index].get();
 }
 
 const CodecBuffer& CodecClient::GetInputBufferByIndex(uint32_t packet_index) {
@@ -431,8 +494,8 @@ void CodecClient::QueueInputPacket(std::unique_ptr<fuchsia::media::Packet> packe
     // This packet is already not on the free list, but is still considered free
     // from a protocol point of view, so update that part.
     std::unique_lock<std::mutex> lock(lock_);
-    ZX_ASSERT(input_free_bits_[local_packet.header().packet_index()]);
-    input_free_bits_[local_packet.header().packet_index()] = false;
+    ZX_ASSERT(input_free_packet_bits_[local_packet.header().packet_index()]);
+    input_free_packet_bits_[local_packet.header().packet_index()] = false;
     // From here it's as if this packet is already in flight with the server.
   }  // ~lock
   async::PostTask(dispatcher_, [this, packet = std::move(local_packet)]() mutable {
@@ -513,7 +576,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
     //
     // Because of the client allowing itself to send RecycleOutputPacket() for a
     // while longer than fundamentally necessary, we delay upkeep on
-    // output_free_bits_ until here.  This upkeep isn't really fundamentally
+    // output_free_packet_bits_ until here.  This upkeep isn't really fundamentally
     // necessary between OnOutputConstraints() with action required true and the
     // last AddOutputBuffer() as part of output re-configuration, but ... this
     // explicit delayed upkeep _may_ help illustrate how it's acceptable for a
@@ -543,7 +606,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
       //
       // Think of this assignment as slightly more than a comment in this
       // example, rather than any real need.
-      output_free_bits_.resize(0);
+      output_free_packet_bits_.resize(0);
 
       // Free the old output buffers, if any.
       all_output_buffers_.clear();
@@ -574,10 +637,12 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
     ZX_ASSERT(snapped_constraints->has_buffer_constraints());
     const fuchsia::media::StreamBufferConstraints& buffer_constraints =
         snapped_constraints->buffer_constraints();
+    ZX_ASSERT(buffer_constraints.has_packet_count_for_server_min());
     ZX_ASSERT(buffer_constraints.has_packet_count_for_server_recommended());
-    uint32_t packet_count_for_server = buffer_constraints.packet_count_for_server_recommended();
+    // Use min; if decode gets stuck using min, we want to notice that.
+    uint32_t packet_count_for_server = buffer_constraints.packet_count_for_server_min();
     uint32_t packet_count_for_client =
-        std::max(kMinExtraOutputPacketsForClient, buffer_constraints.packet_count_for_client_min());
+        std::max(kMinOutputPacketsForClient, buffer_constraints.packet_count_for_client_min());
     if (packet_count_for_client > buffer_constraints.packet_count_for_client_max()) {
       FX_LOGS(FATAL) << "server can't accomodate "
                         "kMinExtraOutputPacketsForClient - not "
@@ -612,7 +677,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
         all_output_buffers_.push_back(std::move(buffer));
 
         if (i == packet_count - 1) {
-          output_free_bits_.resize(packet_count, true);
+          output_free_packet_bits_.resize(packet_count, true);
         }
       }
 
@@ -730,9 +795,13 @@ bool CodecClient::ConfigurePortBufferCollection(
   // min_size_bytes here, unless output, in which case setting a min_size_bytes
   // allows for seamless video frame dimension changes.  If the client code says
   // 0 that's fine.
+  //
+  // Similar for min_buffer_count, but min of 0 means 0 / no constraint in that case.
   ZX_DEBUG_ASSERT(constraints.buffer_memory_constraints.min_size_bytes == 0);
+  ZX_DEBUG_ASSERT(constraints.min_buffer_count == 0);
   if (is_output) {
     constraints.buffer_memory_constraints.min_size_bytes = min_output_buffer_size_;
+    constraints.min_buffer_count = min_output_buffer_count_;
   }
   constraints.buffer_memory_constraints.max_size_bytes = std::numeric_limits<uint32_t>::max();
   constraints.buffer_memory_constraints.physically_contiguous_required = false;
@@ -777,13 +846,18 @@ bool CodecClient::ConfigurePortBufferCollection(
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
   // This borrows buffer_collection during
   // the call.
-  if (!WaitForSysmemBuffersAllocated(&buffer_collection, &buffer_collection_info)) {
+  if (!WaitForSysmemBuffersAllocated(is_output, &buffer_collection, &buffer_collection_info)) {
     FX_LOGS(FATAL) << "WaitForSysmemBuffer"
                       "sAllocated failed";
     return false;
   }
 
   packet_count = std::max(packet_count, buffer_collection_info.buffer_count);
+
+  // We don't expect normal cases to go above kMaxExpectedBufferCount, but if
+  // min_output_buffer_count_ forces higher buffer counts, that's fine.
+  ZX_ASSERT(buffer_collection_info.buffer_count <= kMaxExpectedBufferCount ||
+            min_output_buffer_count_ > kMaxExpectedBufferCount);
 
   fuchsia::sysmem::BufferCollectionPtr buffer_collection_ptr;
 
@@ -814,7 +888,7 @@ void CodecClient::RecycleOutputPacket(fuchsia::media::PacketHeader free_packet) 
   ZX_ASSERT(free_packet.has_packet_index());
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
-    output_free_bits_[free_packet.packet_index()] = true;
+    output_free_packet_bits_[free_packet.packet_index()] = true;
   }  // ~lock
   async::PostTask(dispatcher_, [this, free_packet = std::move(free_packet)]() mutable {
     codec_->RecycleOutputPacket(std::move(free_packet));
@@ -944,7 +1018,7 @@ void CodecClient::OnOutputPacket(fuchsia::media::Packet output_packet, bool erro
       FX_LOGS(FATAL) << "server incorrectly sent output packet while required "
                         "constraints change pending";
     }
-    if (!output_free_bits_[packet_index]) {
+    if (!output_free_packet_bits_[packet_index]) {
       // The packet was emitted twice by the server without it becoming free in
       // between, which is broken server behavior.
       FX_LOGS(FATAL) << "server incorrectly emitted an output packet without it becoming "
@@ -953,7 +1027,7 @@ void CodecClient::OnOutputPacket(fuchsia::media::Packet output_packet, bool erro
     // Emitted by server, so not free until later when we send it back to server
     // with RecycleOutputPacket(), or until we re-configure output buffers in
     // which case all the output packets start free with the server.
-    output_free_bits_[packet_index] = false;
+    output_free_packet_bits_[packet_index] = false;
     emitted_output_.push_back(std::move(output));
     is_format_since_last_packet_ = false;
     if (!output_pending_) {

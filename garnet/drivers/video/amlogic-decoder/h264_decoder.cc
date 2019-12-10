@@ -35,6 +35,7 @@
 
 static const uint32_t kBufferAlignShift = 4 + 12;
 static const uint32_t kBufferAlign = 1 << kBufferAlignShift;
+constexpr uint32_t kMaxActualDPBSize = 24;
 
 // AvScratch1
 class StreamInfo : public TypedRegisterBase<DosRegisterIo, StreamInfo, uint32_t> {
@@ -476,14 +477,21 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t cod
         .WriteTo(owner_->dosbus());
     video_frames_.push_back({std::move(frame), std::move(y_canvas), std::move(uv_canvas)});
   }
-  AvScratch0::Get().FromValue(next_av_scratch0_).WriteTo(owner_->dosbus());
+
+  uint32_t actual_dpb_size = frame_count;
+  ZX_DEBUG_ASSERT(actual_dpb_size <= kMaxActualDPBSize);
+  ZX_DEBUG_ASSERT(next_max_reference_size_ <= next_max_dpb_size_);
+  uint32_t av_scratch0 =
+      (next_max_reference_size_ << 24) | (actual_dpb_size << 16) | (next_max_dpb_size_ << 8);
+  AvScratch0::Get().FromValue(av_scratch0).WriteTo(owner_->dosbus());
+
   state_ = DecoderState::kRunning;
 }
 
-zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t coded_width,
-                                          uint32_t coded_height, uint32_t display_width,
-                                          uint32_t display_height, bool has_sar, uint32_t sar_width,
-                                          uint32_t sar_height) {
+zx_status_t H264Decoder::InitializeFrames(uint32_t min_frame_count, uint32_t max_frame_count,
+                                          uint32_t coded_width, uint32_t coded_height,
+                                          uint32_t display_width, uint32_t display_height,
+                                          bool has_sar, uint32_t sar_width, uint32_t sar_height) {
   DLOG("InitializeFrames() display_width: %u display_height: %u", display_width, display_height);
   video_frames_.clear();
   returned_frames_.clear();
@@ -504,8 +512,8 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count, uint32_t coded_w
     return dup_result;
   }
   zx_status_t initialize_result = initialize_frames_handler_(
-      std::move(duplicated_bti), frame_count, coded_width, coded_height, stride, display_width,
-      display_height, has_sar, sar_width, sar_height);
+      std::move(duplicated_bti), min_frame_count, max_frame_count, coded_width, coded_height,
+      stride, display_width, display_height, has_sar, sar_width, sar_height);
   if (initialize_result != ZX_OK) {
     if (initialize_result != ZX_ERR_STOP) {
       DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
@@ -545,6 +553,7 @@ void H264Decoder::TryReturnFrames() {
 }
 
 zx_status_t H264Decoder::InitializeStream() {
+LOG(INFO, "H264Decoder::InitializeStream()");
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   state_ = DecoderState::kWaitingForNewFrames;
   BarrierBeforeRelease();  // For reference_mv_buffer_
@@ -569,15 +578,35 @@ zx_status_t H264Decoder::InitializeStream() {
   }
   uint32_t mb_height = stream_info.total_mbs() / mb_width;
 
-  constexpr uint32_t kActualDPBSize = 24;
   uint32_t max_dpb_size = GetMaxDpbSize(level_idc, mb_width, mb_height);
   if (max_dpb_size == 0) {
-    max_dpb_size = kActualDPBSize;
-  } else {
-    max_dpb_size = std::min(max_dpb_size, kActualDPBSize);
+    LOG(WARN, "mb_width and/or mb_height invalid? - mb_width: %u mb_height: %u",
+        mb_width, mb_height);
+    max_dpb_size = kMaxActualDPBSize;
   }
-  uint32_t max_reference_size = std::min(stream_info.max_reference_size(), kActualDPBSize - 1);
-  max_dpb_size = std::max(max_reference_size, max_dpb_size);
+  // GetMaxDpbSize() returns max 16, but kMaxActualDPBSize is 24.
+  ZX_DEBUG_ASSERT(max_dpb_size < kMaxActualDPBSize);
+
+  // The firmware says how many reference frames are needed by this stream.  We don't expect the
+  // firmware to mess this up, but warn if it does, and try to fixup.  If fixup is actually
+  // triggered, it won't necessarily help.
+  uint32_t max_reference_size = stream_info.max_reference_size();
+  if (max_reference_size > kMaxActualDPBSize - 1) {
+    LOG(WARN, "max_reference_size is too large - clamping - max_reference_size: %u",
+        max_reference_size);
+    max_reference_size = kMaxActualDPBSize - 1;
+  } else if (max_reference_size == 0) {
+    LOG(WARN, "max_reference_size is zero - unexpected - using default: %u", max_dpb_size);
+    max_reference_size = max_dpb_size - 1;
+  }
+
+  // The HW decoder / firmware seems to require several extra frames or it won't continue decoding
+  // frames.
+  constexpr uint32_t kDbpSizeAdj = 6;
+  uint32_t min_buffer_count = max_dpb_size + kDbpSizeAdj;
+  min_buffer_count = std::min(min_buffer_count, kMaxActualDPBSize);
+
+  // Add 1 because firmware may expect this.
   max_reference_size++;
 
   // Rounding to 4 macroblocks is for matching the linux driver, in case the
@@ -658,15 +687,24 @@ zx_status_t H264Decoder::InitializeStream() {
     }
   }
 
-  next_av_scratch0_ = (max_reference_size << 24) | (kActualDPBSize << 16) | (max_dpb_size << 8);
+  // These we pass back to the firmware later, having computed/adjusted as above.
+  next_max_reference_size_ = max_reference_size;
+  next_max_dpb_size_ = max_dpb_size;
 
-  // TODO(dustingreen): Plumb min and max frame counts, with max at least
-  // kActualDPBSize (24 or higher if possible), and min sufficient to allow
-  // decode to proceed without tending to leave the decoder idle for long if the
-  // client immediately releases each frame (just barely enough to decode as
-  // long as the client never camps on even one frame).
-  zx_status_t status = InitializeFrames(kActualDPBSize, coded_width, coded_height, display_width,
-                                        display_height, has_sar, sar_width, sar_height);
+  // The actual # of buffers is determined by sysmem, but constrainted by "max_dpb_size" as the min
+  // # of needed buffers for reference and re-ordering purposes, not counting decode-into buffer.
+  // The "max" means the max the stream might require, so that's actually the min # of buffers we
+  // need.  The +1 accounts for the decode-into buffer (AFAICT).  Reduce this number at your own
+  // risk - YMMV.
+  LOG(INFO, "max_reference_size: %u max_dpb_size: %u min_buffer_count: %u",
+      max_reference_size, max_dpb_size, min_buffer_count);
+  uint32_t min_frame_count = min_buffer_count;
+  // Also constrained by the maximum number of buffers this driver knows how to track for now, which
+  // is kMaxActualDPBSize (24).
+  uint32_t max_frame_count = kMaxActualDPBSize;
+  zx_status_t status = InitializeFrames(min_frame_count, max_frame_count, coded_width, coded_height,
+                                        display_width, display_height, has_sar, sar_width,
+                                        sar_height);
   if (status != ZX_OK) {
     if (status != ZX_ERR_STOP) {
       DECODE_ERROR("InitializeFrames() failed: status: %d\n", status);
@@ -759,10 +797,6 @@ void H264Decoder::HandleInterrupt() {
       break;
 
     case kCommandInitializeStream: {
-      // For now, this can block for a while until buffers are allocated, or
-      // until it fails. One of the ways it can fail is if the Codec client
-      // closes the current stream at the Codec interface level (not exactly the
-      // same thing as "stream" here).
       zx_status_t status = InitializeStream();
       if (status != ZX_OK) {
         OnFatalError();

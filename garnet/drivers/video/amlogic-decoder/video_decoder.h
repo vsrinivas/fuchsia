@@ -64,10 +64,12 @@ class CodecPacket;
 class VideoDecoder {
  public:
   using IsCurrentOutputBufferCollectionUsable =
-      fit::function<bool(uint32_t frame_count, uint32_t coded_width, uint32_t coded_height,
-                         uint32_t stride, uint32_t display_width, uint32_t display_height)>;
+      fit::function<bool(uint32_t min_frame_count, uint32_t max_frame_count, uint32_t coded_width,
+                         uint32_t coded_height, uint32_t stride, uint32_t display_width,
+                         uint32_t display_height)>;
   using InitializeFramesHandler = fit::function<zx_status_t(::zx::bti,
-                                                            uint32_t,  // frame_count
+                                                            uint32_t,  // min_frame_count
+                                                            uint32_t,  // max_frame_count
                                                             uint32_t,  // width
                                                             uint32_t,  // height
                                                             uint32_t,  // stride

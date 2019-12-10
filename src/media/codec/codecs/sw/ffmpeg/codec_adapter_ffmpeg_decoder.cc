@@ -34,9 +34,6 @@ constexpr uint32_t kInputPerPacketBufferBytesMin = 8 * 1024;
 // This is an arbitrary cap for now.
 constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
 
-// For now, this is the forced packet count for output.
-static constexpr uint32_t kOutputPacketCount = 21;
-
 }  // namespace
 
 CodecAdapterFfmpegDecoder::CodecAdapterFfmpegDecoder(std::mutex& lock,
@@ -247,9 +244,8 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
   uint32_t packet_count =
       partial_settings.packet_count_for_server() + partial_settings.packet_count_for_client();
 
-  // For now this is true - when we plumb more flexible buffer count range this
-  // will change to account for a range.
-  ZX_DEBUG_ASSERT(port != kOutputPort || packet_count == kOutputPacketCount);
+  ZX_DEBUG_ASSERT(port != kOutputPort ||
+                  packet_count >= kMinOutputPacketCount && packet_count <= kMaxOutputPacketCount);
 
   // TODO(MTWN-250): plumb/permit range of buffer count from further down,
   // instead of single number frame_count, and set this to the actual
@@ -263,7 +259,11 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
   // be just the buffers needed for camping and maybe 1 for shared slack.  If
   // the client wants more buffers the client can demand buffers in its own
   // fuchsia::sysmem::BufferCollection::SetConstraints().
-  result.min_buffer_count_for_camping = partial_settings.packet_count_for_server();
+  if (port == kOutputPort) {
+    result.min_buffer_count_for_camping = kMinOutputBufferCountForCamping;
+  } else {
+    result.min_buffer_count_for_camping = kMinInputBufferCountForCamping;
+  }
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
   // TODO: Uncap max_buffer_count, have both sides infer that packet count is
@@ -377,7 +377,9 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
 
 void CodecAdapterFfmpegDecoder::CoreCodecSetBufferCollectionInfo(
     CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
-  // TODO: Should uncap max_buffer_count and stop asserting this, or assert
-  // instead that buffer_count >= buffers for camping + dedicated slack.
-  ZX_DEBUG_ASSERT(port != kOutputPort || buffer_collection_info.buffer_count == kOutputPacketCount);
+  if (port == kInputPort) {
+    ZX_DEBUG_ASSERT(buffer_collection_info.buffer_count >= kMinInputBufferCountForCamping);
+  } else {
+    ZX_DEBUG_ASSERT(buffer_collection_info.buffer_count >= kMinOutputBufferCountForCamping);
+  }
 }

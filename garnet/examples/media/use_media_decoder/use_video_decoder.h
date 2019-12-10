@@ -47,7 +47,8 @@ void use_h264_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                       fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                       InStreamPeeker* in_stream, InputCopier* input_copier,
-                      uint64_t min_output_buffer_size, bool is_secure_output, bool is_secure_input,
+                      uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
+                      bool is_secure_output, bool is_secure_input,
                       FrameSink* frame_sink, EmitFrame emit_frame);
 
 // The same as use_h264_decoder, but for a VP9 file wrapped in an IVF container.
@@ -55,7 +56,8 @@ void use_vp9_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                      InStreamPeeker* in_stream, InputCopier* input_copier,
-                     uint64_t min_output_buffer_size, bool is_secure_output, bool is_secure_input,
+                     uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
+                     bool is_secure_output, bool is_secure_input,
                      FrameSink* frame_sink, EmitFrame emit_frame);
 
 // Common function pointer type shared by use_h264_decoder, use_vp9_decoder.
@@ -63,7 +65,8 @@ typedef void (*UseVideoDecoderFunction)(async::Loop* fidl_loop, thrd_t fidl_thre
                                         fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                                         fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                                         InStreamPeeker* in_stream, InputCopier* input_copier,
-                                        uint64_t min_output_buffer_size, bool is_secure_output,
+                                        uint64_t min_output_buffer_size,
+                                        uint32_t min_output_buffer_count, bool is_secure_output,
                                         bool is_secure_input, FrameSink* frame_sink,
                                         EmitFrame emit_frame);
 

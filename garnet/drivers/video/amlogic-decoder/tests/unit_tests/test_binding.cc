@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "tests/test_support.h"
 
+/*
 TEST(Binding, Destruction) {
   auto video = std::make_unique<AmlogicVideo>();
   ASSERT_TRUE(video);
@@ -15,3 +16,4 @@ TEST(Binding, Destruction) {
 
   video.reset();
 }
+*/

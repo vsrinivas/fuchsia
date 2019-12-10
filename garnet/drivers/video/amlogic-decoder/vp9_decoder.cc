@@ -82,6 +82,16 @@ union Vp9Decoder::HardwareRenderParams {
 // skipped.
 constexpr uint32_t kBufferOverrunPaddingBytes = 0;
 
+// The VP9 format needs 8 reference pictures, plus 1 to decode into.
+//
+// Extras for use later in the pipeline can be obtained by those participants
+// later in the pipeline specifying min_buffer_count_for_camping to sysmem.
+constexpr uint32_t kMinFrames = 8 + 1;
+
+// In typical cases we'll use a frame count closer to kMinFrames than
+// kMaxFrames, but some specialized scenarios can benefit from more frames.
+constexpr uint32_t kMaxFrames = 24;
+
 void Vp9Decoder::BufferAllocator::Register(WorkingBuffer* buffer) { buffers_.push_back(buffer); }
 
 zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(VideoDecoder::Owner* owner,
@@ -412,9 +422,11 @@ void Vp9Decoder::Frame::Deref() {
   refcount--;
   assert(refcount >= client_refcount);
   assert(refcount >= 0);
-  if (on_deck_frame) {
+  if (on_deck_frame || index >= parent->valid_frames_count_) {
     // Now that there's an on deck frame that can be decoded into, this frame is
     // just wasting space.
+    //
+    // Or same if there are fewer frames we intend to actively use going forward.
     ReleaseIfNonreference();
   }
 }
@@ -468,8 +480,9 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
                                    uint32_t coded_height, uint32_t stride) {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
   ZX_ASSERT(owner_->IsDecoderCurrent(this));
+  ZX_DEBUG_ASSERT(valid_frames_count_ == 0);
   uint32_t frame_vmo_bytes = stride * coded_height * 3 / 2;
-  for (uint32_t i = 0; i < frames_.size(); i++) {
+  for (uint32_t i = 0; i < frames.size(); i++) {
     auto video_frame = std::make_shared<VideoFrame>();
 
     // These are set later in PrepareFrame().
@@ -519,6 +532,7 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
     io_buffer_cache_flush(&video_frame->buffer, 0, io_buffer_size(&video_frame->buffer, 0));
     frames_[i]->on_deck_frame = std::move(video_frame);
   }
+  valid_frames_count_ = frames.size();
 
   BarrierAfterFlush();
 
@@ -530,7 +544,9 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
 }
 
 void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
-  assert(frame->index < frames_.size());
+  // If this isn't true, the weak ptr would have signaled the caller that we don't need the frame
+  // back any more, so the caller doesn't call ReturnFrame().
+  ZX_DEBUG_ASSERT(frame->index < frames_.size());
   auto& ref_frame = frames_[frame->index];
   // Frame must still be valid if the refcount is > 0.
   assert(ref_frame->frame == frame);
@@ -550,6 +566,7 @@ void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
     PrepareNewFrame(true);
   }
 }
+
 enum Vp9Command {
   // Sent from the host to the device after a header has been decoded to say
   // that the compressed frame body should be decoded.
@@ -905,15 +922,24 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
 bool Vp9Decoder::CanBeSwappedIn() {
   if (have_fatal_error_)
     return false;
+
+  if (valid_frames_count_ == 0) {
+    // We can start decoding without output frames allocated.  This is normal
+    // when starting the first stream, as output format detection requires some
+    // input data.
+    return true;
+  }
+
   bool has_available_output_frames = false;
-  for (uint32_t i = 0; i < frames_.size(); i++) {
+  for (uint32_t i = 0; i < valid_frames_count_; i++) {
     if (frames_[i]->refcount == 0) {
       has_available_output_frames = true;
       break;
     }
   }
-  if (!has_available_output_frames)
+  if (!has_available_output_frames) {
     return false;
+  }
 
   if (check_output_ready_ && !check_output_ready_()) {
     return false;
@@ -1043,6 +1069,8 @@ void Vp9Decoder::SetCheckOutputReady(CheckOutputReady check_output_ready) {
   check_output_ready_ = std::move(check_output_ready);
 }
 
+Vp9Decoder::Frame::Frame(Vp9Decoder* parent_param) : parent(parent_param) {}
+
 Vp9Decoder::Frame::~Frame() { io_buffer_release(&compressed_data); }
 
 bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_checked_previously) {
@@ -1076,10 +1104,17 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
 
   // If !is_current_output_buffer_collection_usable_, then we don't support dynamic dimensions.
   bool buffers_allocated = !!frames_[0]->frame || !!frames_[0]->on_deck_frame;
+  // For VP9 we have kMinFrames and kMaxFrames as the min/max bounds on # of frames the decoder is
+  // able/willing to handle/track, and those constants are completely independent of any information
+  // in the input stream data.  There's no reason for this decoder to ever need to check if the # of
+  // buffers in the current collection is compatible with new input data, so this decoder just says
+  // that the min_frame_count and max_frame_count are both the current frame count.  The current
+  // collection is always ok in terms of frame count.
   if (!buffers_allocated || reallocate_buffers_next_frame_for_testing_ ||
       (is_current_output_buffer_collection_usable_ &&
-       !is_current_output_buffer_collection_usable_(frames_.size(), coded_width, coded_height,
-                                                    stride, display_width, display_height))) {
+       !is_current_output_buffer_collection_usable_(
+           valid_frames_count_, valid_frames_count_, coded_width, coded_height, stride,
+           display_width, display_height))) {
     reallocate_buffers_next_frame_for_testing_ = false;
     if (params_checked_previously) {
       // If we get here, it means we're seeing rejection of
@@ -1108,10 +1143,6 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     // can be dropped when resolution switching also involves re-allocating
     // buffers.
     //
-    // TODO(dustingreen): When buffers are large enough and aren't reallocated,
-    // resolution switching should be seamless.  See also TODO above re. keeping
-    // larger buffers if the needed buffer size goes down.
-    //
     // The reason for having a higher bar for degree of seamless-ness when
     // buffers are not reallocated (vs. lower-than-"perfect" bar when they are
     // re-allocated) is partly because of the need for phsyically contiguous
@@ -1130,6 +1161,9 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     // problems (and/or requiring more buffers to compensate for timing effects
     // of dynamic add/remove).
     for (uint32_t i = 0; i < frames_.size(); i++) {
+      // Resetting on_deck_frame should avoid leaking if dimensions change in quick succession, with
+      // first buffer collection having more buffers than second.
+      frames_[i]->on_deck_frame.reset();
       if (use_compressed_output_) {
         // In normal operation (outside decoder self-tests) this reset() is relied
         // upon to essentially signal to the CodecBuffer::frame weak_ptr<> that
@@ -1150,6 +1184,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
         frames_[i]->ReleaseIfNonreference();
       }
     }
+    valid_frames_count_ = 0;
 
     ::zx::bti duplicated_bti;
     zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
@@ -1164,8 +1199,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     // those potential sources don't provide sample_aspect_ratio, then 1:1 is
     // a reasonable default.
     zx_status_t initialize_result = initialize_frames_handler_(
-        std::move(duplicated_bti), frames_.size(), coded_width, coded_height, stride, display_width,
-        display_height, false, 1, 1);
+        std::move(duplicated_bti), kMinFrames, kMaxFrames, coded_width, coded_height, stride,
+        display_width, display_height, false, 1, 1);
     if (initialize_result != ZX_OK) {
       if (initialize_result != ZX_ERR_STOP) {
         DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
@@ -1176,8 +1211,9 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     return false;
   }
 
+  ZX_DEBUG_ASSERT(valid_frames_count_ != 0);
   Frame* new_frame = nullptr;
-  for (uint32_t i = 0; i < frames_.size(); i++) {
+  for (uint32_t i = 0; i < valid_frames_count_; i++) {
     if (frames_[i]->refcount == 0) {
       new_frame = frames_[i].get();
       break;
@@ -1190,8 +1226,8 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   }
 
   if (new_frame->on_deck_frame) {
-    new_frame->frame = new_frame->on_deck_frame;
-    new_frame->on_deck_frame = nullptr;
+    new_frame->frame = std::move(new_frame->on_deck_frame);
+    ZX_DEBUG_ASSERT(!new_frame->on_deck_frame);
   }
 
   // These may or may not be changing.  VP9 permits frame dimensions to change
@@ -1200,6 +1236,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   // buffers.
   new_frame->hw_width = params->hw_width;
   new_frame->hw_height = params->hw_height;
+  ZX_DEBUG_ASSERT(new_frame->frame);
   new_frame->frame->hw_width = params->hw_width;
   new_frame->frame->hw_height = params->hw_height;
   new_frame->frame->coded_width = coded_width;
@@ -1210,6 +1247,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   // derived value
   new_frame->frame->uv_plane_offset = new_frame->frame->coded_height * new_frame->frame->stride;
 
+  ZX_DEBUG_ASSERT(new_frame->refcount == 0);
   current_frame_ = new_frame;
   current_frame_->refcount++;
   current_frame_->decoded_index = decoded_frame_count_++;
@@ -1315,10 +1353,8 @@ void Vp9Decoder::ConfigureReferenceFrameHardware() {
 }
 
 zx_status_t Vp9Decoder::AllocateFrames() {
-  // The VP9 format needs 8 reference pictures, plus keep some extra ones that
-  // are available for use later in the pipeline.
-  for (uint32_t i = 0; i < 16; i++) {
-    auto frame = std::make_unique<Frame>();
+  for (uint32_t i = 0; i < kMaxFrames; i++) {
+    auto frame = std::make_unique<Frame>(this);
     if (use_compressed_output_) {
       constexpr uint32_t kCompressedHeaderSize = 0x48000;
       auto internal_buffer = InternalBuffer::CreateAligned(
@@ -1342,20 +1378,36 @@ void Vp9Decoder::InitializeHardwarePictureList() {
   // Signal autoincrementing writes to table.
   HevcdMppAnc2AxiTblConfAddr::Get().FromValue(0).set_bit1(1).set_bit2(1).WriteTo(owner_->dosbus());
 
-  // This table maps "canvas" indices to the compressed headers of reference
-  // pictures.
-  for (auto& frame : frames_) {
+  // This table maps "canvas" indices to the compressed headers of reference pictures.
+  for (uint32_t i = 0; i < kMaxFrames; ++i) {
+    auto& frame = frames_[i];
+    std::shared_ptr<VideoFrame> video_frame = frame->frame ? frame->frame : frame->on_deck_frame;
     if (use_compressed_output_) {
+      zx_paddr_t phys_addr = 0;
+      if (video_frame) {
+        // TODO(dustingreen): Consider a table-remap (from frames_ index to HW table index) instead
+        // of using phys_addr 0.  We need to be sure the stream data can't be telling the firmware
+        // to actually write to phys 0 + x.  But with old frames potentially still referenced, then
+        // droppped, unclear how that'd work overall.  Or, check if HW really can be convinced to
+        // write at 0 + x by using zero here.  If not, seems fine.
+        phys_addr = frame->compressed_header->phys_base();
+      }
       HevcdMppAnc2AxiTblData::Get()
-          .FromValue(truncate_to_32(frame->compressed_header->phys_base()) >> 5)
+          .FromValue(truncate_to_32(phys_addr) >> 5)
           .WriteTo(owner_->dosbus());
     } else {
-      std::shared_ptr<VideoFrame> video_frame = frame->frame ? frame->frame : frame->on_deck_frame;
+      zx_paddr_t phys_addr_y = 0;
+      zx_paddr_t phys_addr_uv = 0;
+      if (video_frame) {
+        phys_addr_y = video_frame->buffer.phys_list[0];
+        phys_addr_uv = phys_addr_y + video_frame->uv_plane_offset;
+      }
       // Use alternating indices for Y and UV.
-      uint32_t buffer_address = truncate_to_32(video_frame->buffer.phys_list[0]);
-      HevcdMppAnc2AxiTblData::Get().FromValue(buffer_address >> 5).WriteTo(owner_->dosbus());
       HevcdMppAnc2AxiTblData::Get()
-          .FromValue((buffer_address + video_frame->uv_plane_offset) >> 5)
+          .FromValue(truncate_to_32(phys_addr_y) >> 5)
+          .WriteTo(owner_->dosbus());
+      HevcdMppAnc2AxiTblData::Get()
+          .FromValue(truncate_to_32(phys_addr_uv) >> 5)
           .WriteTo(owner_->dosbus());
     }
   }

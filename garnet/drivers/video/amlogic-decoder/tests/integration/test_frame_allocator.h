@@ -9,11 +9,14 @@
 
 #include "amlogic-video.h"
 #include "video_decoder.h"
+#include "macros.h"
+
+#include <random>
 
 class TestFrameAllocator {
  public:
   explicit TestFrameAllocator(AmlogicVideo* video)
-      : video_(video), loop_(&kAsyncLoopConfigNoAttachToThread) {
+      : video_(video), loop_(&kAsyncLoopConfigNoAttachToThread), prng_(rd_()) {
     loop_.StartThread();
   }
 
@@ -24,15 +27,19 @@ class TestFrameAllocator {
   }
 
  private:
-  zx_status_t AllocateFrames(zx::bti bti, uint32_t frame_count, uint32_t coded_width,
-                             uint32_t coded_height, uint32_t stride, uint32_t display_width,
-                             uint32_t display_height, bool has_sar, uint32_t sar_width,
-                             uint32_t sar_height) {
+  zx_status_t AllocateFrames(zx::bti bti, uint32_t min_frame_count, uint32_t max_frame_count,
+                             uint32_t coded_width, uint32_t coded_height, uint32_t stride,
+                             uint32_t display_width, uint32_t display_height, bool has_sar,
+                             uint32_t sar_width, uint32_t sar_height) {
     // Post to other thread so that we initialize the frames in a different callstack.
-    async::PostTask(loop_.dispatcher(), [this, bti = std::move(bti), frame_count, coded_width,
-                                         coded_height, stride]() {
+    async::PostTask(loop_.dispatcher(), [this, bti = std::move(bti), min_frame_count,
+                                         max_frame_count, coded_width, coded_height, stride]() {
       std::vector<CodecFrame> frames;
       uint32_t frame_vmo_bytes = coded_height * stride * 3 / 2;
+      std::uniform_int_distribution<uint32_t> frame_count_distribution(min_frame_count, max_frame_count);
+      uint32_t frame_count = frame_count_distribution(prng_);
+      LOG(INFO, "AllocateFrames() - frame_count: %u min_frame_count: %u max_frame_count: %u",
+          frame_count, min_frame_count, max_frame_count);
       for (uint32_t i = 0; i < frame_count; i++) {
         zx::vmo frame_vmo;
         zx_status_t vmo_create_result =
@@ -63,10 +70,12 @@ class TestFrameAllocator {
     return ZX_OK;
   }
 
-  AmlogicVideo* video_;
+  AmlogicVideo* video_ = nullptr;
   VideoDecoder* decoder_ = nullptr;
   async::Loop loop_;
   uint64_t next_non_codec_buffer_lifetime_ordinal_ = 1;
+  std::random_device rd_;
+  std::mt19937 prng_;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_INTEGRATION_TEST_FRAME_ALLOCATOR_H_

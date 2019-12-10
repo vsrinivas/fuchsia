@@ -339,8 +339,7 @@ class TestVP9 {
             DumpVideoFrameToFile(frame.get(), filename);
 #endif
             ReturnFrame(video.get(), frame);
-            // Only 49 of the first 50 frames are shown.
-            if (frame_count == 49)
+            if (frame_count == 50)
               wait_valid.set_value();
           });
     }
@@ -447,8 +446,7 @@ class TestVP9 {
             DumpVideoFrameToFile(frame.get(), "/tmp/bearmulti1.yuv");
 #endif
             ReturnFrame(video.get(), frame);
-            // Only 49 of the first 50 frames are shown.
-            if (frame_count == 49)
+            if (frame_count == 50)
               wait_valid.set_value();
           });
     }
@@ -542,7 +540,7 @@ class TestVP9 {
     EXPECT_EQ(std::future_status::ready,
               wait_valid1.get_future().wait_for(std::chrono::seconds(10)));
 
-    EXPECT_EQ(49u, frame_count);
+    EXPECT_EQ(50u, frame_count);
     if (inject_initialization_fault) {
       EXPECT_TRUE(got_error);
       EXPECT_EQ(20u, frame_count1);

@@ -89,7 +89,6 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
 
     char firmware_format[sizeof(header->data.format) + 1] = {};
     memcpy(firmware_format, header->data.format, sizeof(header->data.format));
-    LOG(INFO, "firmware_format: %s", firmware_format);
 
     FirmwareCode code = {offset + sizeof(FirmwareHeader), firmware_length};
     firmware_code_[std::string(firmware_format)] = code;

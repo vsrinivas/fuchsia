@@ -51,6 +51,9 @@
 //  search_pattern_ - HW only reads this
 //  parser_input_ - not used when secure)
 
+// TODO(fxb/41972): bti::release_quarantine() or zx_bti_release_quarantine() somewhere during
+// startup, after HW is known idle, before we allocate anything from sysmem.
+
 // These match the regions exported when the bus device was added.
 enum MmioRegion {
   kCbus,

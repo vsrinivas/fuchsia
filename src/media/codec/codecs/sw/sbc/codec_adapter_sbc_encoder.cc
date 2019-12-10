@@ -14,9 +14,6 @@ constexpr uint32_t kInputPerPacketBufferBytesMin = SBC_MAX_PCM_BUFFER_SIZE;
 // This is an arbitrary cap for now.
 constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
 
-// For now, this is the forced packet count for output.
-static constexpr uint32_t kOutputPacketCount = 21;
-
 constexpr char kSbcMimeType[] = "audio/sbc";
 
 }  // namespace
@@ -106,7 +103,8 @@ CodecAdapterSbcEncoder::CoreCodecGetBufferCollectionConstraints(
 
   // For now this is true - when we plumb more flexible buffer count range this
   // will change to account for a range.
-  ZX_DEBUG_ASSERT(port != kOutputPort || packet_count == kOutputPacketCount);
+  ZX_DEBUG_ASSERT(port != kOutputPort ||
+                  packet_count >= kMinOutputPacketCount && packet_count <= kMaxOutputPacketCount);
 
   // TODO(MTWN-250): plumb/permit range of buffer count from further down,
   // instead of single number frame_count, and set this to the actual
@@ -123,9 +121,6 @@ CodecAdapterSbcEncoder::CoreCodecGetBufferCollectionConstraints(
   result.min_buffer_count_for_camping = partial_settings.packet_count_for_server();
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
   ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
-  // TODO: Uncap max_buffer_count, have both sides infer that packet count is
-  // at least as many as buffer_count.
-  result.max_buffer_count = packet_count;
 
   uint32_t per_packet_buffer_bytes_min;
   uint32_t per_packet_buffer_bytes_max;
@@ -358,7 +353,9 @@ uint8_t* CodecAdapterSbcEncoder::NextOutputBlock() {
 
 void CodecAdapterSbcEncoder::CoreCodecSetBufferCollectionInfo(
     CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
-  // TODO: Should uncap max_buffer_count and stop asserting this, or assert
-  // instead that buffer_count >= buffers for camping + dedicated slack.
-  ZX_DEBUG_ASSERT(port != kOutputPort || buffer_collection_info.buffer_count == kOutputPacketCount);
+  if (port == kInputPort) {
+    ZX_DEBUG_ASSERT(buffer_collection_info.buffer_count >= kMinInputBufferCountForCamping);
+  } else {
+    ZX_DEBUG_ASSERT(buffer_collection_info.buffer_count >= kMinOutputBufferCountForCamping);
+  }
 }

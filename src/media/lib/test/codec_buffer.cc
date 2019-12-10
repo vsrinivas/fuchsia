@@ -12,7 +12,7 @@
 CodecBuffer::CodecBuffer(uint32_t buffer_index, size_t size_bytes)
     : buffer_index_(buffer_index), size_bytes_(size_bytes) {}
 
-uint32_t CodecBuffer::buffer_index() { return buffer_index_; }
+uint32_t CodecBuffer::buffer_index() const { return buffer_index_; }
 
 void CodecBuffer::SetPhysicallyContiguousRequired(const ::zx::handle& very_temp_kludge_bti_handle) {
   is_physically_contiguous_required_ = true;
@@ -104,6 +104,8 @@ std::unique_ptr<CodecBuffer> CodecBuffer::Allocate(
 bool CodecBuffer::CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start,
                                         uint32_t vmo_usable_size, bool need_write,
                                         bool is_physically_contiguous) {
+  ZX_DEBUG_ASSERT(vmo);
+  ZX_DEBUG_ASSERT(vmo_usable_size != 0);
   zx_vm_option_t options = ZX_VM_PERM_READ;
   if (need_write) {
     options |= ZX_VM_PERM_WRITE;

@@ -67,6 +67,10 @@ pub enum BufferSetType {
 
 pub struct BufferSetFactory;
 
+// This client only intends to be filling one input buffer or hashing one output buffer at any given
+// time.
+const MIN_BUFFER_COUNT_FOR_CAMPING: u32 = 1;
+
 impl BufferSetFactory {
     pub async fn buffer_set(
         buffer_lifetime_ordinal: u64,
@@ -157,10 +161,9 @@ impl BufferSetFactory {
             buffer_collection_constraints.unwrap_or(BUFFER_COLLECTION_CONSTRAINTS_DEFAULT);
         assert_eq!(
             collection_constraints.min_buffer_count_for_camping, 0,
-            "Codecs assert that buffer_count == packet count, so we can't change this yet."
+            "min_buffer_count_for_camping should default to 0 before we've set it"
         );
-        collection_constraints.min_buffer_count_for_camping =
-            constraints.default_settings.packet_count_for_client;
+        collection_constraints.min_buffer_count_for_camping = MIN_BUFFER_COUNT_FOR_CAMPING;
 
         vlog!(3, "Our buffer collection constraints are: {:#?}", collection_constraints);
 

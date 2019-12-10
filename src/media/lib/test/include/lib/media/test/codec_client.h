@@ -55,6 +55,8 @@ class CodecClient {
   // be requested via sysmem.
   void SetMinOutputBufferSize(uint64_t min_output_buffer_size);
 
+  void SetMinOutputBufferCount(uint32_t min_buffer_count);
+
   // Get the Codec into a state where it's ready to process input data.
   void Start();
 
@@ -72,6 +74,10 @@ class CodecClient {
   // ongoing basis from the Codec using some other thread(s), processed, and
   // those output packets freed back to the codec.
   std::unique_ptr<fuchsia::media::Packet> BlockingGetFreeInputPacket();
+
+  // Updates input_packet_index_to_buffer_index_[packet->packet_index()] and
+  // packet->set_buffer_index().
+  const CodecBuffer& BlockingGetFreeInputBufferForPacket(fuchsia::media::Packet* packet);
 
   const CodecBuffer& GetInputBufferByIndex(uint32_t packet_index);
   const CodecBuffer& GetOutputBufferByIndex(uint32_t packet_index);
@@ -116,6 +122,8 @@ class CodecClient {
   void set_is_output_secure(bool is_output_secure) { is_output_secure_ = is_output_secure; }
   void set_is_input_secure(bool is_input_secure) { is_input_secure_ = is_input_secure; }
 
+  uint32_t input_buffer_count() { return all_input_buffers_.size(); }
+
   // On this thread, while the codec is being fed input data on
  private:
   friend class CodecStream;
@@ -131,6 +139,7 @@ class CodecClient {
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>* out_codec_sysmem_token);
 
   bool WaitForSysmemBuffersAllocated(
+      bool is_output,
       fuchsia::sysmem::BufferCollectionSyncPtr* buffer_collection_param,
       fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info);
 
@@ -184,6 +193,7 @@ class CodecClient {
   bool is_start_called_ = false;
   fuchsia::media::StreamProcessorPtr codec_;
   uint64_t min_output_buffer_size_ = 0;
+  uint32_t min_output_buffer_count_ = 0;
   // This only temporarily holds the Codec request that was created during the
   // constructor.  If the caller asks for this more than once, the subsequent
   // requests give back a !is_valid() request.
@@ -220,12 +230,24 @@ class CodecClient {
   // so that's how we represent the packets in this example - as created and
   // owned by their input and output arcs, not kept allocated continuously by
   // CodecClient.
+  //
+  // We need to track which outstanding packet has which buffer_index so we know
+  // which buffer to free when we get a packet back.  Not all clients will
+  // choose to allow buffer_index != packet_index, but in general that is
+  // allowed, so CodecClient intentionally does not make them always equal.
+  //
+  // The number of packets can be greater than the number of buffers, but never
+  // less.
+  std::vector<uint32_t> input_packet_index_to_buffer_index_;
 
-  // This vector is used to track which input packet_id(s) are free.  A free
-  // packet_id means the buffer at all_input_buffers_[packet_id] is free.  We
-  // push to the end and pop from the end since that's what vector<> is good at.
-  std::vector<uint32_t> input_free_list_;
-  std::condition_variable input_free_list_not_empty_;
+  // This vector is used to track which input packet_id(s) are free.  We push to
+  // the end and pop from the end since that's what vector<> is good at.
+  std::vector<uint32_t> input_free_packet_list_;
+  std::condition_variable input_free_packet_list_not_empty_;
+
+  // Track which input buffers are free.
+  std::vector<uint32_t> input_free_buffer_list_;
+  std::condition_variable input_free_buffer_list_not_empty_;
 
   // In this example, we do verify that the server is being sane with respect
   // to free/busy status of packets.  In general a client shouldn't let a
@@ -235,12 +257,12 @@ class CodecClient {
   // false - not free (from when we queue a lambda that'll end up sending the
   //   packet to the codec, to when we receive the message from the codec saying
   //   the packet is free again)
-  std::vector<bool> input_free_bits_;
+  std::vector<bool> input_free_packet_bits_;
 
   // Which output packets are free from the client point of view.  If the server
   // tries to emit the same packet more than once concurrently, these bits are
   // how we notice.
-  std::vector<bool> output_free_bits_;
+  std::vector<bool> output_free_packet_bits_;
 
   // The server must order its output strictly by stream_lifetime_ordinal - once
   // a new stream_lifetime_ordinal has started the server can't output anything

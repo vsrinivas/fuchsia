@@ -154,7 +154,28 @@ test("use_vp9_decoder_test") {
 
   # In contrast to use_h264_decoder_test, there is no SW fallback for VP9 at the
   # moment, so for now only list envs with HW decode.
-  environments = [ astro_env ]
+  environments = [ astro_env, sherlock_env, vim2_env ]
+}
+
+test("use_vp9_decoder_24_output_frames_test") {
+  testonly = true
+
+  output_name = "use_vp9_decoder_24_output_frames_test"
+
+  sources = [
+    "test/use_vp9_decoder_24_output_frames_test.cc",
+  ]
+
+  deps = [
+    ":use_media_decoder_source_set",
+  ]
+
+  # In contrast to use_h264_decoder_test, there is no SW fallback for VP9 at the
+  # moment, so for now only list envs with HW decode, and which also have
+  # sufficient contiguous sysmem heap to handle 24 frames from bear-vp9.ivf.
+  #
+  # TODO(fxb/41735): Enable on astro in future if/when posible.
+  environments = [ sherlock_env, vim2_env ]
 }
 
 test("use_vp9_decoder_secure_output_test") {

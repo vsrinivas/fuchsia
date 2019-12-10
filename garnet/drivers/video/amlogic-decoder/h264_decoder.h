@@ -48,9 +48,9 @@ class H264Decoder : public VideoDecoder {
 
   zx_status_t ResetHardware();
   zx_status_t LoadSecondaryFirmware(const uint8_t* data, uint32_t firmware_size);
-  zx_status_t InitializeFrames(uint32_t frame_count, uint32_t width, uint32_t height,
-                               uint32_t display_width, uint32_t display_height, bool has_sar,
-                               uint32_t sar_width, uint32_t sar_height);
+  zx_status_t InitializeFrames(uint32_t min_frame_count, uint32_t max_frame_count, uint32_t width,
+                               uint32_t height, uint32_t display_width, uint32_t display_height,
+                               bool has_sar, uint32_t sar_width, uint32_t sar_height);
   zx_status_t InitializeStream();
   void ReceivedFrames(uint32_t frame_count);
   void SwitchStreams();
@@ -66,9 +66,11 @@ class H264Decoder : public VideoDecoder {
   DecoderState state_ = DecoderState::kRunning;
 
   // These are set in InitializeFrames for use in InitializedFrames.
-  // next_av_scratch0_ contains information about reference frames that firmware
-  // will need to process the video.
-  uint32_t next_av_scratch0_ = 0;
+  // next_max_reference_size_ and next_max_dpb_size_ are specified to the firmware, along with the
+  // actual number of frames.  It's not immediately clear why/whether the firmware actually needs
+  // these in addition to actual number of frames.
+  uint32_t next_max_reference_size_ = 0;
+  uint32_t next_max_dpb_size_ = 0;
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
 

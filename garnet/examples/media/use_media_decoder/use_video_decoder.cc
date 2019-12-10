@@ -152,8 +152,8 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
       }
 
       // For input we do buffer_index == packet_index.
-      const CodecBuffer& buffer =
-          codec_client->GetInputBufferByIndex(packet->header().packet_index());
+      const CodecBuffer& buffer = codec_client->BlockingGetFreeInputBufferForPacket(packet.get());
+      ZX_ASSERT(packet->buffer_index() == buffer.buffer_index());
       uint32_t padding_length = tvp ? tvp->PaddingLength() : 0;
       size_t bytes_to_copy =
           std::min(byte_count - bytes_so_far, buffer.size_bytes() - padding_length);
@@ -255,7 +255,8 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
     std::unique_ptr<fuchsia::media::Packet> packet = codec_client->BlockingGetFreeInputPacket();
     ZX_ASSERT(packet->has_header());
     ZX_ASSERT(packet->header().has_packet_index());
-    const CodecBuffer& buffer = codec_client->GetInputBufferByIndex(packet->buffer_index());
+    const CodecBuffer& buffer = codec_client->BlockingGetFreeInputBufferForPacket(packet.get());
+    ZX_ASSERT(packet->buffer_index() == buffer.buffer_index());
     // VP9 decoder doesn't yet support splitting access units into multiple
     // packets.
     ZX_ASSERT(byte_count <= buffer.size_bytes());
@@ -338,13 +339,17 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                               fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                               fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                               InStreamPeeker* in_stream, InputCopier* copier, Format format,
-                              uint64_t min_output_buffer_size, bool is_secure_output,
-                              bool is_secure_input, FrameSink* frame_sink, EmitFrame emit_frame) {
+                              uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
+                              bool is_secure_output, bool is_secure_input, FrameSink* frame_sink,
+                              EmitFrame emit_frame) {
   VLOGF("use_video_decoder()\n");
 
   VLOGF("before CodecClient::CodecClient()...\n");
   CodecClient codec_client(fidl_loop, fidl_thread, std::move(sysmem));
+  // no effect if 0
   codec_client.SetMinOutputBufferSize(min_output_buffer_size);
+  // no effect if 0
+  codec_client.SetMinOutputBufferCount(min_output_buffer_count);
   codec_client.set_is_output_secure(is_secure_output);
   codec_client.set_is_input_secure(is_secure_input);
 
@@ -728,20 +733,22 @@ void use_h264_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                       fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                       fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                       InStreamPeeker* in_stream, InputCopier* input_copier,
-                      uint64_t min_output_buffer_size, bool is_secure_output, bool is_secure_input,
+                      uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
+                      bool is_secure_output, bool is_secure_input,
                       FrameSink* frame_sink, EmitFrame emit_frame) {
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem), in_stream,
-                    input_copier, Format::kH264, min_output_buffer_size, is_secure_output,
-                    is_secure_input, frame_sink, std::move(emit_frame));
+                    input_copier, Format::kH264, min_output_buffer_size, min_output_buffer_count,
+                    is_secure_output, is_secure_input, frame_sink, std::move(emit_frame));
 }
 
 void use_vp9_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                      InStreamPeeker* in_stream, InputCopier* input_copier,
-                     uint64_t min_output_buffer_size, bool is_secure_output, bool is_secure_input,
+                     uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
+                     bool is_secure_output, bool is_secure_input,
                      FrameSink* frame_sink, EmitFrame emit_frame) {
   use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem), in_stream,
-                    input_copier, Format::kVp9, min_output_buffer_size, is_secure_output,
-                    is_secure_input, frame_sink, std::move(emit_frame));
+                    input_copier, Format::kVp9, min_output_buffer_size, min_output_buffer_count,
+                    is_secure_output, is_secure_input, frame_sink, std::move(emit_frame));
 }

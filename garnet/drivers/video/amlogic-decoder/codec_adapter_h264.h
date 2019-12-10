@@ -79,7 +79,8 @@ class CodecAdapterH264 : public CodecAdapter {
   //
   // The buffer pointer can be nullptr unless the VMO is a secure VMO.
   bool ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t* data, uint32_t length);
-  zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t frame_count, uint32_t width,
+  zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t min_frame_count,
+                                      uint32_t max_frame_count, uint32_t width,
                                       uint32_t height, uint32_t stride, uint32_t display_width,
                                       uint32_t display_height, bool has_sar, uint32_t sar_width,
                                       uint32_t sar_height);
@@ -122,7 +123,8 @@ class CodecAdapterH264 : public CodecAdapter {
   std::vector<CodecPacket*> all_output_packets_;
   std::vector<uint32_t> free_output_packets_;
 
-  uint32_t packet_count_total_ = 0;
+  uint32_t min_buffer_count_[kPortCount] = {};
+  uint32_t max_buffer_count_[kPortCount] = {};
   uint32_t width_ = 0;
   uint32_t height_ = 0;
   uint32_t min_stride_ = 0;

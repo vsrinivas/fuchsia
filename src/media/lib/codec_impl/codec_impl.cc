@@ -1579,7 +1579,8 @@ void CodecImpl::SetBufferSettingsCommon(
         }();
     // The core codec doesn't fill out usage directly.  Instead we fill it out
     // here.
-    if (!FixupBufferCollectionConstraintsLocked(port, port_settings_[port]->partial_settings(),
+    if (!FixupBufferCollectionConstraintsLocked(port, stream_constraints,
+                                                port_settings_[port]->partial_settings(),
                                                 &buffer_collection_constraints)) {
       // FixupBufferCollectionConstraints() already called Fail().
       ZX_DEBUG_ASSERT(IsStoppingLocked());
@@ -1665,7 +1666,7 @@ void CodecImpl::SetBufferSettingsCommon(
 
     // The core codec doesn't fill out usage directly.  Instead we fill it out
     // here.
-    if (!FixupBufferCollectionConstraintsLocked(port, fake_partial_settings,
+    if (!FixupBufferCollectionConstraintsLocked(port, stream_constraints, fake_partial_settings,
                                                 &buffer_collection_constraints)) {
       // FixupBufferCollectionConstraints() already called Fail().
       ZX_DEBUG_ASSERT(IsStoppingLocked());
@@ -2786,7 +2787,8 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
 // from a different proc.  If not (probably this is the case), we can change several of the checks
 // in here to ZX_DEBUG_ASSERT() instead.
 bool CodecImpl::FixupBufferCollectionConstraintsLocked(
-    CodecPort port, const fuchsia::media::StreamBufferPartialSettings& partial_settings,
+    CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+    const fuchsia::media::StreamBufferPartialSettings& partial_settings,
     fuchsia::sysmem::BufferCollectionConstraints* buffer_collection_constraints) {
   fuchsia::sysmem::BufferUsage& usage = buffer_collection_constraints->usage;
 
@@ -2874,10 +2876,11 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
 
   uint32_t required_min_buffer_count_for_camping;
   if (is_single_buffer_mode) {
+    // This isn't especially meaningful for is_single_buffer_mode.
     required_min_buffer_count_for_camping =
-        static_cast<uint32_t>(partial_settings.packet_count_for_server() != 0);
+        static_cast<uint32_t>(stream_buffer_constraints.packet_count_for_server_min() != 0);
   } else {
-    required_min_buffer_count_for_camping = partial_settings.packet_count_for_server();
+    required_min_buffer_count_for_camping = stream_buffer_constraints.packet_count_for_server_min();
   }
   if (buffer_collection_constraints->min_buffer_count_for_camping <
       required_min_buffer_count_for_camping) {

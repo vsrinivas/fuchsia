@@ -10,7 +10,7 @@
         }
     },
     "program": {
-        "binary": "test/use_h264_decoder_test"
+        "binary": "test/use_vp9_decoder_24_output_frames_test"
     },
     "sandbox": {
         "dev": [
