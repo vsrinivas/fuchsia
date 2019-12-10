@@ -9,6 +9,7 @@
 #define SRC_UI_A11Y_LIB_SEMANTICS_TREE_H_
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
+#include <fuchsia/math/cpp/fidl.h>
 
 #include <optional>
 #include <unordered_map>
@@ -54,11 +55,25 @@ class SemanticTree {
 
   using TreeUpdates = std::vector<TreeUpdate>;
 
-  SemanticTree() = default;
+  using ActionHandlerCallback = fit::function<void(
+      uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+      fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
+          callback)>;
+
+  using HitTestingHandlerCallback = fit::function<void(
+      fuchsia::math::PointF local_point,
+      fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback)>;
+
+  // A SemanticTree object is normally maintained by a semantics provider while
+  // being consumed by a semantics consumer (such as a screen reader). This
+  // class takes two handlers, provided by the semantics provider, which answer
+  // to calls performed by assistive technology, such as actions on nodes and
+  // hit testing.
+  SemanticTree(ActionHandlerCallback action_handler, HitTestingHandlerCallback hit_testing_handler);
   virtual ~SemanticTree() = default;
 
-  // Returns a copy of the node with |node_id|, nullptr otherwise.
-  fuchsia::accessibility::semantics::NodePtr GetNode(const uint32_t node_id) const;
+  // Returns the node with |node_id|, nullptr otherwise.
+  const fuchsia::accessibility::semantics::Node* GetNode(const uint32_t node_id) const;
 
   // Applies the node updates in |updates| if they leave the final resulting
   // tree in a valid state, returning true if the operation was successful. If
@@ -84,6 +99,19 @@ class SemanticTree {
 
   // Returns the number of nodes in this tree.
   size_t Size() const { return nodes_.size(); }
+
+  // Performs accessibility action on this tree. This request is passed to
+  // |action_handler_| which is received at construction time.
+  void PerformAccessibilityAction(
+      uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+      fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
+          callback) const;
+
+  // Performs hit testing on this tree. This request is passed to
+  // |hit_testing_handler_| which is received at construction time.
+  void PerformHitTesting(
+      fuchsia::math::PointF local_point,
+      fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) const;
 
  private:
   // Validates the state of the resulting tree if the pending updates in |nodes_to_be_updated_| were
@@ -112,6 +140,12 @@ class SemanticTree {
   // Nodes from this tree. If not empty, there must be a node which node id is
   // equal to kRootNodeId. It is also garanteed that this tree is always valid.
   std::unordered_map<uint32_t /*node_id*/, fuchsia::accessibility::semantics::Node> nodes_;
+
+  // Handler responsible for answering calls to PerformAccessibilityAction().
+  ActionHandlerCallback action_handler_;
+
+  // Handler responsible for answering calls to PerformHitTesting().
+  HitTestingHandlerCallback hit_testing_handler_;
 };
 
 }  // namespace transition

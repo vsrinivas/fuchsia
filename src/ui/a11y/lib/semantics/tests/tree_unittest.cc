@@ -42,7 +42,19 @@ const std::string kSemanticTreeWithMissingChildrenPath =
 
 class SemanticTreeTestTransition : public gtest::TestLoopFixture {
  public:
-  SemanticTreeTestTransition() { syslog::InitLogger(); }
+  SemanticTreeTestTransition()
+      : tree_(
+            [this](uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+                   fuchsia::accessibility::semantics::SemanticListener::
+                       OnAccessibilityActionRequestedCallback callback) {
+              this->action_handler_called_ = true;
+            },
+            [this](fuchsia::math::PointF local_point,
+                   fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
+              this->hit_testing_called_ = true;
+            }) {
+    syslog::InitLogger();
+  }
 
  protected:
   void SetUp() override { TestLoopFixture::SetUp(); }
@@ -79,6 +91,12 @@ class SemanticTreeTestTransition : public gtest::TestLoopFixture {
   }
 
   SemanticTreeParser semantic_tree_parser_;
+
+  // Whether the action handler was called.
+  bool action_handler_called_ = false;
+
+  // Whether the hit testing handler was called.
+  bool hit_testing_called_ = false;
 
   // Our test subject.
   SemanticTree tree_;
@@ -303,6 +321,17 @@ TEST_F(SemanticTreeTestTransition, ReparentsNodes) {
   auto new_parent = tree_.GetNode(1);
   EXPECT_TRUE(new_parent);
   EXPECT_THAT(new_parent->child_ids(), testing::ElementsAre(3, 4, 2));
+}
+
+TEST_F(SemanticTreeTestTransition, PerformAccessibilityActionRequested) {
+  tree_.PerformAccessibilityAction(1, fuchsia::accessibility::semantics::Action::DEFAULT,
+                                   [](auto...) {});
+  EXPECT_TRUE(action_handler_called_);
+}
+
+TEST_F(SemanticTreeTestTransition, PerformHitTestingRequested) {
+  tree_.PerformHitTesting({1, 1}, [](auto...) {});
+  EXPECT_TRUE(hit_testing_called_);
 }
 
 }  // namespace

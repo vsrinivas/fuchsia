@@ -17,7 +17,6 @@ namespace {
 
 using SemanticTreeData = std::unordered_map<uint32_t, fuchsia::accessibility::semantics::Node>;
 using fuchsia::accessibility::semantics::Node;
-using fuchsia::accessibility::semantics::NodePtr;
 
 // Tries to find |node_id| in |updated_nodes|, if not in |default_nodes|. If
 // |node_id| is not present in either, returns nullptr. Please note that if
@@ -131,14 +130,17 @@ const Node& SemanticTree::TreeUpdate::node() const {
   return *node_;
 }
 
-NodePtr SemanticTree::GetNode(const uint32_t node_id) const {
+SemanticTree::SemanticTree(ActionHandlerCallback action_handler,
+                           HitTestingHandlerCallback hit_testing_handler)
+    : action_handler_(std::move(action_handler)),
+      hit_testing_handler_(std::move(hit_testing_handler)) {}
+
+const Node* SemanticTree::GetNode(const uint32_t node_id) const {
   const auto it = nodes_.find(node_id);
   if (it == nodes_.end()) {
     return nullptr;
   }
-  auto node_ptr = Node::New();
-  it->second.Clone(node_ptr.get());
-  return node_ptr;
+  return &it->second;
 }
 
 bool SemanticTree::Update(TreeUpdates updates) {
@@ -220,6 +222,19 @@ void SemanticTree::ApplyNodeUpdates(const std::unordered_set<uint32_t>& visited_
 }
 
 void SemanticTree::Clear() { nodes_.clear(); }
+
+void SemanticTree::PerformAccessibilityAction(
+    uint32_t node_id, fuchsia::accessibility::semantics::Action action,
+    fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
+        callback) const {
+  action_handler_(node_id, action, std::move(callback));
+}
+
+void SemanticTree::PerformHitTesting(
+    fuchsia::math::PointF local_point,
+    fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) const {
+  hit_testing_handler_(local_point, std::move(callback));
+}
 
 }  // namespace transition
 }  // namespace a11y
