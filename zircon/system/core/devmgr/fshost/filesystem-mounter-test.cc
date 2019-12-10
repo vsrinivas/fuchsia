@@ -26,7 +26,9 @@ class FilesystemMounterHarness : public zxtest::Test {
     ASSERT_OK(zx::event::create(0, &fshost_event_));
     zx::event event_clone;
     ASSERT_OK(fshost_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_clone));
-    ASSERT_OK(FsManager::Create(std::move(event_clone), MakeMetrics(), &manager_));
+    zx::channel dir_request;
+    ASSERT_OK(FsManager::Create(std::move(event_clone), nullptr, std::move(dir_request),
+                                MakeMetrics(), &manager_));
     manager_->WatchExit();
   }
 

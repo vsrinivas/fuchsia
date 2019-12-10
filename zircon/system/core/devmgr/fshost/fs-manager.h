@@ -17,6 +17,7 @@
 #include <zircon/types.h>
 
 #include <fs/vfs.h>
+#include <loader-service/loader-service.h>
 
 // Used for fshost signals.
 #include "../shared/fdio.h"
@@ -29,7 +30,8 @@ namespace devmgr {
 // in-memory filesystem.
 class FsManager {
  public:
-  static zx_status_t Create(zx::event fshost_event, FsHostMetrics metrics,
+  static zx_status_t Create(zx::event fshost_event, loader_service_t* loader_svc,
+                            zx::channel dir_request, FsHostMetrics metrics,
                             std::unique_ptr<FsManager>* out);
 
   // Set of options for logging FsHost metrics with cobalt service.
@@ -64,6 +66,7 @@ class FsManager {
 
  private:
   FsManager(zx::event fshost_event, FsHostMetrics metrics);
+  zx_status_t SetupOutgoingDirectory(zx::channel dir_request, loader_service_t* loader_svc);
   zx_status_t Initialize();
 
   // Event on which "FSHOST_SIGNAL_XXX" signals are set.
@@ -80,6 +83,7 @@ class FsManager {
   std::unique_ptr<memfs::Vfs> root_vfs_;
 
   std::unique_ptr<async::Loop> global_loop_;
+  fs::ManagedVfs outgoing_vfs_;
   async::Wait global_shutdown_;
 
   // The base, root directory which serves the rest of the fshost.

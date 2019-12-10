@@ -20,7 +20,7 @@ namespace {
 // Create a subclass to access the protected test-only constructor on SystemInstance.
 class SystemInstanceForTest : public SystemInstance {
  public:
-  SystemInstanceForTest(zx::channel fs_root) : SystemInstance(std::move(fs_root)) {}
+  SystemInstanceForTest(fdio_ns_t* default_ns_) : SystemInstance(default_ns_) {}
 };
 
 struct Context {
@@ -53,6 +53,12 @@ class SystemInstanceFsProvider : public zxtest::Test {
   SystemInstanceFsProvider() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ASSERT_OK(loop_.StartThread());
 
+    // We want to create an alternative namespace for this test to use, to keep
+    // this test hermetic wrt. other running tests.
+    zx_status_t status = fdio_ns_create(&ns_for_test_);
+    ZX_ASSERT_MSG(status == ZX_OK, "devcoordinator: cannot create namespace: %s\n",
+                  zx_status_get_string(status));
+
     // Mock out an object that implements DirectoryOpen and records some state.
     // Bind it to the server handle, and provide that to SystemInstance as the fs_root connection.
     zx::channel client, server;
@@ -60,7 +66,8 @@ class SystemInstanceFsProvider : public zxtest::Test {
     ASSERT_OK(fidl_bind(loop_.dispatcher(), server.release(),
                         reinterpret_cast<fidl_dispatch_t*>(fuchsia_io_DirectoryAdmin_dispatch),
                         &context_, &kDirectoryAdminOps));
-    under_test_.reset(new SystemInstanceForTest(std::move(client)));
+    ASSERT_OK(fdio_ns_bind(ns_for_test_, "/", client.release()));
+    under_test_.reset(new SystemInstanceForTest(ns_for_test_));
   }
 
   void CloneFsAndCheckFlags(const char* path, uint32_t expected_flags) {
@@ -78,6 +85,7 @@ class SystemInstanceFsProvider : public zxtest::Test {
 
  private:
   async::Loop loop_;
+  fdio_ns_t* ns_for_test_;
   Context context_;
   std::unique_ptr<SystemInstanceForTest> under_test_;
 };

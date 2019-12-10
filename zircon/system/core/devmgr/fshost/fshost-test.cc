@@ -105,8 +105,9 @@ TEST(FsManagerTestCase, WatchExit) {
   ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &controller));
 
   std::unique_ptr<devmgr::FsManager> manager;
-  zx_status_t status =
-      devmgr::FsManager::Create(std::move(event), devmgr::FsHostMetrics(MakeCollector()), &manager);
+  zx::channel dir_request;
+  zx_status_t status = devmgr::FsManager::Create(std::move(event), nullptr, std::move(dir_request),
+                                                 devmgr::FsHostMetrics(MakeCollector()), &manager);
   ASSERT_OK(status);
   manager->WatchExit();
 

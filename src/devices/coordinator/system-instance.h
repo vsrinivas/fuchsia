@@ -7,6 +7,7 @@
 
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/ldsvc/llcpp/fidl.h>
+#include <lib/fdio/namespace.h>
 #include <lib/zx/vmo.h>
 
 #include "boot-args.h"
@@ -58,15 +59,14 @@ class SystemInstance : public devmgr::FsProvider {
   zx_status_t clone_fshost_ldsvc(zx::channel* loader);
 
  protected:
-  // Protected constructor for SystemInstance that allows injecting a filesystem root, primarily for
-  // use in unit tests.
-  explicit SystemInstance(zx::channel fs_root);
+  // Protected constructor for SystemInstance that allows injecting a different
+  // namespace, primarily for use in unit tests.
+  explicit SystemInstance(fdio_ns_t* default_ns);
 
  private:
   // Private helper functions.
   void do_autorun(const char* name, const char* cmd, const zx::resource& root_resource);
-  void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
-                    zx::channel fshost_server);
+  zx::channel fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args);
 
   // The handle used to transmit messages to appmgr.
   zx::channel appmgr_client_;
@@ -90,15 +90,6 @@ class SystemInstance : public devmgr::FsProvider {
   // The outgoing (exposed) connection to the svchost.
   zx::channel svchost_outgoing_;
 
-  // Handle to the loader service hosted in fshost, which allows loading from /boot and /system
-  // rather than specific packages.
-  // This isn't actually "optional", it's just initialized later.
-  // TODO(ZX-4860): Delete this once all dependencies have been removed.
-  fit::optional<llcpp::fuchsia::ldsvc::Loader::SyncClient> fshost_ldsvc_;
-
-  // The root of the filesystem host.
-  zx::channel fs_root_;
-
   // The job in which we run "svc" realm services, like svchost, fshost,
   // miscsvc, netsvc, the consoles, autorun, and others.
   zx::job svc_job_;
@@ -109,6 +100,12 @@ class SystemInstance : public devmgr::FsProvider {
   // Used to bind the svchost to the virtual-console binary to provide fidl
   // services.
   zx::channel virtcon_fidl_;
+
+  // The namespace into which SystemInstance::CloneFs will send open requests
+  // for directories hosted by fshost. Defaults to the results of
+  // fdio_ns_get_installed during construction, but can be overridden for test
+  // cases.
+  fdio_ns_t* default_ns_;
 
   devmgr::DevmgrLauncher launcher_;
 };

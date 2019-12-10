@@ -19,6 +19,7 @@
 #include <threads.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
@@ -27,6 +28,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <fs/remote_dir.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 
@@ -47,6 +49,7 @@ cobalt_client::CollectorOptions FsManager::CollectorOptions() {
 FsManager::FsManager(zx::event fshost_event, FsHostMetrics metrics)
     : event_(std::move(fshost_event)),
       global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
+      outgoing_vfs_(fs::ManagedVfs(global_loop_->dispatcher())),
       registry_(global_loop_.get()),
       metrics_(std::move(metrics)) {
   ZX_ASSERT(global_root_ == nullptr);
@@ -62,7 +65,8 @@ FsManager::~FsManager() {
   }
 }
 
-zx_status_t FsManager::Create(zx::event fshost_event, FsHostMetrics metrics,
+zx_status_t FsManager::Create(zx::event fshost_event, loader_service_t* loader_svc,
+                              zx::channel dir_request, FsHostMetrics metrics,
                               std::unique_ptr<FsManager>* out) {
   auto fs_manager =
       std::unique_ptr<FsManager>(new FsManager(std::move(fshost_event), std::move(metrics)));
@@ -70,7 +74,76 @@ zx_status_t FsManager::Create(zx::event fshost_event, FsHostMetrics metrics,
   if (status != ZX_OK) {
     return status;
   }
+  if (dir_request.is_valid()) {
+    status = fs_manager->SetupOutgoingDirectory(std::move(dir_request), loader_svc);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
   *out = std::move(fs_manager);
+  return ZX_OK;
+}
+
+// Sets up the outgoing directory, and runs it on the PA_DIRECTORY_REQUEST
+// handle if it exists. See fshost.cml for a list of what's in the directory.
+zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
+                                              loader_service_t* loader_svc) {
+  auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+
+  // TODO: fshost exposes two separate service directories, one here and one in
+  // the registry vfs that's mounted under fs-manager-svc further down in this
+  // function. These should be combined by either pulling the registry services
+  // into this VFS or by pushing the services in this directory into the
+  // registry.
+
+  // Add loader services to the vfs
+  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  // This service name is breaking the convention whereby the directory entry
+  // name matches the protocol name. This is an implementation of
+  // fuchsia.ldsvc.Loader, and is renamed to make it easier to identify that
+  // this implementation comes from fshost.
+  svc_dir->AddEntry("fuchsia.fshost.Loader",
+                    fbl::MakeRefCounted<fs::Service>([loader_svc](zx::channel chan) {
+                      zx_status_t status = loader_service_attach(loader_svc, chan.release());
+                      if (status != ZX_OK) {
+                        fprintf(stderr, "fshost: failed to attach loader service: %s\n",
+                                zx_status_get_string(status));
+                      }
+                      return status;
+                    }));
+  outgoing_dir->AddEntry("svc", std::move(svc_dir));
+
+  // Add /fs to the outgoing vfs
+  zx::channel filesystems_client, filesystems_server;
+  zx_status_t status = zx::channel::create(0, &filesystems_client, &filesystems_server);
+  if (status != ZX_OK) {
+    printf("fshost: failed to create channel\n");
+    return status;
+  }
+  status = this->ServeRoot(std::move(filesystems_server));
+  if (status != ZX_OK) {
+    printf("fshost: Cannot serve root filesystem\n");
+    return status;
+  }
+  outgoing_dir->AddEntry("fs", fbl::MakeRefCounted<fs::RemoteDir>(std::move(filesystems_client)));
+
+  // Add /fs-manager-svc to the vfs
+  zx::channel services_client, services_server;
+  status = zx::channel::create(0, &services_client, &services_server);
+  if (status != ZX_OK) {
+    printf("fshost: failed to create channel\n");
+    return status;
+  }
+  status = this->ServeFshostRoot(std::move(services_server));
+  if (status != ZX_OK) {
+    printf("fshost: Cannot serve export directory\n");
+    return status;
+  }
+  outgoing_dir->AddEntry("fs-manager-svc",
+                         fbl::MakeRefCounted<fs::RemoteDir>(std::move(services_client)));
+
+  // Run the outgoing directory
+  outgoing_vfs_.ServeDirectory(outgoing_dir, std::move(dir_request));
   return ZX_OK;
 }
 

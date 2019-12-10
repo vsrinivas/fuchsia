@@ -24,6 +24,7 @@ source_set("fshost-registry") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/loader-service",
     "$zx/system/ulib/memfs:memfs-cpp",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
@@ -118,6 +119,7 @@ zx_test("fshost-test") {
     "$zx/system/ulib/cobalt-client",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/loader-service",
     "$zx/system/ulib/zxtest",
   ]
 }
@@ -150,6 +152,7 @@ zx_test("block-watcher-test") {
     "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs/metrics:metrics-cobalt",
+    "$zx/system/ulib/loader-service",
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/zxtest",

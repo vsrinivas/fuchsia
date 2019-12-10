@@ -23,6 +23,8 @@
 
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/unique_fd.h>
+#include <fs/remote_dir.h>
+#include <fs/service.h>
 #include <loader-service/loader-service.h>
 #include <ramdevice-client/ramdisk.h>
 
@@ -103,25 +105,22 @@ int RamctlWatcher(void* arg) {
 }
 
 // Setup the loader service to be used by all processes spawned by devmgr.
-void setup_loader_service(zx::channel devmgr_loader) {
+// TODO(fxb/34633): this loader service is deprecated and should be deleted.
+loader_service_t* setup_loader_service() {
   loader_service_t* svc;
   zx_status_t status = loader_service_create_fs(nullptr, &svc);
   if (status != ZX_OK) {
     fprintf(stderr, "fshost: failed to create loader service %d\n", status);
   }
   auto defer = fit::defer([svc] { loader_service_release(svc); });
-  status = loader_service_attach(svc, devmgr_loader.release());
-  if (status != ZX_OK) {
-    fprintf(stderr, "fshost: failed to attach to loader service: %d\n", status);
-    return;
-  }
   zx_handle_t fshost_loader;
   status = loader_service_connect(svc, &fshost_loader);
   if (status != ZX_OK) {
     fprintf(stderr, "fshost: failed to connect to loader service: %d\n", status);
-    return;
+    return nullptr;
   }
   zx_handle_close(dl_set_loader_service(fshost_loader));
+  return svc;
 }
 
 // Initialize the fshost namespace.
@@ -189,35 +188,27 @@ int main(int argc, char** argv) {
     }
   }
 
-  zx::channel fs_root_server(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
-  zx::channel devmgr_loader(zx_take_startup_handle(PA_HND(PA_USER0, 2)));
-  zx::channel fshost_export_server(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
   zx::event fshost_event(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
 
-  // First, initialize the local filesystem in isolation.
+  // Setup the devmgr loader service.
+  loader_service_t* loader_svc = devmgr::setup_loader_service();
+  if (loader_svc == nullptr) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Initialize the local filesystem in isolation.
+  zx::channel dir_request(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   std::unique_ptr<devmgr::FsManager> fs_manager;
   zx_status_t status =
-      devmgr::FsManager::Create(std::move(fshost_event), devmgr::MakeMetrics(), &fs_manager);
+      devmgr::FsManager::Create(std::move(fshost_event), loader_svc, std::move(dir_request),
+                                devmgr::MakeMetrics(), &fs_manager);
   if (status != ZX_OK) {
     printf("fshost: Cannot create FsManager\n");
     return status;
   }
 
-  // First, begin serving the "fs_root" on behalf of devmgr.
-  status = fs_manager->ServeRoot(std::move(fs_root_server));
-  if (status != ZX_OK) {
-    printf("fshost: Cannot serve devmgr's root filesystem\n");
-    return status;
-  }
-  status = fs_manager->ServeFshostRoot(std::move(fshost_export_server));
-  if (status != ZX_OK) {
-    printf("fshost: Cannot serve export directory\n");
-    return status;
-  }
-
-  // Now that we are serving the fs_root, acquire a new connection
-  // to place in our own namespace.
-  zx::channel fs_root_client;
+  // Serve the root filesystems in our own namespace.
+  zx::channel fs_root_client, fs_root_server;
   status = zx::channel::create(0, &fs_root_client, &fs_root_server);
   if (status != ZX_OK) {
     return ZX_OK;
@@ -235,9 +226,6 @@ int main(int argc, char** argv) {
     return status;
   }
   fs_manager->WatchExit();
-
-  // Setup the devmgr loader service.
-  devmgr::setup_loader_service(std::move(devmgr_loader));
 
   // If there is a ramdisk, setup the ramctl filesystems.
   zx::vmo ramdisk_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, 0)));

@@ -44,7 +44,9 @@ class BlockDeviceHarness : public zxtest::Test {
     ASSERT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_));
 
     // Initialize FilesystemMounter.
-    ASSERT_OK(FsManager::Create(std::move(event), MakeMetrics(&logger_), &manager_));
+    zx::channel dir_request;
+    ASSERT_OK(FsManager::Create(std::move(event), nullptr, std::move(dir_request),
+                                MakeMetrics(&logger_), &manager_));
 
     // Fshost really likes mounting filesystems at "/fs".
     // Let's make that available in our namespace.

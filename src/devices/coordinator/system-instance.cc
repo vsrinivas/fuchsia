@@ -4,10 +4,10 @@
 
 #include "system-instance.h"
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
@@ -88,10 +88,16 @@ zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
                                ramdisk_vmo->reset_and_get_address(), &length);
 }
 
-SystemInstance::SystemInstance() : SystemInstance(zx::channel()) {}
+SystemInstance::SystemInstance() : SystemInstance(nullptr) {}
 
-SystemInstance::SystemInstance(zx::channel fs_root)
-    : fshost_ldsvc_(zx::channel()), fs_root_(std::move(fs_root)), launcher_(this) {}
+SystemInstance::SystemInstance(fdio_ns_t* default_ns) : default_ns_(default_ns), launcher_(this) {
+  if (default_ns_ == nullptr) {
+    zx_status_t status;
+    status = fdio_ns_get_installed(&default_ns_);
+    ZX_ASSERT_MSG(status == ZX_OK, "devcoordinator: cannot get namespace: %s\n",
+                  zx_status_get_string(status));
+  }
+}
 
 zx_status_t SystemInstance::CreateSvcJob(const zx::job& root_job) {
   zx_status_t status = zx::job::create(root_job, 0u, &svc_job_);
@@ -447,6 +453,45 @@ zx_status_t SystemInstance::ReuseExistingSvchost() {
   return ZX_OK;
 }
 
+// Binds common filesystems from fshost into our namespace. This is a temporary
+// workaround until fshost is run as a v2 component, as once that is complete
+// these paths will exist in devcoordinator's namespace when it is started.
+void bind_fshost_filesystems(zx::channel fshost_out_dir, zx::channel fshost_server, fdio_ns_t* ns) {
+  zx_status_t r;
+  if ((r = fdio_ns_bind(ns, "/fshost", fshost_out_dir.release())) != ZX_OK) {
+    printf("devcoordinator: cannot bind /fshost to namespace: %s\n", zx_status_get_string(r));
+    return;
+  }
+
+  const char* fstab[] = {
+      "/bin", "/data", "/system", "/install", "/volume", "/blob", "/pkgfs", "/tmp",
+  };
+  const uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_ADMIN |
+                         ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_EXECUTABLE;
+  for (unsigned n = 0; n < fbl::count_of(fstab); n++) {
+    zx::channel client, server;
+    if ((r = zx::channel::create(0, &server, &client)) != ZX_OK) {
+      printf("devcoordinator: failed to create channel: %s\n", zx_status_get_string(r));
+      return;
+    }
+    fbl::String fshost_path =
+        fbl::String::Concat({fbl::String("/fshost/fs"), fbl::String(fstab[n])});
+    if ((r = fdio_open(fshost_path.c_str(), flags, server.release())) != ZX_OK) {
+      printf("devcoordinator: cannot open %s: %s\n", fshost_path.c_str(), zx_status_get_string(r));
+      return;
+    }
+    if ((r = fdio_ns_bind(ns, fstab[n], client.release())) != ZX_OK) {
+      printf("devcoordinator: cannot bind %s to namespace: %s\n", fstab[n],
+             zx_status_get_string(r));
+      return;
+    }
+  }
+
+  r = fdio_open("/fshost/fs-manager-svc", FS_READ_WRITE_DIR_FLAGS, fshost_server.release());
+  ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot open /fshost/fs-manager-svc: %s\n",
+                zx_status_get_string(r));
+}
+
 void SystemInstance::devmgr_vfs_init(devmgr::Coordinator* coordinator,
                                      const devmgr::DevmgrArgs& devmgr_args,
                                      zx::channel fshost_server) {
@@ -458,12 +503,8 @@ void SystemInstance::devmgr_vfs_init(devmgr::Coordinator* coordinator,
   ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot bind /dev to namespace: %s\n",
                 zx_status_get_string(r));
 
-  // Start fshost before binding /system, since it publishes it.
-  fshost_start(coordinator, devmgr_args, std::move(fshost_server));
-
-  if ((r = fdio_ns_bind(ns, "/system", CloneFs("system").release())) != ZX_OK) {
-    printf("devcoordinator: cannot bind /system to namespace: %d\n", r);
-  }
+  zx::channel fshost_out_dir = fshost_start(coordinator, devmgr_args);
+  bind_fshost_filesystems(std::move(fshost_out_dir), std::move(fshost_server), ns);
 }
 
 // Thread entry point
@@ -906,19 +947,12 @@ int SystemInstance::FuchsiaStarter(devmgr::Coordinator* coordinator) {
 
 // TODO(ZX-4860): DEPRECATED. Do not add new dependencies on the fshost loader service!
 zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
-  // Only valid to call this after fshost_ldsvc_ has been wired up.
-  ZX_ASSERT_MSG(fshost_ldsvc_.has_value(), "clone_fshost_ldsvc called too early");
-
   zx::channel remote;
   zx_status_t status = zx::channel::create(0, loader, &remote);
   if (status != ZX_OK) {
     return status;
   }
-  auto result = fshost_ldsvc_->Clone(std::move(remote));
-  if (result.status() != ZX_OK) {
-    return result.status();
-  }
-  return result.Unwrap()->rv;
+  return fdio_service_connect("/fshost/svc/fuchsia.fshost.Loader", remote.release());
 }
 
 void SystemInstance::do_autorun(const char* name, const char* cmd,
@@ -939,30 +973,19 @@ void SystemInstance::do_autorun(const char* name, const char* cmd,
   }
 }
 
-void SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
-                                  const devmgr::DevmgrArgs& devmgr_args,
-                                  zx::channel fshost_server) {
+zx::channel SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
+                                         const devmgr::DevmgrArgs& devmgr_args) {
   // assemble handles to pass down to fshost
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t types[fbl::count_of(handles)];
   size_t n = 0;
 
-  // Pass server ends of fs_root_ and ldsvc handles to fshost.
-  zx::channel fs_root_server;
-  if (zx::channel::create(0, &fs_root_, &fs_root_server) == ZX_OK) {
-    handles[n] = fs_root_server.release();
-    types[n++] = PA_HND(PA_USER0, 0);
+  // pass directory request handle to fshost
+  zx::channel dir_request_local, dir_request_remote;
+  if (zx::channel::create(0, &dir_request_local, &dir_request_remote) == ZX_OK) {
+    handles[n] = dir_request_remote.release();
+    types[n++] = PA_HND(PA_DIRECTORY_REQUEST, 0);
   }
-  zx::channel ldsvc_client, ldsvc_server;
-  if (zx::channel::create(0, &ldsvc_client, &ldsvc_server) == ZX_OK) {
-    handles[n] = ldsvc_server.release();
-    types[n++] = PA_HND(PA_USER0, 2);
-  }
-  fshost_ldsvc_.emplace(std::move(ldsvc_client));
-
-  // The "public directory" of the fshost service.
-  handles[n] = fshost_server.release();
-  types[n++] = PA_HND(PA_USER0, 3);
 
   // pass fuchsia start event to fshost
   zx::event fshost_event_duplicate;
@@ -1010,7 +1033,19 @@ void SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
 
   launcher_.Launch(svc_job_, "fshost", args.data(), env.data(), -1, coordinator->root_resource(),
                    handles, types, n, nullptr, FS_BOOT | FS_DEV | FS_SVC);
+  return dir_request_local;
 }
+
+static struct {
+  const char* name;
+  uint32_t flags;
+} DIRECTORY_RIGHTS[] = {
+    {"bin", FS_READ_EXEC_DIR_FLAGS},   {"blob", FS_READ_WRITE_DIR_FLAGS},
+    {"boot", ZX_FS_RIGHT_READABLE},    {"data", FS_READ_WRITE_DIR_FLAGS},
+    {"hub", FS_READ_WRITE_DIR_FLAGS},  {"install", FS_READ_WRITE_DIR_FLAGS},
+    {"pkgfs", FS_READ_EXEC_DIR_FLAGS}, {"system", FS_READ_EXEC_DIR_FLAGS},
+    {"tmp", FS_READ_WRITE_DIR_FLAGS},  {"volume", FS_READ_WRITE_DIR_FLAGS},
+};
 
 zx::channel SystemInstance::CloneFs(const char* path) {
   if (!strcmp(path, "dev")) {
@@ -1020,33 +1055,33 @@ zx::channel SystemInstance::CloneFs(const char* path) {
   if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
     return zx::channel();
   }
-  if (!strcmp(path, "boot")) {
-    zx_status_t status = fdio_open("/boot", ZX_FS_RIGHT_READABLE, h1.release());
-    if (status != ZX_OK) {
-      log(ERROR, "devcoordinator: fdio_open(\"/boot\") failed: %s\n", zx_status_get_string(status));
+  zx_status_t status = ZX_OK;
+  if (!strcmp(path, "svc")) {
+    zx::unowned_channel fs = zx::unowned_channel(svchost_outgoing_);
+    status = fdio_service_clone_to(fs->get(), h1.release());
+  } else if (!strncmp(path, "dev/", 4)) {
+    zx::unowned_channel fs = devmgr::devfs_root_borrow();
+    path += 4;
+    status = fdio_open_at(fs->get(), path, FS_READ_WRITE_DIR_FLAGS, h1.release());
+  } else if (!strcmp(path, "hub")) {
+    status = fdio_open_at(appmgr_client_.get(), path, FS_READ_WRITE_DIR_FLAGS, h1.release());
+  } else {
+    int flags = 0;
+    for (unsigned n = 0; n < fbl::count_of(DIRECTORY_RIGHTS); n++) {
+      if (!strcmp(path, DIRECTORY_RIGHTS[n].name)) {
+        flags = DIRECTORY_RIGHTS[n].flags;
+        break;
+      }
+    }
+    if (flags == 0) {
+      log(ERROR, "devcoordinator: CloneFs failed for path %s: unexpected path\n", path);
       return zx::channel();
     }
-    return h0;
+    fbl::String abs_path = fbl::String::Concat({fbl::String("/"), fbl::String(path)});
+    status = fdio_ns_connect(default_ns_, abs_path.c_str(), flags, h1.release());
   }
-  zx::unowned_channel fs(fs_root_);
-  int flags = FS_READ_WRITE_DIR_FLAGS;
-  if (!strcmp(path, "hub")) {
-    fs = zx::unowned_channel(appmgr_client_);
-  } else if (!strcmp(path, "svc")) {
-    flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-    fs = zx::unowned_channel(svchost_outgoing_);
-    path = ".";
-  } else if (!strncmp(path, "dev/", 4)) {
-    fs = devmgr::devfs_root_borrow();
-    path += 4;
-  } else if (!strcmp(path, "pkgfs") || !strcmp(path, "system") || !strcmp(path, "bin")) {
-    // pkgfs itself plus these two other paths, which are really just paths into pkgfs, all should
-    // be cloned with READ|EXEC rights.
-    flags = FS_READ_EXEC_DIR_FLAGS;
-  }
-  zx_status_t status = fdio_open_at(fs->get(), path, flags, h1.release());
   if (status != ZX_OK) {
-    log(ERROR, "devcoordinator: fdio_open_at failed for path %s: %s\n", path,
+    log(ERROR, "devcoordinator: CloneFs failed for path %s: %s\n", path,
         zx_status_get_string(status));
     return zx::channel();
   }
