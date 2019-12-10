@@ -29,18 +29,21 @@ use fidl::{
 /// const comment #3
 pub const C: i32 = 4;
 
-fidl_union! {
-  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: Union,
-  members: [
-    Field {
-      ty: i32,
-      offset: 4,
-      xunion_ordinal: 1,
-    },
-  ],
-  size: 8,
-  align: 4,
+fidl_xunion! {
+	/// union comment #1
+	///
+	/// union comment #3
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	name: Union,
+	members: [
+		/// union member comment #1
+		///
+		/// union member comment #3
+		Field {
+			ty: i32,
+			ordinal: 1,
+		},
+	],
 }
 
 /// struct comment #1

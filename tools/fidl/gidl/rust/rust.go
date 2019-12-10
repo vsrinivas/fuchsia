@@ -18,10 +18,9 @@ import (
 )
 
 var tmpl = template.Must(template.New("tmpls").Parse(`
-use fidl::{Error, encoding::{Context, Decodable, Decoder, Encoder}};
+use fidl::encoding::{Context, Decodable, Decoder, Encoder};
 use fidl_conformance as conformance;
 
-const OLD_CONTEXT: &Context = &Context { unions_use_xunion_format: false };
 const V1_CONTEXT: &Context = &Context { unions_use_xunion_format: true };
 
 {{ range .EncodeSuccessCases }}
@@ -148,6 +147,9 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		}
 		value := visit(encodeSuccess.Value, decl)
 		for _, encoding := range encodeSuccess.Encodings {
+			if encoding.WireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
 				Name:    testCaseName(encodeSuccess.Name, encoding.WireFormat),
 				Context: encodingContext(encoding.WireFormat),
@@ -172,6 +174,9 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		valueType := rustType(decodeSuccess.Value.(gidlir.Object).Name)
 		value := visit(decodeSuccess.Value, decl)
 		for _, encoding := range decodeSuccess.Encodings {
+			if encoding.WireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
 				Name:      testCaseName(decodeSuccess.Name, encoding.WireFormat),
 				Context:   encodingContext(encoding.WireFormat),
@@ -201,6 +206,9 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 		value := visit(encodeFailure.Value, decl)
 
 		for _, wireFormat := range encodeFailure.WireFormats {
+			if wireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:      testCaseName(encodeFailure.Name, wireFormat),
 				Context:   encodingContext(wireFormat),
@@ -221,6 +229,9 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 		}
 		valueType := rustType(decodeFailure.Type)
 		for _, encoding := range decodeFailure.Encodings {
+			if encoding.WireFormat == gidlir.OldWireFormat {
+				continue
+			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 				Name:      testCaseName(decodeFailure.Name, encoding.WireFormat),
 				Context:   encodingContext(encoding.WireFormat),
@@ -425,6 +436,8 @@ var rustErrorCodeNames = map[gidlir.ErrorCode]string{
 }
 
 func rustErrorCode(code gidlir.ErrorCode) (string, error) {
+	// TODO: Add `use fidl::Error` to the tmpl string when there is at least one
+	// failure case generated.
 	if str, ok := rustErrorCodeNames[code]; ok {
 		return fmt.Sprintf("Error::%s", str), nil
 	}

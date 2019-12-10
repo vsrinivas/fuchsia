@@ -120,10 +120,12 @@ func TestCompileXUnion(t *testing.T) {
 }
 
 func TestCompileUnion(t *testing.T) {
+	// Note: At this point in the union-to-xunion migration, JSON IR unions are
+	// compiled into static xunions in the Rust fidlgen IR.
 	cases := []struct {
 		name     string
 		input    types.Union
-		expected Union
+		expected XUnion
 	}{
 		{
 			name: "SingleInt64",
@@ -159,7 +161,7 @@ func TestCompileUnion(t *testing.T) {
 				MaxHandles:   0,
 				MaxOutOfLine: 4294967295,
 			},
-			expected: Union{
+			expected: XUnion{
 				Attributes: types.Attributes{
 					Attributes: []types.Attribute{
 						{
@@ -171,25 +173,19 @@ func TestCompileUnion(t *testing.T) {
 				ECI:     types.EncodedCompoundIdentifier("Test"),
 				Derives: derivesAll,
 				Name:    "Test",
-				Members: []UnionMember{
+				Members: []XUnionMember{
 					{
 						Attributes: types.Attributes{},
-						Derives:    0,
 						OGType: types.Type{
 							Kind:             types.PrimitiveType,
 							PrimitiveSubtype: types.Int64,
 						},
-						Type: Type{
-							Decl:    "i64",
-							Derives: 0,
-						},
-						Name:          "I",
-						Offset:        0,
-						XUnionOrdinal: 2,
+						Type:    "i64",
+						Name:    "I",
+						Ordinal: 2,
 					},
 				},
-				Size:      24,
-				Alignment: 0,
+				Strictness: types.IsStrict,
 			},
 		},
 	}
@@ -205,7 +201,7 @@ func TestCompileUnion(t *testing.T) {
 				},
 			}
 			result := Compile(root)
-			actual := result.Unions[0]
+			actual := result.XUnions[0]
 
 			if diff := cmp.Diff(ex.expected, actual); diff != "" {
 				t.Errorf("expected != actual (-want +got)\n%s", diff)

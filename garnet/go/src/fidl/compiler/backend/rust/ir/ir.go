@@ -1388,23 +1388,12 @@ func Compile(r types.Root) Root {
 		root.XUnions = append(root.XUnions, c.compileXUnion(v))
 	}
 
-	// TODO(fxb/39159): Toggle to confirm Union & XUnion APIs align, and all
-	// can be properly compiled.
-	treatUnionAsXUnions := false
 	for _, v := range r.Unions {
-		if !treatUnionAsXUnions {
-			if v.Attributes.HasAttribute("Result") {
-				root.Results = append(root.Results, c.compileResultFromUnion(v, root))
-			} else {
-				root.Unions = append(root.Unions, c.compileUnion(v))
-			}
+		vConverted := types.ConvertUnionToXUnion(v)
+		if v.Attributes.HasAttribute("Result") {
+			root.Results = append(root.Results, c.compileResultFromXUnion(vConverted, root))
 		} else {
-			vConverted := types.ConvertUnionToXUnion(v)
-			if v.Attributes.HasAttribute("Result") {
-				root.Results = append(root.Results, c.compileResultFromXUnion(vConverted, root))
-			} else {
-				root.XUnions = append(root.XUnions, c.compileXUnion(vConverted))
-			}
+			root.XUnions = append(root.XUnions, c.compileXUnion(vConverted))
 		}
 	}
 

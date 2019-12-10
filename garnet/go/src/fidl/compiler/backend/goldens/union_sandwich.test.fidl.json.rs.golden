@@ -24,60 +24,48 @@ use fidl::{
 };
 
 
-fidl_union! {
-  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: UnionSize8Alignment4,
-  members: [
-    Variant {
-      ty: u32,
-      offset: 4,
-      xunion_ordinal: 1,
-    },
-  ],
-  size: 8,
-  align: 4,
+fidl_xunion! {
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	name: UnionSize8Alignment4,
+	members: [
+		Variant {
+			ty: u32,
+			ordinal: 1,
+		},
+	],
 }
 
-fidl_union! {
-  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: UnionSize12Alignment4,
-  members: [
-    Variant {
-      ty: [u8; 6],
-      offset: 4,
-      xunion_ordinal: 1,
-    },
-  ],
-  size: 12,
-  align: 4,
+fidl_xunion! {
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	name: UnionSize12Alignment4,
+	members: [
+		Variant {
+			ty: [u8; 6],
+			ordinal: 1,
+		},
+	],
 }
 
-fidl_union! {
-  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: UnionSize24Alignment8,
-  members: [
-    Variant {
-      ty: StructSize16Alignment8,
-      offset: 8,
-      xunion_ordinal: 1,
-    },
-  ],
-  size: 24,
-  align: 8,
+fidl_xunion! {
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	name: UnionSize24Alignment8,
+	members: [
+		Variant {
+			ty: StructSize16Alignment8,
+			ordinal: 1,
+		},
+	],
 }
 
-fidl_union! {
-  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: UnionSize36Alignment4,
-  members: [
-    Variant {
-      ty: [u8; 32],
-      offset: 4,
-      xunion_ordinal: 1,
-    },
-  ],
-  size: 36,
-  align: 4,
+fidl_xunion! {
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	name: UnionSize36Alignment4,
+	members: [
+		Variant {
+			ty: [u8; 32],
+			ordinal: 1,
+		},
+	],
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

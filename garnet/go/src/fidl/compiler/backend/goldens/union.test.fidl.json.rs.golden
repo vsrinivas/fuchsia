@@ -24,80 +24,64 @@ use fidl::{
 };
 
 
-fidl_union! {
-  #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: Union,
-  members: [
-    Primitive {
-      ty: i32,
-      offset: 8,
-      xunion_ordinal: 1,
-    },
-    StringNeedsConstructor {
-      ty: String,
-      offset: 8,
-      xunion_ordinal: 2,
-    },
-    VectorStringAlsoNeedsConstructor {
-      ty: Vec<String>,
-      offset: 8,
-      xunion_ordinal: 3,
-    },
-  ],
-  size: 24,
-  align: 8,
+fidl_xunion! {
+	#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	name: Union,
+	members: [
+		Primitive {
+			ty: i32,
+			ordinal: 1,
+		},
+		StringNeedsConstructor {
+			ty: String,
+			ordinal: 2,
+		},
+		VectorStringAlsoNeedsConstructor {
+			ty: Vec<String>,
+			ordinal: 3,
+		},
+	],
 }
 
-fidl_union! {
-  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: FieldCollision,
-  members: [
-    FieldCollisionTag {
-      ty: i32,
-      offset: 4,
-      xunion_ordinal: 1,
-    },
-  ],
-  size: 8,
-  align: 4,
+fidl_xunion! {
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	name: FieldCollision,
+	members: [
+		FieldCollisionTag {
+			ty: i32,
+			ordinal: 1,
+		},
+	],
 }
 
-fidl_union! {
-  #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: ExplicitUnion,
-  members: [
-    Primitive {
-      ty: i32,
-      offset: 8,
-      xunion_ordinal: 1,
-    },
-    StringNeedsConstructor {
-      ty: String,
-      offset: 8,
-      xunion_ordinal: 3,
-    },
-  ],
-  size: 24,
-  align: 8,
+fidl_xunion! {
+	#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	name: ExplicitUnion,
+	members: [
+		Primitive {
+			ty: i32,
+			ordinal: 1,
+		},
+		StringNeedsConstructor {
+			ty: String,
+			ordinal: 3,
+		},
+	],
 }
 
-fidl_union! {
-  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-  name: ReverseOrdinalUnion,
-  members: [
-    First {
-      ty: u32,
-      offset: 4,
-      xunion_ordinal: 1,
-    },
-    Second {
-      ty: u32,
-      offset: 4,
-      xunion_ordinal: 2,
-    },
-  ],
-  size: 8,
-  align: 4,
+fidl_xunion! {
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	name: ReverseOrdinalUnion,
+	members: [
+		First {
+			ty: u32,
+			ordinal: 1,
+		},
+		Second {
+			ty: u32,
+			ordinal: 2,
+		},
+	],
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

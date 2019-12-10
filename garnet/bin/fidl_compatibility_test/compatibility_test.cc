@@ -68,6 +68,7 @@ constexpr char kUsage[] = ("Usage:\n  fidl_compatibility_test foo_server bar_ser
 // when it interprets the static union tag as a xunion ordinal).
 const std::vector<std::string> kV1OnlyBindings = {
     "go",
+    "rust",
 };
 
 class DataGenerator {
