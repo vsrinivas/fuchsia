@@ -357,12 +357,18 @@ def strip_binary_manifest(
         if debug is None:
             print 'WARNING: no debug file found for %s' % info.filename
             continue
-        assert debug.build_id, "'%s' has no build ID" % debug.filename
         assert not debug.stripped, "'%s' is stripped" % debug.filename
         assert info == debug._replace(
             filename=info.filename,
             stripped=True), ("Debug file mismatch: %r vs %r" % (info, debug))
-        debug_list.append(debug)
+        if debug.build_id:
+            debug_list.append(debug)
+        else:
+            # Every binary should have a build ID, except for test cases
+            # specifically testing missing-build-ID or missing-PT_NOTE cases.
+            # Those will have 'test' in the name.
+            assert 'test' in os.path.basename(debug.filename), (
+                "'%s' has no build ID" % debug.filename)
 
     return stripped_manifest, debug_list, new_output
 

@@ -18,4 +18,23 @@ zx_test("dlfcn") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
   ]
+
+  data_deps = [
+    ":test-dso-no-note",
+  ]
+}
+
+loadable_module("test-dso-no-note") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "test-dso-no-note.cc",
+  ]
+  configs += [ ":no-build-id" ]
+  install_path = "lib/test-dso-no-note.so"
+}
+
+config("no-build-id") {
+  visibility = [ ":*" ]
+  ldflags = [ "-Wl,--build-id=none" ]
 }

@@ -217,9 +217,26 @@ static bool dladdr_unexported_test(void) {
 
 // TODO(dbort): Test that this process uses the system loader service by default
 
+bool dso_no_note_test(void) {
+  BEGIN_TEST;
+
+  void* obj = dlopen("test-dso-no-note.so", RTLD_LOCAL);
+  ASSERT_NONNULL(obj, dlerror());
+
+  void* sym = dlsym(obj, "dummy");
+  EXPECT_NONNULL(sym, dlerror());
+
+  (*(void(*)(void))(uintptr_t)(sym))();
+
+  EXPECT_EQ(dlclose(obj), 0, dlerror());
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(dlfcn_tests)
 RUN_TEST(dlopen_vmo_test);
 RUN_TEST(loader_service_test);
 RUN_TEST(clone_test);
 RUN_TEST(dladdr_unexported_test);
+RUN_TEST(dso_no_note_test);
 END_TEST_CASE(dlfcn_tests)

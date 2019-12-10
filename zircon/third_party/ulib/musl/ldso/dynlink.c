@@ -1087,9 +1087,11 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo, struct ds
   if (dso->tls.size)
     dso->tls.image = laddr(dso, tls_image);
 
-  for (const Phdr* seg = first_note; seg <= last_note; ++seg) {
-    if (seg->p_type == PT_NOTE && find_buildid_note(dso, seg))
-      break;
+  if (first_note != NULL) {
+    for (const Phdr* seg = first_note; seg <= last_note; ++seg) {
+      if (seg->p_type == PT_NOTE && find_buildid_note(dso, seg))
+        break;
+    }
   }
 
   return ZX_OK;
