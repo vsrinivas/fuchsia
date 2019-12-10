@@ -131,6 +131,9 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	var bootMode bootserver.Mode
 	if r.netboot {
 		bootMode = bootserver.ModeNetboot
@@ -177,6 +180,8 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	var socketPath string
 	if t0.Serial() != nil {
+		defer t0.Serial().Close()
+
 		// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
 		// arm64 devices should already be enabling kernel.serial at compile time.
 		r.zirconArgs = append(r.zirconArgs, "kernel.serial=legacy")
@@ -203,18 +208,13 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			return err
 		}
 		defer l.Close()
-		ctx, cancel := context.WithCancel(ctx)
-		defer cancel()
 		go func() {
-			if err := s.Run(ctx, l); err != nil {
+			if err := s.Run(ctx, l); err != nil && ctx.Err() != nil {
 				errs <- err
 				return
 			}
 		}()
 	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	// Defer asynchronously restarts of each target.
 	defer func() {
@@ -367,7 +367,7 @@ func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (Target,
 		if err := json.Unmarshal(obj, &cfg); err != nil {
 			return nil, fmt.Errorf("invalid QEMU config found: %v", err)
 		}
-		return target.NewQEMUTarget(cfg, opts), nil
+		return target.NewQEMUTarget(cfg, opts)
 	case "device":
 		var cfg target.DeviceConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {

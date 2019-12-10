@@ -103,7 +103,10 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		}
 	}
 
-	t := target.NewQEMUTarget(config, target.Options{})
+	t, err := target.NewQEMUTarget(config, target.Options{})
+	if err != nil {
+		return err
+	}
 	if err := t.Start(ctx, imgs, cmdlineArgs); err != nil {
 		return err
 	}
