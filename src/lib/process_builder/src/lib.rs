@@ -410,7 +410,7 @@ impl ProcessBuilder {
 
         // Check if main executable is dynamically linked, and handle appropriately.
         let loaded_elf;
-        let _reserve_vmar; // VMAR destroyed on drop but otherwise unused, hence _ prefix.
+        let mut reserve_vmar = None;
         let dynamic;
         if let Some(interp_hdr) =
             elf_headers.program_header_with_type(elf_parse::SegmentType::Interp)?
@@ -426,12 +426,12 @@ impl ProcessBuilder {
             // reserve the low address region for sanitizers to allocate shadow memory.
             //
             // The reservation VMAR ensures that the initial allocations & mappings made in this
-            // function stay out of this area. It is destroyed automatically on Drop. The process's
-            // own allocations can use the full address space.
+            // function stay out of this area. It is destroyed below before returning and the
+            // process's own allocations can use the full address space.
             //
             // !! WARNING: This makes a specific address VMAR allocation, so it must come before
             // any elf_load::load_elf calls. !!
-            _reserve_vmar = ReservationVmar::reserve_low_address_space(&self.inner.root_vmar)?;
+            reserve_vmar = Some(ReservationVmar::reserve_low_address_space(&self.inner.root_vmar)?);
 
             // Get the dynamic linker and map it into the process's address space.
             let ld_vmo = get_dynamic_linker(&ldsvc, &self.executable, interp_hdr).await?;
@@ -454,9 +454,9 @@ impl ProcessBuilder {
             });
         }
 
-        // Load the system vDSO into the process's address space and a handle to it to the
-        // bootstrap message.
-        let vdso_base = self.inner.load_system_vdso(self.vdso)?;
+        // Load the vDSO - either the default system vDSO, or the user-provided one - into the
+        // process's address space and a handle to it to the bootstrap message.
+        let vdso_base = self.inner.load_vdso(self.vdso)?;
 
         // Calculate initial stack size.
         let stack_size;
@@ -493,6 +493,12 @@ impl ProcessBuilder {
         // Build and send the primary bootstrap message.
         let msg = processargs::Message::build(self.inner.msg_contents)?;
         msg.write(&bootstrap_wr).map_err(ProcessBuilderError::WriteBootstrapMessage)?;
+
+        // Explicitly destroy the reservation VMAR before returning so that we can be sure it is
+        // gone (so we don't end up with a process with half its address space gone).
+        if let Some(mut r) = reserve_vmar {
+            r.destroy().map_err(ProcessBuilderError::DestroyReservationVMAR)?;
+        }
 
         Ok(BuiltProcess {
             process: self.inner.process,
@@ -618,9 +624,10 @@ impl BuilderInner {
             .collect()
     }
 
-    /// Load the system vDSO VMO into the process's address space and a handle to it to the
-    /// bootstrap message. Returns the base address that the vDSO was mapped into.
-    fn load_system_vdso(&mut self, vdso: Option<zx::Vmo>) -> Result<usize, ProcessBuilderError> {
+    /// Load the vDSO VMO into the process's address space and a handle to it to the bootstrap
+    /// message. If a vDSO VMO is provided, loads that one, otherwise loads the default system
+    /// vDSO. Returns the base address that the vDSO was mapped into.
+    fn load_vdso(&mut self, vdso: Option<zx::Vmo>) -> Result<usize, ProcessBuilderError> {
         let vdso_vmo = match vdso {
             Some(vmo) => Ok(vmo),
             None => get_system_vdso_vmo(),
@@ -776,7 +783,7 @@ impl BuiltProcess {
     }
 }
 
-struct ReservationVmar(zx::Vmar);
+struct ReservationVmar(Option<zx::Vmar>);
 
 impl ReservationVmar {
     /// Reserve the lower half of the address space of the given VMAR by allocating another VMAR.
@@ -799,29 +806,33 @@ impl ReservationVmar {
             })?;
         assert_eq!(reserve_base, info.base, "Reservation VMAR allocated at wrong address");
 
-        Ok(ReservationVmar(reserve_vmar))
+        Ok(ReservationVmar(Some(reserve_vmar)))
+    }
+
+    /// Destroy the reservation. The reservation is also automatically destroyed when
+    /// ReservationVmar is dropped.
+    ///
+    /// VMARs are not destroyed when the handle is closed (by dropping), so we must explicit destroy
+    /// it to release the reservation and allow the created process to use the full address space.
+    fn destroy(&mut self) -> Result<(), zx::Status> {
+        match self.0.take() {
+            Some(vmar) => {
+                // This is safe because there are no mappings in the region and it is not a region
+                // in the current process.
+                unsafe { vmar.destroy() }
+            }
+            None => Ok(()),
+        }
     }
 }
 
-// VMARs are not destroyed when the handle is closed (by dropping), so we must explicit destroy it
-// to release the reservation and allow the created process to use the full address space.
+// This is probably unnecessary, but it feels wrong to rely on the side effect of the process's
+// root VMAR going away. We explicitly call destroy if ProcessBuilder.build() succeeds and returns
+// a BuiltProcess, in which case this will do nothing, and if build() fails then the new process
+// and its root VMAR will get cleaned up along with this sub-VMAR.
 impl Drop for ReservationVmar {
     fn drop(&mut self) {
-        // This is safe because there are no mappings in the region and it is not a region in the
-        // current process.
-        unsafe {
-            // TODO(fxb/42437): add back the .expect() here.
-            // Temporarily ignoring failures here since we're seeing secondary failures here
-            // masking other process spawning failures since dropping the process handle before
-            // destroying the child vmar handle destroys the child vmar handle automatically.
-            // We won't leak anything ignoring this error, and it'll help us figure out what
-            // the primary failures we're seeing in CQ/CI are.
-            let result = self.0.destroy();
-            if result.is_err() {
-                warn!("Failed to drop reservation VMAR; carrying on presuming we dropped the
-                      process handle first");
-            }
-        }
+        self.destroy().unwrap_or_else(|e| warn!("Failed to destroy reservation VMAR: {}", e));
     }
 }
 
@@ -859,6 +870,8 @@ pub enum ProcessBuilderError {
     LoadDynamicLinkerTimeout(),
     #[fail(display = "Failed to write bootstrap message to channel: {}", _0)]
     WriteBootstrapMessage(#[cause] zx::Status),
+    #[fail(display = "Failed to destroy reservation VMAR: {}", _0)]
+    DestroyReservationVMAR(#[cause] zx::Status),
 }
 
 impl ProcessBuilderError {
@@ -871,7 +884,8 @@ impl ProcessBuilderError {
             | ProcessBuilderError::CreateThread(s)
             | ProcessBuilderError::ProcessStart(s)
             | ProcessBuilderError::GenericStatus(_, s)
-            | ProcessBuilderError::WriteBootstrapMessage(s) => *s,
+            | ProcessBuilderError::WriteBootstrapMessage(s)
+            | ProcessBuilderError::DestroyReservationVMAR(s) => *s,
             ProcessBuilderError::ElfParse(e) => e.as_zx_status(),
             ProcessBuilderError::ElfLoad(e) => e.as_zx_status(),
             ProcessBuilderError::Processargs(e) => e.as_zx_status(),
@@ -1030,7 +1044,8 @@ mod tests {
     }
 
     // Verify that a loader service handle is properly handled if passed directly to
-    // set_loader_service instead of through add_handles.
+    // set_loader_service instead of through add_handles. Otherwise this test is identical to
+    // start_util_with_args.
     #[fasync::run_singlethreaded(test)]
     async fn set_loader_directly() -> Result<(), Error> {
         let test_args = vec!["arg0", "arg1", "arg2"];
@@ -1054,8 +1069,13 @@ mod tests {
         Ok(())
     }
 
-    // Verify that a vDSO handle is properly handled if passed directly to
-    // set_vdso_vmo instead of relying on the default value.
+    // Verify that a vDSO handle is properly handled if passed directly to set_vdso_vmo instead of
+    // relying on the default value.
+    // Note: There isn't a great way to tell here whether the vDSO VMO we passed in was used
+    // instead of the default (because the kernel only allows use of vDSOs that it created for
+    // security, so we can't make a fake vDSO with a different name or something), so that isn't
+    // checked explicitly. The failure tests below make sure we don't ignore the provided vDSO VMO
+    // completely.
     #[fasync::run_singlethreaded(test)]
     async fn set_vdso_directly() -> Result<(), Error> {
         let test_args = vec!["arg0", "arg1", "arg2"];
@@ -1063,22 +1083,68 @@ mod tests {
             test_args.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
 
         let (mut builder, proxy) = setup_test_util_builder(true)?;
-        builder.add_handles(vec![StartupHandle {
-            handle: get_system_vdso_vmo()?.into_handle(),
-            info: HandleInfo::new(HandleType::VdsoVmo, 0),
-        }])?;
+        builder.set_vdso_vmo(get_system_vdso_vmo()?);
         builder.add_arguments(test_args_cstr);
         let process = builder.build().await?.start()?;
         check_process_running(&process)?;
 
-        // Use the util protocol to confirm that the new process was set up correctly. A successful
-        // connection to the util validates that handles are passed correctly to the new process,
-        // since the DirectoryRequest handle made it.
+        // Use the util protocol to confirm that the new process was set up correctly.
         let proc_args = proxy.get_arguments().await.context("failed to get args from util")?;
         assert_eq!(proc_args, test_args);
 
         mem::drop(proxy);
         check_process_exited_ok(&process).await?;
+        Ok(())
+    }
+
+    // Verify that a vDSO handle is properly handled if passed directly to set_vdso_vmo instead of
+    // relying on the default value, this time by providing an invalid VMO (something that isn't
+    // ELF and will fail to parse). This also indirectly tests that the reservation VMAR cleanup
+    // happens properly by testing a failure after it has been created.
+    #[fasync::run_singlethreaded(test)]
+    async fn set_invalid_vdso_directly_fails() -> Result<(), Error> {
+        let bad_vdso = zx::Vmo::create(1)?;
+
+        let (mut builder, _) = setup_test_util_builder(true)?;
+        builder.set_vdso_vmo(bad_vdso);
+
+        let result = builder.build().await;
+        match result {
+            Err(ProcessBuilderError::ElfParse(ElfParseError::InvalidFileHeader(_))) => {}
+            Err(err) => {
+                panic!("Unexpected error type: {}", err);
+            }
+            Ok(_) => {
+                panic!("Unexpectedly succeeded to build process with invalid vDSO");
+            }
+        }
+        Ok(())
+    }
+
+    // Verify that a vDSO handle is properly handled if passed through add_handles instead of
+    // relying on the default value, this time by providing an invalid VMO (something that isn't
+    // ELF and will fail to parse). This also indirectly tests that the reservation VMAR cleanup
+    // happens properly by testing a failure after it has been created.
+    #[fasync::run_singlethreaded(test)]
+    async fn set_invalid_vdso_fails() -> Result<(), Error> {
+        let bad_vdso = zx::Vmo::create(1)?;
+
+        let (mut builder, _) = setup_test_util_builder(true)?;
+        builder.add_handles(vec![StartupHandle {
+            handle: bad_vdso.into_handle(),
+            info: HandleInfo::new(HandleType::VdsoVmo, 0),
+        }])?;
+
+        let result = builder.build().await;
+        match result {
+            Err(ProcessBuilderError::ElfParse(ElfParseError::InvalidFileHeader(_))) => {}
+            Err(err) => {
+                panic!("Unexpected error type: {}", err);
+            }
+            Ok(_) => {
+                panic!("Unexpectedly succeeded to build process with invalid vDSO");
+            }
+        }
         Ok(())
     }
 
@@ -1173,8 +1239,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_no_loader_fails() -> Result<(), Error> {
         let (builder, _) = setup_test_util_builder(false)?;
-        let result = builder.build().await;
 
+        let result = builder.build().await;
         match result {
             Err(ProcessBuilderError::LoaderMissing()) => {}
             Err(err) => {
@@ -1187,7 +1253,7 @@ mod tests {
         Ok(())
     }
 
-    // Checks that, for dynamically linked binaries, the lower half of the address space is
+    // Checks that, for dynamically linked binaries, the lower half of the address space has been
     // reserved for sanitizers.
     #[fasync::run_singlethreaded(test)]
     async fn verify_low_address_range_reserved() -> Result<(), Error> {

@@ -111,7 +111,7 @@ impl ProcessLauncher {
                         }
                         Err(err) => {
                             warn!(
-                                "Failed to launch process '{}' in job {}: {}",
+                                "Failed to launch process '{}' in job {}: {:?}",
                                 name,
                                 koid_to_string(job_koid),
                                 err
@@ -143,7 +143,7 @@ impl ProcessLauncher {
                         }
                         Err(err) => {
                             warn!(
-                                "Failed to create process '{}' in job {}: {}",
+                                "Failed to create process '{}' in job {}: {:?}",
                                 name,
                                 koid_to_string(job_koid),
                                 err
@@ -328,17 +328,11 @@ mod tests {
         fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
-        fuchsia_async::{
-            EHandle,
-            self as fasync,
-        },
+        fuchsia_async::{self as fasync, EHandle},
         fuchsia_runtime::{job_default, HandleType},
         fuchsia_vfs_pseudo_fs_mt::{
-            directory::entry::DirectoryEntry,
-            execution_scope::ExecutionScope,
-            file::pcb::asynchronous::read_only_static,
-            path,
-            pseudo_directory,
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::pcb::asynchronous::read_only_static, path, pseudo_directory,
         },
         fuchsia_zircon::HandleBased,
         futures::lock::Mutex,
