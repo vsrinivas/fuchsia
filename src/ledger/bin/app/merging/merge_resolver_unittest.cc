@@ -23,7 +23,6 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/backoff/testing/test_backoff.h"
-#include "src/lib/callback/cancellable_helper.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 

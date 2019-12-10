@@ -24,7 +24,6 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/callback/cancellable.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

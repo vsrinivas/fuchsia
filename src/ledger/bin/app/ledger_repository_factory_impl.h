@@ -24,7 +24,6 @@
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/ledger/lib/callback/managed_container.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/callback/cancellable.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/inspect.h"
