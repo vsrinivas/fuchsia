@@ -1,8 +1,6 @@
 # Nand testing
 
-*** note
-__WARNING:__ Most of these tests are destructive in nature.
-***
+Warning: Most of these tests are destructive in nature.
 
 ## Accessing the desired device
 
@@ -23,19 +21,17 @@ devices may be removed like so:
 $ unbind /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm
 ```
 
-*** note
-__WARNING:__ Before removing a particular device, remove its descendants. By
+Warning: Before removing a particular device, remove its descendants. By
 extension, file systems must be unmounted before a block device is removed.
 Note that this requirement is likely to render a running system unusable, as
 the backing for the OS may be going away. Netboot may be the only viable option.
-***
 
 Note that all other devices created by nandpart must also be removed. Use `dm
 dump` to inspect the device tree.
 
 ## Protocol testing
 
-*nand-test* is an integration test which performs basic tests of nand protocol
+`nand-test` is an integration test which performs basic tests of nand protocol
 drivers.
 
 For example, this command will test an existing ram-nand device making sure the
@@ -47,7 +43,7 @@ $ /boot/test/sys/nand-test --device /dev/misc/nand-ctl/ram-nand-0 --first-block 
 
 ## Correctness testing
 
-*nand-util* is a troubleshooting tool that can perform a simple read-reliability
+`nand-util` is a troubleshooting tool that can perform a simple read-reliability
 test.
 
 ```shell
@@ -63,13 +59,11 @@ $ nand-util --device /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm --read --bl
 
 ## Grab an image
 
-*nand-util* can also be used to grab an image of the nand contents:
+`nand-util` can also be used to grab an image of the nand contents:
 
-*** note
-If a file system is already mounted, unbind will fail, and forcing it to work is
+Note: If a file system is already mounted, unbind will fail, and forcing it to work is
 likely to render the system unusable. Rememer to netboot or use Zedboot as
 needed.
-***
 
 ```shell
 $ unbind /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm/ftl/block
