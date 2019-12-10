@@ -13,8 +13,10 @@ import (
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/link/channel"
+	"github.com/google/netstack/tcpip/link/sniffer"
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
+	"github.com/google/netstack/tcpip/network/ipv6"
 	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/waiter"
@@ -116,222 +118,235 @@ func TestEndpoint_Wait(t *testing.T) {
 }
 
 func TestBridge(t *testing.T) {
-	// payload should be unique enough that it won't accidentally appear
-	// in TCP/IP packets.
-	const payload = "hello"
+	for _, testCase := range []struct {
+		name        string
+		protocol    stack.NetworkProtocol
+		addressSize int
+	}{
+		{name: "ipv4", protocol: ipv4.NewProtocol(), addressSize: header.IPv4AddressSize},
+		{name: "ipv6", protocol: ipv6.NewProtocol(), addressSize: header.IPv6AddressSize},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			// payload should be unique enough that it won't accidentally appear
+			// in TCP/IP packets.
+			const payload = "hello"
 
-	/* Connection diagram:
-	 s1ep <----> ep1         ep2 <----> s2ep
-								^--bridge1--^
-	*/
-	ep1, ep2 := pipe(tcpip.LinkAddress(bytes.Repeat([]byte{1}, header.EthernetAddressSize)), tcpip.LinkAddress(bytes.Repeat([]byte{2}, header.EthernetAddressSize)))
-	ep3, ep4 := pipe(tcpip.LinkAddress(bytes.Repeat([]byte{3}, header.EthernetAddressSize)), tcpip.LinkAddress(bytes.Repeat([]byte{4}, header.EthernetAddressSize)))
-	s1addr := tcpip.Address([]byte{1, 1, 1, 1})
-	s1subnet := util.PointSubnet(s1addr)
-	s1, err := makeStackWithEndpoint(ep1, s1addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	baddr := tcpip.Address([]byte{2, 2, 2, 2})
-	bsubnet := util.PointSubnet(baddr)
-	sb, b, err := makeStackWithBridgedEndpoints(ep2, ep3, baddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := b.Up(); err != nil {
-		t.Fatal(err)
-	}
-
-	s2addr := tcpip.Address([]byte{3, 3, 3, 3})
-	s2subnet := util.PointSubnet(s2addr)
-	s2, err := makeStackWithEndpoint(ep4, s2addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Add an address to one of the constituent links of the bridge (in addition
-	// to the address on the virtual NIC representing the bridge itself), to test
-	// that constituent links are still routable.
-	bcaddr := tcpip.Address([]byte{4, 4, 4, 4})
-	bcsubnet := util.PointSubnet(bcaddr)
-	if err := sb.AddAddress(1, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
-		t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
-	}
-	if err := sb.AddAddress(1, header.IPv4ProtocolNumber, bcaddr); err != nil {
-		t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
-	}
-
-	s1.SetRouteTable([]tcpip.Route{
-		{
-			Destination: s2subnet,
-			NIC:         1,
-		},
-		{
-			Destination: bsubnet,
-			NIC:         1,
-		},
-		{
-			Destination: bcsubnet,
-			NIC:         1,
-		},
-	})
-
-	sb.SetRouteTable([]tcpip.Route{
-		{
-			Destination: s1subnet,
-			NIC:         1,
-		},
-	})
-
-	s2.SetRouteTable(
-		[]tcpip.Route{
-			{
-				Destination: s1subnet,
-				NIC:         2,
-			},
-		},
-	)
-
-	addrs := map[tcpip.Address]*stack.Stack{
-		s2addr: s2,
-		baddr:  sb,
-		bcaddr: sb,
-	}
-
-	stacks := map[string]*stack.Stack{
-		"s1": s1, "s2": s2, "sb": sb,
-	}
-
-	ep2.onWritePacket = func(vv buffer.VectorisedView, linkHeader buffer.View) {
-		if bytes.Contains(vv.ToView(), []byte(payload)) {
-			t.Errorf("did not expect payload %q to be sent back to ep1 in vv: %v", payload, vv)
-		}
-	}
-
-	for addr, toStack := range addrs {
-		t.Run(fmt.Sprintf("ConnectAndWrite_%s", addr), func(t *testing.T) {
-			recvd, err := connectAndWrite(s1, toStack, addr, payload)
+			/* Connection diagram:
+			 s1ep <----> ep1         ep2 <----> s2ep
+										^--bridge1--^
+			*/
+			ep1, ep2 := pipe(tcpip.LinkAddress(bytes.Repeat([]byte{1}, header.EthernetAddressSize)), tcpip.LinkAddress(bytes.Repeat([]byte{2}, header.EthernetAddressSize)))
+			ep3, ep4 := pipe(tcpip.LinkAddress(bytes.Repeat([]byte{3}, header.EthernetAddressSize)), tcpip.LinkAddress(bytes.Repeat([]byte{4}, header.EthernetAddressSize)))
+			s1addr := tcpip.Address(bytes.Repeat([]byte{1}, testCase.addressSize))
+			s1subnet := util.PointSubnet(s1addr)
+			s1, err := makeStackWithEndpoint(ep1, testCase.protocol, s1addr)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if got := string(recvd); got != payload {
-				t.Errorf("got Read(...) = %v, want = %v", got, payload)
+			baddr := tcpip.Address(bytes.Repeat([]byte{2}, testCase.addressSize))
+			bsubnet := util.PointSubnet(baddr)
+			sb, b, err := makeStackWithBridgedEndpoints(ep2, ep3, testCase.protocol, baddr)
+			if err != nil {
+				t.Fatal(err)
 			}
 
-			for name, s := range stacks {
-				stats := s.Stats()
-				if n := stats.UnknownProtocolRcvdPackets.Value(); n != 0 {
-					t.Errorf("stack %s received %d UnknownProtocolRcvdPackets", name, n)
+			if err := b.Up(); err != nil {
+				t.Fatal(err)
+			}
+
+			s2addr := tcpip.Address(bytes.Repeat([]byte{3}, testCase.addressSize))
+			s2subnet := util.PointSubnet(s2addr)
+			s2, err := makeStackWithEndpoint(ep4, testCase.protocol, s2addr)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Add an address to one of the constituent links of the bridge (in addition
+			// to the address on the virtual NIC representing the bridge itself), to test
+			// that constituent links are still routable.
+			bcaddr := tcpip.Address(bytes.Repeat([]byte{4}, testCase.addressSize))
+			bcsubnet := util.PointSubnet(bcaddr)
+			if err := sb.AddAddress(1, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
+				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
+			}
+			if err := sb.AddAddress(1, testCase.protocol.Number(), bcaddr); err != nil {
+				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
+			}
+
+			s1.SetRouteTable([]tcpip.Route{
+				{
+					Destination: s2subnet,
+					NIC:         1,
+				},
+				{
+					Destination: bsubnet,
+					NIC:         1,
+				},
+				{
+					Destination: bcsubnet,
+					NIC:         1,
+				},
+			})
+
+			sb.SetRouteTable([]tcpip.Route{
+				{
+					Destination: s1subnet,
+					NIC:         1,
+				},
+			})
+
+			s2.SetRouteTable(
+				[]tcpip.Route{
+					{
+						Destination: s1subnet,
+						NIC:         2,
+					},
+				},
+			)
+
+			addrs := map[tcpip.Address]*stack.Stack{
+				s2addr: s2,
+				baddr:  sb,
+				bcaddr: sb,
+			}
+
+			stacks := map[string]*stack.Stack{
+				"s1": s1, "s2": s2, "sb": sb,
+			}
+
+			ep2.onWritePacket = func(vv buffer.VectorisedView, linkHeader buffer.View) {
+				for _, view := range vv.Views() {
+					if bytes.Contains(view, []byte(payload)) {
+						t.Errorf("did not expect payload %x to be sent back to ep1 in vv: %x", payload, vv)
+					}
 				}
-				if n := stats.MalformedRcvdPackets.Value(); n != 0 {
-					t.Errorf("stack %s received %d MalformedRcvdPackets", name, n)
-				}
-				if n := stats.DroppedPackets.Value(); n != 0 {
-					t.Errorf("stack %s received %d DroppedPackets", name, n)
+			}
+
+			for addr, toStack := range addrs {
+				t.Run(fmt.Sprintf("ConnectAndWrite_%s", addr), func(t *testing.T) {
+					recvd, err := connectAndWrite(s1, toStack, testCase.protocol, addr, payload)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					if !bytes.Equal(recvd, []byte(payload)) {
+						t.Errorf("got Read(...) = %x, want = %x", recvd, payload)
+					}
+
+					for name, s := range stacks {
+						stats := s.Stats()
+						if n := stats.UnknownProtocolRcvdPackets.Value(); n != 0 {
+							t.Errorf("stack %s received %d UnknownProtocolRcvdPackets", name, n)
+						}
+						if n := stats.MalformedRcvdPackets.Value(); n != 0 {
+							t.Errorf("stack %s received %d MalformedRcvdPackets", name, n)
+						}
+						if n := stats.DroppedPackets.Value(); n != 0 {
+							t.Errorf("stack %s received %d DroppedPackets", name, n)
+						}
+
+						// The invalid address counter counts packets that have been received
+						// by a stack correctly addressed at the link layer but incorrectly
+						// addressed at the network layer (e.g. no network interface has the
+						// address listed in the packet). This usually happens because
+						// the stack is being sent packets for an IP address that it used to
+						// have but doesn't have anymore.  In this case, the bridge will
+						// forward a packet to all constituent links when the link address that
+						// the packet is addressed to isn't found on the bridge.
+						//
+						// TODO(NET-690): When we implement learning, we should be able to
+						// modify this test setup to get to zero invalid addresses received.
+						// With the current test setup, once learning is implemented, the
+						// bridge would indiscriminately forward the first packet addressed to
+						// a link address to all constituent links (causing #links - 1 invalid
+						// addresses received), observe which link the response packet came
+						// from, and then remember which link to forward to when the next
+						// packet addressed to that link address was received. We might be able
+						// to get to zero invalid addresses received by learning which links a
+						// given address is on via the broadcast packets sent during ARP.
+						// if n := stats.IP.InvalidAddressesReceived.Value(); n != 0 {
+						//   t.Errorf("stack %s received %d InvalidAddressesReceived", name, n)
+						// }
+						if n := stats.IP.OutgoingPacketErrors.Value(); n != 0 {
+							t.Errorf("stack %s received %d OutgoingPacketErrors", name, n)
+						}
+						if n := stats.TCP.FailedConnectionAttempts.Value(); n != 0 {
+							t.Errorf("stack %s received %d FailedConnectionAttempts", name, n)
+						}
+						if n := stats.TCP.InvalidSegmentsReceived.Value(); n != 0 {
+							t.Errorf("stack %s received %d InvalidSegmentsReceived", name, n)
+						}
+						if n := stats.TCP.ResetsSent.Value(); n != 0 {
+							t.Errorf("stack %s received %d ResetsSent", name, n)
+						}
+						if n := stats.TCP.ResetsReceived.Value(); n != 0 {
+							t.Errorf("stack %s received %d ResetsReceived", name, n)
+						}
+					}
+				})
+			}
+
+			if err := b.Close(); err != nil {
+				t.Fatal(err)
+			}
+
+			// verify that the endpoint from the constituent link on sb is still accessible
+			// and the bridge endpoint and endpoint on s2 are no longer accessible from s1
+			noLongerConnectable := map[tcpip.Address]*stack.Stack{
+				s2addr: s2,
+				baddr:  sb,
+			}
+
+			stillConnectable := map[tcpip.Address]*stack.Stack{
+				bcaddr: sb,
+			}
+
+			for addr, toStack := range noLongerConnectable {
+				t.Run(addr.String(), func(t *testing.T) {
+					senderWaitQueue := new(waiter.Queue)
+					sender, err := s1.NewEndpoint(tcp.ProtocolNumber, testCase.protocol.Number(), senderWaitQueue)
+					if err != nil {
+						t.Fatalf("NewEndpoint failed: %s", err)
+					}
+					defer sender.Close()
+
+					receiverWaitQueue := new(waiter.Queue)
+					receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, testCase.protocol.Number(), receiverWaitQueue)
+					if err != nil {
+						t.Fatalf("NewEndpoint failed: %s", err)
+					}
+					defer receiver.Close()
+
+					if err := receiver.Bind(tcpip.FullAddress{Addr: addr}); err != nil {
+						t.Fatalf("bind failed: %s", err)
+					}
+					if err := receiver.Listen(1); err != nil {
+						t.Fatalf("listen failed: %s", err)
+					}
+					addr, err := receiver.GetLocalAddress()
+					if err != nil {
+						t.Fatalf("getlocaladdress failed: %s", err)
+					}
+					addr.NIC = 0
+
+					if err := connect(sender, addr, senderWaitQueue, receiverWaitQueue); err != timeoutSendReady {
+						t.Errorf("expected timeout sendready, got %v connecting to addr %+v", err, addr)
+					}
+				})
+			}
+
+			for addr, toStack := range stillConnectable {
+				recvd, err := connectAndWrite(s1, toStack, testCase.protocol, addr, payload)
+				if err != nil {
+					t.Fatal(err)
 				}
 
-				// The invalid address counter counts packets that have been received
-				// by a stack correctly addressed at the link layer but incorrectly
-				// addressed at the network layer (e.g. no network interface has the
-				// address listed in the packet). This usually happens because
-				// the stack is being sent packets for an IP address that it used to
-				// have but doesn't have anymore.  In this case, the bridge will
-				// forward a packet to all constituent links when the link address that
-				// the packet is addressed to isn't found on the bridge.
-				//
-				// TODO(NET-690): When we implement learning, we should be able to
-				// modify this test setup to get to zero invalid addresses received.
-				// With the current test setup, once learning is implemented, the
-				// bridge would indiscriminately forward the first packet addressed to
-				// a link address to all constituent links (causing #links - 1 invalid
-				// addresses received), observe which link the response packet came
-				// from, and then remember which link to forward to when the next
-				// packet addressed to that link address was received. We might be able
-				// to get to zero invalid addresses received by learning which links a
-				// given address is on via the broadcast packets sent during ARP.
-				// if n := stats.IP.InvalidAddressesReceived.Value(); n != 0 {
-				//   t.Errorf("stack %s received %d InvalidAddressesReceived", name, n)
-				// }
-				if n := stats.IP.OutgoingPacketErrors.Value(); n != 0 {
-					t.Errorf("stack %s received %d OutgoingPacketErrors", name, n)
-				}
-				if n := stats.TCP.FailedConnectionAttempts.Value(); n != 0 {
-					t.Errorf("stack %s received %d FailedConnectionAttempts", name, n)
-				}
-				if n := stats.TCP.InvalidSegmentsReceived.Value(); n != 0 {
-					t.Errorf("stack %s received %d InvalidSegmentsReceived", name, n)
-				}
-				if n := stats.TCP.ResetsSent.Value(); n != 0 {
-					t.Errorf("stack %s received %d ResetsSent", name, n)
-				}
-				if n := stats.TCP.ResetsReceived.Value(); n != 0 {
-					t.Errorf("stack %s received %d ResetsReceived", name, n)
+				if !bytes.Equal(recvd, []byte(payload)) {
+					t.Errorf("got Read(...) = %x, want = %x", recvd, payload)
 				}
 			}
 		})
-	}
-
-	if err := b.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	// verify that the endpoint from the constituent link on sb is still accessible
-	// and the bridge endpoint and endpoint on s2 are no longer accessible from s1
-	noLongerConnectable := map[tcpip.Address]*stack.Stack{
-		s2addr: s2,
-		baddr:  sb,
-	}
-
-	stillConnectable := map[tcpip.Address]*stack.Stack{
-		bcaddr: sb,
-	}
-
-	for addr, toStack := range noLongerConnectable {
-		t.Run(string(addr), func(t *testing.T) {
-			senderWaitQueue := new(waiter.Queue)
-			sender, err := s1.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, senderWaitQueue)
-			if err != nil {
-				t.Fatalf("NewEndpoint failed: %s", err)
-			}
-			defer sender.Close()
-
-			receiverWaitQueue := new(waiter.Queue)
-			receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, receiverWaitQueue)
-			if err != nil {
-				t.Fatalf("NewEndpoint failed: %s", err)
-			}
-			defer receiver.Close()
-
-			if err := receiver.Bind(tcpip.FullAddress{Addr: addr}); err != nil {
-				t.Fatalf("bind failed: %s", err)
-			}
-			if err := receiver.Listen(1); err != nil {
-				t.Fatalf("listen failed: %s", err)
-			}
-			addr, err := receiver.GetLocalAddress()
-			if err != nil {
-				t.Fatalf("getlocaladdress failed: %s", err)
-			}
-			addr.NIC = 0
-
-			if err := connect(sender, addr, senderWaitQueue, receiverWaitQueue); err != timeoutSendReady {
-				t.Errorf("expected timeout sendready, got %v connecting to addr %+v", err, addr)
-			}
-		})
-	}
-
-	for addr, toStack := range stillConnectable {
-		recvd, err := connectAndWrite(s1, toStack, addr, payload)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if got := string(recvd); got != payload {
-			t.Errorf("got Read(...) = %v, want = %v", got, payload)
-		}
 	}
 }
 
@@ -375,7 +390,7 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 	// We use nil as the link header parameter for DeliverNetworkPacket and
 	// onWritePacket as we pass a packet straight from e to the linked
 	// endpoint, e.linked, without creating an l2 header.
-	e.linked.dispatcher.DeliverNetworkPacket(e.linked, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, payload, nil)
+	e.linked.dispatcher.DeliverNetworkPacket(e.linked, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, payload.Clone(nil), nil)
 	if fn := e.onWritePacket; fn != nil {
 		fn(payload, nil)
 	}
@@ -425,42 +440,51 @@ func (e *endpoint) LinkAddress() tcpip.LinkAddress {
 	return e.linkAddr
 }
 
-func makeStackWithEndpoint(ep stack.LinkEndpoint, addr tcpip.Address) (*stack.Stack, error) {
+func makeStackWithEndpoint(ep stack.LinkEndpoint, protocol stack.NetworkProtocol, addr tcpip.Address) (*stack.Stack, error) {
+	if testing.Verbose() {
+		ep = sniffer.New(ep)
+	}
+
 	s := stack.New(stack.Options{
 		NetworkProtocols: []stack.NetworkProtocol{
 			arp.NewProtocol(),
-			ipv4.NewProtocol(),
+			protocol,
 		},
 		TransportProtocols: []stack.TransportProtocol{
 			tcp.NewProtocol(),
 		},
 	})
-	ep = bridge.NewEndpoint(ep)
 	if err := s.CreateNIC(1, ep); err != nil {
 		return nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
 	if err := s.AddAddress(1, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
 		return nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
-	if err := s.AddAddress(1, header.IPv4ProtocolNumber, addr); err != nil {
+	if err := s.AddAddress(1, protocol.Number(), addr); err != nil {
 		return nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
 	return s, nil
 }
 
-func makeStackWithBridgedEndpoints(ep1, ep2 *endpoint, baddr tcpip.Address) (*stack.Stack, *bridge.Endpoint, error) {
+func makeStackWithBridgedEndpoints(ep1, ep2 stack.LinkEndpoint, protocol stack.NetworkProtocol, baddr tcpip.Address) (*stack.Stack, *bridge.Endpoint, error) {
+	if testing.Verbose() {
+		ep1 = sniffer.New(ep1)
+		ep2 = sniffer.New(ep2)
+	}
+
 	bep1 := bridge.NewEndpoint(ep1)
 	bep2 := bridge.NewEndpoint(ep2)
 
 	stk := stack.New(stack.Options{
 		NetworkProtocols: []stack.NetworkProtocol{
 			arp.NewProtocol(),
-			ipv4.NewProtocol(),
+			protocol,
 		},
 		TransportProtocols: []stack.TransportProtocol{
 			tcp.NewProtocol(),
 		},
 	})
+
 	if err := stk.CreateNIC(1, bep1); err != nil {
 		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
@@ -468,11 +492,15 @@ func makeStackWithBridgedEndpoints(ep1, ep2 *endpoint, baddr tcpip.Address) (*st
 		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
 	bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
+	var bridgeLinkEP stack.LinkEndpoint = bridgeEP
+	if testing.Verbose() {
+		bridgeLinkEP = sniffer.New(bridgeLinkEP)
+	}
 	bID := tcpip.NICID(3)
-	if err := stk.CreateNIC(bID, bridgeEP); err != nil {
+	if err := stk.CreateNIC(bID, bridgeLinkEP); err != nil {
 		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
-	if err := stk.AddAddress(bID, header.IPv4ProtocolNumber, baddr); err != nil {
+	if err := stk.AddAddress(bID, protocol.Number(), baddr); err != nil {
 		return nil, nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
 	if err := stk.AddAddress(bID, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
@@ -482,16 +510,16 @@ func makeStackWithBridgedEndpoints(ep1, ep2 *endpoint, baddr tcpip.Address) (*st
 	return stk, bridgeEP, nil
 }
 
-func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, addr tcpip.Address, payload string) ([]byte, error) {
+func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocol stack.NetworkProtocol, addr tcpip.Address, payload string) ([]byte, error) {
 	senderWaitQueue := new(waiter.Queue)
-	sender, err := fromStack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, senderWaitQueue)
+	sender, err := fromStack.NewEndpoint(tcp.ProtocolNumber, protocol.Number(), senderWaitQueue)
 	if err != nil {
 		return nil, fmt.Errorf("NewEndpoint failed: %s", err)
 	}
 	defer sender.Close()
 
 	receiverWaitQueue := new(waiter.Queue)
-	receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, receiverWaitQueue)
+	receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, protocol.Number(), receiverWaitQueue)
 	if err != nil {
 		return nil, fmt.Errorf("NewEndpoint failed: %s", err)
 	}

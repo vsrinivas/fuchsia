@@ -3,6 +3,7 @@
 package bridge
 
 import (
+	"fmt"
 	"hash/fnv"
 	"math"
 	"sort"
@@ -243,7 +244,7 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	// out of rxEP, otherwise the rest of this function would just be
 	// "ep.WritePacket and if broadcast, also deliver to ep.links."
 	if broadcast {
-		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv, linkHeader)
+		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv.Clone(nil), linkHeader)
 	}
 
 	// NB: This isn't really a valid Route; Route is a public type but cannot
@@ -255,18 +256,33 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	// access itself so indirectly.
 	r := stack.Route{LocalLinkAddress: srcLinkAddr, RemoteLinkAddress: dstLinkAddr, NetProto: p}
 
-	hdr := buffer.NewPrependable(int(ep.MaxHeaderLength()))
+	// WritePacket implementations assume that `hdr` contains all packet headers. We need to bridge
+	// the gap between this API and DeliverNetworkPacket which has all packet headers in the first
+	// payload view.
+	//
+	// TODO(tamird): this recently changed upstream such that both APIs use the same type; this code
+	// should be removed once that change is imported.
+	payload := vv
+	firstView := payload.First()
+	payload.RemoveFirst() // doesn't mutate vv
+	hdr := buffer.NewPrependable(int(ep.MaxHeaderLength()) + len(firstView))
+	{
+		reserved := hdr.Prepend(len(firstView))
+		if n := copy(reserved, firstView); n != len(firstView) {
+			panic(fmt.Sprintf("copied %d/%d bytes", n, len(firstView)))
+		}
+	}
 
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
 	rxaddr := rxEP.LinkAddress()
 	for linkaddr, l := range ep.links {
 		if broadcast {
-			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv, linkHeader)
+			l.Dispatcher().DeliverNetworkPacket(l, srcLinkAddr, dstLinkAddr, p, vv.Clone(nil), linkHeader)
 		}
 		// Don't write back out interface from which the frame arrived
 		// because that causes interoperability issues with a router.
 		if linkaddr != rxaddr {
-			l.WritePacket(&r, nil, hdr, vv, p)
+			l.WritePacket(&r, nil, hdr, payload, p)
 		}
 	}
 }
