@@ -115,8 +115,7 @@ fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {
             for (auto& source : sources) {
               if (source.is_ok()) {
                 inspect_deprecated::Source ok_source = source.take_value();
-                // TODO(fxb/42023): re-enable once not crashing.
-                // ok_source.SortHierarchy();
+                ok_source.SortHierarchy();
                 ok_sources.push_back(std::move(ok_source));
               } else {
                 FX_LOGS(ERROR) << "Failed to read one Inspect source: " << source.take_error();
