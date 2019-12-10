@@ -19,7 +19,7 @@ namespace escher {
 template <typename IndexedTriangleMeshT>
 MeshPtr IndexedTriangleMeshUpload(Escher* escher, BatchGpuUploader* uploader,
                                   const MeshSpec& mesh_spec, const BoundingBox& bounding_box,
-                                  const IndexedTriangleMeshT& mesh) {
+                                  IndexedTriangleMeshT mesh) {
   TRACE_DURATION("gfx", "escher::IndexedTriangleMeshUpload", "triangles", mesh.triangle_count(),
                  "vertices", mesh.vertex_count());
   if (mesh.index_count() == 0)
@@ -38,6 +38,9 @@ MeshPtr IndexedTriangleMeshUpload(Escher* escher, BatchGpuUploader* uploader,
   const size_t attr2_offset = attr1_offset + attr1_bytes;
   const size_t attr3_offset = attr2_offset + attr2_bytes;
 
+  auto vertex_count = mesh.vertex_count();
+  auto index_count = mesh.index_count();
+
   // Use a single buffer, but don't interleave the position and attribute
   // data.
   auto buffer = escher->NewBuffer(
@@ -46,29 +49,31 @@ MeshPtr IndexedTriangleMeshUpload(Escher* escher, BatchGpuUploader* uploader,
       vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eIndexBuffer |
           vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
       vk::MemoryPropertyFlagBits::eDeviceLocal);
-  auto writer = uploader->AcquireWriter(total_bytes);
-  {
-    TRACE_DURATION("gfx", "escher::IndexedTriangleMeshUpload[memcpy]");
-    uint8_t* base = writer->host_ptr();
-    memcpy(base + ind_offset, mesh.indices.data(), ind_bytes);
-    memcpy(base + pos_offset, mesh.positions.data(), pos_bytes);
-    if (attr1_bytes > 0) {
-      memcpy(base + attr1_offset, mesh.attributes1.data(), attr1_bytes);
-    }
-    if (attr2_bytes > 0) {
-      memcpy(base + attr2_offset, mesh.attributes2.data(), attr2_bytes);
-    }
-    if (attr3_bytes > 0) {
-      memcpy(base + attr3_offset, mesh.attributes3.data(), attr3_bytes);
-    }
-  }
-  writer->WriteBuffer(buffer, {0, 0, total_bytes});
-  uploader->PostWriter(std::move(writer));
+
+  uploader->ScheduleWriteBuffer(
+      buffer,
+      [ind_bytes, pos_bytes, pos_offset, attr1_offset, attr2_offset, attr3_offset, attr1_bytes,
+       attr2_bytes, attr3_bytes,
+       mesh = std::move(mesh)](uint8_t* host_buffer_ptr, size_t copy_size) {
+        TRACE_DURATION("gfx", "escher::IndexedTriangleMeshUpload[memcpy]");
+        memcpy(host_buffer_ptr + ind_offset, mesh.indices.data(), ind_bytes);
+        memcpy(host_buffer_ptr + pos_offset, mesh.positions.data(), pos_bytes);
+        if (attr1_bytes > 0) {
+          memcpy(host_buffer_ptr + attr1_offset, mesh.attributes1.data(), attr1_bytes);
+        }
+        if (attr2_bytes > 0) {
+          memcpy(host_buffer_ptr + attr2_offset, mesh.attributes2.data(), attr2_bytes);
+        }
+        if (attr3_bytes > 0) {
+          memcpy(host_buffer_ptr + attr3_offset, mesh.attributes3.data(), attr3_bytes);
+        }
+      },
+      /* target_offset */ 0, /* copy_size */ total_bytes);
 
   return fxl::MakeRefCounted<Mesh>(escher->resource_recycler(), mesh_spec, bounding_box,
-                                   mesh.index_count(), buffer, ind_offset, mesh.vertex_count(),
-                                   buffer, pos_offset, (attr1_bytes ? buffer : nullptr),
-                                   attr1_offset, (attr2_bytes ? buffer : nullptr), attr2_offset,
+                                   index_count, buffer, ind_offset, vertex_count, buffer,
+                                   pos_offset, (attr1_bytes ? buffer : nullptr), attr1_offset,
+                                   (attr2_bytes ? buffer : nullptr), attr2_offset,
                                    (attr3_bytes ? buffer : nullptr), attr3_offset);
 }
 

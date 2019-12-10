@@ -155,5 +155,19 @@ void ClipToRect(vk::Rect2D* clippee, const vk::Rect2D& clipper) {
   clippee->extent.height = max_y - min_y;
 }
 
+vk::BufferImageCopy GetDefaultBufferImageCopy(size_t width, size_t height) {
+  vk::BufferImageCopy result;
+  result.bufferOffset = 0U;
+  result.bufferRowLength = 0U;
+  result.bufferImageHeight = 0U;
+  result.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+  result.imageSubresource.mipLevel = 0;
+  result.imageSubresource.baseArrayLayer = 0;
+  result.imageSubresource.layerCount = 1;
+  result.imageOffset = vk::Offset3D(0U, 0U, 0U);
+  result.imageExtent = vk::Extent3D(width, height, 1U);
+  return result;
+}
+
 }  // namespace impl
 }  // namespace escher

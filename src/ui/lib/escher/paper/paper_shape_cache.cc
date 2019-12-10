@@ -157,16 +157,18 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(IndexedTriangleMesh2d<vec2> mesh,
       }};
 
       return PaperShapeCacheEntry{
-          .mesh =
-              IndexedTriangleMeshUpload(escher, uploader, new_mesh_spec, bounding_box, out_mesh),
+          .mesh = IndexedTriangleMeshUpload(escher, uploader, new_mesh_spec, bounding_box,
+                                            std::move(out_mesh)),
           .num_indices = original_index_count,
           .num_shadow_volume_indices = out_mesh.index_count(),
       };
     } break;
     default:
+      auto num_indices = tri_mesh.index_count();
       return PaperShapeCacheEntry{
-          .mesh = IndexedTriangleMeshUpload(escher, uploader, mesh_spec, bounding_box, tri_mesh),
-          .num_indices = tri_mesh.index_count(),
+          .mesh = IndexedTriangleMeshUpload(escher, uploader, mesh_spec, bounding_box,
+                                            std::move(tri_mesh)),
+          .num_indices = num_indices,
           .num_shadow_volume_indices = 0,
       };
   }
@@ -184,9 +186,11 @@ PaperShapeCacheEntry ProcessTriangleMesh3d(IndexedTriangleMesh3d<vec2> mesh,
   std::tie(tri_mesh, std::ignore) =
       IndexedTriangleMeshClip(std::move(mesh), clip_planes, num_clip_planes);
 
+  auto index_count = tri_mesh.index_count();
   return PaperShapeCacheEntry{
-      .mesh = IndexedTriangleMeshUpload(escher, uploader, mesh_spec, bounding_box, tri_mesh),
-      .num_indices = tri_mesh.index_count(),
+      .mesh =
+          IndexedTriangleMeshUpload(escher, uploader, mesh_spec, bounding_box, std::move(tri_mesh)),
+      .num_indices = index_count,
       .num_shadow_volume_indices = 0,
   };
 }

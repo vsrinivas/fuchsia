@@ -17,7 +17,8 @@ namespace escher {
 class MeshBuilder : public fxl::RefCountedThreadSafe<MeshBuilder> {
  public:
   // Return a mesh constructed from the indices and vertices added by AddIndex()
-  // and AddVertex(), respectively.  This can only be called once.
+  // and AddVertex(), respectively.  After this function is called, all the
+  // staging buffers will be cleared so that the builder can be reused.
   virtual MeshPtr Build() = 0;
 
   // Copy the index into the staging buffer, so that it will be uploaded to the
@@ -50,25 +51,24 @@ class MeshBuilder : public fxl::RefCountedThreadSafe<MeshBuilder> {
   // Return pointer to start of data for the vertex at the specified index.
   uint8_t* GetVertex(size_t index) {
     FXL_DCHECK(index < vertex_count_);
-    return vertex_staging_buffer_ + (index * vertex_stride_);
+    return vertex_staging_buffer_.data() + (index * vertex_stride_);
   }
   // Return pointer to the i-th index that was added.
   uint32_t* GetIndex(size_t i) {
     FXL_DCHECK(i < index_count_);
-    return index_staging_buffer_ + i;
+    return index_staging_buffer_.data() + i;
   }
 
  protected:
-  MeshBuilder(size_t max_vertex_count, size_t max_index_count, size_t vertex_stride,
-              uint8_t* vertex_staging_buffer, uint32_t* index_staging_buffer);
+  MeshBuilder(size_t max_vertex_count, size_t max_index_count, size_t vertex_stride);
   FRIEND_REF_COUNTED_THREAD_SAFE(MeshBuilder);
   virtual ~MeshBuilder();
 
   const size_t max_vertex_count_;
   const size_t max_index_count_;
   const size_t vertex_stride_;
-  uint8_t* vertex_staging_buffer_;
-  uint32_t* index_staging_buffer_;
+  std::vector<uint8_t> vertex_staging_buffer_;
+  std::vector<uint32_t> index_staging_buffer_;
   size_t vertex_count_ = 0;
   size_t index_count_ = 0;
 
@@ -81,6 +81,7 @@ typedef fxl::RefPtr<MeshBuilder> MeshBuilderPtr;
 
 inline MeshBuilder& MeshBuilder::AddIndex(uint32_t index) {
   FXL_DCHECK(index_count_ < max_index_count_);
+  FXL_DCHECK(index_count_ < index_staging_buffer_.size());
   index_staging_buffer_[index_count_++] = index;
   return *this;
 }
@@ -88,8 +89,12 @@ inline MeshBuilder& MeshBuilder::AddIndex(uint32_t index) {
 inline MeshBuilder& MeshBuilder::AddVertexData(const void* ptr, size_t size) {
   FXL_DCHECK(vertex_count_ < max_vertex_count_);
   FXL_DCHECK(size <= vertex_stride_);
-  size_t offset = vertex_stride_ * vertex_count_++;
-  memcpy(vertex_staging_buffer_ + offset, ptr, size);
+  FXL_DCHECK(vertex_count_ * vertex_stride_ < vertex_staging_buffer_.size());
+
+  const auto* src_ptr = static_cast<const uint8_t*>(ptr);
+  size_t offset = vertex_stride_ * vertex_count_;
+  ++vertex_count_;
+  std::copy(src_ptr, src_ptr + size, vertex_staging_buffer_.begin() + offset);
   return *this;
 }
 

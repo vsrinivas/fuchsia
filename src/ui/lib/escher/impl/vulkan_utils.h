@@ -40,6 +40,9 @@ namespace impl {
 // Check if the given vk::ImageCreateInfo is valid for the device.
 bool CheckImageCreateInfoValidity(vk::PhysicalDevice device, const vk::ImageCreateInfo& info);
 
+// Create a default vk::BufferImageCopy object for a width x height image.
+vk::BufferImageCopy GetDefaultBufferImageCopy(size_t width, size_t height);
+
 // Filter the |desired_formats| list to contain only those formats which support
 // optimal tiling.
 std::vector<vk::Format> GetSupportedDepthFormats(vk::PhysicalDevice device,

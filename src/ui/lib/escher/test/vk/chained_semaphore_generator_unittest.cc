@@ -19,11 +19,8 @@ using ChainedSemaphoreGeneratorTest = escher::test::TestWithVkValidationLayer;
 VK_TEST_F(ChainedSemaphoreGeneratorTest, SequentialUpload) {
   auto escher = test::GetEscher()->GetWeakPtr();
   auto uploader1 = BatchGpuUploader::New(escher);
-  const size_t image_size = sizeof(uint8_t) * 4;
-  auto writer = uploader1->AcquireWriter(image_size);
-
   auto uploader2 = BatchGpuUploader::New(escher);
-  auto writer2 = uploader2->AcquireWriter(image_size);
+  const size_t image_size = sizeof(uint8_t) * 4;
 
   // Create a 1x1 RGBA (8-bit channels) image to write to.
   ImageFactoryAdapter image_factory(escher->gpu_allocator(), escher->resource_recycler());
@@ -39,21 +36,14 @@ VK_TEST_F(ChainedSemaphoreGeneratorTest, SequentialUpload) {
   region.bufferOffset = 0;
 
   // Do write.
-  void* host_ptr = writer->host_ptr();
-  uint8_t const color_1[] = {100, 90, 80, 255};
-  memcpy(host_ptr, color_1, sizeof(color_1));
+  std::vector<uint8_t> host_data = {100, 90, 80, 255};
   // We set image layout to eTransferDstOptimal as we need to write to it
   // later.
-  writer->WriteImage(image, region, vk::ImageLayout::eTransferDstOptimal);
-  // Posting and submitting should succeed.
-  uploader1->PostWriter(std::move(writer));
+  uploader1->ScheduleWriteImage(image, std::move(host_data), vk::ImageLayout::eTransferDstOptimal,
+                                region);
 
-  void* host_ptr2 = writer2->host_ptr();
-  uint8_t const color_2[] = {200, 190, 180, 255};
-  memcpy(host_ptr2, color_2, sizeof(color_2));
-  writer2->WriteImage(image, region);
-  // Posting and submitting should succeed.
-  uploader2->PostWriter(std::move(writer2));
+  std::vector<uint8_t> host_data_2 = {200, 190, 180, 255};
+  uploader2->ScheduleWriteImage(image, std::move(host_data_2));
 
   // Set up semaphore chain.
   auto* semaphore_chain = escher->semaphore_chain();
@@ -77,10 +67,11 @@ VK_TEST_F(ChainedSemaphoreGeneratorTest, SequentialUpload) {
   auto downloader = BatchGpuDownloader::New(escher);
   bool downloaded = false;
   bool image_correct = false;
+  std::vector<uint8_t> color_2 = {200, 190, 180, 255};
   downloader->ScheduleReadImage(
       image, region, [&color_2, &downloaded, &image_correct](const void* host_ptr, size_t size) {
         downloaded = true;
-        image_correct = memcmp(host_ptr, color_2, image_size) == 0;
+        image_correct = memcmp(host_ptr, color_2.data(), image_size) == 0;
       });
   downloader->Submit();
   escher->vk_device().waitIdle();

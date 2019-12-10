@@ -132,9 +132,6 @@ VK_TEST_F(BatchGpuDownloaderTest, InitializeUploaderAndDownloader) {
   auto uploader = BatchGpuUploader::New(escher);
   auto downloader = BatchGpuDownloader::New(escher);
 
-  auto writer = uploader->AcquireWriter(256);
-  uploader->PostWriter(std::move(writer));
-
   bool uploader_finished = false;
   bool batch_download_done = false;
   uploader->Submit([&uploader_finished]() { uploader_finished = true; });
@@ -370,7 +367,6 @@ VK_TEST_F(BatchGpuDownloaderTest, DISABLED_ReadAfterWriteSucceeds) {
   auto escher = test::GetEscher()->GetWeakPtr();
   auto uploader = BatchGpuUploader::New(escher);
   const size_t buffer_size = 3 * sizeof(vec3);
-  auto writer = uploader->AcquireWriter(buffer_size);
   // Create buffer to write to.
   BufferFactoryAdapter buffer_factory(escher->gpu_allocator(), escher->resource_recycler());
   BufferPtr vertex_buffer = buffer_factory.NewBuffer(buffer_size,
@@ -381,14 +377,14 @@ VK_TEST_F(BatchGpuDownloaderTest, DISABLED_ReadAfterWriteSucceeds) {
   ASSERT_TRUE(vertex_buffer) << "Fatal: Cannot allocate device-local vertex buffer.";
 
   // Do write.
-  void* host_ptr = writer->host_ptr();
-  vec3* const write_verts = static_cast<vec3*>(host_ptr);
+  std::vector<uint8_t> host_data(buffer_size);
+  vec3* write_verts = reinterpret_cast<vec3*>(host_data.data());
   write_verts[0] = vec3(0.f, 0.f, 1.f);
   write_verts[1] = vec3(0.f, 1.f, 0.f);
   write_verts[2] = vec3(1.f, 0.f, 0.f);
-  writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
-  // Posting and submitting should succeed.
-  uploader->PostWriter(std::move(writer));
+
+  uploader->ScheduleWriteBuffer(vertex_buffer, host_data);
+  uploader->Submit();
 
   // Create a BatchGpuDownloader to read from the buffer pending a write.
   auto downloader = BatchGpuDownloader::New(escher, CommandBuffer::Type::kTransfer);

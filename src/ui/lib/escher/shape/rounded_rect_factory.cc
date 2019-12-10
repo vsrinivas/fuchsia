@@ -45,23 +45,28 @@ MeshPtr RoundedRectFactory::NewRoundedRect(const RoundedRectSpec& spec, const Me
 
   switch (mesh_spec.vertex_buffer_count()) {
     case 1: {
-      auto writer = batch_gpu_uploader->AcquireWriter(vertex_buffer_size);
-      GenerateRoundedRectVertices(spec, mesh_spec, writer->host_ptr(), writer->size());
-      writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
-      batch_gpu_uploader->PostWriter(std::move(writer));
+      batch_gpu_uploader->ScheduleWriteBuffer(
+          vertex_buffer,
+          [spec, mesh_spec, vertex_buffer_size](uint8_t* host_ptr, size_t copy_size) {
+            GenerateRoundedRectVertices(spec, mesh_spec, host_ptr, vertex_buffer_size);
+          },
+          /* target_offset */ 0U, /* copy_size */ vertex_buffer_size);
 
       return fxl::MakeRefCounted<Mesh>(static_cast<ResourceRecycler*>(this), mesh_spec,
                                        bounding_box, vertex_count, index_count, vertex_buffer,
                                        std::move(index_buffer));
     }
     case 2: {
-      auto writer = batch_gpu_uploader->AcquireWriter(vertex_buffer_size);
-      GenerateRoundedRectVertices(spec, mesh_spec, writer->host_ptr(),
-                                  vertex_count * primary_buffer_stride,
-                                  writer->host_ptr() + vertex_count * primary_buffer_stride,
-                                  vertex_count * secondary_buffer_stride);
-      writer->WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
-      batch_gpu_uploader->PostWriter(std::move(writer));
+      batch_gpu_uploader->ScheduleWriteBuffer(
+          vertex_buffer,
+          [spec, mesh_spec, vertex_count, primary_buffer_stride, secondary_buffer_stride](
+              uint8_t* host_ptr, size_t copy_size) {
+            GenerateRoundedRectVertices(spec, mesh_spec, host_ptr,
+                                        vertex_count * primary_buffer_stride,
+                                        host_ptr + vertex_count * primary_buffer_stride,
+                                        vertex_count * secondary_buffer_stride);
+          },
+          /* target_offset */ 0U, /* copy_size */ vertex_buffer_size);
 
       return fxl::MakeRefCounted<Mesh>(static_cast<ResourceRecycler*>(this), mesh_spec,
                                        bounding_box, index_count, std::move(index_buffer), 0,
@@ -90,10 +95,12 @@ BufferPtr RoundedRectFactory::GetIndexBuffer(const RoundedRectSpec& spec, const 
                                                   vk::BufferUsageFlagBits::eTransferDst,
                                               vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-    auto writer = batch_gpu_uploader->AcquireWriter(index_buffer_size);
-    GenerateRoundedRectIndices(spec, mesh_spec, writer->host_ptr(), writer->size());
-    writer->WriteBuffer(index_buffer_, {0, 0, index_buffer_->size()});
-    batch_gpu_uploader->PostWriter(std::move(writer));
+    batch_gpu_uploader->ScheduleWriteBuffer(
+        index_buffer_,
+        [spec, mesh_spec, index_buffer_size](uint8_t* host_ptr, size_t copy_size) {
+          GenerateRoundedRectIndices(spec, mesh_spec, host_ptr, index_buffer_size);
+        },
+        /* target_offset */ 0U, /* copy_size */ index_buffer_size);
   }
   return index_buffer_;
 }

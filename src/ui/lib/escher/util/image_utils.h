@@ -21,11 +21,7 @@ class ImageFactory;
 
 namespace image_utils {
 
-#ifdef __Fuchsia__
 using ImageConversionFunction = fit::function<void(void*, const void*, uint32_t, uint32_t)>;
-#else
-using ImageConversionFunction = fit::function<void(void*, const void*, uint32_t, uint32_t)>;
-#endif
 
 // Returns the number of bytes per pixel for the given format.
 size_t BytesPerPixel(vk::Format format);

@@ -191,11 +191,11 @@ void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader, const uint8_t* pix
   size_t width = image->info().width;
   size_t height = image->info().height;
 
-  auto writer = batch_gpu_uploader->AcquireWriter(width * height * bytes_per_pixel);
+  std::vector<uint8_t> pixels_to_write(width * height * bytes_per_pixel);
   if (!conversion_func) {
-    std::memcpy(writer->host_ptr(), pixels, width * height * bytes_per_pixel);
+    std::copy(pixels, pixels + width * height * bytes_per_pixel, pixels_to_write.begin());
   } else {
-    conversion_func(writer->host_ptr(), pixels, width, height);
+    conversion_func(pixels_to_write.data(), pixels, width, height);
   }
 
   vk::BufferImageCopy region;
@@ -208,8 +208,7 @@ void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader, const uint8_t* pix
   region.imageExtent.depth = 1;
   region.bufferOffset = 0;
 
-  writer->WriteImage(image, region, final_layout);
-  batch_gpu_uploader->PostWriter(std::move(writer));
+  batch_gpu_uploader->ScheduleWriteImage(image, std::move(pixels_to_write), final_layout, region);
 }
 
 ImagePtr NewRgbaImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,

@@ -271,8 +271,11 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
 
   paper_renderer_->FinalizeFrame();
 
-  auto upload_semaphore = escher::Semaphore::New(escher_->vk_device());
-  gpu_uploader->AddSignalSemaphore(upload_semaphore);
+  auto upload_semaphore = escher::SemaphorePtr();
+  if (gpu_uploader->HasContentToUpload()) {
+    upload_semaphore = escher::Semaphore::New(escher_->vk_device());
+    gpu_uploader->AddSignalSemaphore(upload_semaphore);
+  }
   gpu_uploader->Submit();
   paper_renderer_->EndFrame(std::move(upload_semaphore));
 }

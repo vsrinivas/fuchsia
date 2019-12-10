@@ -6,11 +6,23 @@
 
 #include <lib/fit/function.h>
 
+#include <variant>
+
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/util/align.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
-#include "src/ui/lib/escher/vk/gpu_mem.h"
 
 namespace escher {
+
+namespace {
+
+// Vulkan specs requires that bufferOffset in VkBufferImageCopy be multiple of
+// 4, so we enforce that all buffer offsets (including buffers and images) align
+// to multiples of 4 by aligning up the addresses.
+constexpr vk::DeviceSize kByteAlignment = 4;
+
+}  // namespace
 
 std::unique_ptr<BatchGpuUploader> BatchGpuUploader::New(EscherWeakPtr weak_escher,
                                                         uint64_t frame_trace_number) {
@@ -22,178 +34,205 @@ std::unique_ptr<BatchGpuUploader> BatchGpuUploader::New(EscherWeakPtr weak_esche
   return std::make_unique<BatchGpuUploader>(std::move(weak_escher), frame_trace_number);
 }
 
-BatchGpuUploader::Writer::Writer(CommandBufferPtr command_buffer, BufferPtr buffer)
-    : command_buffer_(std::move(command_buffer)), buffer_(std::move(buffer)) {
-  FXL_DCHECK(command_buffer_ && buffer_);
-}
-
-BatchGpuUploader::Writer::~Writer() { FXL_DCHECK(!command_buffer_ && !buffer_); }
-
-void BatchGpuUploader::Writer::WriteBuffer(const BufferPtr& target, vk::BufferCopy region) {
-  TRACE_DURATION("gfx", "escher::BatchGpuUploader::Writer::WriteBuffer");
-
-  // Set up pipeline flags and access flags for synchronization. See class
-  // comments for details.
-  constexpr auto kPipelineFlag = vk::PipelineStageFlagBits::eTransfer;
-  const auto kAccessFlagOutside =
-      vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eTransferWrite;
-  const auto kAccessFlagInside = vk::AccessFlagBits::eTransferWrite;
-
-  command_buffer_->BufferBarrier(buffer_, kPipelineFlag, kAccessFlagOutside, kPipelineFlag,
-                                 kAccessFlagInside);
-  command_buffer_->vk().copyBuffer(buffer_->vk(), target->vk(), 1, &region);
-  command_buffer_->BufferBarrier(buffer_, kPipelineFlag, kAccessFlagInside, kPipelineFlag,
-                                 kAccessFlagOutside);
-  command_buffer_->KeepAlive(target);
-}
-
-void BatchGpuUploader::Writer::WriteImage(const ImagePtr& target, vk::BufferImageCopy region,
-                                          vk::ImageLayout final_layout) {
-  TRACE_DURATION("gfx", "escher::BatchGpuUploader::Writer::WriteImage");
-
-  // Set up pipeline flags and access flags for synchronization. See class
-  // comments for details.
-  constexpr auto kPipelineFlag = vk::PipelineStageFlagBits::eTransfer;
-  const auto kAccessFlagOutside =
-      vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eTransferWrite;
-  const auto kAccessFlagInside = vk::AccessFlagBits::eTransferWrite;
-
-  command_buffer_->ImageBarrier(target, target->layout(), vk::ImageLayout::eTransferDstOptimal,
-                                kPipelineFlag, kAccessFlagOutside, kPipelineFlag,
-                                kAccessFlagInside);
-  command_buffer_->vk().copyBufferToImage(buffer_->vk(), target->vk(),
-                                          vk::ImageLayout::eTransferDstOptimal, 1, &region);
-  command_buffer_->ImageBarrier(target, vk::ImageLayout::eTransferDstOptimal, final_layout,
-                                kPipelineFlag, kAccessFlagInside, kPipelineFlag,
-                                kAccessFlagOutside);
-
-  command_buffer_->KeepAlive(target);
-}
-
-CommandBufferPtr BatchGpuUploader::Writer::TakeCommandsAndShutdown() {
-  FXL_DCHECK(command_buffer_);
-  // Assume that if a writer was requested, it was written to, and the buffer
-  // needs to be kept alive.
-  command_buffer_->KeepAlive(buffer_);
-
-  // Underlying CommandBuffer is being removed, shutdown this writer.
-  buffer_ = nullptr;
-  return std::move(command_buffer_);
-}
-
 BatchGpuUploader::BatchGpuUploader(EscherWeakPtr weak_escher, uint64_t frame_trace_number)
-    : escher_(std::move(weak_escher)), frame_trace_number_(frame_trace_number) {
+    : escher_(std::move(weak_escher)),
+      frame_trace_number_(frame_trace_number),
+      buffer_cache_(escher_->buffer_cache()->GetWeakPtr()) {
   FXL_DCHECK(escher_);
+  FXL_DCHECK(buffer_cache_);
 }
 
 BatchGpuUploader::~BatchGpuUploader() {
-  FXL_CHECK(!frame_);
-  FXL_CHECK(writer_count_ == 0);
+  FXL_CHECK(resources_.empty() && copy_info_records_.empty() && wait_semaphores_.empty() &&
+            signal_semaphores_.empty() && current_offset_ == 0U);
 }
 
-void BatchGpuUploader::Initialize() {
-  // TODO(ES-115) Back the uploader with transfer queue command buffers
-  // directly, rather than use a frame to manage GPU submits, when command
-  // buffer recycling is refactored.
-  if (!frame_) {
-    frame_ = escher_->NewFrame("Gpu Uploader", frame_trace_number_,
-                               /*enable_gpu_logging=*/false, CommandBuffer::Type::kTransfer,
-                               /*use_protected_memory=*/false);
+void BatchGpuUploader::ScheduleWriteBuffer(const BufferPtr& target,
+                                           DataProviderCallback write_function,
+                                           vk::DeviceSize target_offset, vk::DeviceSize copy_size) {
+  TRACE_DURATION("gfx", "escher::BatchGpuUploader::ScheduleWriteBuffer");
+  vk::DeviceSize src_offset = AlignedToNext(current_offset_, kByteAlignment);
+  auto writeable_size = target->size() - target_offset;
+  FXL_DCHECK(writeable_size >= copy_size) << "copy_size + target_offset exceeds the buffer size";
+  auto write_size = std::min(copy_size, writeable_size);
+  auto region = vk::BufferCopy(src_offset, target_offset, write_size);
+
+  copy_info_records_.push_back(
+      CopyInfo{.type = CopyType::COPY_BUFFER,
+               .offset = src_offset,
+               .size = write_size,
+               .write_function = std::move(write_function),
+               .copy_info = BufferCopyInfo{.target = target, .region = region}});
+  current_offset_ = src_offset + copy_info_records_.back().size;
+
+  // Keep the target alive until Submit().
+  resources_.push_back(target);
+}
+
+void BatchGpuUploader::ScheduleWriteImage(const ImagePtr& target,
+                                          DataProviderCallback write_function,
+                                          vk::ImageLayout final_layout,
+                                          vk::BufferImageCopy region) {
+  // Create default buffer image copy if the region is empty.
+  if (region == vk::BufferImageCopy()) {
+    region = impl::GetDefaultBufferImageCopy(target->width(), target->height());
   }
-  FXL_DCHECK(frame_);
-  if (!buffer_cache_) {
-    buffer_cache_ = escher_->buffer_cache()->GetWeakPtr();
-  }
+
+  FXL_DCHECK(region.bufferOffset == 0U);
+
+  // For now we expect that we only accept full image to be uploadable.
+  FXL_DCHECK(region.imageOffset == vk::Offset3D(0, 0, 0) &&
+             region.imageExtent == vk::Extent3D(target->width(), target->height(), 1U));
+
+  TRACE_DURATION("gfx", "escher::BatchGpuUploader::ScheduleWriteImage");
+  vk::DeviceSize src_offset = AlignedToNext(current_offset_, kByteAlignment);
+  auto final_region = region;
+  final_region.setBufferOffset(src_offset);
+
+  copy_info_records_.push_back(CopyInfo{
+      .type = CopyType::COPY_IMAGE,
+      .offset = src_offset,
+      .size = target->size(),
+      .write_function = std::move(write_function),
+      .copy_info =
+          ImageCopyInfo{.target = target, .region = final_region, .final_layout = final_layout}});
+  current_offset_ = src_offset + copy_info_records_.back().size;
+
+  // Keep the target alive until Submit().
+  resources_.push_back(target);
+}
+
+BufferPtr BatchGpuUploader::CreateBufferFromRecords() {
   FXL_DCHECK(buffer_cache_);
+  FXL_DCHECK(HasContentToUpload());
 
-  is_initialized_ = true;
-}
+  vk::DeviceSize buffer_size = copy_info_records_.back().offset + copy_info_records_.back().size;
+  BufferPtr src_buffer = buffer_cache_->NewHostBuffer(buffer_size);
+  FXL_DCHECK(src_buffer) << "Error allocating buffer";
 
-std::unique_ptr<BatchGpuUploader::Writer> BatchGpuUploader::AcquireWriter(vk::DeviceSize size) {
-  if (!is_initialized_) {
-    Initialize();
+  for (const auto& copy_info_record : copy_info_records_) {
+    auto dst_ptr = src_buffer->host_ptr() + copy_info_record.offset;
+    auto copy_size = copy_info_record.size;
+    copy_info_record.write_function(dst_ptr, copy_size);
   }
-  FXL_DCHECK(frame_);
-  FXL_DCHECK(size);
-  // TODO(SCN-846) Relax this check once Writers are backed by secondary
-  // buffers, and the frame's primary command buffer is not moved into the
-  // Writer.
-  FXL_DCHECK(writer_count_ == 0);
 
-  TRACE_DURATION("gfx", "escher::BatchGpuUploader::AcquireWriter");
-
-  vk::DeviceSize vk_size = size;
-  BufferPtr buffer = buffer_cache_->NewHostBuffer(vk_size);
-  FXL_DCHECK(buffer) << "Error allocating buffer";
-
-  CommandBufferPtr command_buffer = frame_->TakeCommandBuffer();
-  FXL_DCHECK(command_buffer) << "Error getting the frame's command buffer.";
-
-  ++writer_count_;
-  return std::make_unique<BatchGpuUploader::Writer>(std::move(command_buffer), std::move(buffer));
+  return src_buffer;
 }
 
-void BatchGpuUploader::PostWriter(std::unique_ptr<BatchGpuUploader::Writer> writer) {
-  FXL_DCHECK(frame_);
-  if (!writer) {
+void BatchGpuUploader::GenerateCommands(CommandBuffer* cmds) {
+  if (!NeedsCommandBuffer()) {
     return;
   }
-  // TODO(SCN-846) Relax this check once Writers are backed by secondary
-  // buffers, and the frame's primary command buffer is not moved into the
-  // Writer.
-  FXL_DCHECK(writer_count_ == 1);
 
-  auto command_buffer = writer->TakeCommandsAndShutdown();
-  frame_->PutCommandBuffer(std::move(command_buffer));
-  --writer_count_;
-  writer.reset();
+  TRACE_DURATION("gfx", "BatchGpuUploader::GenerateCommands");
+  // Check existence of command buffer and buffer cache.
+  FXL_DCHECK(cmds);
+
+  // We only create the src_buffer if we need to upload something.
+  // If we only need to create an empty command buffer (to signal / wait on
+  // semaphores), we won't need the buffer.
+  BufferPtr src_buffer = BufferPtr();
+  if (HasContentToUpload()) {
+    src_buffer = CreateBufferFromRecords();
+    cmds->KeepAlive(src_buffer);
+  }
+
+  // Set up pipeline flags and access flags for synchronization. See class
+  // comments for details.
+  constexpr auto kPipelineFlag = vk::PipelineStageFlagBits::eTransfer;
+  const auto kAccessFlagOutside =
+      vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eTransferWrite;
+  const auto kAccessFlagInside = vk::AccessFlagBits::eTransferWrite;
+
+  for (const auto& copy_info_record : copy_info_records_) {
+    switch (copy_info_record.type) {
+      case CopyType::COPY_IMAGE: {
+        const auto* image_copy_info = std::get_if<ImageCopyInfo>(&copy_info_record.copy_info);
+        FXL_DCHECK(image_copy_info);
+
+        ImagePtr target = image_copy_info->target;
+        auto final_layout = image_copy_info->final_layout;
+        cmds->ImageBarrier(target, target->layout(), vk::ImageLayout::eTransferDstOptimal,
+                           kPipelineFlag, kAccessFlagOutside, kPipelineFlag, kAccessFlagInside);
+        cmds->vk().copyBufferToImage(src_buffer->vk(), target->vk(),
+                                     vk::ImageLayout::eTransferDstOptimal, 1,
+                                     &image_copy_info->region);
+        cmds->ImageBarrier(target, vk::ImageLayout::eTransferDstOptimal, final_layout,
+                           kPipelineFlag, kAccessFlagInside, kPipelineFlag, kAccessFlagOutside);
+        cmds->KeepAlive(target);
+        break;
+      }
+      case CopyType::COPY_BUFFER: {
+        const auto* buffer_copy_info = std::get_if<BufferCopyInfo>(&copy_info_record.copy_info);
+        FXL_DCHECK(buffer_copy_info);
+
+        cmds->BufferBarrier(buffer_copy_info->target, kPipelineFlag, kAccessFlagOutside,
+                            kPipelineFlag, kAccessFlagInside);
+        cmds->vk().copyBuffer(src_buffer->vk(), buffer_copy_info->target->vk(), 1,
+                              &buffer_copy_info->region);
+        cmds->BufferBarrier(buffer_copy_info->target, kPipelineFlag, kAccessFlagInside,
+                            kPipelineFlag, kAccessFlagOutside);
+
+        cmds->KeepAlive(buffer_copy_info->target);
+        break;
+      }
+    }
+  }
+
+  // Add semaphores for the submitted command buffer to wait on / signal.
+  for (auto& pair : wait_semaphores_) {
+    cmds->AddWaitSemaphore(std::move(pair.first), pair.second);
+  }
+  wait_semaphores_.clear();
+
+  for (auto& sem : signal_semaphores_) {
+    cmds->AddSignalSemaphore(std::move(sem));
+  }
+  signal_semaphores_.clear();
+
+  // Since we keep the target alive using CommandBuffer, we can remove these
+  // RefPtrs from |resources_| right now.
+  resources_.clear();
+  copy_info_records_.clear();
+  current_offset_ = 0U;
 }
 
 void BatchGpuUploader::Submit(fit::function<void()> callback) {
-  // TODO(SCN-846) Relax this check once Writers are backed by secondary
-  // buffers, and the frame's primary command buffer is not moved into the
-  // Writer.
-  FXL_DCHECK(writer_count_ == 0);
-  if (!is_initialized_) {
+  if (!NeedsCommandBuffer()) {
     // This uploader was never used, nothing to submit.
     if (callback) {
       callback();
     }
     return;
   }
-  FXL_DCHECK(frame_);
 
-  // Add semaphores for the submitted command buffer to wait on.
-  for (auto& pair : wait_semaphores_) {
-    frame_->cmds()->AddWaitSemaphore(std::move(pair.first), pair.second);
-  }
-  wait_semaphores_.clear();
+  TRACE_DURATION("gfx", "BatchGpuUploader::Submit");
+  // Create new command buffer.
+  auto frame = escher_->NewFrame("Gpu Uploader", frame_trace_number_,
+                                 /*enable_gpu_logging=*/false, CommandBuffer::Type::kTransfer,
+                                 /*use_protected_memory=*/false);
 
-  for (auto& sem : signal_semaphores_) {
-    frame_->cmds()->AddSignalSemaphore(std::move(sem));
-  }
-  signal_semaphores_.clear();
+  // Add commands to |frame|'s command buffer.
+  GenerateCommands(frame->cmds());
 
-  TRACE_DURATION("gfx", "BatchGpuUploader::SubmitBatch");
-  frame_->EndFrame(SemaphorePtr(), [callback = std::move(callback)]() {
+  // Submit the command buffer.
+  frame->EndFrame(SemaphorePtr(), [callback = std::move(callback)]() {
     if (callback) {
       callback();
     }
   });
-  frame_ = nullptr;
+
+  // Verify that everything is reset so that the uploader can be used as though
+  // it's new.
+  FXL_CHECK(resources_.empty() && copy_info_records_.empty() && wait_semaphores_.empty() &&
+            signal_semaphores_.empty() && current_offset_ == 0U);
 }
 
 void BatchGpuUploader::AddWaitSemaphore(SemaphorePtr sema, vk::PipelineStageFlags flags) {
-  if (!is_initialized_) {
-    Initialize();
-  }
   wait_semaphores_.push_back({std::move(sema), flags});
 }
 
 void BatchGpuUploader::AddSignalSemaphore(SemaphorePtr sema) {
-  if (!is_initialized_) {
-    Initialize();
-  }
   signal_semaphores_.push_back(std::move(sema));
 }
 

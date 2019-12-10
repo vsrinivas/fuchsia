@@ -43,8 +43,7 @@ class MeshManager : public MeshBuilderFactory {
   class MeshBuilder : public escher::MeshBuilder {
    public:
     MeshBuilder(MeshManager* manager, const MeshSpec& spec, size_t max_vertex_count,
-                size_t max_index_count, uint8_t* vertex_ptr, uint32_t* index_ptr,
-                std::unique_ptr<BatchGpuUploader::Writer> writer, BatchGpuUploader* uploader);
+                size_t max_index_count, BatchGpuUploader* uploader);
     ~MeshBuilder() override;
 
     MeshPtr Build() override;
@@ -58,12 +57,6 @@ class MeshManager : public MeshBuilderFactory {
     MeshSpec spec_;
     bool is_built_;
 
-    std::unique_ptr<BatchGpuUploader::Writer> writer_;
-
-    // We retain a raw ptr to the uploader so that we can call PostWriter() on it.  There
-    // is a DCHECK in the BatchGpuUploader destructor that ensures that all readers/writers
-    // have been posted.
-    // TODO(40170): make BatchGpuUploader::Writer responsible for reffing the uploader.
     BatchGpuUploader* gpu_uploader_;
   };
 
