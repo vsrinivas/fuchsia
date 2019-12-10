@@ -10,8 +10,6 @@ toc:
   path: /docs/development/workflows/ctu_analysis.md
 - title: "fx workflows"
   path: /docs/development/workflows/fx.md
-- title: "Multi device setup"
-  path: /docs/development/workflows/multi_device.md
 - title: "Working across different petals"
   path: /docs/development/workflows/working_across_petals.md
 - title: "Developing with Fuchsia packages"

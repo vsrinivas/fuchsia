@@ -1,5 +1,4 @@
-Multi Device Setup
-============
+# Multi Device Setup
 
 This guide will walk you through the process of getting two Fuchsia devices
 set up and synchronizing story state using the
@@ -9,15 +8,11 @@ set up and synchronizing story state using the
 
 ### Devices
 
-Follow the steps at in the [top level docs](../README.md) to:
+Follow the steps at in the [top level docs](/docs/development/README.md) to:
 
 * Check out the source and build Fuchsia.
 * Install it on two devices (or emulators).
 * Connect the devices to the network.
-
-### [Googlers only] Private Test Network Setup
-
-Follow netboot instructions.
 
 ### Identify Test Machines
 

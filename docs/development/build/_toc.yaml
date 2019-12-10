@@ -20,6 +20,8 @@ toc:
   path: /docs/development/build/variants.md
 - title: "Bundles"
   path: /docs/development/build/bundles.md
+- title: "Multi device setup"
+  path: /docs/development/build/multi_device.md
 - title: "A short introduction to GN"
   path: /docs/development/build/intro.md
 - title: "GN in Zircon"
