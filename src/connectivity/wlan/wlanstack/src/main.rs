@@ -86,7 +86,7 @@ async fn main() -> Result<(), Error> {
     let phy_server = device::serve_phys(phys.clone(), cfg.isolated_devmgr, inspect_tree.clone())
         .map_ok(|x| match x {});
     let (cobalt_sender, cobalt_reporter) = CobaltConnector::default()
-        .serve(ConnectionType::project_name(wlan_metrics_registry::PROJECT_NAME));
+        .serve(ConnectionType::project_id(wlan_metrics_registry::PROJECT_ID));
     let telemetry_server =
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
     let (watcher_service, watcher_fut) =
