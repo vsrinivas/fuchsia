@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/camera/image_writer/raw12_writer.h"
+#include "src/camera/lib/image_writer/raw12_writer.h"
 
 namespace camera {
 namespace {

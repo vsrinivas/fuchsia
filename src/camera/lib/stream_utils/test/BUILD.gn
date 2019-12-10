@@ -9,7 +9,7 @@ executable("stream_utils_test") {
   ]
   deps = [
     "//src/camera/drivers/test_utils",
-    "//src/camera/stream_utils",
+    "//src/camera/lib/stream_utils",
     "//src/lib/fxl/test:gtest_main_with_syslog",
   ]
 }

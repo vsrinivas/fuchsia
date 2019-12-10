@@ -14,6 +14,6 @@ source_set("algorithms") {
   ]
 
   deps = [
-    "//src/camera/image_writer",
+    "//src/camera/lib/image_writer",
   ]
 }

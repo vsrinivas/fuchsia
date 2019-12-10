@@ -5,7 +5,7 @@
 #ifndef SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_COMMON_UTIL_H_
 #define SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_COMMON_UTIL_H_
 
-#include "src/camera/stream_utils/stream_constraints.h"
+#include "src/camera/lib/stream_utils/stream_constraints.h"
 
 namespace camera {
 

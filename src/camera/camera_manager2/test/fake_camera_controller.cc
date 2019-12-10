@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "src/camera/stream_utils/stream_constraints.h"
+#include "src/camera/lib/stream_utils/stream_constraints.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {

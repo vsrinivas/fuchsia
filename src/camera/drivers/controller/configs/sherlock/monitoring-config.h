@@ -12,7 +12,7 @@
 
 #include "common-util.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
-#include "src/camera/stream_utils/stream_constraints.h"
+#include "src/camera/lib/stream_utils/stream_constraints.h"
 
 // This file contains static information for the Monitor Configuration
 // There are three streams in one configuration

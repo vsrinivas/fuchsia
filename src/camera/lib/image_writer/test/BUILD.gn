@@ -9,7 +9,7 @@ executable("image_writer_test") {
   ]
   deps = [
     "//src/camera/drivers/test_utils",
-    "//src/camera/image_writer",
+    "//src/camera/lib/image_writer",
     "//src/lib/fxl/test:gtest_main_with_syslog",
   ]
 }
@@ -22,8 +22,8 @@ executable("hsv_generator_test") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
-    "//src/camera/image_writer:hsv_color_source",
-    "//src/camera/image_writer:image_format_rgba",
+    "//src/camera/lib/image_writer:hsv_color_source",
+    "//src/camera/lib/image_writer:image_format_rgba",
     "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fzl",
@@ -40,8 +40,8 @@ executable("image_format_test") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
-    "//src/camera/image_writer:hsv_color_source",
-    "//src/camera/image_writer:image_format_rgba",
+    "//src/camera/lib/image_writer:hsv_color_source",
+    "//src/camera/lib/image_writer:image_format_rgba",
     "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fzl",

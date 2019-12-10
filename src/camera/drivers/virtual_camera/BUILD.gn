@@ -33,7 +33,7 @@ source_set("virtual_camera_source") {
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/media/cpp",
-    "//src/camera/image_writer:hsv_color_source",
+    "//src/camera/lib/image_writer:hsv_color_source",
     "//src/devices:driver",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",

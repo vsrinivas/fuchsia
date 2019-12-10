@@ -69,7 +69,7 @@ source_set("camera-fakes") {
   deps = [
     "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
-    "//src/camera/stream_utils:stream_configs",
+    "//src/camera/lib/stream_utils:stream_configs",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",

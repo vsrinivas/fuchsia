@@ -13,9 +13,7 @@ group("camera") {
     "calibration",
     "camera_manager2",
     "drivers",
-    "image_writer",
-    "lib/format_conversion",
-    "stream_utils",
+    "lib",
   ]
 }
 
@@ -58,11 +56,11 @@ test_package("camera_tests") {
     "//src/camera/drivers/test_utils/test:test_utils_test",
     "//src/camera/drivers/virtual_camera/test:virtual_camera_test",
     "//src/camera/examples/demo/stream_provider/test",
-    "//src/camera/image_writer/test:hsv_generator_test",
-    "//src/camera/image_writer/test:image_format_test",
-    "//src/camera/image_writer/test:image_writer_test",
     "//src/camera/lib/fake_stream/test",
-    "//src/camera/stream_utils/test:stream_utils_test",
+    "//src/camera/lib/image_writer/test:hsv_generator_test",
+    "//src/camera/lib/image_writer/test:image_format_test",
+    "//src/camera/lib/image_writer/test:image_writer_test",
+    "//src/camera/lib/stream_utils/test:stream_utils_test",
   ]
 
   tests = [
@@ -137,17 +135,17 @@ test_package("camera_tests") {
     },
     {
       name = "hsv_generator_test"
-      manifest = "image_writer/test/meta/hsv_generator_test.cmx"
+      manifest = "lib/image_writer/test/meta/hsv_generator_test.cmx"
       environments = basic_envs
     },
     {
       name = "image_format_test"
-      manifest = "image_writer/test/meta/image_format_test.cmx"
+      manifest = "lib/image_writer/test/meta/image_format_test.cmx"
       environments = basic_envs
     },
     {
       name = "image_writer_test"
-      manifest = "image_writer/test/meta/image_writer_test.cmx"
+      manifest = "lib/image_writer/test/meta/image_writer_test.cmx"
       environments = basic_envs
     },
     {
@@ -172,7 +170,7 @@ test_package("camera_tests") {
     },
     {
       name = "stream_utils_test"
-      manifest = "stream_utils/test/meta/stream_utils_test.cmx"
+      manifest = "lib/stream_utils/test/meta/stream_utils_test.cmx"
       environments = basic_envs
     },
     {

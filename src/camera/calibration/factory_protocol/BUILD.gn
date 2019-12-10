@@ -16,7 +16,7 @@ source_set("factory_protocol") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/camera/stream_utils",
+    "//src/camera/lib/stream_utils",
     "//src/camera/test/isp_tester:fuchsia.camera.test",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",

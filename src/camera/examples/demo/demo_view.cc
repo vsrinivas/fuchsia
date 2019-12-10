@@ -18,7 +18,7 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/camera/stream_utils/image_io_util.h"
+#include "src/camera/lib/stream_utils/image_io_util.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 

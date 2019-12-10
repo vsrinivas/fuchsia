@@ -11,7 +11,7 @@ executable("algorithms_test") {
   deps = [
     "//src/camera/calibration/algorithms",
     "//src/camera/drivers/test_utils",
-    "//src/camera/image_writer",
+    "//src/camera/lib/image_writer",
     "//src/lib/fxl/test:gtest_main_with_syslog",
   ]
 }

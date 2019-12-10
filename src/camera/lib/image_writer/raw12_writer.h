@@ -5,7 +5,7 @@
 #ifndef SRC_CAMERA_IMAGE_WRITER_RAW12_WRITER_H_
 #define SRC_CAMERA_IMAGE_WRITER_RAW12_WRITER_H_
 
-#include "src/camera/image_writer/image_writer.h"
+#include "src/camera/lib/image_writer/image_writer.h"
 
 namespace camera {
 

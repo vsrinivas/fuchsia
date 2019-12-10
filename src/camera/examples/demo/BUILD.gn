@@ -21,7 +21,7 @@ executable("demo_bin") {
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
-    "//src/camera/stream_utils",
+    "//src/camera/lib/stream_utils",
     "//src/lib/fsl",
     "//src/lib/ui/base_view",
     "//src/ui/lib/glm_workaround",

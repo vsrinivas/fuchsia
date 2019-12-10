@@ -19,7 +19,7 @@
 #include <trace/event.h>
 
 #include "lib/ui/scenic/cpp/session.h"
-#include "src/camera/stream_utils/image_io_util.h"
+#include "src/camera/lib/stream_utils/image_io_util.h"
 
 namespace camera {
 
