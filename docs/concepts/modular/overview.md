@@ -1,8 +1,13 @@
+Warning: Modular was an experimental application framework for Fuchsia. Its
+functionality is being ported to the Session Framework and the [Component
+Framework](/docs/concepts/components).
+
+The original documentation for Modular follows.
+
 ## Overview
 
-Modular is the application framework for Fuchsia. It manages user experiences by
-composing UI, data, and users from a diverse set of components into logical and
-visual containers called Stories.
+Modular manages user experiences by composing UI, data, and users from a
+diverse set of components into logical and visual containers called Stories.
 
 The framework defines classes of components to extend user experiences and
 provides software primitives for component composition, communication, task
