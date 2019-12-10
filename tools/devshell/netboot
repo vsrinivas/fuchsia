@@ -5,16 +5,46 @@
 
 ### run bootserver for netbooting
 
-## usage: fx netboot [extra bootserver arguments]
+## usage: fx netboot [-h|--help] [--no-build] [bootserver flags]
+##
+##    --no-build     Do not build netboot.zbi before starting server
+##
+##  bootserver flags:
+##    Not all flags will be supported. Internally this script takes control over
+##    all positional arguments, the -1, -n and some other arguments. Configuration
+##    oriented flags such as -b and -w should work.
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
 
+build=true
+while [[ $# -ge 1 ]]; do
+  case "$1" in
+  -h|--help)
+    fx-command-help
+    echo >&2
+    echo >&2 "Bootserver help follows (for bootserver flags):"
+    echo >&2
+    "${FUCHSIA_BUILD_DIR}/netboot.sh" --help
+    ;;
+  --no-build)
+    build=false
+    ;;
+  *)
+    break
+  esac
+  shift
+done
+
 name_args=()
 name="$(get-device-name)"
 if [[ -n "$name" ]]; then
   name_args+=("-n" "${name}")
+fi
+
+if "$build"; then
+  fx-command-run build "${IMAGE_NETBOOT_ZBI}" netboot.sh
 fi
 
 netboot_script="${FUCHSIA_BUILD_DIR}/netboot.sh"
