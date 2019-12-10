@@ -158,6 +158,7 @@ type XUnion struct {
 	MaxHandles         int
 	MaxOutOfLine       int
 	MaxOutOfLineV1NoEE int
+	Result             *Result
 	Kind               xunionKind
 	types.Strictness
 }
@@ -1250,10 +1251,34 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		r.Members = append(r.Members, c.compileXUnionMember(v))
 	}
 
+	if val.Attributes.HasAttribute("Result") {
+		if len(r.Members) != 2 {
+			log.Fatal("A Result union must have two members: ", val.Name)
+		}
+		if val.Members[0].Type.Kind != types.IdentifierType {
+			log.Fatal("Value member of result union must be an identifier", val.Name)
+		}
+		valueStructDeclType, ok := c.decls[val.Members[0].Type.Identifier]
+		if !ok {
+			log.Fatal("Unknown identifier: ", val.Members[0].Type.Identifier)
+		}
+		if valueStructDeclType != "struct" {
+			log.Fatal("First member of result union not a struct: ", val.Name)
+		}
+		result := Result{
+			ResultDecl:      r.Name,
+			ValueStructDecl: r.Members[0].Type.Decl,
+			ErrorDecl:       r.Members[1].Type.Decl,
+		}
+		c.resultForStruct[val.Members[0].Type.Identifier] = &result
+		c.resultForUnion[val.Name] = &result
+		r.Result = &result
+	}
+
 	return r
 }
 
-func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, string) string) Root {
+func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, string) string, treatUnionAsXUnions bool) Root {
 	root := Root{}
 	library := make(types.LibraryIdentifier, 0)
 	raw_library := make(types.LibraryIdentifier, 0)
@@ -1301,7 +1326,13 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 
 	// Note: for Result calculation unions must be compiled before structs.
 	for _, v := range r.Unions {
-		d := c.compileUnion(v)
+		var d Decl
+		if treatUnionAsXUnions {
+			vConverted := types.ConvertUnionToXUnion(v)
+			d = c.compileXUnion(vConverted)
+		} else {
+			d = c.compileUnion(v)
+		}
 		decls[v.Name] = d
 	}
 
@@ -1366,9 +1397,17 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 }
 
 func Compile(r types.Root) Root {
-	return compile(r, formatNamespace)
+	// TODO(fxb/39159): Flip to treat unions as xunions. We must be fully on
+	// the v1 wire format to activate this, and both APIs must have been
+	// properly aligned.
+	treatUnionAsXUnions := false
+	return compile(r, formatNamespace, treatUnionAsXUnions)
 }
 
 func CompileLL(r types.Root) Root {
-	return compile(r, formatLLNamespace)
+	// TODO(fxb/39159): Flip to treat unions as xunions. We must be fully on
+	// the v1 wire format to activate this, and both APIs must have been
+	// properly aligned.
+	treatUnionAsXUnions := false
+	return compile(r, formatLLNamespace, treatUnionAsXUnions)
 }

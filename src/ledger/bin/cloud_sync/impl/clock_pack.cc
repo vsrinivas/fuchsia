@@ -113,6 +113,10 @@ ledger::Status DecodeClock(coroutine::CoroutineHandler* handler, storage::PageSt
           return ledger::Status::DATA_INTEGRITY_ERROR;
           break;
         }
+        case cloud_provider::DeviceEntry::Tag::Invalid: {
+          return ledger::Status::DATA_INTEGRITY_ERROR;
+          break;
+        }
       }
       result.emplace(std::move(device_id), std::move(device_clock));
     }

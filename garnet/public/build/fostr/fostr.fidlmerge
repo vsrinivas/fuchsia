@@ -287,7 +287,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
             {{- end }}
           {{- end }}
         {{- end }}
-    case static_cast<fidl_xunion_tag_t>({{ $type_name }}::InternalTag::kEmpty):
+    case static_cast<fidl_xunion_tag_t>({{ $type_name }}::InternalTag::kEmpty_internalUseOnly):
       return os << "<empty xunion>";
         {{- if .IsFlexible }}
     default:
