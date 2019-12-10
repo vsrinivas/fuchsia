@@ -1,74 +1,176 @@
-# Build and Pave Quickstart
+# Build and pave quickstart
 
-This document captures the common-case workflow for building and deploying
-Fuchsia onto a device using `fx` development commands. Most such commands
-have options for less common situations; see `fx help <command>` for details.
+This document shows you how to build and deploy Fuchsia on a target device with
+`fx` development commands. Most of these commands have additional commands,
+see `fx help <command>` for details.
 
-## Initial Build and Deploy
+## Determine USB drive device path {#usb-drive-device-path}
 
-The initial build and deploy workflow using `fx` is as follows:
+Before you attempt to build and pave Fuchsia on a target device, you need
+to know the path of your USB drive.
 
-1.  `fx set core.x64`
-    Configures the build to build the "core" product on a generic x64 board.
-    See `fx list-products` and `fx list-boards` for lists of available products
-    and boards, respectively.
-1.  `fx build`
-    Builds Zircon, then the rest of Fuchsia.
-1.  `fx mkzedboot <usb_drive_device_path>`
-    Builds the Zedboot media and installs to the USB drive target. See below
-    for notes on obtaining the USB drive device path.
-1.  Attach Zedboot USB to device and reboot.
-1.  Run `lsblk` on the device. Take note of the HDD or SSD's device path.
-    1. An example path looks like `/dev/sys/pci/00:17.0/ahci/sata0/block`
-1.  Run `install-disk-image init-partition-tables <BLOCK_DEVICE_PATH>` on the device.
-1.  Run `fx pave` on your workstation.
-    Starts the bootserver. The bootserver connects to the device to upload the pave image,
-    and then paves the device.
-
-### USB drive device path
-
-Instructions for determining the correct path to your USB drive are as follows,
-depending on the host OS. In either case, you can run the command once with the
-USB drive disconnected, then run again with it connected, to see the
+Note: For either operating system, you can run the command once with the
+USB drive disconnected, then run again with the USB drive connected, to see the
 difference.
 
-* Linux users:
-  - `sudo fdisk -l`
-    Drives are usually of the form /dev/sd[x], e.g. '/dev/sdc'. Select
-    the drive rather than a specific partition.
-* Mac users:
-  - `diskutil list | grep external`
-    Drives are usually of the form /dev/disk[n], e.g. '/dev/disk2'.
-  - If you see 'ERROR: Can't open /dev/disk[n]: Resource busy'
-    then you will have to unmount the usb drive.
-    For this run `hdiutil unmount /dev/disk[n]`.
-    If this does not fix the error, try reformating the drive:
-    `diskutil eraseDisk JHFSX <name_of_the_usb_stick> /dev/disk[n]`.
+### fx
 
-## Subsequent Build and Deploy
+To determine the correct path to your USB drive:
 
-The workflow for re-building and re-deploying using `fx` is slightly different:
+Note: The `fx` tool is platform agnostic and lists available USB
+drives.
 
-1.  Check the [build dashboard](https://luci-milo.appspot.com/p/fuchsia).
-    Helps ensure that HEAD is in a good state to pull.
-1.  `jiri update`
-    Fetches the latest code.
-1.  `fx build`
-    Builds Zircon, then the rest of Fuchsia.
-1.  `fx setup-macos` Sets up firewall rules (Mac users ONLY)
-1.  `fx serve`
-    Starts a development package server on the host.
-1.  Boot the device *without* Zedboot USB attached.
-    Boots the device into its last-paved state.
-1.  `fx ota`
-    Pushes updated packages to the device.
+```
+fx mkzedboot
+```
 
-Note: If desired, the device can be re-paved using Zedboot USB as per steps 4-5
-in the previous section. This is slower, but may be necessary in some cases
-where the system handles the OTA less than gracefully.
+### Linux
+
+To determine the correct path to your USB drive:
+
+   ```
+   sudo fdisk -l
+   ```
+
+   Drives are usually in the form `/dev/sd[x]` such as `/dev/sdc`.
+
+   Make sure that you select the drive rather than a specific
+   partition. For example, a specific partion has a number at the
+   end of the path such as `/dev/sdc1`.
+
+### macOS
+
+To determine the correct path to your USB drive:
+
+   ```
+   diskutil list | grep external
+   ```
+
+   Drives are usually in the form `/dev/disk[n]` such as `/dev/disk2`.
+
+   Note: If you see `ERROR: Can't open /dev/disk[n]: Resource busy`
+   then you will have to unmount the USB drive. To do this, run:
+
+   ```
+   hdiutil unmount /dev/disk[n]
+   ```
+
+   If this does not fix the error, try reformating the drive:
+
+   ```
+   diskutil eraseDisk JHFSX <name_of_the_usb_stick> /dev/disk[n]
+   ```
+
+## Build and deploy Fuchsia
+
+To perform an initial build and deploy of Fuchsia with `fx`, do the following:
+
+1. Set your build type:
+
+   Note: Configures the build to build the `core` product on a generic x64 board.
+   For a list of available products and boards, see `fx list-products` and
+   `fx list-boards` for lists of available products, respectively.
+
+   ```
+   fx set core.x64
+   ```
+
+1. Build a Fuchsia image:
+
+   ```
+   fx build
+   ```
+
+   This command builds Zircon and then the rest of Fuchsia.
+
+1. Build the Zedboot media and install to a USB device target:
+
+   Note: For information on obtainining the USB drive device path,
+   see [USB drive device path](#usb-drive-device-path).
+
+   ```
+   fx mkzedboot <usb_drive_device_path>
+   ```
+
+1. Attach Zedboot USB drive to your target device and reboot that device.
+1. On your target device, run:
+
+   ```
+   lsblk
+   ```
+
+1. Take note of the HDD or SSD's device path from the output of `lsblk`.
+   An example path looks like `/dev/sys/pci/00:17.0/ahci/sata0/block`.
+1. On your target device, run:
+
+   ```
+   install-disk-image init-partition-tables --block_device_path <BLOCK_DEVICE_PATH>
+   ```
+
+1. To start the bootserver, from your host, run:
+
+   Note: The bootserver connects to the target device to upload the Fuchsia image
+   and then paves your target device.
+
+   ```
+   fx pave
+   ```
+
+## Rebuild and redeploy Fuchsia
+
+To rebuild and redeploy with `fx`:
+
+1. Ensure that HEAD is in a good state to pull at
+   the [build dashboard](https://luci-milo.appspot.com/p/fuchsia).
+1. Fetch the latest code:
+
+   ```
+   jiri update
+   ```
+
+1. Build a Fuchsia image:
+
+   ```
+   fx build
+   ```
+
+   This command builds Zircon and then the rest of Fuchsia.
+1. (Only for macOS users) Set up firewall rules:
+
+   ```
+   fx setup-macos
+   ```
+1. From your host, start a development package server:
+
+   ```
+   fx serve
+   ```
+
+1. Boot your target device without the Zedboot USB attached.
+1. From your host, push updated Fuchsia packages to the target device:
+
+   ```
+   fx ota
+   ```
+
+   In some cases, if `fx ota` does not complete successfully, consider repaving
+   with `fx pave`.
 
 ## Troubleshooting
 
-1.  Having '.' in your PATH may cause `fx build` to fail.  The script will
-    change the working directory such that it may create conflicts between the
-    commands it uses (e.g. `touch`) and the binaries in the working directory.
+*  If `fx build` fails, make sure that your `PATH` environment
+   variable is set correctly.
+
+   Note: The `fx` script changes the working directory in a way
+   that may create conflicts between the commands it uses (such as `touch`)
+   and the binaries in the working directory.
+
+   To check the value of your `PATH` variable:
+
+   ```
+   echo $PATH
+   ```
+
+   Make that sure that the output of your `PATH` variable is a list of
+   directories seperated by colons. Make sure that none of the
+   directories are seperated by `.`.
