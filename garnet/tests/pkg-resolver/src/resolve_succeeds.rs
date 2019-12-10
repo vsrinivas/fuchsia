@@ -13,7 +13,7 @@ use {
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{
         serve::{handler, AtomicToggle, UriPathHandler},
-        RepositoryBuilder, VerificationError,
+        RepositoryBuilder,
     },
     futures::{
         channel::{mpsc, oneshot},
@@ -706,6 +706,7 @@ async fn test_concurrent_blob_writes() {
     // Create our test packages and find out the merkle of the duplicate blob
     let duplicate_blob_path = "blob/duplicate";
     let duplicate_blob_contents = &b"I am the duplicate"[..];
+    let unique_blob_path = "blob/unique";
     let pkg1 = PackageBuilder::new("package1")
         .add_resource_at(duplicate_blob_path, duplicate_blob_contents)
         .build()
@@ -713,13 +714,15 @@ async fn test_concurrent_blob_writes() {
         .unwrap();
     let pkg2 = PackageBuilder::new("package2")
         .add_resource_at(duplicate_blob_path, duplicate_blob_contents)
-        .add_resource_at("blob/unique", &b"I am unique"[..])
+        .add_resource_at(unique_blob_path, &b"I am unique"[..])
         .build()
         .await
         .unwrap();
     let duplicate_blob_merkle = pkg1.meta_contents().expect("extracted contents").contents()
         [duplicate_blob_path]
         .to_string();
+    let unique_blob_merkle =
+        pkg2.meta_contents().expect("extracted contents").contents()[unique_blob_path].to_string();
 
     // Create the path handler and the channel to communicate with it
     let (blocking_uri_path_handler, unblocking_closure_receiver) =
@@ -753,35 +756,42 @@ async fn test_concurrent_blob_writes() {
         resolve_package(&resolver_proxy_1, &"fuchsia-pkg://test/package1");
 
     // Wait for GET request to be received by hyper server
-    let unblocking_closure =
+    let send_shared_blob_body =
         unblocking_closure_receiver.await.expect("received unblocking future from hyper server");
 
     // Wait for duplicate blob to be truncated -- we know it is truncated when we get a
     // permission denied error when trying to update the blob in blobfs.
-    let duplicate_blob_uri = Path::new(&duplicate_blob_merkle);
     let blobfs_dir = env.pkgfs.blobfs().root_dir().expect("blobfs has root dir");
-    while blobfs_dir.update_file(duplicate_blob_uri, 0).is_ok() {
+    while blobfs_dir.update_file(Path::new(&duplicate_blob_merkle), 0).is_ok() {
         fasync::Timer::new(fasync::Time::after(fuchsia_zircon::Duration::from_millis(10))).await;
     }
 
-    // At this point, we are confident that the duplicate blob is truncated.
-    // What happens if we try and write to the duplicate blob again, by trying to resolve package 2?
-    // Right now, it doesn't fail so we must check that verify_contents of package 2 produces an error.
-    // TODO(36718) concurrent writes should cause resolve_package to fail
-    // TODO(39488) pkgfs assumes the blob is present and doesn't tell the package resolver to fetch
-    // it, so it never hooks up to the pending future to resolve that blob, resolving an incomplete
-    // package.
-    let package2_dir =
-        resolve_package(&resolver_proxy_2, &"fuchsia-pkg://test/package2").await.unwrap();
-    assert_matches!(
-        pkg2.verify_contents(&package2_dir).await,
-        Err(VerificationError::NoUser0 { path }) if path == "blob/duplicate"
+    // At this point, we are confident that the duplicate blob is truncated. So, if we enqueue
+    // another package resolve for a package that contains the duplicate blob, pkgfs should expose
+    // that blob as a need, and the package resolver should block resolving the package on that
+    // blob fetch finishing.
+    let package2_resolution_fut =
+        resolve_package(&resolver_proxy_2, &"fuchsia-pkg://test/package2");
+
+    // Wait for the unique blob to exist in blobfs.
+    while blobfs_dir.update_file(Path::new(&unique_blob_merkle), 0).is_ok() {
+        fasync::Timer::new(fasync::Time::after(fuchsia_zircon::Duration::from_millis(10))).await;
+    }
+
+    // At this point, both package resolves should be blocked on the shared blob download. Unblock
+    // the server and verify both packages resolve to valid directories.
+    send_shared_blob_body();
+    let ((), ()) = futures::join!(
+        async move {
+            let package1_dir = package1_resolution_fut.await.unwrap();
+            pkg1.verify_contents(&package1_dir).await.unwrap();
+        },
+        async move {
+            let package2_dir = package2_resolution_fut.await.unwrap();
+            pkg2.verify_contents(&package2_dir).await.unwrap();
+        },
     );
 
-    // When we unblock the server, we should observe that package 1 is successfully resolved
-    unblocking_closure();
-    let package1_dir = package1_resolution_fut.await.unwrap();
-    pkg1.verify_contents(&package1_dir).await.unwrap();
     env.stop().await;
 }
 

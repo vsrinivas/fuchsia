@@ -116,8 +116,12 @@ async fn enumerate_needs_dir(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::install::BlobKind, fuchsia_pkg_testing::PackageBuilder, maplit::hashset,
-        matches::assert_matches, pkgfs_ramdisk::PkgfsRamdisk,
+        super::*,
+        crate::install::{BlobKind, BlobWriteSuccess},
+        fuchsia_pkg_testing::PackageBuilder,
+        maplit::hashset,
+        matches::assert_matches,
+        pkgfs_ramdisk::PkgfsRamdisk,
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -169,6 +173,106 @@ mod tests {
 
         install.write_blob(pkg_contents["data/blob2"], BlobKind::Data, "blob2".as_bytes()).await;
         assert_matches!(needs.next().await, None);
+
+        pkgfs.stop().await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shared_blob_still_needed_while_being_written() {
+        let pkgfs = PkgfsRamdisk::start().unwrap();
+        let root = pkgfs.root_dir_proxy().unwrap();
+        let install = crate::install::Client::open_from_pkgfs_root(&root).unwrap();
+        let versions = crate::versions::Client::open_from_pkgfs_root(&root).unwrap();
+        let client = Client::open_from_pkgfs_root(&root).unwrap();
+
+        const SHARED_BLOB_CONTENTS: &[u8] = "shared between both packages".as_bytes();
+
+        let pkg1 = PackageBuilder::new("shared-content-a")
+            .add_resource_at("data/shared", SHARED_BLOB_CONTENTS)
+            .build()
+            .await
+            .unwrap();
+        let pkg2 = PackageBuilder::new("shared-content-b")
+            .add_resource_at("data/shared", SHARED_BLOB_CONTENTS)
+            .build()
+            .await
+            .unwrap();
+        let pkg_contents = pkg1.meta_contents().unwrap().contents().to_owned();
+
+        install.write_meta_far(&pkg1).await;
+
+        // start writing the shared blob, but don't finish.
+        let (blob, closer) =
+            install.create_blob(pkg_contents["data/shared"], BlobKind::Data).await.unwrap();
+        let blob = blob.truncate(SHARED_BLOB_CONTENTS.len() as u64).await.unwrap();
+        let (first, second) = SHARED_BLOB_CONTENTS.split_at(10);
+        let blob = match blob.write(first).await.unwrap() {
+            BlobWriteSuccess::MoreToWrite(blob) => blob,
+            BlobWriteSuccess::Done => unreachable!(),
+        };
+
+        // start installing the second package, and verify the shared blob is listed in needs
+        install.write_meta_far(&pkg2).await;
+        let mut needs = client.list_needs(pkg2.meta_far_merkle_root().to_owned()).boxed();
+        assert_matches!(
+            needs.next().await,
+            Some(Ok(needs)) if needs == hashset! {
+                pkg_contents["data/shared"],
+            }
+        );
+
+        // finish writing the shared blob, and verify both packages are now complete.
+        assert_matches!(blob.write(second).await, Ok(BlobWriteSuccess::Done));
+        closer.close().await;
+
+        assert_matches!(needs.next().await, None);
+
+        let pkg1_dir =
+            versions.open_package(pkg1.meta_far_merkle_root().to_owned(), None).await.unwrap();
+        pkg1.verify_contents(&pkg1_dir).await.unwrap();
+
+        let pkg2_dir =
+            versions.open_package(pkg2.meta_far_merkle_root().to_owned(), None).await.unwrap();
+        pkg2.verify_contents(&pkg2_dir).await.unwrap();
+
+        pkgfs.stop().await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn initially_present_blobs_are_not_needed() {
+        let pkgfs = PkgfsRamdisk::start().unwrap();
+        let root = pkgfs.root_dir_proxy().unwrap();
+        let install = crate::install::Client::open_from_pkgfs_root(&root).unwrap();
+        let client = Client::open_from_pkgfs_root(&root).unwrap();
+
+        const PRESENT_BLOB_CONTENTS: &[u8] = "already here".as_bytes();
+
+        let pkg = PackageBuilder::new("partially-cached")
+            .add_resource_at("data/present", PRESENT_BLOB_CONTENTS)
+            .add_resource_at("data/needed", "need to fetch this one".as_bytes())
+            .build()
+            .await
+            .unwrap();
+        let pkg_contents = pkg.meta_contents().unwrap().contents().to_owned();
+
+        // write the present blob and start installing the package.
+        pkgfs
+            .blobfs()
+            .add_blob_from(
+                &fuchsia_merkle::MerkleTree::from_reader(PRESENT_BLOB_CONTENTS).unwrap().root(),
+                PRESENT_BLOB_CONTENTS,
+            )
+            .unwrap();
+        install.write_meta_far(&pkg).await;
+
+        // confirm that the needed blob is needed and the present blob is present.
+        let mut needs = client.list_needs(pkg.meta_far_merkle_root().to_owned()).boxed();
+        assert_matches!(
+            needs.next().await,
+            Some(Ok(needs)) if needs == hashset! {
+                pkg_contents["data/needed"],
+            }
+        );
 
         pkgfs.stop().await.unwrap();
     }

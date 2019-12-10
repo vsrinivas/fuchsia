@@ -239,15 +239,27 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
             }
         };
 
+        // Files served by the package will either provide an event in its describe info (if that
+        // file is actually a blob from blobfs) or not provide an event (if that file is, for
+        // example, a file contained within the meta far being served in the meta/ directory).
+        //
+        // If the file is a blobfs blob, we want to make sure it is readable. We can just try to
+        // read from it, but the preferred method to wait for a blobfs blob to become readable is
+        // to wait on the USER_0 signal to become asserted on the file's event.
+        //
+        // As all blobs served by a package should already be readable, we assert that USER_0 is
+        // already asserted on the event.
         if let Some(event) = event {
             match event.wait_handle(zx::Signals::USER_0, zx::Time::after(0.seconds())) {
-                Err(Status::TIMED_OUT) => Err(VerificationError::NoUser0 { path: path.into() }),
-                Err(other_status) => Err(format_err!(
+                Err(Status::TIMED_OUT) => Err(VerificationError::from(format_err!(
+                    "file served by blobfs is not complete/readable as USER_0 signal was not set on the File's event: {}",
+                    path
+                ))),
+                Err(other_status) => Err(VerificationError::from(format_err!(
                     "wait_handle failed with status: {:?} {:?}",
                     other_status,
                     path
-                )
-                .into()),
+                ))),
                 Ok(_) => Ok(()),
             }
         } else {
@@ -296,11 +308,6 @@ pub enum VerificationError {
     /// The actual merkle of the file does not match the merkle listed in the meta FAR.
     DifferentFileData {
         /// Path to the file.
-        path: String,
-    },
-    /// USER_0 signal was not set on the File's event.
-    NoUser0 {
-        /// Path to the file
         path: String,
     },
     /// Read method on file failed.

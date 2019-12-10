@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/io"
+	"syscall/zx/zxwait"
 
 	"fuchsia.googlesource.com/pmd/iou"
 )
@@ -45,27 +47,36 @@ func (m *Manager) Channel() zx.Channel {
 
 // HasBlob returns true if the requested blob is available for reading, false otherwise
 func (m *Manager) HasBlob(root string) bool {
-	f, err := m.OpenFile(root, os.O_WRONLY|os.O_APPEND, 0777)
-	switch err := err.(type) {
-	case nil:
-		f.Close()
-
-		// if there was no error, then we opened the file for writing and the file was
-		// writable, which means it exists and is being written by someone.
+	f, err := m.dir.Open(root, io.OpenRightReadable|io.OpenFlagNotDirectory, io.ModeTypeFile)
+	if err != nil {
+		// if the blob can't be opened for read at all, it doesn't
+		// exist and isn't in the process of being written.
 		return false
-	case *zx.Error:
-		switch err.Status {
-		case zx.ErrAccessDenied:
-			// Access denied indicates we explicitly know that we have opened a blob that
-			// already exists and it is not writable - meaning it's already written.
-			return true
-		case zx.ErrNotFound:
-			return false
+	}
+	defer f.Close()
+
+	file, ok := f.(*fdio.File)
+	if !ok {
+		// a node exists with the name, but it isn't a file.
+		return false
+	}
+
+	observed, err := zxwait.Wait(zx.Handle(file.Event), zx.SignalUser0, 0)
+
+	// The above wait should either succeed or fail with zx.ErrTimedOut.
+	// Log unexpected error conditions.
+	if err != nil {
+		e, ok := err.(*zx.Error)
+		if !ok || e.Status != zx.ErrTimedOut {
+			log.Printf("blobfs: unknown error asserting blob existence: %s", err)
 		}
 	}
 
-	log.Printf("blobfs: unknown error asserting blob existence: %s", err)
-	return false
+	// Blobfs will allow blobs that are in the process of being written to
+	// be opened for read, and it will set zx.SignalUser0 on the blob's
+	// event when it actually becomes readable. For the purposes of pkgfs,
+	// we only have a blob if it exists and is readable.
+	return err == nil && (observed&zx.SignalUser0) == zx.SignalUser0
 }
 
 func (m *Manager) Blobs() ([]string, error) {
