@@ -133,13 +133,15 @@ class UnionMember {
   UnionMember(Library* enclosing_library, const rapidjson::Value& value, bool for_xunion);
   ~UnionMember();
 
-  std::string_view name() const { return name_; }
+  bool reserved() const { return reserved_; }
+  const std::string& name() const { return name_; }
   uint64_t offset() const { return offset_; }
   uint64_t size() const { return size_; }
   Ordinal32 ordinal() const { return ordinal_; }
   const Type* type() const { return type_.get(); }
 
  private:
+  const bool reserved_;
   const std::string name_;
   const uint64_t offset_;
   const uint64_t size_;

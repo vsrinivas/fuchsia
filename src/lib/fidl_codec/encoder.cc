@@ -100,18 +100,20 @@ void Encoder::VisitUnionBody(const UnionValue* node) {
 
   uint32_t tag = 0;
   for (const auto& member : node->definition().members()) {
-    if (member->name() == node->field().name()) {
-      auto target_offset = bytes_.size() + member->offset();
-      Write<uint32_t>(tag);
-      bytes_.resize(target_offset);
-      if (node->field().value() != nullptr) {
-        node->field().value()->Visit(this);
+    if (!member->reserved()) {
+      if (member->name() == node->field().name()) {
+        auto target_offset = bytes_.size() + member->offset();
+        Write<uint32_t>(tag);
+        bytes_.resize(target_offset);
+        if (node->field().value() != nullptr) {
+          node->field().value()->Visit(this);
+        }
+        bytes_.resize(target_size);
+        return;
       }
-      bytes_.resize(target_size);
-      return;
-    }
 
-    tag++;
+      tag++;
+    }
   }
 
   FXL_NOTREACHED() << "Invalid union field '" << node->field().name() << "'";

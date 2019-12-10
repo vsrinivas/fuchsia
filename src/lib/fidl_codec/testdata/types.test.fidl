@@ -61,6 +61,7 @@ protocol FidlCodecTestInterface {
     NullableXUnionIntFirst(int32 i, IntStructXunion? isu);
 
     ShortUnion(U8U16Union u, int32 i);
+    ShortUnionReserved(U8U16UnionReserved u, int32 i);
     ShortXUnion(U8U16Xunion u, int32 i);
 
     U8U16UnionStruct(U8U16UnionStructType s);
@@ -136,6 +137,12 @@ xunion IntStructXunion {
 union U8U16Union {
     1: uint8 variant_u8;
     2: uint16 variant_u16;
+};
+
+union U8U16UnionReserved {
+    1: uint8 variant_u8;
+    2: reserved;
+    3: uint16 variant_u16;
 };
 
 xunion U8U16Xunion {

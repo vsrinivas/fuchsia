@@ -91,16 +91,22 @@ std::string Bits::GetNameFromBytes(const uint8_t* bytes) const {
 }
 
 UnionMember::UnionMember(Library* enclosing_library, const rapidjson::Value& value, bool for_xunion)
-    : name_(enclosing_library->ExtractString(value, "union member", "<unknown>", "name")),
-      offset_(enclosing_library->ExtractUint64(value, "union member", name_, "offset")),
-      size_(enclosing_library->ExtractUint64(value, "union member", name_, "size")),
+    : reserved_(enclosing_library->ExtractBool(value, "table member", "<unknown>", "reserved")),
+      name_(reserved_
+                ? "<reserved>"
+                : enclosing_library->ExtractString(value, "union member", "<unknown>", "name")),
+      offset_(reserved_ ? 0
+                        : enclosing_library->ExtractUint64(value, "union member", name_, "offset")),
+      size_(reserved_ ? 0 : enclosing_library->ExtractUint64(value, "union member", name_, "size")),
       ordinal_(for_xunion
                    ? enclosing_library->ExtractUint32(value, "union member", name_, "ordinal")
                    : (value.HasMember("xunion_ordinal")
                           ? enclosing_library->ExtractUint32(value, "union member", name_,
                                                              "xunion_ordinal")
                           : 0)),
-      type_(enclosing_library->ExtractType(value, "union member", name_, "type", size_)) {}
+      type_(reserved_
+                ? std::make_unique<RawType>(0)
+                : enclosing_library->ExtractType(value, "union member", name_, "type", size_)) {}
 
 UnionMember::~UnionMember() = default;
 
@@ -128,15 +134,24 @@ void Union::DecodeTypes(bool for_xunion) {
 }
 
 const UnionMember* Union::MemberWithTag(uint32_t tag) const {
-  if (tag >= members_.size()) {
-    return nullptr;
+  // Only non reserved members count for the tag.
+  for (const auto& member : members_) {
+    if (!member->reserved()) {
+      if (tag == 0) {
+        return member.get();
+      }
+      --tag;
+    }
   }
-  return members_[tag].get();
+  return nullptr;
 }
 
 const UnionMember* Union::MemberWithOrdinal(Ordinal32 ordinal) const {
   for (const auto& member : members_) {
     if (member->ordinal() == ordinal) {
+      if (member->reserved()) {
+        return nullptr;
+      }
       return member.get();
     }
   }

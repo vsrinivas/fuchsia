@@ -1014,6 +1014,7 @@ TEST_F(WireParserTest, BadU8U16UnionStruct) {
 namespace {
 
 using uuu = test::fidlcodec::examples::U8U16Union;
+using uuur = test::fidlcodec::examples::U8U16UnionReserved;
 using uux = test::fidlcodec::examples::U8U16Xunion;
 
 template <class T>
@@ -1049,6 +1050,15 @@ TEST_DECODE_WIRE(ShortUnion8, ShortUnion, R"({"u":{"variant_u8":"16"}, "i":"1"})
 TEST_DECODE_WIRE(ShortUnion16, ShortUnion, R"({"u":{"variant_u16":"1024"}, "i":"1"})",
                  ShortUnionPretty("U8U16Union", "variant_u16", "uint16", 1024, 1),
                  GetUInt16Union<uuu>(1024), 1);
+
+TEST_DECODE_WIRE(ShortUnionReserved8, ShortUnionReserved, R"({"u":{"variant_u8":"16"}, "i":"1"})",
+                 ShortUnionPretty("U8U16UnionReserved", "variant_u8", "uint8", 16, 1),
+                 GetUInt8Union<uuur>(16), 1);
+
+TEST_DECODE_WIRE(ShortUnionReserved16, ShortUnionReserved,
+                 R"({"u":{"variant_u16":"1024"}, "i":"1"})",
+                 ShortUnionPretty("U8U16UnionReserved", "variant_u16", "uint16", 1024, 1),
+                 GetUInt16Union<uuur>(1024), 1);
 
 TEST_DECODE_WIRE(ShortXUnion8, ShortXUnion, R"({"u":{"variant_u8":"16"}, "i":"1"})",
                  ShortUnionPretty("U8U16Xunion", "variant_u8", "uint8", 16, 1),
