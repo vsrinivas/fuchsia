@@ -40,7 +40,7 @@ namespace devmgr {
 
 cobalt_client::CollectorOptions FsManager::CollectorOptions() {
   cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::GeneralAvailability();
-  options.project_name = "local_storage";
+  options.project_id = 3676913920;
   return options;
 }
 

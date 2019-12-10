@@ -25,7 +25,7 @@ constexpr uint32_t kBuckets = 20;
 
 cobalt_client::CollectorOptions MakeOptions() {
   cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::Debug();
-  options.project_name = "Test Project";
+  options.project_id = 20;
   return options;
 }
 

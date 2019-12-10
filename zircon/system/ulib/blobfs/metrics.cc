@@ -26,8 +26,8 @@ BlobfsMetrics::~BlobfsMetrics() { Dump(); }
 
 cobalt_client::CollectorOptions BlobfsMetrics::GetBlobfsOptions() {
   cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::GeneralAvailability();
-  // Filesystems project name as defined in cobalt-analytics projects.yaml.
-  options.project_name = "local_storage";
+  // Filesystems project ID as defined in cobalt-analytics projects.yaml.
+  options.project_id = 3676913920;
   return options;
 }
 
