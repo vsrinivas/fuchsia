@@ -122,7 +122,12 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
                                           zx_port_packet_t* packet) {
   const SmcInstruction si(iss);
   if (si.imm != kSmcPsci) {
-    return ZX_ERR_NOT_SUPPORTED;
+    dprintf(CRITICAL, "Unhandled SMC Instruction %#lx\n", guest_state->x[0]);
+    // From ARM DEN 0028B, Section 5.2: The Unknown SMC Function Identifier is a sign-extended
+    // value of (-1) that is returned in R0, W0 or X0 register.
+    guest_state->x[0] = ~0ul;
+    next_pc(guest_state);
+    return ZX_OK;
   }
 
   next_pc(guest_state);
@@ -140,8 +145,9 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
       guest_state->x[0] = PSCI_SUCCESS;
       return ZX_ERR_NEXT;
     default:
+      dprintf(CRITICAL, "Unhandled SMC PSCI Instruction %#lx\n", guest_state->x[0]);
       guest_state->x[0] = PSCI_NOT_SUPPORTED;
-      return ZX_ERR_NOT_SUPPORTED;
+      return ZX_OK;
   }
 }
 
