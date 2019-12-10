@@ -8,17 +8,9 @@ use {
     async_trait::async_trait,
     failure::{self, format_err, Error},
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport, MouseDescriptor},
-    futures::channel::mpsc::Sender,
+    futures::channel::mpsc::{Receiver, Sender},
     std::ops::Range,
 };
-
-/// Returns a proxy to the first available mouse input device.
-///
-/// # Errors
-/// If there is an error reading the input directory, or no mouse input device is found.
-pub async fn get_mouse_input_device() -> Result<InputDeviceProxy, Error> {
-    input_device::get_device(input_device::InputDeviceType::Mouse).await
-}
 
 /// A [`MouseBinding`] represents a connection to a mouse input device.
 ///
@@ -28,14 +20,17 @@ pub async fn get_mouse_input_device() -> Result<InputDeviceProxy, Error> {
 ///
 /// # Example
 /// ```
-/// let (sender, mouse_report_receiver) = futures::channel::mpsc::channel(1);
-/// let mouse_device: MouseBinding = input_device::InputDeviceBinding::new(sender)).await?;
+/// let mut mouse_device: MouseBinding = input_device::InputDeviceBinding::new().await?;
 ///
-/// while let Some(report) = mouse_report_receiver.next().await {}
+/// while let Some(report) = mouse_device.input_reports().next().await {}
 /// ```
 pub struct MouseBinding {
     /// The sender used to send available input reports.
     report_sender: Sender<InputReport>,
+
+    /// The receiving end of the input report channel. Clients use this indirectly via
+    /// [`input_reports()`].
+    report_receiver: Receiver<InputReport>,
 
     /// The range of possible x values for this device.
     _x_range: Range<i64>,
@@ -58,49 +53,38 @@ pub struct MouseBinding {
 
 #[async_trait]
 impl input_device::InputDeviceBinding for MouseBinding {
-    async fn new(report_stream: Sender<InputReport>) -> Result<Self, Error> {
-        let device_proxy: InputDeviceProxy = get_mouse_input_device().await?;
-
-        let mouse = MouseBinding::create_mouse_binding(&device_proxy, report_stream).await?;
-        mouse.listen_for_reports(device_proxy);
-
-        Ok(mouse)
-    }
-
-    fn get_report_stream(&self) -> Sender<fidl_fuchsia_input_report::InputReport> {
+    fn input_report_sender(&self) -> Sender<InputReport> {
         self.report_sender.clone()
     }
-}
 
-impl MouseBinding {
-    /// Creates a [`MouseBinding`] from an [`InputDeviceProxy`]
-    ///
-    /// # Parameters
-    /// - `mouse_device`: An input device associated with a mouse device.
-    /// - `report_sender`: The sender to which the [`MouseBinding`] will send input reports.
-    ///
-    /// # Errors
-    /// If the `mouse_device` does not represent a mouse, or the parsing of the device's descriptor
-    /// fails.
-    async fn create_mouse_binding(
-        mouse_device: &InputDeviceProxy,
-        report_sender: Sender<fidl_fuchsia_input_report::InputReport>,
-    ) -> Result<MouseBinding, Error> {
-        match mouse_device.get_descriptor().await?.mouse {
+    fn input_reports(&mut self) -> &mut Receiver<fidl_fuchsia_input_report::InputReport> {
+        return &mut self.report_receiver;
+    }
+
+    async fn default_input_device() -> Result<InputDeviceProxy, Error> {
+        input_device::get_device(input_device::InputDeviceType::Mouse).await
+    }
+
+    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
+        match device.get_descriptor().await?.mouse {
             Some(MouseDescriptor {
                 movement_x: Some(x_axis),
                 movement_y: Some(y_axis),
                 scroll_v: vertical_scroll_range,
                 scroll_h: horizontal_scroll_range,
                 buttons,
-            }) => Ok(MouseBinding {
-                report_sender,
-                _x_range: to_range(x_axis),
-                _y_range: to_range(y_axis),
-                _horizontal_scroll_range: horizontal_scroll_range.map(to_range),
-                _vertical_scroll_range: vertical_scroll_range.map(to_range),
-                _buttons: buttons.unwrap_or_default(),
-            }),
+            }) => {
+                let (report_sender, report_receiver) = futures::channel::mpsc::channel(1);
+                Ok(MouseBinding {
+                    report_sender,
+                    report_receiver,
+                    _x_range: to_range(x_axis),
+                    _y_range: to_range(y_axis),
+                    _horizontal_scroll_range: horizontal_scroll_range.map(to_range),
+                    _vertical_scroll_range: vertical_scroll_range.map(to_range),
+                    _buttons: buttons.unwrap_or_default(),
+                })
+            }
             descriptor => Err(format_err!("Mouse Descriptor failed to parse: \n {:?}", descriptor)),
         }
     }

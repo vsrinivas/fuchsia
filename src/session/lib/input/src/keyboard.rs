@@ -8,34 +8,29 @@ use {
     failure::{self, format_err, Error},
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport, KeyboardDescriptor},
     fidl_fuchsia_ui_input2::Key,
-    futures::channel::mpsc::Sender,
+    futures::channel::mpsc::{Receiver, Sender},
 };
-
-/// Returns a proxy to the first available keyboard input device.
-///
-/// # Errors
-/// If there is an error reading the directory, or no keyboard input device is found.
-#[allow(dead_code)]
-pub async fn get_keyboard_input_device() -> Result<InputDeviceProxy, Error> {
-    input_device::get_device(input_device::InputDeviceType::Keyboard).await
-}
 
 /// A [`KeyboardBinding`] represents a connection to a keyboard input device.
 ///
 /// The [`KeyboardBinding`] parses and exposes keyboard descriptor properties (e.g., the available
 /// keyboard keys) for the device it is associated with. It also parses [`InputReport`]s
-/// from the device, and sends them to clients via [`KeyboardBinding::report_stream`].
+/// from the device, and sends them to clients via the stream available at
+/// [`KeyboardBinding::input_reports()`].
 ///
 /// # Example
 /// ```
-/// let (sender, keyboard_report_receiver) = futures::channel::mpsc::channel(1);
-/// let keyboard_device: KeyboardBinding = input_device::InputDeviceBinding::new(sender)).await?;
+/// let mut keyboard_device: KeyboardBinding = input_device::InputDeviceBinding::new().await?;
 ///
-/// while let Some(report) = keyboard_report_receiver.next().await {}
+/// while let Some(report) = keyboard_device.input_reports().next().await {}
 /// ```
 pub struct KeyboardBinding {
     /// The channel to stream InputReports to
     report_sender: Sender<InputReport>,
+
+    /// The receiving end of the input report channel. Clients use this indirectly via
+    /// [`input_reports()`].
+    report_receiver: Receiver<InputReport>,
 
     /// The keys available on the keyboard.
     _keys: Vec<Key>,
@@ -43,38 +38,23 @@ pub struct KeyboardBinding {
 
 #[async_trait]
 impl input_device::InputDeviceBinding for KeyboardBinding {
-    async fn new(report_stream: Sender<InputReport>) -> Result<Self, Error> {
-        let device_proxy: InputDeviceProxy = get_keyboard_input_device().await?;
-
-        let keyboard =
-            KeyboardBinding::create_keyboard_binding(&device_proxy, report_stream).await?;
-        keyboard.listen_for_reports(device_proxy);
-
-        Ok(keyboard)
-    }
-
-    fn get_report_stream(&self) -> Sender<InputReport> {
+    fn input_report_sender(&self) -> Sender<InputReport> {
         self.report_sender.clone()
     }
-}
 
-impl KeyboardBinding {
-    /// Creates a [`KeyboardBinding`] from an [`InputDeviceProxy`]
-    ///
-    /// # Parameters
-    /// - `keyboard_device`: An input device associated with a keyboard device.
-    /// - `report_sender`: The sender to which the [`KeyboardBinding`] will send input reports.
-    ///
-    /// # Errors
-    /// If the `keyboard_device` does not represent a keyboard, or the parsing of the device's descriptor
-    /// fails.
-    async fn create_keyboard_binding(
-        keyboard_device: &InputDeviceProxy,
-        report_sender: Sender<fidl_fuchsia_input_report::InputReport>,
-    ) -> Result<KeyboardBinding, Error> {
-        match keyboard_device.get_descriptor().await?.keyboard {
+    fn input_reports(&mut self) -> &mut Receiver<fidl_fuchsia_input_report::InputReport> {
+        return &mut self.report_receiver;
+    }
+
+    async fn default_input_device() -> Result<InputDeviceProxy, Error> {
+        input_device::get_device(input_device::InputDeviceType::Keyboard).await
+    }
+
+    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
+        match device.get_descriptor().await?.keyboard {
             Some(KeyboardDescriptor { keys: Some(keys) }) => {
-                Ok(KeyboardBinding { report_sender, _keys: keys })
+                let (report_sender, report_receiver) = futures::channel::mpsc::channel(1);
+                Ok(KeyboardBinding { report_sender, report_receiver, _keys: keys })
             }
             descriptor => {
                 Err(format_err!("Keyboard Descriptor failed to parse: \n {:?}", descriptor))

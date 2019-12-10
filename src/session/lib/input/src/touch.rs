@@ -9,18 +9,9 @@ use {
     failure::{self, format_err, Error},
     fidl_fuchsia_input_report as fidl,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport, TouchDescriptor},
-    futures::channel::mpsc::Sender,
+    futures::channel::mpsc::{Receiver, Sender},
     std::ops::Range,
 };
-
-/// Returns a proxy to the first available touch input device.
-///
-/// # Errors
-/// If there is an error reading the input directory, or no touch input device is found.
-pub async fn get_touch_input_device() -> Result<fidl_fuchsia_input_report::InputDeviceProxy, Error>
-{
-    input_device::get_device(input_device::InputDeviceType::Touch).await
-}
 
 /// A [`TouchBinding`] represents a connection to a touch input device.
 ///
@@ -31,14 +22,15 @@ pub async fn get_touch_input_device() -> Result<fidl_fuchsia_input_report::Input
 ///
 /// # Example
 /// ```
-/// let (sender, touch_report_receiver) = futures::channel::mpsc::channel(1);
-/// let touch_device: TouchBinding = input_device::InputDeviceBinding::new(sender)).await?;
+/// let mut touch_device: TouchBinding = input_device::InputDeviceBinding::new().await?;
 ///
-/// while let Some(report) = touch_report_receiver.next().await {}
+/// while let Some(report) = touch_device.input_reports().next().await {}
 /// ```
 pub struct TouchBinding {
     /// The channel to stream InputReports to
     report_sender: Sender<InputReport>,
+
+    report_receiver: Receiver<InputReport>,
 
     /// The descriptors for each touch contact.
     _contacts: Vec<ContactDescriptor>,
@@ -75,39 +67,25 @@ pub struct ContactDescriptor {
 
 #[async_trait]
 impl input_device::InputDeviceBinding for TouchBinding {
-    async fn new(report_sender: Sender<InputReport>) -> Result<Self, Error> {
-        let device_proxy: fidl_fuchsia_input_report::InputDeviceProxy =
-            get_touch_input_device().await?;
-
-        let touch = TouchBinding::create_touch_binding(&device_proxy, report_sender).await?;
-        touch.listen_for_reports(device_proxy);
-
-        Ok(touch)
-    }
-
-    fn get_report_stream(&self) -> Sender<InputReport> {
+    fn input_report_sender(&self) -> Sender<InputReport> {
         self.report_sender.clone()
     }
-}
 
-impl TouchBinding {
-    /// Creates a [`TouchBinding`] from an [`InputDeviceProxy`]
-    ///
-    /// # Parameters
-    /// - `touch_device`: An input device associated with a touch device.
-    /// - `report_sender`: The sender to which the [`TouchBinding`] will send input reports.
-    ///
-    /// # Errors
-    /// If the `touch_device` does not represent a touch, or the parsing of the device's descriptor
-    /// fails.
-    async fn create_touch_binding(
-        touch_device: &InputDeviceProxy,
-        report_sender: Sender<fidl_fuchsia_input_report::InputReport>,
-    ) -> Result<TouchBinding, Error> {
-        match touch_device.get_descriptor().await?.touch {
+    fn input_reports(&mut self) -> &mut Receiver<fidl_fuchsia_input_report::InputReport> {
+        return &mut self.report_receiver;
+    }
+
+    async fn default_input_device() -> Result<InputDeviceProxy, Error> {
+        input_device::get_device(input_device::InputDeviceType::Touch).await
+    }
+
+    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
+        match device.get_descriptor().await?.touch {
             Some(TouchDescriptor { contacts: Some(contacts), max_contacts: _, touch_type: _ }) => {
+                let (report_sender, report_receiver) = futures::channel::mpsc::channel(1);
                 Ok(TouchBinding {
                     report_sender: report_sender,
+                    report_receiver: report_receiver,
                     _contacts: contacts
                         .iter()
                         .map(TouchBinding::parse_contact_descriptor)
@@ -118,7 +96,9 @@ impl TouchBinding {
             descriptor => Err(format_err!("Touch Descriptor failed to parse: \n {:?}", descriptor)),
         }
     }
+}
 
+impl TouchBinding {
     /// Parses a FIDL contact descriptor into a [`ContactDescriptor`]
     ///
     /// # Parameters

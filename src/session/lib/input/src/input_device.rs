@@ -6,64 +6,104 @@ use {
     async_trait::async_trait,
     failure::{self, format_err, Error, ResultExt},
     fdio,
-    fidl_fuchsia_input_report::InputDeviceMarker,
+    fidl_fuchsia_input_report::{InputDeviceMarker, InputDeviceProxy, InputReport},
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::channel::mpsc::Sender,
+    futures::channel::mpsc::{Receiver, Sender},
     std::{
         fs::{read_dir, ReadDir},
         path::{Path, PathBuf},
     },
 };
 
-#[derive(Clone, Copy)]
-pub enum InputDeviceType {
-    Keyboard,
-    Mouse,
-    Touch,
-}
-
-/// Connects an InputDevice to a session.
+/// An [`InputDeviceBinding`] represents a binding to an input device (e.g., a mouse).
+///
+/// [`InputDeviceBinding`]s expose information about the bound device. For example, a
+/// [`MouseBinding`] exposes the ranges of possible x and y values the device can generate.
+///
+/// An [`InputDeviceBinding`] also forwards the bound input device's input report stream.
+/// The receiving end of the input stream is accessed by [`InputDeviceBinding::input_reports()`].
+///
+/// # Example
+///
+/// ```
+/// let mouse_binding = InputDeviceBinding::new().await;
+/// while let Some(input_report) = mouse_binding.report_stream_receiver().next().await {
+///     // Handle the input report.
+/// }
+/// ```
 #[async_trait]
 pub trait InputDeviceBinding: Sized {
-    /// Creates a new InputDeviceBinding.
+    /// Retrieves a proxy to the default input device of type `Self`.
+    ///
+    /// For example, [`MouseBinding`] finds the first available input device
+    /// which is a mouse and returns a proxy to it.
+    ///
+    /// This allows [`InputDeviceBinding::new`] to have a default implementation
+    /// that reduces the boiler plate in each trait-implementer.
     ///
     /// # Errors
-    /// If a connection couldn't be made to the device or a device was not found.
-    async fn new(
-        report_stream: Sender<fidl_fuchsia_input_report::InputReport>,
-    ) -> Result<Self, Error>;
+    /// If no default device exists.
+    async fn default_input_device() -> Result<InputDeviceProxy, Error>;
 
-    // Returns a clone of the Sender to the channel reporting InputReports to the session.
-    /// TODO(vickiecheng): Stream InputMessages instead of InputReports to the session.
-    fn get_report_stream(&self) -> Sender<fidl_fuchsia_input_report::InputReport>;
+    /// Binds the provided input device to a new instance of `Self`.
+    ///
+    /// Trait-implementers are expected to get the device descriptor and make
+    /// sure it is of the correct type. For example, a [`MouseBinding`] would
+    /// verify that the device has a mouse descriptor.
+    ///
+    /// The [`MouseBinding`] then uses the device's mouse descriptor to
+    /// initialize its fields (e.g., the range of possible x values).
+    ///
+    /// # Parameters
+    /// - `device`: The device to use to initalize the binding.
+    ///
+    /// # Errors
+    /// If the device descriptor could not be retrieved, or the descriptor could
+    /// not be parsed correctly.
+    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error>;
 
-    // Spawns a thread that continuously polls for InputReports. Sends the reports to the binding's
-    // `report_stream`.
-    fn listen_for_reports(&self, device_proxy: fidl_fuchsia_input_report::InputDeviceProxy) {
-        let mut channel_endpoint = self.get_report_stream();
+    /// Returns a stream of input events generated from the bound device.
+    fn input_reports(&mut self) -> &mut Receiver<fidl_fuchsia_input_report::InputReport>;
+
+    /// Returns the input event stream's sender.
+    fn input_report_sender(&self) -> Sender<InputReport>;
+
+    /// Creates a new [`InputDeviceBinding`] for the input type's default input device.
+    ///
+    /// The binding will start listening for input reports immediately, and they
+    /// can be read from [`input_reports()`].
+    ///
+    /// # Errors
+    /// If there was an error finding or binding to the default input device.
+    async fn new() -> Result<Self, Error> {
+        let device_proxy: InputDeviceProxy = Self::default_input_device().await?;
+        let device_binding = Self::bind_device(&device_proxy).await?;
+        device_binding.initialize_report_stream(device_proxy);
+
+        Ok(device_binding)
+    }
+
+    /// Initializes the input report stream for the bound device.
+    ///
+    /// Spawns a future which awaits input reports from the device and forwards them to
+    /// clients via [`input_report_sender()`]. The reports are observed via [`input_reports()`].
+    ///
+    /// # Parameters
+    /// - `device_proxy`: The device proxy which is used to get input reports.
+    fn initialize_report_stream(&self, device_proxy: fidl_fuchsia_input_report::InputDeviceProxy) {
+        let mut report_sender = self.input_report_sender();
         fasync::spawn(async move {
-            let (_status, event) = match device_proxy.get_reports_event().await {
-                Ok((s, e)) => (s, e),
-                Err(e) => {
-                    panic!("Failed to get reports event with error: {}.", e);
-                }
-            };
-
-            loop {
-                let _ = fasync::OnSignals::new(&event, zx::Signals::USER_0).await;
-
-                let input_reports: Vec<fidl_fuchsia_input_report::InputReport> =
-                    match device_proxy.get_reports().await {
-                        Ok(reports) => reports,
-                        Err(e) => {
-                            panic!("Failed to get reports with error: {}", e);
+            if let Ok((_status, event)) = device_proxy.get_reports_event().await {
+                if let Ok(_) = fasync::OnSignals::new(&event, zx::Signals::USER_0).await {
+                    while let Ok(input_reports) = device_proxy.get_reports().await {
+                        for report in input_reports {
+                            let _ = report_sender.try_send(report);
                         }
-                    };
-
-                for report in input_reports {
-                    channel_endpoint.try_send(report).unwrap();
+                    }
                 }
             }
+            // TODO(lindkvist): Add signaling for when this loop exits, since it means the device
+            // binding is no longer functional.
         });
     }
 }
@@ -101,6 +141,13 @@ pub async fn get_device(
     }
 
     Err(format_err!("No input devices found."))
+}
+
+#[derive(Clone, Copy)]
+pub enum InputDeviceType {
+    Keyboard,
+    Mouse,
+    Touch,
 }
 
 /// The path to the input-report directory.
