@@ -231,10 +231,10 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
     return [
       TestCaseResults(
           '${flutterAppName}_fps', Unit.framesPerSecond, [results.averageFps]),
-      TestCaseResults(
-          'frame_build_times', Unit.milliseconds, results.frameBuildTimes),
-      TestCaseResults('frame_rasterizer_times', Unit.milliseconds,
-          results.frameRasterizerTimes),
+      TestCaseResults('${flutterAppName}_frame_build_times', Unit.milliseconds,
+          results.frameBuildTimes),
+      TestCaseResults('${flutterAppName}_frame_rasterizer_times',
+          Unit.milliseconds, results.frameRasterizerTimes),
     ];
   }
 
