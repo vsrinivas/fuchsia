@@ -4,6 +4,7 @@
 
 pub mod actions;
 mod addable_directory;
+mod binding;
 mod capability;
 pub mod dir_tree;
 pub mod error;
@@ -25,7 +26,7 @@ pub mod testing;
 mod tests;
 
 pub use self::{
-    actions::*, capability::*, dir_tree::*, error::*, exposed_dir::*, hooks::*, hub::*, model::*,
-    moniker::*, namespace::*, realm::*, resolver::*, routing::*, routing_facade::*, runner::*,
-    storage::*,
+    actions::*, binding::*, capability::*, dir_tree::*, error::*, exposed_dir::*, hooks::*, hub::*,
+    model::*, moniker::*, namespace::*, realm::*, resolver::*, routing::*, routing_facade::*,
+    runner::*, storage::*,
 };
