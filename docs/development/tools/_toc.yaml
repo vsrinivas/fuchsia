@@ -2,17 +2,19 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Fidlcat"
-  section:
-  - include: /docs/development/tools/fidl_inspecting/_toc.yaml
+- title: "Overview"
+  path: /docs/development/tools/README.md
 - title: "Banjo"
   path: /docs/development/tools/banjo-tutorial.md
-- title: "System monitor"
-  section:
-  - include: /docs/development/tools/system_monitor/_toc.yaml
 - title: "Debugger"
   section:
   - include: /docs/development/debugger/_toc.yaml
+- title: "Fidlcat"
+  section:
+  - include: /docs/development/tools/fidl_inspecting/_toc.yaml
 - title: "QEMU"
   section:
   - include: /docs/development/emulator/_toc.yaml
+- title: "System monitor"
+  section:
+  - include: /docs/development/tools/system_monitor/_toc.yaml
