@@ -224,19 +224,14 @@ impl Controller {
     /// For the FIDL test controller. Informational only and intended for logging only. The state is
     /// inherently racey.
     pub fn is_connected(&self) -> bool {
-        let peer_guard = self.peer.read();
-        let connection = peer_guard.control_channel.read();
-        match *connection {
-            PeerChannel::Connected(_) => true,
-            _ => false,
-        }
+        self.peer.read().is_connected()
     }
 
     /// Returns notification events from the peer.
     pub fn take_event_stream(&self) -> ControllerEventStream {
-        let peer_guard = self.peer.read();
+        let mut peer_guard = self.peer.write();
         let (sender, receiver) = mpsc::channel(2);
-        peer_guard.controller_listeners.lock().push(sender);
+        peer_guard.add_control_listener(sender);
         receiver
     }
 }

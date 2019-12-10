@@ -21,7 +21,7 @@ use {
         stream::{FusedStream, FuturesUnordered, SelectAll, StreamExt, TryStreamExt},
         Stream,
     },
-    parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard},
+    parking_lot::{Mutex, RwLock},
     pin_utils::pin_mut,
     std::{
         collections::HashMap,
@@ -123,12 +123,11 @@ impl<'a> PeerManager<'a> {
         fx_vlog!(tag: "avrcp", 2, "connect_remote_control_psm, requesting to connecting to remote peer {:?}", peer_id);
 
         let remote_peer = self.get_remote_peer(peer_id);
-        let peer_guard = remote_peer.read();
-        let connection = peer_guard.control_channel.upgradable_read();
-        match *connection {
+        let mut peer_guard = remote_peer.write();
+        match peer_guard.control_channel {
             PeerChannel::Disconnected => {
-                let mut conn = RwLockUpgradableReadGuard::upgrade(connection);
-                *conn = PeerChannel::Connecting;
+                fx_vlog!(tag: "avrcp", 2, "connect_remote_control_psm, attempting to connect {:?}", &peer_id);
+                peer_guard.control_channel = PeerChannel::Connecting;
                 let profile_service = self.profile_svc.clone();
                 let peer_id = String::from(peer_id);
                 self.new_control_connection_futures.push(
@@ -146,7 +145,9 @@ impl<'a> PeerManager<'a> {
                     .boxed(),
                 );
             }
-            _ => return,
+            _ => {
+                fx_vlog!(tag: "avrcp", 2, "connect_remote_control_psm, connection {:?}", peer_guard.control_channel);
+            }
         }
     }
 
@@ -162,10 +163,7 @@ impl<'a> PeerManager<'a> {
         match AvcPeer::new(channel) {
             Ok(peer) => {
                 fx_vlog!(tag: "avrcp", 1, "new peer {:#?}", peer);
-                let peer_guard = remote_peer.read();
-                let mut connection = peer_guard.control_channel.write();
-                peer_guard.reset_command_handler();
-                *connection = PeerChannel::Connected(Arc::new(peer));
+                remote_peer.write().set_control_connection(peer);
             }
             Err(e) => {
                 fx_log_err!("Unable to make peer from socket {}: {:?}", peer_id, e);
@@ -201,8 +199,7 @@ impl<'a> PeerManager<'a> {
             return;
         }
 
-        let connection = peer_guard.control_channel.read();
-        match connection.connection() {
+        match peer_guard.control_channel.connection() {
             Some(peer_connection) => {
                 fx_vlog!(tag: "avrcp", 2, "check_peer_state, setting up command handler and pumping notifications {:?}", peer_id);
                 // we have a connection with a profile descriptor but we aren't processing it yet.
@@ -217,8 +214,8 @@ impl<'a> PeerManager<'a> {
                 self.notification_futures.push(Self::pump_peer_notifications(remote_peer.clone()));
             }
             None => {
-                // drop our write guard
-                drop(connection);
+                drop(command_handle_guard);
+                drop(peer_guard);
                 // we have a profile descriptor but we aren't connected to it yet.
                 // TODO: extract out the dynamic PSM from the profile instead of using standard.
                 self.connect_remote_control_psm(peer_id, PSM_AVCTP as u16);
@@ -302,7 +299,7 @@ impl<'a> PeerManager<'a> {
                     NotificationEventId::EventPlaybackStatusChanged => {
                         let response = PlaybackStatusChangedNotificationResponse::decode(data)
                             .map_err(|e| Error::PacketError(e))?;
-                        peer.read().broadcast_event(ControllerEvent::PlaybackStatusChanged(
+                        peer.write().broadcast_event(ControllerEvent::PlaybackStatusChanged(
                             response.playback_status(),
                         ));
                         Ok(false)
@@ -310,7 +307,7 @@ impl<'a> PeerManager<'a> {
                     NotificationEventId::EventTrackChanged => {
                         let response = TrackChangedNotificationResponse::decode(data)
                             .map_err(|e| Error::PacketError(e))?;
-                        peer.read().broadcast_event(ControllerEvent::TrackIdChanged(
+                        peer.write().broadcast_event(ControllerEvent::TrackIdChanged(
                             response.identifier(),
                         ));
                         Ok(false)
@@ -318,7 +315,7 @@ impl<'a> PeerManager<'a> {
                     NotificationEventId::EventPlaybackPosChanged => {
                         let response = PlaybackPosChangedNotificationResponse::decode(data)
                             .map_err(|e| Error::PacketError(e))?;
-                        peer.read().broadcast_event(ControllerEvent::PlaybackPosChanged(
+                        peer.write().broadcast_event(ControllerEvent::PlaybackPosChanged(
                             response.position(),
                         ));
                         Ok(false)
@@ -395,7 +392,7 @@ impl<'a> PeerManager<'a> {
             }
         }
         if close_connection {
-            remote_peer.read().reset_connection();
+            remote_peer.write().reset_connection();
         }
     }
 

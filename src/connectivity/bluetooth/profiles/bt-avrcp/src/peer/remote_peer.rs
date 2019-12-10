@@ -33,14 +33,14 @@ pub struct RemotePeer {
     pub controller_descriptor: RwLock<Option<AvrcpService>>,
 
     /// Control channel to the remote device.
-    pub control_channel: RwLock<PeerChannel<AvcPeer>>,
+    pub control_channel: PeerChannel<AvcPeer>,
 
     // TODO(BT-2221): add browse channel.
-    // browse_channel: RwLock<PeerChannel<AvtcpPeer>>,
+    // browse_channel: PeerChannel<AvtcpPeer>,
     //
     /// Contains a vec of all event stream listeners obtained by any Controllers around this peer
     /// that are listening for events from this peer from this peer.
-    pub controller_listeners: Mutex<Vec<mpsc::Sender<ControllerEvent>>>,
+    controller_listeners: Vec<mpsc::Sender<ControllerEvent>>,
 
     /// Processes commands received as AVRCP target and holds state for continuations and requested
     /// notifications for the control channel. Only set once we have enough information to determine
@@ -52,10 +52,10 @@ impl RemotePeer {
     pub fn new(peer_id: PeerId) -> Self {
         Self {
             peer_id,
-            control_channel: RwLock::new(PeerChannel::Disconnected),
+            control_channel: PeerChannel::Disconnected,
             // TODO(BT-2221): add browse channel.
-            //browse_channel: RwLock::new(PeerChannel::Disconnected),
-            controller_listeners: Mutex::new(Vec::new()),
+            //browse_channel: PeerChannel::Disconnected,
+            controller_listeners: Vec::new(),
             target_descriptor: RwLock::new(None),
             controller_descriptor: RwLock::new(None),
             command_handler: Mutex::new(None),
@@ -63,11 +63,10 @@ impl RemotePeer {
     }
 
     /// Enumerates all listening controller_listeners queues and sends a clone of the event to each
-    pub fn broadcast_event(&self, event: ControllerEvent) {
-        let mut listeners = self.controller_listeners.lock();
+    pub fn broadcast_event(&mut self, event: ControllerEvent) {
         // remove all the dead listeners from the list.
-        listeners.retain(|i| !i.is_closed());
-        for sender in listeners.iter_mut() {
+        self.controller_listeners.retain(|i| !i.is_closed());
+        for sender in self.controller_listeners.iter_mut() {
             if let Err(send_error) = sender.try_send(event.clone()) {
                 fx_log_err!(
                     "unable to send event to peer controller stream for {} {:?}",
@@ -78,20 +77,37 @@ impl RemotePeer {
         }
     }
 
+    pub fn add_control_listener(&mut self, sender: mpsc::Sender<ControllerEvent>) {
+        self.controller_listeners.push(sender)
+    }
+
+    /// For the FIDL test controller. Informational only and intended for logging only. The state is
+    /// inherently racey.
+    pub fn is_connected(&self) -> bool {
+        match self.control_channel {
+            PeerChannel::Connected(_) => true,
+            _ => false,
+        }
+    }
+
     // Hold the write lock on control_channel before calling this.
     pub fn reset_command_handler(&self) {
         let mut cmd_handler = self.command_handler.lock();
         *cmd_handler = None;
     }
 
-    pub fn reset_connection(&self) {
-        let mut control_channel = self.control_channel.write();
+    pub fn reset_connection(&mut self) {
         self.reset_command_handler();
-        *control_channel = PeerChannel::Disconnected;
+        self.control_channel = PeerChannel::Disconnected;
     }
 
     pub fn get_control_connection(&self) -> Result<Arc<AvcPeer>, Error> {
-        self.control_channel.read().connection().ok_or(Error::RemoteNotFound)
+        self.control_channel.connection().ok_or(Error::RemoteNotFound)
+    }
+
+    pub fn set_control_connection(&mut self, peer: AvcPeer) {
+        self.reset_command_handler();
+        self.control_channel = PeerChannel::Connected(Arc::new(peer));
     }
 
     /// Send a generic vendor dependent command and returns the result as a future.
