@@ -49,7 +49,7 @@ def main():
         print('')
         print(
             'For items missing from the generated manifest, augment the '
-            'appropriate target in //build/unifications/images/BUILD.gn '
+            'appropriate target in //build/unification/images/BUILD.gn '
             'with a dependency on the missing item\'s target. For example, '
             'if "bin/foobar" is missing, just add a dependency on the '
             '":bin.foobar" target.')
@@ -68,7 +68,7 @@ def main():
         print(
             'For items not in the reference manifest, inspect the '
             'dependencies of the failing target in '
-            '//build/unifications/images/BUILD.gn and remove the extraneous '
+            '//build/unification/images/BUILD.gn and remove the extraneous '
             'one.')
 
     if different_keys:
