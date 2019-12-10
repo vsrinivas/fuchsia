@@ -19,6 +19,9 @@ toc:
 - title: "Develop a kernel"
   section:
   - include: /docs/development/kernel/_toc.yaml
+- title: "Write a driver"
+  section:
+  - include: /docs/development/drivers/_toc.yaml
 - title: "Develop components"
   section:
   - include: /docs/development/components/_toc.yaml

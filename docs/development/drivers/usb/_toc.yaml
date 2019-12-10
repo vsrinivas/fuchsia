@@ -1,0 +1,6 @@
+# Please, read https://fuchsia.dev/fuchsia-src/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Getting descriptors and endpoints from usb"
+  path: /docs/development/drivers/usb/getting_descriptors_and_endpoints.md

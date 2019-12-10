@@ -84,6 +84,12 @@ also provides core drivers and Fuchsia's libc implementation.
  - Verified boot
  - Updater
 
+## USB
+
+ - [USB Request Life cycle][request-life-cycle]
+ - [Testing][usb-testing]
+ - [Getting descriptors and endpoints][descriptors]
+
 [zircon-concepts]: /docs/concepts/kernel/concepts.md
 [zircon-syscalls]: /docs/reference/syscalls/README.md
 [zircon-vdso]: /docs/concepts/kernel/vdso.md
@@ -100,3 +106,6 @@ also provides core drivers and Fuchsia's libc implementation.
 [input-manager]: /docs/concepts/graphics/scenic/input.md
 [flutter]: https://flutter.dev/
 [software-update-system]: /docs/concepts/system/software_update_system.md
+[request-life-cycle]: /docs/concepts/usb/request-lifecycle.md
+[usb-testing]: /docs/concepts/usb/testing.md
+[descriptors]: /docs/development/drivers/usb/getting_descriptors_and_endpoints.md

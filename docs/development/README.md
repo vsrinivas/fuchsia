@@ -63,6 +63,12 @@ This section covers Fuchsia development hardware targets.
  - [iMX8M EVK][imx8mevk]
  - [HiKey960 (96boards.org)][hikey960]
 
+## Drivers
+
+This section covers developing drivers on Fuchsia.
+
+ - [USB Driver Development][usb]
+
 ## Testing
 
  - [Debugging workflow](/docs/development/debugging/debugging.md)
@@ -111,3 +117,4 @@ This section covers Fuchsia-wide conventions and best practices.
 [intel-nuc]: /docs/development/hardware/intel_nuc.md "Intel NUC"
 [fidl-style]: /docs/development/languages/fidl/style.md
 [fidl-api]: /docs/development/api/fidl.md
+[usb]: /docs/development/drivers/usb
