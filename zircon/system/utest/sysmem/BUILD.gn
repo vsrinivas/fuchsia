@@ -10,6 +10,7 @@ zx_test("sysmem") {
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",
     "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
