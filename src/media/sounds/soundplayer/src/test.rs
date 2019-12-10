@@ -232,6 +232,7 @@ impl FakeAudioRenderer {
                 }
                 AudioRendererRequest::SetUsage { usage, .. } => {
                     assert!(!set_usage_called);
+                    assert!(!set_pcm_stream_type_called);
                     set_usage_called = true;
 
                     assert!(usage == self.renderer_expectations.usage);

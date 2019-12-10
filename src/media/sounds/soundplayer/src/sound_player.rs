@@ -62,8 +62,9 @@ impl SoundPlayer {
                         PlayerRequest::PlaySound { id, usage, responder } => {
                             if let Some(sound) = self.sounds_by_id.get(&id) {
                                 let renderer = saved_renderer.lock().await.take()
-                                    .map_or_else(|| Renderer::new(), |r| Ok(r))?;
-                                match renderer.prepare_packet(sound, usage) {
+                                    .filter(|r| r.usage == usage)
+                                    .map_or_else(|| Renderer::new(usage), |r| Ok(r))?;
+                                match renderer.prepare_packet(sound) {
                                     Ok(packet) =>
                                         futures.push(renderer.play_packet(packet)
                                             .and_then(|renderer| {
@@ -121,10 +122,11 @@ impl Sound {
 
 struct Renderer {
     proxy: AudioRendererProxy,
+    usage: AudioRenderUsage,
 }
 
 impl Renderer {
-    fn new() -> Result<Self> {
+    fn new(usage: AudioRenderUsage) -> Result<Self> {
         let (client_endpoint, server_endpoint) = create_endpoints::<AudioRendererMarker>()
             .context("Creating renderer channel endpoints.")?;
 
@@ -133,11 +135,12 @@ impl Renderer {
             .create_audio_renderer(server_endpoint)
             .context("Creating audio renderer")?;
 
-        Ok(Self { proxy: client_endpoint.into_proxy()? })
+        let new_self = Self { proxy: client_endpoint.into_proxy()?, usage };
+        new_self.proxy.set_usage(usage)?;
+        Ok(new_self)
     }
 
-    fn prepare_packet(&self, sound: &Sound, usage: AudioRenderUsage) -> Result<StreamPacket> {
-        self.proxy.set_usage(usage)?;
+    fn prepare_packet(&self, sound: &Sound) -> Result<StreamPacket> {
         self.proxy.set_pcm_stream_type(&mut sound.stream_type.clone())?;
 
         // This buffer is removed in play_packet.
