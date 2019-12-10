@@ -29,7 +29,7 @@ struct LaunchInfo {
     component_url url;
 
     /// The arguments to be provided to the component.
-    vector<string>? arguments;
+    vector<string:MAX>:MAX? arguments;
 
     /// The file descriptor to use for stdout.
     ///
