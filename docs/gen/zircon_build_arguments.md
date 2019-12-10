@@ -16,13 +16,17 @@ function.
 From //public/gn/config/instrumentation/BUILD.gn:15
 
 ### assert_level
-* 0 means no assertions, not even standard C `assert()`.
-* 1 means `ZX_ASSERT` but not `ZX_DEBUG_ASSERT`.
-* 2 means both `ZX_ASSERT` and  `ZX_DEBUG_ASSERT`.
+Controls which asserts are enabled.
+
+`ZX_ASSERT` is always enabled.
+
+* 0 disables standard C `assert()` and `ZX_DEBUG_ASSERT`.
+* 1 disables `ZX_DEBUG_ASSERT`. Standard C `assert()` remains enabled.
+* 2 enables all asserts.
 
 **Current value (from the default):** `2`
 
-From //public/gn/config/levels.gni:9
+From //public/gn/config/levels.gni:13
 
 ### build_id_dir
 Directory to populate with `xx/yyy` and `xx/yyy.debug` links to ELF
@@ -31,7 +35,7 @@ hexadecimal of any length), `xx/yyy` is a hard link to the stripped
 file and `xx/yyy.debug` is a hard link to the unstripped file.
 Symbolization tools and debuggers find symbolic information this way.
 
-**Current value (from the default):** `"/b/s/w/ir/k/out/build-zircon/.build-id"`
+**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir.zircon/.build-id"`
 
 From //public/gn/toolchain/c_toolchain.gni:18
 
@@ -47,7 +51,7 @@ From //public/gn/toolchain/clang.gni:16
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
 
-**Current value (from the default):** `"/b/s/w/ir/k/out/build-zircon/clang-crashreports"`
+**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir.zircon/clang-crashreports"`
 
 From //public/gn/config/BUILD.gn:12
 
@@ -61,17 +65,22 @@ From //public/gn/config/BUILD.gn:12
 
 ### default_deps
 Defines the `//:default` target: what `ninja` with no arguments does.
+TODO(BLD-353): This must be set by the controlling Fuchsia GN build.
 
-**Current value (from the default):** `[":build-tests", ":ids", ":images", "tools"]`
+**Current value for `target_cpu = `:** `["//:legacy-x64", "//:legacy_unification-x64"]`
 
-From //BUILD.gn:21
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:5
+
+**Overridden from the default:** `false`
+
+From //BUILD.gn:17
 
 ### detailed_scheduler_tracing
 Enable detailed scheduler traces.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:38
+From //kernel/params.gni:41
 
 ### driver_unittest_log_flags
 Log levels to be printed when logs are enabled. Default is ERROR, WARNING, & INFO.
@@ -95,27 +104,12 @@ Enable printing of in driver logs in unittests.
 
 From //system/dev/lib/fake_ddk/BUILD.gn:7
 
-### enable_fair_scheduler
-Enable fair scheduler by default on all architectures.
-
-**Current value (from the default):** `true`
-
-From //kernel/params.gni:35
-
-### enable_kernel_debugging_features
-Whether to include various features (non-shipping, insecure, etc.) in the
-netsvc build.
-
-**Current value (from the default):** `false`
-
-From //public/gn/config/product_parameters.gni:12
-
 ### enable_lock_dep
 Enable kernel lock dependency tracking.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:32
+From //kernel/params.gni:34
 
 ### enable_lock_dep_tests
 Enable kernel lock dependency tracking tests.  By default this is
@@ -125,20 +119,147 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:53
+From //kernel/params.gni:64
 
 ### enable_netsvc_debugging_features
+Whether to include various features (non-shipping, insecure, etc.) in the
+netsvc build.
 
-**Current value (from the default):** `false`
+**Current value for `target_cpu = `:** `false`
 
-From //public/gn/config/product_parameters.gni:13
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:9
+
+**Overridden from the default:** `false`
+
+From //public/gn/config/product_parameters.gni:12
 
 ### enable_user_pci
 Enable userspace PCI and disable kernel PCI.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:41
+From //kernel/params.gni:44
+
+### environment_args
+List of clauses to apply other GN build arguments to specific compilation
+environments.  Each clause specifies matching criteria and arguments to
+set in such environments.  Each matching clause is applied in order; each
+argument it sets overrides any setting of that same argument in an earlier
+matching clause or in the environment() declaration.  Note that if the
+variant selected for a target via [`variants`](#variants) (which see) has
+a `toolchain_args` setting, each argument therein will override the
+settings here in `environment_args` clauses (within that variant
+toolchain).
+
+Each clause is a scope.  The several parameters listed below are the
+matching criteria.  All other parameters in a clause are the build
+arguments set when that clause matches.  Note that these form a subset of
+the matching criteria supported by [`variants`](#variants) selectors,
+except for `tags` and `exclude_tags`.  The semantics of each criterion are
+exactly the same here and there.
+
+For example:
+```
+  environment_args = [ { kernel = true assert_level = 0 } ]
+```
+sets `assert_level = 0` everywhere where `is_kernel == true`, while:
+```
+  environment_args = [
+    {
+      kernel = false
+      assert_level = 0
+    },
+    {
+      kernel = true
+      assert_level = 1
+    },
+    {
+      environment = [ "efi" ]
+      assert_level = 2
+      opt_level = 0
+    },
+  ]
+```
+sets `assert_level = 0` everywhere where `is_kernel == false`,
+sets `assert_level = 1` most places where `is_kernel == true`,
+but sets `assert_level = 2` and `opt_level = 0` in the "efi"
+environment (where `is_kernel == true` also holds, but the later
+clause overrides the preceding `assert_level = 1`).
+
+Clause scope parameters
+
+  * cpu
+    - Optional: If nonempty, match only when $current_cpu is one in the
+    - list.
+    - Type: list(string)
+
+  * os
+    - Optional: If nonempty, match only when $current_os is one in the
+    - list.
+    - Type: list(string)
+
+  * host
+    - Optional: If present, match only in host environments if true or
+    non-host environments if false.  This means a context in which
+    $is_host is true, not specifically the build host.  For example, it
+    would be true when cross-compiling host tools for an SDK build but
+    would be false when compiling code for a hypervisor guest system
+    that happens to be the same CPU and OS as the build host.
+    - Type: bool
+
+  * kernel
+    - Optional: If present, match only in kernel environments if true or
+    non-kernel environments if false.  This means a context in which
+    $is_kernel is true, not just the "kernel" environment itself.
+    For different machine architectures there may be multiple different
+    specialized environments that set $is_kernel, e.g. for boot loaders
+    and for special circumstances used within the kernel.  See also the
+    $tags field in $variant, described below.
+    - Type: bool
+
+  * environment
+    - Optional: If nonempty, a list of environment names that match.  This
+    looks at ${toolchain.environment}, which is the simple name (no
+    directories) in an environment label defined by environment().  Each
+    element can match either the whole environment name, or just the
+    "base" environment, which is the part of the name before a `.` if it
+    has one.  For example, "host" would match both "host" and "host.fuzz".
+    - Type: list(string)
+
+  * tags
+    - Optional: If nonempty, a list of tags which must be present in the
+    `tags` parameter to environment() for that environment to match.
+    - Type: list(string)
+    - Default: []
+
+  * exclude_tags
+    - Optional: If nonempty, a list of tags which must *not* be present in
+    the `tags` parameter to environment() for that environment to match.
+    - Type: list(string)
+    - Default: []
+
+
+**Current value (from the default):** `[]`
+
+From //public/gn/toolchain/environment.gni:108
+
+### fidl_write_v1_wireformat
+
+**Current value (from the default):** `false`
+
+From //system/ulib/fidl/BUILD.gn:6
+
+### fidlc_deprecate_c_unions
+
+**Current value (from the default):** `false`
+
+From //tools/fidl/BUILD.gn:7
+
+### fidlc_union_not_simple
+
+**Current value (from the default):** `false`
+
+From //tools/fidl/BUILD.gn:6
 
 ### gcc_tool_dir
 Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
@@ -156,7 +277,11 @@ From //public/gn/toolchain/gcc.gni:19
 Directory containing the Goma source code.  This can be a GN
 source-absolute path ("//...") or a system absolute path.
 
-**Current value (from the default):** `"/home/swarming/goma"`
+**Current value for `target_cpu = `:** `"/home/swarming/goma"`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:10
+
+**Overridden from the default:** `"/home/swarming/goma"`
 
 From //public/gn/toolchain/goma.gni:13
 
@@ -172,13 +297,25 @@ From //public/gn/toolchain/goma.gni:13
 
 **Current value (from the default):** `"0xffff000000000000"`
 
-From //kernel/params.gni:26
+From //kernel/params.gni:28
 
 ### kernel_base
 
 **Current value (from the default):** `"0xffffffff00000000"`
 
-From //kernel/params.gni:18
+From //kernel/params.gni:20
+
+### kernel_debug_level
+Enables various kernel debugging and diagnostic features.  Valid
+values are between 0-3.  The higher the value, the more that are
+enabled.  A value of 0 disables all of them.
+
+TODO(41790): This value is derived from assert_level.  Decouple
+the two and set kernel_debug_level independently.
+
+**Current value (from the default):** `2`
+
+From //kernel/params.gni:56
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -186,7 +323,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //kernel/params.gni:45
+From //kernel/params.gni:48
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version`.
@@ -211,13 +348,28 @@ From //third_party/ulib/musl/BUILD.gn:6
 
 **Current value (from the default):** `2`
 
-From //public/gn/config/levels.gni:15
+From //public/gn/config/levels.gni:19
+
+### output_breakpad_syms
+"$output_breakpad_syms" gates whether or not breakpad symbols are produced.
+
+**Current value (from the default):** `false`
+
+From //public/gn/config/standard.gni:9
+
+### select_scheduler
+Select an available scheduler.
+Valid values are: "legacy", "fair", "unified"
+
+**Current value (from the default):** `"fair"`
+
+From //kernel/params.gni:38
 
 ### smp_max_cpus
 
 **Current value (from the default):** `16`
 
-From //kernel/params.gni:10
+From //kernel/params.gni:12
 
 ### symbol_level
 * 0 means no debugging information.
@@ -226,7 +378,7 @@ From //kernel/params.gni:10
 
 **Current value (from the default):** `2`
 
-From //public/gn/config/levels.gni:20
+From //public/gn/config/levels.gni:24
 
 ### sysroot
 The `--sysroot` directory for host compilations.
@@ -239,11 +391,11 @@ The empty list (or empty string) means don't use `--sysroot` at all.
 [{
   cpu = "arm64"
   os = "linux"
-  sysroot = "//../prebuilt/third_party/sysroot/linux-arm64"
+  sysroot = "//../prebuilt/third_party/sysroot/linux"
 }, {
   cpu = "x64"
   os = "linux"
-  sysroot = "//../prebuilt/third_party/sysroot/linux-x64"
+  sysroot = "//../prebuilt/third_party/sysroot/linux"
 }]
 ```
 
@@ -256,16 +408,6 @@ From //public/gn/config/BUILD.gn:18
 ### target_os
 
 **Current value (from the default):** `""`
-
-### tests_in_image
-Whether to include all the Zircon tests in the main standalone ZBI.
-TODO(mcgrathr): This will be replaced by a more sophisticated plan for
-what images to build rather than a single "everything" image that needs
-to be pared down.
-
-**Current value (from the default):** `true`
-
-From //BUILD.gn:18
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -296,19 +438,40 @@ See environment() for more information.
 }
 ```
 
-From //public/gn/BUILDCONFIG.gn:20
+From //public/gn/BUILDCONFIG.gn:24
+
+### ubsan_default_options
+Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
+options (before the `UBSAN_OPTIONS` environment variable is read at
+runtime).  This can be set as a build argument to affect most "ubsan"
+variants in $variants (which see), or overridden in $toolchain_args in
+one of those variants.  Note that setting this nonempty may conflict
+with programs that define their own `__ubsan_default_options` C
+function.
+
+**Current value (from the default):** `"print_stacktrace=1"`
+
+From //public/gn/config/instrumentation/BUILD.gn:24
 
 ### use_ccache
 Set to true to enable compiling with ccache.
 
-**Current value (from the default):** `false`
+**Current value for `target_cpu = `:** `false`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:11
+
+**Overridden from the default:** `false`
 
 From //public/gn/toolchain/ccache.gni:9
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
 
-**Current value (from the default):** `false`
+**Current value for `target_cpu = `:** `false`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:12
+
+**Overridden from the default:** `false`
 
 From //public/gn/toolchain/goma.gni:9
 
@@ -548,7 +711,11 @@ Variant scope parameters
     - Type: list(string)
 
 
-**Current value (from the default):** `[]`
+**Current value for `target_cpu = `:** `[]`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:13
+
+**Overridden from the default:** `[]`
 
 From //public/gn/toolchain/variants.gni:222
 
@@ -563,13 +730,15 @@ So using the default during rapid development (quick builds, pretty
 good compression) and "max' for production builds (slow builds, best
 compression available) probably makes sense.
 
-**Current value (from the default):** `"lz4f"`
+**Current value for `target_cpu = `:** `"zstd"`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:14
+
+**Overridden from the default:** `"zstd"`
 
 From //public/gn/zbi.gni:19
 
 ### zx
-*This must never be set as a build argument*.
-
 "$zx/" is the prefix for GN "source-absolute" paths in the Zircon
 build.  When Zircon is built standalone, the Zircon repository is the
 root of the build (where `.gn` is found) so "$zx/" becomes "//".  When
@@ -579,4 +748,12 @@ file that uses `default_args` to set "$zx/" to "//zircon/".
 **Current value (from the default):** `"/"`
 
 From //public/gn/BUILDCONFIG.gn:13
+
+### zx_build
+"$zx_build/" is the prefix for GN "source-absolute" paths in the Zircon
+build for build infrastructure.
+
+**Current value (from the default):** `"/"`
+
+From //public/gn/BUILDCONFIG.gn:17
 
