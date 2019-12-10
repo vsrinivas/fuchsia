@@ -23,13 +23,13 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <src/lib/files/file.h>
-#include <src/lib/fsl/vmo/vector.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
+#include "src/chromium/web_runner_tests/mock_get.h"
 #include "src/chromium/web_runner_tests/test_server.h"
 #include "src/chromium/web_runner_tests/web_context.h"
+#include "src/lib/fsl/vmo/vector.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 #include "src/ui/testing/views/embedder_view.h"
 
@@ -59,19 +59,6 @@ std::map<uint32_t, size_t> Histogram(const fuchsia::ui::scenic::ScreenshotData& 
   return histogram;
 }
 
-// Responds to a GET request, testing that the request looks as expected.
-void MockHttpGetResponse(web_runner_tests::TestServer* server, const char* resource) {
-  const std::string expected_prefix = fxl::StringPrintf("GET /%s HTTP", resource);
-  // |Read| requires preallocate (see sys/socket.h: read)
-  std::string buf(expected_prefix.size(), 0);
-
-  EXPECT_TRUE(server->Read(&buf));
-  EXPECT_EQ(expected_prefix, buf);
-  std::string content;
-  FXL_CHECK(files::ReadFileToString(fxl::StringPrintf("/pkg/data/%s", resource), &content));
-  FXL_CHECK(server->WriteContent(content));
-}
-
 // Invokes the input tool for input injection.
 // See garnet/bin/ui/input/README.md or `input --help` for usage details.
 // Commands used here:
@@ -86,16 +73,16 @@ void Input(std::vector<const char*> args) {
   zx_handle_t proc;
   zx_status_t status =
       fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/bin/input", args.data(), &proc);
-  FXL_CHECK(status == ZX_OK) << "fdio_spawn: " << zx_status_get_string(status);
+  FX_CHECK(status == ZX_OK) << "fdio_spawn: " << zx_status_get_string(status);
 
   status = zx_object_wait_one(proc, ZX_PROCESS_TERMINATED,
                               (zx::clock::get_monotonic() + kTimeout).get(), nullptr);
-  FXL_CHECK(status == ZX_OK) << "zx_object_wait_one: " << zx_status_get_string(status);
+  FX_CHECK(status == ZX_OK) << "zx_object_wait_one: " << zx_status_get_string(status);
 
   zx_info_process_t info;
   status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-  FXL_CHECK(status == ZX_OK) << "zx_object_get_info: " << zx_status_get_string(status);
-  FXL_CHECK(info.return_code == 0) << info.return_code;
+  FX_CHECK(status == ZX_OK) << "zx_object_get_info: " << zx_status_get_string(status);
+  FX_CHECK(info.return_code == 0) << info.return_code;
 }
 
 // Base fixture for pixel tests, containing Scenic and presentation setup, and
@@ -117,7 +104,7 @@ class PixelTest : public gtest::RealLoopFixture {
     // determinism at the expense of added harness complexity).
     //
     // WebRunnerPixelTest.Static below is factored to use view state events, but the others are not.
-    FXL_CHECK(WaitForBlank());
+    FX_CHECK(WaitForBlank());
   }
 
   sys::ComponentContext* context() { return context_.get(); }
@@ -168,14 +155,14 @@ class PixelTest : public gtest::RealLoopFixture {
   void ExpectSolidColor(uint32_t argb) {
     std::map<uint32_t, size_t> histogram;
 
-    FXL_LOG(INFO) << "Looking for color " << std::hex << argb << ".";
+    FX_LOGS(INFO) << "Looking for color " << std::hex << argb << ".";
     EXPECT_TRUE(ScreenshotUntil(
         [argb, &histogram](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
           if (!status)
             return false;
 
           histogram = Histogram(screenshot);
-          FXL_LOG(INFO) << "Looking for color " << std::hex << argb << ": found " << std::dec
+          FX_LOGS(INFO) << "Looking for color " << std::hex << argb << ": found " << std::dec
                         << histogram[argb] << " px.";
           return histogram[argb] > 0u;
         }));
@@ -187,14 +174,14 @@ class PixelTest : public gtest::RealLoopFixture {
   void ExpectPrimaryColor(uint32_t color) {
     std::multimap<size_t, uint32_t> inverse_histogram;
 
-    FXL_LOG(INFO) << "Looking for color " << std::hex << color;
+    FX_LOGS(INFO) << "Looking for color " << std::hex << color;
     EXPECT_TRUE(ScreenshotUntil([color, &inverse_histogram](
                                     fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
       if (!status)
         return false;
 
       std::map<uint32_t, size_t> histogram = Histogram(screenshot);
-      FXL_LOG(INFO) << histogram[color] << " px";
+      FX_LOGS(INFO) << histogram[color] << " px";
 
       inverse_histogram.clear();
       for (const auto entry : histogram) {
@@ -220,14 +207,14 @@ TEST_F(WebRunnerPixelTest, Static) {
   static constexpr uint32_t kTargetColor = 0xffff00ff;
 
   web_runner_tests::TestServer server;
-  FXL_CHECK(server.FindAndBindPort());
+  FX_CHECK(server.FindAndBindPort());
 
   // Chromium and the Fuchsia network package loader both send us requests. This
   // may go away after MI4-1807; although the race seems to be in Modular, the
   // fix may remove the unnecessary net request in component framework.
   auto serve = server.ServeAsync([&server] {
     while (server.Accept()) {
-      MockHttpGetResponse(&server, "static.html");
+      web_runner_tests::MockHttpGetResponse(&server, "static.html");
     }
   });
 
@@ -283,12 +270,12 @@ TEST_F(WebPixelTest, Static) {
   static constexpr uint32_t kTargetColor = 0xffff00ff;
 
   web_runner_tests::TestServer server;
-  FXL_CHECK(server.FindAndBindPort());
+  FX_CHECK(server.FindAndBindPort());
 
   auto serve = server.ServeAsync([&server] {
-    FXL_LOG(INFO) << "Waiting for HTTP request from Chromium";
+    FX_LOGS(INFO) << "Waiting for HTTP request from Chromium";
     ASSERT_TRUE(server.Accept()) << "Did not receive HTTP request from Chromium";
-    MockHttpGetResponse(&server, "static.html");
+    web_runner_tests::MockHttpGetResponse(&server, "static.html");
   });
 
   web_context()->Navigate(fxl::StringPrintf("http://localhost:%d/static.html", server.port()));
@@ -305,11 +292,11 @@ TEST_F(WebPixelTest, Dynamic) {
   static constexpr uint32_t kAfterColor = 0xff40e0d0;
 
   web_runner_tests::TestServer server;
-  FXL_CHECK(server.FindAndBindPort());
+  FX_CHECK(server.FindAndBindPort());
 
   auto serve = server.ServeAsync([&server] {
     ASSERT_TRUE(server.Accept());
-    MockHttpGetResponse(&server, "dynamic.html");
+    web_runner_tests::MockHttpGetResponse(&server, "dynamic.html");
   });
 
   web_context()->Navigate(fxl::StringPrintf("http://localhost:%d/dynamic.html", server.port()));

@@ -8,7 +8,8 @@
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
+
+#include "src/lib/syslog/cpp/logger.h"
 
 WebContext::WebContext(sys::ComponentContext* component_context) {
   auto web_context_provider = component_context->svc()->Connect<fuchsia::web::ContextProvider>();
@@ -17,7 +18,7 @@ WebContext::WebContext(sys::ComponentContext* component_context) {
   });
 
   auto incoming_service_clone = component_context->svc()->CloneChannel();
-  FXL_CHECK(incoming_service_clone.is_valid());
+  FX_CHECK(incoming_service_clone.is_valid());
   fuchsia::web::CreateContextParams params;
   params.set_service_directory(std::move(incoming_service_clone));
 

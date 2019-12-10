@@ -5,15 +5,15 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/string_printf.h>
 
-#include "lib/sys/cpp/service_directory.h"
 #include "src/chromium/web_runner_tests/test_server.h"
 #include "src/chromium/web_runner_tests/web_context.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 // This file contains a subset of adapted Chromium Fuchsia tests to make sure
 // nothing broke on the import boundary.
@@ -32,7 +32,7 @@ namespace {
 // https://chromium.googlesource.com/chromium/src/+/master/fuchsia/runners/web/web_runner_smoke_test.cc
 TEST(WebRunnerIntegrationTest, Smoke) {
   web_runner_tests::TestServer server;
-  FXL_CHECK(server.FindAndBindPort());
+  FX_CHECK(server.FindAndBindPort());
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = fxl::StringPrintf("http://localhost:%d/foo.html", server.port());
@@ -52,7 +52,7 @@ TEST(WebRunnerIntegrationTest, Smoke) {
   ASSERT_TRUE(server.Read(&buf));
   EXPECT_EQ(expected_prefix, buf.substr(0, expected_prefix.size()));
 
-  FXL_CHECK(server.WriteContent("<!doctype html><img src=\"/img.png\">"));
+  FX_CHECK(server.WriteContent("<!doctype html><img src=\"/img.png\">"));
 
   expected_prefix = "GET /img.png HTTP";
   buf.resize(expected_prefix.size());
@@ -141,7 +141,7 @@ TEST_F(ChromiumAppTest, CreateAndNavigate) {
       });
 
   web_runner_tests::TestServer server;
-  FXL_CHECK(server.FindAndBindPort());
+  FX_CHECK(server.FindAndBindPort());
 
   const std::string url = fxl::StringPrintf("http://localhost:%d/foo.html", server.port());
   web_context()->Navigate(url);
@@ -152,7 +152,7 @@ TEST_F(ChromiumAppTest, CreateAndNavigate) {
   std::string buf(expected_prefix.size(), 0);
   ASSERT_TRUE(server.Read(&buf));
   EXPECT_EQ(expected_prefix, buf.substr(0, expected_prefix.size()));
-  FXL_CHECK(server.WriteContent(R"(<!doctype html>
+  FX_CHECK(server.WriteContent(R"(<!doctype html>
       <html>
         <head>
           <title>Test title!</title>
