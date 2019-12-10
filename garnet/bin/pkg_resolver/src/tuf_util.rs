@@ -6,8 +6,8 @@
 #![allow(deprecated)]
 
 use {
-    crate::cache::MerkleForError,
-    chrono::{DateTime, Utc},
+    crate::{cache::MerkleForError, inspect_util::OptionalTimeProperty},
+    chrono::DateTime,
     failure::format_err,
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryKey},
     fuchsia_hyper::HyperConnector,
@@ -51,7 +51,16 @@ pub struct Inner {
         HttpRepository<HttpsConnector<HyperConnector>, Json>,
         tuf::client::DefaultTranslator,
     >,
-    last_updated_time: DateTime<chrono::offset::Utc>,
+
+    /// Time that this repository was last successfully updated, or None if the repository has
+    /// never successfully fetched target metadata.
+    last_updated_time: Option<DateTime<chrono::offset::Utc>>,
+
+    /// Time that this repository was last used to lookup target metadata, or None if no targets
+    /// have been resolved throught this repository.
+    last_used_time: Option<DateTime<chrono::offset::Utc>>,
+
+    /// Count of the number of merkle roots resolved through this repository.
     num_packages_fetched: u64,
 }
 
@@ -98,7 +107,8 @@ impl Inner {
             .await
             .map_err(|e| format_err!("Unable to create rust tuf client, received error {:?}", e))?,
             num_packages_fetched: 0,
-            last_updated_time: Utc::now(),
+            last_updated_time: None,
+            last_used_time: None,
         })
     }
 
@@ -113,7 +123,7 @@ impl Inner {
                 MerkleForError::TufError(other)
             }
         })?;
-        self.last_updated_time = chrono::Utc::now();
+        self.last_updated_time = Some(chrono::Utc::now());
 
         let description =
             self.client.fetch_target_description(&target_path).await.map_err(|e| match e {
@@ -127,7 +137,6 @@ impl Inner {
                     MerkleForError::TufError(other)
                 }
             })?;
-        self.num_packages_fetched += 1;
 
         let custom = description.custom().ok_or(MerkleForError::NoCustomMetadata)?.to_owned();
         let custom = serde_json::Value::from(custom.into_iter().collect::<serde_json::Map<_, _>>());
@@ -135,11 +144,18 @@ impl Inner {
             serde_json::from_value(custom).map_err(MerkleForError::SerdeError)?;
         custom.size = description.length();
 
+        self.last_used_time = Some(chrono::Utc::now());
+        self.num_packages_fetched += 1;
+
         Ok(custom)
     }
 
-    pub fn last_updated_time(&self) -> &DateTime<chrono::offset::Utc> {
+    pub fn last_updated_time(&self) -> &Option<DateTime<chrono::offset::Utc>> {
         &self.last_updated_time
+    }
+
+    pub fn last_used_time(&self) -> &Option<DateTime<chrono::offset::Utc>> {
+        &self.last_used_time
     }
 
     pub fn num_packages_fetched(&self) -> u64 {
@@ -151,7 +167,8 @@ pub type InspectableInner = Inspectable<Inner, InspectableInnerWatcher>;
 
 pub struct InspectableInnerWatcher {
     num_packages_fetched_property: inspect::UintProperty,
-    last_updated_property: inspect::StringProperty,
+    last_updated_property: OptionalTimeProperty,
+    last_used_property: OptionalTimeProperty,
     _node: inspect::Node,
 }
 
@@ -161,15 +178,24 @@ impl Watch<Inner> for InspectableInnerWatcher {
         Self {
             num_packages_fetched_property: rust_tuf_repo_node
                 .create_uint("num_packages_fetched", inner.num_packages_fetched()),
-            last_updated_property: rust_tuf_repo_node
-                .create_string("last_updated_time", format!("{:?}", inner.last_updated_time())),
+            last_updated_property: OptionalTimeProperty::new(
+                &rust_tuf_repo_node,
+                "last_updated_time",
+                inner.last_updated_time(),
+            ),
+            last_used_property: OptionalTimeProperty::new(
+                &rust_tuf_repo_node,
+                "last_used_time",
+                inner.last_used_time(),
+            ),
             _node: rust_tuf_repo_node,
         }
     }
 
     fn watch(&mut self, inner: &Inner) {
         self.num_packages_fetched_property.set(inner.num_packages_fetched());
-        self.last_updated_property.set(&format!("{:?}", inner.last_updated_time()));
+        self.last_updated_property.set(inner.last_updated_time());
+        self.last_used_property.set(inner.last_used_time());
     }
 }
 
@@ -190,7 +216,7 @@ mod tests {
     #[ignore]
     async fn test_get_merkle_at_path() {
         // Serve static repo and connect to it
-        let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
+        let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let repo = Arc::new(
             RepositoryBuilder::new().add_package(&pkg).build().await.expect("created repo"),
         );
@@ -200,7 +226,7 @@ mod tests {
         let mut repo = Inner::new(&repo_config).await.expect("created opened repo");
         let first_updated_time = repo.last_updated_time.clone();
         let target_path =
-            TargetPath::new("just_meta_far/0".to_string()).expect("created target path");
+            TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
 
         // Obtain merkle root and meta far size
         let CustomTargetMetadata { merkle, size } =
@@ -235,7 +261,7 @@ mod tests {
     #[ignore]
     async fn test_get_merkle_at_path_fails_when_remote_repo_down() {
         // Serve static repo
-        let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
+        let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let repo = Arc::new(
             RepositoryBuilder::new().add_package(&pkg).build().await.expect("created repo"),
         );
@@ -253,7 +279,7 @@ mod tests {
         let mut repo = Inner::new(&repo_config).await.expect("created opened repo");
         let first_updated_time = repo.last_updated_time.clone();
         let target_path =
-            TargetPath::new("just_meta_far/0".to_string()).expect("created target path");
+            TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
 
         // When the server is blocked, we should fail at get_merkle_at_path
         // TODO(fxb/39651) if the Inner can't connect to the remote server AND
@@ -287,7 +313,7 @@ mod inspectable_inner_tests {
     #[fasync::run_singlethreaded(test)]
     // TODO(42445) figure out why these tests are flaking
     #[ignore]
-    async fn test_initialization() {
+    async fn test_initialization_and_destruction() {
         let inspector = inspect::Inspector::new();
         let repo = Arc::new(RepositoryBuilder::new().build().await.expect("created repo"));
         let served_repository = repo.build_server().start().expect("create served repo");
@@ -297,17 +323,23 @@ mod inspectable_inner_tests {
         let inspectable = InspectableInner::new(
             Inner::new(&repo_config).await.expect("created Inner"),
             inspector.root(),
-            "test-property",
+            "repo-node",
         );
-
         assert_inspect_tree!(
             inspector,
             root: {
-                "test-property": {
-                  last_updated_time: format!("{:?}",inspectable.last_updated_time()),
-                  num_packages_fetched: inspectable.num_packages_fetched(),
+                "repo-node": {
+                  last_updated_time: "None",
+                  last_used_time: "None",
+                  num_packages_fetched: 0u64,
                 }
             }
+        );
+
+        drop(inspectable);
+        assert_inspect_tree!(
+            inspector,
+            root: {}
         );
     }
 
@@ -315,7 +347,7 @@ mod inspectable_inner_tests {
     #[ignore]
     async fn test_watcher() {
         let inspector = inspect::Inspector::new();
-        let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
+        let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let repo = Arc::new(
             RepositoryBuilder::new().add_package(&pkg).build().await.expect("created repo"),
         );
@@ -325,9 +357,9 @@ mod inspectable_inner_tests {
         let mut inspectable = InspectableInner::new(
             Inner::new(&repo_config).await.expect("created Inner"),
             inspector.root(),
-            "test-property",
+            "repo-node",
         );
-        let target_path = tuf::metadata::TargetPath::new("just_meta_far/0".to_string())
+        let target_path = tuf::metadata::TargetPath::new("just-meta-far/0".to_string())
             .expect("created target path");
 
         inspectable
@@ -339,9 +371,10 @@ mod inspectable_inner_tests {
         assert_inspect_tree!(
             inspector,
             root: {
-                "test-property": {
-                  last_updated_time: format!("{:?}",inspectable.last_updated_time()),
-                  num_packages_fetched: inspectable.num_packages_fetched(),
+                "repo-node": {
+                  last_updated_time: format!("{:?}", inspectable.last_updated_time()),
+                  last_used_time: format!("{:?}", inspectable.last_used_time()),
+                  num_packages_fetched: 1u64,
                 }
             }
         );

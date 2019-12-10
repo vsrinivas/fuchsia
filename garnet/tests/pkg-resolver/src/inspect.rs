@@ -3,8 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    super::*, fidl_fuchsia_pkg_ext::RepositoryConfigBuilder, fuchsia_async as fasync,
-    fuchsia_inspect::assert_inspect_tree, fuchsia_pkg_testing::RepositoryBuilder,
+    super::*,
+    failure::{bail, format_err},
+    fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
+    fuchsia_async as fasync,
+    fuchsia_inspect::{
+        assert_inspect_tree,
+        reader::Property,
+        testing::{AnyProperty, PropertyAssertion},
+    },
+    fuchsia_pkg_testing::RepositoryBuilder,
+    matches::assert_matches,
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -32,8 +41,8 @@ async fn test_initial_inspect_state() {
             },
             main: {
               channel: {
-                tuf_config_name: format!("{:?}", Option::<String>::None),
-                channel_name: format!("{:?}", Option::<String>::None),
+                tuf_config_name: OptionDebugStringProperty::<String>::None,
+                channel_name: OptionDebugStringProperty::<String>::None,
               }
             },
             experiments: {
@@ -76,8 +85,8 @@ async fn test_adding_repo_updates_inspect_state() {
             },
             main: {
               channel: {
-                tuf_config_name: format!("{:?}", Option::<String>::None),
-                channel_name: format!("{:?}", Option::<String>::None),
+                tuf_config_name: OptionDebugStringProperty::<String>::None,
+                channel_name: OptionDebugStringProperty::<String>::None,
               }
             },
             experiments: {
@@ -160,7 +169,8 @@ async fn test_resolving_package_updates_inspect_state() {
                 repos: {
                   "example.com": contains {
                     num_packages_fetched: 1u64,
-                    last_updated_time: fuchsia_inspect::testing::AnyProperty,
+                    last_updated_time: OptionDebugStringProperty::Some(AnyProperty),
+                    last_used_time: OptionDebugStringProperty::Some(AnyProperty),
                   },
                 },
                 stats: {
@@ -175,4 +185,92 @@ async fn test_resolving_package_updates_inspect_state() {
         }
     );
     env.stop().await;
+}
+
+enum OptionDebugStringProperty<I> {
+    Some(I),
+    None,
+}
+
+impl<I> PropertyAssertion for OptionDebugStringProperty<I>
+where
+    I: PropertyAssertion,
+{
+    fn run(&self, actual: &Property) -> Result<(), failure::Error> {
+        match actual {
+            Property::String(name, value) => match self {
+                OptionDebugStringProperty::Some(inner) => {
+                    const PREFIX: &str = "Some(";
+                    const SUFFIX: &str = ")";
+                    if !value.starts_with(PREFIX) {
+                        bail!(r#"expected property to be "Some(...", actual {:?}"#, actual);
+                    }
+                    if !value.ends_with(SUFFIX) {
+                        bail!(r#"expected property to be "...)", actual {:?}"#, actual);
+                    }
+                    let inner_value = &value[PREFIX.len()..(value.len() - SUFFIX.len())];
+                    inner.run(&Property::String(name.clone(), inner_value.to_owned()))
+                }
+                OptionDebugStringProperty::None => {
+                    if value != "None" {
+                        bail!(r#"expected property string to be "None", got {:?}"#, actual);
+                    }
+                    Ok(())
+                }
+            },
+            _wrong_type => Err(format_err!("expected string property, got {:?}", actual)),
+        }
+    }
+}
+
+#[test]
+fn test_option_debug_string_property() {
+    fn make_string_property(value: &str) -> Property {
+        Property::String("name".to_owned(), value.to_owned())
+    }
+
+    fn dbg<D: std::fmt::Debug>(d: D) -> String {
+        format!("{:?}", d)
+    }
+
+    // trivial ok
+    assert_matches!(
+        OptionDebugStringProperty::Some(AnyProperty).run(&make_string_property("Some()")),
+        Ok(())
+    );
+    assert_matches!(
+        OptionDebugStringProperty::<AnyProperty>::None.run(&make_string_property("None")),
+        Ok(())
+    );
+
+    // trivial err
+    assert_matches!(
+        OptionDebugStringProperty::Some(AnyProperty).run(&make_string_property("None")),
+        Err(_)
+    );
+    assert_matches!(
+        OptionDebugStringProperty::Some(AnyProperty).run(&make_string_property("Some(foo")),
+        Err(_)
+    );
+    assert_matches!(
+        OptionDebugStringProperty::<AnyProperty>::None.run(&make_string_property("Some()")),
+        Err(_)
+    );
+
+    // non-empty inner ok
+    assert_matches!(
+        OptionDebugStringProperty::Some(AnyProperty).run(&make_string_property("Some(value)")),
+        Ok(())
+    );
+    assert_matches!(
+        OptionDebugStringProperty::Some(dbg("string"))
+            .run(&make_string_property("Some(\"string\")")),
+        Ok(())
+    );
+
+    // non-empty inner err
+    assert_matches!(
+        OptionDebugStringProperty::Some(dbg("a")).run(&make_string_property("Some(\"b\")")),
+        Err(_)
+    );
 }
