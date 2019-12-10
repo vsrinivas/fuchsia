@@ -11,27 +11,27 @@ import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
 
-void main() {
-  // Enable logging output.
-  Logger.root
-    ..level = Level.ALL
-    ..onRecord.listen((rec) => print('[${rec.level}]: ${rec.message}'));
-
+class PerfTestHelper {
   sl4f.Sl4f sl4fDriver;
   sl4f.Performance performance;
   sl4f.Storage storage;
 
-  setUp(() async {
+  Future<void> setUp() async {
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
+    addTearDown(() async {
+      await sl4fDriver.stopServer();
+      sl4fDriver.close();
+    });
     performance = sl4f.Performance(sl4fDriver);
     storage = sl4f.Storage(sl4fDriver);
-  });
+  }
 
-  tearDown(() async {
-    await sl4fDriver.stopServer();
-    sl4fDriver.close();
-  });
+  static Future<PerfTestHelper> make() async {
+    final helper = PerfTestHelper();
+    await helper.setUp();
+    return helper;
+  }
 
   Future<void> processResults(String resultsFile) async {
     final localResultsFile =
@@ -45,18 +45,27 @@ void main() {
         localResultsFile, Platform.environment,
         uploadToCatapultDashboard: false);
   }
+}
 
-  void addTspecTest(String specFile) {
-    test(specFile, () async {
-      const resultsFile = '/tmp/perf_results.json';
-      final result = await sl4fDriver.ssh.run(
-          'trace record --spec-file=$specFile --benchmark-results-file=$resultsFile');
-      expect(result.exitCode, equals(0));
-      await processResults(resultsFile);
-    }, timeout: Timeout.none);
-  }
+void addTspecTest(String specFile) {
+  test(specFile, () async {
+    final helper = await PerfTestHelper.make();
+    const resultsFile = '/tmp/perf_results.json';
+    final result = await helper.sl4fDriver.ssh.run(
+        'trace record --spec-file=$specFile --benchmark-results-file=$resultsFile');
+    expect(result.exitCode, equals(0));
+    await helper.processResults(resultsFile);
+  }, timeout: Timeout.none);
+}
+
+void main() {
+  // Enable logging output.
+  Logger.root
+    ..level = Level.ALL
+    ..onRecord.listen((rec) => print('[${rec.level}]: ${rec.message}'));
 
   test('zircon_benchmarks', () async {
+    final helper = await PerfTestHelper.make();
     const resultsFile = '/tmp/perf_results.json';
     // Log the full 32-bit exit status value in order to debug the flaky failure
     // in fxb/39577.  Do that on the Fuchsia side because the exit status we get
@@ -64,10 +73,10 @@ void main() {
     const logStatus = r'status=$?; '
         r'echo exit status: $status; '
         r'if [ $status != 0 ]; then exit 1; fi';
-    final result = await sl4fDriver.ssh.run(
+    final result = await helper.sl4fDriver.ssh.run(
         '/bin/zircon_benchmarks -p --quiet --out $resultsFile; $logStatus');
     expect(result.exitCode, equals(0));
-    await processResults(resultsFile);
+    await helper.processResults(resultsFile);
   }, timeout: Timeout.none);
 
   addTspecTest('/pkgfs/packages/benchmark/0/data/benchmark_example.tspec');
