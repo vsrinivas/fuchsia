@@ -357,4 +357,46 @@ TEST_F(AmlUartHarness, SerialImplWriteAsync) {
   ASSERT_EQ(memcmp(buf.data(), context.data, buf.size()), 0);
 }
 
+TEST_F(AmlUartHarness, SerialImplAsyncWriteDoubleCallback) {
+  // NOTE: we don't start the IRQ thread.  The Handle*RaceForTest() enable.
+  struct Context {
+    uint8_t data[kDataLen];
+    sync_completion_t completion;
+  } context;
+  for (size_t i = 0; i < kDataLen; i++) {
+    context.data[i] = static_cast<uint8_t>(i);
+  }
+  auto cb = [](void* ctx, zx_status_t status) {
+    auto context = static_cast<Context*>(ctx);
+    sync_completion_signal(&context->completion);
+  };
+  Device().SerialImplAsyncWriteAsync(context.data, kDataLen, cb, &context);
+  Device().HandleTXRaceForTest();
+  sync_completion_wait(&context.completion, ZX_TIME_INFINITE);
+  auto buf = Pdev().TxBuf();
+  ASSERT_EQ(buf.size(), kDataLen);
+  ASSERT_EQ(memcmp(buf.data(), context.data, buf.size()), 0);
+}
+
+TEST_F(AmlUartHarness, SerialImplAsyncReadDoubleCallback) {
+  // NOTE: we don't start the IRQ thread.  The Handle*RaceForTest() enable.
+  struct Context {
+    uint8_t data[kDataLen];
+    sync_completion_t completion;
+  } context;
+  for (size_t i = 0; i < kDataLen; i++) {
+    context.data[i] = static_cast<uint8_t>(i);
+  }
+  auto cb = [](void* ctx, zx_status_t status, const void* buffer, size_t bufsz) {
+    auto context = static_cast<Context*>(ctx);
+    EXPECT_EQ(bufsz, kDataLen);
+    EXPECT_EQ(memcmp(buffer, context->data, bufsz), 0);
+    sync_completion_signal(&context->completion);
+  };
+  Device().SerialImplAsyncReadAsync(cb, &context);
+  Pdev().Inject(context.data, kDataLen);
+  Device().HandleRXRaceForTest();
+  sync_completion_wait(&context.completion, ZX_TIME_INFINITE);
+}
+
 }  // namespace

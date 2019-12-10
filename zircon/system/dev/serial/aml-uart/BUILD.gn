@@ -17,6 +17,7 @@ zx_driver("aml-uart") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit:headers",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
@@ -25,7 +26,6 @@ zx_driver("aml-uart") {
   ]
 }
 
-
 zx_test("aml-uart-test") {
   output_name = "aml-uart-test"
   sources = [
@@ -33,10 +33,9 @@ zx_test("aml-uart-test") {
     "aml-uart.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.platform.bus",
-    "$zx/system/ulib/zircon-internal",
-    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.serialimpl.async",
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/fake-mmio-reg",
@@ -45,9 +44,11 @@ zx_test("aml-uart-test") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit:headers",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/mock-function",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

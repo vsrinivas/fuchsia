@@ -107,19 +107,11 @@ uint32_t AmlUart::ReadStateAndNotify() {
   uint32_t state = 0;
   if (!status.rx_empty()) {
     state |= SERIAL_STATE_READABLE;
-    fbl::AutoLock lock(&read_lock_);
-    if (read_pending_) {
-      lock.release();
-      HandleRX();
-    }
+    HandleRX();
   }
   if (!status.tx_full()) {
     state |= SERIAL_STATE_WRITABLE;
-    fbl::AutoLock lock(&write_lock_);
-    if (write_pending_) {
-      lock.release();
-      HandleTX();
-    }
+    HandleTX();
   }
 
   return state;
@@ -275,6 +267,26 @@ void AmlUart::EnableLocked(bool enable) {
   }
 }
 
+void AmlUart::HandleTXRaceForTest() {
+  {
+    fbl::AutoLock al(&enable_lock_);
+    EnableLocked(true);
+  }
+  ReadState();
+  HandleTX();
+  HandleTX();
+}
+
+void AmlUart::HandleRXRaceForTest() {
+  {
+    fbl::AutoLock al(&enable_lock_);
+    EnableLocked(true);
+  }
+  ReadState();
+  HandleRX();
+  HandleRX();
+}
+
 zx_status_t AmlUart::SerialImplAsyncEnable(bool enable) {
   fbl::AutoLock al(&enable_lock_);
 
@@ -319,26 +331,31 @@ void AmlUart::SerialImplAsyncReadAsync(serial_impl_async_read_async_callback cal
 }
 
 void AmlUart::SerialImplAsyncCancelAll() {
-  fbl::AutoLock read_lock(&read_lock_);
-  if (read_pending_) {
-    read_pending_ = false;
-    auto cb = read_callback_;
-    auto cookie = read_cookie_;
-    read_lock.release();
-    cb(cookie, ZX_ERR_CANCELED, nullptr, 0);
+  {
+    fbl::AutoLock read_lock(&read_lock_);
+    if (read_pending_) {
+      read_pending_ = false;
+      auto cb = MakeReadCallbackLocked(ZX_ERR_CANCELED, nullptr, 0);
+      read_lock.release();
+      cb();
+    }
   }
   fbl::AutoLock write_lock(&write_lock_);
   if (write_pending_) {
     write_pending_ = false;
-    auto cb = write_callback_;
-    auto cookie = write_cookie_;
+    auto cb = MakeWriteCallbackLocked(ZX_ERR_CANCELED);
     write_lock.release();
-    cb(cookie, ZX_ERR_CANCELED);
+    cb();
   }
 }
 
+// Handles receiviung data into the buffer and calling the read callback when complete.
+// Does nothing if read_pending_ is false.
 void AmlUart::HandleRX() {
   fbl::AutoLock lock(&read_lock_);
+  if (!read_pending_) {
+    return;
+  }
   unsigned char buf[128];
   size_t length = 128;
   auto* bufptr = static_cast<uint8_t*>(buf);
@@ -352,15 +369,20 @@ void AmlUart::HandleRX() {
   if (read == 0) {
     return;
   }
+  // Some bytes were read.  The client must queue another read to get any data.
   read_pending_ = false;
-  auto cb = read_callback_;
-  auto cookie = read_cookie_;
+  auto cb = MakeReadCallbackLocked(ZX_OK, buf, read);
   lock.release();
-  cb(cookie, ZX_OK, buf, read);
+  cb();
 }
 
+// Handles transmitting the data in write_buffer_ until it is completely written.
+// Does nothing if write_pending_ is not true.
 void AmlUart::HandleTX() {
   fbl::AutoLock lock(&write_lock_);
+  if (!write_pending_) {
+    return;
+  }
   const auto* bufptr = static_cast<const uint8_t*>(write_buffer_);
   const uint8_t* const end = bufptr + write_size_;
   while (bufptr < end && (ReadState() & SERIAL_STATE_WRITABLE)) {
@@ -372,12 +394,35 @@ void AmlUart::HandleTX() {
   write_size_ -= written;
   write_buffer_ += written;
   if (!write_size_) {
+    // The write has completed, notify the client.
     write_pending_ = false;
-    auto cb = write_callback_;
-    auto cookie = write_cookie_;
+    auto cb = MakeWriteCallbackLocked(ZX_OK);
     lock.release();
-    cb(cookie, ZX_OK);
+    cb();
   }
+}
+
+fit::closure AmlUart::MakeReadCallbackLocked(zx_status_t status, void* buf, size_t len) {
+  if (read_callback_ == nullptr) {
+    return []() {};
+  }
+  auto callback = [cb = read_callback_, cookie = read_cookie_, status, buf,
+                   len]() { cb(cookie, status, buf, len); };
+  read_callback_ = nullptr;
+  read_cookie_ = nullptr;
+  return callback;
+}
+
+fit::closure AmlUart::MakeWriteCallbackLocked(zx_status_t status) {
+  if (write_callback_ == nullptr) {
+    return []() {};
+  }
+  auto callback = [cb = write_callback_, cookie = write_cookie_, status]() {
+    cb(cookie, status);
+  };
+  write_callback_ = nullptr;
+  write_cookie_ = nullptr;
+  return callback;
 }
 
 void AmlUart::SerialImplAsyncWriteAsync(const void* buf, size_t length,

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/device-protocol/platform-device.h>
+#include <lib/fit/function.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
@@ -55,16 +56,22 @@ class AmlUart : public DeviceType,
         serial_port_info_(serial_port_info),
         mmio_(std::move(mmio)) {}
 
+  // Test functions: simulate a data race where the HandleTX / HandleRX functions get called twice.
+  void HandleTXRaceForTest();
+  void HandleRXRaceForTest();
+
  private:
-  using Callback = fbl::Function<void(uint32_t)>;
+  using Callback = fit::function<void(uint32_t)>;
 
   // Reads the current state from the status register and calls notify_cb if it has changed.
   uint32_t ReadStateAndNotify();
   uint32_t ReadState();
   void EnableLocked(bool enable) TA_REQ(enable_lock_);
   int IrqThread();
-  void HandleTX();
   void HandleRX();
+  void HandleTX();
+  fit::closure MakeReadCallbackLocked(zx_status_t status, void* buf, size_t len) TA_REQ(read_lock_);
+  fit::closure MakeWriteCallbackLocked(zx_status_t status) TA_REQ(write_lock_);
 
   const pdev_protocol_t pdev_;
   const serial_port_info_t serial_port_info_;
