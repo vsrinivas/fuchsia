@@ -8,44 +8,42 @@
 #include <zircon/types.h>
 
 #include <fbl/vector.h>
-#include <fs/journal/format.h>
 #include <storage/operation/buffered-operation.h>
 
 namespace fs {
 
-JournalEntryView::JournalEntryView(storage::BlockBufferView view) : view_(std::move(view)) {}
+JournalEntryView::JournalEntryView(storage::BlockBufferView view)
+    : view_(std::move(view)),
+      header_(fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(view_.Data(0)), view_.BlockSize())) {}
 
 JournalEntryView::JournalEntryView(storage::BlockBufferView view,
                                    const fbl::Vector<storage::BufferedOperation>& operations,
                                    uint64_t sequence_number)
-    : view_(std::move(view)) {
+    : view_(std::move(view)),
+      header_(fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(view_.Data(0)), view_.BlockSize()),
+              view_.length() - kEntryMetadataBlocks, sequence_number) {
   Encode(operations, sequence_number);
 }
 
 void JournalEntryView::Encode(const fbl::Vector<storage::BufferedOperation>& operations,
                               uint64_t sequence_number) {
-  memset(header(), 0, kJournalBlockSize);
-  header()->prefix.magic = kJournalEntryMagic;
-  header()->prefix.sequence_number = sequence_number;
-  header()->prefix.flags = kJournalPrefixFlagHeader;
-  header()->payload_blocks = view_.length() - kEntryMetadataBlocks;
-  ZX_DEBUG_ASSERT(header()->payload_blocks < kMaxBlockDescriptors);
-  size_t block_index = 0;
+  ZX_DEBUG_ASSERT(header_.PayloadBlocks() < kMaxBlockDescriptors);
+  uint32_t block_index = 0;
   for (const auto& operation : operations) {
     for (size_t i = 0; i < operation.op.length; i++) {
-      header()->target_blocks[block_index] = operation.op.dev_offset + i;
+      header_.SetTargetBlock(block_index, operation.op.dev_offset + i);
       auto block_ptr =
           reinterpret_cast<uint64_t*>(view_.Data(kJournalEntryHeaderBlocks + block_index));
       if (*block_ptr == kJournalEntryMagic) {
         // If the payload could be confused with a journal structure, replace
         // it with zeros, and add an "escaped" flag instead.
         *block_ptr = 0;
-        header()->target_flags[block_index] |= kJournalBlockDescriptorFlagEscapedBlock;
+        header_.SetEscapedBlock(block_index, true);
       }
       block_index++;
     }
   }
-  ZX_DEBUG_ASSERT_MSG(block_index == header()->payload_blocks, "Mismatched block count");
+  ZX_DEBUG_ASSERT_MSG(block_index == header_.PayloadBlocks(), "Mismatched block count");
 
   memset(footer(), 0, sizeof(JournalCommitBlock));
   footer()->prefix.magic = kJournalEntryMagic;
@@ -55,9 +53,10 @@ void JournalEntryView::Encode(const fbl::Vector<storage::BufferedOperation>& ope
 }
 
 void JournalEntryView::DecodePayloadBlocks() {
-  for (size_t i = 0; i < header()->payload_blocks; i++) {
-    if (header()->target_flags[i] & kJournalBlockDescriptorFlagEscapedBlock) {
+  for (uint32_t i = 0; i < header().PayloadBlocks(); i++) {
+    if (header_.EscapedBlock(i)) {
       auto block_ptr = reinterpret_cast<uint64_t*>(view_.Data(kJournalEntryHeaderBlocks + i));
+      ZX_ASSERT(*block_ptr == 0);
       *block_ptr = kJournalEntryMagic;
     }
   }

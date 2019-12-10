@@ -55,9 +55,10 @@ TEST_F(EntryViewTest, SetHeaderFromOperation) {
 
   JournalEntryView view(make_view(3), operations, 1);
   const JournalEntryView& c_view = view;
-  EXPECT_EQ(JournalObjectType::kHeader, c_view.header()->prefix.ObjectType());
+  auto header = view.header();
+  EXPECT_EQ(JournalObjectType::kHeader, header.ObjectType());
   EXPECT_EQ(JournalObjectType::kCommit, c_view.footer()->prefix.ObjectType());
-  EXPECT_EQ(1234, c_view.header()->target_blocks[0]);
+  EXPECT_EQ(1234, header.TargetBlock(0));
 }
 
 TEST_F(EntryViewTest, SetHeaderFromMultipleOperations) {
@@ -83,11 +84,11 @@ TEST_F(EntryViewTest, SetHeaderFromMultipleOperations) {
   };
 
   JournalEntryView view(make_view(4), operations, 1);
-  const JournalEntryView& c_view = view;
-  EXPECT_EQ(1234, c_view.header()->target_blocks[0]);
-  EXPECT_EQ(0, c_view.header()->target_flags[0]);
-  EXPECT_EQ(5678, c_view.header()->target_blocks[1]);
-  EXPECT_EQ(0, c_view.header()->target_flags[1]);
+  auto header = view.header();
+  EXPECT_EQ(1234, header.TargetBlock(0));
+  EXPECT_FALSE(header.EscapedBlock(0));
+  EXPECT_EQ(5678, header.TargetBlock(1));
+  EXPECT_FALSE(header.EscapedBlock(1));
 }
 
 TEST_F(EntryViewTest, SameJournalEntryGeneratesSameChecksum) {
@@ -212,10 +213,10 @@ TEST_F(EntryViewEscapedTest, EscapedBlocksAreModifiedBySet) {
   ptr[1] = 0xDEADBEEF;
 
   JournalEntryView view(buffer_view, operations(), 1);
+  auto header = view.header();
 
-  auto& cview = const_cast<const JournalEntryView&>(view);
-  EXPECT_EQ(kJournalBlockDescriptorFlagEscapedBlock, cview.header()->target_flags[0]);
-  EXPECT_EQ(kTarget, cview.header()->target_blocks[0]);
+  EXPECT_TRUE(header.EscapedBlock(0));
+  EXPECT_EQ(kTarget, header.TargetBlock(0));
   EXPECT_EQ(0, ptr[0], "Payload prefix should have been escaped, but it was not");
   EXPECT_EQ(0xDEADBEEF, ptr[1], "Remainder of payload should have remained unescaped");
 }
@@ -233,10 +234,10 @@ TEST_F(EntryViewEscapedTest, EscapedBlocksCanBeDecoded) {
   EXPECT_EQ(0, ptr[0], "Payload prefix should have been escaped, but it was not");
 
   view.DecodePayloadBlocks();
+  auto header = view.header();
 
-  auto& cview = const_cast<const JournalEntryView&>(view);
-  EXPECT_EQ(kJournalBlockDescriptorFlagEscapedBlock, cview.header()->target_flags[0]);
-  EXPECT_EQ(kTarget, cview.header()->target_blocks[0]);
+  EXPECT_TRUE(header.EscapedBlock(0));
+  EXPECT_EQ(kTarget, header.TargetBlock(0));
   EXPECT_EQ(kJournalEntryMagic, ptr[0], "Payload prefix should have been reset, but it was not");
   EXPECT_EQ(0xDEADBEEF, ptr[1], "Remainter of payload should have remained untouched");
 }

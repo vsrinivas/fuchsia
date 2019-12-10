@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <minfs/minfs.h>
-
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
@@ -23,6 +21,7 @@
 #include <fbl/auto_call.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
+#include <minfs/minfs.h>
 #include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__
@@ -32,6 +31,7 @@
 #include <lib/zx/event.h>
 
 #include <fbl/auto_lock.h>
+#include <fs/journal/header_view.h>
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
 #include <fs/pseudo_dir.h>
@@ -1384,9 +1384,8 @@ zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options
 
 #ifdef __Fuchsia__
 zx_status_t MountAndServe(const MountOptions& mount_options, async_dispatcher_t* dispatcher,
-                          std::unique_ptr<minfs::Bcache> bcache,
-                          zx::channel mount_channel, fbl::Closure on_unmount,
-                          ServeLayout serve_layout) {
+                          std::unique_ptr<minfs::Bcache> bcache, zx::channel mount_channel,
+                          fbl::Closure on_unmount, ServeLayout serve_layout) {
   TRACE_DURATION("minfs", "MountAndServe");
   minfs::MountOptions options = mount_options;
 

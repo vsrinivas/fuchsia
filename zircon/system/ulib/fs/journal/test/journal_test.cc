@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <fs/journal/format.h>
+#include <fs/journal/header_view.h>
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
 #include <zxtest/zxtest.h>
@@ -58,8 +59,8 @@ void CheckCircularBufferContents(const zx::vmo& buffer, size_t buffer_blocks, si
   }
 }
 
-void CopyBytes(const zx::vmo& source, const zx::vmo& destination,
-               uint64_t offset, uint64_t length) {
+void CopyBytes(const zx::vmo& source, const zx::vmo& destination, uint64_t offset,
+               uint64_t length) {
   std::vector<uint8_t> buffer(length, 0);
   EXPECT_OK(source.read(buffer.data(), offset, length));
   EXPECT_OK(destination.write(buffer.data(), offset, length));
@@ -177,16 +178,16 @@ zx_status_t MockVmoidRegistry::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
 
 const zx::vmo& MockVmoidRegistry::GetVmo(vmoid_t vmoid, BufferType buffer) {
   switch (vmoid) {
-  case kJournalVmoid:
-    return buffer == BufferType::kDiskBuffer ? disk_buffers_.journal_vmo :
-        memory_buffers_.journal_vmo;
-  case kWritebackVmoid:
-    return buffer == BufferType::kDiskBuffer ? disk_buffers_.writeback_vmo :
-        memory_buffers_.writeback_vmo;
-  case kInfoVmoid:
-    return buffer == BufferType::kDiskBuffer ? disk_buffers_.info_vmo : memory_buffers_.info_vmo;
-  default:
-    ZX_ASSERT(false);
+    case kJournalVmoid:
+      return buffer == BufferType::kDiskBuffer ? disk_buffers_.journal_vmo
+                                               : memory_buffers_.journal_vmo;
+    case kWritebackVmoid:
+      return buffer == BufferType::kDiskBuffer ? disk_buffers_.writeback_vmo
+                                               : memory_buffers_.writeback_vmo;
+    case kInfoVmoid:
+      return buffer == BufferType::kDiskBuffer ? disk_buffers_.info_vmo : memory_buffers_.info_vmo;
+    default:
+      ZX_ASSERT(false);
   }
 }
 
@@ -219,8 +220,8 @@ void MockVmoidRegistry::Replay(fbl::Vector<storage::BufferedOperation>* operatio
   // the "clone" to be modified while leaving the original journal untouched.
   zx::vmo journal_vmo;
   uint64_t length = kBlockSize * kJournalLength;
-  ASSERT_OK(disk_buffers_.journal_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length,
-                                                   &journal_vmo));
+  ASSERT_OK(
+      disk_buffers_.journal_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length, &journal_vmo));
   ASSERT_OK(mapper.Map(std::move(journal_vmo), length));
   storage::VmoBuffer journal_buffer(this, std::move(mapper), kJournalVmoid, kJournalLength,
                                     kBlockSize);
@@ -242,8 +243,7 @@ class MockTransactionHandler final : public fs::TransactionHandler {
   using TransactionCallback =
       fit::function<zx_status_t(const block_fifo_request_t* requests, size_t count)>;
 
-  MockTransactionHandler(MockVmoidRegistry* registry,
-                         TransactionCallback* callbacks = nullptr,
+  MockTransactionHandler(MockVmoidRegistry* registry, TransactionCallback* callbacks = nullptr,
                          size_t transactions_expected = 0)
       : registry_(registry), callbacks_(callbacks), transactions_expected_(transactions_expected) {}
 
@@ -279,8 +279,7 @@ class MockTransactionHandler final : public fs::TransactionHandler {
       if (request.opcode & BLOCKIO_WRITE) {
         CopyBytes(registry_->GetVmo(request.vmoid, BufferType::kMemoryBuffer),
                   registry_->GetVmo(request.vmoid, BufferType::kDiskBuffer),
-                  request.vmo_offset * kBlockSize,
-                  request.length * kBlockSize);
+                  request.vmo_offset * kBlockSize, request.length * kBlockSize);
       }
     }
     return callbacks_[transactions_seen_++](requests, count);

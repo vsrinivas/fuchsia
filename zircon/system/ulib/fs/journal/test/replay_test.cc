@@ -338,61 +338,6 @@ TEST_F(ParseJournalTest, MultipleEntriesWithSameSequenceNumberOnlyKeepsFirst) {
   ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 }
 
-// When two operations are on contiguous dev offsets in order, they are merged into one write
-// operation.
-TEST_F(ParseJournalTest, ContiguousWritesAreMerged) {
-  info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
-  AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
-  AddOperation(/* dev_offset= */ 11, /* length= */ 1, &ops);
-  const uint64_t kEntryLengthA = 2 + kEntryMetadataBlocks;
-  JournalEntryView entry_view_a(storage::BlockBufferView(journal_buffer(), 0, kEntryLengthA), ops,
-                                kGoldenSequenceNumber);
-
-  fbl::Vector<storage::BufferedOperation> operations;
-  uint64_t sequence_number = 0;
-  uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(1, operations.size());
-  EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
-  EXPECT_EQ(kEntryLengthA, next_entry_start);
-  uint64_t vmo_offset = kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 2));
-}
-
-// When two operations are merged, but then later a subset of that merged operation is updated
-// again, the operation is split up into the proper chunks.
-TEST_F(ParseJournalTest, UpdatingSubsetOfPreviousContiguousWriteSplitsOperation) {
-  info_block()->Update(0, kGoldenSequenceNumber);
-  fbl::Vector<storage::BufferedOperation> ops;
-  AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
-  AddOperation(/* dev_offset= */ 11, /* length= */ 1, &ops);
-  const uint64_t kEntryLengthA = 2 + kEntryMetadataBlocks;
-  JournalEntryView entry_view_a(storage::BlockBufferView(journal_buffer(), 0, kEntryLengthA), ops,
-                                kGoldenSequenceNumber);
-
-  ops.reset();
-  AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
-  const uint64_t kEntryLengthB = 1 + kEntryMetadataBlocks;
-  JournalEntryView entry_view_b(
-      storage::BlockBufferView(journal_buffer(), kEntryLengthA, kEntryLengthB), ops,
-      kGoldenSequenceNumber + 1);
-
-  fbl::Vector<storage::BufferedOperation> operations;
-  uint64_t sequence_number = 0;
-  uint64_t next_entry_start = 0;
-  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
-                                &next_entry_start));
-  ASSERT_EQ(2, operations.size());
-  EXPECT_EQ(kGoldenSequenceNumber + 2, sequence_number);
-  EXPECT_EQ(kEntryLengthA + kEntryLengthB, next_entry_start);
-  uint64_t vmo_offset = kJournalEntryHeaderBlocks;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[1], vmo_offset + 1, 11, 1));
-  vmo_offset += kEntryLengthA;
-  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
-}
-
 TEST_F(ParseJournalTest, EscapedEntry) {
   info_block()->Update(0, kGoldenSequenceNumber);
   fbl::Vector<storage::BufferedOperation> ops;
@@ -410,7 +355,7 @@ TEST_F(ParseJournalTest, EscapedEntry) {
 
   // Verify that it was escaped.
   const auto& const_entry_view = entry_view;
-  EXPECT_EQ(kJournalBlockDescriptorFlagEscapedBlock, const_entry_view.header()->target_flags[0]);
+  EXPECT_TRUE(const_entry_view.header().EscapedBlock(0));
   EXPECT_EQ(0, ptr[0]);
   EXPECT_EQ(0xDEADBEEF, ptr[1]);
 
@@ -517,8 +462,9 @@ TEST_F(ParseJournalTest, EntryModifiedHeaderDropped) {
 
   // Before we replay, flip some bits in the header.
   storage::BlockBufferView buffer_view(journal_buffer(), 0, kEntryLength);
-  auto raw_block = static_cast<JournalHeaderBlock*>(buffer_view.Data(0));
-  raw_block->target_blocks[16] = ~(raw_block->target_blocks[16]);
+  JournalHeaderView raw_block(
+      fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(buffer_view.Data(0)), buffer_view.BlockSize()));
+  raw_block.SetTargetBlock(16, ~(raw_block.TargetBlock(16)));
 
   // As a result, there are no entries identified as replayable.
   fbl::Vector<storage::BufferedOperation> operations;
@@ -630,8 +576,9 @@ TEST_F(ParseJournalTest, DetectsCorruptJournalIfOldEntryHasBadChecksumButGoodLen
 
   // Before we replay, flip some bits in the old entry's header.
   storage::BlockBufferView buffer_view(journal_buffer(), 0, kEntryLength);
-  auto raw_block = static_cast<JournalHeaderBlock*>(buffer_view.Data(0));
-  raw_block->target_blocks[16] = ~(raw_block->target_blocks[16]);
+  JournalHeaderView raw_block(
+      fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(buffer_view.Data(0)), buffer_view.BlockSize()));
+  raw_block.SetTargetBlock(16, ~(raw_block.TargetBlock(16)));
 
   // As a result, there are no entries identified as replayable, and
   // (because the second entry was valid, but the first entry wasn't) the journal

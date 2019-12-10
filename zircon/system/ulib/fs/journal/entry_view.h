@@ -10,6 +10,7 @@
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 #include <fs/journal/format.h>
+#include <fs/journal/header_view.h>
 #include <fs/journal/superblock.h>
 #include <storage/buffer/block-buffer-view.h>
 #include <storage/operation/buffered-operation.h>
@@ -33,9 +34,7 @@ class JournalEntryView {
                    const fbl::Vector<storage::BufferedOperation>& operations,
                    uint64_t sequence_number);
 
-  const JournalHeaderBlock* header() const {
-    return reinterpret_cast<const JournalHeaderBlock*>(view_.Data(0));
-  }
+  const JournalHeaderView& header() const { return header_; }
 
   const JournalCommitBlock* footer() const {
     return reinterpret_cast<const JournalCommitBlock*>(
@@ -58,14 +57,13 @@ class JournalEntryView {
   // Asserts that |operations| is exactly the size of the journal entry.
   void Encode(const fbl::Vector<storage::BufferedOperation>& operations, uint64_t sequence_number);
 
-  JournalHeaderBlock* header() { return reinterpret_cast<JournalHeaderBlock*>(view_.Data(0)); }
-
   JournalCommitBlock* footer() {
     return reinterpret_cast<JournalCommitBlock*>(
         view_.Data(view_.length() - kJournalEntryCommitBlocks));
   }
 
   storage::BlockBufferView view_;
+  JournalHeaderView header_;
 };
 
 }  // namespace fs

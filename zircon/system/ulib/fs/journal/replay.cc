@@ -23,12 +23,12 @@ namespace {
 // Ensures the payload length is not zero, and that the entry length does not overflow
 // the journal buffer.
 uint64_t ParseEntryLength(const storage::VmoBuffer* journal_buffer,
-                          const JournalHeaderBlock* header) {
+                          const JournalHeaderView& header) {
   uint64_t entry_length = 0;
-  if (unlikely(add_overflow(header->payload_blocks, kEntryMetadataBlocks, &entry_length))) {
+  if (unlikely(add_overflow(header.PayloadBlocks(), kEntryMetadataBlocks, &entry_length))) {
     return 0;
   }
-  if (header->payload_blocks == 0 || entry_length > journal_buffer->capacity()) {
+  if (header.PayloadBlocks() == 0 || entry_length > journal_buffer->capacity()) {
     // Zero-length entries and larger-than-buffer entries disallowed.
     return 0;
   }
@@ -36,37 +36,20 @@ uint64_t ParseEntryLength(const storage::VmoBuffer* journal_buffer,
   return entry_length;
 }
 
-bool IsJournalMetadata(const JournalHeaderBlock* header, uint64_t sequence_number) {
-  if (header->prefix.magic != kJournalEntryMagic) {
-    return false;
-  }
-  if (header->prefix.sequence_number != sequence_number) {
-    return false;
-  }
-  return true;
-}
-
-bool IsHeader(const JournalHeaderBlock* header, uint64_t sequence_number) {
-  if (!IsJournalMetadata(header, sequence_number)) {
-    return false;
-  }
-  if (header->prefix.ObjectType() != JournalObjectType::kHeader) {
-    return false;
-  }
-  return true;
-}
-
 std::optional<const JournalEntryView> ParseEntry(storage::VmoBuffer* journal_buffer, uint64_t start,
                                                  uint64_t sequence_number) {
   // To know how much of the journal we need to parse, first observe only one block.
   storage::BlockBufferView small_view(journal_buffer, start, 1);
-  const JournalEntryView header_entry_view(std::move(small_view));
+  const auto header = JournalHeaderView::Create(
+      fbl::Span<uint8_t>(static_cast<uint8_t*>(small_view.Data(0)), small_view.BlockSize()),
+      sequence_number);
 
-  // Before trying to access the commit block, check the header.
-  if (!IsHeader(header_entry_view.header(), sequence_number)) {
+  // This is not a header block.
+  if (header.is_error()) {
     return std::nullopt;
   }
-  uint64_t entry_length = ParseEntryLength(journal_buffer, header_entry_view.header());
+
+  uint64_t entry_length = ParseEntryLength(journal_buffer, header.value());
   if (!entry_length) {
     return std::nullopt;
   }
@@ -80,8 +63,7 @@ std::optional<const JournalEntryView> ParseEntry(storage::VmoBuffer* journal_buf
   if (const_entry_view.footer()->prefix.magic != kJournalEntryMagic) {
     return std::nullopt;
   }
-  if (const_entry_view.header()->prefix.sequence_number !=
-      const_entry_view.footer()->prefix.sequence_number) {
+  if (header.value().SequenceNumber() != const_entry_view.footer()->prefix.sequence_number) {
     return std::nullopt;
   }
   // Validate the contents of the entry itself.
@@ -103,34 +85,40 @@ bool IsSubsequentEntryValid(storage::VmoBuffer* journal_buffer, uint64_t start,
   // Access the current entry, but ignore everything except the "length" field.
   // WARNING: This (intentionally) does not validate the current entry.
   storage::BlockBufferView small_view(journal_buffer, start, kJournalEntryHeaderBlocks);
-  const JournalEntryView header_entry_view(std::move(small_view));
-  if (!IsHeader(header_entry_view.header(), sequence_number)) {
+  const auto header = JournalHeaderView::Create(
+      fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(small_view.Data(0)), small_view.BlockSize()),
+      sequence_number);
+
+  if (header.is_error()) {
     // If this isn't a header, we can't find the subsequent entry.
     return false;
   }
 
   // Check the next entry, if the current entry's length field is (somehow) valid.
-  uint64_t entry_length = ParseEntryLength(journal_buffer, header_entry_view.header());
+  uint64_t entry_length = ParseEntryLength(journal_buffer, header.value());
   if (!entry_length) {
     // If we can't parse the length, then we can't check the subsequent entry.
     // If two neighboring entries are corrupted, this is treated as an interruption.
     return false;
   }
   start = (start + entry_length) % journal_buffer->capacity();
-  const auto entry_view = JournalEntryView(storage::BlockBufferView(journal_buffer, start, 1));
-  return IsJournalMetadata(entry_view.header(), sequence_number + 1);
+  return JournalHeaderView::Create(
+             fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(journal_buffer->Data(start)),
+                                journal_buffer->BlockSize()),
+             sequence_number + 1)
+      .is_ok();
 }
 
 void ParseBlocks(const storage::VmoBuffer& journal_buffer, const JournalEntryView& entry,
                  uint64_t entry_start, ReplayTree* operation_tree) {
   // Collect all the operations to be replayed from this entry into |operation_tree|.
   storage::BufferedOperation operation;
-  for (size_t i = 0; i < entry.header()->payload_blocks; i++) {
+  for (uint32_t i = 0; i < entry.header().PayloadBlocks(); i++) {
     operation.vmoid = journal_buffer.vmoid();
     operation.op.type = storage::OperationType::kWrite;
     operation.op.vmo_offset =
         (entry_start + kJournalEntryHeaderBlocks + i) % journal_buffer.capacity();
-    operation.op.dev_offset = entry.header()->target_blocks[i];
+    operation.op.dev_offset = entry.header().TargetBlock(i);
     operation.op.length = 1;
 
     operation_tree->insert(operation);
@@ -175,7 +163,7 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
       break;
     }
 
-    if (entry->header()->prefix.ObjectType() == JournalObjectType::kRevocation) {
+    if (entry->header().ObjectType() == JournalObjectType::kRevocation) {
       // TODO(ZX-4752): Revocation records advise us to avoid replaying the provided
       // operations.
       //
@@ -190,11 +178,11 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
     }
 
     // Move to the next entry.
-    auto entry_blocks = entry->header()->payload_blocks + kEntryMetadataBlocks;
+    auto entry_blocks = entry->header().PayloadBlocks() + kEntryMetadataBlocks;
     entry_start = (entry_start + entry_blocks) % journal_buffer->capacity();
 
     // Move the sequence_number forward beyond the most recently seen entry.
-    sequence_number = entry->header()->prefix.sequence_number + 1;
+    sequence_number = entry->header().SequenceNumber() + 1;
   }
 
   // Now that we've finished replaying entries, return the next sequence_number to use.

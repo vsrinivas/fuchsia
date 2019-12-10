@@ -4,7 +4,14 @@
 
 zx_library("journal") {
   host = true
-  sources = []
+  sources = [
+    "header_view.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/third_party/ulib/cksum",
+  ]
   static = true
 
   if (is_fuchsia) {
@@ -30,18 +37,16 @@ zx_library("journal") {
       "$zx/system/ulib/storage/buffer:headers",
       "$zx/system/ulib/storage/operation:headers",
     ]
-    deps = [
+    deps += [
       "$zx/system/ulib/disk-inspector",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fit",
       "$zx/system/ulib/fs/transaction",
       "$zx/system/ulib/range",
       "$zx/system/ulib/storage/buffer",
       "$zx/system/ulib/storage/operation",
       "$zx/system/ulib/sync",
       "$zx/system/ulib/zircon",
-      "$zx/third_party/ulib/cksum",
     ]
   }
 }
@@ -59,6 +64,7 @@ zx_test("journal-unit") {
     "test/background_executor_test.cc",
     "test/data_streamer_test.cc",
     "test/entry_view_test.cc",
+    "test/header_view_test.cc",
     "test/inspector_test.cc",
     "test/journal_test.cc",
     "test/operation_tracker_test.cc",
@@ -71,6 +77,7 @@ zx_test("journal-unit") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
+    "$zx/third_party/ulib/cksum",
   ]
 
   include_dirs = [ "." ]
