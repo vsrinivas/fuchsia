@@ -51,6 +51,7 @@ bool g_has_md_clear;
 bool g_md_clear_on_user_return;
 bool g_has_ibpb;
 bool g_should_ibpb_on_ctxt_switch;
+bool g_ras_fill_on_entry;
 // True if we should disable all speculative execution mitigations.
 bool g_disable_spec_mitigations;
 
@@ -416,6 +417,8 @@ void x86_feature_debug(void) {
     printf("l1d_flush_on_vmentry ");
   if (g_should_ibpb_on_ctxt_switch)
     printf("ibpb_ctxt_switch ");
+  if (g_ras_fill_on_entry)
+    printf("ras_fill ");
   printf("\n");
 }
 
@@ -917,9 +920,9 @@ void x86_cpu_ibpb(MsrAccess* msr) {
   msr->write_msr(/*msr_index=*/X86_MSR_IA32_PRED_CMD, /*value=*/1);
 }
 
+const uint8_t kNop = 0x90;
 CODE_TEMPLATE(kLfence, "lfence")
 void swapgs_bug_postfence(const CodePatchInfo* patch) {
-  const uint8_t kNop = 0x90;
   const size_t kSize = 3;
   DEBUG_ASSERT(patch->dest_size == kSize);
   DEBUG_ASSERT(kLfenceEnd - kLfence == kSize);
@@ -929,6 +932,19 @@ void swapgs_bug_postfence(const CodePatchInfo* patch) {
     g_swapgs_bug_mitigated = true;
   } else {
     memset(patch->dest_addr, kNop, kSize);
+  }
+}
+
+extern "C" void x86_ras_fill_select(const CodePatchInfo* patch) {
+  const size_t kSize = 9;
+  DEBUG_ASSERT(patch->dest_size == kSize);
+
+  // TODO(fxb/33667): Consider whether Enhanced IBRS + SMEP + SMAP requires filling RAS.
+  if (g_disable_spec_mitigations) {
+     memset(patch->dest_addr, kNop, kSize);
+  } else {
+     // Keep the call to x86_ras_fill in place.
+     g_ras_fill_on_entry = true;
   }
 }
 
