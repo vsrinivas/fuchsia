@@ -6,9 +6,10 @@
 #include <lib/fzl/vmo-pool.h>
 #include <lib/zx/vmo.h>
 #include <zircon/rights.h>
-#include <zxtest/zxtest.h>
 
 #include <utility>
+
+#include <zxtest/zxtest.h>
 
 #include "vmo-probe.h"
 
@@ -50,6 +51,8 @@ class VmoPoolTester : public zxtest::Test {
     ASSERT_OK(pool_.Init(vmo_handles_, kNumVmos));
   }
 
+  void SetUp() override { ASSERT_OK(fake_bti_create(bti_.reset_and_get_address())); }
+
   void FillBuffers(size_t num_buffers) {
     for (size_t i = 0; i < kNumVmos && i < num_buffers; ++i) {
       auto buffer = pool_.LockBufferForWrite();
@@ -60,12 +63,8 @@ class VmoPoolTester : public zxtest::Test {
 
   // Create vmos for each handle in an array of vmo handles:
   void CreateContiguousVmos(size_t num_vmos, size_t vmo_size, zx::vmo* vmos) {
-    if (bti_handle_ == ZX_HANDLE_INVALID) {
-      ASSERT_OK(fake_bti_create(&bti_handle_), "");
-    }
     for (size_t i = 0; i < num_vmos; ++i) {
-      zx_status_t status =
-          zx::vmo::create_contiguous(*zx::unowned_bti(bti_handle_), vmo_size, 0, &vmos[i]);
+      zx_status_t status = zx::vmo::create_contiguous(bti_, vmo_size, 0, &vmos[i]);
       ASSERT_OK(status);
     }
   }
@@ -77,23 +76,13 @@ class VmoPoolTester : public zxtest::Test {
 
   void PinVmos(fzl::VmoPool::RequireContig require_contiguous,
                fzl::VmoPool::RequireLowMem require_low_memory) {
-    if (bti_handle_ == ZX_HANDLE_INVALID) {
-      ASSERT_OK(fake_bti_create(&bti_handle_), "");
-    }
-    EXPECT_EQ(pool_.PinVmos(*zx::unowned_bti(bti_handle_), require_contiguous, require_low_memory),
-              ZX_OK);
+    EXPECT_EQ(pool_.PinVmos(bti_, require_contiguous, require_low_memory), ZX_OK);
     is_pinned_ = true;
   }
 
   void MapVmos() {
     EXPECT_OK(pool_.MapVmos());
     is_mapped_ = true;
-  }
-
-  ~VmoPoolTester() {
-    if (bti_handle_ != ZX_HANDLE_INVALID) {
-      fake_bti_destroy(bti_handle_);
-    }
   }
 
   // Fills the pool, to make sure all accounting
@@ -189,7 +178,7 @@ class VmoPoolTester : public zxtest::Test {
     }
   }
 
-  zx_handle_t bti_handle_ = ZX_HANDLE_INVALID;
+  zx::bti bti_;
 };
 
 TEST_F(VmoPoolTester, FillAndEmptyPool) {

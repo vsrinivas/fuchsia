@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/ref_ptr.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 #include <zircon/rights.h>
-#include <zxtest/zxtest.h>
 
 #include <climits>  // PAGE_SIZE
 #include <utility>
+
+#include <fbl/ref_ptr.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -21,7 +22,7 @@ TEST(FakeBti, CreateFakeBti) {
   zx_handle_t bti = ZX_HANDLE_INVALID;
   EXPECT_OK(fake_bti_create(&bti));
   EXPECT_NE(bti, ZX_HANDLE_INVALID);
-  ASSERT_NO_DEATH(([bti]() { fake_bti_destroy(bti); }));
+  ASSERT_NO_DEATH(([bti]() { zx_handle_close(bti); }));
 }
 
 TEST(FakeBti, PinVmo) {
@@ -48,7 +49,7 @@ TEST(FakeBti, PinVmo) {
   EXPECT_EQ(addrs[kPageCount], 42);
 
   ASSERT_NO_DEATH(([pmt_handle]() { EXPECT_OK(zx_pmt_unpin(pmt_handle)); }));
-  ASSERT_NO_DEATH(([bti]() { fake_bti_destroy(bti); }));
+  ASSERT_NO_DEATH(([bti]() { zx_handle_close(bti); }));
 }
 
 TEST(FakeBti, CreateContiguousVmo) {
@@ -66,52 +67,7 @@ TEST(FakeBti, CreateContiguousVmo) {
   EXPECT_EQ(addr, FAKE_BTI_PHYS_ADDR);
 
   ASSERT_NO_DEATH(([pmt_handle]() { EXPECT_OK(zx_pmt_unpin(pmt_handle)); }));
-  ASSERT_NO_DEATH(([bti]() { fake_bti_destroy(bti); }));
-}
-
-TEST(FakeBti, DuplicateHandle) {
-  // Setup, create a fake bti, make sure it is valid:
-  zx_handle_t bti = ZX_HANDLE_INVALID;
-  zx_handle_t bti_dup = ZX_HANDLE_INVALID;
-  EXPECT_OK(fake_bti_create(&bti));
-  EXPECT_NE(bti, ZX_HANDLE_INVALID);
-
-  // Duplicate the handle, make sure it is valid:
-  EXPECT_OK(zx_handle_duplicate(bti, 0, &bti_dup));
-  EXPECT_NE(bti_dup, ZX_HANDLE_INVALID);
-
-  // TODO(ZX-3131): Add ability to get koid from fake bti handle, so
-  // we can verify the two handles reference the same object.
-}
-
-TEST(FakeBti, DuplicateRealHandle) {
-  // Setup, create an event and duplicate it, to make sure that still works:
-  zx::event event, event_dup;
-
-  ASSERT_OK(zx::event::create(0u, &event), "Error during event create");
-  EXPECT_OK(event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_dup));
-
-  // The ZX_EVENT_SIGNALED bit is guaranteed to be 0 when we create the object.
-  // Now signal the original event:
-  ASSERT_OK(event.signal(0u, ZX_EVENT_SIGNALED));
-  zx_signals_t pending;
-  // Now wait for that signal on the duplicated version:
-  EXPECT_OK(event_dup.wait_one(ZX_EVENT_SIGNALED, zx::time(0), &pending));
-  EXPECT_EQ(pending & ZX_EVENT_SIGNALED, ZX_EVENT_SIGNALED, "Error during wait call");
-}
-
-constexpr zx_handle_t kPotentialHandle = 1;
-
-TEST(FakeBti, DuplicateInvalidHandle) {
-  zx_handle_t bti = ZX_HANDLE_INVALID;
-  zx_handle_t bti_dup = ZX_HANDLE_INVALID;
-  // Duplicating an invalid (ZX_HANDLE_INVALID) should cause the fake duplicate
-  // to assert, since ZX_HANDLE_INVALID is a valid fake handle.
-  ASSERT_DEATH(([bti, &bti_dup]() { zx_handle_duplicate(bti, 0, &bti_dup); }));
-
-  // However, a real handle will just return an error:
-  bti = kPotentialHandle;
-  ASSERT_NO_DEATH(([bti, &bti_dup]() { EXPECT_NOT_OK(zx_handle_duplicate(bti, 0, &bti_dup)); }));
+  ASSERT_NO_DEATH(([bti]() { zx_handle_close(bti); }));
 }
 
 // TODO(ZX-3131): when functionality is available, check that pinning a
