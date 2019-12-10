@@ -26,18 +26,21 @@ async fn destruction() -> Result<(), Error> {
     )
     .await?;
 
-    let sink = test
-        .breakpoint_system
-        .soak_events(vec![StopInstance::TYPE, PostDestroyInstance::TYPE])
-        .await?;
-    let receiver = test.breakpoint_system.set_breakpoints(vec![PostDestroyInstance::TYPE]).await?;
-    test.breakpoint_system.start_component_manager().await?;
+    let breakpoint_system = test
+        .connect_to_breakpoint_system()
+        .await
+        .expect("Breakpoint system should be available, but is not");
+
+    let sink =
+        breakpoint_system.soak_events(vec![StopInstance::TYPE, PostDestroyInstance::TYPE]).await?;
+    let receiver = breakpoint_system.set_breakpoints(vec![PostDestroyInstance::TYPE]).await?;
+    breakpoint_system.start_component_manager().await?;
 
     // Wait for `coll:root` to be destroyed.
     let invocation = receiver.wait_until_exact::<PostDestroyInstance>("/coll:root:1").await?;
 
     // Assert that root component has no children.
-    let child_dir_path = test.hub_v2_path.join("children");
+    let child_dir_path = test.get_hub_v2_path().join("children");
     let child_dir_path = child_dir_path.to_str().expect("invalid chars");
     let child_dir = open_directory_in_namespace(child_dir_path, OPEN_RIGHT_READABLE)?;
     let child_dir_contents = list_directory(&child_dir).await?;

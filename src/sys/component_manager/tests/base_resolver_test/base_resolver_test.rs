@@ -24,11 +24,14 @@ async fn base_resolver_test() -> Result<(), Error> {
     )
     .await?;
 
+    let breakpoint_system =
+        &test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
+
     // Register breakpoints and begin execution of component manager
-    let receiver = test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 
     // Begin component manager's execution
-    test.breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
     let invocation = receiver.expect_exact::<StartInstance>("/").await?;
@@ -40,7 +43,7 @@ async fn base_resolver_test() -> Result<(), Error> {
 
     // Connect to the echo service
     let path_to_service_dir =
-        test.component_manager_path.join("out/hub/children/echo_server/exec/out/svc");
+        test.get_component_manager_path().join("out/hub/children/echo_server/exec/out/svc");
     let path_to_service_dir = path_to_service_dir.to_str().expect("unexpected chars");
     let echo_proxy = connect_to_service_at::<fidl_echo::EchoMarker>(path_to_service_dir)?;
 

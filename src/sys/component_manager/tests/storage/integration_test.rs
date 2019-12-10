@@ -39,9 +39,11 @@ async fn storage() -> Result<(), Error> {
     )
     .await?;
 
-    let receiver = test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let breakpoint_system =
+        test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
+    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 
-    test.breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be bound to
     let invocation = receiver.expect_exact::<StartInstance>("/").await?;
@@ -54,10 +56,10 @@ async fn storage() -> Result<(), Error> {
     let invocation = receiver.expect_type::<StartInstance>().await?;
     invocation.resume().await?;
 
-    let memfs_path = test
-        .component_manager_path
-        .join("out/hub/children/memfs/exec/out/svc/fuchsia.io.Directory");
-    let data_path = test.component_manager_path.join("out/hub/children/storage_user/exec/out/data");
+    let component_manager_path = test.get_component_manager_path();
+    let memfs_path =
+        component_manager_path.join("out/hub/children/memfs/exec/out/svc/fuchsia.io.Directory");
+    let data_path = component_manager_path.join("out/hub/children/storage_user/exec/out/data");
 
     check_storage(memfs_path, data_path, "storage_user:0").await?;
     Ok(())
@@ -72,14 +74,15 @@ async fn storage_from_collection() -> Result<(), Error> {
     )
     .await?;
 
-    let receiver = test
-        .breakpoint_system
+    let breakpoint_system =
+        test.connect_to_breakpoint_system().await.expect("breakpoint system did not connect");
+    let receiver = breakpoint_system
         .set_breakpoints(vec![StartInstance::TYPE, PostDestroyInstance::TYPE])
         .await?;
     let bind_receiver =
-        test.breakpoint_system.set_breakpoints(vec![RouteFrameworkCapability::TYPE]).await?;
+        breakpoint_system.set_breakpoints(vec![RouteFrameworkCapability::TYPE]).await?;
 
-    test.breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_manager().await?;
 
     // Expect the root component to be started
     let invocation = receiver.expect_exact::<StartInstance>("/").await?;
@@ -99,11 +102,10 @@ async fn storage_from_collection() -> Result<(), Error> {
     invocation.resume().await?;
 
     // With all children started, do the test
-    let memfs_path = test
-        .component_manager_path
-        .join("out/hub/children/memfs/exec/out/svc/fuchsia.io.Directory");
-    let data_path =
-        test.component_manager_path.join("out/hub/children/coll:storage_user/exec/out/data");
+    let component_manager_path = test.get_component_manager_path();
+    let memfs_path =
+        component_manager_path.join("out/hub/children/memfs/exec/out/svc/fuchsia.io.Directory");
+    let data_path = component_manager_path.join("out/hub/children/coll:storage_user/exec/out/data");
 
     check_storage(memfs_path.clone(), data_path, "coll:storage_user:1").await?;
 

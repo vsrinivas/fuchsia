@@ -12,15 +12,17 @@ fn launch_cs2(hub_v2_path: PathBuf) -> Vec<String> {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn empty_component() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/empty.cm").await?;
-    let receiver = test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let breakpoint_system =
+        test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
+    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 
-    test.breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_manager().await?;
 
     // Root must be created first
     let invocation = receiver.expect_exact::<StartInstance>("/").await?;
     invocation.resume().await?;
 
-    let output = launch_cs2(test.hub_v2_path);
+    let output = launch_cs2(test.get_hub_v2_path());
     let output: Vec<&str> = output.iter().map(|line| line.as_str()).collect();
     assert_eq!(
         output,
@@ -38,9 +40,11 @@ async fn empty_component() -> Result<(), Error> {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn tree() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/root.cm").await?;
-    let receiver = test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+    let breakpoint_system =
+        test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
+    let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 
-    test.breakpoint_system.start_component_manager().await?;
+    breakpoint_system.start_component_manager().await?;
 
     // Root must be created first
     let invocation = receiver.expect_exact::<StartInstance>("/").await?;
@@ -52,7 +56,7 @@ async fn tree() -> Result<(), Error> {
         invocation.resume().await?;
     }
 
-    let output = launch_cs2(test.hub_v2_path);
+    let output = launch_cs2(test.get_hub_v2_path());
     let output: Vec<&str> = output.iter().map(|line| line.as_str()).collect();
     assert_eq!(
         output,

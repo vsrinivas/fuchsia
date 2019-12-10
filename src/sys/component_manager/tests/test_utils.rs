@@ -69,29 +69,33 @@ pub struct BlackBoxTest {
     /// The app that handles component manager
     pub component_manager_app: App,
 
-    /// The breakpoints FIDL service connected to component manager.
-    /// An integration test can use this service to halt tasks of component manager
-    /// at various points during its execution.
-    pub breakpoint_system: BreakpointSystemClient,
+    /// URL for the component manager used for this test
+    pub component_manager_url: String,
 
-    /// The path from Hub v1 to component manager.
-    pub component_manager_path: PathBuf,
+    /// URL of the root component given to this test's component manager
+    pub root_component_url: String,
 
-    /// The path from Hub v1 to Hub v2
-    /// To get this path, append "out/hub" to the component manager path.
-    pub hub_v2_path: PathBuf,
+    /// Label give to this test's component manager in the hub
+    pub label: String,
 }
 
 impl BlackBoxTest {
     /// Creates a black box test with the default component manager URL and no
     /// additional directory handles that are passed in to component manager.
     /// The output of component manager is not redirected.
+    ///
     /// At the end of this function call, a component manager has been created
     /// in a hermetic environment and its execution is halted.
     pub async fn default(root_component_url: &str) -> Result<Self, Error> {
         Self::custom(COMPONENT_MANAGER_URL, root_component_url, vec![], None).await
     }
-
+    /// Creates a black box test from the given component manager and
+    /// root component URL. The supplied directory handles are given to the
+    /// started component manager. If an output file descriptor is supplied it
+    /// is attached to the component manager's output.
+    ///
+    /// At the end of this function call, a component manager has been created
+    /// in a hermetic environment and its execution is halted.
     pub async fn custom(
         component_manager_url: &str,
         root_component_url: &str,
@@ -111,19 +115,35 @@ impl BlackBoxTest {
             output_file_descriptor,
         )
         .await?;
-        let component_manager_path = find_component_manager_in_hub(component_manager_url, &label);
-        let breakpoint_system = connect_to_breakpoint_system(&component_manager_path).await?;
-        let hub_v2_path = component_manager_path.join("out/hub");
 
         let test = Self {
             env,
             component_manager_app,
-            breakpoint_system,
-            component_manager_path,
-            hub_v2_path,
+            component_manager_url: component_manager_url.to_string(),
+            root_component_url: root_component_url.to_string(),
+            label,
         };
-
         Ok(test)
+    }
+
+    /// The path from Hub v1 to component manager.
+    pub fn get_component_manager_path(&self) -> PathBuf {
+        find_component_manager_in_hub(&self.component_manager_url, &self.label)
+    }
+
+    /// The path from Hub v1 to Hub v2
+    /// To get this path, append "out/hub" to the component manager path.
+    pub fn get_hub_v2_path(&self) -> PathBuf {
+        let path = self.get_component_manager_path();
+        path.join("out/hub")
+    }
+
+    /// The breakpoints FIDL service connected to component manager.
+    /// An integration test can use this service to halt tasks of component manager
+    /// at various points during its execution.
+    pub async fn connect_to_breakpoint_system(&self) -> Result<BreakpointSystemClient, Error> {
+        let path = self.get_component_manager_path();
+        connect_to_breakpoint_system(&path).await
     }
 }
 
@@ -155,7 +175,9 @@ pub async fn launch_component_and_expect_output_with_extra_dirs(
         Some(pipe_handle),
     )
     .await?;
-    test.breakpoint_system.start_component_manager().await?;
+
+    let breakpoint_system_client = &test.connect_to_breakpoint_system().await?;
+    breakpoint_system_client.start_component_manager().await?;
     read_from_pipe(file, expected_output)
 }
 
@@ -274,6 +296,7 @@ fn find_component_manager_in_hub(component_manager_url: &str, label: &str) -> Pa
 
     // Get the id for the environment
     let dir: Vec<DirEntry> = read_dir(path_to_env)
+        // TODO convert this to an error instead of causing a panic
         .expect("could not open nested environment in the hub")
         .map(|x| x.expect("entry unreadable"))
         .collect();
@@ -293,6 +316,7 @@ fn find_component_manager_in_hub(component_manager_url: &str, label: &str) -> Pa
 
     // Get the id for component manager
     let dir: Vec<DirEntry> = read_dir(path_to_cm)
+        // TOOD convert this into an error instead of causing a panic
         .expect("could not open component manager in the hub")
         .map(|x| x.expect("entry unreadable"))
         .collect();

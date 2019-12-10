@@ -40,20 +40,22 @@ impl TestRunner {
             // These receivers are registered separately because the events do not happen
             // in predictable orders. There is a possibility for the RouteFrameworkCapability event
             // to be interleaved between the StartInstance events.
+            let breakpoint_system = test
+                .connect_to_breakpoint_system()
+                .await
+                .expect("breakpoint system failed to connect");
             let start_receiver =
-                test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
-            let route_receiver = test
-                .breakpoint_system
-                .set_breakpoints(vec![RouteFrameworkCapability::TYPE])
-                .await?;
+                breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+            let route_receiver =
+                breakpoint_system.set_breakpoints(vec![RouteFrameworkCapability::TYPE]).await?;
 
             // Register for events which are required by this test runner.
             // TODO(xbhatnag): There may be problems here if event_types contains
             // StartInstance or RouteFrameworkCapability
-            let receiver = test.breakpoint_system.set_breakpoints(event_types).await?;
+            let receiver = breakpoint_system.set_breakpoints(event_types).await?;
 
             // Unblock component manager
-            test.breakpoint_system.start_component_manager().await?;
+            breakpoint_system.start_component_manager().await?;
 
             // Wait for the root component to start up
             start_receiver.expect_exact::<StartInstance>("/").await?.resume().await?;
@@ -74,7 +76,8 @@ impl TestRunner {
             receiver
         };
 
-        let external_hub_v2_path = test.component_manager_path.join("out/hub");
+        let external_hub_v2_path = test.get_component_manager_path().join("out/hub");
+
         let runner = Self { _test: test, external_hub_v2_path, hub_report_capability };
 
         Ok((runner, receiver))
