@@ -46,13 +46,13 @@ As that link suggests, contact CLion support for instructions
 regarding the options and values that might help you with whatever issue
 you are trying to solve.
 
-## VIM
+## Vim
 
 See [Helpful Vim tools for Fuchsia development](/scripts/vim/README.md).
 
-## Visual Studio Code (vscode) {#visual-studio-code}
+## Visual Studio Code (VS Code) {#visual-studio-code}
 
-There are multiple vscode setups known to work to different degrees. The
+There are multiple VS Code setups known to work to different degrees. The
 sections below describe the different setups (pick one).
 
 ### clangd
@@ -71,7 +71,7 @@ Note: the path to clangd does need to be absolute.
 
 Finally, follow the **Compilation Database** instructions below to
 generate the `compile_commands.json` in the fuchsia root directory. Then
-reload vscode to enjoy the results.
+reload VS Code to enjoy the results.
 
 You may also benefit from enabling background indexing and clang-tidy using the following settings:
 
@@ -84,10 +84,10 @@ You may also benefit from enabling background indexing and clang-tidy using the 
 
 Further details on clangd setup can be found [here](https://clang.llvm.org/extra/clangd/Installation.html).
 
-### default vscode C++ extension
+### Default VS Code C++ extension
 
 Install the default [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)
-suggested by vscode.
+suggested by VS Code.
 
 You can use [tasks](https://code.visualstudio.com/docs/editor/tasks) to
 configure a compilation step.
