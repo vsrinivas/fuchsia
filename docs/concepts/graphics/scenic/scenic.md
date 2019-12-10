@@ -235,17 +235,14 @@ The bounds of the root view are defined by a min and a max point as follows:
 [View Bounds](view_bounds.md) shows how to set up your view bounds, how to debug
 them with wireframe rendering, and explains how view bounds interact with hit testing.
 
-
-## Timing Model {#timing-model}
-
-[Life of a Pixel](life_of_a_pixel.md) shows how a client Present request is integrated into
-a Scenic frame.
-
-TODO(SCN-1202): Talk about scheduling frames, presentation timestamps, etc.
-
 ## Fences {#fences}
 
 TODO(SCN-1228): Talk about synchronization.
+
+# Frame Scheduling {#frame-scheduling}
+
+[Frame scheduling](frame_scheduling.md) explains how the frame scheduling API work and contains
+examples of how to use it.
 
 # Examples of using Scenic {#examples-of-using-scenic}
 

@@ -8,6 +8,8 @@ toc:
   path: /docs/concepts/graphics/scenic/scenic.md
 - title: "Scenic input system"
   path: /docs/concepts/graphics/scenic/input.md
+- title: "Frame Scheduling"
+  path: /docs/concepts/graphics/scenic/frame_scheduling.md
 - title: "Life of a pixel"
   path: /docs/concepts/graphics/scenic/life_of_a_pixel.md
 - title: "Lifecycle of a scene graph resource"
