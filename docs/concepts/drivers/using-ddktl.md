@@ -19,8 +19,8 @@ The mixins that we'll be discussing are defined in
 
 The following mixins are provided:
 
-Mixin class            | Function                | Purpose
------------------------|-------------------------|------------------------------
+Mixin class            | Function             | Purpose
+-----------------------|----------------------|------------------------------
 `ddk::GetProtocolable`    | **DdkGetProtocol()** | fetches the protocol
 `ddk::Openable`           | **DdkOpen()**        | client's **open()**
 `ddk::Closable`           | **DdkClose()**       | client's **close()**
@@ -34,13 +34,14 @@ Mixin class            | Function                | Purpose
 
 For completeness, the following mixins are also provided, but have been deprecated:
 
-Deprecated Mixin class | Function             | Purpose
------------------------|----------------------|------------------------------
-`ddk::Suspendable`     | **DdkSuspend()**     | to suspend device
-`ddk::Resumable`       | **DdkResume()**      | to resume device
-`ddk::Readable`        | **DdkRead()**        | client's **read()**
-`ddk::Writable`        | **DdkWrite()**       | client's **write()**
-`ddk::GetSizable`      | **DdkGetSize()**     | returns size of device
+Deprecated Mixin class      | Function             | Purpose
+----------------------------|----------------------|------------------------------
+`ddk::Suspendable`          | **DdkSuspend()**     | to suspend device
+`ddk::Resumable`            | **DdkResume()**      | to resume device
+`ddk::Readable`             | **DdkRead()**        | client's **read()**
+`ddk::Writable`             | **DdkWrite()**       | client's **write()**
+`ddk::GetSizable`           | **DdkGetSize()**     | returns size of device
+`ddk::UnbindableDeprecated` | **DdkUnbindDeprecated()**   | called when this device is being removed
 
 These mixins correspond to the functions defined in the
 [`zx_protocol_device_t`](/zircon/system/ulib/ddk/include/ddk/device.h#74) struct

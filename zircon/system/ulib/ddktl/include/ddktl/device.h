@@ -61,28 +61,31 @@
 // |                         |                                                    |
 // | ddk::ResumableNew       | zx_status_t DdkResumeNew(uint8_t requested_state,  |
 // |                         |                          uint8_t* out_state)       |
-// | ddk::Resumable          | zx_status_t DdkResume(uint32_t flags)              |
 // |                         |                                                    |
 // | ddk::Rxrpcable          | zx_status_t DdkRxrpc(zx_handle_t channel)          |
 // +-------------------------+----------------------------------------------------+
 //
 // Deprecated Mixins:
-// +----------------------+----------------------------------------------------+
-// | Mixin class          | Required function implementation                   |
-// +----------------------+----------------------------------------------------+
-// | ddk::Readable        | zx_status_t DdkRead(void* buf, size_t count,       |
-// |                      |                     zx_off_t off, size_t* actual)  |
-// |                      |                                                    |
-// | ddk::Writable        | zx_status_t DdkWrite(const void* buf,              |
-// |                      |                      size_t count, zx_off_t off,   |
-// |                      |                      size_t* actual)               |
-// |                      |                                                    |
-// | ddk::GetSizable      | zx_off_t DdkGetSize()                              |
-// |                      |                                                    |
-// | ddk::Suspendable     | zx_status_t DdkSuspend(uint32_t flags)             |
-// |                      |                                                    |
-// | ddk::Resumable       | zx_status_t DdkResume(uint32_t flags)              |
-// +----------------------+----------------------------------------------------+
+// +--------------------------+----------------------------------------------------+
+// | Mixin class              | Required function implementation                   |
+// +--------------------------+----------------------------------------------------+
+// | ddk::Readable            | zx_status_t DdkRead(void* buf, size_t count,       |
+// |                          |                     zx_off_t off, size_t* actual)  |
+// |                          |                                                    |
+// | ddk::Writable            | zx_status_t DdkWrite(const void* buf,              |
+// |                          |                      size_t count, zx_off_t off,   |
+// |                          |                      size_t* actual)               |
+// |                          |                                                    |
+// | ddk::GetSizable          | zx_off_t DdkGetSize()                              |
+// |                          |                                                    |
+// | ddk::Suspendable         | zx_status_t DdkSuspend(uint32_t flags)             |
+// |                          |                                                    |
+// | ddk::Resumable           | zx_status_t DdkResume(uint32_t flags)              |
+// |                          |                                                    |
+// | ddk::UnbindableDeprecated| void DdkUnbindDeprecated()                         |
+// |                          |                                                    |
+// +--------------------------+----------------------------------------------------+
+//
 //
 // Note: the ddk::FullDevice type alias may also be used if your device class
 // will implement every mixin.
