@@ -231,6 +231,12 @@ void DmaManager::LoadNewFrame() {
   auto buffer = buffers_.LockBufferForWrite();
   uint32_t enable_buffer_write = 0;
   if (buffer) {
+    if (buffer_underrun_sequential_count_ > 0) {
+      FX_LOGF(INFO, TAG, "DmaManager: buffer underrun recovered - dropped %llu frames",
+              buffer_underrun_sequential_count_);
+      buffer_underrun_sequential_count_ = 0;
+    }
+
     // 3) Set the DMA address
     auto memory_address = static_cast<uint32_t>(buffer->physical_address());
 
@@ -250,7 +256,11 @@ void DmaManager::LoadNewFrame() {
   } else {
     // If we run out of buffers, disable write and send the callback for
     // out of buffers:
-    FX_LOG(ERROR, TAG, "Failed to get buffer");
+    constexpr uint32_t kUnderrunReportPeriod = 5 * 30;  // Log every 5 seconds at 30FPS
+    if ((buffer_underrun_sequential_count_++ % kUnderrunReportPeriod) == 0) {
+      FX_LOGF(WARNING, TAG, "DmaManager: no free buffers - dropped %llu frames",
+              buffer_underrun_sequential_count_);
+    }
   }
 
   // 4) Set Write_on

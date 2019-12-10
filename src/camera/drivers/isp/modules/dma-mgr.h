@@ -88,6 +88,7 @@ class DmaManager {
   Stream stream_type_;
   fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback_;
   zx::bti bti_;
+  uint64_t buffer_underrun_sequential_count_ = 0;
 
   // Releases the write lock on the frame and calls the
   // frame_available_callback.
