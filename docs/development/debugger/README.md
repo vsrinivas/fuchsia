@@ -11,12 +11,6 @@ This is the very detailed setup guide. Please see:
 
 The debugger runs remotely only (you can't do self-hosted debug).
 
-### Bugs
-
-  * [Open zxdb bugs](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5040)
-
-  * [Report a new zxdb bug](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?components=DeveloperExperience%3Ezxdb)
-
 ## Binary location (for SDK users)
 
 The binary is `tools/zxdb` in the Fuchsia SDK. SDK users will have to do an
@@ -418,6 +412,10 @@ To run the debug agent tests:
 ```
 fx run-test debug_agent_tests
 ```
+
+## Bugs
+
+To report a new zxdb bug, see [Report a new zxdb bug](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?components=DeveloperExperience%3Ezxdb).
 
 ## Other Languages
 
