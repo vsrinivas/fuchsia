@@ -22,11 +22,11 @@
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/callback/managed_container.h"
+#include "src/ledger/lib/callback/operation_serializer.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
-#include "src/lib/callback/operation_serializer.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/observer_list.h"
@@ -327,7 +327,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   // Identifier for this device on the page clock. It does not need to be consistent across pages.
   clocks::DeviceId device_id_;
 
-  callback::OperationSerializer commit_serializer_;
+  ledger::OperationSerializer commit_serializer_;
   coroutine::CoroutineManager download_manager_;
   coroutine::CoroutineManager coroutine_manager_;
 

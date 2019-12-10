@@ -11,6 +11,7 @@ source_set("lock") {
   ]
 
   public_deps = [
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/coroutine",
     "//src/lib/callback",
     "//src/lib/fxl",

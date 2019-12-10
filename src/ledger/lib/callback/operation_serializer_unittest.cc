@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/operation_serializer.h"
+#include "src/ledger/lib/callback/operation_serializer.h"
 
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 
-namespace callback {
+namespace ledger {
 namespace {
 
 TEST(OperationSerializer, ExecutionIsInOrder) {
@@ -84,4 +84,4 @@ TEST(OperationSerializer, DontContinueAfterDestruction) {
 }
 
 }  // namespace
-}  // namespace callback
+}  // namespace ledger

@@ -16,7 +16,7 @@
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/lib/callback/operation_serializer.h"
+#include "src/ledger/lib/callback/operation_serializer.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -101,9 +101,9 @@ class ConflictResolverClient : public fuchsia::ledger::MergeResultProviderSyncab
 
   // Operations are operating on the state of the merge commit. They must be
   // serialized.
-  callback::OperationSerializer operation_serializer_;
+  OperationSerializer operation_serializer_;
 
-  ledger::SyncableBinding<fuchsia::ledger::MergeResultProviderSyncableDelegate>
+  SyncableBinding<fuchsia::ledger::MergeResultProviderSyncableDelegate>
       merge_result_provider_binding_;
 
   // This must be the last member of the class.

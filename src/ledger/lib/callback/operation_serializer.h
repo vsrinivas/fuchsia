@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_CALLBACK_OPERATION_SERIALIZER_H_
-#define SRC_LIB_CALLBACK_OPERATION_SERIALIZER_H_
+#ifndef SRC_LEDGER_LIB_CALLBACK_OPERATION_SERIALIZER_H_
+#define SRC_LEDGER_LIB_CALLBACK_OPERATION_SERIALIZER_H_
 
 #include <lib/fit/function.h>
 
@@ -11,10 +11,9 @@
 #include <queue>
 
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace callback {
+namespace ledger {
 
 namespace internal {
 
@@ -43,6 +42,8 @@ struct Signature {
 class OperationSerializer {
  public:
   OperationSerializer() : weak_factory_(this) {}
+  OperationSerializer(const OperationSerializer&) = delete;
+  OperationSerializer& operator=(const OperationSerializer&) = delete;
   ~OperationSerializer() {}
 
   // Queues operations so that they are serialized: an operation is executed
@@ -99,10 +100,8 @@ class OperationSerializer {
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<OperationSerializer> weak_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(OperationSerializer);
 };
 
-}  // namespace callback
+}  // namespace ledger
 
-#endif  // SRC_LIB_CALLBACK_OPERATION_SERIALIZER_H_
+#endif  // SRC_LEDGER_LIB_CALLBACK_OPERATION_SERIALIZER_H_

@@ -22,7 +22,7 @@ void UseStack() { EXPECT_EQ(Fact(5), 120u); }
 
 TEST(Lock, OneLock) {
   coroutine::CoroutineServiceImpl coroutine_service;
-  callback::OperationSerializer serializer;
+  ledger::OperationSerializer serializer;
 
   fit::function<void(size_t)> callback;
   auto callable = [&callback](fit::function<void(size_t)> called_callback) {
@@ -59,7 +59,7 @@ TEST(Lock, OneLock) {
 TEST(Lock, ManyLocks) {
   constexpr size_t nb_routines = 10;
   coroutine::CoroutineServiceImpl coroutine_service;
-  callback::OperationSerializer serializer;
+  ledger::OperationSerializer serializer;
 
   std::queue<fit::function<void(size_t)>> callbacks;
 
@@ -91,7 +91,7 @@ TEST(Lock, ManyLocks) {
 }
 
 TEST(Lock, Interrupted) {
-  callback::OperationSerializer serializer;
+  ledger::OperationSerializer serializer;
   coroutine::CoroutineHandler* handler_ptr = nullptr;
 
   fit::function<void()> callback;

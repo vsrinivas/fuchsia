@@ -106,7 +106,7 @@ class PageStorageImplAccessorForTest {
     return storage->object_identifier_factory_.count(digest);
   }
 
-  static callback::OperationSerializer& GetCommitSerializer(
+  static ledger::OperationSerializer& GetCommitSerializer(
       const std::unique_ptr<PageStorageImpl>& storage) {
     return storage->commit_serializer_;
   }

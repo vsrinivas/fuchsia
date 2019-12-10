@@ -7,8 +7,8 @@
 
 #include <memory>
 
+#include "src/ledger/lib/callback/operation_serializer.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/callback/operation_serializer.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 
@@ -26,7 +26,7 @@ class Lock {
 // a serialized operation of |serializer|), and INTERRUPTED if the coroutine
 // stack must be unwound immediately (see coroutine::SyncCall for this case).
 ABSL_MUST_USE_RESULT coroutine::ContinuationStatus AcquireLock(
-    coroutine::CoroutineHandler* handler, callback::OperationSerializer* serializer,
+    coroutine::CoroutineHandler* handler, ledger::OperationSerializer* serializer,
     std::unique_ptr<Lock>* lock);
 
 }  // namespace lock

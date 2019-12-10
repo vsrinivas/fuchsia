@@ -21,8 +21,8 @@
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/completer.h"
+#include "src/ledger/lib/callback/operation_serializer.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/callback/operation_serializer.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -94,7 +94,7 @@ class PageUsageDb {
   // serialized to guarantee that consecutive calls to update the contents of a
   // single page (e.g. a page is opened and then closed) are written in |db_| in
   // the right order, i.e. the order in which they were called.
-  callback::OperationSerializer serializer_;
+  OperationSerializer serializer_;
 };
 
 }  // namespace ledger

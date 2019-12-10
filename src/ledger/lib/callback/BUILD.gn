@@ -6,6 +6,7 @@ source_set("callback") {
   sources = [
     "managed_container.cc",
     "managed_container.h",
+    "operation_serializer.h",
   ]
 
   public_deps = [
@@ -23,6 +24,7 @@ source_set("unittests") {
 
   sources = [
     "managed_container_unittest.cc",
+    "operation_serializer_unittest.cc",
   ]
 
   deps = [

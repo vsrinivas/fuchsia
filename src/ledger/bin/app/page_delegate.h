@@ -23,7 +23,7 @@
 #include "src/ledger/bin/storage/public/journal.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/callback/operation_serializer.h"
+#include "src/ledger/lib/callback/operation_serializer.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
@@ -113,7 +113,7 @@ class PageDelegate {
   fit::closure on_discardable_;
 
   std::unique_ptr<storage::Journal> journal_;
-  callback::OperationSerializer operation_serializer_;
+  OperationSerializer operation_serializer_;
   SyncWatcherSet* watcher_set_;
 
   std::unique_ptr<PageImpl> page_impl_;

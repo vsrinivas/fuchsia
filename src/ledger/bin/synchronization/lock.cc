@@ -24,7 +24,7 @@ class LockImpl : public Lock {
   }
 
   coroutine::ContinuationStatus Acquire(coroutine::CoroutineHandler* const handler,
-                                        callback::OperationSerializer* const serializer) {
+                                        ledger::OperationSerializer* const serializer) {
     return SyncCall(handler, [weak_this = weak_ptr_factory_.GetWeakPtr(),
                               serializer](fit::function<void()> sync_callback) {
       serializer->Serialize<>([] {},
@@ -52,7 +52,7 @@ class LockImpl : public Lock {
 }  // namespace
 
 coroutine::ContinuationStatus AcquireLock(coroutine::CoroutineHandler* const handler,
-                                          callback::OperationSerializer* const serializer,
+                                          ledger::OperationSerializer* const serializer,
                                           std::unique_ptr<Lock>* lock) {
   std::unique_ptr<LockImpl> impl = std::make_unique<LockImpl>();
   coroutine::ContinuationStatus status = impl->Acquire(handler, serializer);
