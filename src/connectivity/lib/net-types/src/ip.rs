@@ -195,8 +195,16 @@ pub trait Ip:
     /// The subnet of multicast addresses.
     const MULTICAST_SUBNET: Subnet<Self::Addr>;
 
-    /// The subnet of link-local addresses.
-    const LINK_LOCAL_SUBNET: Subnet<Self::Addr>;
+    /// The subnet of link-local unicast addresses.
+    ///
+    /// Note that some multicast addresses are also link-local. In IPv4, these
+    /// are contained in the [link-local multicast subnet]. In IPv6, the
+    /// link-local multicast addresses are not organized into a single subnet;
+    /// instead, whether a multicast IPv6 address is link-local is a function of
+    /// its scope.
+    ///
+    /// [link-local multicast subnet]: Ipv4::LINK_LOCAL_MULTICAST_SUBNET
+    const LINK_LOCAL_UNICAST_SUBNET: Subnet<Self::Addr>;
 
     /// "IPv4" or "IPv6".
     const NAME: &'static str;
@@ -233,10 +241,11 @@ impl Ip for Ipv4 {
         Subnet { network: Ipv4Addr::new([127, 0, 0, 0]), prefix: 8 };
     const MULTICAST_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([224, 0, 0, 0]), prefix: 4 };
-    /// Outlined in [RFC 3927 Section 2.1].
+    /// The subnet of link-local unicast addresses, outlined in [RFC 3927
+    /// Section 2.1].
     ///
     /// [RFC 3927 Section 2.1]: https://tools.ietf.org/html/rfc3927#section-2.1
-    const LINK_LOCAL_SUBNET: Subnet<Ipv4Addr> =
+    const LINK_LOCAL_UNICAST_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([169, 254, 0, 0]), prefix: 16 };
     const NAME: &'static str = "IPv4";
     type Addr = Ipv4Addr;
@@ -261,6 +270,13 @@ impl Ipv4 {
     /// [RFC 1812 Section 5.3.7]: https://tools.ietf.org/html/rfc1812#section-5.3.7
     pub const CLASS_E_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([240, 0, 0, 0]), prefix: 4 };
+
+    /// The subnet of link-local multicast addresses, outlined in [RFC 5771
+    /// Section 4].
+    ///
+    /// [RFC 5771 Section 4]: https://tools.ietf.org/html/rfc5771#section-4
+    const LINK_LOCAL_MULTICAST_SUBNET: Subnet<Ipv4Addr> =
+        Subnet { network: Ipv4Addr::new([169, 254, 0, 0]), prefix: 16 };
 }
 
 /// IPv6.
@@ -293,10 +309,16 @@ impl Ip for Ipv6 {
         network: Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
         prefix: 8,
     };
-    /// Defined in [RFC 4291 Section 2.5.6].
+    /// The subnet of link-local unicast addresses, defined in [RFC 4291 Section
+    /// 2.5.6].
+    ///
+    /// Note that multicast addresses can also be link-local. However, there is no
+    /// single subnet of link-local multicast addresses. For more details on
+    /// link-local multicast addresses, see [RFC 4291 Section 2.7].
     ///
     /// [RFC 4291 Section 2.5.6]: https://tools.ietf.org/html/rfc4291#section-2.5.6
-    const LINK_LOCAL_SUBNET: Subnet<Ipv6Addr> = Subnet {
+    /// [RFC 4291 Section 2.7]: https://tools.ietf.org/html/rfc4291#section-2.7
+    const LINK_LOCAL_UNICAST_SUBNET: Subnet<Ipv6Addr> = Subnet {
         network: Ipv6Addr::new([0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
         prefix: 10,
     };
@@ -337,6 +359,7 @@ pub trait IpAddress:
     + Default
     + Sync
     + Send
+    + LinkLocalAddress
     + sealed::Sealed
     + 'static
 {
@@ -515,24 +538,37 @@ impl MulticastAddress for IpAddr {
     }
 }
 
-impl<A: IpAddress> LinkLocalAddress for A {
+impl LinkLocalAddress for Ipv4Addr {
     /// Is this address in the link-local subnet?
     ///
     /// `is_linklocal` returns true if `self` is in
-    /// [`A::Version::LINK_LOCAL_SUBNET`].
-    ///
-    /// [`A::Version::LINK_LOCAL_SUBNET`]: crate::ip::Ip::LINK_LOCAL_SUBNET
+    /// [`Ipv4::LINK_LOCAL_UNICAST_SUBNET`] or
+    /// [`Ipv4::LINK_LOCAL_MULTICAST_SUBNET`].
     #[inline]
     fn is_linklocal(&self) -> bool {
-        <A as IpAddress>::Version::LINK_LOCAL_SUBNET.contains(self)
+        Ipv4::LINK_LOCAL_UNICAST_SUBNET.contains(self)
+            || Ipv4::LINK_LOCAL_MULTICAST_SUBNET.contains(self)
+    }
+}
+
+impl LinkLocalAddress for Ipv6Addr {
+    /// Is this address in the link-local subnet?
+    ///
+    /// `is_linklocal` returns true if `self` is in
+    /// [`Ipv6::LINK_LOCAL_UNICAST_SUBNET`] or `self` is a multicast address
+    /// whose scope is link-local.
+    #[inline]
+    fn is_linklocal(&self) -> bool {
+        const LINK_LOCAL_SCOPE: u8 = 0x02;
+        // TODO(joshlf): Stop doing this manually once we have a general-purpose
+        // mechanism for extracting the scope from a multicast address.
+        Ipv6::LINK_LOCAL_UNICAST_SUBNET.contains(self)
+            || (self.is_multicast() && self.0[1] & 0x0F == LINK_LOCAL_SCOPE)
     }
 }
 
 impl LinkLocalAddress for IpAddr {
-    /// Is this address in the link-local subnet?
-    ///
-    /// `is_linklocal` returns true if `self` is in [`Ip::LINK_LOCAL_SUBNET`]
-    /// for the IP version of this address.
+    /// Is this address link-local?
     #[inline]
     fn is_linklocal(&self) -> bool {
         map_ip_addr!(self, is_linklocal)
@@ -1259,12 +1295,45 @@ mod tests {
         assert!(!Ipv4::UNSPECIFIED_ADDRESS.is_linklocal());
         assert!(!Ipv6::UNSPECIFIED_ADDRESS.is_linklocal());
 
-        let link_local = Ipv4::LINK_LOCAL_SUBNET.network;
+        let link_local = Ipv4::LINK_LOCAL_UNICAST_SUBNET.network;
         assert!(link_local.is_linklocal());
         assert!(link_local.is_specified());
-        let link_local = Ipv6::LINK_LOCAL_SUBNET.network;
+        let link_local = Ipv4::LINK_LOCAL_MULTICAST_SUBNET.network;
         assert!(link_local.is_linklocal());
         assert!(link_local.is_specified());
+        let link_local = Ipv6::LINK_LOCAL_UNICAST_SUBNET.network;
+        assert!(link_local.is_linklocal());
+        assert!(link_local.is_specified());
+        let mut link_local = Ipv6::MULTICAST_SUBNET.network;
+        link_local.0[1] = 0x02;
+        assert!(link_local.is_linklocal());
+        assert!(link_local.is_specified());
+    }
+
+    #[test]
+    fn test_linklocal() {
+        // IPv4
+        assert!(Ipv4::LINK_LOCAL_UNICAST_SUBNET.network.is_linklocal());
+        assert!(Ipv4::LINK_LOCAL_MULTICAST_SUBNET.network.is_linklocal());
+
+        // IPv6
+        assert!(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network.is_linklocal());
+        let mut addr = Ipv6::MULTICAST_SUBNET.network;
+        for flags in 0..=0x0F {
+            // Set the scope to link-local and the flags to `flags`.
+            addr.0[1] = (flags << 4) | 0x02;
+            // Test that a link-local multicast address is always considered
+            // link-local regardless of which flags are set.
+            assert!(addr.is_linklocal());
+        }
+
+        // Test that a non-multicast address (outside of the link-local subnet)
+        // is never considered link-local even if the bits are set that, in a
+        // multicast address, would put it in the link-local scope.
+        let mut addr = Ipv6::LOOPBACK_ADDRESS.get();
+        // Explicitly set the scope to link-local.
+        addr.0[1] = 0x02;
+        assert!(!addr.is_linklocal());
     }
 
     #[test]

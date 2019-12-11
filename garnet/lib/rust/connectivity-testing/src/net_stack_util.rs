@@ -28,7 +28,7 @@ pub async fn netstack_did_get_dhcp(
 }
 
 fn valid_ip_filter<A: net_types::ip::IpAddress>(addr: &A) -> bool {
-    use net_types::{LinkLocalAddress, MulticastAddress, SpecifiedAddress};
+    use net_types::{MulticastAddress, SpecifiedAddress};
     !(addr.is_linklocal() || !addr.is_specified() || addr.is_multicast() || addr.is_loopback())
 }
 
