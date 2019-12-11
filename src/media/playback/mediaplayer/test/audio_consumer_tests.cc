@@ -7,21 +7,23 @@
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
+#include <memory>
 #include <queue>
+#include <type_traits>
 
 #include "gtest/gtest.h"
 #include "lib/media/cpp/timeline_function.h"
+#include "lib/media/cpp/timeline_rate.h"
 #include "lib/media/cpp/type_converters.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "lib/zx/time.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "src/media/playback/mediaplayer/test/command_queue.h"
+#include "src/media/playback/mediaplayer/audio_consumer_impl.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_audio.h"
-#include "src/media/playback/mediaplayer/test/fakes/fake_scenic.h"
-#include "src/media/playback/mediaplayer/test/fakes/fake_wav_reader.h"
 #include "src/media/playback/mediaplayer/test/sink_feeder.h"
 
 namespace media_player {
@@ -81,7 +83,6 @@ class AudioConsumerTests : public sys::testing::TestWithEnvironment {
 
   FakeAudio fake_audio_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-  SinkFeeder sink_feeder_;
 };
 
 // Test that factory channel is closed and we still have a connection to the created AudioConsumer
@@ -329,6 +330,61 @@ TEST_F(AudioConsumerTests, OverlappingStreamSink) {
   RunLoopUntil([&sink2_packet]() { return sink2_packet; });
 
   EXPECT_TRUE(sink2_packet);
+}
+
+// Test that packet timestamps are properly transformed from input rate of
+// nanoseconds to the renderer rate of frames
+TEST_F(AudioConsumerTests, CheckPtsRate) {
+  fuchsia::media::StreamSinkPtr sink;
+  fuchsia::media::AudioStreamType stream_type;
+  stream_type.frames_per_second = kFramesPerSecond;
+  stream_type.channels = kSamplesPerFrame;
+  stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  bool sink_connection_closed = false;
+
+  fake_audio_.renderer().ExpectPackets({{kFramesPerSecond, kVmoSize, 0x0000000000000000}});
+
+  got_status_ = false;
+
+  std::vector<zx::vmo> vmos(kNumVmos);
+  for (uint32_t i = 0; i < kNumVmos; i++) {
+    zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmos[i]);
+    EXPECT_EQ(status, ZX_OK);
+  }
+
+  audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, nullptr, sink.NewRequest());
+
+  sink.set_error_handler(
+      [&sink_connection_closed](zx_status_t status) { sink_connection_closed = true; });
+
+  RunLoopUntilIdle();
+
+  audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0,
+                         fuchsia::media::NO_TIMESTAMP);
+
+  audio_consumer_.events().WatchStatus([this](fuchsia::media::AudioConsumerStatus status) {
+    EXPECT_TRUE(status.has_presentation_timeline());
+    // test things are progressing
+    EXPECT_EQ(status.presentation_timeline().subject_delta, 1u);
+    got_status_ = true;
+  });
+
+  RunLoopUntil([this]() { return got_status_; });
+
+  auto packet = fuchsia::media::StreamPacket::New();
+  packet->payload_buffer_id = 0;
+  packet->payload_size = kVmoSize;
+  packet->payload_offset = 0;
+  packet->pts = ZX_SEC(1);
+
+  bool sent_packet = false;
+  sink->SendPacket(*packet, [&sent_packet]() { sent_packet = true; });
+
+  RunLoopUntil([&sent_packet]() { return sent_packet; });
+
+  EXPECT_TRUE(sent_packet);
+  EXPECT_TRUE(fake_audio_.renderer().expected());
+  EXPECT_FALSE(sink_connection_closed);
 }
 
 }  // namespace test
