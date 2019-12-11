@@ -90,13 +90,13 @@ resolved.
   haven't been resolved yet).
   - There should be no `exec` directories for any component.
 
-`BlackBoxTest` automatically connects to the `BreakpointSystem` FIDL service.
 The `BreakpointSystem` FIDL service is used to set breakpoints and unblock
-component manager:
+component manager. This code demonstrates using the `BreakpointSystem` service:
 
 ```
-let receiver = test.breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).await?;
-test.breakpoint_system.start_component_manager().await?;
+let breakpoint_system = test.connect_to_breakpoint_system().await?;
+let receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).await?;
+breakpoint_system.start_component_manager().await?;
 ```
 
 By the end of this code block:
@@ -164,10 +164,11 @@ The workflow for the `BreakpointSystemClient` library looks something like this:
 let test = BlackBoxTest::default(“fuchsia-pkg://fuchsia.com/foo#meta/root.cm”).await?;
 
 // Get a receiver by setting breakpoints
-let receiver = test.breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
+let breakpoint_system = test.connect_to_breakpoint_system().await?;
+let receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 
 // Unblock component manager
-test.breakpoint_system.start_component_manager().await?;
+breakpoint_system.start_component_manager().await?;
 
 // Wait for an invocation
 let invocation = receiver.expect_type::<StartInstance>().await?;
