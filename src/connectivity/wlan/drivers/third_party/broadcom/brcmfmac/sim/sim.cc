@@ -53,7 +53,7 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
           return BUS_OP(bus)->BusGetBootloaderMacAddr(mac_addr);
         },
     .get_wifi_metadata =
-        [](zx_device_t* zx_dev, void* data, size_t exp_size, size_t* actual) {
+        [](brcmf_bus* bus, void* data, size_t exp_size, size_t* actual) {
           wifi_config_t wifi_config = {
               .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
               .iovar_table =

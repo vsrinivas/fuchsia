@@ -86,8 +86,7 @@ struct brcmf_bus_ops {
   zx_status_t (*get_fwname)(brcmf_bus* bus, uint chip, uint chiprev, unsigned char* fw_name,
                             size_t* fw_name_size);
   zx_status_t (*get_bootloader_macaddr)(brcmf_bus* bus, uint8_t* mac_addr);
-  zx_status_t (*get_wifi_metadata)(zx_device_t* zxdev, void* config, size_t exp_size,
-                                   size_t* actual);
+  zx_status_t (*get_wifi_metadata)(brcmf_bus* bus, void* config, size_t exp_size, size_t* actual);
 };
 
 /**
@@ -213,6 +212,11 @@ static inline zx_status_t brcmf_bus_get_fwname(struct brcmf_bus* bus, uint chip,
 static inline zx_status_t brcmf_bus_get_bootloader_macaddr(struct brcmf_bus* bus,
                                                            uint8_t* mac_addr) {
   return bus->ops->get_bootloader_macaddr(bus, mac_addr);
+}
+
+static inline zx_status_t brcmf_bus_get_wifi_metadata(struct brcmf_bus* bus, void* config,
+                                                      size_t exp_size, size_t* actual) {
+  return bus->ops->get_wifi_metadata(bus, config, exp_size, actual);
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_

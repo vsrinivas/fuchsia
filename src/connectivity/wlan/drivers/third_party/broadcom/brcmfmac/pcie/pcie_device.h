@@ -34,6 +34,7 @@ class PcieDevice : public Device {
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
   void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
+  zx_status_t DeviceGetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) override;
 
  private:
   explicit PcieDevice(zx_device_t* parent);

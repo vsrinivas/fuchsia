@@ -188,8 +188,7 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
 static zx_status_t brcmf_get_meta_data(brcmf_if* ifp, wifi_config_t* config) {
   zx_status_t err;
   size_t actual;
-  err = ifp->drvr->bus_if->ops->get_wifi_metadata(ifp->drvr->zxdev, config, sizeof(wifi_config_t),
-                                                  &actual);
+  err = brcmf_bus_get_wifi_metadata(ifp->drvr->bus_if, config, sizeof(wifi_config_t), &actual);
   if (err != ZX_OK) {
     BRCMF_ERR("get metadata failed, err: %d\n", err);
     memset(config, 0, sizeof(*config));

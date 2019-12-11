@@ -40,8 +40,9 @@ bool operator==(const sdio_rw_txn_t& lhs, const sdio_rw_txn_t& rhs) {
           lhs.write == rhs.write && lhs.buf_offset == rhs.buf_offset);
 }
 
-zx_status_t get_wifi_metadata(zx_device_t* zx_dev, void* data, size_t exp_size, size_t* actual) {
-  return device_get_metadata(zx_dev, DEVICE_METADATA_WIFI_CONFIG, data, exp_size, actual);
+zx_status_t get_wifi_metadata(struct brcmf_bus* bus, void* data, size_t exp_size, size_t* actual) {
+  return device_get_metadata(bus->bus_priv.sdio->drvr->zxdev, DEVICE_METADATA_WIFI_CONFIG, data,
+                             exp_size, actual);
 }
 
 namespace {
@@ -97,6 +98,7 @@ TEST(Sdio, IntrRegister) {
   sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
   sdio_dev.sdio_proto_fn2 = *sdio2.GetProto();
   sdio_dev.drvr = &drvr;
+  bus_if.bus_priv.sdio = &sdio_dev;
   bus_if.ops = &sdio_bus_ops;
   sdio_dev.bus_if = &bus_if;
   sdio_dev.settings = &settings;

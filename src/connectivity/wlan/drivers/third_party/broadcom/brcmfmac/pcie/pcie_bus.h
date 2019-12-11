@@ -46,6 +46,7 @@ class PcieBus {
   zx_status_t GetMemdump(void* data, size_t len);
   zx_status_t GetFwname(uint chip, uint chiprev, unsigned char* fw_name, size_t* fw_name_size);
   zx_status_t GetBootloaderMacaddr(uint8_t* mac_addr);
+  zx_status_t GetWifiMetadata(void* config, size_t exp_size, size_t* actual);
 
  private:
   Device* device_ = nullptr;

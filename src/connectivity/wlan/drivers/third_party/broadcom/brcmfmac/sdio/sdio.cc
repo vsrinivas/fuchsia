@@ -3599,10 +3599,13 @@ static zx_status_t brcmf_sdio_get_fwname(brcmf_bus* bus_if, uint32_t chip, uint3
   return ret;
 }
 
-static zx_status_t brcmf_get_wifi_metadata(zx_device_t* zx_dev, void* data, size_t exp_size,
+static zx_status_t brcmf_get_wifi_metadata(brcmf_bus* bus_if, void* data, size_t exp_size,
                                            size_t* actual) {
-  return device_get_metadata(zx_dev, DEVICE_METADATA_WIFI_CONFIG, data, exp_size, actual);
+  struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
+  return device_get_metadata(sdiodev->drvr->zxdev, DEVICE_METADATA_WIFI_CONFIG, data, exp_size,
+                             actual);
 }
+
 static zx_status_t brcmf_sdio_get_bootloader_macaddr(brcmf_bus* bus_if, uint8_t* mac_addr) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
   return brcmf_sdiod_get_bootloader_macaddr(sdiodev, mac_addr);

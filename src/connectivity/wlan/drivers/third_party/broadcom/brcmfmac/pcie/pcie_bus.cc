@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <string>
 
+#include <ddk/metadata.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
@@ -86,6 +88,10 @@ const brcmf_bus_ops* PcieBus::GetBusOps() {
           [](brcmf_bus* bus, uint8_t* mac_addr) {
             return bus->bus_priv.pcie->GetBootloaderMacaddr(mac_addr);
           },
+      .get_wifi_metadata =
+          [](brcmf_bus* bus, void* config, size_t exp_size, size_t* actual) {
+            return bus->bus_priv.pcie->GetWifiMetadata(config, exp_size, actual);
+          },
   };
   return &bus_ops;
 }
@@ -141,6 +147,10 @@ zx_status_t PcieBus::GetFwname(uint chip, uint chiprev, unsigned char* fw_name,
 zx_status_t PcieBus::GetBootloaderMacaddr(uint8_t* mac_addr) {
   BRCMF_ERR("PcieBus::GetBootloaderMacaddr unimplemented\n");
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t PcieBus::GetWifiMetadata(void* config, size_t exp_size, size_t* actual) {
+  return device_->DeviceGetMetadata(DEVICE_METADATA_WIFI_CONFIG, config, exp_size, actual);
 }
 
 }  // namespace brcmfmac

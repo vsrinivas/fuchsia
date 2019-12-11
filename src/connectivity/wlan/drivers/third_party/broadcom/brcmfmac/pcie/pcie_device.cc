@@ -52,5 +52,9 @@ zx_status_t PcieDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_t* 
   return load_firmware(zxdev(), path, fw, size);
 }
 
+zx_status_t PcieDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) {
+  return device_get_metadata(zxdev(), type, buf, buflen, actual);
+}
+
 }  // namespace brcmfmac
 }  // namespace wlan
