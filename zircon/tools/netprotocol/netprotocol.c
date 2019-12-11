@@ -278,7 +278,18 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
   bool received_packets = false;
   bool first_wait = netboot_wait;
 
+#if defined(__APPLE__)
+  // macOS development hosts often have a firewall that prompts the user with a dialog box asking if
+  // a conection should be allowed. On macOS, use a long timeout for the first wait to ensure the
+  // user has a chance to read the dialog and respond. See also bug fxb/42296.
+  //
+  // TODO(maniscalco): Once macOS hosts are no longer supported for bringup development we can
+  // remove this special case and the first_wait concept.
   struct timeval end_tv = netboot_timeout_init(first_wait ? 3600000 : netboot_timeout);
+#else
+  struct timeval end_tv = netboot_timeout_init(netboot_timeout);
+#endif
+
   for (;;) {
     int wait_ms = netboot_timeout_get_msec(&end_tv);
     if (wait_ms < 0) {
