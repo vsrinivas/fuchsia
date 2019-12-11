@@ -128,7 +128,8 @@ struct Type {
     kTable,
     kUnion,
     kXUnion,
-    kPointer,
+    kStructPointer,
+    kUnionPointer,
     kMessage,
     kProtocol,
     kArray,
@@ -227,7 +228,7 @@ struct StructType : public Type {
 
 struct StructPointerType : public Type {
   StructPointerType(std::string name, const Type* type, const uint32_t pointer_size)
-      : Type(Kind::kPointer, std::move(name), pointer_size, CodingNeeded::kAlways),
+      : Type(Kind::kStructPointer, std::move(name), pointer_size, CodingNeeded::kAlways),
         element_type(static_cast<const StructType*>(type)) {
     assert(type->kind == Type::Kind::kStruct);
   }
@@ -253,7 +254,7 @@ struct UnionType : public Type {
 
 struct UnionPointerType : public Type {
   UnionPointerType(std::string name, const Type* type, const uint32_t pointer_size)
-      : Type(Kind::kPointer, std::move(name), pointer_size, CodingNeeded::kAlways),
+      : Type(Kind::kUnionPointer, std::move(name), pointer_size, CodingNeeded::kAlways),
         element_type(static_cast<const UnionType*>(type)) {
     assert(type->kind == Type::Kind::kUnion);
   }
@@ -285,6 +286,18 @@ struct XUnionType : public Type {
   types::Nullability nullability;
   types::Strictness strictness;
   XUnionType* maybe_reference_type = nullptr;
+
+  // This XUnionType was created from...
+  enum class Source {
+    kFromXUnion = 1,    // ... a xunion declaration.
+    kFromUnion,         // ... a (static) union declaration.
+    kFromUnionPointer,  // ... a (static) pointer-to-union declaration.
+  };
+  Source source = Source::kFromXUnion;
+
+  bool FromUnion() const { return source == Source::kFromUnion; }
+
+  bool FromUnionPointer() const { return source == Source::kFromUnionPointer; }
 };
 
 struct MessageType : public Type {

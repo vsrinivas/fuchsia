@@ -8,11 +8,11 @@
 
 #include <unittest/unittest.h>
 
-#define ASSERT_TRUE_NOMSG(x) ASSERT_TRUE(x, "")
-
 #include "generated/transformer_tables.test.h"
 #include "zircon/errors.h"
 #include "zircon/types.h"
+
+#define ASSERT_TRUE_NOMSG(x) ASSERT_TRUE(x, "")
 
 bool cmp_payload(const uint8_t* actual, size_t actual_size, const uint8_t* expected,
                  size_t expected_size) {
@@ -3908,60 +3908,85 @@ static bool size5alignment4vector(void) {
                                        sizeof(v1_bytes), old_bytes, sizeof(old_bytes))); \
   END_TEST;
 
-#define DECLARE_X_FOR_TEST(coding_table, size_)                                               \
-  struct FidlStructField coding_table##field = {                                              \
-      .type = &coding_table, .offset = 0u, .padding = 0u, .alt_field = &coding_table##field}; \
-  struct fidl_type coding_table##coded_struct_type;                                           \
-  struct fidl_type coding_table##coded_struct_type = {                                        \
-      .type_tag = kFidlTypeStruct,                                                            \
-      .coded_struct = {.fields = &coding_table##field,                                        \
-                       .field_count = 1,                                                      \
-                       .size = size_,                                                         \
-                       .max_out_of_line = UINT32_MAX,                                         \
-                       .contains_union = true,                                                \
-                       .name = "",                                                            \
-                       .alt_type = &coding_table##coded_struct_type.coded_struct}}
+#define DECLARE_X_FOR_TEST(old_coding_table, v1_coding_table, size_)      \
+  struct FidlStructField old_coding_table##field = {                      \
+      .type = &old_coding_table, .offset = 0u, .padding = 0u};            \
+  struct fidl_type old_coding_table##coded_struct_type;                   \
+  struct fidl_type v1_coding_table##coded_struct_type;                    \
+  struct fidl_type old_coding_table##coded_struct_type = {                \
+      .type_tag = kFidlTypeStruct,                                        \
+      .coded_struct = {.fields = &old_coding_table##field,                \
+                       .field_count = 1,                                  \
+                       .size = size_,                                     \
+                       .max_out_of_line = UINT32_MAX,                     \
+                       .contains_union = true,                            \
+                       .name = "",                                        \
+                       .alt_type = &v1_coding_table##coded_struct_type}}; \
+  struct FidlStructField v1_coding_table##field = {                       \
+      .type = &v1_coding_table, .offset = 0u, .padding = 0u};             \
+  struct fidl_type v1_coding_table##coded_struct_type = {                 \
+      .type_tag = kFidlTypeStruct,                                        \
+      .coded_struct = {.fields = &v1_coding_table##field,                 \
+                       .field_count = 1,                                  \
+                       .size = size_,                                     \
+                       .max_out_of_line = UINT32_MAX,                     \
+                       .contains_union = true,                            \
+                       .name = "",                                        \
+                       .alt_type = &old_coding_table##coded_struct_type}};
 
-#define DO_X_TEST(coding_table, old_bytes, v1_bytes) \
-  DO_TEST(coding_table##coded_struct_type, coding_table##coded_struct_type, old_bytes, v1_bytes);
+#define DO_X_TEST(old_coding_table, v1_coding_table, old_bytes, v1_bytes)                     \
+  DO_TEST(old_coding_table##coded_struct_type, v1_coding_table##coded_struct_type, old_bytes, \
+          v1_bytes);
 
-#define DECLARE_TABLE_FOR_TEST(coding_table) DECLARE_X_FOR_TEST(coding_table, 16)
-#define DECLARE_XUNION_FOR_TEST(coding_table) DECLARE_X_FOR_TEST(coding_table, 24)
+#define DECLARE_TABLE_FOR_TEST(old_coding_table, v1_coding_table) \
+  DECLARE_X_FOR_TEST(old_coding_table, v1_coding_table, 16)
+#define DECLARE_XUNION_FOR_TEST(old_coding_table, v1_coding_table) \
+  DECLARE_X_FOR_TEST(old_coding_table, v1_coding_table, 24)
 
-DECLARE_TABLE_FOR_TEST(example_Table_NoFieldsTable);
-DECLARE_TABLE_FOR_TEST(example_Table_TwoReservedFieldsTable);
-DECLARE_TABLE_FOR_TEST(example_Table_StructWithReservedSandwichTable);
-DECLARE_TABLE_FOR_TEST(example_Table_StructWithUint32SandwichTable);
-DECLARE_TABLE_FOR_TEST(example_Table_UnionWithVector_ReservedSandwichTable);
-DECLARE_TABLE_FOR_TEST(example_Table_UnionWithVector_StructSandwichTable);
+DECLARE_TABLE_FOR_TEST(example_Table_NoFieldsTable, v1_example_Table_NoFieldsTable);
+DECLARE_TABLE_FOR_TEST(example_Table_TwoReservedFieldsTable,
+                       v1_example_Table_TwoReservedFieldsTable);
+DECLARE_TABLE_FOR_TEST(example_Table_StructWithReservedSandwichTable,
+                       v1_example_Table_StructWithReservedSandwichTable);
+DECLARE_TABLE_FOR_TEST(example_Table_StructWithUint32SandwichTable,
+                       v1_example_Table_StructWithUint32SandwichTable);
+DECLARE_TABLE_FOR_TEST(example_Table_UnionWithVector_ReservedSandwichTable,
+                       v1_example_Table_UnionWithVector_ReservedSandwichTable);
+DECLARE_TABLE_FOR_TEST(example_Table_UnionWithVector_StructSandwichTable,
+                       v1_example_Table_UnionWithVector_StructSandwichTable);
 
 static bool table_nofields(void) {
-  DO_X_TEST(example_Table_NoFieldsTable, table_nofields_v1_and_old, table_nofields_v1_and_old);
+  DO_X_TEST(example_Table_NoFieldsTable, v1_example_Table_NoFieldsTable, table_nofields_v1_and_old,
+            table_nofields_v1_and_old);
 }
 
 static bool table_tworeservedfields(void) {
-  DO_X_TEST(example_Table_TwoReservedFieldsTable, table_tworeservedfields_v1_and_old,
-            table_tworeservedfields_v1_and_old);
+  DO_X_TEST(example_Table_TwoReservedFieldsTable, v1_example_Table_TwoReservedFieldsTable,
+            table_tworeservedfields_v1_and_old, table_tworeservedfields_v1_and_old);
 }
 
 static bool table_structwithreservedsandwich(void) {
   DO_X_TEST(example_Table_StructWithReservedSandwichTable,
+            v1_example_Table_StructWithReservedSandwichTable,
             table_structwithreservedsandwich_v1_and_old,
             table_structwithreservedsandwich_v1_and_old);
 }
 
 static bool table_structwithuint32sandwich(void) {
-  DO_X_TEST(example_Table_StructWithUint32SandwichTable, table_structwithuint32sandwich_v1_and_old,
-            table_structwithuint32sandwich_v1_and_old);
+  DO_X_TEST(example_Table_StructWithUint32SandwichTable,
+            v1_example_Table_StructWithUint32SandwichTable,
+            table_structwithuint32sandwich_v1_and_old, table_structwithuint32sandwich_v1_and_old);
 }
 
 static bool table_unionwithvector_reservedsandwich(void) {
   DO_X_TEST(example_Table_UnionWithVector_ReservedSandwichTable,
+            v1_example_Table_UnionWithVector_ReservedSandwichTable,
             table_unionwithvector_reservedsandwich_old, table_unionwithvector_reservedsandwich_v1);
 }
 
 static bool table_unionwithvector_structsandwich(void) {
   DO_X_TEST(example_Table_UnionWithVector_StructSandwichTable,
+            v1_example_Table_UnionWithVector_StructSandwichTable,
             table_unionwithvector_structsandwich_old, table_unionwithvector_structsandwich_v1);
 }
 
@@ -3976,16 +4001,16 @@ static bool simpletablearraystruct(void) {
   END_TEST;
 }
 
-DECLARE_XUNION_FOR_TEST(example_XUnionWithStructTable);
+DECLARE_XUNION_FOR_TEST(example_XUnionWithStructTable, v1_example_XUnionWithStructTable);
 
 static bool xunionwithstruct(void) {
-  DO_X_TEST(example_XUnionWithStructTable, xunionwithstruct_old_and_v1,
-            xunionwithstruct_old_and_v1);
+  DO_X_TEST(example_XUnionWithStructTable, v1_example_XUnionWithStructTable,
+            xunionwithstruct_old_and_v1, xunionwithstruct_old_and_v1);
 }
 
 static bool xunionwithunknownordinal(void) {
-  DO_X_TEST(example_XUnionWithStructTable, xunionwithunknownordinal_old_and_v1,
-            xunionwithunknownordinal_old_and_v1);
+  DO_X_TEST(example_XUnionWithStructTable, v1_example_XUnionWithStructTable,
+            xunionwithunknownordinal_old_and_v1, xunionwithunknownordinal_old_and_v1);
 }
 
 static bool arraystruct(void) {

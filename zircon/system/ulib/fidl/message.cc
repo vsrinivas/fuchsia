@@ -46,25 +46,27 @@ struct HeapAllocatedMessage {
 
 }  // namespace
 
-const fidl_type_t get_alt_type(const fidl_type_t* type) {
+const fidl_type_t* get_alt_type(const fidl_type_t* type) {
   switch (type->type_tag) {
     case kFidlTypePrimitive:
     case kFidlTypeEnum:
     case kFidlTypeBits:
     case kFidlTypeString:
     case kFidlTypeHandle:
-      return *type;
+      return type;
     case kFidlTypeStruct:
-      return fidl_type_t{.type_tag = kFidlTypeStruct, .coded_struct = *type->coded_struct.alt_type};
+      return type->coded_struct.alt_type;
     case kFidlTypeUnion:
-      return fidl_type_t{.type_tag = kFidlTypeUnion, .coded_union = *type->coded_union.alt_type};
+      return type->coded_union.alt_type;
+    case kFidlTypeXUnion:
+      return type->coded_xunion.alt_type;
     case kFidlTypeArray:
-      return fidl_type_t{.type_tag = kFidlTypeArray, .coded_array = *type->coded_array.alt_type};
+      return type->coded_array.alt_type;
     case kFidlTypeVector:
-      return fidl_type_t{.type_tag = kFidlTypeVector, .coded_vector = *type->coded_vector.alt_type};
+      return type->coded_vector.alt_type;
     default:
       assert(false && "cannot get alt type of a type that lacks an alt type");
-      return *type;
+      return type;
   }
 }
 
@@ -80,7 +82,7 @@ zx_status_t FidlTransformWithCallback(
     return callback(src_bytes, src_num_bytes);
   }
 
-  auto msg_size = ClampedMessageSize(get_alt_type(type).coded_struct);
+  auto msg_size = ClampedMessageSize(get_alt_type(type)->coded_struct);
   uint32_t dst_num_bytes;
   if (msg_size <= kMaxStackAllocSize) {
     auto dst_bytes = static_cast<uint8_t*>(alloca(msg_size));
@@ -136,11 +138,11 @@ zx_status_t Message::Encode(const fidl_type_t* type, const char** error_msg_out)
 
 zx_status_t Message::Decode(const fidl_type_t* type, const char** error_msg_out) {
   if (should_decode_union_from_xunion()) {
-    fidl_type_t v1_type = get_alt_type(type);
+    const fidl_type_t* v1_type = get_alt_type(type);
     allocated_buffer.resize(ZX_CHANNEL_MAX_MSG_BYTES);
     uint32_t size;
     zx_status_t transform_status =
-        fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_type, bytes_.data(), bytes_.actual(),
+        fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, v1_type, bytes_.data(), bytes_.actual(),
                        allocated_buffer.data(), static_cast<uint32_t>(allocated_buffer.capacity()),
                        &size, error_msg_out);
     if (transform_status != ZX_OK) {

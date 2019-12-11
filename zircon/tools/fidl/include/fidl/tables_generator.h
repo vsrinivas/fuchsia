@@ -78,7 +78,8 @@ class TablesGenerator {
 
   void Produce(CodedTypesGenerator* coded_types_generator);
 
-  template <class T> std::string AltTableReference(const T& type) const;
+  template <class T>
+  std::string AltTableReference(const T& type) const;
   const coded::Type* AltType(const coded::Type* type) const;
 
   const flat::Library* library_;

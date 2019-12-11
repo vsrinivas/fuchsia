@@ -15,7 +15,7 @@
 
 namespace fidl {
 
-const fidl_type_t get_alt_type(const fidl_type_t* type);
+const fidl_type_t* get_alt_type(const fidl_type_t* type);
 
 // This is a higher level wrapper around fidl_transform that is responsible for
 // allocating memory for the transformed bytes, then calls the provided callback

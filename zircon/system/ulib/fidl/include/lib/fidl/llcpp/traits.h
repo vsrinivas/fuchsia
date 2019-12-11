@@ -118,7 +118,7 @@ namespace internal {
 // Whether a FIDL transactional message is used as a request or a response.
 enum class TransactionalMessageKind {
   kRequest,
-  kResponse
+  kResponse,
 };
 
 // C++ 14 compatible implementation of std::void_t.

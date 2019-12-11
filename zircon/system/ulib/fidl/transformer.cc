@@ -106,24 +106,16 @@ uint32_t UnsafeInlineSize(const fidl_type_t* type, WireFormat wire_format) {
     case kFidlTypeStructPointer:
       return 8;
     case kFidlTypeUnionPointer:
-      switch (wire_format) {
-        case WireFormat::kOld:
-          return 8;
-        case WireFormat::kV1:
-          return 24;  // xunion
-      }
+      assert(wire_format == WireFormat::kOld);
+      return 8;
     case kFidlTypeVector:
     case kFidlTypeString:
       return 16;
     case kFidlTypeStruct:
       return type->coded_struct.size;
     case kFidlTypeUnion:
-      switch (wire_format) {
-        case WireFormat::kOld:
-          return type->coded_union.size;
-        case WireFormat::kV1:
-          return 24;  // xunion
-      }
+      assert(wire_format == WireFormat::kOld);
+      return type->coded_union.size;
     case kFidlTypeArray:
       return type->coded_array.array_size;
     case kFidlTypeXUnion:
@@ -346,6 +338,7 @@ class DebugInfo final {
     char type_desc[256] = {};
     fidl_format_type_name(type_, type_desc, sizeof(type_desc));
 
+    printf("src: " __FILE__ "\n");
     printf("direction: %s\n", direction().c_str());
     printf("transformer.cc:%d: %s\n", line_number_, error_msg_);
     printf("top level type: %s\n", type_desc);
@@ -363,7 +356,9 @@ class DebugInfo final {
 
         printf("0x%02x, ", buffer[i]);
 
-        if (i % 8 == 7) {
+        if (i % 0x10 == 0x07) {
+          printf("  // 0x%02x\n", i - 7);
+        } else if (i % 0x08 == 0x07) {
           printf("\n");
         }
       }
@@ -426,21 +421,14 @@ class TransformerBase {
     TRANSFORMER_ASSERT(type, position);
 
     switch (type->type_tag) {
-      case kFidlTypeStruct: {
-        const fidl_type_t ft{.type_tag = kFidlTypeStruct,
-                             .coded_struct = *type->coded_struct.alt_type};
-        return InlineSize(&ft, To(), position);
-      }
-      case kFidlTypeUnion: {
-        const fidl_type_t ft{.type_tag = kFidlTypeUnion,
-                             .coded_union = *type->coded_union.alt_type};
-        return InlineSize(&ft, To(), position);
-      }
-      case kFidlTypeArray: {
-        const fidl_type_t ft{.type_tag = kFidlTypeArray,
-                             .coded_array = *type->coded_array.alt_type};
-        return InlineSize(&ft, To(), position);
-      }
+      case kFidlTypeStruct:
+        return InlineSize(type->coded_struct.alt_type, To(), position);
+      case kFidlTypeUnion:
+        return InlineSize(type->coded_union.alt_type, To(), position);
+      case kFidlTypeArray:
+        return InlineSize(type->coded_array.alt_type, To(), position);
+      case kFidlTypeXUnion:
+        return InlineSize(type->coded_xunion.alt_type, To(), position);
       case kFidlTypePrimitive:
       case kFidlTypeEnum:
       case kFidlTypeBits:
@@ -448,7 +436,6 @@ class TransformerBase {
       case kFidlTypeUnionPointer:
       case kFidlTypeVector:
       case kFidlTypeString:
-      case kFidlTypeXUnion:
       case kFidlTypeHandle:
       case kFidlTypeTable:
         return InlineSize(type, To(), position);
@@ -488,7 +475,7 @@ class TransformerBase {
     }
 
     const auto& src_coded_struct = top_level_type_->coded_struct;
-    const auto& dst_coded_struct = *src_coded_struct.alt_type;
+    const auto& dst_coded_struct = src_coded_struct.alt_type->coded_struct;
     // Since this is the top-level struct, the first secondary object (i.e.
     // out-of-line offset) is exactly placed after this struct, i.e. the
     // struct's inline size.
@@ -517,27 +504,27 @@ class TransformerBase {
         return src_dst->Copy(position, dst_size);
       case kFidlTypeStructPointer: {
         const auto& src_coded_struct = *type->coded_struct_pointer.struct_type;
-        const auto& dst_coded_struct = *src_coded_struct.alt_type;
+        const auto& dst_coded_struct = src_coded_struct.alt_type->coded_struct;
         return TransformStructPointer(src_coded_struct, dst_coded_struct, position,
                                       out_traversal_result);
       }
       case kFidlTypeUnionPointer: {
         const auto& src_coded_union = *type->coded_union_pointer.union_type;
-        const auto& dst_coded_union = *src_coded_union.alt_type;
-        return TransformUnionPointer(src_coded_union, dst_coded_union, position,
-                                     out_traversal_result);
+        const auto& dst_coded_xunion = src_coded_union.alt_type->coded_xunion;
+        return TransformUnionPointerToOptionalXUnion(src_coded_union, dst_coded_xunion, position,
+                                                     out_traversal_result);
       }
       case kFidlTypeStruct: {
         const auto& src_coded_struct = type->coded_struct;
-        const auto& dst_coded_struct = *src_coded_struct.alt_type;
+        const auto& dst_coded_struct = src_coded_struct.alt_type->coded_struct;
         return TransformStruct(src_coded_struct, dst_coded_struct, position, dst_size,
                                out_traversal_result);
       }
       case kFidlTypeUnion: {
         const auto& src_coded_union = type->coded_union;
-        const auto& dst_coded_union = *src_coded_union.alt_type;
-        return TransformUnion(src_coded_union, dst_coded_union, position, dst_size,
-                              out_traversal_result);
+        const auto& dst_coded_union = src_coded_union.alt_type->coded_xunion;
+        return TransformUnionToXUnion(src_coded_union, dst_coded_union, position, dst_size,
+                                      out_traversal_result);
       }
       case kFidlTypeArray: {
         const auto convert = [](const FidlCodedArray& coded_array) {
@@ -550,7 +537,7 @@ class TransformerBase {
           return result;
         };
         auto src_coded_array = convert(type->coded_array);
-        auto dst_coded_array = convert(*type->coded_array.alt_type);
+        auto dst_coded_array = convert(type->coded_array.alt_type->coded_array);
         return TransformArray(src_coded_array, dst_coded_array, position, dst_size,
                               out_traversal_result);
       }
@@ -558,13 +545,38 @@ class TransformerBase {
         return TransformString(position, out_traversal_result);
       case kFidlTypeVector: {
         const auto& src_coded_vector = type->coded_vector;
-        const auto& dst_coded_vector = *src_coded_vector.alt_type;
+        const auto& dst_coded_vector = src_coded_vector.alt_type->coded_vector;
         return TransformVector(src_coded_vector, dst_coded_vector, position, out_traversal_result);
       }
       case kFidlTypeTable:
         return TransformTable(type->coded_table, position, out_traversal_result);
       case kFidlTypeXUnion:
-        return TransformXUnion(type->coded_xunion, position, out_traversal_result);
+        TRANSFORMER_ASSERT(type->coded_xunion.alt_type, position);
+
+        switch (type->coded_xunion.alt_type->type_tag) {
+          case kFidlTypeUnion:
+            return TransformXUnionToUnion(type->coded_xunion,
+                                          type->coded_xunion.alt_type->coded_union, position,
+                                          dst_size, out_traversal_result);
+          case kFidlTypeUnionPointer:
+            return TransformOptionalXUnionToUnionPointer(
+                type->coded_xunion, *type->coded_xunion.alt_type->coded_union_pointer.union_type,
+                position, out_traversal_result);
+          case kFidlTypeXUnion:
+            return TransformXUnion(type->coded_xunion, position, out_traversal_result);
+          case kFidlTypePrimitive:
+          case kFidlTypeEnum:
+          case kFidlTypeBits:
+          case kFidlTypeStruct:
+          case kFidlTypeStructPointer:
+          case kFidlTypeArray:
+          case kFidlTypeString:
+          case kFidlTypeHandle:
+          case kFidlTypeVector:
+          case kFidlTypeTable:
+            TRANSFORMER_ASSERT(false && "Invalid src_xunion alt_type->type_tag", position);
+            __builtin_unreachable();
+        }
     }
 
     return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "unknown type tag");
@@ -864,6 +876,7 @@ class TransformerBase {
         return src_envelope->num_bytes;
       }
 
+      // TODO(apang): Add test to verify that we should _not_ FIDL_ALIGN below.
       return InlineSize(type, From(), position);
     }();
 
@@ -1033,44 +1046,123 @@ class TransformerBase {
     return ZX_OK;
   }
 
-  virtual WireFormat From() const = 0;
-  virtual WireFormat To() const = 0;
+  zx_status_t TransformUnionPointerToOptionalXUnion(const FidlCodedUnion& src_coded_union,
+                                                    const FidlCodedXUnion& dst_coded_xunion,
+                                                    const Position& position,
+                                                    TraversalResult* out_traversal_result) {
+    auto presence = src_dst->Read<uint64_t>(position);
+    if (!presence) {
+      return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union pointer missing");
+    }
 
-  virtual zx_status_t TransformUnionPointer(const FidlCodedUnion& src_coded_union,
-                                            const FidlCodedUnion& dst_coded_union,
-                                            const Position& position,
-                                            TraversalResult* out_traversal_result) = 0;
+    switch (*presence) {
+      case FIDL_ALLOC_ABSENT: {
+        fidl_xunion_t absent = {};
+        const auto status = src_dst->Write(position, absent);
+        if (status != ZX_OK) {
+          return TRANSFORMER_FAIL(status, position, "unable to write union pointer absense");
+        }
+        return ZX_OK;
+      }
+      case FIDL_ALLOC_PRESENT:
+        // Ok
+        break;
+      default:
+        return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union pointer invalid");
+    }
 
-  virtual zx_status_t TransformUnion(const FidlCodedUnion& src_coded_union,
-                                     const FidlCodedUnion& dst_coded_union,
-                                     const Position& position, uint32_t dst_size,
-                                     TraversalResult* out_traversal_result) = 0;
-  inline zx_status_t Fail(zx_status_t status, const Position& position, const int line_number,
-                          const char* error_msg) {
-    debug_info_->RecordFailure(line_number, error_msg, position);
-    return status;
+    uint32_t src_aligned_size = FIDL_ALIGN(src_coded_union.size);
+    const auto union_position = Position{
+        position.src_out_of_line_offset,
+        position.src_out_of_line_offset + src_aligned_size,
+        position.dst_inline_offset,
+        position.dst_out_of_line_offset,
+    };
+
+    out_traversal_result->src_out_of_line_size += src_aligned_size;
+    return TransformUnionToXUnion(src_coded_union, dst_coded_xunion, union_position,
+                                  0 /* unused: xunions are FIDL_ALIGNed */, out_traversal_result);
   }
 
-  SrcDst* src_dst;
-  DebugInfo* const debug_info_;
+  zx_status_t TransformUnionToXUnion(const FidlCodedUnion& src_coded_union,
+                                     const FidlCodedXUnion& dst_coded_xunion,
+                                     const Position& position, uint32_t /* unused: dst_size */,
+                                     TraversalResult* out_traversal_result) {
+    TRANSFORMER_ASSERT(src_coded_union.field_count == dst_coded_xunion.field_count, position);
 
- private:
-  const fidl_type_t* top_level_type_;
-};
+    // Read: union tag.
+    const auto union_tag_ptr =
+        src_dst->Read<const fidl_union_tag_t>(position, src_coded_union.size);
+    if (!union_tag_ptr) {
+      return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union tag missing");
+    }
+    const auto union_tag = *union_tag_ptr;
 
-// TODO(apang): Mark everything override
+    // Retrieve: union field/variant.
+    if (union_tag >= src_coded_union.field_count) {
+      return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "invalid union tag");
+    }
 
-class V1ToOld final : public TransformerBase {
- public:
-  V1ToOld(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* debug_info)
-      : TransformerBase(src_dst, top_level_type, debug_info) {}
+    const FidlUnionField& src_field = src_coded_union.fields[union_tag];
+    const FidlXUnionField& dst_field = dst_coded_xunion.fields[union_tag];
 
-  WireFormat From() const { return WireFormat::kV1; }
-  WireFormat To() const { return WireFormat::kOld; }
+    // Write: xunion tag & envelope.
+    const uint32_t dst_inline_field_size = [&] {
+      if (src_field.type) {
+        return AltInlineSize(src_field.type, position);
+      } else {
+        return src_coded_union.size - src_coded_union.data_offset - src_field.padding;
+      }
+    }();
 
-  zx_status_t TransformUnionPointer(const FidlCodedUnion& src_coded_union,
-                                    const FidlCodedUnion& dst_coded_union, const Position& position,
-                                    TraversalResult* out_traversal_result) {
+    // Transform: static-union field to xunion field.
+    auto field_position = Position{
+        position.src_inline_offset + src_coded_union.data_offset,
+        position.src_out_of_line_offset,
+        position.dst_out_of_line_offset,
+        position.dst_out_of_line_offset + FIDL_ALIGN(dst_inline_field_size),
+    };
+    TraversalResult field_traversal_result;
+    zx_status_t status =
+        Transform(src_field.type, field_position, dst_inline_field_size, &field_traversal_result);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // Pad field (if needed).
+    const uint32_t dst_field_size =
+        dst_inline_field_size + field_traversal_result.dst_out_of_line_size;
+    const uint32_t dst_padding = FIDL_ALIGN(dst_field_size) - dst_field_size;
+    const auto status_pad_field =
+        src_dst->Pad(field_position.IncreaseDstInlineOffset(dst_field_size), dst_padding);
+    if (status_pad_field != ZX_OK) {
+      return TRANSFORMER_FAIL(status_pad_field, field_position,
+                              "unable to pad union-as-xunion variant");
+    }
+
+    // Write envelope header.
+    fidl_xunion_t xunion;
+    xunion.tag = dst_field.ordinal;
+    xunion.envelope.num_bytes = FIDL_ALIGN(dst_field_size);
+    xunion.envelope.num_handles = field_traversal_result.handle_count;
+    xunion.envelope.presence = FIDL_ALLOC_PRESENT;
+    const auto status_write_xunion = src_dst->Write(position, xunion);
+    if (status_write_xunion != ZX_OK) {
+      return TRANSFORMER_FAIL(status_write_xunion, position,
+                              "unable to write union-as-xunion header");
+    }
+
+    out_traversal_result->src_out_of_line_size += field_traversal_result.src_out_of_line_size;
+    out_traversal_result->dst_out_of_line_size += FIDL_ALIGN(dst_field_size);
+    out_traversal_result->handle_count += field_traversal_result.handle_count;
+
+    return ZX_OK;
+  }
+
+  zx_status_t TransformOptionalXUnionToUnionPointer(const FidlCodedXUnion& src_coded_xunion,
+                                                    const FidlCodedUnion& dst_coded_union,
+                                                    const Position& position,
+                                                    TraversalResult* out_traversal_result) {
     auto src_xunion = src_dst->Read<const fidl_xunion_t>(position);
     if (!src_xunion) {
       return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union-as-xunion missing");
@@ -1103,14 +1195,15 @@ class V1ToOld final : public TransformerBase {
 
     out_traversal_result->dst_out_of_line_size += dst_aligned_size;
 
-    return TransformUnion(src_coded_union, dst_coded_union, union_position,
-                          FIDL_ALIGN(dst_coded_union.size), out_traversal_result);
+    return TransformXUnionToUnion(src_coded_xunion, dst_coded_union, union_position,
+                                  FIDL_ALIGN(dst_coded_union.size), out_traversal_result);
   }
 
-  zx_status_t TransformUnion(const FidlCodedUnion& src_coded_union,
-                             const FidlCodedUnion& dst_coded_union, const Position& position,
-                             uint32_t dst_size, TraversalResult* out_traversal_result) {
-    TRANSFORMER_ASSERT(src_coded_union.field_count == dst_coded_union.field_count, position);
+  zx_status_t TransformXUnionToUnion(const FidlCodedXUnion& src_coded_xunion,
+                                     const FidlCodedUnion& dst_coded_union,
+                                     const Position& position, uint32_t dst_size,
+                                     TraversalResult* out_traversal_result) {
+    TRANSFORMER_ASSERT(src_coded_xunion.field_count == dst_coded_union.field_count, position);
 
     // Read: extensible-union ordinal.
     const auto src_xunion = src_dst->Read<const fidl_xunion_t>(position);
@@ -1133,11 +1226,11 @@ class V1ToOld final : public TransformerBase {
     // Retrieve: flexible-union field (or variant).
     bool src_field_found = false;
     uint32_t src_field_index = 0;
-    const FidlUnionField* src_field = nullptr;
-    for (/* src_field_index needed after the loop */; src_field_index < src_coded_union.field_count;
-         src_field_index++) {
-      const FidlUnionField* candidate_src_field = &src_coded_union.fields[src_field_index];
-      if (candidate_src_field->xunion_ordinal == src_xunion->tag) {
+    const FidlXUnionField* src_field = nullptr;
+    for (/* src_field_index needed after the loop */;
+         src_field_index < src_coded_xunion.field_count; src_field_index++) {
+      const FidlXUnionField* candidate_src_field = &src_coded_xunion.fields[src_field_index];
+      if (candidate_src_field->ordinal == src_xunion->tag) {
         src_field_found = true;
         src_field = candidate_src_field;
         break;
@@ -1183,6 +1276,7 @@ class V1ToOld final : public TransformerBase {
         return src_xunion->envelope.num_bytes;
       }
 
+      // TODO(apang): Add test to verify that we _should_ FIDL_ALIGN below.
       return FIDL_ALIGN(InlineSize(src_field->type, From(), position));
     }();
 
@@ -1214,6 +1308,33 @@ class V1ToOld final : public TransformerBase {
     out_traversal_result->src_out_of_line_size += src_field_inline_size;
     return ZX_OK;
   }
+
+  virtual WireFormat From() const = 0;
+  virtual WireFormat To() const = 0;
+
+  inline zx_status_t Fail(zx_status_t status, const Position& position, const int line_number,
+                          const char* error_msg) {
+    debug_info_->RecordFailure(line_number, error_msg, position);
+    return status;
+  }
+
+  SrcDst* src_dst;
+  DebugInfo* const debug_info_;
+
+ private:
+  const fidl_type_t* top_level_type_;
+};
+
+// TODO(apang): Mark everything override
+// TODO(apang): We can remove the V1ToOld & OldToV1 classes since they only have From() and To()
+// methods now, which can be passed into the constructor of TransformerBase.
+class V1ToOld final : public TransformerBase {
+ public:
+  V1ToOld(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* debug_info)
+      : TransformerBase(src_dst, top_level_type, debug_info) {}
+
+  WireFormat From() const { return WireFormat::kV1; }
+  WireFormat To() const { return WireFormat::kOld; }
 };
 
 class OldToV1 final : public TransformerBase {
@@ -1225,118 +1346,6 @@ class OldToV1 final : public TransformerBase {
   // TODO(apang): Could CRTP this.
   WireFormat From() const { return WireFormat::kOld; }
   WireFormat To() const { return WireFormat::kV1; }
-
-  zx_status_t TransformUnionPointer(const FidlCodedUnion& src_coded_union,
-                                    const FidlCodedUnion& dst_coded_union, const Position& position,
-                                    TraversalResult* out_traversal_result) {
-    auto presence = src_dst->Read<uint64_t>(position);
-    if (!presence) {
-      return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union pointer missing");
-    }
-
-    switch (*presence) {
-      case FIDL_ALLOC_ABSENT: {
-        fidl_xunion_t absent = {};
-        const auto status = src_dst->Write(position, absent);
-        if (status != ZX_OK) {
-          return TRANSFORMER_FAIL(status, position, "unable to write union pointer absense");
-        }
-        return ZX_OK;
-      }
-      case FIDL_ALLOC_PRESENT:
-        // Ok
-        break;
-      default:
-        return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union pointer invalid");
-    }
-
-    uint32_t src_aligned_size = FIDL_ALIGN(src_coded_union.size);
-    const auto union_position = Position{
-        position.src_out_of_line_offset,
-        position.src_out_of_line_offset + src_aligned_size,
-        position.dst_inline_offset,
-        position.dst_out_of_line_offset,
-    };
-
-    out_traversal_result->src_out_of_line_size += src_aligned_size;
-    return TransformUnion(src_coded_union, dst_coded_union, union_position,
-                          0 /* unused: xunions are FIDL_ALIGNed */, out_traversal_result);
-  }
-
-  zx_status_t TransformUnion(const FidlCodedUnion& src_coded_union,
-                             const FidlCodedUnion& dst_coded_union, const Position& position,
-                             uint32_t /* unused: dst_size */,
-                             TraversalResult* out_traversal_result) {
-    TRANSFORMER_ASSERT(src_coded_union.field_count == dst_coded_union.field_count, position);
-
-    // Read: union tag.
-    const auto union_tag_ptr =
-        src_dst->Read<const fidl_union_tag_t>(position, src_coded_union.size);
-    if (!union_tag_ptr) {
-      return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union tag missing");
-    }
-    const auto union_tag = *union_tag_ptr;
-
-    // Retrieve: union field/variant.
-    if (union_tag >= src_coded_union.field_count) {
-      return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "invalid union tag");
-    }
-
-    const FidlUnionField& src_field = src_coded_union.fields[union_tag];
-    const FidlUnionField& dst_field = dst_coded_union.fields[union_tag];
-
-    // Write: xunion tag & envelope.
-    const uint32_t dst_inline_field_size = [&] {
-      if (src_field.type) {
-        return AltInlineSize(src_field.type, position);
-      } else {
-        return src_coded_union.size - src_coded_union.data_offset - src_field.padding;
-      }
-    }();
-
-    // Transform: static-union field to xunion field.
-    auto field_position = Position{
-        position.src_inline_offset + src_coded_union.data_offset,
-        position.src_out_of_line_offset,
-        position.dst_out_of_line_offset,
-        position.dst_out_of_line_offset + FIDL_ALIGN(dst_inline_field_size),
-    };
-    TraversalResult field_traversal_result;
-    zx_status_t status =
-        Transform(src_field.type, field_position, dst_inline_field_size, &field_traversal_result);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    // Pad field (if needed).
-    const uint32_t dst_field_size =
-        dst_inline_field_size + field_traversal_result.dst_out_of_line_size;
-    const uint32_t dst_padding = FIDL_ALIGN(dst_field_size) - dst_field_size;
-    const auto status_pad_field =
-        src_dst->Pad(field_position.IncreaseDstInlineOffset(dst_field_size), dst_padding);
-    if (status_pad_field != ZX_OK) {
-      return TRANSFORMER_FAIL(status_pad_field, field_position,
-                              "unable to pad union-as-xunion variant");
-    }
-
-    // Write envelope header.
-    fidl_xunion_t xunion;
-    xunion.tag = dst_field.xunion_ordinal;
-    xunion.envelope.num_bytes = FIDL_ALIGN(dst_field_size);
-    xunion.envelope.num_handles = field_traversal_result.handle_count;
-    xunion.envelope.presence = FIDL_ALLOC_PRESENT;
-    const auto status_write_xunion = src_dst->Write(position, xunion);
-    if (status_write_xunion != ZX_OK) {
-      return TRANSFORMER_FAIL(status_write_xunion, position,
-                              "unable to write union-as-xunion header");
-    }
-
-    out_traversal_result->src_out_of_line_size += field_traversal_result.src_out_of_line_size;
-    out_traversal_result->dst_out_of_line_size += FIDL_ALIGN(dst_field_size);
-    out_traversal_result->handle_count += field_traversal_result.handle_count;
-
-    return ZX_OK;
-  }
 };
 
 }  // namespace

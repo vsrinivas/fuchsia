@@ -34,13 +34,15 @@ static const bool kFidlStrictness_Flexible = false;
 static const bool kFidlStrictness_Strict = true;
 
 // TODO(fxb/42792): Remove either this FidlAlign function or the FIDL_ALIGN macro in zircon/fidl.h.
+// clang-format off
 #ifdef __cplusplus
 constexpr
-#endif
+#endif  // __cplusplus
 static inline uint64_t FidlAlign(uint32_t offset) {
   const uint64_t alignment_mask = FIDL_ALIGNMENT - 1;
   return (offset + alignment_mask) & ~alignment_mask;
 }
+// clang-format on
 
 // Determine if the pointer is aligned to |FIDL_ALIGNMENT|.
 static inline bool FidlIsAligned(const uint8_t* ptr) {
@@ -75,18 +77,9 @@ struct FidlStructField {
   };
   uint8_t padding;
 
-  // Pointer to the alternate ("alt") version of this FidlStructField, which is
-  // the v1 version of the struct field if this is the old struct field; or the
-  // old version of the struct field if this is the v1 version.
-  const struct FidlStructField* alt_field;
-
 #ifdef __cplusplus
-  // TODO(fxb/39680): Update this constructor, so that a variant is available where not supplying
-  // the |alt_field| parameter forces the constructor caller to acknowledge it's for the old wire
-  // format only.
-  constexpr FidlStructField(const fidl_type* type, uint32_t offset, uint8_t padding,
-                            const FidlStructField* alt_field = nullptr)
-      : type(type), offset(offset), padding(padding), alt_field(alt_field) {}
+  constexpr FidlStructField(const fidl_type* type, uint32_t offset, uint8_t padding)
+      : type(type), offset(offset), padding(padding) {}
 #endif  // __cplusplus
 };
 
@@ -165,7 +158,7 @@ struct FidlCodedStruct {
   // Pointer to the alternate ("alt") version of this FidlCodedStruct, which is the v1 version of
   // the struct if this is the old struct; or the old version of the struct if this is the v1
   // version.
-  const struct FidlCodedStruct* const alt_type;
+  const fidl_type_t* const alt_type;
 };
 
 struct FidlCodedStructPointer {
@@ -187,9 +180,9 @@ struct FidlCodedUnion {
   const uint32_t size;
   const char* name;  // may be nullptr if omitted at compile time
 
-  // Pointer to the alternate ("alt") version of this FidlCodedUnion, which is the v1 version of the
-  // union if this is the old union; or the old version of the union if this is the v1 version.
-  const struct FidlCodedUnion* const alt_type;
+  // Pointer to the alternate ("alt") version of this FidlCodedUnion, which is a FidlCodedXUnion
+  // if this is an old wire-format union.
+  const fidl_type_t* const alt_type;
 };
 
 struct FidlCodedUnionPointer {
@@ -202,6 +195,10 @@ struct FidlCodedXUnion {
   const FidlNullability nullable;
   const char* name;  // may be nullptr if omitted at compile time
   const FidlStrictness strictness;
+
+  // Pointer to the alternate ("alt") version of this FidlCodedXUnion, which a FidlCodedUnion if
+  // this is a static union, or the same FidlCodedXUnion if this is an extensible union.
+  const fidl_type_t* const alt_type;
 };
 
 // An array is essentially a struct with |array_size / element_size| of the same field, named at
@@ -212,8 +209,9 @@ struct FidlCodedArray {
   const uint32_t element_size;
 
   // Pointer to the alternate ("alt") version of this FidlCodedArray, which is the v1 version of the
-  // array if this is the old struct; or the old version of the array if this is the v1 version.
-  const struct FidlCodedArray* const alt_type;
+  // array if this is for the old wire format; or the old version of the array if this is the v1
+  // version.
+  const fidl_type_t* const alt_type;
 };
 
 // TODO(fxb/39388): Switch to using this more ergonomic coding table for arrays.
@@ -222,7 +220,8 @@ struct FidlCodedArrayNew {
   const uint64_t element_count;
   const uint32_t element_size;
   const uint32_t element_padding;
-  const struct FidlCodedArrayNew* const alt_type;
+
+  const fidl_type_t* const alt_type;
 };
 
 struct FidlCodedHandle {
@@ -247,9 +246,9 @@ struct FidlCodedVector {
   const FidlNullability nullable;
 
   // Pointer to the alternate ("alt") version of this FidlCodedVector, which is the v1 version of
-  // the vector if this is the old struct; or the old version of the vector if this is the v1
+  // the vector if this is the old wire format; or the old version of the vector if this is the v1
   // version.
-  const struct FidlCodedVector* const alt_type;
+  const fidl_type_t* const alt_type;
 };
 
 struct fidl_type {

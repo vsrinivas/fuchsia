@@ -15,6 +15,8 @@ static const fidl_type_t Vector4294967295nonnullable38Pointer29conformance_Struc
 static const fidl_type_t
     Vector4294967295nonnullable67Vector4294967295nonnullable38Pointer29conformance_StructSize3Align1Table;
 static const fidl_type_t Vector1nonnullable21conformance_Sandwich1Table;
+static const fidl_type_t Array32_5uint8Table;
+static const fidl_type_t Array6_5uint8Table;
 static const fidl_type_t Array32_34conformance_TransformerSimpleTableTable;
 static const fidl_type_t Vector4294967295nonnullable21conformance_ThreeByteTable;
 static const fidl_type_t Array9_21conformance_ThreeByteTable;
@@ -44,6 +46,7 @@ static const fidl_type_t Vector4294967295nonnullable27conformance_Size5Alignment
 static const fidl_type_t Array15_27conformance_Size5Alignment1Table;
 static const fidl_type_t Vector1nonnullable33conformance_Sandwich1WithOptUnionTable;
 static const fidl_type_t Vector4294967295nullable27String4294967295nonnullableTable;
+static const fidl_type_t Array24_6uint32Table;
 static const fidl_type_t Vector4294967295nonnullable20conformance_FiveByteTable;
 static const fidl_type_t Array24_20conformance_FiveByteTable;
 extern const fidl_type_t conformance_UnionWithVectorOfVectorsTable;
@@ -59,6 +62,8 @@ extern const fidl_type_t conformance_Sandwich4Align8WithPointerTable;
 extern const fidl_type_t conformance_Sandwich4Align8Table;
 extern const fidl_type_t conformance_NoCodingTablesStressorTable;
 extern const fidl_type_t conformance_UnionSize12Align4Table;
+extern const fidl_type_t conformance_XUnionWithUnionsTable;
+extern const fidl_type_t conformance_XUnionWithUnionsNullableRefTable;
 extern const fidl_type_t conformance_Sandwich2Table;
 extern const fidl_type_t conformance_Uint8Uint16Uint32Uint64Table;
 extern const fidl_type_t conformance_Uint64Uint32Uint16Uint8Table;
@@ -77,6 +82,10 @@ extern const fidl_type_t conformance_StructWithVectorsTable;
 extern const fidl_type_t conformance_StructWithArraysTable;
 extern const fidl_type_t conformance_StructSize3Align2Table;
 extern const fidl_type_t conformance_StructSize3Align1Table;
+extern const fidl_type_t conformance_XUnionWithStructTable;
+extern const fidl_type_t conformance_XUnionWithStructNullableRefTable;
+extern const fidl_type_t conformance_XUnionWithXUnionTable;
+extern const fidl_type_t conformance_XUnionWithXUnionNullableRefTable;
 extern const fidl_type_t conformance_XUnionWithXUnionStructTable;
 extern const fidl_type_t conformance_XUnionWithStructStructTable;
 extern const fidl_type_t conformance_UnionWithVectorTable;
@@ -138,15 +147,21 @@ extern const fidl_type_t conformance_InterfaceConfigTable;
 extern const fidl_type_t conformance_TestAddEthernetDeviceRequestTable;
 extern const fidl_type_t conformance_Int64StructTable;
 extern const fidl_type_t conformance_SimpleUnionTable;
+extern const fidl_type_t conformance_SampleXUnionTable;
+extern const fidl_type_t conformance_SampleXUnionNullableRefTable;
 extern const fidl_type_t conformance_TestXUnionInTableTable;
 extern const fidl_type_t conformance_TestInlineXUnionInStructTable;
 extern const fidl_type_t conformance_TestFlexibleXUnionInStructTable;
+extern const fidl_type_t conformance_SampleStrictXUnionTable;
+extern const fidl_type_t conformance_SampleStrictXUnionNullableRefTable;
 extern const fidl_type_t conformance_TestStrictXUnionInStructTable;
 extern const fidl_type_t conformance_FiveByteTable;
 extern const fidl_type_t conformance_FiveByteInVectorTable;
 extern const fidl_type_t conformance_FiveByteInStructTable;
 extern const fidl_type_t conformance_FiveByteInArrayTable;
 extern const fidl_type_t conformance_EmptyStructTable;
+extern const fidl_type_t conformance_XUnionWithEmptyStructTable;
+extern const fidl_type_t conformance_XUnionWithEmptyStructNullableRefTable;
 extern const fidl_type_t conformance_UnionWithEmptyStructTable;
 extern const fidl_type_t conformance_StructWithOptionalsTable;
 extern const fidl_type_t conformance_EmptyStructSandwichTable;
@@ -155,6 +170,8 @@ static const fidl_type_t
 static const fidl_type_t
     v1_Vector4294967295nonnullable76v1_Vector4294967295nonnullable44v1_Pointer32v1_conformance_StructSize3Align1Table;
 static const fidl_type_t v1_Vector1nonnullable24v1_conformance_Sandwich1Table;
+static const fidl_type_t v1_Array32_5uint8Table;
+static const fidl_type_t v1_Array6_5uint8Table;
 static const fidl_type_t v1_Array32_37v1_conformance_TransformerSimpleTableTable;
 static const fidl_type_t v1_Vector4294967295nonnullable24v1_conformance_ThreeByteTable;
 static const fidl_type_t v1_Array9_24v1_conformance_ThreeByteTable;
@@ -185,6 +202,7 @@ static const fidl_type_t v1_Vector4294967295nonnullable30v1_conformance_Size5Ali
 static const fidl_type_t v1_Array15_30v1_conformance_Size5Alignment1Table;
 static const fidl_type_t v1_Vector1nonnullable36v1_conformance_Sandwich1WithOptUnionTable;
 static const fidl_type_t v1_Vector4294967295nullable30v1_String4294967295nonnullableTable;
+static const fidl_type_t v1_Array24_6uint32Table;
 static const fidl_type_t v1_Vector4294967295nonnullable23v1_conformance_FiveByteTable;
 static const fidl_type_t v1_Array24_23v1_conformance_FiveByteTable;
 extern const fidl_type_t v1_conformance_UnionWithVectorOfVectorsTable;
@@ -192,6 +210,7 @@ extern const fidl_type_t v1_conformance_Sandwich9Table;
 extern const fidl_type_t v1_conformance_UnionWithBoundStringTable;
 extern const fidl_type_t v1_conformance_UnionWithBoundStringStructTable;
 extern const fidl_type_t v1_conformance_UnionSize8Align4Table;
+static const fidl_type_t v1_Pointer31v1_conformance_UnionSize8Align4Table;
 extern const fidl_type_t v1_conformance_Sandwich1Table;
 extern const fidl_type_t v1_conformance_OutOfLineSandwich1Table;
 extern const fidl_type_t v1_conformance_UnionSize36Align4Table;
@@ -200,6 +219,8 @@ extern const fidl_type_t v1_conformance_Sandwich4Align8WithPointerTable;
 extern const fidl_type_t v1_conformance_Sandwich4Align8Table;
 extern const fidl_type_t v1_conformance_NoCodingTablesStressorTable;
 extern const fidl_type_t v1_conformance_UnionSize12Align4Table;
+extern const fidl_type_t v1_conformance_XUnionWithUnionsTable;
+extern const fidl_type_t v1_conformance_XUnionWithUnionsNullableRefTable;
 extern const fidl_type_t v1_conformance_Sandwich2Table;
 extern const fidl_type_t v1_conformance_Uint8Uint16Uint32Uint64Table;
 extern const fidl_type_t v1_conformance_Uint64Uint32Uint16Uint8Table;
@@ -218,6 +239,10 @@ extern const fidl_type_t v1_conformance_StructWithVectorsTable;
 extern const fidl_type_t v1_conformance_StructWithArraysTable;
 extern const fidl_type_t v1_conformance_StructSize3Align2Table;
 extern const fidl_type_t v1_conformance_StructSize3Align1Table;
+extern const fidl_type_t v1_conformance_XUnionWithStructTable;
+extern const fidl_type_t v1_conformance_XUnionWithStructNullableRefTable;
+extern const fidl_type_t v1_conformance_XUnionWithXUnionTable;
+extern const fidl_type_t v1_conformance_XUnionWithXUnionNullableRefTable;
 extern const fidl_type_t v1_conformance_XUnionWithXUnionStructTable;
 extern const fidl_type_t v1_conformance_XUnionWithStructStructTable;
 extern const fidl_type_t v1_conformance_UnionWithVectorTable;
@@ -236,6 +261,7 @@ extern const fidl_type_t v1_conformance_Sandwich3Table;
 extern const fidl_type_t v1_conformance_StringWrapperTable;
 extern const fidl_type_t v1_conformance_StringUnionVectorTable;
 extern const fidl_type_t v1_conformance_StringUnionTable;
+static const fidl_type_t v1_Pointer26v1_conformance_StringUnionTable;
 extern const fidl_type_t v1_conformance_ArrayStructTable;
 extern const fidl_type_t v1_conformance_Size8Align8Table;
 extern const fidl_type_t v1_conformance_Size5Alignment4Table;
@@ -279,16 +305,23 @@ extern const fidl_type_t v1_conformance_InterfaceConfigTable;
 extern const fidl_type_t v1_conformance_TestAddEthernetDeviceRequestTable;
 extern const fidl_type_t v1_conformance_Int64StructTable;
 extern const fidl_type_t v1_conformance_SimpleUnionTable;
+extern const fidl_type_t v1_conformance_SampleXUnionTable;
+extern const fidl_type_t v1_conformance_SampleXUnionNullableRefTable;
 extern const fidl_type_t v1_conformance_TestXUnionInTableTable;
 extern const fidl_type_t v1_conformance_TestInlineXUnionInStructTable;
 extern const fidl_type_t v1_conformance_TestFlexibleXUnionInStructTable;
+extern const fidl_type_t v1_conformance_SampleStrictXUnionTable;
+extern const fidl_type_t v1_conformance_SampleStrictXUnionNullableRefTable;
 extern const fidl_type_t v1_conformance_TestStrictXUnionInStructTable;
 extern const fidl_type_t v1_conformance_FiveByteTable;
 extern const fidl_type_t v1_conformance_FiveByteInVectorTable;
 extern const fidl_type_t v1_conformance_FiveByteInStructTable;
 extern const fidl_type_t v1_conformance_FiveByteInArrayTable;
 extern const fidl_type_t v1_conformance_EmptyStructTable;
+extern const fidl_type_t v1_conformance_XUnionWithEmptyStructTable;
+extern const fidl_type_t v1_conformance_XUnionWithEmptyStructNullableRefTable;
 extern const fidl_type_t v1_conformance_UnionWithEmptyStructTable;
+static const fidl_type_t v1_Pointer35v1_conformance_UnionWithEmptyStructTable;
 extern const fidl_type_t v1_conformance_StructWithOptionalsTable;
 extern const fidl_type_t v1_conformance_EmptyStructSandwichTable;
 
@@ -461,8 +494,7 @@ static const fidl_type_t Vector4294967295nonnullable38Pointer29conformance_Struc
           .element_size = 8u,
           .nullable = kFidlNullability_Nonnullable,
           .alt_type =
-              &v1_Vector4294967295nonnullable44v1_Pointer32v1_conformance_StructSize3Align1Table
-                   .coded_vector}}};
+              &v1_Vector4294967295nonnullable44v1_Pointer32v1_conformance_StructSize3Align1Table}}};
 
 static const fidl_type_t
     Vector4294967295nonnullable67Vector4294967295nonnullable38Pointer29conformance_StructSize3Align1Table =
@@ -473,8 +505,7 @@ static const fidl_type_t
               .element_size = 16u,
               .nullable = kFidlNullability_Nonnullable,
               .alt_type =
-                  &v1_Vector4294967295nonnullable76v1_Vector4294967295nonnullable44v1_Pointer32v1_conformance_StructSize3Align1Table
-                       .coded_vector}}};
+                  &v1_Vector4294967295nonnullable76v1_Vector4294967295nonnullable44v1_Pointer32v1_conformance_StructSize3Align1Table}}};
 
 static const fidl_type_t String5nonnullableTable = {
     .type_tag = kFidlTypeString,
@@ -486,36 +517,47 @@ static const fidl_type_t String4294967295nonnullableTable = {
 
 static const fidl_type_t Vector1nonnullable21conformance_Sandwich1Table = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &conformance_Sandwich1Table,
-         .max_count = 1u,
-         .element_size = 16u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &v1_Vector1nonnullable24v1_conformance_Sandwich1Table.coded_vector}}};
+    {.coded_vector = {.element = &conformance_Sandwich1Table,
+                      .max_count = 1u,
+                      .element_size = 16u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &v1_Vector1nonnullable24v1_conformance_Sandwich1Table}}};
+
+static const fidl_type_t Array32_5uint8Table = {
+    .type_tag = kFidlTypeArray,
+    {.coded_array = {.element = NULL,
+                     .array_size = 32u,
+                     .element_size = 1u,
+                     .alt_type = &v1_Array32_5uint8Table}}};
+
+static const fidl_type_t Array6_5uint8Table = {
+    .type_tag = kFidlTypeArray,
+    {.coded_array = {.element = NULL,
+                     .array_size = 6u,
+                     .element_size = 1u,
+                     .alt_type = &v1_Array6_5uint8Table}}};
 
 static const fidl_type_t Array32_34conformance_TransformerSimpleTableTable = {
     .type_tag = kFidlTypeArray,
-    {.coded_array = {
-         .element = &conformance_TransformerSimpleTableTable,
-         .array_size = 32u,
-         .element_size = 16u,
-         .alt_type = &v1_Array32_37v1_conformance_TransformerSimpleTableTable.coded_array}}};
+    {.coded_array = {.element = &conformance_TransformerSimpleTableTable,
+                     .array_size = 32u,
+                     .element_size = 16u,
+                     .alt_type = &v1_Array32_37v1_conformance_TransformerSimpleTableTable}}};
 
 static const fidl_type_t Vector4294967295nonnullable21conformance_ThreeByteTable = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &conformance_ThreeByteTable,
-         .max_count = 4294967295u,
-         .element_size = 3u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &v1_Vector4294967295nonnullable24v1_conformance_ThreeByteTable.coded_vector}}};
+    {.coded_vector = {.element = &conformance_ThreeByteTable,
+                      .max_count = 4294967295u,
+                      .element_size = 3u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &v1_Vector4294967295nonnullable24v1_conformance_ThreeByteTable}}};
 
 static const fidl_type_t Array9_21conformance_ThreeByteTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &conformance_ThreeByteTable,
                      .array_size = 9u,
                      .element_size = 3u,
-                     .alt_type = &v1_Array9_24v1_conformance_ThreeByteTable.coded_array}}};
+                     .alt_type = &v1_Array9_24v1_conformance_ThreeByteTable}}};
 
 static const fidl_type_t Vector4294967295nonnullable5uint8Table = {
     .type_tag = kFidlTypeVector,
@@ -523,7 +565,7 @@ static const fidl_type_t Vector4294967295nonnullable5uint8Table = {
                       .max_count = 4294967295u,
                       .element_size = 1u,
                       .nullable = kFidlNullability_Nonnullable,
-                      .alt_type = &v1_Vector4294967295nonnullable5uint8Table.coded_vector}}};
+                      .alt_type = &v1_Vector4294967295nonnullable5uint8Table}}};
 
 static const fidl_type_t Vector4294967295nonnullable5int32Table = {
     .type_tag = kFidlTypeVector,
@@ -531,7 +573,7 @@ static const fidl_type_t Vector4294967295nonnullable5int32Table = {
                       .max_count = 4294967295u,
                       .element_size = 4u,
                       .nullable = kFidlNullability_Nonnullable,
-                      .alt_type = &v1_Vector4294967295nonnullable5int32Table.coded_vector}}};
+                      .alt_type = &v1_Vector4294967295nonnullable5int32Table}}};
 
 static const fidl_type_t Vector4294967295nonnullable27String4294967295nonnullableTable = {
     .type_tag = kFidlTypeVector,
@@ -540,8 +582,7 @@ static const fidl_type_t Vector4294967295nonnullable27String4294967295nonnullabl
          .max_count = 4294967295u,
          .element_size = 16u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable.coded_vector}}};
+         .alt_type = &v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable}}};
 
 static const fidl_type_t String4294967295nullableTable = {
     .type_tag = kFidlTypeString,
@@ -554,8 +595,7 @@ static const fidl_type_t Vector4294967295nonnullable24String4294967295nullableTa
          .max_count = 4294967295u,
          .element_size = 16u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &v1_Vector4294967295nonnullable27v1_String4294967295nullableTable.coded_vector}}};
+         .alt_type = &v1_Vector4294967295nonnullable27v1_String4294967295nullableTable}}};
 
 static const fidl_type_t Vector4294967295nonnullable25conformance_StructWithIntTable = {
     .type_tag = kFidlTypeVector,
@@ -564,8 +604,7 @@ static const fidl_type_t Vector4294967295nonnullable25conformance_StructWithIntT
          .max_count = 4294967295u,
          .element_size = 4u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &v1_Vector4294967295nonnullable28v1_conformance_StructWithIntTable.coded_vector}}};
+         .alt_type = &v1_Vector4294967295nonnullable28v1_conformance_StructWithIntTable}}};
 
 static const fidl_type_t Vector4294967295nonnullable34Pointer25conformance_StructWithIntTable = {
     .type_tag = kFidlTypeVector,
@@ -574,8 +613,8 @@ static const fidl_type_t Vector4294967295nonnullable34Pointer25conformance_Struc
          .max_count = 4294967295u,
          .element_size = 8u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &v1_Vector4294967295nonnullable40v1_Pointer28v1_conformance_StructWithIntTable
-                          .coded_vector}}};
+         .alt_type =
+             &v1_Vector4294967295nonnullable40v1_Pointer28v1_conformance_StructWithIntTable}}};
 
 static const fidl_type_t Vector4294967295nonnullable33Vector4294967295nonnullable5int32Table = {
     .type_tag = kFidlTypeVector,
@@ -584,37 +623,35 @@ static const fidl_type_t Vector4294967295nonnullable33Vector4294967295nonnullabl
          .max_count = 4294967295u,
          .element_size = 16u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &v1_Vector4294967295nonnullable36v1_Vector4294967295nonnullable5int32Table
-                          .coded_vector}}};
+         .alt_type = &v1_Vector4294967295nonnullable36v1_Vector4294967295nonnullable5int32Table}}};
 
 static const fidl_type_t Array32_27String4294967295nonnullableTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &String4294967295nonnullableTable,
                      .array_size = 32u,
                      .element_size = 16u,
-                     .alt_type = &v1_Array32_30v1_String4294967295nonnullableTable.coded_array}}};
+                     .alt_type = &v1_Array32_30v1_String4294967295nonnullableTable}}};
 
 static const fidl_type_t Array32_24String4294967295nullableTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &String4294967295nullableTable,
                      .array_size = 32u,
                      .element_size = 16u,
-                     .alt_type = &v1_Array32_27v1_String4294967295nullableTable.coded_array}}};
+                     .alt_type = &v1_Array32_27v1_String4294967295nullableTable}}};
 
 static const fidl_type_t Array8_25conformance_StructWithIntTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &conformance_StructWithIntTable,
                      .array_size = 8u,
                      .element_size = 4u,
-                     .alt_type = &v1_Array8_28v1_conformance_StructWithIntTable.coded_array}}};
+                     .alt_type = &v1_Array8_28v1_conformance_StructWithIntTable}}};
 
 static const fidl_type_t Array16_34Pointer25conformance_StructWithIntTable = {
     .type_tag = kFidlTypeArray,
-    {.coded_array = {
-         .element = &Pointer25conformance_StructWithIntTable,
-         .array_size = 16u,
-         .element_size = 8u,
-         .alt_type = &v1_Array16_40v1_Pointer28v1_conformance_StructWithIntTable.coded_array}}};
+    {.coded_array = {.element = &Pointer25conformance_StructWithIntTable,
+                     .array_size = 16u,
+                     .element_size = 8u,
+                     .alt_type = &v1_Array16_40v1_Pointer28v1_conformance_StructWithIntTable}}};
 
 static const fidl_type_t Vector4294967295nonnullable29conformance_StructSize3Align1Table = {
     .type_tag = kFidlTypeVector,
@@ -623,8 +660,7 @@ static const fidl_type_t Vector4294967295nonnullable29conformance_StructSize3Ali
          .max_count = 4294967295u,
          .element_size = 3u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &v1_Vector4294967295nonnullable32v1_conformance_StructSize3Align1Table.coded_vector}}};
+         .alt_type = &v1_Vector4294967295nonnullable32v1_conformance_StructSize3Align1Table}}};
 
 static const fidl_type_t Vector4294967295nonnullable29conformance_StructSize3Align2Table = {
     .type_tag = kFidlTypeVector,
@@ -633,8 +669,7 @@ static const fidl_type_t Vector4294967295nonnullable29conformance_StructSize3Ali
          .max_count = 4294967295u,
          .element_size = 4u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &v1_Vector4294967295nonnullable32v1_conformance_StructSize3Align2Table.coded_vector}}};
+         .alt_type = &v1_Vector4294967295nonnullable32v1_conformance_StructSize3Align2Table}}};
 
 static const fidl_type_t Vector4294967295nonnullable6uint32Table = {
     .type_tag = kFidlTypeVector,
@@ -642,21 +677,21 @@ static const fidl_type_t Vector4294967295nonnullable6uint32Table = {
                       .max_count = 4294967295u,
                       .element_size = 4u,
                       .nullable = kFidlNullability_Nonnullable,
-                      .alt_type = &v1_Vector4294967295nonnullable6uint32Table.coded_vector}}};
+                      .alt_type = &v1_Vector4294967295nonnullable6uint32Table}}};
 
 static const fidl_type_t Array6_29conformance_StructSize3Align1Table = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &conformance_StructSize3Align1Table,
                      .array_size = 6u,
                      .element_size = 3u,
-                     .alt_type = &v1_Array6_32v1_conformance_StructSize3Align1Table.coded_array}}};
+                     .alt_type = &v1_Array6_32v1_conformance_StructSize3Align1Table}}};
 
 static const fidl_type_t Array8_29conformance_StructSize3Align2Table = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &conformance_StructSize3Align2Table,
                      .array_size = 8u,
                      .element_size = 4u,
-                     .alt_type = &v1_Array8_32v1_conformance_StructSize3Align2Table.coded_array}}};
+                     .alt_type = &v1_Array8_32v1_conformance_StructSize3Align2Table}}};
 
 static const fidl_type_t Vector4294967295nonnullable28conformance_UnionSize8Align4Table = {
     .type_tag = kFidlTypeVector,
@@ -665,8 +700,7 @@ static const fidl_type_t Vector4294967295nonnullable28conformance_UnionSize8Alig
          .max_count = 4294967295u,
          .element_size = 8u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &v1_Vector4294967295nonnullable31v1_conformance_UnionSize8Align4Table.coded_vector}}};
+         .alt_type = &v1_Vector4294967295nonnullable31v1_conformance_UnionSize8Align4Table}}};
 
 static const fidl_type_t Vector3nonnullable32Pointer23conformance_StringUnionTable = {
     .type_tag = kFidlTypeVector,
@@ -675,23 +709,21 @@ static const fidl_type_t Vector3nonnullable32Pointer23conformance_StringUnionTab
          .max_count = 3u,
          .element_size = 8u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &v1_Vector3nonnullable38v1_Pointer26v1_conformance_StringUnionTable.coded_vector}}};
+         .alt_type = &v1_Vector3nonnullable38v1_Pointer26v1_conformance_StringUnionTable}}};
 
 static const fidl_type_t Array72_23conformance_StringUnionTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &conformance_StringUnionTable,
                      .array_size = 72u,
                      .element_size = 24u,
-                     .alt_type = &v1_Array72_26v1_conformance_StringUnionTable.coded_array}}};
+                     .alt_type = &v1_Array72_26v1_conformance_StringUnionTable}}};
 
 static const fidl_type_t Array24_32Pointer23conformance_StringUnionTable = {
     .type_tag = kFidlTypeArray,
-    {.coded_array = {
-         .element = &Pointer23conformance_StringUnionTable,
-         .array_size = 24u,
-         .element_size = 8u,
-         .alt_type = &v1_Array72_38v1_Pointer26v1_conformance_StringUnionTable.coded_array}}};
+    {.coded_array = {.element = &Pointer23conformance_StringUnionTable,
+                     .array_size = 24u,
+                     .element_size = 8u,
+                     .alt_type = &v1_Array72_38v1_Pointer26v1_conformance_StringUnionTable}}};
 
 static const fidl_type_t Vector4294967295nonnullable27conformance_Size5Alignment4Table = {
     .type_tag = kFidlTypeVector,
@@ -700,15 +732,14 @@ static const fidl_type_t Vector4294967295nonnullable27conformance_Size5Alignment
          .max_count = 4294967295u,
          .element_size = 8u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &v1_Vector4294967295nonnullable30v1_conformance_Size5Alignment4Table.coded_vector}}};
+         .alt_type = &v1_Vector4294967295nonnullable30v1_conformance_Size5Alignment4Table}}};
 
 static const fidl_type_t Array24_27conformance_Size5Alignment4Table = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &conformance_Size5Alignment4Table,
                      .array_size = 24u,
                      .element_size = 8u,
-                     .alt_type = &v1_Array24_30v1_conformance_Size5Alignment4Table.coded_array}}};
+                     .alt_type = &v1_Array24_30v1_conformance_Size5Alignment4Table}}};
 
 static const fidl_type_t Vector4294967295nonnullable27conformance_Size5Alignment1Table = {
     .type_tag = kFidlTypeVector,
@@ -717,15 +748,14 @@ static const fidl_type_t Vector4294967295nonnullable27conformance_Size5Alignment
          .max_count = 4294967295u,
          .element_size = 5u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &v1_Vector4294967295nonnullable30v1_conformance_Size5Alignment1Table.coded_vector}}};
+         .alt_type = &v1_Vector4294967295nonnullable30v1_conformance_Size5Alignment1Table}}};
 
 static const fidl_type_t Array15_27conformance_Size5Alignment1Table = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &conformance_Size5Alignment1Table,
                      .array_size = 15u,
                      .element_size = 5u,
-                     .alt_type = &v1_Array15_30v1_conformance_Size5Alignment1Table.coded_array}}};
+                     .alt_type = &v1_Array15_30v1_conformance_Size5Alignment1Table}}};
 
 static const fidl_type_t Vector1nonnullable33conformance_Sandwich1WithOptUnionTable = {
     .type_tag = kFidlTypeVector,
@@ -734,8 +764,7 @@ static const fidl_type_t Vector1nonnullable33conformance_Sandwich1WithOptUnionTa
          .max_count = 1u,
          .element_size = 24u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &v1_Vector1nonnullable36v1_conformance_Sandwich1WithOptUnionTable.coded_vector}}};
+         .alt_type = &v1_Vector1nonnullable36v1_conformance_Sandwich1WithOptUnionTable}}};
 
 static const fidl_type_t String2nonnullableTable = {
     .type_tag = kFidlTypeString,
@@ -752,24 +781,29 @@ static const fidl_type_t Vector4294967295nullable27String4294967295nonnullableTa
          .max_count = 4294967295u,
          .element_size = 16u,
          .nullable = kFidlNullability_Nullable,
-         .alt_type =
-             &v1_Vector4294967295nullable30v1_String4294967295nonnullableTable.coded_vector}}};
+         .alt_type = &v1_Vector4294967295nullable30v1_String4294967295nonnullableTable}}};
+
+static const fidl_type_t Array24_6uint32Table = {
+    .type_tag = kFidlTypeArray,
+    {.coded_array = {.element = NULL,
+                     .array_size = 24u,
+                     .element_size = 4u,
+                     .alt_type = &v1_Array24_6uint32Table}}};
 
 static const fidl_type_t Vector4294967295nonnullable20conformance_FiveByteTable = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &conformance_FiveByteTable,
-         .max_count = 4294967295u,
-         .element_size = 8u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &v1_Vector4294967295nonnullable23v1_conformance_FiveByteTable.coded_vector}}};
+    {.coded_vector = {.element = &conformance_FiveByteTable,
+                      .max_count = 4294967295u,
+                      .element_size = 8u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &v1_Vector4294967295nonnullable23v1_conformance_FiveByteTable}}};
 
 static const fidl_type_t Array24_20conformance_FiveByteTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &conformance_FiveByteTable,
                      .array_size = 24u,
                      .element_size = 8u,
-                     .alt_type = &v1_Array24_23v1_conformance_FiveByteTable.coded_array}}};
+                     .alt_type = &v1_Array24_23v1_conformance_FiveByteTable}}};
 
 static const struct FidlUnionField Fields36conformance_UnionWithVectorOfVectors[] = {
     /*FidlUnionField*/
@@ -784,7 +818,7 @@ const fidl_type_t conformance_UnionWithVectorOfVectorsTable = {
                      .data_offset = 8u,
                      .size = 24u,
                      .name = "conformance/UnionWithVectorOfVectors",
-                     .alt_type = &v1_conformance_UnionWithVectorOfVectorsTable.coded_union}}};
+                     .alt_type = &v1_conformance_UnionWithVectorOfVectorsTable}}};
 
 static const struct FidlStructField Fields21conformance_Sandwich9[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 2u, .padding = 6u},
@@ -799,7 +833,7 @@ const fidl_type_t conformance_Sandwich9Table = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/Sandwich9",
-                      .alt_type = &v1_conformance_Sandwich9Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich9Table}}};
 
 static const struct FidlUnionField Fields32conformance_UnionWithBoundString[] = {
     /*FidlUnionField*/ {.type = &String5nonnullableTable, .padding = 0u, .xunion_ordinal = 1u}};
@@ -810,7 +844,7 @@ const fidl_type_t conformance_UnionWithBoundStringTable = {
                      .data_offset = 8u,
                      .size = 24u,
                      .name = "conformance/UnionWithBoundString",
-                     .alt_type = &v1_conformance_UnionWithBoundStringTable.coded_union}}};
+                     .alt_type = &v1_conformance_UnionWithBoundStringTable}}};
 
 static const struct FidlStructField Fields38conformance_UnionWithBoundStringStruct[] = {
     /*FidlStructField*/ {
@@ -823,7 +857,7 @@ const fidl_type_t conformance_UnionWithBoundStringStructTable = {
                       .max_out_of_line = 8u,
                       .contains_union = true,
                       .name = "conformance/UnionWithBoundStringStruct",
-                      .alt_type = &v1_conformance_UnionWithBoundStringStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_UnionWithBoundStringStructTable}}};
 
 static const struct FidlUnionField Fields28conformance_UnionSize8Align4[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 3u, .xunion_ordinal = 1u},
@@ -836,7 +870,7 @@ const fidl_type_t conformance_UnionSize8Align4Table = {
                      .data_offset = 4u,
                      .size = 8u,
                      .name = "conformance/UnionSize8Align4",
-                     .alt_type = &v1_conformance_UnionSize8Align4Table.coded_union}}};
+                     .alt_type = &v1_conformance_UnionSize8Align4Table}}};
 
 static const struct FidlStructField Fields21conformance_Sandwich1[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u},
@@ -850,7 +884,7 @@ const fidl_type_t conformance_Sandwich1Table = {
                       .max_out_of_line = 0u,
                       .contains_union = true,
                       .name = "conformance/Sandwich1",
-                      .alt_type = &v1_conformance_Sandwich1Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich1Table}}};
 
 static const struct FidlStructField Fields30conformance_OutOfLineSandwich1[] = {
     /*FidlStructField*/ {.type = &String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -865,13 +899,13 @@ const fidl_type_t conformance_OutOfLineSandwich1Table = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/OutOfLineSandwich1",
-                      .alt_type = &v1_conformance_OutOfLineSandwich1Table.coded_struct}}};
+                      .alt_type = &v1_conformance_OutOfLineSandwich1Table}}};
 
 static const struct FidlUnionField Fields29conformance_UnionSize36Align4[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 31u, .xunion_ordinal = 1u},
     /*FidlUnionField*/ {.type = NULL, .padding = 31u, .xunion_ordinal = 2u},
     /*FidlUnionField*/ {.type = NULL, .padding = 31u, .xunion_ordinal = 3u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 0u, .xunion_ordinal = 4u}};
+    /*FidlUnionField*/ {.type = &Array32_5uint8Table, .padding = 0u, .xunion_ordinal = 4u}};
 const fidl_type_t conformance_UnionSize36Align4Table = {
     .type_tag = kFidlTypeUnion,
     {.coded_union = {.fields = Fields29conformance_UnionSize36Align4,
@@ -879,7 +913,7 @@ const fidl_type_t conformance_UnionSize36Align4Table = {
                      .data_offset = 4u,
                      .size = 36u,
                      .name = "conformance/UnionSize36Align4",
-                     .alt_type = &v1_conformance_UnionSize36Align4Table.coded_union}}};
+                     .alt_type = &v1_conformance_UnionSize36Align4Table}}};
 
 static const struct FidlStructField Fields21conformance_Sandwich4[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u},
@@ -893,7 +927,7 @@ const fidl_type_t conformance_Sandwich4Table = {
                       .max_out_of_line = 0u,
                       .contains_union = true,
                       .name = "conformance/Sandwich4",
-                      .alt_type = &v1_conformance_Sandwich4Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich4Table}}};
 
 static const struct FidlStructField Fields38conformance_Sandwich4Align8WithPointer[] = {
     /*FidlStructField*/ {.type = &conformance_Sandwich4Table, .offset = 0u, .padding = 4u},
@@ -907,7 +941,7 @@ const fidl_type_t conformance_Sandwich4Align8WithPointerTable = {
                       .max_out_of_line = 8u,
                       .contains_union = true,
                       .name = "conformance/Sandwich4Align8WithPointer",
-                      .alt_type = &v1_conformance_Sandwich4Align8WithPointerTable.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich4Align8WithPointerTable}}};
 
 static const struct FidlStructField Fields27conformance_Sandwich4Align8[] = {
     /*FidlStructField*/ {.type = &conformance_Sandwich4Table, .offset = 0u, .padding = 4u},
@@ -920,7 +954,7 @@ const fidl_type_t conformance_Sandwich4Align8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = true,
                       .name = "conformance/Sandwich4Align8",
-                      .alt_type = &v1_conformance_Sandwich4Align8Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich4Align8Table}}};
 
 static const struct FidlStructField Fields34conformance_NoCodingTablesStressor[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u},
@@ -948,13 +982,13 @@ const fidl_type_t conformance_NoCodingTablesStressorTable = {
                       .max_out_of_line = 16u,
                       .contains_union = true,
                       .name = "conformance/NoCodingTablesStressor",
-                      .alt_type = &v1_conformance_NoCodingTablesStressorTable.coded_struct}}};
+                      .alt_type = &v1_conformance_NoCodingTablesStressorTable}}};
 
 static const struct FidlUnionField Fields29conformance_UnionSize12Align4[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 1u},
     /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 2u},
     /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 3u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 2u, .xunion_ordinal = 4u}};
+    /*FidlUnionField*/ {.type = &Array6_5uint8Table, .padding = 2u, .xunion_ordinal = 4u}};
 const fidl_type_t conformance_UnionSize12Align4Table = {
     .type_tag = kFidlTypeUnion,
     {.coded_union = {.fields = Fields29conformance_UnionSize12Align4,
@@ -962,7 +996,7 @@ const fidl_type_t conformance_UnionSize12Align4Table = {
                      .data_offset = 4u,
                      .size = 12u,
                      .name = "conformance/UnionSize12Align4",
-                     .alt_type = &v1_conformance_UnionSize12Align4Table.coded_union}}};
+                     .alt_type = &v1_conformance_UnionSize12Align4Table}}};
 
 static const struct FidlXUnionField Fields28conformance_XUnionWithUnions[] = {
     /*FidlXUnionField*/ {.type = &conformance_UnionSize8Align4Table, .ordinal = 684009751u},
@@ -973,8 +1007,8 @@ const fidl_type_t conformance_XUnionWithUnionsTable = {
                       .fields = Fields28conformance_XUnionWithUnions,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/XUnionWithUnions",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &v1_conformance_XUnionWithUnionsTable}}};
 static const struct FidlXUnionField Fields39conformance_XUnionWithUnionsNullableRef[] = {
     /*FidlXUnionField*/ {.type = &conformance_UnionSize8Align4Table, .ordinal = 684009751u},
     /*FidlXUnionField*/ {.type = &conformance_UnionSize12Align4Table, .ordinal = 1971727256u}};
@@ -984,8 +1018,8 @@ const fidl_type_t conformance_XUnionWithUnionsNullableRefTable = {
                       .fields = Fields39conformance_XUnionWithUnionsNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/XUnionWithUnions",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &v1_conformance_XUnionWithUnionsNullableRefTable}}};
 static const struct FidlStructField Fields21conformance_Sandwich2[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u},
     /*FidlStructField*/ {.type = &conformance_UnionSize12Align4Table, .offset = 4u, .padding = 0u},
@@ -998,7 +1032,7 @@ const fidl_type_t conformance_Sandwich2Table = {
                       .max_out_of_line = 0u,
                       .contains_union = true,
                       .name = "conformance/Sandwich2",
-                      .alt_type = &v1_conformance_Sandwich2Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich2Table}}};
 
 static const struct FidlStructField Fields35conformance_Uint8Uint16Uint32Uint64[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 1u},
@@ -1013,7 +1047,7 @@ const fidl_type_t conformance_Uint8Uint16Uint32Uint64Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Uint8Uint16Uint32Uint64",
-                      .alt_type = &v1_conformance_Uint8Uint16Uint32Uint64Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Uint8Uint16Uint32Uint64Table}}};
 
 static const struct FidlStructField Fields35conformance_Uint64Uint32Uint16Uint8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u},
@@ -1028,7 +1062,7 @@ const fidl_type_t conformance_Uint64Uint32Uint16Uint8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Uint64Uint32Uint16Uint8",
-                      .alt_type = &v1_conformance_Uint64Uint32Uint16Uint8Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Uint64Uint32Uint16Uint8Table}}};
 
 static const struct FidlTableField Fields34conformance_TransformerSimpleTable[] = {
     /*FidlTableField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 1u}};
@@ -1049,7 +1083,7 @@ const fidl_type_t conformance_SimpleTableArrayStructTable = {
                       .max_out_of_line = 48u,
                       .contains_union = false,
                       .name = "conformance/SimpleTableArrayStruct",
-                      .alt_type = &v1_conformance_SimpleTableArrayStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_SimpleTableArrayStructTable}}};
 
 static const struct FidlStructField Fields34conformance_TransformerEmptyStruct[] = {};
 const fidl_type_t conformance_TransformerEmptyStructTable = {
@@ -1060,7 +1094,7 @@ const fidl_type_t conformance_TransformerEmptyStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/TransformerEmptyStruct",
-                      .alt_type = &v1_conformance_TransformerEmptyStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_TransformerEmptyStructTable}}};
 
 static const struct FidlUnionField Fields28conformance_EmptyStructUnion[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 3u, .xunion_ordinal = 1u},
@@ -1073,7 +1107,7 @@ const fidl_type_t conformance_EmptyStructUnionTable = {
                      .data_offset = 4u,
                      .size = 8u,
                      .name = "conformance/EmptyStructUnion",
-                     .alt_type = &v1_conformance_EmptyStructUnionTable.coded_union}}};
+                     .alt_type = &v1_conformance_EmptyStructUnionTable}}};
 
 static const struct FidlStructField Fields34conformance_EmptyStructUnionStruct[] = {
     /*FidlStructField*/ {.type = &conformance_EmptyStructUnionTable, .offset = 0u, .padding = 0u}};
@@ -1085,7 +1119,7 @@ const fidl_type_t conformance_EmptyStructUnionStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = true,
                       .name = "conformance/EmptyStructUnionStruct",
-                      .alt_type = &v1_conformance_EmptyStructUnionStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_EmptyStructUnionStructTable}}};
 
 static const struct FidlStructField Fields21conformance_ThreeByte[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 0u},
@@ -1099,7 +1133,7 @@ const fidl_type_t conformance_ThreeByteTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/ThreeByte",
-                      .alt_type = &v1_conformance_ThreeByteTable.coded_struct}}};
+                      .alt_type = &v1_conformance_ThreeByteTable}}};
 
 static const struct FidlStructField Fields29conformance_ThreeByteInVector[] = {
     /*FidlStructField*/ {.type = &Vector4294967295nonnullable21conformance_ThreeByteTable,
@@ -1113,7 +1147,7 @@ const fidl_type_t conformance_ThreeByteInVectorTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/ThreeByteInVector",
-                      .alt_type = &v1_conformance_ThreeByteInVectorTable.coded_struct}}};
+                      .alt_type = &v1_conformance_ThreeByteInVectorTable}}};
 
 static const struct FidlStructField Fields29conformance_ThreeByteInStruct[] = {
     /*FidlStructField*/ {.type = &conformance_ThreeByteTable, .offset = 0u, .padding = 0u},
@@ -1127,7 +1161,7 @@ const fidl_type_t conformance_ThreeByteInStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/ThreeByteInStruct",
-                      .alt_type = &v1_conformance_ThreeByteInStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_ThreeByteInStructTable}}};
 
 static const struct FidlStructField Fields28conformance_ThreeByteInArray[] = {
     /*FidlStructField*/ {
@@ -1140,7 +1174,7 @@ const fidl_type_t conformance_ThreeByteInArrayTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/ThreeByteInArray",
-                      .alt_type = &v1_conformance_ThreeByteInArrayTable.coded_struct}}};
+                      .alt_type = &v1_conformance_ThreeByteInArrayTable}}};
 
 static const struct FidlStructField Fields38conformance_TestOptionalXUnionInStruct[] = {
     /*FidlStructField*/ {.type = &String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -1155,7 +1189,7 @@ const fidl_type_t conformance_TestOptionalXUnionInStructTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestOptionalXUnionInStruct",
-                      .alt_type = &v1_conformance_TestOptionalXUnionInStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_TestOptionalXUnionInStructTable}}};
 
 static const struct FidlTableField Fields36conformance_TableWithStringAndVector[] = {
     /*FidlTableField*/ {.type = &String4294967295nonnullableTable, .ordinal = 1u},
@@ -1172,14 +1206,13 @@ static const struct FidlStructField Fields44conformance_StructOfTableWithStringA
         .type = &conformance_TableWithStringAndVectorTable, .offset = 0u, .padding = 0u}};
 const fidl_type_t conformance_StructOfTableWithStringAndVectorTable = {
     .type_tag = kFidlTypeStruct,
-    {.coded_struct = {
-         .fields = Fields44conformance_StructOfTableWithStringAndVector,
-         .field_count = 1u,
-         .size = 16u,
-         .max_out_of_line = 4294967295u,
-         .contains_union = false,
-         .name = "conformance/StructOfTableWithStringAndVector",
-         .alt_type = &v1_conformance_StructOfTableWithStringAndVectorTable.coded_struct}}};
+    {.coded_struct = {.fields = Fields44conformance_StructOfTableWithStringAndVector,
+                      .field_count = 1u,
+                      .size = 16u,
+                      .max_out_of_line = 4294967295u,
+                      .contains_union = false,
+                      .name = "conformance/StructOfTableWithStringAndVector",
+                      .alt_type = &v1_conformance_StructOfTableWithStringAndVectorTable}}};
 
 static const struct FidlStructField Fields25conformance_StructWithInt[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u}};
@@ -1191,7 +1224,7 @@ const fidl_type_t conformance_StructWithIntTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/StructWithInt",
-                      .alt_type = &v1_conformance_StructWithIntTable.coded_struct}}};
+                      .alt_type = &v1_conformance_StructWithIntTable}}};
 
 static const struct FidlStructField Fields29conformance_StructWithVectors[] = {
     /*FidlStructField*/ {
@@ -1226,7 +1259,7 @@ const fidl_type_t conformance_StructWithVectorsTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/StructWithVectors",
-                      .alt_type = &v1_conformance_StructWithVectorsTable.coded_struct}}};
+                      .alt_type = &v1_conformance_StructWithVectorsTable}}};
 
 static const struct FidlStructField Fields28conformance_StructWithArrays[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u},
@@ -1247,7 +1280,7 @@ const fidl_type_t conformance_StructWithArraysTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/StructWithArrays",
-                      .alt_type = &v1_conformance_StructWithArraysTable.coded_struct}}};
+                      .alt_type = &v1_conformance_StructWithArraysTable}}};
 
 static const struct FidlStructField Fields29conformance_StructSize3Align2[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 2u, .padding = 0u},
@@ -1260,7 +1293,7 @@ const fidl_type_t conformance_StructSize3Align2Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/StructSize3Align2",
-                      .alt_type = &v1_conformance_StructSize3Align2Table.coded_struct}}};
+                      .alt_type = &v1_conformance_StructSize3Align2Table}}};
 
 static const struct FidlStructField Fields29conformance_StructSize3Align1[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 3u, .padding = 0u}};
@@ -1272,7 +1305,7 @@ const fidl_type_t conformance_StructSize3Align1Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/StructSize3Align1",
-                      .alt_type = &v1_conformance_StructSize3Align1Table.coded_struct}}};
+                      .alt_type = &v1_conformance_StructSize3Align1Table}}};
 
 static const struct FidlXUnionField Fields28conformance_XUnionWithStruct[] = {
     /*FidlXUnionField*/ {.type = &conformance_StructSize3Align1Table, .ordinal = 423517204u}};
@@ -1282,8 +1315,8 @@ const fidl_type_t conformance_XUnionWithStructTable = {
                       .fields = Fields28conformance_XUnionWithStruct,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/XUnionWithStruct",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &v1_conformance_XUnionWithStructTable}}};
 static const struct FidlXUnionField Fields39conformance_XUnionWithStructNullableRef[] = {
     /*FidlXUnionField*/ {.type = &conformance_StructSize3Align1Table, .ordinal = 423517204u}};
 const fidl_type_t conformance_XUnionWithStructNullableRefTable = {
@@ -1292,8 +1325,8 @@ const fidl_type_t conformance_XUnionWithStructNullableRefTable = {
                       .fields = Fields39conformance_XUnionWithStructNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/XUnionWithStruct",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &v1_conformance_XUnionWithStructNullableRefTable}}};
 static const struct FidlXUnionField Fields28conformance_XUnionWithXUnion[] = {
     /*FidlXUnionField*/ {.type = &conformance_XUnionWithStructTable, .ordinal = 1812359455u}};
 const fidl_type_t conformance_XUnionWithXUnionTable = {
@@ -1302,8 +1335,8 @@ const fidl_type_t conformance_XUnionWithXUnionTable = {
                       .fields = Fields28conformance_XUnionWithXUnion,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/XUnionWithXUnion",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &v1_conformance_XUnionWithXUnionTable}}};
 static const struct FidlXUnionField Fields39conformance_XUnionWithXUnionNullableRef[] = {
     /*FidlXUnionField*/ {.type = &conformance_XUnionWithStructTable, .ordinal = 1812359455u}};
 const fidl_type_t conformance_XUnionWithXUnionNullableRefTable = {
@@ -1312,8 +1345,8 @@ const fidl_type_t conformance_XUnionWithXUnionNullableRefTable = {
                       .fields = Fields39conformance_XUnionWithXUnionNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/XUnionWithXUnion",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &v1_conformance_XUnionWithXUnionNullableRefTable}}};
 static const struct FidlStructField Fields34conformance_XUnionWithXUnionStruct[] = {
     /*FidlStructField*/ {.type = &conformance_XUnionWithXUnionTable, .offset = 0u, .padding = 0u}};
 const fidl_type_t conformance_XUnionWithXUnionStructTable = {
@@ -1324,7 +1357,7 @@ const fidl_type_t conformance_XUnionWithXUnionStructTable = {
                       .max_out_of_line = 32u,
                       .contains_union = false,
                       .name = "conformance/XUnionWithXUnionStruct",
-                      .alt_type = &v1_conformance_XUnionWithXUnionStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_XUnionWithXUnionStructTable}}};
 
 static const struct FidlStructField Fields34conformance_XUnionWithStructStruct[] = {
     /*FidlStructField*/ {.type = &conformance_XUnionWithStructTable, .offset = 0u, .padding = 0u}};
@@ -1336,7 +1369,7 @@ const fidl_type_t conformance_XUnionWithStructStructTable = {
                       .max_out_of_line = 8u,
                       .contains_union = false,
                       .name = "conformance/XUnionWithStructStruct",
-                      .alt_type = &v1_conformance_XUnionWithStructStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_XUnionWithStructStructTable}}};
 
 static const struct FidlUnionField Fields27conformance_UnionWithVector[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 15u, .xunion_ordinal = 1u},
@@ -1369,7 +1402,7 @@ const fidl_type_t conformance_UnionWithVectorTable = {
                      .data_offset = 8u,
                      .size = 24u,
                      .name = "conformance/UnionWithVector",
-                     .alt_type = &v1_conformance_UnionWithVectorTable.coded_union}}};
+                     .alt_type = &v1_conformance_UnionWithVectorTable}}};
 
 static const struct FidlTableField Fields48conformance_Table_UnionWithVector_StructSandwich[] = {
     /*FidlTableField*/ {.type = &conformance_StructSize3Align1Table, .ordinal = 1u},
@@ -1395,8 +1428,7 @@ const fidl_type_t conformance_Table_UnionWithVector_StructSandwichStructTable = 
          .max_out_of_line = 4294967295u,
          .contains_union = true,
          .name = "conformance/Table_UnionWithVector_StructSandwichStruct",
-         .alt_type =
-             &v1_conformance_Table_UnionWithVector_StructSandwichStructTable.coded_struct}}};
+         .alt_type = &v1_conformance_Table_UnionWithVector_StructSandwichStructTable}}};
 
 static const struct FidlTableField Fields50conformance_Table_UnionWithVector_ReservedSandwich[] = {
     /*FidlTableField*/ {.type = &conformance_UnionWithVectorTable, .ordinal = 2u}};
@@ -1420,8 +1452,7 @@ const fidl_type_t conformance_Table_UnionWithVector_ReservedSandwichStructTable 
          .max_out_of_line = 4294967295u,
          .contains_union = true,
          .name = "conformance/Table_UnionWithVector_ReservedSandwichStruct",
-         .alt_type =
-             &v1_conformance_Table_UnionWithVector_ReservedSandwichStructTable.coded_struct}}};
+         .alt_type = &v1_conformance_Table_UnionWithVector_ReservedSandwichStructTable}}};
 
 static const struct FidlStructField Fields21conformance_Sandwich6[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -1435,7 +1466,7 @@ const fidl_type_t conformance_Sandwich6Table = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/Sandwich6",
-                      .alt_type = &v1_conformance_Sandwich6Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich6Table}}};
 
 static const struct FidlTableField Fields42conformance_Table_StructWithUint32Sandwich[] = {
     /*FidlTableField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 1u},
@@ -1453,14 +1484,13 @@ static const struct FidlStructField Fields48conformance_Table_StructWithUint32Sa
         .type = &conformance_Table_StructWithUint32SandwichTable, .offset = 0u, .padding = 0u}};
 const fidl_type_t conformance_Table_StructWithUint32SandwichStructTable = {
     .type_tag = kFidlTypeStruct,
-    {.coded_struct = {
-         .fields = Fields48conformance_Table_StructWithUint32SandwichStruct,
-         .field_count = 1u,
-         .size = 16u,
-         .max_out_of_line = 96u,
-         .contains_union = false,
-         .name = "conformance/Table_StructWithUint32SandwichStruct",
-         .alt_type = &v1_conformance_Table_StructWithUint32SandwichStructTable.coded_struct}}};
+    {.coded_struct = {.fields = Fields48conformance_Table_StructWithUint32SandwichStruct,
+                      .field_count = 1u,
+                      .size = 16u,
+                      .max_out_of_line = 96u,
+                      .contains_union = false,
+                      .name = "conformance/Table_StructWithUint32SandwichStruct",
+                      .alt_type = &v1_conformance_Table_StructWithUint32SandwichStructTable}}};
 
 static const struct FidlTableField Fields44conformance_Table_StructWithReservedSandwich[] = {
     /*FidlTableField*/ {.type = &conformance_StructSize3Align1Table, .ordinal = 2u},
@@ -1476,14 +1506,13 @@ static const struct FidlStructField Fields50conformance_Table_StructWithReserved
         .type = &conformance_Table_StructWithReservedSandwichTable, .offset = 0u, .padding = 0u}};
 const fidl_type_t conformance_Table_StructWithReservedSandwichStructTable = {
     .type_tag = kFidlTypeStruct,
-    {.coded_struct = {
-         .fields = Fields50conformance_Table_StructWithReservedSandwichStruct,
-         .field_count = 1u,
-         .size = 16u,
-         .max_out_of_line = 48u,
-         .contains_union = false,
-         .name = "conformance/Table_StructWithReservedSandwichStruct",
-         .alt_type = &v1_conformance_Table_StructWithReservedSandwichStructTable.coded_struct}}};
+    {.coded_struct = {.fields = Fields50conformance_Table_StructWithReservedSandwichStruct,
+                      .field_count = 1u,
+                      .size = 16u,
+                      .max_out_of_line = 48u,
+                      .contains_union = false,
+                      .name = "conformance/Table_StructWithReservedSandwichStruct",
+                      .alt_type = &v1_conformance_Table_StructWithReservedSandwichStructTable}}};
 
 static const struct FidlStructField Fields23conformance_Regression4[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 3u},
@@ -1501,7 +1530,7 @@ const fidl_type_t conformance_Regression4Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Regression4",
-                      .alt_type = &v1_conformance_Regression4Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Regression4Table}}};
 
 static const struct FidlStructField Fields30conformance_StructSize16Align8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u},
@@ -1514,7 +1543,7 @@ const fidl_type_t conformance_StructSize16Align8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/StructSize16Align8",
-                      .alt_type = &v1_conformance_StructSize16Align8Table.coded_struct}}};
+                      .alt_type = &v1_conformance_StructSize16Align8Table}}};
 
 static const struct FidlUnionField Fields29conformance_UnionSize24Align8[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 15u, .xunion_ordinal = 1u},
@@ -1529,7 +1558,7 @@ const fidl_type_t conformance_UnionSize24Align8Table = {
                      .data_offset = 8u,
                      .size = 24u,
                      .name = "conformance/UnionSize24Align8",
-                     .alt_type = &v1_conformance_UnionSize24Align8Table.coded_union}}};
+                     .alt_type = &v1_conformance_UnionSize24Align8Table}}};
 
 static const struct FidlUnionField Fields24conformance_UnionOfUnion[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 23u, .xunion_ordinal = 1u},
@@ -1547,7 +1576,7 @@ const fidl_type_t conformance_UnionOfUnionTable = {
                      .data_offset = 8u,
                      .size = 32u,
                      .name = "conformance/UnionOfUnion",
-                     .alt_type = &v1_conformance_UnionOfUnionTable.coded_union}}};
+                     .alt_type = &v1_conformance_UnionOfUnionTable}}};
 
 static const struct FidlStructField Fields21conformance_Sandwich8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u},
@@ -1561,7 +1590,7 @@ const fidl_type_t conformance_Sandwich8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = true,
                       .name = "conformance/Sandwich8",
-                      .alt_type = &v1_conformance_Sandwich8Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich8Table}}};
 
 static const struct FidlStructField Fields21conformance_Sandwich5[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -1575,7 +1604,7 @@ const fidl_type_t conformance_Sandwich5Table = {
                       .max_out_of_line = 0u,
                       .contains_union = true,
                       .name = "conformance/Sandwich5",
-                      .alt_type = &v1_conformance_Sandwich5Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich5Table}}};
 
 static const struct FidlStructField Fields21conformance_Sandwich3[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -1589,7 +1618,7 @@ const fidl_type_t conformance_Sandwich3Table = {
                       .max_out_of_line = 0u,
                       .contains_union = true,
                       .name = "conformance/Sandwich3",
-                      .alt_type = &v1_conformance_Sandwich3Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich3Table}}};
 
 static const struct FidlStructField Fields25conformance_StringWrapper[] = {
     /*FidlStructField*/ {.type = &String4294967295nonnullableTable, .offset = 0u, .padding = 0u}};
@@ -1601,7 +1630,7 @@ const fidl_type_t conformance_StringWrapperTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/StringWrapper",
-                      .alt_type = &v1_conformance_StringWrapperTable.coded_struct}}};
+                      .alt_type = &v1_conformance_StringWrapperTable}}};
 
 static const struct FidlStructField Fields29conformance_StringUnionVector[] = {
     /*FidlStructField*/ {.type = &Vector3nonnullable32Pointer23conformance_StringUnionTable,
@@ -1615,7 +1644,7 @@ const fidl_type_t conformance_StringUnionVectorTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/StringUnionVector",
-                      .alt_type = &v1_conformance_StringUnionVectorTable.coded_struct}}};
+                      .alt_type = &v1_conformance_StringUnionVectorTable}}};
 
 static const struct FidlUnionField Fields23conformance_StringUnion[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 15u, .xunion_ordinal = 1u},
@@ -1629,7 +1658,7 @@ const fidl_type_t conformance_StringUnionTable = {
                      .data_offset = 8u,
                      .size = 24u,
                      .name = "conformance/StringUnion",
-                     .alt_type = &v1_conformance_StringUnionTable.coded_union}}};
+                     .alt_type = &v1_conformance_StringUnionTable}}};
 
 static const struct FidlStructField Fields23conformance_ArrayStruct[] = {
     /*FidlStructField*/ {
@@ -1644,7 +1673,7 @@ const fidl_type_t conformance_ArrayStructTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/ArrayStruct",
-                      .alt_type = &v1_conformance_ArrayStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_ArrayStructTable}}};
 
 static const struct FidlStructField Fields23conformance_Size8Align8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u}};
@@ -1656,7 +1685,7 @@ const fidl_type_t conformance_Size8Align8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Size8Align8",
-                      .alt_type = &v1_conformance_Size8Align8Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Size8Align8Table}}};
 
 static const struct FidlStructField Fields27conformance_Size5Alignment4[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u},
@@ -1669,7 +1698,7 @@ const fidl_type_t conformance_Size5Alignment4Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment4",
-                      .alt_type = &v1_conformance_Size5Alignment4Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Size5Alignment4Table}}};
 
 static const struct FidlStructField Fields33conformance_Size5Alignment4Vector[] = {
     /*FidlStructField*/ {.type = &Vector4294967295nonnullable27conformance_Size5Alignment4Table,
@@ -1683,7 +1712,7 @@ const fidl_type_t conformance_Size5Alignment4VectorTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment4Vector",
-                      .alt_type = &v1_conformance_Size5Alignment4VectorTable.coded_struct}}};
+                      .alt_type = &v1_conformance_Size5Alignment4VectorTable}}};
 
 static const struct FidlStructField Fields32conformance_Size5Alignment4Array[] = {
     /*FidlStructField*/ {
@@ -1696,7 +1725,7 @@ const fidl_type_t conformance_Size5Alignment4ArrayTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment4Array",
-                      .alt_type = &v1_conformance_Size5Alignment4ArrayTable.coded_struct}}};
+                      .alt_type = &v1_conformance_Size5Alignment4ArrayTable}}};
 
 static const struct FidlStructField Fields27conformance_Size5Alignment1[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 5u, .padding = 0u}};
@@ -1708,7 +1737,7 @@ const fidl_type_t conformance_Size5Alignment1Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment1",
-                      .alt_type = &v1_conformance_Size5Alignment1Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Size5Alignment1Table}}};
 
 static const struct FidlStructField Fields33conformance_Size5Alignment1Vector[] = {
     /*FidlStructField*/ {.type = &Vector4294967295nonnullable27conformance_Size5Alignment1Table,
@@ -1722,7 +1751,7 @@ const fidl_type_t conformance_Size5Alignment1VectorTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment1Vector",
-                      .alt_type = &v1_conformance_Size5Alignment1VectorTable.coded_struct}}};
+                      .alt_type = &v1_conformance_Size5Alignment1VectorTable}}};
 
 static const struct FidlStructField Fields32conformance_Size5Alignment1Array[] = {
     /*FidlStructField*/ {
@@ -1735,7 +1764,7 @@ const fidl_type_t conformance_Size5Alignment1ArrayTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment1Array",
-                      .alt_type = &v1_conformance_Size5Alignment1ArrayTable.coded_struct}}};
+                      .alt_type = &v1_conformance_Size5Alignment1ArrayTable}}};
 
 static const struct FidlUnionField Fields30conformance_SingleVariantUnion[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 0u, .xunion_ordinal = 1u}};
@@ -1746,7 +1775,7 @@ const fidl_type_t conformance_SingleVariantUnionTable = {
                      .data_offset = 4u,
                      .size = 8u,
                      .name = "conformance/SingleVariantUnion",
-                     .alt_type = &v1_conformance_SingleVariantUnionTable.coded_union}}};
+                     .alt_type = &v1_conformance_SingleVariantUnionTable}}};
 
 static const struct FidlStructField Fields36conformance_SingleVariantUnionStruct[] = {
     /*FidlStructField*/ {
@@ -1759,7 +1788,7 @@ const fidl_type_t conformance_SingleVariantUnionStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = true,
                       .name = "conformance/SingleVariantUnionStruct",
-                      .alt_type = &v1_conformance_SingleVariantUnionStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_SingleVariantUnionStructTable}}};
 
 static const struct FidlTableField Fields23conformance_SimpleTable[] = {
     /*FidlTableField*/ {.type = &fidl_internal_kInt64Table, .ordinal = 1u},
@@ -1780,7 +1809,7 @@ const fidl_type_t conformance_StructOfSimpleTableTable = {
                       .max_out_of_line = 48u,
                       .contains_union = false,
                       .name = "conformance/StructOfSimpleTable",
-                      .alt_type = &v1_conformance_StructOfSimpleTableTable.coded_struct}}};
+                      .alt_type = &v1_conformance_StructOfSimpleTableTable}}};
 
 static const struct FidlStructField Fields33conformance_SimpleTableThenUint64[] = {
     /*FidlStructField*/ {.type = &conformance_SimpleTableTable, .offset = 0u, .padding = 0u},
@@ -1793,7 +1822,7 @@ const fidl_type_t conformance_SimpleTableThenUint64Table = {
                       .max_out_of_line = 48u,
                       .contains_union = false,
                       .name = "conformance/SimpleTableThenUint64",
-                      .alt_type = &v1_conformance_SimpleTableThenUint64Table.coded_struct}}};
+                      .alt_type = &v1_conformance_SimpleTableThenUint64Table}}};
 
 static const struct FidlStructField Fields21conformance_Sandwich7[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -1807,7 +1836,7 @@ const fidl_type_t conformance_Sandwich7Table = {
                       .max_out_of_line = 16u,
                       .contains_union = true,
                       .name = "conformance/Sandwich7",
-                      .alt_type = &v1_conformance_Sandwich7Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich7Table}}};
 
 static const struct FidlStructField Fields33conformance_Sandwich1WithOptUnion[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -1822,7 +1851,7 @@ const fidl_type_t conformance_Sandwich1WithOptUnionTable = {
                       .max_out_of_line = 8u,
                       .contains_union = true,
                       .name = "conformance/Sandwich1WithOptUnion",
-                      .alt_type = &v1_conformance_Sandwich1WithOptUnionTable.coded_struct}}};
+                      .alt_type = &v1_conformance_Sandwich1WithOptUnionTable}}};
 
 static const struct FidlStructField Fields42conformance_OutOfLineSandwich1WithOptUnion[] = {
     /*FidlStructField*/ {.type = &String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -1833,14 +1862,13 @@ static const struct FidlStructField Fields42conformance_OutOfLineSandwich1WithOp
     /*FidlStructField*/ {.type = &String4294967295nonnullableTable, .offset = 32u, .padding = 0u}};
 const fidl_type_t conformance_OutOfLineSandwich1WithOptUnionTable = {
     .type_tag = kFidlTypeStruct,
-    {.coded_struct = {
-         .fields = Fields42conformance_OutOfLineSandwich1WithOptUnion,
-         .field_count = 3u,
-         .size = 48u,
-         .max_out_of_line = 4294967295u,
-         .contains_union = true,
-         .name = "conformance/OutOfLineSandwich1WithOptUnion",
-         .alt_type = &v1_conformance_OutOfLineSandwich1WithOptUnionTable.coded_struct}}};
+    {.coded_struct = {.fields = Fields42conformance_OutOfLineSandwich1WithOptUnion,
+                      .field_count = 3u,
+                      .size = 48u,
+                      .max_out_of_line = 4294967295u,
+                      .contains_union = true,
+                      .name = "conformance/OutOfLineSandwich1WithOptUnion",
+                      .alt_type = &v1_conformance_OutOfLineSandwich1WithOptUnionTable}}};
 
 static const struct FidlUnionField Fields31conformance_ReverseOrdinalUnion[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 4u, .xunion_ordinal = 1u},
@@ -1853,7 +1881,7 @@ const fidl_type_t conformance_ReverseOrdinalUnionTable = {
                      .data_offset = 8u,
                      .size = 16u,
                      .name = "conformance/ReverseOrdinalUnion",
-                     .alt_type = &v1_conformance_ReverseOrdinalUnionTable.coded_union}}};
+                     .alt_type = &v1_conformance_ReverseOrdinalUnionTable}}};
 
 static const struct FidlStructField Fields37conformance_ReverseOrdinalUnionStruct[] = {
     /*FidlStructField*/ {
@@ -1866,7 +1894,7 @@ const fidl_type_t conformance_ReverseOrdinalUnionStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = true,
                       .name = "conformance/ReverseOrdinalUnionStruct",
-                      .alt_type = &v1_conformance_ReverseOrdinalUnionStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_ReverseOrdinalUnionStructTable}}};
 
 static const struct FidlTableField Fields31conformance_ReverseOrdinalTable[] = {
     /*FidlTableField*/ {.type = &fidl_internal_kInt64Table, .ordinal = 1u},
@@ -1889,7 +1917,7 @@ const fidl_type_t conformance_StructOfReverseOrdinalTableTable = {
                       .max_out_of_line = 72u,
                       .contains_union = false,
                       .name = "conformance/StructOfReverseOrdinalTable",
-                      .alt_type = &v1_conformance_StructOfReverseOrdinalTableTable.coded_struct}}};
+                      .alt_type = &v1_conformance_StructOfReverseOrdinalTableTable}}};
 
 static const struct FidlStructField Fields23conformance_Regression3[] = {
     /*FidlStructField*/ {
@@ -1902,7 +1930,7 @@ const fidl_type_t conformance_Regression3Table = {
                       .max_out_of_line = 40u,
                       .contains_union = false,
                       .name = "conformance/Regression3",
-                      .alt_type = &v1_conformance_Regression3Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Regression3Table}}};
 
 static const struct FidlStructField Fields23conformance_Regression1[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 3u},
@@ -1919,7 +1947,7 @@ const fidl_type_t conformance_Regression1Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Regression1",
-                      .alt_type = &v1_conformance_Regression1Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Regression1Table}}};
 
 static const struct FidlStructField Fields23conformance_Regression2[] = {
     /*FidlStructField*/ {.type = &conformance_Regression1Table, .offset = 0u, .padding = 0u},
@@ -1932,7 +1960,7 @@ const fidl_type_t conformance_Regression2Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Regression2",
-                      .alt_type = &v1_conformance_Regression2Table.coded_struct}}};
+                      .alt_type = &v1_conformance_Regression2Table}}};
 
 static const struct FidlStructField Fields26conformance_NodeAttributes[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -1950,7 +1978,7 @@ const fidl_type_t conformance_NodeAttributesTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/NodeAttributes",
-                      .alt_type = &v1_conformance_NodeAttributesTable.coded_struct}}};
+                      .alt_type = &v1_conformance_NodeAttributesTable}}};
 
 static const struct FidlStructField Fields31conformance_FileGetAttrResponse[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -1963,7 +1991,7 @@ const fidl_type_t conformance_FileGetAttrResponseTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/FileGetAttrResponse",
-                      .alt_type = &v1_conformance_FileGetAttrResponseTable.coded_struct}}};
+                      .alt_type = &v1_conformance_FileGetAttrResponseTable}}};
 
 static const struct FidlStructField Fields19conformance_MyUint8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 0u}};
@@ -1975,7 +2003,7 @@ const fidl_type_t conformance_MyUint8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyUint8",
-                      .alt_type = &v1_conformance_MyUint8Table.coded_struct}}};
+                      .alt_type = &v1_conformance_MyUint8Table}}};
 
 static const struct FidlStructField Fields20conformance_MyUint64[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u}};
@@ -1987,7 +2015,7 @@ const fidl_type_t conformance_MyUint64Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyUint64",
-                      .alt_type = &v1_conformance_MyUint64Table.coded_struct}}};
+                      .alt_type = &v1_conformance_MyUint64Table}}};
 
 static const struct FidlStructField Fields20conformance_MyUint32[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u}};
@@ -1999,7 +2027,7 @@ const fidl_type_t conformance_MyUint32Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyUint32",
-                      .alt_type = &v1_conformance_MyUint32Table.coded_struct}}};
+                      .alt_type = &v1_conformance_MyUint32Table}}};
 
 static const struct FidlStructField Fields20conformance_MyUint16[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 2u, .padding = 0u}};
@@ -2011,7 +2039,7 @@ const fidl_type_t conformance_MyUint16Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyUint16",
-                      .alt_type = &v1_conformance_MyUint16Table.coded_struct}}};
+                      .alt_type = &v1_conformance_MyUint16Table}}};
 
 static const struct FidlStructField Fields18conformance_MyInt8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 0u}};
@@ -2023,7 +2051,7 @@ const fidl_type_t conformance_MyInt8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyInt8",
-                      .alt_type = &v1_conformance_MyInt8Table.coded_struct}}};
+                      .alt_type = &v1_conformance_MyInt8Table}}};
 
 static const struct FidlStructField Fields19conformance_MyInt64[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u}};
@@ -2035,7 +2063,7 @@ const fidl_type_t conformance_MyInt64Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyInt64",
-                      .alt_type = &v1_conformance_MyInt64Table.coded_struct}}};
+                      .alt_type = &v1_conformance_MyInt64Table}}};
 
 static const struct FidlStructField Fields19conformance_MyInt32[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u}};
@@ -2047,7 +2075,7 @@ const fidl_type_t conformance_MyInt32Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyInt32",
-                      .alt_type = &v1_conformance_MyInt32Table.coded_struct}}};
+                      .alt_type = &v1_conformance_MyInt32Table}}};
 
 static const struct FidlStructField Fields19conformance_MyInt16[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 2u, .padding = 0u}};
@@ -2059,7 +2087,7 @@ const fidl_type_t conformance_MyInt16Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyInt16",
-                      .alt_type = &v1_conformance_MyInt16Table.coded_struct}}};
+                      .alt_type = &v1_conformance_MyInt16Table}}};
 
 static const struct FidlStructField Fields21conformance_MyFloat64[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u}};
@@ -2071,7 +2099,7 @@ const fidl_type_t conformance_MyFloat64Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyFloat64",
-                      .alt_type = &v1_conformance_MyFloat64Table.coded_struct}}};
+                      .alt_type = &v1_conformance_MyFloat64Table}}};
 
 static const struct FidlStructField Fields21conformance_MyFloat32[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u}};
@@ -2083,7 +2111,7 @@ const fidl_type_t conformance_MyFloat32Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyFloat32",
-                      .alt_type = &v1_conformance_MyFloat32Table.coded_struct}}};
+                      .alt_type = &v1_conformance_MyFloat32Table}}};
 
 static const struct FidlStructField Fields18conformance_MyByte[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 0u}};
@@ -2095,7 +2123,7 @@ const fidl_type_t conformance_MyByteTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyByte",
-                      .alt_type = &v1_conformance_MyByteTable.coded_struct}}};
+                      .alt_type = &v1_conformance_MyByteTable}}};
 
 static const struct FidlStructField Fields18conformance_MyBool[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 0u}};
@@ -2107,7 +2135,7 @@ const fidl_type_t conformance_MyBoolTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyBool",
-                      .alt_type = &v1_conformance_MyBoolTable.coded_struct}}};
+                      .alt_type = &v1_conformance_MyBoolTable}}};
 
 static const struct FidlStructField Fields32conformance_Length2StringWrapper[] = {
     /*FidlStructField*/ {.type = &String2nonnullableTable, .offset = 0u, .padding = 0u}};
@@ -2119,7 +2147,7 @@ const fidl_type_t conformance_Length2StringWrapperTable = {
                       .max_out_of_line = 8u,
                       .contains_union = false,
                       .name = "conformance/Length2StringWrapper",
-                      .alt_type = &v1_conformance_Length2StringWrapperTable.coded_struct}}};
+                      .alt_type = &v1_conformance_Length2StringWrapperTable}}};
 
 static const struct FidlStructField Fields22conformance_LaunchInfo[] = {
     /*FidlStructField*/ {.type = &String200nonnullableTable, .offset = 0u, .padding = 0u},
@@ -2144,7 +2172,7 @@ const fidl_type_t conformance_LaunchInfoTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/LaunchInfo",
-                      .alt_type = &v1_conformance_LaunchInfoTable.coded_struct}}};
+                      .alt_type = &v1_conformance_LaunchInfoTable}}};
 
 static const struct FidlStructField Fields34conformance_CreateComponentRequest[] = {
     /*FidlStructField*/ {.type = &conformance_LaunchInfoTable, .offset = 0u, .padding = 0u},
@@ -2157,10 +2185,10 @@ const fidl_type_t conformance_CreateComponentRequestTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/CreateComponentRequest",
-                      .alt_type = &v1_conformance_CreateComponentRequestTable.coded_struct}}};
+                      .alt_type = &v1_conformance_CreateComponentRequestTable}}};
 
 static const struct FidlUnionField Fields27conformance_IpAddressConfig[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 0u, .xunion_ordinal = 1u},
+    /*FidlUnionField*/ {.type = &Array24_6uint32Table, .padding = 0u, .xunion_ordinal = 1u},
     /*FidlUnionField*/ {.type = NULL, .padding = 23u, .xunion_ordinal = 2u}};
 const fidl_type_t conformance_IpAddressConfigTable = {
     .type_tag = kFidlTypeUnion,
@@ -2169,7 +2197,7 @@ const fidl_type_t conformance_IpAddressConfigTable = {
                      .data_offset = 4u,
                      .size = 28u,
                      .name = "conformance/IpAddressConfig",
-                     .alt_type = &v1_conformance_IpAddressConfigTable.coded_union}}};
+                     .alt_type = &v1_conformance_IpAddressConfigTable}}};
 
 static const struct FidlStructField Fields27conformance_InterfaceConfig[] = {
     /*FidlStructField*/ {.type = &String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -2182,7 +2210,7 @@ const fidl_type_t conformance_InterfaceConfigTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/InterfaceConfig",
-                      .alt_type = &v1_conformance_InterfaceConfigTable.coded_struct}}};
+                      .alt_type = &v1_conformance_InterfaceConfigTable}}};
 
 static const struct FidlStructField Fields40conformance_TestAddEthernetDeviceRequest[] = {
     /*FidlStructField*/ {.type = &String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -2196,7 +2224,7 @@ const fidl_type_t conformance_TestAddEthernetDeviceRequestTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestAddEthernetDeviceRequest",
-                      .alt_type = &v1_conformance_TestAddEthernetDeviceRequestTable.coded_struct}}};
+                      .alt_type = &v1_conformance_TestAddEthernetDeviceRequestTable}}};
 
 static const struct FidlStructField Fields23conformance_Int64Struct[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u}};
@@ -2208,7 +2236,7 @@ const fidl_type_t conformance_Int64StructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Int64Struct",
-                      .alt_type = &v1_conformance_Int64StructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_Int64StructTable}}};
 
 static const struct FidlUnionField Fields23conformance_SimpleUnion[] = {
     /*FidlUnionField*/ {.type = NULL, .padding = 12u, .xunion_ordinal = 1u},
@@ -2223,32 +2251,32 @@ const fidl_type_t conformance_SimpleUnionTable = {
                      .data_offset = 8u,
                      .size = 24u,
                      .name = "conformance/SimpleUnion",
-                     .alt_type = &v1_conformance_SimpleUnionTable.coded_union}}};
+                     .alt_type = &v1_conformance_SimpleUnionTable}}};
 
 static const struct FidlXUnionField Fields24conformance_SampleXUnion[] = {
-    /*FidlXUnionField*/ {.type = &conformance_SimpleTableTable, .ordinal = 35514581u},
     /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 949769906u},
-    /*FidlXUnionField*/ {.type = &conformance_SimpleUnionTable, .ordinal = 2033143581u}};
+    /*FidlXUnionField*/ {.type = &conformance_SimpleUnionTable, .ordinal = 2033143581u},
+    /*FidlXUnionField*/ {.type = &conformance_SimpleTableTable, .ordinal = 35514581u}};
 const fidl_type_t conformance_SampleXUnionTable = {
     .type_tag = kFidlTypeXUnion,
     {.coded_xunion = {.field_count = 3u,
                       .fields = Fields24conformance_SampleXUnion,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/SampleXUnion",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &v1_conformance_SampleXUnionTable}}};
 static const struct FidlXUnionField Fields35conformance_SampleXUnionNullableRef[] = {
-    /*FidlXUnionField*/ {.type = &conformance_SimpleTableTable, .ordinal = 35514581u},
     /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 949769906u},
-    /*FidlXUnionField*/ {.type = &conformance_SimpleUnionTable, .ordinal = 2033143581u}};
+    /*FidlXUnionField*/ {.type = &conformance_SimpleUnionTable, .ordinal = 2033143581u},
+    /*FidlXUnionField*/ {.type = &conformance_SimpleTableTable, .ordinal = 35514581u}};
 const fidl_type_t conformance_SampleXUnionNullableRefTable = {
     .type_tag = kFidlTypeXUnion,
     {.coded_xunion = {.field_count = 3u,
                       .fields = Fields35conformance_SampleXUnionNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/SampleXUnion",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &v1_conformance_SampleXUnionNullableRefTable}}};
 static const struct FidlTableField Fields25conformance_XUnionInTable[] = {
     /*FidlTableField*/ {.type = &String4294967295nonnullableTable, .ordinal = 1u},
     /*FidlTableField*/ {.type = &conformance_SampleXUnionTable, .ordinal = 2u},
@@ -2269,7 +2297,7 @@ const fidl_type_t conformance_TestXUnionInTableTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestXUnionInTable",
-                      .alt_type = &v1_conformance_TestXUnionInTableTable.coded_struct}}};
+                      .alt_type = &v1_conformance_TestXUnionInTableTable}}};
 
 static const struct FidlStructField Fields36conformance_TestInlineXUnionInStruct[] = {
     /*FidlStructField*/ {.type = &String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -2283,7 +2311,7 @@ const fidl_type_t conformance_TestInlineXUnionInStructTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestInlineXUnionInStruct",
-                      .alt_type = &v1_conformance_TestInlineXUnionInStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_TestInlineXUnionInStructTable}}};
 
 static const struct FidlStructField Fields38conformance_TestFlexibleXUnionInStruct[] = {
     /*FidlStructField*/ {.type = &conformance_SampleXUnionTable, .offset = 0u, .padding = 0u}};
@@ -2295,7 +2323,7 @@ const fidl_type_t conformance_TestFlexibleXUnionInStructTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestFlexibleXUnionInStruct",
-                      .alt_type = &v1_conformance_TestFlexibleXUnionInStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_TestFlexibleXUnionInStructTable}}};
 
 static const struct FidlXUnionField Fields30conformance_SampleStrictXUnion[] = {
     /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 149088882u},
@@ -2307,8 +2335,8 @@ const fidl_type_t conformance_SampleStrictXUnionTable = {
                       .fields = Fields30conformance_SampleStrictXUnion,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/SampleStrictXUnion",
-                      .strictness = kFidlStrictness_Strict}}};
-
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &v1_conformance_SampleStrictXUnionTable}}};
 static const struct FidlXUnionField Fields41conformance_SampleStrictXUnionNullableRef[] = {
     /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 149088882u},
     /*FidlXUnionField*/ {.type = &conformance_SimpleUnionTable, .ordinal = 670279483u},
@@ -2319,8 +2347,8 @@ const fidl_type_t conformance_SampleStrictXUnionNullableRefTable = {
                       .fields = Fields41conformance_SampleStrictXUnionNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/SampleStrictXUnion",
-                      .strictness = kFidlStrictness_Strict}}};
-
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &v1_conformance_SampleStrictXUnionNullableRefTable}}};
 static const struct FidlStructField Fields36conformance_TestStrictXUnionInStruct[] = {
     /*FidlStructField*/ {
         .type = &conformance_SampleStrictXUnionTable, .offset = 0u, .padding = 0u}};
@@ -2332,7 +2360,7 @@ const fidl_type_t conformance_TestStrictXUnionInStructTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestStrictXUnionInStruct",
-                      .alt_type = &v1_conformance_TestStrictXUnionInStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_TestStrictXUnionInStructTable}}};
 
 static const struct FidlStructField Fields20conformance_FiveByte[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u},
@@ -2345,7 +2373,7 @@ const fidl_type_t conformance_FiveByteTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/FiveByte",
-                      .alt_type = &v1_conformance_FiveByteTable.coded_struct}}};
+                      .alt_type = &v1_conformance_FiveByteTable}}};
 
 static const struct FidlStructField Fields28conformance_FiveByteInVector[] = {
     /*FidlStructField*/ {.type = &Vector4294967295nonnullable20conformance_FiveByteTable,
@@ -2359,7 +2387,7 @@ const fidl_type_t conformance_FiveByteInVectorTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/FiveByteInVector",
-                      .alt_type = &v1_conformance_FiveByteInVectorTable.coded_struct}}};
+                      .alt_type = &v1_conformance_FiveByteInVectorTable}}};
 
 static const struct FidlStructField Fields28conformance_FiveByteInStruct[] = {
     /*FidlStructField*/ {.type = &conformance_FiveByteTable, .offset = 0u, .padding = 0u},
@@ -2373,7 +2401,7 @@ const fidl_type_t conformance_FiveByteInStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/FiveByteInStruct",
-                      .alt_type = &v1_conformance_FiveByteInStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_FiveByteInStructTable}}};
 
 static const struct FidlStructField Fields27conformance_FiveByteInArray[] = {
     /*FidlStructField*/ {
@@ -2386,7 +2414,7 @@ const fidl_type_t conformance_FiveByteInArrayTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/FiveByteInArray",
-                      .alt_type = &v1_conformance_FiveByteInArrayTable.coded_struct}}};
+                      .alt_type = &v1_conformance_FiveByteInArrayTable}}};
 
 static const struct FidlStructField Fields23conformance_EmptyStruct[] = {};
 const fidl_type_t conformance_EmptyStructTable = {
@@ -2397,7 +2425,7 @@ const fidl_type_t conformance_EmptyStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/EmptyStruct",
-                      .alt_type = &v1_conformance_EmptyStructTable.coded_struct}}};
+                      .alt_type = &v1_conformance_EmptyStructTable}}};
 
 static const struct FidlXUnionField Fields33conformance_XUnionWithEmptyStruct[] = {
     /*FidlXUnionField*/ {.type = &conformance_EmptyStructTable, .ordinal = 1956241662u}};
@@ -2407,8 +2435,8 @@ const fidl_type_t conformance_XUnionWithEmptyStructTable = {
                       .fields = Fields33conformance_XUnionWithEmptyStruct,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/XUnionWithEmptyStruct",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &v1_conformance_XUnionWithEmptyStructTable}}};
 static const struct FidlXUnionField Fields44conformance_XUnionWithEmptyStructNullableRef[] = {
     /*FidlXUnionField*/ {.type = &conformance_EmptyStructTable, .ordinal = 1956241662u}};
 const fidl_type_t conformance_XUnionWithEmptyStructNullableRefTable = {
@@ -2417,8 +2445,8 @@ const fidl_type_t conformance_XUnionWithEmptyStructNullableRefTable = {
                       .fields = Fields44conformance_XUnionWithEmptyStructNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/XUnionWithEmptyStruct",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &v1_conformance_XUnionWithEmptyStructNullableRefTable}}};
 static const struct FidlUnionField Fields32conformance_UnionWithEmptyStruct[] = {
     /*FidlUnionField*/ {.type = &conformance_EmptyStructTable, .padding = 7u, .xunion_ordinal = 1u},
     /*FidlUnionField*/ {.type = NULL, .padding = 0u, .xunion_ordinal = 2u}};
@@ -2429,7 +2457,7 @@ const fidl_type_t conformance_UnionWithEmptyStructTable = {
                      .data_offset = 8u,
                      .size = 16u,
                      .name = "conformance/UnionWithEmptyStruct",
-                     .alt_type = &v1_conformance_UnionWithEmptyStructTable.coded_union}}};
+                     .alt_type = &v1_conformance_UnionWithEmptyStructTable}}};
 
 static const struct FidlTableField Fields32conformance_TableWithEmptyStruct[] = {
     /*FidlTableField*/ {.type = &conformance_EmptyStructTable, .ordinal = 1u}};
@@ -2461,7 +2489,7 @@ const fidl_type_t conformance_StructWithOptionalsTable = {
                       .max_out_of_line = 64u,
                       .contains_union = true,
                       .name = "conformance/StructWithOptionals",
-                      .alt_type = &v1_conformance_StructWithOptionalsTable.coded_struct}}};
+                      .alt_type = &v1_conformance_StructWithOptionalsTable}}};
 
 static const struct FidlStructField Fields31conformance_EmptyStructSandwich[] = {
     /*FidlStructField*/ {.type = &String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -2475,7 +2503,7 @@ const fidl_type_t conformance_EmptyStructSandwichTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/EmptyStructSandwich",
-                      .alt_type = &v1_conformance_EmptyStructSandwichTable.coded_struct}}};
+                      .alt_type = &v1_conformance_EmptyStructSandwichTable}}};
 
 // Coding tables for v1 wire format.
 
@@ -2484,6 +2512,7 @@ extern const fidl_type_t v1_conformance_Sandwich9Table;
 extern const fidl_type_t v1_conformance_UnionWithBoundStringTable;
 extern const fidl_type_t v1_conformance_UnionWithBoundStringStructTable;
 extern const fidl_type_t v1_conformance_UnionSize8Align4Table;
+static const fidl_type_t v1_Pointer31v1_conformance_UnionSize8Align4Table;
 extern const fidl_type_t v1_conformance_Sandwich1Table;
 extern const fidl_type_t v1_conformance_OutOfLineSandwich1Table;
 extern const fidl_type_t v1_conformance_UnionSize36Align4Table;
@@ -2540,6 +2569,7 @@ extern const fidl_type_t v1_conformance_Sandwich3Table;
 extern const fidl_type_t v1_conformance_StringWrapperTable;
 extern const fidl_type_t v1_conformance_StringUnionVectorTable;
 extern const fidl_type_t v1_conformance_StringUnionTable;
+static const fidl_type_t v1_Pointer26v1_conformance_StringUnionTable;
 extern const fidl_type_t v1_conformance_ArrayStructTable;
 extern const fidl_type_t v1_conformance_Size8Align8Table;
 extern const fidl_type_t v1_conformance_Size5Alignment4Table;
@@ -2602,13 +2632,11 @@ extern const fidl_type_t v1_conformance_EmptyStructTable;
 extern const fidl_type_t v1_conformance_XUnionWithEmptyStructTable;
 extern const fidl_type_t v1_conformance_XUnionWithEmptyStructNullableRefTable;
 extern const fidl_type_t v1_conformance_UnionWithEmptyStructTable;
+static const fidl_type_t v1_Pointer35v1_conformance_UnionWithEmptyStructTable;
 extern const fidl_type_t v1_conformance_TableWithEmptyStructTable;
 extern const fidl_type_t v1_conformance_StructWithOptionalsTable;
 extern const fidl_type_t v1_conformance_EmptyStructSandwichTable;
 
-static const fidl_type_t v1_Pointer31v1_conformance_UnionSize8Align4Table = {
-    .type_tag = kFidlTypeUnionPointer,
-    {.coded_union_pointer = {.union_type = &v1_conformance_UnionSize8Align4Table.coded_union}}};
 static const fidl_type_t v1_Pointer24v1_conformance_Sandwich1Table = {
     .type_tag = kFidlTypeStructPointer,
     {.coded_struct_pointer = {.struct_type = &v1_conformance_Sandwich1Table.coded_struct}}};
@@ -2622,9 +2650,6 @@ static const fidl_type_t v1_Pointer28v1_conformance_StructWithIntTable = {
 static const fidl_type_t v1_Pointer32v1_conformance_StructSize3Align1Table = {
     .type_tag = kFidlTypeStructPointer,
     {.coded_struct_pointer = {.struct_type = &v1_conformance_StructSize3Align1Table.coded_struct}}};
-static const fidl_type_t v1_Pointer26v1_conformance_StringUnionTable = {
-    .type_tag = kFidlTypeUnionPointer,
-    {.coded_union_pointer = {.union_type = &v1_conformance_StringUnionTable.coded_union}}};
 static const fidl_type_t v1_Pointer26v1_conformance_Size8Align8Table = {
     .type_tag = kFidlTypeStructPointer,
     {.coded_struct_pointer = {.struct_type = &v1_conformance_Size8Align8Table.coded_struct}}};
@@ -2634,9 +2659,6 @@ static const fidl_type_t v1_Pointer26v1_conformance_Regression2Table = {
 static const fidl_type_t v1_Pointer26v1_conformance_EmptyStructTable = {
     .type_tag = kFidlTypeStructPointer,
     {.coded_struct_pointer = {.struct_type = &v1_conformance_EmptyStructTable.coded_struct}}};
-static const fidl_type_t v1_Pointer35v1_conformance_UnionWithEmptyStructTable = {
-    .type_tag = kFidlTypeUnionPointer,
-    {.coded_union_pointer = {.union_type = &v1_conformance_UnionWithEmptyStructTable.coded_union}}};
 
 static const fidl_type_t
     v1_Vector4294967295nonnullable44v1_Pointer32v1_conformance_StructSize3Align1Table = {
@@ -2646,8 +2668,8 @@ static const fidl_type_t
              .max_count = 4294967295u,
              .element_size = 8u,
              .nullable = kFidlNullability_Nonnullable,
-             .alt_type = &Vector4294967295nonnullable38Pointer29conformance_StructSize3Align1Table
-                              .coded_vector}}};
+             .alt_type =
+                 &Vector4294967295nonnullable38Pointer29conformance_StructSize3Align1Table}}};
 
 static const fidl_type_t
     v1_Vector4294967295nonnullable76v1_Vector4294967295nonnullable44v1_Pointer32v1_conformance_StructSize3Align1Table =
@@ -2659,8 +2681,7 @@ static const fidl_type_t
               .element_size = 16u,
               .nullable = kFidlNullability_Nonnullable,
               .alt_type =
-                  &Vector4294967295nonnullable67Vector4294967295nonnullable38Pointer29conformance_StructSize3Align1Table
-                       .coded_vector}}};
+                  &Vector4294967295nonnullable67Vector4294967295nonnullable38Pointer29conformance_StructSize3Align1Table}}};
 
 static const fidl_type_t v1_String5nonnullableTable = {
     .type_tag = kFidlTypeString,
@@ -2676,30 +2697,41 @@ static const fidl_type_t v1_Vector1nonnullable24v1_conformance_Sandwich1Table = 
                       .max_count = 1u,
                       .element_size = 40u,
                       .nullable = kFidlNullability_Nonnullable,
-                      .alt_type = &Vector1nonnullable21conformance_Sandwich1Table.coded_vector}}};
+                      .alt_type = &Vector1nonnullable21conformance_Sandwich1Table}}};
+
+static const fidl_type_t v1_Array32_5uint8Table = {
+    .type_tag = kFidlTypeArray,
+    {.coded_array = {.element = NULL,
+                     .array_size = 32u,
+                     .element_size = 1u,
+                     .alt_type = &Array32_5uint8Table}}};
+
+static const fidl_type_t v1_Array6_5uint8Table = {
+    .type_tag = kFidlTypeArray,
+    {.coded_array = {
+         .element = NULL, .array_size = 6u, .element_size = 1u, .alt_type = &Array6_5uint8Table}}};
 
 static const fidl_type_t v1_Array32_37v1_conformance_TransformerSimpleTableTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_conformance_TransformerSimpleTableTable,
                      .array_size = 32u,
                      .element_size = 16u,
-                     .alt_type = &Array32_34conformance_TransformerSimpleTableTable.coded_array}}};
+                     .alt_type = &Array32_34conformance_TransformerSimpleTableTable}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable24v1_conformance_ThreeByteTable = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &v1_conformance_ThreeByteTable,
-         .max_count = 4294967295u,
-         .element_size = 3u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &Vector4294967295nonnullable21conformance_ThreeByteTable.coded_vector}}};
+    {.coded_vector = {.element = &v1_conformance_ThreeByteTable,
+                      .max_count = 4294967295u,
+                      .element_size = 3u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &Vector4294967295nonnullable21conformance_ThreeByteTable}}};
 
 static const fidl_type_t v1_Array9_24v1_conformance_ThreeByteTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_conformance_ThreeByteTable,
                      .array_size = 9u,
                      .element_size = 3u,
-                     .alt_type = &Array9_21conformance_ThreeByteTable.coded_array}}};
+                     .alt_type = &Array9_21conformance_ThreeByteTable}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable5uint8Table = {
     .type_tag = kFidlTypeVector,
@@ -2707,7 +2739,7 @@ static const fidl_type_t v1_Vector4294967295nonnullable5uint8Table = {
                       .max_count = 4294967295u,
                       .element_size = 1u,
                       .nullable = kFidlNullability_Nonnullable,
-                      .alt_type = &Vector4294967295nonnullable5uint8Table.coded_vector}}};
+                      .alt_type = &Vector4294967295nonnullable5uint8Table}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable5int32Table = {
     .type_tag = kFidlTypeVector,
@@ -2715,16 +2747,15 @@ static const fidl_type_t v1_Vector4294967295nonnullable5int32Table = {
                       .max_count = 4294967295u,
                       .element_size = 4u,
                       .nullable = kFidlNullability_Nonnullable,
-                      .alt_type = &Vector4294967295nonnullable5int32Table.coded_vector}}};
+                      .alt_type = &Vector4294967295nonnullable5int32Table}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &v1_String4294967295nonnullableTable,
-         .max_count = 4294967295u,
-         .element_size = 16u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &Vector4294967295nonnullable27String4294967295nonnullableTable.coded_vector}}};
+    {.coded_vector = {.element = &v1_String4294967295nonnullableTable,
+                      .max_count = 4294967295u,
+                      .element_size = 16u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &Vector4294967295nonnullable27String4294967295nonnullableTable}}};
 
 static const fidl_type_t v1_String4294967295nullableTable = {
     .type_tag = kFidlTypeString,
@@ -2732,21 +2763,19 @@ static const fidl_type_t v1_String4294967295nullableTable = {
 
 static const fidl_type_t v1_Vector4294967295nonnullable27v1_String4294967295nullableTable = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &v1_String4294967295nullableTable,
-         .max_count = 4294967295u,
-         .element_size = 16u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &Vector4294967295nonnullable24String4294967295nullableTable.coded_vector}}};
+    {.coded_vector = {.element = &v1_String4294967295nullableTable,
+                      .max_count = 4294967295u,
+                      .element_size = 16u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &Vector4294967295nonnullable24String4294967295nullableTable}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable28v1_conformance_StructWithIntTable = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &v1_conformance_StructWithIntTable,
-         .max_count = 4294967295u,
-         .element_size = 4u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &Vector4294967295nonnullable25conformance_StructWithIntTable.coded_vector}}};
+    {.coded_vector = {.element = &v1_conformance_StructWithIntTable,
+                      .max_count = 4294967295u,
+                      .element_size = 4u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &Vector4294967295nonnullable25conformance_StructWithIntTable}}};
 
 static const fidl_type_t
     v1_Vector4294967295nonnullable40v1_Pointer28v1_conformance_StructWithIntTable = {
@@ -2756,8 +2785,7 @@ static const fidl_type_t
              .max_count = 4294967295u,
              .element_size = 8u,
              .nullable = kFidlNullability_Nonnullable,
-             .alt_type = &Vector4294967295nonnullable34Pointer25conformance_StructWithIntTable
-                              .coded_vector}}};
+             .alt_type = &Vector4294967295nonnullable34Pointer25conformance_StructWithIntTable}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable36v1_Vector4294967295nonnullable5int32Table =
     {.type_tag = kFidlTypeVector,
@@ -2766,36 +2794,35 @@ static const fidl_type_t v1_Vector4294967295nonnullable36v1_Vector4294967295nonn
           .max_count = 4294967295u,
           .element_size = 16u,
           .nullable = kFidlNullability_Nonnullable,
-          .alt_type =
-              &Vector4294967295nonnullable33Vector4294967295nonnullable5int32Table.coded_vector}}};
+          .alt_type = &Vector4294967295nonnullable33Vector4294967295nonnullable5int32Table}}};
 
 static const fidl_type_t v1_Array32_30v1_String4294967295nonnullableTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_String4294967295nonnullableTable,
                      .array_size = 32u,
                      .element_size = 16u,
-                     .alt_type = &Array32_27String4294967295nonnullableTable.coded_array}}};
+                     .alt_type = &Array32_27String4294967295nonnullableTable}}};
 
 static const fidl_type_t v1_Array32_27v1_String4294967295nullableTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_String4294967295nullableTable,
                      .array_size = 32u,
                      .element_size = 16u,
-                     .alt_type = &Array32_24String4294967295nullableTable.coded_array}}};
+                     .alt_type = &Array32_24String4294967295nullableTable}}};
 
 static const fidl_type_t v1_Array8_28v1_conformance_StructWithIntTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_conformance_StructWithIntTable,
                      .array_size = 8u,
                      .element_size = 4u,
-                     .alt_type = &Array8_25conformance_StructWithIntTable.coded_array}}};
+                     .alt_type = &Array8_25conformance_StructWithIntTable}}};
 
 static const fidl_type_t v1_Array16_40v1_Pointer28v1_conformance_StructWithIntTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_Pointer28v1_conformance_StructWithIntTable,
                      .array_size = 16u,
                      .element_size = 8u,
-                     .alt_type = &Array16_34Pointer25conformance_StructWithIntTable.coded_array}}};
+                     .alt_type = &Array16_34Pointer25conformance_StructWithIntTable}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable32v1_conformance_StructSize3Align1Table = {
     .type_tag = kFidlTypeVector,
@@ -2804,8 +2831,7 @@ static const fidl_type_t v1_Vector4294967295nonnullable32v1_conformance_StructSi
          .max_count = 4294967295u,
          .element_size = 3u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &Vector4294967295nonnullable29conformance_StructSize3Align1Table.coded_vector}}};
+         .alt_type = &Vector4294967295nonnullable29conformance_StructSize3Align1Table}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable32v1_conformance_StructSize3Align2Table = {
     .type_tag = kFidlTypeVector,
@@ -2814,8 +2840,7 @@ static const fidl_type_t v1_Vector4294967295nonnullable32v1_conformance_StructSi
          .max_count = 4294967295u,
          .element_size = 4u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &Vector4294967295nonnullable29conformance_StructSize3Align2Table.coded_vector}}};
+         .alt_type = &Vector4294967295nonnullable29conformance_StructSize3Align2Table}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable6uint32Table = {
     .type_tag = kFidlTypeVector,
@@ -2823,21 +2848,21 @@ static const fidl_type_t v1_Vector4294967295nonnullable6uint32Table = {
                       .max_count = 4294967295u,
                       .element_size = 4u,
                       .nullable = kFidlNullability_Nonnullable,
-                      .alt_type = &Vector4294967295nonnullable6uint32Table.coded_vector}}};
+                      .alt_type = &Vector4294967295nonnullable6uint32Table}}};
 
 static const fidl_type_t v1_Array6_32v1_conformance_StructSize3Align1Table = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_conformance_StructSize3Align1Table,
                      .array_size = 6u,
                      .element_size = 3u,
-                     .alt_type = &Array6_29conformance_StructSize3Align1Table.coded_array}}};
+                     .alt_type = &Array6_29conformance_StructSize3Align1Table}}};
 
 static const fidl_type_t v1_Array8_32v1_conformance_StructSize3Align2Table = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_conformance_StructSize3Align2Table,
                      .array_size = 8u,
                      .element_size = 4u,
-                     .alt_type = &Array8_29conformance_StructSize3Align2Table.coded_array}}};
+                     .alt_type = &Array8_29conformance_StructSize3Align2Table}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable31v1_conformance_UnionSize8Align4Table = {
     .type_tag = kFidlTypeVector,
@@ -2846,72 +2871,67 @@ static const fidl_type_t v1_Vector4294967295nonnullable31v1_conformance_UnionSiz
          .max_count = 4294967295u,
          .element_size = 24u,
          .nullable = kFidlNullability_Nonnullable,
-         .alt_type =
-             &Vector4294967295nonnullable28conformance_UnionSize8Align4Table.coded_vector}}};
+         .alt_type = &Vector4294967295nonnullable28conformance_UnionSize8Align4Table}}};
 
 static const fidl_type_t v1_Vector3nonnullable38v1_Pointer26v1_conformance_StringUnionTable = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &v1_Pointer26v1_conformance_StringUnionTable,
-         .max_count = 3u,
-         .element_size = 24u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &Vector3nonnullable32Pointer23conformance_StringUnionTable.coded_vector}}};
+    {.coded_vector = {.element = &v1_Pointer26v1_conformance_StringUnionTable,
+                      .max_count = 3u,
+                      .element_size = 24u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &Vector3nonnullable32Pointer23conformance_StringUnionTable}}};
 
 static const fidl_type_t v1_Array72_26v1_conformance_StringUnionTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_conformance_StringUnionTable,
                      .array_size = 72u,
                      .element_size = 24u,
-                     .alt_type = &Array72_23conformance_StringUnionTable.coded_array}}};
+                     .alt_type = &Array72_23conformance_StringUnionTable}}};
 
 static const fidl_type_t v1_Array72_38v1_Pointer26v1_conformance_StringUnionTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_Pointer26v1_conformance_StringUnionTable,
                      .array_size = 72u,
                      .element_size = 24u,
-                     .alt_type = &Array24_32Pointer23conformance_StringUnionTable.coded_array}}};
+                     .alt_type = &Array24_32Pointer23conformance_StringUnionTable}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable30v1_conformance_Size5Alignment4Table = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &v1_conformance_Size5Alignment4Table,
-         .max_count = 4294967295u,
-         .element_size = 8u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &Vector4294967295nonnullable27conformance_Size5Alignment4Table.coded_vector}}};
+    {.coded_vector = {.element = &v1_conformance_Size5Alignment4Table,
+                      .max_count = 4294967295u,
+                      .element_size = 8u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &Vector4294967295nonnullable27conformance_Size5Alignment4Table}}};
 
 static const fidl_type_t v1_Array24_30v1_conformance_Size5Alignment4Table = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_conformance_Size5Alignment4Table,
                      .array_size = 24u,
                      .element_size = 8u,
-                     .alt_type = &Array24_27conformance_Size5Alignment4Table.coded_array}}};
+                     .alt_type = &Array24_27conformance_Size5Alignment4Table}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable30v1_conformance_Size5Alignment1Table = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &v1_conformance_Size5Alignment1Table,
-         .max_count = 4294967295u,
-         .element_size = 5u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &Vector4294967295nonnullable27conformance_Size5Alignment1Table.coded_vector}}};
+    {.coded_vector = {.element = &v1_conformance_Size5Alignment1Table,
+                      .max_count = 4294967295u,
+                      .element_size = 5u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &Vector4294967295nonnullable27conformance_Size5Alignment1Table}}};
 
 static const fidl_type_t v1_Array15_30v1_conformance_Size5Alignment1Table = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_conformance_Size5Alignment1Table,
                      .array_size = 15u,
                      .element_size = 5u,
-                     .alt_type = &Array15_27conformance_Size5Alignment1Table.coded_array}}};
+                     .alt_type = &Array15_27conformance_Size5Alignment1Table}}};
 
 static const fidl_type_t v1_Vector1nonnullable36v1_conformance_Sandwich1WithOptUnionTable = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &v1_conformance_Sandwich1WithOptUnionTable,
-         .max_count = 1u,
-         .element_size = 40u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &Vector1nonnullable33conformance_Sandwich1WithOptUnionTable.coded_vector}}};
+    {.coded_vector = {.element = &v1_conformance_Sandwich1WithOptUnionTable,
+                      .max_count = 1u,
+                      .element_size = 40u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &Vector1nonnullable33conformance_Sandwich1WithOptUnionTable}}};
 
 static const fidl_type_t v1_String2nonnullableTable = {
     .type_tag = kFidlTypeString,
@@ -2923,44 +2943,47 @@ static const fidl_type_t v1_String200nonnullableTable = {
 
 static const fidl_type_t v1_Vector4294967295nullable30v1_String4294967295nonnullableTable = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &v1_String4294967295nonnullableTable,
-         .max_count = 4294967295u,
-         .element_size = 16u,
-         .nullable = kFidlNullability_Nullable,
-         .alt_type = &Vector4294967295nullable27String4294967295nonnullableTable.coded_vector}}};
+    {.coded_vector = {.element = &v1_String4294967295nonnullableTable,
+                      .max_count = 4294967295u,
+                      .element_size = 16u,
+                      .nullable = kFidlNullability_Nullable,
+                      .alt_type = &Vector4294967295nullable27String4294967295nonnullableTable}}};
+
+static const fidl_type_t v1_Array24_6uint32Table = {
+    .type_tag = kFidlTypeArray,
+    {.coded_array = {.element = NULL,
+                     .array_size = 24u,
+                     .element_size = 4u,
+                     .alt_type = &Array24_6uint32Table}}};
 
 static const fidl_type_t v1_Vector4294967295nonnullable23v1_conformance_FiveByteTable = {
     .type_tag = kFidlTypeVector,
-    {.coded_vector = {
-         .element = &v1_conformance_FiveByteTable,
-         .max_count = 4294967295u,
-         .element_size = 8u,
-         .nullable = kFidlNullability_Nonnullable,
-         .alt_type = &Vector4294967295nonnullable20conformance_FiveByteTable.coded_vector}}};
+    {.coded_vector = {.element = &v1_conformance_FiveByteTable,
+                      .max_count = 4294967295u,
+                      .element_size = 8u,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .alt_type = &Vector4294967295nonnullable20conformance_FiveByteTable}}};
 
 static const fidl_type_t v1_Array24_23v1_conformance_FiveByteTable = {
     .type_tag = kFidlTypeArray,
     {.coded_array = {.element = &v1_conformance_FiveByteTable,
                      .array_size = 24u,
                      .element_size = 8u,
-                     .alt_type = &Array24_20conformance_FiveByteTable.coded_array}}};
+                     .alt_type = &Array24_20conformance_FiveByteTable}}};
 
-static const struct FidlUnionField Fields39v1_conformance_UnionWithVectorOfVectors[] = {
-    /*FidlUnionField*/
+static const struct FidlXUnionField Fields39v1_conformance_UnionWithVectorOfVectors[] = {
+    /*FidlXUnionField*/
     {.type =
          &v1_Vector4294967295nonnullable76v1_Vector4294967295nonnullable44v1_Pointer32v1_conformance_StructSize3Align1Table,
-     .padding = 0u,
-     .xunion_ordinal = 1u}};
+     .ordinal = 1u}};
 const fidl_type_t v1_conformance_UnionWithVectorOfVectorsTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields39v1_conformance_UnionWithVectorOfVectors,
-                     .field_count = 1u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/UnionWithVectorOfVectors",
-                     .alt_type = &conformance_UnionWithVectorOfVectorsTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 1u,
+                      .fields = Fields39v1_conformance_UnionWithVectorOfVectors,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/UnionWithVectorOfVectors",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_UnionWithVectorOfVectorsTable}}};
 static const struct FidlStructField Fields24v1_conformance_Sandwich9[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 2u, .padding = 6u},
     /*FidlStructField*/
@@ -2974,19 +2997,18 @@ const fidl_type_t v1_conformance_Sandwich9Table = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/Sandwich9",
-                      .alt_type = &conformance_Sandwich9Table.coded_struct}}};
+                      .alt_type = &conformance_Sandwich9Table}}};
 
-static const struct FidlUnionField Fields35v1_conformance_UnionWithBoundString[] = {
-    /*FidlUnionField*/ {.type = &v1_String5nonnullableTable, .padding = 0u, .xunion_ordinal = 1u}};
+static const struct FidlXUnionField Fields35v1_conformance_UnionWithBoundString[] = {
+    /*FidlXUnionField*/ {.type = &v1_String5nonnullableTable, .ordinal = 1u}};
 const fidl_type_t v1_conformance_UnionWithBoundStringTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields35v1_conformance_UnionWithBoundString,
-                     .field_count = 1u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/UnionWithBoundString",
-                     .alt_type = &conformance_UnionWithBoundStringTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 1u,
+                      .fields = Fields35v1_conformance_UnionWithBoundString,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/UnionWithBoundString",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_UnionWithBoundStringTable}}};
 static const struct FidlStructField Fields41v1_conformance_UnionWithBoundStringStruct[] = {
     /*FidlStructField*/ {
         .type = &v1_conformance_UnionWithBoundStringTable, .offset = 0u, .padding = 0u}};
@@ -2998,21 +3020,32 @@ const fidl_type_t v1_conformance_UnionWithBoundStringStructTable = {
                       .max_out_of_line = 24u,
                       .contains_union = true,
                       .name = "conformance/UnionWithBoundStringStruct",
-                      .alt_type = &conformance_UnionWithBoundStringStructTable.coded_struct}}};
+                      .alt_type = &conformance_UnionWithBoundStringStructTable}}};
 
-static const struct FidlUnionField Fields31v1_conformance_UnionSize8Align4[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 2u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 4u, .xunion_ordinal = 3u}};
+static const struct FidlXUnionField Fields31v1_conformance_UnionSize8Align4[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 3u}};
 const fidl_type_t v1_conformance_UnionSize8Align4Table = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields31v1_conformance_UnionSize8Align4,
-                     .field_count = 3u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/UnionSize8Align4",
-                     .alt_type = &conformance_UnionSize8Align4Table.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 3u,
+                      .fields = Fields31v1_conformance_UnionSize8Align4,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/UnionSize8Align4",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_UnionSize8Align4Table}}};
+static const struct FidlXUnionField Fields43v1_Pointer31v1_conformance_UnionSize8Align4[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 3u}};
+static const fidl_type_t v1_Pointer31v1_conformance_UnionSize8Align4Table = {
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 3u,
+                      .fields = Fields43v1_Pointer31v1_conformance_UnionSize8Align4,
+                      .nullable = kFidlNullability_Nullable,
+                      .name = "conformance/UnionSize8Align4",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &Pointer28conformance_UnionSize8Align4Table}}};
 static const struct FidlStructField Fields24v1_conformance_Sandwich1[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
     /*FidlStructField*/
@@ -3026,7 +3059,7 @@ const fidl_type_t v1_conformance_Sandwich1Table = {
                       .max_out_of_line = 8u,
                       .contains_union = true,
                       .name = "conformance/Sandwich1",
-                      .alt_type = &conformance_Sandwich1Table.coded_struct}}};
+                      .alt_type = &conformance_Sandwich1Table}}};
 
 static const struct FidlStructField Fields33v1_conformance_OutOfLineSandwich1[] = {
     /*FidlStructField*/ {.type = &v1_String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -3042,22 +3075,21 @@ const fidl_type_t v1_conformance_OutOfLineSandwich1Table = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/OutOfLineSandwich1",
-                      .alt_type = &conformance_OutOfLineSandwich1Table.coded_struct}}};
+                      .alt_type = &conformance_OutOfLineSandwich1Table}}};
 
-static const struct FidlUnionField Fields32v1_conformance_UnionSize36Align4[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 2u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 3u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 0u, .xunion_ordinal = 4u}};
+static const struct FidlXUnionField Fields32v1_conformance_UnionSize36Align4[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 3u},
+    /*FidlXUnionField*/ {.type = &v1_Array32_5uint8Table, .ordinal = 4u}};
 const fidl_type_t v1_conformance_UnionSize36Align4Table = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields32v1_conformance_UnionSize36Align4,
-                     .field_count = 4u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/UnionSize36Align4",
-                     .alt_type = &conformance_UnionSize36Align4Table.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 4u,
+                      .fields = Fields32v1_conformance_UnionSize36Align4,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/UnionSize36Align4",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_UnionSize36Align4Table}}};
 static const struct FidlStructField Fields24v1_conformance_Sandwich4[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
     /*FidlStructField*/
@@ -3071,7 +3103,7 @@ const fidl_type_t v1_conformance_Sandwich4Table = {
                       .max_out_of_line = 32u,
                       .contains_union = true,
                       .name = "conformance/Sandwich4",
-                      .alt_type = &conformance_Sandwich4Table.coded_struct}}};
+                      .alt_type = &conformance_Sandwich4Table}}};
 
 static const struct FidlStructField Fields41v1_conformance_Sandwich4Align8WithPointer[] = {
     /*FidlStructField*/ {.type = &v1_conformance_Sandwich4Table, .offset = 0u, .padding = 0u},
@@ -3085,7 +3117,7 @@ const fidl_type_t v1_conformance_Sandwich4Align8WithPointerTable = {
                       .max_out_of_line = 40u,
                       .contains_union = true,
                       .name = "conformance/Sandwich4Align8WithPointer",
-                      .alt_type = &conformance_Sandwich4Align8WithPointerTable.coded_struct}}};
+                      .alt_type = &conformance_Sandwich4Align8WithPointerTable}}};
 
 static const struct FidlStructField Fields30v1_conformance_Sandwich4Align8[] = {
     /*FidlStructField*/ {.type = &v1_conformance_Sandwich4Table, .offset = 0u, .padding = 0u},
@@ -3098,7 +3130,7 @@ const fidl_type_t v1_conformance_Sandwich4Align8Table = {
                       .max_out_of_line = 32u,
                       .contains_union = true,
                       .name = "conformance/Sandwich4Align8",
-                      .alt_type = &conformance_Sandwich4Align8Table.coded_struct}}};
+                      .alt_type = &conformance_Sandwich4Align8Table}}};
 
 static const struct FidlStructField Fields37v1_conformance_NoCodingTablesStressor[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u},
@@ -3128,22 +3160,21 @@ const fidl_type_t v1_conformance_NoCodingTablesStressorTable = {
                       .max_out_of_line = 112u,
                       .contains_union = true,
                       .name = "conformance/NoCodingTablesStressor",
-                      .alt_type = &conformance_NoCodingTablesStressorTable.coded_struct}}};
+                      .alt_type = &conformance_NoCodingTablesStressorTable}}};
 
-static const struct FidlUnionField Fields32v1_conformance_UnionSize12Align4[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 2u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 3u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 2u, .xunion_ordinal = 4u}};
+static const struct FidlXUnionField Fields32v1_conformance_UnionSize12Align4[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 3u},
+    /*FidlXUnionField*/ {.type = &v1_Array6_5uint8Table, .ordinal = 4u}};
 const fidl_type_t v1_conformance_UnionSize12Align4Table = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields32v1_conformance_UnionSize12Align4,
-                     .field_count = 4u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/UnionSize12Align4",
-                     .alt_type = &conformance_UnionSize12Align4Table.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 4u,
+                      .fields = Fields32v1_conformance_UnionSize12Align4,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/UnionSize12Align4",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_UnionSize12Align4Table}}};
 static const struct FidlXUnionField Fields31v1_conformance_XUnionWithUnions[] = {
     /*FidlXUnionField*/ {.type = &v1_conformance_UnionSize8Align4Table, .ordinal = 684009751u},
     /*FidlXUnionField*/ {.type = &v1_conformance_UnionSize12Align4Table, .ordinal = 1971727256u}};
@@ -3153,8 +3184,8 @@ const fidl_type_t v1_conformance_XUnionWithUnionsTable = {
                       .fields = Fields31v1_conformance_XUnionWithUnions,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/XUnionWithUnions",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &conformance_XUnionWithUnionsTable}}};
 static const struct FidlXUnionField Fields42v1_conformance_XUnionWithUnionsNullableRef[] = {
     /*FidlXUnionField*/ {.type = &v1_conformance_UnionSize8Align4Table, .ordinal = 684009751u},
     /*FidlXUnionField*/ {.type = &v1_conformance_UnionSize12Align4Table, .ordinal = 1971727256u}};
@@ -3164,8 +3195,8 @@ const fidl_type_t v1_conformance_XUnionWithUnionsNullableRefTable = {
                       .fields = Fields42v1_conformance_XUnionWithUnionsNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/XUnionWithUnions",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &conformance_XUnionWithUnionsNullableRefTable}}};
 static const struct FidlStructField Fields24v1_conformance_Sandwich2[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
     /*FidlStructField*/
@@ -3179,7 +3210,7 @@ const fidl_type_t v1_conformance_Sandwich2Table = {
                       .max_out_of_line = 8u,
                       .contains_union = true,
                       .name = "conformance/Sandwich2",
-                      .alt_type = &conformance_Sandwich2Table.coded_struct}}};
+                      .alt_type = &conformance_Sandwich2Table}}};
 
 static const struct FidlStructField Fields38v1_conformance_Uint8Uint16Uint32Uint64[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 1u},
@@ -3194,7 +3225,7 @@ const fidl_type_t v1_conformance_Uint8Uint16Uint32Uint64Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Uint8Uint16Uint32Uint64",
-                      .alt_type = &conformance_Uint8Uint16Uint32Uint64Table.coded_struct}}};
+                      .alt_type = &conformance_Uint8Uint16Uint32Uint64Table}}};
 
 static const struct FidlStructField Fields38v1_conformance_Uint64Uint32Uint16Uint8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u},
@@ -3209,7 +3240,7 @@ const fidl_type_t v1_conformance_Uint64Uint32Uint16Uint8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Uint64Uint32Uint16Uint8",
-                      .alt_type = &conformance_Uint64Uint32Uint16Uint8Table.coded_struct}}};
+                      .alt_type = &conformance_Uint64Uint32Uint16Uint8Table}}};
 
 static const struct FidlTableField Fields37v1_conformance_TransformerSimpleTable[] = {
     /*FidlTableField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 1u}};
@@ -3231,7 +3262,7 @@ const fidl_type_t v1_conformance_SimpleTableArrayStructTable = {
                       .max_out_of_line = 48u,
                       .contains_union = false,
                       .name = "conformance/SimpleTableArrayStruct",
-                      .alt_type = &conformance_SimpleTableArrayStructTable.coded_struct}}};
+                      .alt_type = &conformance_SimpleTableArrayStructTable}}};
 
 static const struct FidlStructField Fields37v1_conformance_TransformerEmptyStruct[] = {};
 const fidl_type_t v1_conformance_TransformerEmptyStructTable = {
@@ -3242,21 +3273,19 @@ const fidl_type_t v1_conformance_TransformerEmptyStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/TransformerEmptyStruct",
-                      .alt_type = &conformance_TransformerEmptyStructTable.coded_struct}}};
+                      .alt_type = &conformance_TransformerEmptyStructTable}}};
 
-static const struct FidlUnionField Fields31v1_conformance_EmptyStructUnion[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/ {
-        .type = &v1_conformance_TransformerEmptyStructTable, .padding = 7u, .xunion_ordinal = 2u}};
+static const struct FidlXUnionField Fields31v1_conformance_EmptyStructUnion[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &v1_conformance_TransformerEmptyStructTable, .ordinal = 2u}};
 const fidl_type_t v1_conformance_EmptyStructUnionTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields31v1_conformance_EmptyStructUnion,
-                     .field_count = 2u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/EmptyStructUnion",
-                     .alt_type = &conformance_EmptyStructUnionTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 2u,
+                      .fields = Fields31v1_conformance_EmptyStructUnion,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/EmptyStructUnion",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_EmptyStructUnionTable}}};
 static const struct FidlStructField Fields37v1_conformance_EmptyStructUnionStruct[] = {
     /*FidlStructField*/ {
         .type = &v1_conformance_EmptyStructUnionTable, .offset = 0u, .padding = 0u}};
@@ -3268,7 +3297,7 @@ const fidl_type_t v1_conformance_EmptyStructUnionStructTable = {
                       .max_out_of_line = 8u,
                       .contains_union = true,
                       .name = "conformance/EmptyStructUnionStruct",
-                      .alt_type = &conformance_EmptyStructUnionStructTable.coded_struct}}};
+                      .alt_type = &conformance_EmptyStructUnionStructTable}}};
 
 static const struct FidlStructField Fields24v1_conformance_ThreeByte[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 0u},
@@ -3282,7 +3311,7 @@ const fidl_type_t v1_conformance_ThreeByteTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/ThreeByte",
-                      .alt_type = &conformance_ThreeByteTable.coded_struct}}};
+                      .alt_type = &conformance_ThreeByteTable}}};
 
 static const struct FidlStructField Fields32v1_conformance_ThreeByteInVector[] = {
     /*FidlStructField*/ {.type = &v1_Vector4294967295nonnullable24v1_conformance_ThreeByteTable,
@@ -3296,7 +3325,7 @@ const fidl_type_t v1_conformance_ThreeByteInVectorTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/ThreeByteInVector",
-                      .alt_type = &conformance_ThreeByteInVectorTable.coded_struct}}};
+                      .alt_type = &conformance_ThreeByteInVectorTable}}};
 
 static const struct FidlStructField Fields32v1_conformance_ThreeByteInStruct[] = {
     /*FidlStructField*/ {.type = &v1_conformance_ThreeByteTable, .offset = 0u, .padding = 0u},
@@ -3310,7 +3339,7 @@ const fidl_type_t v1_conformance_ThreeByteInStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/ThreeByteInStruct",
-                      .alt_type = &conformance_ThreeByteInStructTable.coded_struct}}};
+                      .alt_type = &conformance_ThreeByteInStructTable}}};
 
 static const struct FidlStructField Fields31v1_conformance_ThreeByteInArray[] = {
     /*FidlStructField*/ {
@@ -3323,7 +3352,7 @@ const fidl_type_t v1_conformance_ThreeByteInArrayTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/ThreeByteInArray",
-                      .alt_type = &conformance_ThreeByteInArrayTable.coded_struct}}};
+                      .alt_type = &conformance_ThreeByteInArrayTable}}};
 
 static const struct FidlStructField Fields41v1_conformance_TestOptionalXUnionInStruct[] = {
     /*FidlStructField*/ {.type = &v1_String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -3339,7 +3368,7 @@ const fidl_type_t v1_conformance_TestOptionalXUnionInStructTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestOptionalXUnionInStruct",
-                      .alt_type = &conformance_TestOptionalXUnionInStructTable.coded_struct}}};
+                      .alt_type = &conformance_TestOptionalXUnionInStructTable}}};
 
 static const struct FidlTableField Fields39v1_conformance_TableWithStringAndVector[] = {
     /*FidlTableField*/ {.type = &v1_String4294967295nonnullableTable, .ordinal = 1u},
@@ -3356,14 +3385,13 @@ static const struct FidlStructField Fields47v1_conformance_StructOfTableWithStri
         .type = &v1_conformance_TableWithStringAndVectorTable, .offset = 0u, .padding = 0u}};
 const fidl_type_t v1_conformance_StructOfTableWithStringAndVectorTable = {
     .type_tag = kFidlTypeStruct,
-    {.coded_struct = {
-         .fields = Fields47v1_conformance_StructOfTableWithStringAndVector,
-         .field_count = 1u,
-         .size = 16u,
-         .max_out_of_line = 4294967295u,
-         .contains_union = false,
-         .name = "conformance/StructOfTableWithStringAndVector",
-         .alt_type = &conformance_StructOfTableWithStringAndVectorTable.coded_struct}}};
+    {.coded_struct = {.fields = Fields47v1_conformance_StructOfTableWithStringAndVector,
+                      .field_count = 1u,
+                      .size = 16u,
+                      .max_out_of_line = 4294967295u,
+                      .contains_union = false,
+                      .name = "conformance/StructOfTableWithStringAndVector",
+                      .alt_type = &conformance_StructOfTableWithStringAndVectorTable}}};
 
 static const struct FidlStructField Fields28v1_conformance_StructWithInt[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u}};
@@ -3375,7 +3403,7 @@ const fidl_type_t v1_conformance_StructWithIntTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/StructWithInt",
-                      .alt_type = &conformance_StructWithIntTable.coded_struct}}};
+                      .alt_type = &conformance_StructWithIntTable}}};
 
 static const struct FidlStructField Fields32v1_conformance_StructWithVectors[] = {
     /*FidlStructField*/ {
@@ -3410,7 +3438,7 @@ const fidl_type_t v1_conformance_StructWithVectorsTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/StructWithVectors",
-                      .alt_type = &conformance_StructWithVectorsTable.coded_struct}}};
+                      .alt_type = &conformance_StructWithVectorsTable}}};
 
 static const struct FidlStructField Fields31v1_conformance_StructWithArrays[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u},
@@ -3433,7 +3461,7 @@ const fidl_type_t v1_conformance_StructWithArraysTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/StructWithArrays",
-                      .alt_type = &conformance_StructWithArraysTable.coded_struct}}};
+                      .alt_type = &conformance_StructWithArraysTable}}};
 
 static const struct FidlStructField Fields32v1_conformance_StructSize3Align2[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 2u, .padding = 0u},
@@ -3446,7 +3474,7 @@ const fidl_type_t v1_conformance_StructSize3Align2Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/StructSize3Align2",
-                      .alt_type = &conformance_StructSize3Align2Table.coded_struct}}};
+                      .alt_type = &conformance_StructSize3Align2Table}}};
 
 static const struct FidlStructField Fields32v1_conformance_StructSize3Align1[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 3u, .padding = 0u}};
@@ -3458,7 +3486,7 @@ const fidl_type_t v1_conformance_StructSize3Align1Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/StructSize3Align1",
-                      .alt_type = &conformance_StructSize3Align1Table.coded_struct}}};
+                      .alt_type = &conformance_StructSize3Align1Table}}};
 
 static const struct FidlXUnionField Fields31v1_conformance_XUnionWithStruct[] = {
     /*FidlXUnionField*/ {.type = &v1_conformance_StructSize3Align1Table, .ordinal = 423517204u}};
@@ -3468,8 +3496,8 @@ const fidl_type_t v1_conformance_XUnionWithStructTable = {
                       .fields = Fields31v1_conformance_XUnionWithStruct,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/XUnionWithStruct",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &conformance_XUnionWithStructTable}}};
 static const struct FidlXUnionField Fields42v1_conformance_XUnionWithStructNullableRef[] = {
     /*FidlXUnionField*/ {.type = &v1_conformance_StructSize3Align1Table, .ordinal = 423517204u}};
 const fidl_type_t v1_conformance_XUnionWithStructNullableRefTable = {
@@ -3478,8 +3506,8 @@ const fidl_type_t v1_conformance_XUnionWithStructNullableRefTable = {
                       .fields = Fields42v1_conformance_XUnionWithStructNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/XUnionWithStruct",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &conformance_XUnionWithStructNullableRefTable}}};
 static const struct FidlXUnionField Fields31v1_conformance_XUnionWithXUnion[] = {
     /*FidlXUnionField*/ {.type = &v1_conformance_XUnionWithStructTable, .ordinal = 1812359455u}};
 const fidl_type_t v1_conformance_XUnionWithXUnionTable = {
@@ -3488,8 +3516,8 @@ const fidl_type_t v1_conformance_XUnionWithXUnionTable = {
                       .fields = Fields31v1_conformance_XUnionWithXUnion,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/XUnionWithXUnion",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &conformance_XUnionWithXUnionTable}}};
 static const struct FidlXUnionField Fields42v1_conformance_XUnionWithXUnionNullableRef[] = {
     /*FidlXUnionField*/ {.type = &v1_conformance_XUnionWithStructTable, .ordinal = 1812359455u}};
 const fidl_type_t v1_conformance_XUnionWithXUnionNullableRefTable = {
@@ -3498,8 +3526,8 @@ const fidl_type_t v1_conformance_XUnionWithXUnionNullableRefTable = {
                       .fields = Fields42v1_conformance_XUnionWithXUnionNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/XUnionWithXUnion",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &conformance_XUnionWithXUnionNullableRefTable}}};
 static const struct FidlStructField Fields37v1_conformance_XUnionWithXUnionStruct[] = {
     /*FidlStructField*/ {
         .type = &v1_conformance_XUnionWithXUnionTable, .offset = 0u, .padding = 0u}};
@@ -3511,7 +3539,7 @@ const fidl_type_t v1_conformance_XUnionWithXUnionStructTable = {
                       .max_out_of_line = 32u,
                       .contains_union = false,
                       .name = "conformance/XUnionWithXUnionStruct",
-                      .alt_type = &conformance_XUnionWithXUnionStructTable.coded_struct}}};
+                      .alt_type = &conformance_XUnionWithXUnionStructTable}}};
 
 static const struct FidlStructField Fields37v1_conformance_XUnionWithStructStruct[] = {
     /*FidlStructField*/ {
@@ -3524,45 +3552,29 @@ const fidl_type_t v1_conformance_XUnionWithStructStructTable = {
                       .max_out_of_line = 8u,
                       .contains_union = false,
                       .name = "conformance/XUnionWithStructStruct",
-                      .alt_type = &conformance_XUnionWithStructStructTable.coded_struct}}};
+                      .alt_type = &conformance_XUnionWithStructStructTable}}};
 
-static const struct FidlUnionField Fields30v1_conformance_UnionWithVector[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/
-    {.type = &v1_Vector4294967295nonnullable5uint8Table, .padding = 0u, .xunion_ordinal = 2u},
-    /*FidlUnionField*/
-    {.type = &v1_String4294967295nonnullableTable, .padding = 0u, .xunion_ordinal = 3u},
-    /*FidlUnionField*/
-    {.type = &v1_Vector4294967295nonnullable32v1_conformance_StructSize3Align1Table,
-     .padding = 0u,
-     .xunion_ordinal = 4u},
-    /*FidlUnionField*/
-    {.type = &v1_Vector4294967295nonnullable32v1_conformance_StructSize3Align2Table,
-     .padding = 0u,
-     .xunion_ordinal = 5u},
-    /*FidlUnionField*/
-    {.type = &v1_Vector4294967295nonnullable6uint32Table, .padding = 0u, .xunion_ordinal = 6u},
-    /*FidlUnionField*/
-    {.type = &v1_Array6_32v1_conformance_StructSize3Align1Table,
-     .padding = 2u,
-     .xunion_ordinal = 7u},
-    /*FidlUnionField*/
-    {.type = &v1_Array8_32v1_conformance_StructSize3Align2Table,
-     .padding = 0u,
-     .xunion_ordinal = 8u},
-    /*FidlUnionField*/
-    {.type = &v1_Vector4294967295nonnullable31v1_conformance_UnionSize8Align4Table,
-     .padding = 0u,
-     .xunion_ordinal = 9u}};
+static const struct FidlXUnionField Fields30v1_conformance_UnionWithVector[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &v1_Vector4294967295nonnullable5uint8Table, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &v1_String4294967295nonnullableTable, .ordinal = 3u},
+    /*FidlXUnionField*/
+    {.type = &v1_Vector4294967295nonnullable32v1_conformance_StructSize3Align1Table, .ordinal = 4u},
+    /*FidlXUnionField*/
+    {.type = &v1_Vector4294967295nonnullable32v1_conformance_StructSize3Align2Table, .ordinal = 5u},
+    /*FidlXUnionField*/ {.type = &v1_Vector4294967295nonnullable6uint32Table, .ordinal = 6u},
+    /*FidlXUnionField*/ {.type = &v1_Array6_32v1_conformance_StructSize3Align1Table, .ordinal = 7u},
+    /*FidlXUnionField*/ {.type = &v1_Array8_32v1_conformance_StructSize3Align2Table, .ordinal = 8u},
+    /*FidlXUnionField*/
+    {.type = &v1_Vector4294967295nonnullable31v1_conformance_UnionSize8Align4Table, .ordinal = 9u}};
 const fidl_type_t v1_conformance_UnionWithVectorTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields30v1_conformance_UnionWithVector,
-                     .field_count = 9u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/UnionWithVector",
-                     .alt_type = &conformance_UnionWithVectorTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 9u,
+                      .fields = Fields30v1_conformance_UnionWithVector,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/UnionWithVector",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_UnionWithVectorTable}}};
 static const struct FidlTableField Fields51v1_conformance_Table_UnionWithVector_StructSandwich[] = {
     /*FidlTableField*/ {.type = &v1_conformance_StructSize3Align1Table, .ordinal = 1u},
     /*FidlTableField*/ {.type = &v1_conformance_UnionWithVectorTable, .ordinal = 2u},
@@ -3580,14 +3592,13 @@ static const struct FidlStructField
                              .padding = 0u}};
 const fidl_type_t v1_conformance_Table_UnionWithVector_StructSandwichStructTable = {
     .type_tag = kFidlTypeStruct,
-    {.coded_struct = {
-         .fields = Fields57v1_conformance_Table_UnionWithVector_StructSandwichStruct,
-         .field_count = 1u,
-         .size = 16u,
-         .max_out_of_line = 4294967295u,
-         .contains_union = true,
-         .name = "conformance/Table_UnionWithVector_StructSandwichStruct",
-         .alt_type = &conformance_Table_UnionWithVector_StructSandwichStructTable.coded_struct}}};
+    {.coded_struct = {.fields = Fields57v1_conformance_Table_UnionWithVector_StructSandwichStruct,
+                      .field_count = 1u,
+                      .size = 16u,
+                      .max_out_of_line = 4294967295u,
+                      .contains_union = true,
+                      .name = "conformance/Table_UnionWithVector_StructSandwichStruct",
+                      .alt_type = &conformance_Table_UnionWithVector_StructSandwichStructTable}}};
 
 static const struct FidlTableField Fields53v1_conformance_Table_UnionWithVector_ReservedSandwich[] =
     {
@@ -3605,14 +3616,13 @@ static const struct FidlStructField
                              .padding = 0u}};
 const fidl_type_t v1_conformance_Table_UnionWithVector_ReservedSandwichStructTable = {
     .type_tag = kFidlTypeStruct,
-    {.coded_struct = {
-         .fields = Fields59v1_conformance_Table_UnionWithVector_ReservedSandwichStruct,
-         .field_count = 1u,
-         .size = 16u,
-         .max_out_of_line = 4294967295u,
-         .contains_union = true,
-         .name = "conformance/Table_UnionWithVector_ReservedSandwichStruct",
-         .alt_type = &conformance_Table_UnionWithVector_ReservedSandwichStructTable.coded_struct}}};
+    {.coded_struct = {.fields = Fields59v1_conformance_Table_UnionWithVector_ReservedSandwichStruct,
+                      .field_count = 1u,
+                      .size = 16u,
+                      .max_out_of_line = 4294967295u,
+                      .contains_union = true,
+                      .name = "conformance/Table_UnionWithVector_ReservedSandwichStruct",
+                      .alt_type = &conformance_Table_UnionWithVector_ReservedSandwichStructTable}}};
 
 static const struct FidlStructField Fields24v1_conformance_Sandwich6[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -3626,7 +3636,7 @@ const fidl_type_t v1_conformance_Sandwich6Table = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/Sandwich6",
-                      .alt_type = &conformance_Sandwich6Table.coded_struct}}};
+                      .alt_type = &conformance_Sandwich6Table}}};
 
 static const struct FidlTableField Fields45v1_conformance_Table_StructWithUint32Sandwich[] = {
     /*FidlTableField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 1u},
@@ -3646,14 +3656,13 @@ static const struct FidlStructField Fields51v1_conformance_Table_StructWithUint3
                              .padding = 0u}};
 const fidl_type_t v1_conformance_Table_StructWithUint32SandwichStructTable = {
     .type_tag = kFidlTypeStruct,
-    {.coded_struct = {
-         .fields = Fields51v1_conformance_Table_StructWithUint32SandwichStruct,
-         .field_count = 1u,
-         .size = 16u,
-         .max_out_of_line = 96u,
-         .contains_union = false,
-         .name = "conformance/Table_StructWithUint32SandwichStruct",
-         .alt_type = &conformance_Table_StructWithUint32SandwichStructTable.coded_struct}}};
+    {.coded_struct = {.fields = Fields51v1_conformance_Table_StructWithUint32SandwichStruct,
+                      .field_count = 1u,
+                      .size = 16u,
+                      .max_out_of_line = 96u,
+                      .contains_union = false,
+                      .name = "conformance/Table_StructWithUint32SandwichStruct",
+                      .alt_type = &conformance_Table_StructWithUint32SandwichStructTable}}};
 
 static const struct FidlTableField Fields47v1_conformance_Table_StructWithReservedSandwich[] = {
     /*FidlTableField*/ {.type = &v1_conformance_StructSize3Align1Table, .ordinal = 2u},
@@ -3671,14 +3680,13 @@ static const struct FidlStructField
                              .padding = 0u}};
 const fidl_type_t v1_conformance_Table_StructWithReservedSandwichStructTable = {
     .type_tag = kFidlTypeStruct,
-    {.coded_struct = {
-         .fields = Fields53v1_conformance_Table_StructWithReservedSandwichStruct,
-         .field_count = 1u,
-         .size = 16u,
-         .max_out_of_line = 48u,
-         .contains_union = false,
-         .name = "conformance/Table_StructWithReservedSandwichStruct",
-         .alt_type = &conformance_Table_StructWithReservedSandwichStructTable.coded_struct}}};
+    {.coded_struct = {.fields = Fields53v1_conformance_Table_StructWithReservedSandwichStruct,
+                      .field_count = 1u,
+                      .size = 16u,
+                      .max_out_of_line = 48u,
+                      .contains_union = false,
+                      .name = "conformance/Table_StructWithReservedSandwichStruct",
+                      .alt_type = &conformance_Table_StructWithReservedSandwichStructTable}}};
 
 static const struct FidlStructField Fields26v1_conformance_Regression4[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 3u},
@@ -3697,7 +3705,7 @@ const fidl_type_t v1_conformance_Regression4Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Regression4",
-                      .alt_type = &conformance_Regression4Table.coded_struct}}};
+                      .alt_type = &conformance_Regression4Table}}};
 
 static const struct FidlStructField Fields33v1_conformance_StructSize16Align8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u},
@@ -3710,41 +3718,35 @@ const fidl_type_t v1_conformance_StructSize16Align8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/StructSize16Align8",
-                      .alt_type = &conformance_StructSize16Align8Table.coded_struct}}};
+                      .alt_type = &conformance_StructSize16Align8Table}}};
 
-static const struct FidlUnionField Fields32v1_conformance_UnionSize24Align8[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 2u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 3u},
-    /*FidlUnionField*/
-    {.type = &v1_conformance_StructSize16Align8Table, .padding = 0u, .xunion_ordinal = 4u}};
+static const struct FidlXUnionField Fields32v1_conformance_UnionSize24Align8[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 3u},
+    /*FidlXUnionField*/ {.type = &v1_conformance_StructSize16Align8Table, .ordinal = 4u}};
 const fidl_type_t v1_conformance_UnionSize24Align8Table = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields32v1_conformance_UnionSize24Align8,
-                     .field_count = 4u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/UnionSize24Align8",
-                     .alt_type = &conformance_UnionSize24Align8Table.coded_union}}};
-
-static const struct FidlUnionField Fields27v1_conformance_UnionOfUnion[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/
-    {.type = &v1_conformance_UnionSize8Align4Table, .padding = 0u, .xunion_ordinal = 2u},
-    /*FidlUnionField*/
-    {.type = &v1_conformance_UnionSize12Align4Table, .padding = 0u, .xunion_ordinal = 3u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 4u},
-    /*FidlUnionField*/
-    {.type = &v1_conformance_UnionSize24Align8Table, .padding = 0u, .xunion_ordinal = 5u}};
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 4u,
+                      .fields = Fields32v1_conformance_UnionSize24Align8,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/UnionSize24Align8",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_UnionSize24Align8Table}}};
+static const struct FidlXUnionField Fields27v1_conformance_UnionOfUnion[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &v1_conformance_UnionSize8Align4Table, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &v1_conformance_UnionSize12Align4Table, .ordinal = 3u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 4u},
+    /*FidlXUnionField*/ {.type = &v1_conformance_UnionSize24Align8Table, .ordinal = 5u}};
 const fidl_type_t v1_conformance_UnionOfUnionTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields27v1_conformance_UnionOfUnion,
-                     .field_count = 5u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/UnionOfUnion",
-                     .alt_type = &conformance_UnionOfUnionTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 5u,
+                      .fields = Fields27v1_conformance_UnionOfUnion,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/UnionOfUnion",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_UnionOfUnionTable}}};
 static const struct FidlStructField Fields24v1_conformance_Sandwich8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u},
     /*FidlStructField*/ {.type = &v1_conformance_UnionOfUnionTable, .offset = 8u, .padding = 0u},
@@ -3757,7 +3759,7 @@ const fidl_type_t v1_conformance_Sandwich8Table = {
                       .max_out_of_line = 40u,
                       .contains_union = true,
                       .name = "conformance/Sandwich8",
-                      .alt_type = &conformance_Sandwich8Table.coded_struct}}};
+                      .alt_type = &conformance_Sandwich8Table}}};
 
 static const struct FidlStructField Fields24v1_conformance_Sandwich5[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -3771,7 +3773,7 @@ const fidl_type_t v1_conformance_Sandwich5Table = {
                       .max_out_of_line = 40u,
                       .contains_union = true,
                       .name = "conformance/Sandwich5",
-                      .alt_type = &conformance_Sandwich5Table.coded_struct}}};
+                      .alt_type = &conformance_Sandwich5Table}}};
 
 static const struct FidlStructField Fields24v1_conformance_Sandwich3[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -3786,7 +3788,7 @@ const fidl_type_t v1_conformance_Sandwich3Table = {
                       .max_out_of_line = 16u,
                       .contains_union = true,
                       .name = "conformance/Sandwich3",
-                      .alt_type = &conformance_Sandwich3Table.coded_struct}}};
+                      .alt_type = &conformance_Sandwich3Table}}};
 
 static const struct FidlStructField Fields28v1_conformance_StringWrapper[] = {
     /*FidlStructField*/ {
@@ -3799,7 +3801,7 @@ const fidl_type_t v1_conformance_StringWrapperTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/StringWrapper",
-                      .alt_type = &conformance_StringWrapperTable.coded_struct}}};
+                      .alt_type = &conformance_StringWrapperTable}}};
 
 static const struct FidlStructField Fields32v1_conformance_StringUnionVector[] = {
     /*FidlStructField*/ {
@@ -3814,22 +3816,32 @@ const fidl_type_t v1_conformance_StringUnionVectorTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/StringUnionVector",
-                      .alt_type = &conformance_StringUnionVectorTable.coded_struct}}};
+                      .alt_type = &conformance_StringUnionVectorTable}}};
 
-static const struct FidlUnionField Fields26v1_conformance_StringUnion[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/
-    {.type = &v1_String4294967295nonnullableTable, .padding = 0u, .xunion_ordinal = 2u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 3u}};
+static const struct FidlXUnionField Fields26v1_conformance_StringUnion[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &v1_String4294967295nonnullableTable, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 3u}};
 const fidl_type_t v1_conformance_StringUnionTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields26v1_conformance_StringUnion,
-                     .field_count = 3u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/StringUnion",
-                     .alt_type = &conformance_StringUnionTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 3u,
+                      .fields = Fields26v1_conformance_StringUnion,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/StringUnion",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_StringUnionTable}}};
+static const struct FidlXUnionField Fields38v1_Pointer26v1_conformance_StringUnion[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &v1_String4294967295nonnullableTable, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint8Table, .ordinal = 3u}};
+static const fidl_type_t v1_Pointer26v1_conformance_StringUnionTable = {
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 3u,
+                      .fields = Fields38v1_Pointer26v1_conformance_StringUnion,
+                      .nullable = kFidlNullability_Nullable,
+                      .name = "conformance/StringUnion",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &Pointer23conformance_StringUnionTable}}};
 static const struct FidlStructField Fields26v1_conformance_ArrayStruct[] = {
     /*FidlStructField*/ {
         .type = &v1_Array72_26v1_conformance_StringUnionTable, .offset = 0u, .padding = 0u},
@@ -3844,7 +3856,7 @@ const fidl_type_t v1_conformance_ArrayStructTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/ArrayStruct",
-                      .alt_type = &conformance_ArrayStructTable.coded_struct}}};
+                      .alt_type = &conformance_ArrayStructTable}}};
 
 static const struct FidlStructField Fields26v1_conformance_Size8Align8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u}};
@@ -3856,7 +3868,7 @@ const fidl_type_t v1_conformance_Size8Align8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Size8Align8",
-                      .alt_type = &conformance_Size8Align8Table.coded_struct}}};
+                      .alt_type = &conformance_Size8Align8Table}}};
 
 static const struct FidlStructField Fields30v1_conformance_Size5Alignment4[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u},
@@ -3869,7 +3881,7 @@ const fidl_type_t v1_conformance_Size5Alignment4Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment4",
-                      .alt_type = &conformance_Size5Alignment4Table.coded_struct}}};
+                      .alt_type = &conformance_Size5Alignment4Table}}};
 
 static const struct FidlStructField Fields36v1_conformance_Size5Alignment4Vector[] = {
     /*FidlStructField*/ {
@@ -3884,7 +3896,7 @@ const fidl_type_t v1_conformance_Size5Alignment4VectorTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment4Vector",
-                      .alt_type = &conformance_Size5Alignment4VectorTable.coded_struct}}};
+                      .alt_type = &conformance_Size5Alignment4VectorTable}}};
 
 static const struct FidlStructField Fields35v1_conformance_Size5Alignment4Array[] = {
     /*FidlStructField*/ {
@@ -3897,7 +3909,7 @@ const fidl_type_t v1_conformance_Size5Alignment4ArrayTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment4Array",
-                      .alt_type = &conformance_Size5Alignment4ArrayTable.coded_struct}}};
+                      .alt_type = &conformance_Size5Alignment4ArrayTable}}};
 
 static const struct FidlStructField Fields30v1_conformance_Size5Alignment1[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 5u, .padding = 0u}};
@@ -3909,7 +3921,7 @@ const fidl_type_t v1_conformance_Size5Alignment1Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment1",
-                      .alt_type = &conformance_Size5Alignment1Table.coded_struct}}};
+                      .alt_type = &conformance_Size5Alignment1Table}}};
 
 static const struct FidlStructField Fields36v1_conformance_Size5Alignment1Vector[] = {
     /*FidlStructField*/ {
@@ -3924,7 +3936,7 @@ const fidl_type_t v1_conformance_Size5Alignment1VectorTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment1Vector",
-                      .alt_type = &conformance_Size5Alignment1VectorTable.coded_struct}}};
+                      .alt_type = &conformance_Size5Alignment1VectorTable}}};
 
 static const struct FidlStructField Fields35v1_conformance_Size5Alignment1Array[] = {
     /*FidlStructField*/ {
@@ -3937,19 +3949,18 @@ const fidl_type_t v1_conformance_Size5Alignment1ArrayTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Size5Alignment1Array",
-                      .alt_type = &conformance_Size5Alignment1ArrayTable.coded_struct}}};
+                      .alt_type = &conformance_Size5Alignment1ArrayTable}}};
 
-static const struct FidlUnionField Fields33v1_conformance_SingleVariantUnion[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 4u, .xunion_ordinal = 1u}};
+static const struct FidlXUnionField Fields33v1_conformance_SingleVariantUnion[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 1u}};
 const fidl_type_t v1_conformance_SingleVariantUnionTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields33v1_conformance_SingleVariantUnion,
-                     .field_count = 1u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/SingleVariantUnion",
-                     .alt_type = &conformance_SingleVariantUnionTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 1u,
+                      .fields = Fields33v1_conformance_SingleVariantUnion,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/SingleVariantUnion",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_SingleVariantUnionTable}}};
 static const struct FidlStructField Fields39v1_conformance_SingleVariantUnionStruct[] = {
     /*FidlStructField*/ {
         .type = &v1_conformance_SingleVariantUnionTable, .offset = 0u, .padding = 0u}};
@@ -3961,7 +3972,7 @@ const fidl_type_t v1_conformance_SingleVariantUnionStructTable = {
                       .max_out_of_line = 8u,
                       .contains_union = true,
                       .name = "conformance/SingleVariantUnionStruct",
-                      .alt_type = &conformance_SingleVariantUnionStructTable.coded_struct}}};
+                      .alt_type = &conformance_SingleVariantUnionStructTable}}};
 
 static const struct FidlTableField Fields26v1_conformance_SimpleTable[] = {
     /*FidlTableField*/ {.type = &fidl_internal_kInt64Table, .ordinal = 1u},
@@ -3982,7 +3993,7 @@ const fidl_type_t v1_conformance_StructOfSimpleTableTable = {
                       .max_out_of_line = 48u,
                       .contains_union = false,
                       .name = "conformance/StructOfSimpleTable",
-                      .alt_type = &conformance_StructOfSimpleTableTable.coded_struct}}};
+                      .alt_type = &conformance_StructOfSimpleTableTable}}};
 
 static const struct FidlStructField Fields36v1_conformance_SimpleTableThenUint64[] = {
     /*FidlStructField*/ {.type = &v1_conformance_SimpleTableTable, .offset = 0u, .padding = 0u},
@@ -3995,7 +4006,7 @@ const fidl_type_t v1_conformance_SimpleTableThenUint64Table = {
                       .max_out_of_line = 48u,
                       .contains_union = false,
                       .name = "conformance/SimpleTableThenUint64",
-                      .alt_type = &conformance_SimpleTableThenUint64Table.coded_struct}}};
+                      .alt_type = &conformance_SimpleTableThenUint64Table}}};
 
 static const struct FidlStructField Fields24v1_conformance_Sandwich7[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -4010,7 +4021,7 @@ const fidl_type_t v1_conformance_Sandwich7Table = {
                       .max_out_of_line = 48u,
                       .contains_union = true,
                       .name = "conformance/Sandwich7",
-                      .alt_type = &conformance_Sandwich7Table.coded_struct}}};
+                      .alt_type = &conformance_Sandwich7Table}}};
 
 static const struct FidlStructField Fields36v1_conformance_Sandwich1WithOptUnion[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -4025,7 +4036,7 @@ const fidl_type_t v1_conformance_Sandwich1WithOptUnionTable = {
                       .max_out_of_line = 8u,
                       .contains_union = true,
                       .name = "conformance/Sandwich1WithOptUnion",
-                      .alt_type = &conformance_Sandwich1WithOptUnionTable.coded_struct}}};
+                      .alt_type = &conformance_Sandwich1WithOptUnionTable}}};
 
 static const struct FidlStructField Fields45v1_conformance_OutOfLineSandwich1WithOptUnion[] = {
     /*FidlStructField*/ {.type = &v1_String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -4043,21 +4054,20 @@ const fidl_type_t v1_conformance_OutOfLineSandwich1WithOptUnionTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/OutOfLineSandwich1WithOptUnion",
-                      .alt_type = &conformance_OutOfLineSandwich1WithOptUnionTable.coded_struct}}};
+                      .alt_type = &conformance_OutOfLineSandwich1WithOptUnionTable}}};
 
-static const struct FidlUnionField Fields34v1_conformance_ReverseOrdinalUnion[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 4u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 2u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 0u, .xunion_ordinal = 4u}};
+static const struct FidlXUnionField Fields34v1_conformance_ReverseOrdinalUnion[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kBoolTable, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kInt64Table, .ordinal = 4u}};
 const fidl_type_t v1_conformance_ReverseOrdinalUnionTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields34v1_conformance_ReverseOrdinalUnion,
-                     .field_count = 3u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/ReverseOrdinalUnion",
-                     .alt_type = &conformance_ReverseOrdinalUnionTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 3u,
+                      .fields = Fields34v1_conformance_ReverseOrdinalUnion,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/ReverseOrdinalUnion",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_ReverseOrdinalUnionTable}}};
 static const struct FidlStructField Fields40v1_conformance_ReverseOrdinalUnionStruct[] = {
     /*FidlStructField*/ {
         .type = &v1_conformance_ReverseOrdinalUnionTable, .offset = 0u, .padding = 0u}};
@@ -4069,7 +4079,7 @@ const fidl_type_t v1_conformance_ReverseOrdinalUnionStructTable = {
                       .max_out_of_line = 8u,
                       .contains_union = true,
                       .name = "conformance/ReverseOrdinalUnionStruct",
-                      .alt_type = &conformance_ReverseOrdinalUnionStructTable.coded_struct}}};
+                      .alt_type = &conformance_ReverseOrdinalUnionStructTable}}};
 
 static const struct FidlTableField Fields34v1_conformance_ReverseOrdinalTable[] = {
     /*FidlTableField*/ {.type = &fidl_internal_kInt64Table, .ordinal = 1u},
@@ -4092,7 +4102,7 @@ const fidl_type_t v1_conformance_StructOfReverseOrdinalTableTable = {
                       .max_out_of_line = 72u,
                       .contains_union = false,
                       .name = "conformance/StructOfReverseOrdinalTable",
-                      .alt_type = &conformance_StructOfReverseOrdinalTableTable.coded_struct}}};
+                      .alt_type = &conformance_StructOfReverseOrdinalTableTable}}};
 
 static const struct FidlStructField Fields26v1_conformance_Regression3[] = {
     /*FidlStructField*/ {
@@ -4105,7 +4115,7 @@ const fidl_type_t v1_conformance_Regression3Table = {
                       .max_out_of_line = 40u,
                       .contains_union = false,
                       .name = "conformance/Regression3",
-                      .alt_type = &conformance_Regression3Table.coded_struct}}};
+                      .alt_type = &conformance_Regression3Table}}};
 
 static const struct FidlStructField Fields26v1_conformance_Regression1[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 3u},
@@ -4122,7 +4132,7 @@ const fidl_type_t v1_conformance_Regression1Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Regression1",
-                      .alt_type = &conformance_Regression1Table.coded_struct}}};
+                      .alt_type = &conformance_Regression1Table}}};
 
 static const struct FidlStructField Fields26v1_conformance_Regression2[] = {
     /*FidlStructField*/ {.type = &v1_conformance_Regression1Table, .offset = 0u, .padding = 0u},
@@ -4135,7 +4145,7 @@ const fidl_type_t v1_conformance_Regression2Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Regression2",
-                      .alt_type = &conformance_Regression2Table.coded_struct}}};
+                      .alt_type = &conformance_Regression2Table}}};
 
 static const struct FidlStructField Fields29v1_conformance_NodeAttributes[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -4153,7 +4163,7 @@ const fidl_type_t v1_conformance_NodeAttributesTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/NodeAttributes",
-                      .alt_type = &conformance_NodeAttributesTable.coded_struct}}};
+                      .alt_type = &conformance_NodeAttributesTable}}};
 
 static const struct FidlStructField Fields34v1_conformance_FileGetAttrResponse[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 4u},
@@ -4166,7 +4176,7 @@ const fidl_type_t v1_conformance_FileGetAttrResponseTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/FileGetAttrResponse",
-                      .alt_type = &conformance_FileGetAttrResponseTable.coded_struct}}};
+                      .alt_type = &conformance_FileGetAttrResponseTable}}};
 
 static const struct FidlStructField Fields22v1_conformance_MyUint8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 0u}};
@@ -4178,7 +4188,7 @@ const fidl_type_t v1_conformance_MyUint8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyUint8",
-                      .alt_type = &conformance_MyUint8Table.coded_struct}}};
+                      .alt_type = &conformance_MyUint8Table}}};
 
 static const struct FidlStructField Fields23v1_conformance_MyUint64[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u}};
@@ -4190,7 +4200,7 @@ const fidl_type_t v1_conformance_MyUint64Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyUint64",
-                      .alt_type = &conformance_MyUint64Table.coded_struct}}};
+                      .alt_type = &conformance_MyUint64Table}}};
 
 static const struct FidlStructField Fields23v1_conformance_MyUint32[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u}};
@@ -4202,7 +4212,7 @@ const fidl_type_t v1_conformance_MyUint32Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyUint32",
-                      .alt_type = &conformance_MyUint32Table.coded_struct}}};
+                      .alt_type = &conformance_MyUint32Table}}};
 
 static const struct FidlStructField Fields23v1_conformance_MyUint16[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 2u, .padding = 0u}};
@@ -4214,7 +4224,7 @@ const fidl_type_t v1_conformance_MyUint16Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyUint16",
-                      .alt_type = &conformance_MyUint16Table.coded_struct}}};
+                      .alt_type = &conformance_MyUint16Table}}};
 
 static const struct FidlStructField Fields21v1_conformance_MyInt8[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 0u}};
@@ -4226,7 +4236,7 @@ const fidl_type_t v1_conformance_MyInt8Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyInt8",
-                      .alt_type = &conformance_MyInt8Table.coded_struct}}};
+                      .alt_type = &conformance_MyInt8Table}}};
 
 static const struct FidlStructField Fields22v1_conformance_MyInt64[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u}};
@@ -4238,7 +4248,7 @@ const fidl_type_t v1_conformance_MyInt64Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyInt64",
-                      .alt_type = &conformance_MyInt64Table.coded_struct}}};
+                      .alt_type = &conformance_MyInt64Table}}};
 
 static const struct FidlStructField Fields22v1_conformance_MyInt32[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u}};
@@ -4250,7 +4260,7 @@ const fidl_type_t v1_conformance_MyInt32Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyInt32",
-                      .alt_type = &conformance_MyInt32Table.coded_struct}}};
+                      .alt_type = &conformance_MyInt32Table}}};
 
 static const struct FidlStructField Fields22v1_conformance_MyInt16[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 2u, .padding = 0u}};
@@ -4262,7 +4272,7 @@ const fidl_type_t v1_conformance_MyInt16Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyInt16",
-                      .alt_type = &conformance_MyInt16Table.coded_struct}}};
+                      .alt_type = &conformance_MyInt16Table}}};
 
 static const struct FidlStructField Fields24v1_conformance_MyFloat64[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u}};
@@ -4274,7 +4284,7 @@ const fidl_type_t v1_conformance_MyFloat64Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyFloat64",
-                      .alt_type = &conformance_MyFloat64Table.coded_struct}}};
+                      .alt_type = &conformance_MyFloat64Table}}};
 
 static const struct FidlStructField Fields24v1_conformance_MyFloat32[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u}};
@@ -4286,7 +4296,7 @@ const fidl_type_t v1_conformance_MyFloat32Table = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyFloat32",
-                      .alt_type = &conformance_MyFloat32Table.coded_struct}}};
+                      .alt_type = &conformance_MyFloat32Table}}};
 
 static const struct FidlStructField Fields21v1_conformance_MyByte[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 0u}};
@@ -4298,7 +4308,7 @@ const fidl_type_t v1_conformance_MyByteTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyByte",
-                      .alt_type = &conformance_MyByteTable.coded_struct}}};
+                      .alt_type = &conformance_MyByteTable}}};
 
 static const struct FidlStructField Fields21v1_conformance_MyBool[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 1u, .padding = 0u}};
@@ -4310,7 +4320,7 @@ const fidl_type_t v1_conformance_MyBoolTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/MyBool",
-                      .alt_type = &conformance_MyBoolTable.coded_struct}}};
+                      .alt_type = &conformance_MyBoolTable}}};
 
 static const struct FidlStructField Fields35v1_conformance_Length2StringWrapper[] = {
     /*FidlStructField*/ {.type = &v1_String2nonnullableTable, .offset = 0u, .padding = 0u}};
@@ -4322,7 +4332,7 @@ const fidl_type_t v1_conformance_Length2StringWrapperTable = {
                       .max_out_of_line = 8u,
                       .contains_union = false,
                       .name = "conformance/Length2StringWrapper",
-                      .alt_type = &conformance_Length2StringWrapperTable.coded_struct}}};
+                      .alt_type = &conformance_Length2StringWrapperTable}}};
 
 static const struct FidlStructField Fields25v1_conformance_LaunchInfo[] = {
     /*FidlStructField*/ {.type = &v1_String200nonnullableTable, .offset = 0u, .padding = 0u},
@@ -4349,7 +4359,7 @@ const fidl_type_t v1_conformance_LaunchInfoTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/LaunchInfo",
-                      .alt_type = &conformance_LaunchInfoTable.coded_struct}}};
+                      .alt_type = &conformance_LaunchInfoTable}}};
 
 static const struct FidlStructField Fields37v1_conformance_CreateComponentRequest[] = {
     /*FidlStructField*/ {.type = &v1_conformance_LaunchInfoTable, .offset = 0u, .padding = 0u},
@@ -4362,20 +4372,19 @@ const fidl_type_t v1_conformance_CreateComponentRequestTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/CreateComponentRequest",
-                      .alt_type = &conformance_CreateComponentRequestTable.coded_struct}}};
+                      .alt_type = &conformance_CreateComponentRequestTable}}};
 
-static const struct FidlUnionField Fields30v1_conformance_IpAddressConfig[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 0u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 7u, .xunion_ordinal = 2u}};
+static const struct FidlXUnionField Fields30v1_conformance_IpAddressConfig[] = {
+    /*FidlXUnionField*/ {.type = &v1_Array24_6uint32Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kBoolTable, .ordinal = 2u}};
 const fidl_type_t v1_conformance_IpAddressConfigTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields30v1_conformance_IpAddressConfig,
-                     .field_count = 2u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/IpAddressConfig",
-                     .alt_type = &conformance_IpAddressConfigTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 2u,
+                      .fields = Fields30v1_conformance_IpAddressConfig,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/IpAddressConfig",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_IpAddressConfigTable}}};
 static const struct FidlStructField Fields30v1_conformance_InterfaceConfig[] = {
     /*FidlStructField*/ {.type = &v1_String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
     /*FidlStructField*/ {
@@ -4388,7 +4397,7 @@ const fidl_type_t v1_conformance_InterfaceConfigTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/InterfaceConfig",
-                      .alt_type = &conformance_InterfaceConfigTable.coded_struct}}};
+                      .alt_type = &conformance_InterfaceConfigTable}}};
 
 static const struct FidlStructField Fields43v1_conformance_TestAddEthernetDeviceRequest[] = {
     /*FidlStructField*/ {.type = &v1_String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -4403,7 +4412,7 @@ const fidl_type_t v1_conformance_TestAddEthernetDeviceRequestTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestAddEthernetDeviceRequest",
-                      .alt_type = &conformance_TestAddEthernetDeviceRequestTable.coded_struct}}};
+                      .alt_type = &conformance_TestAddEthernetDeviceRequestTable}}};
 
 static const struct FidlStructField Fields26v1_conformance_Int64Struct[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 8u, .padding = 0u}};
@@ -4415,48 +4424,45 @@ const fidl_type_t v1_conformance_Int64StructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/Int64Struct",
-                      .alt_type = &conformance_Int64StructTable.coded_struct}}};
+                      .alt_type = &conformance_Int64StructTable}}};
 
-static const struct FidlUnionField Fields26v1_conformance_SimpleUnion[] = {
-    /*FidlUnionField*/ {.type = NULL, .padding = 4u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 0u, .xunion_ordinal = 2u},
-    /*FidlUnionField*/
-    {.type = &v1_conformance_Int64StructTable, .padding = 0u, .xunion_ordinal = 3u},
-    /*FidlUnionField*/
-    {.type = &v1_String4294967295nonnullableTable, .padding = 0u, .xunion_ordinal = 4u}};
+static const struct FidlXUnionField Fields26v1_conformance_SimpleUnion[] = {
+    /*FidlXUnionField*/ {.type = &fidl_internal_kInt32Table, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kInt64Table, .ordinal = 2u},
+    /*FidlXUnionField*/ {.type = &v1_conformance_Int64StructTable, .ordinal = 3u},
+    /*FidlXUnionField*/ {.type = &v1_String4294967295nonnullableTable, .ordinal = 4u}};
 const fidl_type_t v1_conformance_SimpleUnionTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields26v1_conformance_SimpleUnion,
-                     .field_count = 4u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/SimpleUnion",
-                     .alt_type = &conformance_SimpleUnionTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 4u,
+                      .fields = Fields26v1_conformance_SimpleUnion,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/SimpleUnion",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_SimpleUnionTable}}};
 static const struct FidlXUnionField Fields27v1_conformance_SampleXUnion[] = {
-    /*FidlXUnionField*/ {.type = &v1_conformance_SimpleTableTable, .ordinal = 35514581u},
     /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 949769906u},
-    /*FidlXUnionField*/ {.type = &v1_conformance_SimpleUnionTable, .ordinal = 2033143581u}};
+    /*FidlXUnionField*/ {.type = &v1_conformance_SimpleUnionTable, .ordinal = 2033143581u},
+    /*FidlXUnionField*/ {.type = &v1_conformance_SimpleTableTable, .ordinal = 35514581u}};
 const fidl_type_t v1_conformance_SampleXUnionTable = {
     .type_tag = kFidlTypeXUnion,
     {.coded_xunion = {.field_count = 3u,
                       .fields = Fields27v1_conformance_SampleXUnion,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/SampleXUnion",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &conformance_SampleXUnionTable}}};
 static const struct FidlXUnionField Fields38v1_conformance_SampleXUnionNullableRef[] = {
-    /*FidlXUnionField*/ {.type = &v1_conformance_SimpleTableTable, .ordinal = 35514581u},
     /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 949769906u},
-    /*FidlXUnionField*/ {.type = &v1_conformance_SimpleUnionTable, .ordinal = 2033143581u}};
+    /*FidlXUnionField*/ {.type = &v1_conformance_SimpleUnionTable, .ordinal = 2033143581u},
+    /*FidlXUnionField*/ {.type = &v1_conformance_SimpleTableTable, .ordinal = 35514581u}};
 const fidl_type_t v1_conformance_SampleXUnionNullableRefTable = {
     .type_tag = kFidlTypeXUnion,
     {.coded_xunion = {.field_count = 3u,
                       .fields = Fields38v1_conformance_SampleXUnionNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/SampleXUnion",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &conformance_SampleXUnionNullableRefTable}}};
 static const struct FidlTableField Fields28v1_conformance_XUnionInTable[] = {
     /*FidlTableField*/ {.type = &v1_String4294967295nonnullableTable, .ordinal = 1u},
     /*FidlTableField*/ {.type = &v1_conformance_SampleXUnionTable, .ordinal = 2u},
@@ -4477,7 +4483,7 @@ const fidl_type_t v1_conformance_TestXUnionInTableTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestXUnionInTable",
-                      .alt_type = &conformance_TestXUnionInTableTable.coded_struct}}};
+                      .alt_type = &conformance_TestXUnionInTableTable}}};
 
 static const struct FidlStructField Fields39v1_conformance_TestInlineXUnionInStruct[] = {
     /*FidlStructField*/ {.type = &v1_String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -4492,7 +4498,7 @@ const fidl_type_t v1_conformance_TestInlineXUnionInStructTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestInlineXUnionInStruct",
-                      .alt_type = &conformance_TestInlineXUnionInStructTable.coded_struct}}};
+                      .alt_type = &conformance_TestInlineXUnionInStructTable}}};
 
 static const struct FidlStructField Fields41v1_conformance_TestFlexibleXUnionInStruct[] = {
     /*FidlStructField*/ {.type = &v1_conformance_SampleXUnionTable, .offset = 0u, .padding = 0u}};
@@ -4504,7 +4510,7 @@ const fidl_type_t v1_conformance_TestFlexibleXUnionInStructTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestFlexibleXUnionInStruct",
-                      .alt_type = &conformance_TestFlexibleXUnionInStructTable.coded_struct}}};
+                      .alt_type = &conformance_TestFlexibleXUnionInStructTable}}};
 
 static const struct FidlXUnionField Fields33v1_conformance_SampleStrictXUnion[] = {
     /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 149088882u},
@@ -4516,8 +4522,8 @@ const fidl_type_t v1_conformance_SampleStrictXUnionTable = {
                       .fields = Fields33v1_conformance_SampleStrictXUnion,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/SampleStrictXUnion",
-                      .strictness = kFidlStrictness_Strict}}};
-
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_SampleStrictXUnionTable}}};
 static const struct FidlXUnionField Fields44v1_conformance_SampleStrictXUnionNullableRef[] = {
     /*FidlXUnionField*/ {.type = &fidl_internal_kUint32Table, .ordinal = 149088882u},
     /*FidlXUnionField*/ {.type = &v1_conformance_SimpleUnionTable, .ordinal = 670279483u},
@@ -4528,8 +4534,8 @@ const fidl_type_t v1_conformance_SampleStrictXUnionNullableRefTable = {
                       .fields = Fields44v1_conformance_SampleStrictXUnionNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/SampleStrictXUnion",
-                      .strictness = kFidlStrictness_Strict}}};
-
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_SampleStrictXUnionNullableRefTable}}};
 static const struct FidlStructField Fields39v1_conformance_TestStrictXUnionInStruct[] = {
     /*FidlStructField*/ {
         .type = &v1_conformance_SampleStrictXUnionTable, .offset = 0u, .padding = 0u}};
@@ -4541,7 +4547,7 @@ const fidl_type_t v1_conformance_TestStrictXUnionInStructTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = true,
                       .name = "conformance/TestStrictXUnionInStruct",
-                      .alt_type = &conformance_TestStrictXUnionInStructTable.coded_struct}}};
+                      .alt_type = &conformance_TestStrictXUnionInStructTable}}};
 
 static const struct FidlStructField Fields23v1_conformance_FiveByte[] = {
     /*FidlStructField*/ {.type = NULL, .padding_offset = 4u, .padding = 0u},
@@ -4554,7 +4560,7 @@ const fidl_type_t v1_conformance_FiveByteTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/FiveByte",
-                      .alt_type = &conformance_FiveByteTable.coded_struct}}};
+                      .alt_type = &conformance_FiveByteTable}}};
 
 static const struct FidlStructField Fields31v1_conformance_FiveByteInVector[] = {
     /*FidlStructField*/ {.type = &v1_Vector4294967295nonnullable23v1_conformance_FiveByteTable,
@@ -4568,7 +4574,7 @@ const fidl_type_t v1_conformance_FiveByteInVectorTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/FiveByteInVector",
-                      .alt_type = &conformance_FiveByteInVectorTable.coded_struct}}};
+                      .alt_type = &conformance_FiveByteInVectorTable}}};
 
 static const struct FidlStructField Fields31v1_conformance_FiveByteInStruct[] = {
     /*FidlStructField*/ {.type = &v1_conformance_FiveByteTable, .offset = 0u, .padding = 0u},
@@ -4582,7 +4588,7 @@ const fidl_type_t v1_conformance_FiveByteInStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/FiveByteInStruct",
-                      .alt_type = &conformance_FiveByteInStructTable.coded_struct}}};
+                      .alt_type = &conformance_FiveByteInStructTable}}};
 
 static const struct FidlStructField Fields30v1_conformance_FiveByteInArray[] = {
     /*FidlStructField*/ {
@@ -4595,7 +4601,7 @@ const fidl_type_t v1_conformance_FiveByteInArrayTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/FiveByteInArray",
-                      .alt_type = &conformance_FiveByteInArrayTable.coded_struct}}};
+                      .alt_type = &conformance_FiveByteInArrayTable}}};
 
 static const struct FidlStructField Fields26v1_conformance_EmptyStruct[] = {};
 const fidl_type_t v1_conformance_EmptyStructTable = {
@@ -4606,7 +4612,7 @@ const fidl_type_t v1_conformance_EmptyStructTable = {
                       .max_out_of_line = 0u,
                       .contains_union = false,
                       .name = "conformance/EmptyStruct",
-                      .alt_type = &conformance_EmptyStructTable.coded_struct}}};
+                      .alt_type = &conformance_EmptyStructTable}}};
 
 static const struct FidlXUnionField Fields36v1_conformance_XUnionWithEmptyStruct[] = {
     /*FidlXUnionField*/ {.type = &v1_conformance_EmptyStructTable, .ordinal = 1956241662u}};
@@ -4616,8 +4622,8 @@ const fidl_type_t v1_conformance_XUnionWithEmptyStructTable = {
                       .fields = Fields36v1_conformance_XUnionWithEmptyStruct,
                       .nullable = kFidlNullability_Nonnullable,
                       .name = "conformance/XUnionWithEmptyStruct",
-                      .strictness = kFidlStrictness_Flexible}}};
-
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &conformance_XUnionWithEmptyStructTable}}};
 static const struct FidlXUnionField Fields47v1_conformance_XUnionWithEmptyStructNullableRef[] = {
     /*FidlXUnionField*/ {.type = &v1_conformance_EmptyStructTable, .ordinal = 1956241662u}};
 const fidl_type_t v1_conformance_XUnionWithEmptyStructNullableRefTable = {
@@ -4626,21 +4632,30 @@ const fidl_type_t v1_conformance_XUnionWithEmptyStructNullableRefTable = {
                       .fields = Fields47v1_conformance_XUnionWithEmptyStructNullableRef,
                       .nullable = kFidlNullability_Nullable,
                       .name = "conformance/XUnionWithEmptyStruct",
-                      .strictness = kFidlStrictness_Flexible}}};
-
-static const struct FidlUnionField Fields35v1_conformance_UnionWithEmptyStruct[] = {
-    /*FidlUnionField*/ {
-        .type = &v1_conformance_EmptyStructTable, .padding = 7u, .xunion_ordinal = 1u},
-    /*FidlUnionField*/ {.type = NULL, .padding = 0u, .xunion_ordinal = 2u}};
+                      .strictness = kFidlStrictness_Flexible,
+                      .alt_type = &conformance_XUnionWithEmptyStructNullableRefTable}}};
+static const struct FidlXUnionField Fields35v1_conformance_UnionWithEmptyStruct[] = {
+    /*FidlXUnionField*/ {.type = &v1_conformance_EmptyStructTable, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint64Table, .ordinal = 2u}};
 const fidl_type_t v1_conformance_UnionWithEmptyStructTable = {
-    .type_tag = kFidlTypeUnion,
-    {.coded_union = {.fields = Fields35v1_conformance_UnionWithEmptyStruct,
-                     .field_count = 2u,
-                     .data_offset = 8u,
-                     .size = 24u,
-                     .name = "conformance/UnionWithEmptyStruct",
-                     .alt_type = &conformance_UnionWithEmptyStructTable.coded_union}}};
-
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 2u,
+                      .fields = Fields35v1_conformance_UnionWithEmptyStruct,
+                      .nullable = kFidlNullability_Nonnullable,
+                      .name = "conformance/UnionWithEmptyStruct",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &conformance_UnionWithEmptyStructTable}}};
+static const struct FidlXUnionField Fields47v1_Pointer35v1_conformance_UnionWithEmptyStruct[] = {
+    /*FidlXUnionField*/ {.type = &v1_conformance_EmptyStructTable, .ordinal = 1u},
+    /*FidlXUnionField*/ {.type = &fidl_internal_kUint64Table, .ordinal = 2u}};
+static const fidl_type_t v1_Pointer35v1_conformance_UnionWithEmptyStructTable = {
+    .type_tag = kFidlTypeXUnion,
+    {.coded_xunion = {.field_count = 2u,
+                      .fields = Fields47v1_Pointer35v1_conformance_UnionWithEmptyStruct,
+                      .nullable = kFidlNullability_Nullable,
+                      .name = "conformance/UnionWithEmptyStruct",
+                      .strictness = kFidlStrictness_Strict,
+                      .alt_type = &Pointer32conformance_UnionWithEmptyStructTable}}};
 static const struct FidlTableField Fields35v1_conformance_TableWithEmptyStruct[] = {
     /*FidlTableField*/ {.type = &v1_conformance_EmptyStructTable, .ordinal = 1u}};
 const fidl_type_t v1_conformance_TableWithEmptyStructTable = {
@@ -4671,7 +4686,7 @@ const fidl_type_t v1_conformance_StructWithOptionalsTable = {
                       .max_out_of_line = 64u,
                       .contains_union = true,
                       .name = "conformance/StructWithOptionals",
-                      .alt_type = &conformance_StructWithOptionalsTable.coded_struct}}};
+                      .alt_type = &conformance_StructWithOptionalsTable}}};
 
 static const struct FidlStructField Fields34v1_conformance_EmptyStructSandwich[] = {
     /*FidlStructField*/ {.type = &v1_String4294967295nonnullableTable, .offset = 0u, .padding = 0u},
@@ -4686,6 +4701,6 @@ const fidl_type_t v1_conformance_EmptyStructSandwichTable = {
                       .max_out_of_line = 4294967295u,
                       .contains_union = false,
                       .name = "conformance/EmptyStructSandwich",
-                      .alt_type = &conformance_EmptyStructSandwichTable.coded_struct}}};
+                      .alt_type = &conformance_EmptyStructSandwichTable}}};
 
 #endif  // ZIRCON_SYSTEM_UTEST_FIDL_GENERATED_TRANSFORMER_CONFORMANCE_TABLES_H_

@@ -111,6 +111,12 @@ std::string AltTableDeclaration(const T& type, bool is_static) {
 
 }  // namespace
 
+template <class T>
+std::string TablesGenerator::AltTableReference(const T& type) const {
+  const coded::Type* alt_type = AltType(&type);
+  return "&" + NameTable(alt_type->coded_name);
+}
+
 template <typename Collection>
 void TablesGenerator::GenerateArray(const Collection& collection) {
   EmitArrayBegin(&tables_file_);
@@ -238,11 +244,17 @@ void TablesGenerator::Generate(const coded::UnionType& union_type) {
 }
 
 void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
+  Emit(&forward_decls_,
+       AltTableDeclaration(xunion_type, /*is_static=*/xunion_type.FromUnionPointer()));
+
   Emit(&tables_file_, "static const struct FidlXUnionField ");
   Emit(&tables_file_, NameFields(xunion_type.coded_name));
   Emit(&tables_file_, "[] = ");
   GenerateArray(xunion_type.fields);
   Emit(&tables_file_, ";\n");
+
+  if (xunion_type.FromUnionPointer())
+    Emit(&tables_file_, "static ");
 
   Emit(&tables_file_, "const fidl_type_t ");
   Emit(&tables_file_, NameTable(xunion_type.coded_name));
@@ -256,7 +268,9 @@ void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
   Emit(&tables_file_, xunion_type.qname);
   Emit(&tables_file_, "\", .strictness=");
   Emit(&tables_file_, xunion_type.strictness);
-  Emit(&tables_file_, "}}};\n\n");
+  Emit(&tables_file_, ", .alt_type=");
+  Emit(&tables_file_, AltTableReference(xunion_type));
+  Emit(&tables_file_, "}}};\n");
 }
 
 void TablesGenerator::Generate(const coded::StructPointerType& pointer) {
@@ -433,32 +447,34 @@ void TablesGenerator::Generate(const coded::XUnionField& field) {
   Emit(&tables_file_, "}");
 }
 
-template <class T> std::string ForwardDecls(const T& t) {
-  return "extern const fidl_type_t " + NameTable(t.coded_name) + ";\n";
+template <class T>
+std::string ForwardDecls(const T& t, bool is_static) {
+  return std::string(is_static ? "static" : "extern") + " const fidl_type_t " +
+         NameTable(t.coded_name) + ";\n";
 }
 
 void TablesGenerator::GenerateForward(const coded::EnumType& enum_type) {
-  Emit(&tables_file_, ForwardDecls(enum_type));
+  Emit(&tables_file_, ForwardDecls(enum_type, /*is_static=*/false));
 }
 
 void TablesGenerator::GenerateForward(const coded::BitsType& bits_type) {
-  Emit(&tables_file_, ForwardDecls(bits_type));
+  Emit(&tables_file_, ForwardDecls(bits_type, /*is_static=*/false));
 }
 
 void TablesGenerator::GenerateForward(const coded::StructType& struct_type) {
-  Emit(&tables_file_, ForwardDecls(struct_type));
+  Emit(&tables_file_, ForwardDecls(struct_type, /*is_static=*/false));
 }
 
 void TablesGenerator::GenerateForward(const coded::TableType& table_type) {
-  Emit(&tables_file_, ForwardDecls(table_type));
+  Emit(&tables_file_, ForwardDecls(table_type, /*is_static=*/false));
 }
 
 void TablesGenerator::GenerateForward(const coded::UnionType& union_type) {
-  Emit(&tables_file_, ForwardDecls(union_type));
+  Emit(&tables_file_, ForwardDecls(union_type, /*is_static=*/false));
 }
 
 void TablesGenerator::GenerateForward(const coded::XUnionType& xunion_type) {
-  Emit(&tables_file_, ForwardDecls(xunion_type));
+  Emit(&tables_file_, ForwardDecls(xunion_type, /*is_static=*/xunion_type.FromUnionPointer()));
 }
 
 void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
@@ -487,9 +503,8 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
         // Generate forward declarations for both the non-nullable and nullable variants
         const auto& xunion_type = *static_cast<const coded::XUnionType*>(coded_type);
         GenerateForward(xunion_type);
-        assert(xunion_type.maybe_reference_type != nullptr &&
-               "Named coded xunion must have a reference type!");
-        GenerateForward(*xunion_type.maybe_reference_type);
+        if (xunion_type.maybe_reference_type)
+          GenerateForward(*xunion_type.maybe_reference_type);
         break;
       }
       default:
@@ -546,7 +561,8 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
       case coded::Type::Kind::kStruct:
       case coded::Type::Kind::kTable:
       case coded::Type::Kind::kUnion:
-      case coded::Type::Kind::kPointer:
+      case coded::Type::Kind::kStructPointer:
+      case coded::Type::Kind::kUnionPointer:
       case coded::Type::Kind::kXUnion:
         // These are generated in the next phase.
         break;
@@ -612,9 +628,10 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
       case coded::Type::Kind::kXUnion: {
         const auto& xunion_type = *static_cast<const coded::XUnionType*>(coded_type);
         Generate(xunion_type);
-        assert(xunion_type.maybe_reference_type != nullptr &&
-               "Named coded xunion must have a reference type!");
-        Generate(*xunion_type.maybe_reference_type);
+
+        if (xunion_type.maybe_reference_type)
+          Generate(*xunion_type.maybe_reference_type);
+
         break;
       }
       default:
@@ -641,7 +658,6 @@ std::ostringstream TablesGenerator::Produce() {
     const coded::Type* v1 = v1_coded_types[i];
 
     assert((old && v1) || (!old && !v1));
-    assert(old->kind == v1->kind);
 
     alt_type_mapping_[old] = v1;
     alt_type_mapping_[v1] = old;
@@ -660,32 +676,6 @@ std::ostringstream TablesGenerator::Produce() {
   result << "\n";
   result << std::move(tables_file_).str();
   return result;
-}
-
-template <class T>
-std::string TablesGenerator::AltTableReference(const T& type) const {
-  const coded::Type* alt_type = AltType(&type);
-  std::string suffix = "";
-  switch (type.kind) {
-    case coded::Type::Kind::kUnion:
-      suffix = "coded_union";
-      break;
-    case coded::Type::Kind::kStruct:
-      suffix = "coded_struct";
-      break;
-    case coded::Type::Kind::kMessage:
-      suffix = "coded_struct";
-      break;
-    case coded::Type::Kind::kArray:
-      suffix = "coded_array";
-      break;
-    case coded::Type::Kind::kVector:
-      suffix = "coded_vector";
-      break;
-    default:
-      assert(false && "Invalid type passed to TypeAccessor()");
-  }
-  return "&" + NameTable(alt_type->coded_name) + "." + suffix;
 }
 
 const coded::Type* TablesGenerator::AltType(const coded::Type* type) const {
@@ -713,6 +703,6 @@ std::map<uint32_t, uint32_t> MapFieldNumToAltFieldIndexInCodedStruct(
   return mapping;
 }
 
-} // namespace
+}  // namespace
 
-} // namespace fidl
+}  // namespace fidl

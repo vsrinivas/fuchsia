@@ -15,55 +15,106 @@ extern const fidl_type_t v1_fidl_test_simple_SimpleCloseResponseTable;
 
 // Coding tables for old wire format.
 
-
-
 extern const fidl_type_t fidl_test_simple_SimpleEchoRequestTable;
 static const struct FidlStructField Fields34fidl_test_simple_SimpleEchoRequest[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=4u}
-};
-const fidl_type_t fidl_test_simple_SimpleEchoRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields34fidl_test_simple_SimpleEchoRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.simple/SimpleEchoRequest", .alt_type=&v1_fidl_test_simple_SimpleEchoRequestTable.coded_struct}}};
+    /*FidlStructField*/ {.type = NULL, .padding_offset = 20u, .padding = 4u}};
+const fidl_type_t fidl_test_simple_SimpleEchoRequestTable = {
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {.fields = Fields34fidl_test_simple_SimpleEchoRequest,
+                      .field_count = 1u,
+                      .size = 24u,
+                      .max_out_of_line = 0u,
+                      .contains_union = false,
+                      .name = "fidl.test.simple/SimpleEchoRequest",
+                      .alt_type = &v1_fidl_test_simple_SimpleEchoRequestTable}}};
 
 extern const fidl_type_t fidl_test_simple_SimpleEchoResponseTable;
 static const struct FidlStructField Fields35fidl_test_simple_SimpleEchoResponse[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=4u}
-};
-const fidl_type_t fidl_test_simple_SimpleEchoResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35fidl_test_simple_SimpleEchoResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.simple/SimpleEchoResponse", .alt_type=&v1_fidl_test_simple_SimpleEchoResponseTable.coded_struct}}};
+    /*FidlStructField*/ {.type = NULL, .padding_offset = 20u, .padding = 4u}};
+const fidl_type_t fidl_test_simple_SimpleEchoResponseTable = {
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {.fields = Fields35fidl_test_simple_SimpleEchoResponse,
+                      .field_count = 1u,
+                      .size = 24u,
+                      .max_out_of_line = 0u,
+                      .contains_union = false,
+                      .name = "fidl.test.simple/SimpleEchoResponse",
+                      .alt_type = &v1_fidl_test_simple_SimpleEchoResponseTable}}};
 
 extern const fidl_type_t fidl_test_simple_SimpleCloseRequestTable;
 static const struct FidlStructField Fields35fidl_test_simple_SimpleCloseRequest[] = {};
-const fidl_type_t fidl_test_simple_SimpleCloseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35fidl_test_simple_SimpleCloseRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.simple/SimpleCloseRequest", .alt_type=&v1_fidl_test_simple_SimpleCloseRequestTable.coded_struct}}};
+const fidl_type_t fidl_test_simple_SimpleCloseRequestTable = {
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {.fields = Fields35fidl_test_simple_SimpleCloseRequest,
+                      .field_count = 0u,
+                      .size = 16u,
+                      .max_out_of_line = 0u,
+                      .contains_union = false,
+                      .name = "fidl.test.simple/SimpleCloseRequest",
+                      .alt_type = &v1_fidl_test_simple_SimpleCloseRequestTable}}};
 
 extern const fidl_type_t fidl_test_simple_SimpleCloseResponseTable;
 static const struct FidlStructField Fields36fidl_test_simple_SimpleCloseResponse[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=4u}
-};
-const fidl_type_t fidl_test_simple_SimpleCloseResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields36fidl_test_simple_SimpleCloseResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.simple/SimpleCloseResponse", .alt_type=&v1_fidl_test_simple_SimpleCloseResponseTable.coded_struct}}};
-
+    /*FidlStructField*/ {.type = NULL, .padding_offset = 20u, .padding = 4u}};
+const fidl_type_t fidl_test_simple_SimpleCloseResponseTable = {
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {.fields = Fields36fidl_test_simple_SimpleCloseResponse,
+                      .field_count = 1u,
+                      .size = 24u,
+                      .max_out_of_line = 0u,
+                      .contains_union = false,
+                      .name = "fidl.test.simple/SimpleCloseResponse",
+                      .alt_type = &v1_fidl_test_simple_SimpleCloseResponseTable}}};
 
 // Coding tables for v1 wire format.
 
-
-
 extern const fidl_type_t v1_fidl_test_simple_SimpleEchoRequestTable;
 static const struct FidlStructField Fields37v1_fidl_test_simple_SimpleEchoRequest[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=4u}
-};
-const fidl_type_t v1_fidl_test_simple_SimpleEchoRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields37v1_fidl_test_simple_SimpleEchoRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.simple/SimpleEchoRequest", .alt_type=&fidl_test_simple_SimpleEchoRequestTable.coded_struct}}};
+    /*FidlStructField*/ {.type = NULL, .padding_offset = 20u, .padding = 4u}};
+const fidl_type_t v1_fidl_test_simple_SimpleEchoRequestTable = {
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {.fields = Fields37v1_fidl_test_simple_SimpleEchoRequest,
+                      .field_count = 1u,
+                      .size = 24u,
+                      .max_out_of_line = 0u,
+                      .contains_union = false,
+                      .name = "fidl.test.simple/SimpleEchoRequest",
+                      .alt_type = &fidl_test_simple_SimpleEchoRequestTable}}};
 
 extern const fidl_type_t v1_fidl_test_simple_SimpleEchoResponseTable;
 static const struct FidlStructField Fields38v1_fidl_test_simple_SimpleEchoResponse[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=4u}
-};
-const fidl_type_t v1_fidl_test_simple_SimpleEchoResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields38v1_fidl_test_simple_SimpleEchoResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.simple/SimpleEchoResponse", .alt_type=&fidl_test_simple_SimpleEchoResponseTable.coded_struct}}};
+    /*FidlStructField*/ {.type = NULL, .padding_offset = 20u, .padding = 4u}};
+const fidl_type_t v1_fidl_test_simple_SimpleEchoResponseTable = {
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {.fields = Fields38v1_fidl_test_simple_SimpleEchoResponse,
+                      .field_count = 1u,
+                      .size = 24u,
+                      .max_out_of_line = 0u,
+                      .contains_union = false,
+                      .name = "fidl.test.simple/SimpleEchoResponse",
+                      .alt_type = &fidl_test_simple_SimpleEchoResponseTable}}};
 
 extern const fidl_type_t v1_fidl_test_simple_SimpleCloseRequestTable;
 static const struct FidlStructField Fields38v1_fidl_test_simple_SimpleCloseRequest[] = {};
-const fidl_type_t v1_fidl_test_simple_SimpleCloseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields38v1_fidl_test_simple_SimpleCloseRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.simple/SimpleCloseRequest", .alt_type=&fidl_test_simple_SimpleCloseRequestTable.coded_struct}}};
+const fidl_type_t v1_fidl_test_simple_SimpleCloseRequestTable = {
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {.fields = Fields38v1_fidl_test_simple_SimpleCloseRequest,
+                      .field_count = 0u,
+                      .size = 16u,
+                      .max_out_of_line = 0u,
+                      .contains_union = false,
+                      .name = "fidl.test.simple/SimpleCloseRequest",
+                      .alt_type = &fidl_test_simple_SimpleCloseRequestTable}}};
 
 extern const fidl_type_t v1_fidl_test_simple_SimpleCloseResponseTable;
 static const struct FidlStructField Fields39v1_fidl_test_simple_SimpleCloseResponse[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=4u}
-};
-const fidl_type_t v1_fidl_test_simple_SimpleCloseResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39v1_fidl_test_simple_SimpleCloseResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.simple/SimpleCloseResponse", .alt_type=&fidl_test_simple_SimpleCloseResponseTable.coded_struct}}};
-
-
+    /*FidlStructField*/ {.type = NULL, .padding_offset = 20u, .padding = 4u}};
+const fidl_type_t v1_fidl_test_simple_SimpleCloseResponseTable = {
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {.fields = Fields39v1_fidl_test_simple_SimpleCloseResponse,
+                      .field_count = 1u,
+                      .size = 24u,
+                      .max_out_of_line = 0u,
+                      .contains_union = false,
+                      .name = "fidl.test.simple/SimpleCloseResponse",
+                      .alt_type = &fidl_test_simple_SimpleCloseResponseTable}}};

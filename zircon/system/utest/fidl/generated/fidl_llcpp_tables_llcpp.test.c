@@ -15,13 +15,13 @@ extern const fidl_type_t v1_fidl_test_coding_LlcppActionResponseTable;
 
 extern const fidl_type_t fidl_test_coding_LlcppActionRequestTable;
 static const struct FidlStructField Fields35fidl_test_coding_LlcppActionRequest[] = {};
-const fidl_type_t fidl_test_coding_LlcppActionRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35fidl_test_coding_LlcppActionRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.coding/LlcppActionRequest", .alt_type=&v1_fidl_test_coding_LlcppActionRequestTable.coded_struct}}};
+const fidl_type_t fidl_test_coding_LlcppActionRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35fidl_test_coding_LlcppActionRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.coding/LlcppActionRequest", .alt_type=&v1_fidl_test_coding_LlcppActionRequestTable}}};
 
 extern const fidl_type_t fidl_test_coding_LlcppActionResponseTable;
 static const struct FidlStructField Fields36fidl_test_coding_LlcppActionResponse[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=4u}
 };
-const fidl_type_t fidl_test_coding_LlcppActionResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields36fidl_test_coding_LlcppActionResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.coding/LlcppActionResponse", .alt_type=&v1_fidl_test_coding_LlcppActionResponseTable.coded_struct}}};
+const fidl_type_t fidl_test_coding_LlcppActionResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields36fidl_test_coding_LlcppActionResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.coding/LlcppActionResponse", .alt_type=&v1_fidl_test_coding_LlcppActionResponseTable}}};
 
 
 // Coding tables for v1 wire format.
@@ -30,12 +30,12 @@ const fidl_type_t fidl_test_coding_LlcppActionResponseTable = {.type_tag=kFidlTy
 
 extern const fidl_type_t v1_fidl_test_coding_LlcppActionRequestTable;
 static const struct FidlStructField Fields38v1_fidl_test_coding_LlcppActionRequest[] = {};
-const fidl_type_t v1_fidl_test_coding_LlcppActionRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields38v1_fidl_test_coding_LlcppActionRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.coding/LlcppActionRequest", .alt_type=&fidl_test_coding_LlcppActionRequestTable.coded_struct}}};
+const fidl_type_t v1_fidl_test_coding_LlcppActionRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields38v1_fidl_test_coding_LlcppActionRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.coding/LlcppActionRequest", .alt_type=&fidl_test_coding_LlcppActionRequestTable}}};
 
 extern const fidl_type_t v1_fidl_test_coding_LlcppActionResponseTable;
 static const struct FidlStructField Fields39v1_fidl_test_coding_LlcppActionResponse[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=20u, .padding=4u}
 };
-const fidl_type_t v1_fidl_test_coding_LlcppActionResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39v1_fidl_test_coding_LlcppActionResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.coding/LlcppActionResponse", .alt_type=&fidl_test_coding_LlcppActionResponseTable.coded_struct}}};
+const fidl_type_t v1_fidl_test_coding_LlcppActionResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39v1_fidl_test_coding_LlcppActionResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.coding/LlcppActionResponse", .alt_type=&fidl_test_coding_LlcppActionResponseTable}}};
 
 

@@ -36,14 +36,12 @@ static const FidlStructField unbounded_nonnullable_string_fields[] = {
                     offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string), 0),
 };
 
-const FidlCodedStruct unbounded_nonnullable_string_message{
-    .fields = unbounded_nonnullable_string_fields,
-    .field_count = ArrayCount(unbounded_nonnullable_string_fields),
-    .size = sizeof(unbounded_nonnullable_string_inline_data),
-    .max_out_of_line = 0xFFFFFFFF,
-    .contains_union = false,
-    .name = "unbounded_nonnullable_string_message",
-    .alt_type = &unbounded_nonnullable_string_message};
-
 const fidl_type_t unbounded_nonnullable_string_message_type = {
-    .type_tag = kFidlTypeStruct, {.coded_struct = unbounded_nonnullable_string_message}};
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {.fields = unbounded_nonnullable_string_fields,
+                      .field_count = ArrayCount(unbounded_nonnullable_string_fields),
+                      .size = sizeof(unbounded_nonnullable_string_inline_data),
+                      .max_out_of_line = 0xFFFFFFFF,
+                      .contains_union = false,
+                      .name = "unbounded_nonnullable_string_message",
+                      .alt_type = &unbounded_nonnullable_string_message_type}}};

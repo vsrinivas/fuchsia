@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+
 #include <unittest/unittest.h>
 
 #include "fidl_coded_types.h"
@@ -142,14 +143,14 @@ bool message_part_wrap_array_test() {
 }
 
 extern "C" {
-  // Defined in generated/transformer_tables.test.h.
-  extern const fidl_type_t example_Sandwich1Table;
-  extern const fidl_type_t example_SimpleTableArrayStructTable;
+// Defined in generated/transformer_tables.test.h.
+extern const fidl_type_t example_Sandwich1Table;
+extern const fidl_type_t example_SimpleTableArrayStructTable;
 
-  // Defined in transformer_tests.c.
-  extern const uint8_t simpletablearraystruct_v1_and_old[0x50];
-  extern const uint8_t sandwich1_case1_v1[0x30];
-  extern const uint8_t sandwich1_case1_old[0x10];
+// Defined in transformer_tests.c.
+extern const uint8_t simpletablearraystruct_v1_and_old[0x50];
+extern const uint8_t sandwich1_case1_v1[0x30];
+extern const uint8_t sandwich1_case1_old[0x10];
 }
 
 bool transform_with_callback_noop() {

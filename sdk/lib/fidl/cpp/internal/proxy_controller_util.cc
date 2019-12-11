@@ -50,8 +50,8 @@ zx_status_t ValidateV1Bytes(const fidl_type_t* type, const Message& message,
     // validation
     return ZX_OK;
   }
-  fidl_type_t v1_type = get_alt_type(type);
-  auto struct_type = v1_type.coded_struct;
+  const fidl_type_t* v1_type = get_alt_type(type);
+  auto struct_type = v1_type->coded_struct;
   if (!struct_type.contains_union) {
     return message.Validate(type, &error_msg);
   }
@@ -60,7 +60,7 @@ zx_status_t ValidateV1Bytes(const fidl_type_t* type, const Message& message,
   uint32_t actual_old_bytes;
   if (msg_size <= kMaxStackAllocSize) {
     auto old_bytes = static_cast<uint8_t*>(alloca(msg_size));
-    zx_status_t status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_type,
+    zx_status_t status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, v1_type,
                                         message.bytes().data(), message.bytes().actual(), old_bytes,
                                         msg_size, &actual_old_bytes, &error_msg);
     if (status == ZX_ERR_BAD_STATE) {
@@ -75,7 +75,7 @@ zx_status_t ValidateV1Bytes(const fidl_type_t* type, const Message& message,
     return fidl_validate(type, old_bytes, actual_old_bytes, message.handles().actual(), &error_msg);
   } else {
     HeapAllocatedMessage old_bytes(msg_size);
-    zx_status_t status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_type,
+    zx_status_t status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, v1_type,
                                         message.bytes().data(), message.bytes().actual(),
                                         old_bytes.data, msg_size, &actual_old_bytes, &error_msg);
     if (status == ZX_ERR_BAD_STATE) {

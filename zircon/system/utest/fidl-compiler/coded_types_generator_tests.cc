@@ -231,18 +231,18 @@ xunion MyXUnion {
   ASSERT_EQ(fidl::types::Nullability::kNullable, nullable_xunion->nullability);
 
   auto type1 = gen.coded_types().at(1).get();
-  ASSERT_STR_EQ("int32", type1->coded_name.c_str());
+  ASSERT_STR_EQ("bool", type1->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
-  auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
+  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
 
   auto type2 = gen.coded_types().at(2).get();
-  ASSERT_STR_EQ("bool", type2->coded_name.c_str());
+  ASSERT_STR_EQ("int32", type2->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type2->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
-  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
+  auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
 
   auto name = fidl::flat::Name(library.library(), "MyXUnion");
   auto type = gen.CodedTypeFor(&name);
@@ -255,11 +255,11 @@ xunion MyXUnion {
   auto xunion_field0 = coded_xunion->fields.at(0);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, xunion_field0.type->kind);
   auto xunion_field0_primitive = static_cast<const fidl::coded::PrimitiveType*>(xunion_field0.type);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, xunion_field0_primitive->subtype);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, xunion_field0_primitive->subtype);
   auto xunion_field1 = coded_xunion->fields.at(1);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, xunion_field1.type->kind);
   auto xunion_field1_primitive = static_cast<const fidl::coded::PrimitiveType*>(xunion_field1.type);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, xunion_field1_primitive->subtype);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, xunion_field1_primitive->subtype);
   ASSERT_STR_EQ("example/MyXUnion", coded_xunion->qname.c_str());
   ASSERT_EQ(fidl::types::Nullability::kNonnullable, coded_xunion->nullability);
   ASSERT_NONNULL(coded_xunion->maybe_reference_type);
@@ -464,18 +464,18 @@ struct Wrapper2 {
   ASSERT_EQ(fidl::types::Nullability::kNullable, nullable_xunion->nullability);
 
   auto type1 = gen.coded_types().at(1).get();
-  ASSERT_STR_EQ("int32", type1->coded_name.c_str());
+  ASSERT_STR_EQ("bool", type1->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
-  auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
+  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
 
   auto type2 = gen.coded_types().at(2).get();
-  ASSERT_STR_EQ("bool", type2->coded_name.c_str());
+  ASSERT_STR_EQ("int32", type2->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type2->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
-  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
+  auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
 
   END_TEST;
 }
@@ -668,8 +668,8 @@ bool field_num_in_struct() {
   BEGIN_TEST;
 
   auto wire_formats = std::vector<fidl::WireFormat>{
-    fidl::WireFormat::kOld,
-    fidl::WireFormat::kV1NoEe,
+      fidl::WireFormat::kOld,
+      fidl::WireFormat::kV1NoEe,
   };
   for (auto wire_format : wire_formats) {
     TestLibrary library(R"FIDL(
@@ -718,8 +718,8 @@ bool field_num_in_message() {
   BEGIN_TEST;
 
   auto wire_formats = std::vector<fidl::WireFormat>{
-    fidl::WireFormat::kOld,
-    fidl::WireFormat::kV1NoEe,
+      fidl::WireFormat::kOld,
+      fidl::WireFormat::kV1NoEe,
   };
   for (auto wire_format : wire_formats) {
     TestLibrary library(R"FIDL(

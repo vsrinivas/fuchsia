@@ -12,8 +12,6 @@
 extern "C" {
 #endif
 
-extern const FidlCodedStruct unbounded_nonnullable_string_message;
-
 extern const fidl_type_t unbounded_nonnullable_string_message_type;
 
 #if defined(__cplusplus)
