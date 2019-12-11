@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace cloud_sync {
@@ -41,7 +42,7 @@ Aggregator::Aggregator() = default;
 
 Aggregator::~Aggregator() {
   // There should be no listener left when destroying this object.
-  FXL_DCHECK(listeners_.empty());
+  LEDGER_DCHECK(listeners_.empty());
 }
 
 void Aggregator::SetBaseWatcher(SyncStateWatcher* base_watcher) {

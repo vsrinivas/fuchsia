@@ -15,6 +15,10 @@ source_set("public") {
     "//third_party/abseil-cpp",
   ]
 
+  deps = [
+    "//src/ledger/lib/logging",
+  ]
+
   configs += [ "//src/ledger:ledger_config" ]
 }
 

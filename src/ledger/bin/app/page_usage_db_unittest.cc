@@ -18,6 +18,7 @@
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 
@@ -59,7 +60,7 @@ class PageUsageDbTest : public TestWithEnvironment {
     });
     db_ = std::make_unique<PageUsageDb>(
         &environment_, dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
-    FXL_DCHECK(status == Status::OK);
+    LEDGER_DCHECK(status == Status::OK);
   }
 
  protected:

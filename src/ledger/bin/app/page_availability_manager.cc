@@ -9,17 +9,18 @@
 #include <optional>
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
 
 void PageAvailabilityManager::MarkPageBusy() {
-  FXL_DCHECK(!on_available_callbacks_) << "Page is already busy.";
+  LEDGER_DCHECK(!on_available_callbacks_) << "Page is already busy.";
   on_available_callbacks_ = {std::vector<fit::closure>{}};
 }
 
 void PageAvailabilityManager::MarkPageAvailable() {
-  FXL_DCHECK(on_available_callbacks_) << "Page is already available.";
+  LEDGER_DCHECK(on_available_callbacks_) << "Page is already available.";
   for (const auto& page_callback : on_available_callbacks_.value()) {
     page_callback();
   }

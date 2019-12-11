@@ -48,6 +48,7 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/scoped_callback.h"
@@ -146,7 +147,7 @@ PageId PageStorageImpl::GetId() { return page_id_; }
 void PageStorageImpl::SetSyncDelegate(PageSyncDelegate* page_sync) { page_sync_ = page_sync; }
 
 Status PageStorageImpl::GetHeadCommits(std::vector<std::unique_ptr<const Commit>>* head_commits) {
-  FXL_DCHECK(head_commits);
+  LEDGER_DCHECK(head_commits);
   *head_commits = commit_factory_.GetHeads();
   return Status::OK;
 }
@@ -167,7 +168,7 @@ void PageStorageImpl::GetMergeCommitIds(
 
 void PageStorageImpl::GetCommit(
     CommitIdView commit_id, fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
-  FXL_DCHECK(commit_id.size());
+  LEDGER_DCHECK(commit_id.size());
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, commit_id = convert::ToString(commit_id)](
@@ -186,7 +187,7 @@ void PageStorageImpl::GetGenerationAndMissingParents(
   Status status = commit_factory_.FromStorageBytes(std::move(id_and_bytes.id),
                                                    std::move(id_and_bytes.bytes), &commit);
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "Unable to load commit from storage bytes.";
+    LEDGER_LOG(ERROR) << "Unable to load commit from storage bytes.";
     callback(status, 0, {});
     return;
   }
@@ -246,7 +247,7 @@ std::unique_ptr<Journal> PageStorageImpl::StartMergeCommit(std::unique_ptr<const
 void PageStorageImpl::CommitJournal(
     std::unique_ptr<Journal> journal,
     fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
-  FXL_DCHECK(journal);
+  LEDGER_DCHECK(journal);
 
   coroutine_manager_.StartCoroutine(
       std::move(callback),
@@ -312,7 +313,7 @@ void PageStorageImpl::IsSynced(fit::function<void(Status, bool)> callback) {
       callback(status, false);
       return;
     }
-    FXL_DCHECK(is_synced.size() == 2);
+    LEDGER_DCHECK(is_synced.size() == 2);
     callback(Status::OK, is_synced[0] && is_synced[1]);
   });
 }
@@ -330,7 +331,7 @@ void PageStorageImpl::IsEmpty(fit::function<void(Status, bool)> callback) {
           callback(status, false);
           return;
         }
-        FXL_DCHECK(!commit_ids.empty());
+        LEDGER_DCHECK(!commit_ids.empty());
         if (commit_ids.size() > 1) {
           // A page is not empty if there is more than one head commit.
           callback(Status::OK, false);
@@ -394,7 +395,7 @@ void PageStorageImpl::GetUnsyncedPieces(
 
 void PageStorageImpl::MarkPieceSynced(ObjectIdentifier object_identifier,
                                       fit::function<void(Status)> callback) {
-  FXL_DCHECK(IsTokenValid(object_identifier));
+  LEDGER_DCHECK(IsTokenValid(object_identifier));
   coroutine_manager_.StartCoroutine(
       std::move(callback), [this, object_identifier = std::move(object_identifier)](
                                CoroutineHandler* handler, fit::function<void(Status)> callback) {
@@ -404,7 +405,7 @@ void PageStorageImpl::MarkPieceSynced(ObjectIdentifier object_identifier,
 
 void PageStorageImpl::IsPieceSynced(ObjectIdentifier object_identifier,
                                     fit::function<void(Status, bool)> callback) {
-  FXL_DCHECK(IsTokenValid(object_identifier));
+  LEDGER_DCHECK(IsTokenValid(object_identifier));
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier)](
@@ -440,7 +441,7 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
   // |data_source| is not splitted yet: |tree_references| must contain only
   // BTree-level references, not piece-level references, and only in the case
   // where |data_source| actually represents a tree node.
-  FXL_DCHECK(object_type == ObjectType::TREE_NODE || tree_references.empty());
+  LEDGER_DCHECK(object_type == ObjectType::TREE_NODE || tree_references.empty());
   auto traced_callback = TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
 
   auto managed_data_source = managed_container_.Manage(std::move(data_source));
@@ -461,7 +462,7 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
         SplitDataSource(
             managed_data_source_ptr, object_type,
             [this](ObjectDigest object_digest) {
-              FXL_DCHECK(IsDigestValid(object_digest));
+              LEDGER_DCHECK(IsDigestValid(object_digest));
               return encryption_service_->MakeObjectIdentifier(&object_identifier_factory_,
                                                                std::move(object_digest));
             },
@@ -475,7 +476,7 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
                 return;
               }
 
-              FXL_DCHECK(piece != nullptr);
+              LEDGER_DCHECK(piece != nullptr);
               ObjectIdentifier identifier = piece->GetIdentifier();
               auto object_info = GetObjectDigestInfo(identifier.object_digest());
               if (!object_info.is_inlined()) {
@@ -489,7 +490,7 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
                 if (object_info.object_type == ObjectType::TREE_NODE) {
                   // There is at most one TREE_NODE, and it must be the last piece, so
                   // it is safe to add tree_references to piece_references there.
-                  FXL_DCHECK(status == IterationStatus::DONE);
+                  LEDGER_DCHECK(status == IterationStatus::DONE);
                   piece_references.insert(std::make_move_iterator(tree_references.begin()),
                                           std::make_move_iterator(tree_references.end()));
                 }
@@ -501,7 +502,7 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
               if (status == IterationStatus::IN_PROGRESS)
                 return;
 
-              FXL_DCHECK(status == IterationStatus::DONE);
+              LEDGER_DCHECK(status == IterationStatus::DONE);
               waiter->Finalize([identifier = std::move(identifier),
                                 live_pieces = std::move(live_pieces),
                                 callback = std::move(callback)](Status status) mutable {
@@ -517,7 +518,7 @@ Status PageStorageImpl::DeleteObject(coroutine::CoroutineHandler* handler,
                                      ObjectDigest object_digest,
                                      ObjectReferencesAndPriority* references) {
   if (GetObjectDigestInfo(object_digest).is_inlined()) {
-    FXL_VLOG(2) << "Object is inline, cannot be deleted: " << object_digest;
+    LEDGER_VLOG(2) << "Object is inline, cannot be deleted: " << object_digest;
     return Status::INTERNAL_NOT_FOUND;
   }
   if (object_identifier_factory_.count(object_digest) != 0) {
@@ -578,10 +579,10 @@ Status PageStorageImpl::DeleteObject(coroutine::CoroutineHandler* handler,
 void PageStorageImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t offset,
                                     int64_t max_size, Location location,
                                     fit::function<void(Status, ledger::SizedVmo)> callback) {
-  FXL_DCHECK(IsDigestValid(object_identifier.object_digest()));
-  FXL_DCHECK(GetObjectDigestInfo(object_identifier.object_digest()).object_type ==
-             ObjectType::BLOB);
-  FXL_DCHECK(IsTokenValid(object_identifier));
+  LEDGER_DCHECK(IsDigestValid(object_identifier.object_digest()));
+  LEDGER_DCHECK(GetObjectDigestInfo(object_identifier.object_digest()).object_type ==
+                ObjectType::BLOB);
+  LEDGER_DCHECK(IsTokenValid(object_identifier));
   GetOrDownloadPiece(
       object_identifier, location,
       [this, location, object_identifier = std::move(object_identifier), offset, max_size,
@@ -591,10 +592,10 @@ void PageStorageImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
           callback(status, nullptr);
           return;
         }
-        FXL_DCHECK(piece);
+        LEDGER_DCHECK(piece);
         // |piece| is necessarily a blob, so it must have been retrieved from
         // disk or written to disk already.
-        FXL_DCHECK(!write_callback);
+        LEDGER_DCHECK(!write_callback);
 
         // If we are reading zero bytes, bail out now.
         if (max_size == 0) {
@@ -623,7 +624,7 @@ void PageStorageImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
           return;
         }
 
-        FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+        LEDGER_DCHECK(digest_info.piece_type == PieceType::INDEX);
         // We do not need to keep children pieces alive with in-memory references because we have
         // already the root piece to disk, creating on-disk references.
         GetIndexObject(*piece, offset, max_size, location, /*child_identifiers=*/nullptr,
@@ -636,8 +637,8 @@ void PageStorageImpl::GetObject(
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
   fit::function<void(Status, std::unique_ptr<const Object>)> traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_get_object");
-  FXL_DCHECK(IsDigestValid(object_identifier.object_digest()));
-  FXL_DCHECK(IsTokenValid(object_identifier));
+  LEDGER_DCHECK(IsDigestValid(object_identifier.object_digest()));
+  LEDGER_DCHECK(IsTokenValid(object_identifier));
 
   GetOrDownloadPiece(
       object_identifier, location,
@@ -648,17 +649,17 @@ void PageStorageImpl::GetObject(
           callback(status, nullptr);
           return;
         }
-        FXL_DCHECK(piece);
+        LEDGER_DCHECK(piece);
         ObjectDigestInfo digest_info = GetObjectDigestInfo(piece->GetIdentifier().object_digest());
 
         // If the piece is a chunk, then the piece represents the whole object.
         if (digest_info.is_chunk()) {
-          FXL_DCHECK(!write_callback);
+          LEDGER_DCHECK(!write_callback);
           callback(Status::OK, std::make_unique<ChunkObject>(std::move(piece)));
           return;
         }
 
-        FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+        LEDGER_DCHECK(digest_info.piece_type == PieceType::INDEX);
         // A container which will be filled with the identifiers of the children of |piece|, to keep
         // them alive until write_callback has completed, ie. until |piece| has been written to
         // disk with its references and |callback| is called.
@@ -696,7 +697,7 @@ void PageStorageImpl::GetObject(
 
 void PageStorageImpl::GetPiece(ObjectIdentifier object_identifier,
                                fit::function<void(Status, std::unique_ptr<const Piece>)> callback) {
-  FXL_DCHECK(IsTokenValid(object_identifier));
+  LEDGER_DCHECK(IsTokenValid(object_identifier));
   ObjectDigestInfo digest_info = GetObjectDigestInfo(object_identifier.object_digest());
   if (digest_info.is_inlined()) {
     callback(Status::OK, std::make_unique<InlinePiece>(std::move(object_identifier)));
@@ -784,7 +785,7 @@ void PageStorageImpl::GetDiffForCloud(
                   // TODO(nellyv): Here we assume that the parent commit is available: when we start
                   // prunning synced commits it might not be the case and another commit should be
                   // used instead.
-                  FXL_DCHECK(status != Status::INTERNAL_NOT_FOUND);
+                  LEDGER_DCHECK(status != Status::INTERNAL_NOT_FOUND);
                   if (status != Status::OK) {
                     callback(status, "", {});
                     return;
@@ -796,13 +797,13 @@ void PageStorageImpl::GetDiffForCloud(
                       return false;
                     }
                     if (change.base) {
-                      FXL_DCHECK(!change.base->entry_id.empty());
+                      LEDGER_DCHECK(!change.base->entry_id.empty());
                       // This change is either an update or a deletion. In either case we send to
                       // the cloud a deletion of the previous entry.
                       changes->push_back({std::move(*change.base), /*deleted*/ true});
                     }
                     if (change.target) {
-                      FXL_DCHECK(!change.target->entry_id.empty());
+                      LEDGER_DCHECK(!change.target->entry_id.empty());
                       // This change is either an update or an insertion. In either case we send to
                       // the cloud an insertion of the updated entry.
                       changes->push_back({std::move(*change.target), /*deleted*/ false});
@@ -930,7 +931,7 @@ void PageStorageImpl::GetCommitRootIdentifier(
         callback(status, {});
         return;
       }
-      FXL_DCHECK(commit);
+      LEDGER_DCHECK(commit);
       callback(Status::OK, commit->GetRootIdentifier());
     });
   }
@@ -965,8 +966,8 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler, PageDb::Ba
     auto it = seen_identifiers.insert(std::move(object_identifiers.back()));
     object_identifiers.pop_back();
     const ObjectIdentifier& object_identifier = *(it.first);
-    FXL_DCHECK(!GetObjectDigestInfo(object_identifier.object_digest()).is_inlined());
-    FXL_DCHECK(IsTokenValid(object_identifier));
+    LEDGER_DCHECK(!GetObjectDigestInfo(object_identifier.object_digest()).is_inlined());
+    LEDGER_DCHECK(IsTokenValid(object_identifier));
     RETURN_ON_ERROR(batch->SetObjectStatus(handler, object_identifier, PageDbObjectStatus::LOCAL));
     if (GetObjectDigestInfo(object_identifier.object_digest()).piece_type == PieceType::INDEX) {
       std::unique_ptr<const Piece> piece;
@@ -1016,7 +1017,7 @@ void PageStorageImpl::AddPiece(std::unique_ptr<const Piece> piece, ChangeSource 
 
 void PageStorageImpl::ObjectIsUntracked(ObjectIdentifier object_identifier,
                                         fit::function<void(Status, bool)> callback) {
-  FXL_DCHECK(IsTokenValid(object_identifier));
+  LEDGER_DCHECK(IsTokenValid(object_identifier));
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, object_identifier = std::move(object_identifier)](
@@ -1049,7 +1050,7 @@ void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t
                                      fit::function<void(Status, ledger::SizedVmo)> callback) {
   ObjectDigestInfo digest_info = GetObjectDigestInfo(piece.GetIdentifier().object_digest());
 
-  FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+  LEDGER_DCHECK(digest_info.piece_type == PieceType::INDEX);
   absl::string_view content = piece.GetData();
   const FileIndex* file_index;
   Status status = FileIndexSerialization::ParseFileIndex(content, &file_index);
@@ -1063,8 +1064,8 @@ void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t
   zx::vmo raw_vmo;
   zx_status_t zx_status = zx::vmo::create(length, 0, &raw_vmo);
   if (zx_status != ZX_OK) {
-    FXL_LOG(WARNING) << "Unable to create VMO of size " << length << ": "
-                     << zx_status_get_string(zx_status);
+    LEDGER_LOG(WARNING) << "Unable to create VMO of size " << length << ": "
+                        << zx_status_get_string(zx_status);
     callback(Status::INTERNAL_ERROR, nullptr);
     return;
   }
@@ -1073,7 +1074,7 @@ void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t
   ledger::SizedVmo vmo_copy;
   zx_status = vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to duplicate vmo: " << zx_status_get_string(zx_status);
+    LEDGER_LOG(ERROR) << "Unable to duplicate vmo: " << zx_status_get_string(zx_status);
     callback(Status::INTERNAL_ERROR, nullptr);
     return;
   }
@@ -1103,9 +1104,9 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::Si
   ObjectDigestInfo digest_info = GetObjectDigestInfo(piece.GetIdentifier().object_digest());
   if (digest_info.is_inlined() || digest_info.is_chunk()) {
     if (object_size != static_cast<int64_t>(content.size())) {
-      FXL_LOG(ERROR) << "Error in serialization format. Expecting object: " << piece.GetIdentifier()
-                     << " to have size: " << object_size
-                     << ", but found an object of size: " << content.size();
+      LEDGER_LOG(ERROR) << "Error in serialization format. Expecting object: "
+                        << piece.GetIdentifier() << " to have size: " << object_size
+                        << ", but found an object of size: " << content.size();
       callback(Status::DATA_INTEGRITY_ERROR);
       return;
     }
@@ -1120,11 +1121,11 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::Si
     // Read and write until reaching either size of the object, or global size.
     int64_t read_write_size =
         std::min(static_cast<int64_t>(content.size()) - read_offset, global_size - write_offset);
-    FXL_DCHECK(read_write_size > 0);
+    LEDGER_DCHECK(read_write_size > 0);
     absl::string_view read_substr = content.substr(read_offset, read_write_size);
     zx_status_t zx_status = vmo.vmo().write(read_substr.data(), write_offset, read_write_size);
     if (zx_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unable to write to vmo: " << zx_status_get_string(zx_status);
+      LEDGER_LOG(ERROR) << "Unable to write to vmo: " << zx_status_get_string(zx_status);
       callback(Status::INTERNAL_ERROR);
       return;
     }
@@ -1139,9 +1140,9 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::Si
     return;
   }
   if (static_cast<int64_t>(file_index->size()) != object_size) {
-    FXL_LOG(ERROR) << "Error in serialization format. Expecting object: " << piece.GetIdentifier()
-                   << " to have size " << object_size
-                   << ", but found an index object of size: " << file_index->size();
+    LEDGER_LOG(ERROR) << "Error in serialization format. Expecting object: "
+                      << piece.GetIdentifier() << " to have size " << object_size
+                      << ", but found an index object of size: " << file_index->size();
     callback(Status::DATA_INTEGRITY_ERROR);
     return;
   }
@@ -1171,14 +1172,14 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::Si
     ledger::SizedVmo vmo_copy;
     zx_status_t zx_status = vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
     if (zx_status != ZX_OK) {
-      FXL_LOG(ERROR) << "Unable to duplicate vmo: " << zx_status_get_string(zx_status);
+      LEDGER_LOG(ERROR) << "Unable to duplicate vmo: " << zx_status_get_string(zx_status);
       callback(Status::INTERNAL_ERROR);
       return;
     }
     // This is a child, so it cannot be a tree node, only top pieces may be tree
     // nodes.
-    FXL_DCHECK(GetObjectDigestInfo(child_identifier.object_digest()).object_type ==
-               ObjectType::BLOB);
+    LEDGER_DCHECK(GetObjectDigestInfo(child_identifier.object_digest()).object_type ==
+                  ObjectType::BLOB);
     GetOrDownloadPiece(
         child_identifier, location,
         [this, vmo = std::move(vmo_copy), global_offset, global_size, child_position,
@@ -1189,8 +1190,8 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::Si
             child_callback(status);
             return;
           }
-          FXL_DCHECK(child_piece);
-          FXL_DCHECK(!write_callback);
+          LEDGER_DCHECK(child_piece);
+          LEDGER_DCHECK(!write_callback);
           // The |child_piece| is necessarily a blob, so it must have been read from
           // or written to disk already. As such, its children will be kept alive by
           // on-disk references when we get them recursively.
@@ -1216,14 +1217,14 @@ void PageStorageImpl::GetOrDownloadPiece(
       callback(status, std::move(piece), {});
       return;
     }
-    FXL_DCHECK(piece == nullptr);
+    LEDGER_DCHECK(piece == nullptr);
     // An unexpected error occured.
     if (status != Status::INTERNAL_NOT_FOUND || location.is_local()) {
       callback(status, nullptr, {});
       return;
     }
     // Object not found locally, attempt to download it.
-    FXL_DCHECK(location.is_network());
+    LEDGER_DCHECK(location.is_network());
     if (!page_sync_) {
       callback(Status::NETWORK_ERROR, nullptr, {});
       return;
@@ -1276,7 +1277,7 @@ void PageStorageImpl::DownloadPieceDirectly(
           ChangeSource source;
           IsObjectSynced is_object_synced;
           std::unique_ptr<DataSource::DataChunk> chunk;
-          FXL_DCHECK(location.is_network());
+          LEDGER_DCHECK(location.is_network());
           RetrievedObjectType retrieved_object_type = location.is_tree_node_from_network()
                                                           ? RetrievedObjectType::TREE_NODE
                                                           : RetrievedObjectType::BLOB;
@@ -1302,7 +1303,7 @@ void PageStorageImpl::DownloadPieceDirectly(
           }
           // Sanity-check of retrieved object.
           auto digest_info = GetObjectDigestInfo(object_identifier.object_digest());
-          FXL_DCHECK(!digest_info.is_inlined());
+          LEDGER_DCHECK(!digest_info.is_inlined());
 
           if (object_identifier.object_digest() !=
               ComputeObjectDigest(digest_info.piece_type, digest_info.object_type, chunk->Get())) {
@@ -1354,7 +1355,7 @@ void PageStorageImpl::DownloadPieceDirectly(
             return;
           }
           if (digest_info.object_type == ObjectType::TREE_NODE) {
-            FXL_DCHECK(digest_info.is_chunk());
+            LEDGER_DCHECK(digest_info.is_chunk());
             // Convert the piece to a chunk Object to extract its
             // references.
             auto object = std::make_unique<ChunkObject>(std::move(piece));
@@ -1469,7 +1470,7 @@ Status PageStorageImpl::SynchronousDownloadDiff(coroutine::CoroutineHandler* han
   // but we might need some of their pieces to be sent if they become part of an object later on.
 
   if (new_root_identifier != target_commit_root_id) {
-    FXL_LOG(ERROR)
+    LEDGER_LOG(ERROR)
         << "Applying the change provided by the cloud did not produce the expected tree.";
     return Status::INTERNAL_NOT_FOUND;
   }
@@ -1572,8 +1573,8 @@ Status PageStorageImpl::SynchronousGetCommit(CoroutineHandler* handler, CommitId
 Status PageStorageImpl::SynchronousAddCommitFromLocal(CoroutineHandler* handler,
                                                       std::unique_ptr<const Commit> commit,
                                                       std::vector<ObjectIdentifier> new_objects) {
-  FXL_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest()));
-  FXL_DCHECK(IsTokenValid(commit->GetRootIdentifier()));
+  LEDGER_DCHECK(IsDigestValid(commit->GetRootIdentifier().object_digest()));
+  LEDGER_DCHECK(IsTokenValid(commit->GetRootIdentifier()));
   std::vector<std::unique_ptr<const Commit>> commits;
   commits.reserve(1);
   commits.push_back(std::move(commit));
@@ -1624,7 +1625,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
 
     status = commit_factory_.FromStorageBytes(id, std::move(storage_bytes), &commit);
     if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
+      LEDGER_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
       return status;
     }
 
@@ -1826,8 +1827,8 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
           return s;
         }
         if (s != Status::OK) {
-          FXL_LOG(ERROR) << "Failed to find parent commit \"" << ToHex(parent_id)
-                         << "\" of commit \"" << convert::ToHex(commit->GetId()) << "\".";
+          LEDGER_LOG(ERROR) << "Failed to find parent commit \"" << ToHex(parent_id)
+                            << "\" of commit \"" << convert::ToHex(commit->GetId()) << "\".";
           if (s == Status::INTERNAL_NOT_FOUND) {
             ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
             return s;
@@ -1886,7 +1887,7 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
   // If these commits came from the cloud, they are marked as synced and we should remove them from
   // the commit factory. If they came from P2P or local they are marked as unsynced and should
   // instead be added in commit factory. Check that at most one of these containers has elements.
-  FXL_DCHECK(synced_commits.empty() || unsynced_commits.empty());
+  LEDGER_DCHECK(synced_commits.empty() || unsynced_commits.empty());
 
   // Remove all synced commits from the commit_factory_.
   for (const auto& [synced_commit_id, root_identifier] : synced_commits) {
@@ -1916,8 +1917,8 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
 Status PageStorageImpl::SynchronousAddPiece(CoroutineHandler* handler, const Piece& piece,
                                             ChangeSource source, IsObjectSynced is_object_synced,
                                             ObjectReferencesAndPriority references) {
-  FXL_DCHECK(!GetObjectDigestInfo(piece.GetIdentifier().object_digest()).is_inlined());
-  FXL_DCHECK(
+  LEDGER_DCHECK(!GetObjectDigestInfo(piece.GetIdentifier().object_digest()).is_inlined());
+  LEDGER_DCHECK(
       piece.GetIdentifier().object_digest() ==
       ComputeObjectDigest(GetObjectDigestInfo(piece.GetIdentifier().object_digest()).piece_type,
                           GetObjectDigestInfo(piece.GetIdentifier().object_digest()).object_type,

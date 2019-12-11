@@ -12,6 +12,7 @@
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/synchronization/lock.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -21,13 +22,13 @@ namespace {
 constexpr absl::string_view kOpenedPagePrefix = "opened/";
 
 std::string GetKeyForOpenedPage(absl::string_view ledger_name, storage::PageIdView page_id) {
-  FXL_DCHECK(page_id.size() == ::fuchsia::ledger::PAGE_ID_SIZE);
+  LEDGER_DCHECK(page_id.size() == ::fuchsia::ledger::PAGE_ID_SIZE);
   return absl::StrCat(kOpenedPagePrefix, ledger_name, page_id);
 }
 
 void GetPageFromOpenedRow(absl::string_view row, std::string* ledger_name,
                           storage::PageId* page_id) {
-  FXL_DCHECK(row.size() > ::fuchsia::ledger::PAGE_ID_SIZE + kOpenedPagePrefix.size());
+  LEDGER_DCHECK(row.size() > ::fuchsia::ledger::PAGE_ID_SIZE + kOpenedPagePrefix.size());
   size_t ledger_name_size = row.size() - ::fuchsia::ledger::PAGE_ID_SIZE - kOpenedPagePrefix.size();
   *ledger_name = convert::ToString(row.substr(kOpenedPagePrefix.size(), ledger_name_size));
   *page_id = convert::ToString(row.substr(kOpenedPagePrefix.size() + ledger_name_size));
@@ -90,8 +91,8 @@ class PageInfoIterator final : public storage::Iterator<const PageInfo> {
 bool LogOnInitializationError(absl::string_view operation_description, Status status) {
   if (status != Status::OK) {
     if (status != Status::INTERRUPTED) {
-      FXL_LOG(ERROR) << operation_description
-                     << " failed because of initialization error: " << fidl::ToUnderlying(status);
+      LEDGER_LOG(ERROR) << operation_description << " failed because of initialization error: "
+                        << fidl::ToUnderlying(status);
     }
     return true;
   }
@@ -135,7 +136,7 @@ Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
   if (LogOnInitializationError("MarkPageClosed", status)) {
     return status;
   }
-  FXL_DCHECK(page_id.size() == ::fuchsia::ledger::PAGE_ID_SIZE);
+  LEDGER_DCHECK(page_id.size() == ::fuchsia::ledger::PAGE_ID_SIZE);
   zx::time_utc now;
   if (clock_->Now(&now) != ZX_OK) {
     return Status::IO_ERROR;

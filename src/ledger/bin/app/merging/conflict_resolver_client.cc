@@ -17,6 +17,7 @@
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/util/ptr.h"
 #include "src/lib/callback/scoped_callback.h"
@@ -41,8 +42,8 @@ ConflictResolverClient::ConflictResolverClient(storage::PageStorage* storage,
       callback_(std::move(callback)),
       merge_result_provider_binding_(this),
       weak_factory_(this) {
-  FXL_DCHECK(left_->GetTimestamp() >= right_->GetTimestamp());
-  FXL_DCHECK(callback_);
+  LEDGER_DCHECK(left_->GetTimestamp() >= right_->GetTimestamp());
+  LEDGER_DCHECK(callback_);
 }
 
 ConflictResolverClient::~ConflictResolverClient() = default;
@@ -76,7 +77,8 @@ void ConflictResolverClient::Cancel() {
 void ConflictResolverClient::GetOrCreateObjectIdentifier(
     const MergedValue& merged_value,
     fit::function<void(Status, storage::ObjectIdentifier)> callback) {
-  FXL_DCHECK(merged_value.source == ValueSource::RIGHT || merged_value.source == ValueSource::NEW);
+  LEDGER_DCHECK(merged_value.source == ValueSource::RIGHT ||
+                merged_value.source == ValueSource::NEW);
   switch (merged_value.source) {
     case ValueSource::RIGHT: {
       std::string key = convert::ToString(merged_value.key);
@@ -84,8 +86,8 @@ void ConflictResolverClient::GetOrCreateObjectIdentifier(
           *right_, key, [key, callback = std::move(callback)](Status status, storage::Entry entry) {
             if (status != Status::OK) {
               if (status == Status::KEY_NOT_FOUND) {
-                FXL_LOG(ERROR) << "Key " << key
-                               << " is not present in the right change. Unable to proceed";
+                LEDGER_LOG(ERROR) << "Key " << key
+                                  << " is not present in the right change. Unable to proceed";
               }
               callback(Status::INVALID_ARGUMENT, {});
               return;
@@ -113,13 +115,13 @@ void ConflictResolverClient::GetOrCreateObjectIdentifier(
       break;
     }
     default: {
-      FXL_NOTREACHED();
+      LEDGER_NOTREACHED();
     }
   }
 }
 
 void ConflictResolverClient::Finalize(Status status) {
-  FXL_DCHECK(callback_) << "Finalize must only be called once.";
+  LEDGER_DCHECK(callback_) << "Finalize must only be called once.";
   if (journal_) {
     journal_.reset();
   }
@@ -161,7 +163,8 @@ void ConflictResolverClient::GetDiff(
               return;
             }
             if (status != Status::OK) {
-              FXL_LOG(ERROR) << "Unable to compute diff due to error " << status << ", aborting.";
+              LEDGER_LOG(ERROR) << "Unable to compute diff due to error " << status
+                                << ", aborting.";
               callback(status, {}, nullptr);
               Finalize(status);
               return;
@@ -215,7 +218,7 @@ void ConflictResolverClient::Merge(std::vector<MergedValue> merged_values,
               ++i;
             }
           }
-          FXL_DCHECK(i == object_identifiers.size());
+          LEDGER_DCHECK(i == object_identifiers.size());
           callback(Status::OK);
         });
       });
@@ -269,8 +272,8 @@ void ConflictResolverClient::Done(fit::function<void(Status)> callback) {
           return;
         }
         in_client_request_ = false;
-        FXL_DCHECK(!cancelled_);
-        FXL_DCHECK(journal_);
+        LEDGER_DCHECK(!cancelled_);
+        LEDGER_DCHECK(journal_);
 
         storage_->CommitJournal(
             std::move(journal_),

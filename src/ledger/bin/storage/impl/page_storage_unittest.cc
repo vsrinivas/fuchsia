@@ -43,6 +43,7 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
@@ -305,7 +306,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
 
   void UpdateClock(storage::Clock /*clock*/,
                    fit::function<void(ledger::Status)> callback) override {
-    FXL_NOTIMPLEMENTED();
+    LEDGER_NOTIMPLEMENTED();
     callback(ledger::Status::NOT_IMPLEMENTED);
   }
 

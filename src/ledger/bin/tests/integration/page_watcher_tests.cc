@@ -21,6 +21,7 @@
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
@@ -464,7 +465,7 @@ class WaitingWatcher : public PageWatcher {
   // PageWatcher:
   void OnChange(PageChange page_change, ResultState result_state,
                 OnChangeCallback callback) override {
-    FXL_DCHECK(result_state == ResultState::COMPLETED)
+    LEDGER_DCHECK(result_state == ResultState::COMPLETED)
         << "Handling OnChange pagination not implemented yet";
     changes.emplace_back(std::move(page_change), std::move(callback));
     change_callback_();

@@ -37,6 +37,7 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
@@ -266,7 +267,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
         status = Status::INTERRUPTED;
         return;
       }
-      FXL_CHECK(status == Status::OK);
+      LEDGER_CHECK(status == Status::OK);
       dbview_factory = std::make_unique<DbViewFactory>(std::move(leveldb));
       device_id_manager = device_id_manager_factory(dbview_factory.get());
       page_usage_db = std::make_unique<PageUsageDb>(

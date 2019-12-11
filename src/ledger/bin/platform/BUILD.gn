@@ -34,6 +34,7 @@ source_set("implementation") {
     ":platform",
     "//peridot/lib/scoped_tmpfs",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/logging",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

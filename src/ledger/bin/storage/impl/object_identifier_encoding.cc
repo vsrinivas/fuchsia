@@ -11,6 +11,7 @@
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -58,7 +59,7 @@ bool DecodeObjectIdentifier(absl::string_view data, ObjectIdentifierFactory* fac
 }
 
 std::string EncodeDigestPrefixedObjectIdentifier(const ObjectIdentifier& object_identifier) {
-  FXL_DCHECK(object_identifier.object_digest().Serialize().size() == kStorageHashSize + 1);
+  LEDGER_DCHECK(object_identifier.object_digest().Serialize().size() == kStorageHashSize + 1);
   return absl::StrCat(object_identifier.object_digest().Serialize(),
                       SerializeData(static_cast<uint32_t>(object_identifier.key_index())));
 }

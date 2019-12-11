@@ -6,6 +6,8 @@
 
 #include <lib/fit/defer.h>
 
+#include "src/ledger/lib/logging/logging.h"
+
 namespace ledger {
 
 BlockingCallbackWaiter::BlockingCallbackWaiter(LoopController* loop_controller)
@@ -33,7 +35,7 @@ fit::function<void()> BlockingCallbackWaiter::GetCallback() {
 }
 
 bool BlockingCallbackWaiter::RunUntilCalled() {
-  FXL_DCHECK(!running_);
+  LEDGER_DCHECK(!running_);
   running_ = true;
   auto cleanup = fit::defer([this] { running_ = false; });
   while (NotCalledYet()) {

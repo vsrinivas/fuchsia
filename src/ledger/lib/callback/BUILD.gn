@@ -15,6 +15,7 @@ source_set("callback") {
   ]
 
   deps = [
+    "//src/ledger/lib/logging",
     "//src/lib/callback",
   ]
 }

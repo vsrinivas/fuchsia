@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
 
+#include "src/ledger/lib/logging/logging.h"
+
 namespace ledger {
 
 TestPageWatcher::TestPageWatcher(fidl::InterfaceRequest<PageWatcher> request,
@@ -13,7 +15,7 @@ TestPageWatcher::TestPageWatcher(fidl::InterfaceRequest<PageWatcher> request,
 void TestPageWatcher::DelayCallback(bool delay_callback) { delay_callback_ = delay_callback; }
 
 void TestPageWatcher::CallOnChangeCallback() {
-  FXL_CHECK(on_change_callback_);
+  LEDGER_CHECK(on_change_callback_);
   on_change_callback_(last_snapshot_.NewRequest());
   on_change_callback_ = nullptr;
 }
@@ -32,7 +34,7 @@ void TestPageWatcher::OnChange(PageChange page_change, ResultState result_state,
   last_result_state_ = result_state;
   last_page_change_ = std::move(page_change);
   last_snapshot_.Unbind();
-  FXL_CHECK(!on_change_callback_);
+  LEDGER_CHECK(!on_change_callback_);
   on_change_callback_ = std::move(callback);
   if (!delay_callback_) {
     CallOnChangeCallback();

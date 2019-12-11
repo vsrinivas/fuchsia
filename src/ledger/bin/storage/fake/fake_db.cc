@@ -8,6 +8,7 @@
 
 #include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -120,13 +121,13 @@ class PrefixIterator
 
   const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>& operator*()
       const override {
-    FXL_DCHECK(current_.has_value());
+    LEDGER_DCHECK(current_.has_value());
     return current_.value();
   }
 
   const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>* operator->()
       const override {
-    FXL_DCHECK(current_.has_value());
+    LEDGER_DCHECK(current_.has_value());
     return &current_.value();
   }
 
@@ -160,7 +161,7 @@ Status FakeDb::StartBatch(coroutine::CoroutineHandler* handler, std::unique_ptr<
 
 Status FakeDb::Get(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
                    std::string* value) {
-  FXL_DCHECK(value);
+  LEDGER_DCHECK(value);
   auto it = key_value_store_.find(convert::ToString(key));
   if (it == key_value_store_.end()) {
     return Status::INTERNAL_NOT_FOUND;

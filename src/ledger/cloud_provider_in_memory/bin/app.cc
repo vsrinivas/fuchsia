@@ -13,6 +13,7 @@
 
 #include "peridot/lib/rng/system_random.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace cloud_provider {
 namespace {
@@ -21,7 +22,7 @@ class App {
  public:
   explicit App(async_dispatcher_t* dispatcher)
       : dispatcher_(dispatcher), component_context_(sys::ComponentContext::Create()) {
-    FXL_DCHECK(component_context_);
+    LEDGER_DCHECK(component_context_);
   }
   App(const App&) = delete;
   App& operator=(const App&) = delete;

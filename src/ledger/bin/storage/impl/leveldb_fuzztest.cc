@@ -22,6 +22,7 @@
 #include "src/ledger/bin/testing/run_in_coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
+#include "src/ledger/lib/logging/logging.h"
 
 // Fuzz test for LevelDb implementation of Db.
 //
@@ -56,11 +57,11 @@ void DoStartBatch(async::TestLoop* test_loop, coroutine::CoroutineService* corou
                   storage::Db* db, std::unique_ptr<storage::Db::Batch>* batch) {
   bool completed = ledger::RunInCoroutine(test_loop, coroutine_service,
                                           [batch, db](coroutine::CoroutineHandler* handler) {
-                                            FXL_VLOG(1) << " - StartBatch";
+                                            LEDGER_VLOG(1) << " - StartBatch";
                                             auto status = db->StartBatch(handler, batch);
-                                            FXL_DCHECK(status == storage::Status::OK);
+                                            LEDGER_DCHECK(status == storage::Status::OK);
                                           });
-  FXL_DCHECK(completed);
+  LEDGER_DCHECK(completed);
 }
 
 // Executes (commits) the given batch.
@@ -68,11 +69,11 @@ void DoExecute(async::TestLoop* test_loop, coroutine::CoroutineService* coroutin
                storage::Db::Batch* batch) {
   bool completed = ledger::RunInCoroutine(test_loop, coroutine_service,
                                           [batch](coroutine::CoroutineHandler* handler) {
-                                            FXL_VLOG(1) << " - Batch > Execute";
+                                            LEDGER_VLOG(1) << " - Batch > Execute";
                                             storage::Status status = batch->Execute(handler);
-                                            FXL_DCHECK(status == storage::Status::OK);
+                                            LEDGER_DCHECK(status == storage::Status::OK);
                                           });
-  FXL_DCHECK(completed);
+  LEDGER_DCHECK(completed);
 }
 
 // Deletes an entry with the given key from the db.
@@ -80,11 +81,11 @@ void DoDelete(async::TestLoop* test_loop, coroutine::CoroutineService* coroutine
               storage::Db::Batch* batch, std::string key) {
   bool completed = ledger::RunInCoroutine(test_loop, coroutine_service,
                                           [batch, key](coroutine::CoroutineHandler* handler) {
-                                            FXL_VLOG(1) << " - Batch > Delete " << key;
+                                            LEDGER_VLOG(1) << " - Batch > Delete " << key;
                                             storage::Status status = batch->Delete(handler, key);
-                                            FXL_DCHECK(status == storage::Status::OK);
+                                            LEDGER_DCHECK(status == storage::Status::OK);
                                           });
-  FXL_DCHECK(completed);
+  LEDGER_DCHECK(completed);
 }
 
 // Writes an entry to the db.
@@ -92,11 +93,11 @@ void DoPut(async::TestLoop* test_loop, coroutine::CoroutineService* coroutine_se
            storage::Db::Batch* batch, std::string key, std::string value) {
   bool completed = ledger::RunInCoroutine(
       test_loop, coroutine_service, [batch, key, value](coroutine::CoroutineHandler* handler) {
-        FXL_VLOG(1) << " - Batch > Put " << key << "=" << value;
+        LEDGER_VLOG(1) << " - Batch > Put " << key << "=" << value;
         storage::Status status = batch->Put(handler, key, value);
-        FXL_DCHECK(status == storage::Status::OK);
+        LEDGER_DCHECK(status == storage::Status::OK);
       });
-  FXL_DCHECK(completed);
+  LEDGER_DCHECK(completed);
 }
 
 // Queries the db to see if the given key is present.
@@ -104,11 +105,12 @@ void DoQueryHasKey(async::TestLoop* test_loop, coroutine::CoroutineService* coro
                    storage::Db* db, std::string key) {
   bool completed = ledger::RunInCoroutine(
       test_loop, coroutine_service, [&db, key](coroutine::CoroutineHandler* handler) {
-        FXL_VLOG(1) << " - Batch > QueryHasKey " << key;
+        LEDGER_VLOG(1) << " - Batch > QueryHasKey " << key;
         storage::Status status = db->HasKey(handler, key);
-        FXL_DCHECK(status == storage::Status::OK || status == storage::Status::INTERNAL_NOT_FOUND);
+        LEDGER_DCHECK(status == storage::Status::OK ||
+                      status == storage::Status::INTERNAL_NOT_FOUND);
       });
-  FXL_DCHECK(completed);
+  LEDGER_DCHECK(completed);
 }
 
 }  // namespace
@@ -135,7 +137,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t remaining_size
   std::unique_ptr<storage::Db::Batch> batch;
   auto db = GetDb(&environment, tmp_location.get());
 
-  FXL_VLOG(1) << "Let's try to break LevelDb!";
+  LEDGER_VLOG(1) << "Let's try to break LevelDb!";
   // Start the batch.
   DoStartBatch(&test_loop, &coroutine_service, db.get(), &batch);
 

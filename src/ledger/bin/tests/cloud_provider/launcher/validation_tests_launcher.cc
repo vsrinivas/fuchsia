@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/optional.h>
 
 #include "lib/async/dispatcher.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace cloud_provider {
@@ -78,7 +79,7 @@ void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
         callback_(return_code);
       };
   validation_tests_controller_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Lost connection to validation tests binary.";
+    LEDGER_LOG(ERROR) << "Lost connection to validation tests binary.";
     callback_(-1);
   });
 }

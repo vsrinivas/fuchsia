@@ -25,6 +25,7 @@
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -99,15 +100,16 @@ UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop,
       transaction_size_(transaction_size),
       key_size_(kKeySize),
       value_size_(value_size) {
-  FXL_DCHECK(loop_);
-  FXL_DCHECK(entry_count_ > 0);
-  FXL_DCHECK(value_size_ > 0);
-  FXL_DCHECK(key_size_ > 0);
-  FXL_DCHECK(transaction_size_ >= 0);
+  LEDGER_DCHECK(loop_);
+  LEDGER_DCHECK(entry_count_ > 0);
+  LEDGER_DCHECK(value_size_ > 0);
+  LEDGER_DCHECK(key_size_ > 0);
+  LEDGER_DCHECK(transaction_size_ >= 0);
 }
 
 void UpdateEntryBenchmark::Run() {
-  FXL_LOG(INFO) << "--entry-count=" << entry_count_ << " --transaction-size=" << transaction_size_;
+  LEDGER_LOG(INFO) << "--entry-count=" << entry_count_
+                   << " --transaction-size=" << transaction_size_;
   Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
                             "", "update_entry", tmp_dir_->path(), QuitLoopClosure(), &ledger_,
                             kDefaultGarbageCollectionPolicy);

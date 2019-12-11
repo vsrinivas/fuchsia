@@ -13,6 +13,7 @@
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -31,7 +32,7 @@ BatchDownload::BatchDownload(storage::PageStorage* storage,
       on_done_(std::move(on_done)),
       on_error_(std::move(on_error)),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(storage);
+  LEDGER_DCHECK(storage);
   TRACE_ASYNC_BEGIN("ledger", "batch_download", reinterpret_cast<uintptr_t>(this));
 }
 
@@ -40,14 +41,14 @@ BatchDownload::~BatchDownload() {
 }
 
 void BatchDownload::Start() {
-  FXL_DCHECK(!started_);
+  LEDGER_DCHECK(!started_);
   started_ = true;
   auto waiter = fxl::MakeRefCounted<
       callback::Waiter<encryption::Status, storage::PageStorage::CommitIdAndBytes>>(
       encryption::Status::OK);
   for (auto& remote_commit : remote_commits_) {
     if (!remote_commit.has_id() || !remote_commit.has_data()) {
-      FXL_LOG(ERROR) << "Received invalid commits from the cloud provider";
+      LEDGER_LOG(ERROR) << "Received invalid commits from the cloud provider";
       on_error_();
       return;
     }
@@ -58,13 +59,13 @@ void BatchDownload::Start() {
             [this, id = std::move(remote_commit.id()), callback = waiter->NewCallback()](
                 encryption::Status status, std::string content) mutable {
               if (status != encryption::Status::OK) {
-                FXL_LOG(ERROR) << "Failed to decrypt the commit.";
+                LEDGER_LOG(ERROR) << "Failed to decrypt the commit.";
                 on_error_();
                 return;
               }
               storage::CommitId local_id = storage::ComputeCommitId(content);
               if (convert::ToArray(encryption_service_->EncodeCommitId(local_id)) != id) {
-                FXL_LOG(ERROR) << "Commit content doesn't match the received id.";
+                LEDGER_LOG(ERROR) << "Commit content doesn't match the received id.";
                 on_error_();
                 return;
               }

@@ -27,6 +27,7 @@
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
@@ -81,13 +82,13 @@ std::vector<uint8_t> GetModuleKey(int i) {
 
 std::unique_ptr<PageId> MakePageId(absl::string_view id) {
   PageId page_id;
-  FXL_DCHECK(id.size() == page_id.id.size()) << id.size() << " != " << page_id.id.size();
+  LEDGER_DCHECK(id.size() == page_id.id.size()) << id.size() << " != " << page_id.id.size();
   memcpy(page_id.id.data(), id.data(), id.length());
   return std::make_unique<PageId>(page_id);
 }
 
 fit::function<void(Status)> CheckStatusOKCallback() {
-  return [](Status status) { FXL_CHECK(status == Status::OK); };
+  return [](Status status) { LEDGER_CHECK(status == Status::OK); };
 }
 
 // Each story has 2 active connections (PagePtr) while being used, while a third one is opened to
@@ -146,8 +147,8 @@ void ReadAllFromPage(const PagePtr* page, const std::vector<uint8_t>& prefix,
       ->GetEntries(convert::ToArray(""), nullptr,
                    [page_snapshot = std::move(page_snapshot), callback = std::move(callback)](
                        std::vector<Entry> entries, std::unique_ptr<Token> token) {
-                     FXL_CHECK(entries.empty());
-                     FXL_CHECK(token == nullptr);
+                     LEDGER_CHECK(entries.empty());
+                     LEDGER_CHECK(token == nullptr);
                      callback();
                    });
 }
@@ -240,8 +241,8 @@ StoriesBenchmark::StoriesBenchmark(async::Loop* loop,
       story_count_(story_count),
       active_story_count_(active_story_count),
       wait_for_cached_page_(wait_for_cached_page) {
-  FXL_DCHECK(loop_);
-  FXL_DCHECK(story_count > 0);
+  LEDGER_DCHECK(loop_);
+  LEDGER_DCHECK(story_count > 0);
 }
 
 void StoriesBenchmark::Run() {
@@ -251,7 +252,7 @@ void StoriesBenchmark::Run() {
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
-  FXL_CHECK(memory_estimator_.Init());
+  LEDGER_CHECK(memory_estimator_.Init());
 
   InitializeDefaultPages();
 }
@@ -330,7 +331,7 @@ void StoriesBenchmark::RunSingle(int i) {
 
     // Measure memory before the cleanup.
     uint64_t memory;
-    FXL_CHECK(memory_estimator_.GetLedgerMemoryUsage(&memory));
+    LEDGER_CHECK(memory_estimator_.GetLedgerMemoryUsage(&memory));
     TRACE_COUNTER("benchmark", "memory_stories", i, "memory", TA_UINT64(memory));
 
     MaybeCleanup(i, [this, i] { RunSingle(i + 1); });
@@ -376,7 +377,7 @@ void StoriesBenchmark::EditStory(int i, PageId story_id, fit::function<void()> c
 }
 
 void StoriesBenchmark::MaybeCleanup(int i, fit::function<void()> callback) {
-  FXL_DCHECK(active_stories_.size() <= active_story_count_);
+  LEDGER_DCHECK(active_stories_.size() <= active_story_count_);
   // After the |i|th story, |i + 1| stories have been created in total.
   size_t stories_created = i + 1;
   if (stories_created < active_story_count_) {
@@ -426,7 +427,7 @@ void StoriesBenchmark::ClearRemainingPages(size_t story_index, fit::function<voi
 void StoriesBenchmark::ShutDown() {
   size_t i = story_count_ - active_story_count_ + 1;
   ClearRemainingPages(i, [this] {
-    FXL_DCHECK(active_stories_.empty());
+    LEDGER_DCHECK(active_stories_.empty());
 
     // Shut down the Ledger process first as it relies on |tmp_location_| storage.
     KillLedgerProcess(&component_controller_);

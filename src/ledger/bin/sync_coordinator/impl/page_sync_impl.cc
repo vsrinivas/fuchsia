@@ -6,6 +6,7 @@
 
 #include <lib/fit/function.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -89,12 +90,12 @@ PageSyncImpl::CloudSyncHolder::CloudSyncHolder() = default;
 PageSyncImpl::CloudSyncHolder::~CloudSyncHolder() = default;
 
 void PageSyncImpl::CloudSyncHolder::SetCloudSync(std::unique_ptr<cloud_sync::PageSync> cloud_sync) {
-  FXL_DCHECK(!cloud_sync_);
+  LEDGER_DCHECK(!cloud_sync_);
   cloud_sync_ = std::move(cloud_sync);
 }
 
 cloud_sync::PageSync* PageSyncImpl::CloudSyncHolder::GetCloudSync() {
-  FXL_DCHECK(cloud_sync_);
+  LEDGER_DCHECK(cloud_sync_);
   return cloud_sync_.get();
 }
 
@@ -115,31 +116,31 @@ PageSyncImpl::P2PSyncHolder::P2PSyncHolder() = default;
 PageSyncImpl::P2PSyncHolder::~P2PSyncHolder() = default;
 
 void PageSyncImpl::P2PSyncHolder::SetP2PSync(std::unique_ptr<p2p_sync::PageCommunicator> p2p_sync) {
-  FXL_DCHECK(!p2p_sync_);
+  LEDGER_DCHECK(!p2p_sync_);
   p2p_sync_ = std::move(p2p_sync);
 }
 
 p2p_sync::PageCommunicator* PageSyncImpl::P2PSyncHolder::GetP2PSync() {
-  FXL_DCHECK(p2p_sync_);
+  LEDGER_DCHECK(p2p_sync_);
   return p2p_sync_.get();
 }
 
 PageSyncImpl::PageSyncImpl(storage::PageStorage* storage, storage::PageSyncClient* sync_client)
     : storage_(storage), sync_client_(sync_client) {
-  FXL_DCHECK(storage_);
-  FXL_DCHECK(sync_client_);
+  LEDGER_DCHECK(storage_);
+  LEDGER_DCHECK(sync_client_);
 }
 
 PageSyncImpl::~PageSyncImpl() = default;
 
 storage::PageSyncClient* PageSyncImpl::CreateCloudSyncClient() {
-  FXL_DCHECK(!cloud_sync_);
+  LEDGER_DCHECK(!cloud_sync_);
   cloud_sync_ = std::make_unique<CloudSyncHolder>();
   return cloud_sync_.get();
 }
 
 void PageSyncImpl::SetCloudSync(std::unique_ptr<cloud_sync::PageSync> cloud_sync) {
-  FXL_DCHECK(cloud_sync_);
+  LEDGER_DCHECK(cloud_sync_);
   if (!cloud_sync) {
     // Cloud sync failed to produce an initialized |cloud_sync| instance - e.g.
     // because cloud provider is disconnected. Unset the entire cloud sync
@@ -149,7 +150,7 @@ void PageSyncImpl::SetCloudSync(std::unique_ptr<cloud_sync::PageSync> cloud_sync
   }
 
   cloud_sync->SetOnUnrecoverableError([this] {
-    FXL_LOG(WARNING) << "Shutting down page cloud sync.";
+    LEDGER_LOG(WARNING) << "Shutting down page cloud sync.";
     // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
     cloud_sync_.reset();
   });
@@ -157,13 +158,13 @@ void PageSyncImpl::SetCloudSync(std::unique_ptr<cloud_sync::PageSync> cloud_sync
 }
 
 storage::PageSyncClient* PageSyncImpl::CreateP2PSyncClient() {
-  FXL_DCHECK(!p2p_sync_);
+  LEDGER_DCHECK(!p2p_sync_);
   p2p_sync_ = std::make_unique<P2PSyncHolder>();
   return p2p_sync_.get();
 }
 
 void PageSyncImpl::SetP2PSync(std::unique_ptr<p2p_sync::PageCommunicator> p2p_sync) {
-  FXL_DCHECK(p2p_sync_);
+  LEDGER_DCHECK(p2p_sync_);
   p2p_sync_->SetP2PSync(std::move(p2p_sync));
 }
 

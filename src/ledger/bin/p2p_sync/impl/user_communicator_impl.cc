@@ -9,6 +9,7 @@
 #include "src/ledger/bin/p2p_sync/impl/ledger_communicator_impl.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/p2p_sync/impl/message_holder.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace p2p_sync {
@@ -17,18 +18,18 @@ UserCommunicatorImpl::UserCommunicatorImpl(ledger::Environment* environment,
                                            std::unique_ptr<p2p_provider::P2PProvider> provider)
     : environment_(environment), p2p_provider_(std::move(provider)) {}
 
-UserCommunicatorImpl::~UserCommunicatorImpl() { FXL_DCHECK(ledgers_.empty()); }
+UserCommunicatorImpl::~UserCommunicatorImpl() { LEDGER_DCHECK(ledgers_.empty()); }
 
 void UserCommunicatorImpl::Start() {
-  FXL_DCHECK(!started_);
+  LEDGER_DCHECK(!started_);
   started_ = true;
   p2p_provider_->Start(this);
 }
 
 std::unique_ptr<LedgerCommunicator> UserCommunicatorImpl::GetLedgerCommunicator(
     std::string namespace_id) {
-  FXL_DCHECK(started_);
-  FXL_DCHECK(ledgers_.find(namespace_id) == ledgers_.end())
+  LEDGER_DCHECK(started_);
+  LEDGER_DCHECK(ledgers_.find(namespace_id) == ledgers_.end())
       << "UserCommunicatorImpl::GetLedgerCommunicator should be called once "
          "per active namespace: "
       << namespace_id;
@@ -46,13 +47,13 @@ void UserCommunicatorImpl::OnNewMessage(const p2p_provider::P2PClientId& source,
   std::optional<MessageHolder<Message>> message = CreateMessageHolder<Message>(data, &ParseMessage);
   if (!message) {
     // Wrong serialization, abort.
-    FXL_LOG(ERROR) << "The message received is malformed.";
+    LEDGER_LOG(ERROR) << "The message received is malformed.";
     return;
   };
 
   switch ((*message)->message_type()) {
     case MessageUnion_NONE:
-      FXL_LOG(ERROR) << "The message received is unexpected at this point.";
+      LEDGER_LOG(ERROR) << "The message received is unexpected at this point.";
       return;
       break;
 
@@ -110,7 +111,7 @@ void UserCommunicatorImpl::OnDeviceChange(const p2p_provider::P2PClientId& remot
     }
     case p2p_provider::DeviceChangeType::DELETED: {
       auto it = devices_.find(remote_device);
-      FXL_DCHECK(it != devices_.end());
+      LEDGER_DCHECK(it != devices_.end());
       devices_.erase(it);
       break;
     }

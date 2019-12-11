@@ -8,6 +8,7 @@
 #include <initializer_list>
 #include <string>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -17,7 +18,7 @@ template <typename I>
 I DeserializeData(absl::string_view value) {
   static_assert(std::is_trivially_copyable<I>::value,
                 "The return type must be trivially copyable.");
-  FXL_DCHECK(value.size() == sizeof(I));
+  LEDGER_DCHECK(value.size() == sizeof(I));
   I result;
   memcpy(&result, value.data(), sizeof(I));
   return result;

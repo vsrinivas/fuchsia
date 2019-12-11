@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/logging.h"
@@ -23,7 +24,7 @@ constexpr size_t kMaxInlineDataSize = ZX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
 
 bool LogOnError(Status status, absl::string_view description) {
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << description << " failed with status " << fidl::ToUnderlying(status) << ".";
+    LEDGER_LOG(ERROR) << description << " failed with status " << fidl::ToUnderlying(status) << ".";
     return true;
   }
   return false;
@@ -38,8 +39,8 @@ void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
                                  Priority priority, fit::function<void(Status)> callback) {
   if (ref_strategy == ReferenceStrategy::INLINE) {
     if (value.size() >= kMaxInlineDataSize) {
-      FXL_LOG(ERROR) << "Value too large (" << value.size()
-                     << ") to be put inline. Consider putting as reference instead.";
+      LEDGER_LOG(ERROR) << "Value too large (" << value.size()
+                        << ") to be put inline. Consider putting as reference instead.";
       callback(Status::IO_ERROR);
       return;
     }

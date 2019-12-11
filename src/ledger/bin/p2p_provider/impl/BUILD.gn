@@ -33,6 +33,7 @@ source_set("impl") {
     "//sdk/fidl/fuchsia.modular.auth",
     "//src/ledger/bin/environment",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/logging",
     "//src/lib/backoff",
     "//src/lib/callback",
   ]

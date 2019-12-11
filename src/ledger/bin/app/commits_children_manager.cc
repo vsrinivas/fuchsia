@@ -17,6 +17,7 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/ensure_called.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -50,18 +51,18 @@ void CommitsChildrenManager::GetNames(fit::function<void(std::set<std::string>)>
     if (status != storage::Status::OK) {
       // Inspect is prepared to receive incomplete information; there's not really anything
       // further for us to do than to log that the function failed.
-      FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
+      LEDGER_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
       callback(std::set<std::string>());
       return;
     }
-    FXL_DCHECK(active_page_manager);
+    LEDGER_DCHECK(active_page_manager);
     active_page_manager->GetCommits(
         [callback = std::move(callback), token = std::move(token)](
             Status status, const std::vector<std::unique_ptr<const storage::Commit>>& commits) {
           if (status != storage::Status::OK) {
             // Inspect is prepared to receive incomplete information; there's not really anything
             // further for us to do than to log that the function failed.
-            FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
+            LEDGER_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
             callback(std::set<std::string>());
             return;
           }
@@ -77,7 +78,7 @@ void CommitsChildrenManager::GetNames(fit::function<void(std::set<std::string>)>
 void CommitsChildrenManager::Attach(std::string name, fit::function<void(fit::closure)> callback) {
   storage::CommitId commit_id;
   if (!CommitDisplayNameToCommitId(name, &commit_id)) {
-    FXL_LOG(WARNING) << "Inspect passed invalid commit display name: " << name;
+    LEDGER_LOG(WARNING) << "Inspect passed invalid commit display name: " << name;
     callback([] {});
     return;
   }
@@ -97,11 +98,11 @@ void CommitsChildrenManager::Attach(std::string name, fit::function<void(fit::cl
     if (status != storage::Status::OK) {
       // Inspect is prepared to receive incomplete information; there's not really anything
       // further for us to do than to log that the function failed.
-      FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
+      LEDGER_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
       emplacement.first->second.Abandon();
       return;
     }
-    FXL_DCHECK(active_page_manager);
+    LEDGER_DCHECK(active_page_manager);
     active_page_manager->GetCommit(
         commit_id, [this, commit_display_name = std::move(commit_display_name),
                     emplacement = std::move(emplacement), token = std::move(token)](

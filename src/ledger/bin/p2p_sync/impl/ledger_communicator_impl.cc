@@ -9,6 +9,7 @@
 #include "src/ledger/bin/p2p_sync/impl/flatbuffer_message_factory.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace p2p_sync {
@@ -17,14 +18,14 @@ LedgerCommunicatorImpl::LedgerCommunicatorImpl(ledger::Environment* environment,
     : environment_(environment), namespace_id_(std::move(namespace_id)), mesh_(mesh) {}
 
 LedgerCommunicatorImpl::~LedgerCommunicatorImpl() {
-  FXL_DCHECK(pages_.empty());
+  LEDGER_DCHECK(pages_.empty());
   if (on_delete_) {
     on_delete_();
   }
 }
 
 void LedgerCommunicatorImpl::set_on_delete(fit::closure on_delete) {
-  FXL_DCHECK(!on_delete_) << "on_delete() can only be called once.";
+  LEDGER_DCHECK(!on_delete_) << "on_delete() can only be called once.";
   on_delete_ = std::move(on_delete);
 }
 
@@ -66,7 +67,7 @@ std::unique_ptr<PageCommunicator> LedgerCommunicatorImpl::GetPageCommunicator(
     storage::PageStorage* storage, storage::PageSyncClient* sync_client) {
   storage::PageId page_id = storage->GetId();
 
-  FXL_DCHECK(pages_.find(page_id) == pages_.end());
+  LEDGER_DCHECK(pages_.find(page_id) == pages_.end());
 
   std::unique_ptr<PageCommunicatorImpl> page = std::make_unique<PageCommunicatorImpl>(
       environment_, storage, sync_client, namespace_id_, page_id, mesh_);
@@ -74,7 +75,7 @@ std::unique_ptr<PageCommunicator> LedgerCommunicatorImpl::GetPageCommunicator(
   pages_.emplace(page_id, page_ptr);
   page->set_on_delete([this, page_id = std::move(page_id)] {
     auto it = pages_.find(page_id);
-    FXL_DCHECK(it != pages_.end());
+    LEDGER_DCHECK(it != pages_.end());
     pages_.erase(it);
   });
   return page;

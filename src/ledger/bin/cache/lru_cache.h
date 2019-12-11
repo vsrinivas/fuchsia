@@ -13,6 +13,7 @@
 #include <set>
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace cache {
@@ -63,7 +64,7 @@ class LRUCache {
     requests_[key].push_back(std::move(callback));
     generator_(key, [this, key](S status, V value) {
       auto request_iterator = requests_.find(key);
-      FXL_DCHECK(request_iterator != requests_.end());
+      LEDGER_DCHECK(request_iterator != requests_.end());
       auto callbacks = std::move(request_iterator->second);
       requests_.erase(request_iterator);
 

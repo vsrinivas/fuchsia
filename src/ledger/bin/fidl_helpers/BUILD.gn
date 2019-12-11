@@ -25,6 +25,7 @@ source_set("message_relay") {
   ]
 
   deps = [
+    "//src/ledger/lib/logging",
     "//zircon/public/lib/async-default",
   ]
 

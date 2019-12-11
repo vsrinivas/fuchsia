@@ -14,6 +14,7 @@
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace cloud_sync {
@@ -34,8 +35,8 @@ PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher,
       log_prefix_("Page " + convert::ToHex(storage->GetId()) + " sync: "),
       ledger_watcher_(std::move(ledger_watcher)),
       task_runner_(dispatcher) {
-  FXL_DCHECK(storage_);
-  FXL_DCHECK(page_cloud_);
+  LEDGER_DCHECK(storage_);
+  LEDGER_DCHECK(page_cloud_);
   // We need to initialize page_download_ after task_runner_, but task_runner_
   // must be the last field.
   page_download_ = std::make_unique<PageDownload>(&task_runner_, storage_, encryption_service_,
@@ -68,7 +69,7 @@ void PageSyncImpl::EnableUpload() {
 }
 
 void PageSyncImpl::Start() {
-  FXL_DCHECK(!started_);
+  LEDGER_DCHECK(!started_);
   started_ = true;
 
   page_download_->StartDownload();
@@ -79,16 +80,16 @@ void PageSyncImpl::Start() {
 }
 
 void PageSyncImpl::SetOnPaused(fit::closure on_paused) {
-  FXL_DCHECK(!on_paused_);
-  FXL_DCHECK(!started_);
+  LEDGER_DCHECK(!on_paused_);
+  LEDGER_DCHECK(!started_);
   on_paused_ = std::move(on_paused);
 }
 
 bool PageSyncImpl::IsPaused() { return page_upload_->IsPaused() && page_download_->IsPaused(); }
 
 void PageSyncImpl::SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) {
-  FXL_DCHECK(!on_backlog_downloaded_);
-  FXL_DCHECK(!started_);
+  LEDGER_DCHECK(!on_backlog_downloaded_);
+  LEDGER_DCHECK(!started_);
   on_backlog_downloaded_ = std::move(on_backlog_downloaded);
 }
 

@@ -48,6 +48,10 @@ source_set("completer") {
     "//src/lib/fxl",
   ]
 
+  deps = [
+    "//src/ledger/lib/logging",
+  ]
+
   configs += [ "//src/ledger:ledger_config" ]
 }
 

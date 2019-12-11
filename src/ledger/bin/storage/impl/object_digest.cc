@@ -8,6 +8,7 @@
 
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/constants.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -39,19 +40,19 @@ ObjectDigest BuildDigest(std::bitset<8> prefix, convert::ExtendedStringView data
 bool IsDigestValid(convert::ExtendedStringView object_digest) {
   // All object digests should have a prefix.
   if (object_digest.size() == 0) {
-    FXL_LOG(INFO) << "Invalid object digest: empty.";
+    LEDGER_LOG(INFO) << "Invalid object digest: empty.";
     return false;
   }
   std::bitset<8> prefix(object_digest[0]);
   // Check inline bit.
   if (prefix[kInlineBit] && object_digest.size() > kStorageHashSize + 1) {
-    FXL_LOG(INFO) << "Invalid object digest: inline but size=" << object_digest.size()
-                  << "; digest=" << convert::ToHex(object_digest);
+    LEDGER_LOG(INFO) << "Invalid object digest: inline but size=" << object_digest.size()
+                     << "; digest=" << convert::ToHex(object_digest);
     return false;
   }
   if (!prefix[kInlineBit] && object_digest.size() != kStorageHashSize + 1) {
-    FXL_LOG(INFO) << "Invalid object digest: not inline but size=" << object_digest.size()
-                  << "; digest=" << convert::ToHex(object_digest);
+    LEDGER_LOG(INFO) << "Invalid object digest: not inline but size=" << object_digest.size()
+                     << "; digest=" << convert::ToHex(object_digest);
     return false;
   }
   // All bits must be zero except the ones we use for ObjectDigestInfo.
@@ -66,7 +67,7 @@ bool IsDigestValid(const ObjectDigest& object_digest) {
 }
 
 ObjectDigestInfo GetObjectDigestInfo(const ObjectDigest& object_digest) {
-  FXL_DCHECK(IsDigestValid(object_digest));
+  LEDGER_DCHECK(IsDigestValid(object_digest));
 
   const std::string& digest = object_digest.Serialize();
   std::bitset<8> prefix(digest[0]);
@@ -78,7 +79,7 @@ ObjectDigestInfo GetObjectDigestInfo(const ObjectDigest& object_digest) {
 }
 
 absl::string_view ExtractObjectDigestData(const ObjectDigest& object_digest) {
-  FXL_DCHECK(IsDigestValid(object_digest));
+  LEDGER_DCHECK(IsDigestValid(object_digest));
 
   absl::string_view digest = object_digest.Serialize();
   return digest.substr(1);

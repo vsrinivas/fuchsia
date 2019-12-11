@@ -17,6 +17,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/ensure_called.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -74,13 +75,13 @@ void InspectedCommit::GetNames(fit::function<void(std::set<std::string>)> callba
         if (status != storage::Status::OK) {
           // Inspect is prepared to receive incomplete information; there's not really anything
           // further for us to do than to log that the function failed.
-          FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
+          LEDGER_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
           callback({});
           ongoing_storage_accesses_--;
           CheckDiscardable();
           return;
         }
-        FXL_DCHECK(active_page_manager);
+        LEDGER_DCHECK(active_page_manager);
 
         std::unique_ptr<std::set<std::string>> key_display_names =
             std::make_unique<std::set<std::string>>();
@@ -95,7 +96,7 @@ void InspectedCommit::GetNames(fit::function<void(std::set<std::string>)> callba
               if (status != storage::Status::OK) {
                 // Inspect is prepared to receive incomplete information; there's not really
                 // anything further for us to do than to log that the function failed.
-                FXL_LOG(WARNING) << "GetEntries called back with non-OK status: " << status;
+                LEDGER_LOG(WARNING) << "GetEntries called back with non-OK status: " << status;
                 callback(std::set<std::string>());
               } else {
                 callback(std::move(*key_display_names));
@@ -112,7 +113,7 @@ void InspectedCommit::GetNames(fit::function<void(std::set<std::string>)> callba
 void InspectedCommit::Attach(std::string name, fit::function<void(fit::closure)> callback) {
   std::string key;
   if (!KeyDisplayNameToKey(name, &key)) {
-    FXL_LOG(WARNING) << "Inspect passed invalid key display name: " << name;
+    LEDGER_LOG(WARNING) << "Inspect passed invalid key display name: " << name;
     callback([] {});
     return;
   }
@@ -135,11 +136,11 @@ void InspectedCommit::Attach(std::string name, fit::function<void(fit::closure)>
           ongoing_storage_accesses_--;
           // Inspect is prepared to receive incomplete information; there's not really anything
           // further for us to do than to log that the function failed.
-          FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
+          LEDGER_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
           emplacement.first->second.Abandon();
           return;
         }
-        FXL_DCHECK(active_page_manager);
+        LEDGER_DCHECK(active_page_manager);
         active_page_manager->GetValue(
             *commit_, key,
             callback::MakeScoped(
@@ -149,7 +150,7 @@ void InspectedCommit::Attach(std::string name, fit::function<void(fit::closure)>
                   if (status != storage::Status::OK) {
                     // Inspect is prepared to receive incomplete information; there's not really
                     // anything further for us to do than to log that the function failed.
-                    FXL_LOG(WARNING) << "GetValue called back with non-OK status: " << status;
+                    LEDGER_LOG(WARNING) << "GetValue called back with non-OK status: " << status;
                     emplacement.first->second.Abandon();
                     return;
                   }

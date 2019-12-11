@@ -17,6 +17,7 @@
 
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
@@ -112,7 +113,7 @@ class ScopedAsyncExecutor {
     scope_.emplace();
   }
 
-  ~ScopedAsyncExecutor() { FXL_DCHECK(stopped_); }
+  ~ScopedAsyncExecutor() { LEDGER_DCHECK(stopped_); }
 
   // fit::executor:
   void schedule_task(fit::promise<> task) {
@@ -247,7 +248,7 @@ void LevelDbFactory::IOLevelDbFactory::GetOrCreateDb(
 
 void LevelDbFactory::IOLevelDbFactory::SelfDestruct(
     std::unique_ptr<LevelDbFactory::IOLevelDbFactory> self) {
-  FXL_DCHECK(self.get() == this);
+  LEDGER_DCHECK(self.get() == this);
   io_executor_.Stop();
   std::unique_ptr<ledger::Notification> notification = environment_->MakeNotification();
   async::PostTask(environment_->io_dispatcher(),
@@ -309,7 +310,7 @@ LevelDbFactory::IOLevelDbFactory::GetOrCreateDbAtPathOnIOThread(
   if (create_in_staging_path == CreateInStagingPath::YES) {
     status = CreateDbThroughStagingPathOnIOThread(std::move(db_path), &leveldb);
   } else {
-    FXL_DCHECK(environment_->file_system()->IsDirectory(db_path));
+    LEDGER_DCHECK(environment_->file_system()->IsDirectory(db_path));
     leveldb = std::make_unique<LevelDb>(environment_->file_system(), environment_->dispatcher(),
                                         std::move(db_path));
     status = leveldb->Init();
@@ -337,13 +338,13 @@ Status LevelDbFactory::IOLevelDbFactory::CreateDbThroughStagingPathOnIOThread(
   // - |staging_path_| and |cached_db_path_| share the same parent (the
   //   |cache_path| given on the constructor), and
   // - in LevelDb initialization, the directories up to the db path are created.
-  FXL_DCHECK(ParentDirectoryExists(environment_->file_system(), db_path))
+  LEDGER_DCHECK(ParentDirectoryExists(environment_->file_system(), db_path))
       << "Parent directory does not exit for path: " << db_path.path();
   // Move it to the final destination.
   if (environment_->file_system()->Rename(tmp_destination, db_path) != 0) {
-    FXL_LOG(ERROR) << "Unable to move LevelDb from staging path to final "
-                      "destination: "
-                   << db_path.path() << ".";
+    LEDGER_LOG(ERROR) << "Unable to move LevelDb from staging path to final "
+                         "destination: "
+                      << db_path.path() << ".";
     return Status::IO_ERROR;
   }
   *db = std::move(result);
@@ -369,8 +370,9 @@ LevelDbFactory::IOLevelDbFactory::ReturnPrecachedDbOnIOThread(
 
   // Move the cached db to the final destination.
   if (environment_->file_system()->Rename(cached_db_path_, db_path) != 0) {
-    FXL_LOG(ERROR) << "Unable to move LevelDb from: " << cached_db_path_.path()
-                   << " to final destination: " << db_path.path() << ". Error: " << strerror(errno);
+    LEDGER_LOG(ERROR) << "Unable to move LevelDb from: " << cached_db_path_.path()
+                      << " to final destination: " << db_path.path()
+                      << ". Error: " << strerror(errno);
     // Moving to the final destination failed, but the cached db was created
     // succesfully: we fail, and we'll retry the cached db next time.
     fit::bridge<std::unique_ptr<Db>, Status> bridge;
@@ -396,12 +398,12 @@ LevelDbFactory::LevelDbFactory(ledger::Environment* environment, ledger::Detache
 }
 
 LevelDbFactory::~LevelDbFactory() {
-  FXL_DCHECK(initialized_);
+  LEDGER_DCHECK(initialized_);
   io_level_db_factory_->SelfDestruct(std::move(io_level_db_factory_));
 }
 
 void LevelDbFactory::Init() {
-  FXL_DCHECK(!initialized_);
+  LEDGER_DCHECK(!initialized_);
   io_level_db_factory_->Init();
   initialized_ = true;
 }
@@ -427,7 +429,7 @@ void LevelDbFactory::GetOrCreateDb(ledger::DetachedPath db_path,
                 callback(Status::OK, result.take_value());
                 return;
               case fit::result_state::pending:
-                FXL_NOTREACHED();
+                LEDGER_NOTREACHED();
                 return;
             }
           }));

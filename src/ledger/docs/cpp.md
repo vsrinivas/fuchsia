@@ -28,7 +28,7 @@ if (SyncCall(handler, &LongAsyncComputation, &s, &i) ==
     ContinuationStatus::INTERRUPTED) {
   return ContinuationStatus::INTERRUPTED;
 }
-FXL_LOG(INFO) << "LongAsyncComputation returned: " << s << " " << i;
+LEDGER_LOG(INFO) << "LongAsyncComputation returned: " << s << " " << i;
 // Possibly make further async calls.
 ```
 
@@ -36,7 +36,7 @@ Instead of:
 
 ```cpp
 LongAsyncComputation([] (auto s, auto i) {
-  FXL_LOG(INFO) << "LongAsyncComputation returned: " << s << " " << i;
+  LEDGER_LOG(INFO) << "LongAsyncComputation returned: " << s << " " << i;
   // Possibly make further async calls.
 });
 ```

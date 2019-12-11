@@ -9,6 +9,8 @@
 
 #include <memory>
 
+#include "src/ledger/lib/logging/logging.h"
+
 namespace ledger {
 
 namespace {
@@ -23,7 +25,7 @@ class SubLoopTestLoop : public SubLoop {
     // TODO(qsr): Implement drain on TestLoop.
     auto waiter = controller_->NewWaiter();
     async::PostTask(dispatcher(), waiter->GetCallback());
-    FXL_CHECK(waiter->RunUntilCalled());
+    LEDGER_CHECK(waiter->RunUntilCalled());
   }
 
   async_dispatcher_t* dispatcher() override { return loop_interface_->dispatcher(); }
@@ -50,7 +52,7 @@ class CallbackWaiterImpl : public CallbackWaiter {
   }
 
   bool RunUntilCalled() override {
-    FXL_DCHECK(!running_);
+    LEDGER_DCHECK(!running_);
     running_ = true;
     auto cleanup = fit::defer([this] { running_ = false; });
     bool called = loop_->RunLoopUntil([this] { return !NotCalledYet(); });

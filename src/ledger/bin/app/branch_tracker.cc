@@ -13,6 +13,7 @@
 #include "src/ledger/bin/app/diff_utils.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -35,7 +36,7 @@ class BranchTracker::PageWatcherContainer {
       if (handler_) {
         handler_->Resume(coroutine::ContinuationStatus::INTERRUPTED);
       }
-      FXL_DCHECK(!handler_);
+      LEDGER_DCHECK(!handler_);
       if (on_discardable_) {
         on_discardable_();
       }
@@ -53,7 +54,7 @@ class BranchTracker::PageWatcherContainer {
     if (handler_) {
       handler_->Resume(coroutine::ContinuationStatus::INTERRUPTED);
     }
-    FXL_DCHECK(!handler_);
+    LEDGER_DCHECK(!handler_);
   }
 
   void SetOnDiscardable(fit::closure on_discardable) {
@@ -64,7 +65,7 @@ class BranchTracker::PageWatcherContainer {
 
   void UpdateCommit(std::unique_ptr<const storage::Commit> commit) {
     current_commit_ = std::move(commit);
-    FXL_DCHECK(current_commit_);
+    LEDGER_DCHECK(current_commit_);
     SendCommit();
   }
 
@@ -185,7 +186,7 @@ class BranchTracker::PageWatcherContainer {
                 // This change notification is abandonned. At the next commit,
                 // we will try again (but not before). The next notification
                 // will cover both this change and the next.
-                FXL_LOG(ERROR) << "Unable to compute PageChange for Watch update.";
+                LEDGER_LOG(ERROR) << "Unable to compute PageChange for Watch update.";
                 change_in_flight_ = false;
                 return;
               }
@@ -207,7 +208,7 @@ class BranchTracker::PageWatcherContainer {
                                                   paginated_changes = std::move(paginated_changes)](
                                                      coroutine::CoroutineHandler* handler) mutable {
                 auto guard = fit::defer([this] { handler_ = nullptr; });
-                FXL_DCHECK(!handler_);
+                LEDGER_DCHECK(!handler_);
                 handler_ = handler;
                 for (size_t i = 0; i < paginated_changes.size(); ++i) {
                   ResultState state;
@@ -265,9 +266,9 @@ Status BranchTracker::Init() {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   RETURN_ON_ERROR(storage_->GetHeadCommits(&commits));
 
-  FXL_DCHECK(!commits.empty());
-  FXL_DCHECK(commits[0]);
-  FXL_DCHECK(!current_commit_);
+  LEDGER_DCHECK(!commits.empty());
+  LEDGER_DCHECK(commits[0]);
+  LEDGER_DCHECK(!current_commit_);
 
   current_commit_ = std::move(commits[0]);
   storage_->AddCommitWatcher(this);
@@ -284,7 +285,7 @@ std::unique_ptr<const storage::Commit> BranchTracker::GetBranchHead() {
 
 void BranchTracker::OnNewCommits(const std::vector<std::unique_ptr<const storage::Commit>>& commits,
                                  storage::ChangeSource /*source*/) {
-  FXL_DCHECK(current_commit_);
+  LEDGER_DCHECK(current_commit_);
   bool changed = false;
   const std::unique_ptr<const storage::Commit>* new_current_commit = &current_commit_;
   for (const auto& commit : commits) {
@@ -304,7 +305,7 @@ void BranchTracker::OnNewCommits(const std::vector<std::unique_ptr<const storage
   }
   if (changed) {
     current_commit_ = (*new_current_commit)->Clone();
-    FXL_DCHECK(current_commit_);
+    LEDGER_DCHECK(current_commit_);
   }
 
   if (!changed || transaction_in_progress_) {
@@ -316,7 +317,7 @@ void BranchTracker::OnNewCommits(const std::vector<std::unique_ptr<const storage
 }
 
 void BranchTracker::StartTransaction(fit::closure watchers_drained_callback) {
-  FXL_DCHECK(!transaction_in_progress_);
+  LEDGER_DCHECK(!transaction_in_progress_);
   transaction_in_progress_ = true;
   auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   for (auto& watcher : watchers_) {
@@ -326,7 +327,7 @@ void BranchTracker::StartTransaction(fit::closure watchers_drained_callback) {
 }
 
 void BranchTracker::StopTransaction(std::unique_ptr<const storage::Commit> commit) {
-  FXL_DCHECK(transaction_in_progress_ || !commit);
+  LEDGER_DCHECK(transaction_in_progress_ || !commit);
 
   if (!transaction_in_progress_) {
     return;

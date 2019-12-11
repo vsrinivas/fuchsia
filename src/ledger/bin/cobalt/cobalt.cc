@@ -7,6 +7,7 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/cobalt/ledger_metrics_registry.cb.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/file.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 
@@ -20,7 +21,7 @@ cobalt::CobaltLogger* g_cobalt_logger = nullptr;
 fit::deferred_action<fit::closure> InitializeCobalt(async_dispatcher_t* dispatcher,
                                                     sys::ComponentContext* context) {
   std::unique_ptr<cobalt::CobaltLogger> cobalt_logger;
-  FXL_DCHECK(!g_cobalt_logger);
+  LEDGER_DCHECK(!g_cobalt_logger);
 
   cobalt_logger = cobalt::NewCobaltLoggerFromProjectName(dispatcher, context->svc(),
                                                          cobalt_registry::kProjectName);

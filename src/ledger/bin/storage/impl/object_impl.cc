@@ -15,6 +15,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -31,7 +32,7 @@ Status BasePiece::AppendReferences(ObjectReferencesAndPriority* references) cons
   if (digest_info.is_chunk()) {
     return Status::OK;
   }
-  FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+  LEDGER_DCHECK(digest_info.piece_type == PieceType::INDEX);
   // The piece is an index: parse it and append its children to references.
   const FileIndex* file_index;
   RETURN_ON_ERROR(FileIndexSerialization::ParseFileIndex(GetData(), &file_index));
@@ -74,13 +75,13 @@ absl::string_view LevelDBPiece::GetData() const {
 ObjectIdentifier LevelDBPiece::GetIdentifier() const { return identifier_; }
 
 Status BaseObject::AppendReferences(ObjectReferencesAndPriority* references) const {
-  FXL_DCHECK(references);
+  LEDGER_DCHECK(references);
   // Blobs have no references.
   const auto digest_info = GetObjectDigestInfo(GetIdentifier().object_digest());
   if (digest_info.object_type == ObjectType::BLOB) {
     return Status::OK;
   }
-  FXL_DCHECK(digest_info.object_type == ObjectType::TREE_NODE);
+  LEDGER_DCHECK(digest_info.object_type == ObjectType::TREE_NODE);
   // Parse the object into a TreeNode.
   std::unique_ptr<const btree::TreeNode> node;
   RETURN_ON_ERROR(btree::TreeNode::FromObject(*this, &node));
@@ -89,7 +90,7 @@ Status BaseObject::AppendReferences(ObjectReferencesAndPriority* references) con
 }
 
 ChunkObject::ChunkObject(std::unique_ptr<const Piece> piece) : piece_(std::move(piece)) {
-  FXL_DCHECK(GetObjectDigestInfo(piece_->GetIdentifier().object_digest()).is_chunk())
+  LEDGER_DCHECK(GetObjectDigestInfo(piece_->GetIdentifier().object_digest()).is_chunk())
       << "INDEX piece " << piece_->GetIdentifier() << " cannot be used as an object.";
 }
 
@@ -122,7 +123,7 @@ Status VmoObject::GetData(absl::string_view* data) const {
 Status VmoObject::GetVmo(ledger::SizedVmo* vmo) const {
   zx_status_t zx_status = vmo_.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, vmo);
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to duplicate a vmo: " << zx_status_get_string(zx_status);
+    LEDGER_LOG(ERROR) << "Unable to duplicate a vmo: " << zx_status_get_string(zx_status);
     return Status::INTERNAL_ERROR;
   }
   return Status::OK;
@@ -138,7 +139,7 @@ Status VmoObject::Initialize() const {
       0, ToFullPages(vmo_.size()),
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, &vmar_, &allocate_address);
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to allocate VMAR: " << zx_status_get_string(zx_status);
+    LEDGER_LOG(ERROR) << "Unable to allocate VMAR: " << zx_status_get_string(zx_status);
     return Status::INTERNAL_ERROR;
   }
 
@@ -147,7 +148,7 @@ Status VmoObject::Initialize() const {
       vmar_.map(0, vmo_.vmo(), 0, vmo_.size(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                 reinterpret_cast<uintptr_t*>(&mapped_address));
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to map VMO: " << zx_status_get_string(zx_status);
+    LEDGER_LOG(ERROR) << "Unable to map VMO: " << zx_status_get_string(zx_status);
     vmar_.reset();
     return Status::INTERNAL_ERROR;
   }

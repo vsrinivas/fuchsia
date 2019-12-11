@@ -13,6 +13,7 @@
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
 
 namespace cloud_sync {
@@ -77,8 +78,8 @@ void PageUpload::OnNewCommits(
 }
 
 void PageUpload::UploadUnsyncedCommits() {
-  FXL_DCHECK(internal_state_ == PageUploadState::PROCESSING);
-  FXL_DCHECK(!batch_upload_);
+  LEDGER_DCHECK(internal_state_ == PageUploadState::PROCESSING);
+  LEDGER_DCHECK(!batch_upload_);
 
   if (!delegate_->IsDownloadIdle()) {
     // If a commit batch is currently being downloaded, don't try to start the upload.
@@ -121,7 +122,7 @@ void PageUpload::VerifyUnsyncedCommits(
     return;
   }
 
-  FXL_DCHECK(!heads.empty());
+  LEDGER_DCHECK(!heads.empty());
 
   if (!delegate_->IsDownloadIdle()) {
     // If a commit batch is currently being downloaded, don't try to start
@@ -143,7 +144,7 @@ void PageUpload::VerifyUnsyncedCommits(
 
 void PageUpload::HandleUnsyncedCommits(
     std::vector<std::unique_ptr<const storage::Commit>> commits) {
-  FXL_DCHECK(!batch_upload_);
+  LEDGER_DCHECK(!batch_upload_);
   SetState(UPLOAD_IN_PROGRESS);
   batch_upload_ = std::make_unique<BatchUpload>(
       coroutine_service_, storage_, encryption_service_, page_cloud_, std::move(commits),
@@ -156,13 +157,13 @@ void PageUpload::HandleUnsyncedCommits(
       [this](BatchUpload::ErrorType error_type) {
         switch (error_type) {
           case BatchUpload::ErrorType::TEMPORARY: {
-            FXL_LOG(WARNING) << log_prefix_
-                             << "commit upload failed due to a connection error, retrying.";
+            LEDGER_LOG(WARNING) << log_prefix_
+                                << "commit upload failed due to a connection error, retrying.";
             SetState(UPLOAD_TEMPORARY_ERROR);
             RetryWithBackoff([this] { Resume(); });
           } break;
           case BatchUpload::ErrorType::PERMANENT: {
-            FXL_LOG(WARNING) << log_prefix_ << "commit upload failed with a permanent error.";
+            LEDGER_LOG(WARNING) << log_prefix_ << "commit upload failed with a permanent error.";
             SetState(UPLOAD_PERMANENT_ERROR);
           } break;
         }
@@ -171,7 +172,7 @@ void PageUpload::HandleUnsyncedCommits(
 }
 
 void PageUpload::HandleError(const char error_description[]) {
-  FXL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
+  LEDGER_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
   SetState(UPLOAD_PERMANENT_ERROR);
 }
 
@@ -233,7 +234,7 @@ void PageUpload::NextState() {
 void PageUpload::PreviousState() {
   switch (internal_state_) {
     case PageUploadState::NO_COMMIT:
-      FXL_NOTREACHED() << "Bad state";
+      LEDGER_NOTREACHED() << "Bad state";
     case PageUploadState::PROCESSING:
       internal_state_ = PageUploadState::NO_COMMIT;
       if (external_state_ == UPLOAD_IN_PROGRESS) {
@@ -289,9 +290,9 @@ void PageUpload::UpdateClock(storage::Clock clock, fit::function<void(ledger::St
 }
 
 void PageUpload::Resume() {
-  FXL_DCHECK(internal_state_ != PageUploadState::NO_COMMIT);
-  FXL_DCHECK(external_state_ == UPLOAD_TEMPORARY_ERROR);
-  FXL_DCHECK(batch_upload_);
+  LEDGER_DCHECK(internal_state_ != PageUploadState::NO_COMMIT);
+  LEDGER_DCHECK(external_state_ == UPLOAD_TEMPORARY_ERROR);
+  LEDGER_DCHECK(batch_upload_);
   SetState(UPLOAD_IN_PROGRESS);
   batch_upload_->Retry();
   return;

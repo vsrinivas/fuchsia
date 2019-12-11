@@ -7,6 +7,7 @@
 
 #include <lib/zx/socket.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace socket {
@@ -23,7 +24,9 @@ class SocketPair {
   zx::socket socket2;
 };
 
-inline SocketPair::SocketPair() { FXL_CHECK(zx::socket::create(0u, &socket1, &socket2) == ZX_OK); }
+inline SocketPair::SocketPair() {
+  LEDGER_CHECK(zx::socket::create(0u, &socket1, &socket2) == ZX_OK);
+}
 
 inline SocketPair::~SocketPair() {}
 

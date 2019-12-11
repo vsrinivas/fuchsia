@@ -26,6 +26,7 @@
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -120,12 +121,12 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop,
       commit_count_(commit_count),
       key_size_(key_size),
       value_size_(value_size) {
-  FXL_DCHECK(loop_);
-  FXL_DCHECK(page_count_ >= 0);
-  FXL_DCHECK(unique_key_count_ >= 0);
-  FXL_DCHECK(commit_count_ >= 0);
-  FXL_DCHECK(key_size_ > 0);
-  FXL_DCHECK(value_size_ > 0);
+  LEDGER_DCHECK(loop_);
+  LEDGER_DCHECK(page_count_ >= 0);
+  LEDGER_DCHECK(unique_key_count_ >= 0);
+  LEDGER_DCHECK(commit_count_ >= 0);
+  LEDGER_DCHECK(key_size_ > 0);
+  LEDGER_DCHECK(value_size_ > 0);
 }
 
 void DiskSpaceBenchmark::Run() {
@@ -163,8 +164,8 @@ void DiskSpaceBenchmark::Populate() {
   int transaction_size =
       static_cast<int>(ceil(static_cast<double>(unique_key_count_) / commit_count_));
   int insertions = std::max(unique_key_count_, commit_count_);
-  FXL_LOG(INFO) << "Transaction size: " << transaction_size << ", insertions: " << insertions
-                << ".";
+  LEDGER_LOG(INFO) << "Transaction size: " << transaction_size << ", insertions: " << insertions
+                   << ".";
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (auto& page : pages_) {
     auto keys = generator_.MakeKeys(insertions, key_size_, unique_key_count_);
@@ -185,7 +186,7 @@ void DiskSpaceBenchmark::ShutDownAndRecord() {
   loop_->Quit();
 
   uint64_t tmp_dir_size = 0;
-  FXL_CHECK(GetDirectoryContentSize(platform_->file_system(), tmp_dir_->path(), &tmp_dir_size));
+  LEDGER_CHECK(GetDirectoryContentSize(platform_->file_system(), tmp_dir_->path(), &tmp_dir_size));
   TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size", TA_UINT64(tmp_dir_size));
 }
 

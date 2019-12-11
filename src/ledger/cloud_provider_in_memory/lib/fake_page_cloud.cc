@@ -13,6 +13,7 @@
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "third_party/murmurhash/murmurhash.h"
@@ -153,9 +154,9 @@ FakePageCloud::WatcherContainer::WatcherContainer(cloud_provider::PageCloudWatch
 
 void FakePageCloud::WatcherContainer::SendCommits(std::vector<cloud_provider::Commit> commits,
                                                   size_t next_commit_index, fit::closure on_ack) {
-  FXL_DCHECK(watcher_.is_bound());
-  FXL_DCHECK(!waiting_for_watcher_ack_);
-  FXL_DCHECK(!commits.empty());
+  LEDGER_DCHECK(watcher_.is_bound());
+  LEDGER_DCHECK(!waiting_for_watcher_ack_);
+  LEDGER_DCHECK(!commits.empty());
 
   waiting_for_watcher_ack_ = true;
   next_commit_index_ = next_commit_index;

@@ -27,6 +27,7 @@
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/logging.h"
@@ -103,11 +104,11 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
       transaction_size_(transaction_size),
       key_size_(key_size),
       value_size_(value_size) {
-  FXL_DCHECK(loop_);
-  FXL_DCHECK(entry_count_ > 0);
-  FXL_DCHECK(transaction_size_ >= 0);
-  FXL_DCHECK(key_size_ > 0);
-  FXL_DCHECK(value_size_ > 0);
+  LEDGER_DCHECK(loop_);
+  LEDGER_DCHECK(entry_count_ > 0);
+  LEDGER_DCHECK(transaction_size_ >= 0);
+  LEDGER_DCHECK(key_size_ > 0);
+  LEDGER_DCHECK(value_size_ > 0);
 }
 
 void DeleteEntryBenchmark::Run() {
@@ -158,7 +159,8 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
     ShutDown();
 
     uint64_t tmp_dir_size = 0;
-    FXL_CHECK(GetDirectoryContentSize(platform_->file_system(), tmp_dir_->path(), &tmp_dir_size));
+    LEDGER_CHECK(
+        GetDirectoryContentSize(platform_->file_system(), tmp_dir_->path(), &tmp_dir_size));
     TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size",
                   TA_UINT64(tmp_dir_size));
     return;

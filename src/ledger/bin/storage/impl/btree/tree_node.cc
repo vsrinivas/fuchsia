@@ -14,6 +14,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/logging.h"
@@ -32,7 +33,7 @@ void ExtractReferences(const std::vector<Entry>& entries,
                        ObjectReferencesAndPriority* references) {
   for (const auto& [size, identifier] : children) {
     const auto& digest = identifier.object_digest();
-    FXL_DCHECK(storage::IsDigestValid(digest));
+    LEDGER_DCHECK(storage::IsDigestValid(digest));
     if (!GetObjectDigestInfo(digest).is_inlined()) {
       // Node-node references are always treated as eager.
       references->emplace(digest, KeyPriority::EAGER);
@@ -54,7 +55,7 @@ TreeNode::TreeNode(ObjectIdentifier identifier, uint8_t level, std::vector<Entry
       level_(level),
       entries_(std::move(entries)),
       children_(std::move(children)) {
-  FXL_DCHECK(children_.empty() || children_.cbegin()->first <= entries_.size());
+  LEDGER_DCHECK(children_.empty() || children_.cbegin()->first <= entries_.size());
 }
 
 TreeNode::~TreeNode() = default;
@@ -98,7 +99,7 @@ void TreeNode::FromEntries(PageStorage* page_storage, uint8_t level,
                            const std::vector<Entry>& entries,
                            const std::map<size_t, ObjectIdentifier>& children,
                            fit::function<void(Status, ObjectIdentifier)> callback) {
-  FXL_DCHECK(children.empty() || children.rbegin()->first <= entries.size());
+  LEDGER_DCHECK(children.empty() || children.rbegin()->first <= entries.size());
   ObjectReferencesAndPriority tree_references;
   ExtractReferences(entries, children, &tree_references);
   std::string encoding = EncodeNode(level, entries, children);
@@ -110,7 +111,7 @@ void TreeNode::FromEntries(PageStorage* page_storage, uint8_t level,
 int TreeNode::GetKeyCount() const { return entries_.size(); }
 
 Status TreeNode::GetEntry(int index, Entry* entry) const {
-  FXL_DCHECK(index >= 0 && index < GetKeyCount());
+  LEDGER_DCHECK(index >= 0 && index < GetKeyCount());
   *entry = entries_[index];
   return Status::OK;
 }

@@ -9,6 +9,7 @@
 #include "src/ledger/bin/tests/cloud_provider/types.h"
 #include "src/ledger/bin/tests/cloud_provider/validation_test.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace cloud_provider {
@@ -46,7 +47,7 @@ class DeviceSetTest : public ValidationTest, public DeviceSetWatcher {
   void OnError(Status status) override {
     // Do nothing - the validation test suite currently does not inject and test
     // for network errors.
-    FXL_NOTIMPLEMENTED();
+    LEDGER_NOTIMPLEMENTED();
   }
 };
 

@@ -25,6 +25,7 @@
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/logging.h"
@@ -112,8 +113,8 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop,
       reuse_(reuse),
       wait_for_cached_page_(wait_for_cached_page),
       clear_pages_(clear_pages) {
-  FXL_DCHECK(loop_);
-  FXL_DCHECK(requests_count_ > 0);
+  LEDGER_DCHECK(loop_);
+  LEDGER_DCHECK(requests_count_ > 0);
   pages_.resize(requests_count_);
 }
 

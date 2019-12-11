@@ -10,6 +10,7 @@
 
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
@@ -32,7 +33,7 @@ bool InspectedEntry::IsDiscardable() const { return outstanding_detachers_ == 0;
 fit::closure InspectedEntry::CreateDetacher() {
   outstanding_detachers_++;
   return [this]() {
-    FXL_DCHECK(outstanding_detachers_ > 0);
+    LEDGER_DCHECK(outstanding_detachers_ > 0);
     outstanding_detachers_--;
     if (on_discardable_ && IsDiscardable()) {
       on_discardable_();

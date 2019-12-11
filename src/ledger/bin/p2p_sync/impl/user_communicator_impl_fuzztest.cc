@@ -20,6 +20,7 @@
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace p2p_sync {
 namespace {
@@ -43,7 +44,7 @@ class FuzzingP2PProvider : public p2p_provider::P2PProvider {
 
   bool SendMessage(const p2p_provider::P2PClientId& client_id,
                    convert::ExtendedStringView data) override {
-    FXL_NOTIMPLEMENTED();
+    LEDGER_NOTIMPLEMENTED();
     return false;
   }
 

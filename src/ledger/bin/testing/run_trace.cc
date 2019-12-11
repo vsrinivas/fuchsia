@@ -8,6 +8,7 @@
 #include <lib/zx/channel.h>
 #include <zircon/device/vfs.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -23,9 +24,9 @@ void RunTrace(sys::ComponentContext* component_context,
 
   zx::channel dir, server;
   zx_status_t status = zx::channel::create(0, &dir, &server);
-  FXL_CHECK(status == ZX_OK);
+  LEDGER_CHECK(status == ZX_OK);
   status = fdio_open(kTraceTestDataLocalPath, ZX_FS_RIGHT_READABLE, server.release());
-  FXL_CHECK(status == ZX_OK);
+  LEDGER_CHECK(status == ZX_OK);
   launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
   launch_info.flat_namespace->paths.push_back(kTraceTestDataRemotePath);
   launch_info.flat_namespace->directories.push_back(std::move(dir));

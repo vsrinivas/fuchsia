@@ -25,6 +25,7 @@
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
@@ -45,7 +46,7 @@ bool FindPathToDir(ledger::FileSystem* file_system, const ledger::DetachedPath& 
                    absl::string_view target_dir, ledger::DetachedPath* path_to_dir) {
   std::vector<std::string> directory_entries;
   if (!file_system->GetDirectoryContents(root_path, &directory_entries)) {
-    FXL_LOG(ERROR) << "Error while reading directory contents at: " << root_path.path();
+    LEDGER_LOG(ERROR) << "Error while reading directory contents at: " << root_path.path();
     return false;
   }
   for (const std::string& entry : directory_entries) {

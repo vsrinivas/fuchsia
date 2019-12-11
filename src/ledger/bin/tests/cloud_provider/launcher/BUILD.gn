@@ -17,4 +17,8 @@ source_set("launcher") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/callback",
   ]
+
+  deps = [
+    "//src/ledger/lib/logging",
+  ]
 }

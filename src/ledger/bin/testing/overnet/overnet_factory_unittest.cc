@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl_helpers/message_relay.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 
@@ -201,7 +202,7 @@ TEST_F(OvernetFactoryTest, ServiceProvider) {
   zx::channel remote;
   zx_status_t status = zx::channel::create(0u, &local, &remote);
 
-  FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
+  LEDGER_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
   fuchsia::overnet::protocol::NodeId node_id;
   node_id.id = 1u;
   overnet2->ConnectToService(std::move(node_id), "test_service", std::move(remote));

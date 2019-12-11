@@ -6,23 +6,26 @@
 
 #include <lib/fit/function.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace sync_coordinator {
 
-void PageSyncEmptyImpl::Start() { FXL_NOTIMPLEMENTED(); }
+void PageSyncEmptyImpl::Start() { LEDGER_NOTIMPLEMENTED(); }
 
-void PageSyncEmptyImpl::SetOnPaused(fit::closure /*on_paused_callback*/) { FXL_NOTIMPLEMENTED(); }
+void PageSyncEmptyImpl::SetOnPaused(fit::closure /*on_paused_callback*/) {
+  LEDGER_NOTIMPLEMENTED();
+}
 
 bool PageSyncEmptyImpl::IsPaused() {
-  FXL_NOTIMPLEMENTED();
+  LEDGER_NOTIMPLEMENTED();
   return true;
 }
 
 void PageSyncEmptyImpl::SetOnBacklogDownloaded(fit::closure /*on_backlog_downloaded_callback*/) {
-  FXL_NOTIMPLEMENTED();
+  LEDGER_NOTIMPLEMENTED();
 }
 
-void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* /*watcher*/) { FXL_NOTIMPLEMENTED(); }
+void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* /*watcher*/) { LEDGER_NOTIMPLEMENTED(); }
 
 }  // namespace sync_coordinator

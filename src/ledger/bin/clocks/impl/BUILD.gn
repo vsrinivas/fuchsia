@@ -16,6 +16,7 @@ source_set("impl") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:completer",
     "//src/ledger/lib/coroutine",
+    "//src/ledger/lib/logging",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -32,6 +33,7 @@ source_set("unittests") {
     "//src/ledger/bin/storage/fake:lib",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/coroutine",
+    "//src/ledger/lib/logging",
     "//src/lib/callback",
     "//third_party/googletest:gtest",
   ]

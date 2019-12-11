@@ -28,6 +28,7 @@ source_set("environment") {
 
   deps = [
     "//peridot/lib/rng:system",
+    "//src/ledger/lib/logging",
     "//zircon/public/lib/async-cpp",
   ]
 
@@ -45,6 +46,10 @@ source_set("test_loop_notification") {
   public_deps = [
     ":environment",
     "//zircon/public/lib/async-testing",
+  ]
+
+  deps = [
+    "//src/ledger/lib/logging",
   ]
 }
 

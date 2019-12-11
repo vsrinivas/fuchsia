@@ -8,6 +8,7 @@
 #include <iterator>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/logging.h"
 
@@ -33,13 +34,13 @@ P2PProviderImpl::P2PProviderImpl(fuchsia::overnet::OvernetPtr overnet,
 P2PProviderImpl::~P2PProviderImpl() = default;
 
 void P2PProviderImpl::Start(Client* client) {
-  FXL_DCHECK(!client_);
-  FXL_DCHECK(client);
+  LEDGER_DCHECK(!client_);
+  LEDGER_DCHECK(client);
   client_ = client;
   user_id_provider_->GetUserId([this](UserIdProvider::Status status, std::string user_id) {
     if (status != UserIdProvider::Status::OK) {
-      FXL_LOG(ERROR) << "Unable to retrieve the user ID necessary to start "
-                        "the peer-to-peer provider.";
+      LEDGER_LOG(ERROR) << "Unable to retrieve the user ID necessary to start "
+                           "the peer-to-peer provider.";
       return;
     }
     user_id_ = user_id;
@@ -72,7 +73,7 @@ void P2PProviderImpl::ConnectToService(zx::channel chan,
 void P2PProviderImpl::AddConnectionFromChannel(
     zx::channel chan, std::optional<fuchsia::overnet::protocol::NodeId> overnet_id) {
   if (overnet_id) {
-    FXL_DCHECK(contacted_peers_.find(*overnet_id) == contacted_peers_.end())
+    LEDGER_DCHECK(contacted_peers_.find(*overnet_id) == contacted_peers_.end())
         << "Connecting to an already contacted peer.";
     contacted_peers_.emplace(*overnet_id);
   }
@@ -141,7 +142,7 @@ void P2PProviderImpl::ListenForNewDevices() {
       zx::channel local;
       zx::channel remote;
       zx_status_t status = zx::channel::create(0u, &local, &remote);
-      FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
+      LEDGER_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
       overnet_->ConnectToService(peer.id, OvernetServiceName(), std::move(remote));
       AddConnectionFromChannel(std::move(local), peer.id);
     }
@@ -150,12 +151,12 @@ void P2PProviderImpl::ListenForNewDevices() {
 }
 
 void P2PProviderImpl::Dispatch(P2PClientId source, std::vector<uint8_t> data) {
-  FXL_DCHECK(client_);
+  LEDGER_DCHECK(client_);
   client_->OnNewMessage(source, data);
 }
 
 void P2PProviderImpl::OnDeviceChange(P2PClientId remote_device, DeviceChangeType change_type) {
-  FXL_DCHECK(client_);
+  LEDGER_DCHECK(client_);
   client_->OnDeviceChange(remote_device, change_type);
 }
 

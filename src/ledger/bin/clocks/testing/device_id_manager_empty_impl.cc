@@ -4,6 +4,7 @@
 
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace clocks {
@@ -12,13 +13,13 @@ DeviceIdManagerEmptyImpl::DeviceIdManagerEmptyImpl() = default;
 DeviceIdManagerEmptyImpl::~DeviceIdManagerEmptyImpl() = default;
 
 ledger::Status DeviceIdManagerEmptyImpl::OnPageDeleted(coroutine::CoroutineHandler* /*handler*/) {
-  FXL_NOTIMPLEMENTED();
+  LEDGER_NOTIMPLEMENTED();
   return ledger::Status::OK;
 }
 
 ledger::Status DeviceIdManagerEmptyImpl::GetNewDeviceId(coroutine::CoroutineHandler* /*handler*/,
                                                         DeviceId* device_id) {
-  FXL_NOTIMPLEMENTED();
+  LEDGER_NOTIMPLEMENTED();
   *device_id = {"device", 0};
   return ledger::Status::OK;
 }

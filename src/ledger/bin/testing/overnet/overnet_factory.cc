@@ -9,6 +9,7 @@
 
 #include "lib/async/dispatcher.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace ledger {
 class OvernetFactory::Holder {
@@ -78,7 +79,7 @@ void OvernetFactory::UpdatedHostList() {
 void OvernetFactory::ListPeers(
     uint64_t last_version,
     fit::function<void(uint64_t, std::vector<FakeOvernet::Delegate::FakePeer>)> callback) {
-  FXL_CHECK(last_version <= current_version_)
+  LEDGER_CHECK(last_version <= current_version_)
       << "Last seen version (" << last_version << ") is more recent than current version ("
       << current_version_ << "). Something is wrong here.";
   if (last_version == current_version_) {

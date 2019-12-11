@@ -11,6 +11,7 @@
 #include <trace/event.h>
 #include <trace/observer.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -40,8 +41,8 @@ int RunWithTracing(async::Loop* loop, fit::function<void()> runnable) {
       // started in the immediate next task on the queue (before the quit
       // task executes).
       started = true;
-      FXL_LOG(ERROR) << "Timed out waiting for the tracing to start; Did you run the "
-                        "binary with the trace tool enabled?";
+      LEDGER_LOG(ERROR) << "Timed out waiting for the tracing to start; Did you run the "
+                           "binary with the trace tool enabled?";
       err = -1;
       loop->Quit();
     }

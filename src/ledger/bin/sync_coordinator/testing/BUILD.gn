@@ -19,6 +19,7 @@ source_set("testing") {
   ]
 
   deps = [
+    "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
     "//src/lib/backoff/testing",
     "//src/lib/fxl",

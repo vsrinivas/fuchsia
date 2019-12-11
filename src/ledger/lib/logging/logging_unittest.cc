@@ -10,6 +10,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/base/log_severity.h"
 
 namespace ledger {

@@ -12,6 +12,7 @@
 #include "src/ledger/bin/tests/cloud_provider/validation_test.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
@@ -171,7 +172,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
                    OnNewObjectCallback /*callback*/) override {
     // We don't have any implementations yet that support this API.
     // TODO(ppi): add tests for the OnNewObject notifications.
-    FXL_NOTIMPLEMENTED();
+    LEDGER_NOTIMPLEMENTED();
   }
 
   void OnError(cloud_provider::Status status) override { on_error_status_ = status; }

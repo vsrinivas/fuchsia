@@ -4,6 +4,7 @@
 
 #include "src/ledger/bin/public/status.h"
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -46,12 +47,12 @@ zx_status_t ConvertToEpitaph(Status status) {
     case Status::PAGE_NOT_FOUND:
     case Status::KEY_NOT_FOUND:
     case Status::NETWORK_ERROR:
-      FXL_DCHECK(false) << "Status: " << status
-                        << " is a visible status and should not be sent as epitaph";
+      LEDGER_DCHECK(false) << "Status: " << status
+                           << " is a visible status and should not be sent as epitaph";
       return ZX_ERR_INTERNAL;
     case Status::INTERRUPTED:
     case Status::NOT_IMPLEMENTED:
-      FXL_DCHECK(false) << "Status: " << status << " should never be sent to the client.";
+      LEDGER_DCHECK(false) << "Status: " << status << " should never be sent to the client.";
       return ZX_ERR_INTERNAL;
     case Status::CANCELED:
       return ZX_ERR_CANCELED;

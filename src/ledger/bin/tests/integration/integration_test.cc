@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 
 #include "src/ledger/bin/tests/integration/test_utils.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
 #include "src/ledger/lib/socket/strings.h"
@@ -69,7 +70,7 @@ BaseIntegrationTest::NewLedgerAppInstance() {
 }
 
 LedgerAppInstanceFactory* BaseIntegrationTest::GetAppFactory() {
-  FXL_DCHECK(factory_) << "|SetUp| has not been called.";
+  LEDGER_DCHECK(factory_) << "|SetUp| has not been called.";
   return factory_.get();
 }
 

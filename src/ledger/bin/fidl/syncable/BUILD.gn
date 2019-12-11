@@ -15,6 +15,7 @@ source_set("syncable") {
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/public",
     "//src/ledger/bin/sync_helper",
+    "//src/ledger/lib/logging",
     "//zircon/public/lib/fit",
   ]
 

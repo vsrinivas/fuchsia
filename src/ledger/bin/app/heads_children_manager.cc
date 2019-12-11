@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "src/ledger/bin/inspect/inspect.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/ensure_called.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -51,17 +52,17 @@ void HeadsChildrenManager::GetNames(fit::function<void(std::set<std::string>)> c
         if (status != storage::Status::OK) {
           // Inspect is prepared to receive incomplete information; there's not really anything
           // further for us to do than to log that the function failed.
-          FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
+          LEDGER_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
           callback(std::set<std::string>{});
           return;
         }
-        FXL_DCHECK(active_inspectable_page);
+        LEDGER_DCHECK(active_inspectable_page);
         std::vector<const storage::CommitId> heads;
         status = active_inspectable_page->GetHeads(&heads);
         if (status != storage::Status::OK) {
           // Inspect is prepared to receive incomplete information; there's not really anything
           // further for us to do than to log that the function failed.
-          FXL_LOG(WARNING) << "GetHeads returned non-OK status: " << status;
+          LEDGER_LOG(WARNING) << "GetHeads returned non-OK status: " << status;
           callback(std::set<std::string>{});
           return;
         }
@@ -76,7 +77,7 @@ void HeadsChildrenManager::GetNames(fit::function<void(std::set<std::string>)> c
 void HeadsChildrenManager::Attach(std::string name, fit::function<void(fit::closure)> callback) {
   storage::CommitId head;
   if (!CommitDisplayNameToCommitId(name, &head)) {
-    FXL_LOG(WARNING) << "Inspect passed invalid head display name: " << name;
+    LEDGER_LOG(WARNING) << "Inspect passed invalid head display name: " << name;
     callback([] {});
     return;
   }

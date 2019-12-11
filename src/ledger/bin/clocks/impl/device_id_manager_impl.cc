@@ -8,6 +8,7 @@
 #include <string>
 
 #include "src/ledger/bin/public/status.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace clocks {
@@ -23,7 +24,7 @@ absl::string_view ToStringView(const uint64_t& counter) {
 }
 
 uint64_t FromStringView(absl::string_view data) {
-  FXL_DCHECK(data.size() == sizeof(uint64_t));
+  LEDGER_DCHECK(data.size() == sizeof(uint64_t));
   uint64_t result;
   memcpy(&result, data.data(), sizeof(uint64_t));
   return result;

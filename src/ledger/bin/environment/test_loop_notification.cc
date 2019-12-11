@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/environment/test_loop_notification.h"
 
+#include "src/ledger/lib/logging/logging.h"
+
 namespace ledger {
 
 Environment::NotificationFactory TestLoopNotification::NewFactory(async::TestLoop* test_loop) {
@@ -16,7 +18,7 @@ bool TestLoopNotification::HasBeenNotified() const { return notified_; }
 
 void TestLoopNotification::WaitForNotification() const {
   bool notified = test_loop_->BlockCurrentSubLoopAndRunOthersUntil([this] { return notified_; });
-  FXL_CHECK(notified);
+  LEDGER_CHECK(notified);
 }
 
 void TestLoopNotification::Notify() { notified_ = true; }

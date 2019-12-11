@@ -6,6 +6,7 @@
 
 #include <zircon/status.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -13,11 +14,11 @@ namespace ledger {
 SizedVmo::SizedVmo(std::nullptr_t) : vmo_(), size_(0u) {}
 
 SizedVmo::SizedVmo(zx::vmo vmo, uint64_t size) : vmo_(std::move(vmo)), size_(size) {
-  FXL_DCHECK(vmo_ && IsSizeValid(vmo_, size_));
+  LEDGER_DCHECK(vmo_ && IsSizeValid(vmo_, size_));
 }
 
 bool SizedVmo::FromTransport(fuchsia::mem::Buffer transport, SizedVmo* out) {
-  FXL_DCHECK(transport.vmo);
+  LEDGER_DCHECK(transport.vmo);
 
   if (!IsSizeValid(transport.vmo, transport.size)) {
     return false;
@@ -31,7 +32,7 @@ bool SizedVmo::IsSizeValid(const zx::vmo& vmo, uint64_t size) {
   size_t vmo_size;
   zx_status_t zx_status = vmo.get_size(&vmo_size);
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Unable to get VMO size: " << zx_status_get_string(zx_status);
+    LEDGER_LOG(ERROR) << "Unable to get VMO size: " << zx_status_get_string(zx_status);
     return false;
   }
   return vmo_size >= size;

@@ -17,6 +17,7 @@
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
@@ -46,7 +47,7 @@ class Watcher : public PageWatcher {
   // PageWatcher:
   void OnChange(PageChange page_change, ResultState result_state,
                 OnChangeCallback callback) override {
-    FXL_DCHECK(result_state == ResultState::COMPLETED)
+    LEDGER_DCHECK(result_state == ResultState::COMPLETED)
         << "Handling OnChange pagination not implemented yet";
     changes_seen++;
     last_page_change_ = std::move(page_change);
@@ -128,7 +129,7 @@ class ConflictResolverImpl : public ConflictResolver {
     // sending half of |results|' elements.
     ::testing::AssertionResult Merge(std::vector<MergedValue> results,
                                      MergeType merge_type = MergeType::SIMPLE) {
-      FXL_DCHECK(merge_type == MergeType::SIMPLE || results.size() >= 2);
+      LEDGER_DCHECK(merge_type == MergeType::SIMPLE || results.size() >= 2);
 
       if (!result_provider) {
         return ::testing::AssertionFailure() << "Merge failed: result_provider is disconnected.";

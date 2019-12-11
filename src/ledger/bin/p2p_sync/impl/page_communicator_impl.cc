@@ -14,6 +14,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -119,7 +120,7 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
       fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) {
-    FXL_DCHECK(response_);
+    LEDGER_DCHECK(response_);
     callback(response_->status, storage::ChangeSource::P2P, response_->is_object_synced,
              response_->status == ledger::Status::OK
                  ? storage::DataSource::DataChunk::Create(response_->data)
@@ -166,7 +167,7 @@ PageCommunicatorImpl::PageCommunicatorImpl(ledger::Environment* environment,
       weak_factory_(this) {}
 
 PageCommunicatorImpl::~PageCommunicatorImpl() {
-  FXL_DCHECK(!in_destructor_);
+  LEDGER_DCHECK(!in_destructor_);
   in_destructor_ = true;
 
   flatbuffers::FlatBufferBuilder buffer;
@@ -186,7 +187,7 @@ PageCommunicatorImpl::~PageCommunicatorImpl() {
 }
 
 void PageCommunicatorImpl::Start() {
-  FXL_DCHECK(!started_);
+  LEDGER_DCHECK(!started_);
   started_ = true;
   sync_client_->SetSyncDelegate(this);
   storage_->AddCommitWatcher(this);
@@ -202,7 +203,7 @@ void PageCommunicatorImpl::Start() {
 }
 
 void PageCommunicatorImpl::set_on_delete(fit::closure on_delete) {
-  FXL_DCHECK(!on_delete_) << "set_on_delete() can only be called once.";
+  LEDGER_DCHECK(!on_delete_) << "set_on_delete() can only be called once.";
   on_delete_ = std::move(on_delete);
 }
 
@@ -244,7 +245,7 @@ void PageCommunicatorImpl::OnDeviceChange(const p2p_provider::P2PClientId& remot
 
 void PageCommunicatorImpl::OnNewRequest(const p2p_provider::P2PClientId& source,
                                         MessageHolder<Request> message) {
-  FXL_DCHECK(!in_destructor_);
+  LEDGER_DCHECK(!in_destructor_);
   switch (message->request_type()) {
     case RequestMessage_WatchStartRequest: {
       MarkSyncedToPeer([this, source](ledger::Status status) {
@@ -252,7 +253,7 @@ void PageCommunicatorImpl::OnNewRequest(const p2p_provider::P2PClientId& source,
           // If we fail to mark the page storage as synced to a peer, we
           // might end up in a situation of deleting from disk a partially
           // synced page. Log an error and return.
-          FXL_LOG(ERROR) << "Failed to mark PageStorage as synced to peer";
+          LEDGER_LOG(ERROR) << "Failed to mark PageStorage as synced to peer";
           return;
         }
         if (interested_devices_.find(source) == interested_devices_.end()) {
@@ -312,14 +313,14 @@ void PageCommunicatorImpl::OnNewRequest(const p2p_provider::P2PClientId& source,
                            }));
       break;
     case RequestMessage_NONE:
-      FXL_LOG(ERROR) << "The message received is malformed";
+      LEDGER_LOG(ERROR) << "The message received is malformed";
       break;
   }
 }
 
 void PageCommunicatorImpl::OnNewResponse(const p2p_provider::P2PClientId& source,
                                          MessageHolder<Response> message) {
-  FXL_DCHECK(!in_destructor_);
+  LEDGER_DCHECK(!in_destructor_);
   if (message->status() != ResponseStatus_OK) {
     // The namespace or page was unknown on the other side. We can probably do
     // something smart with this information (for instance, stop sending
@@ -366,7 +367,7 @@ void PageCommunicatorImpl::OnNewResponse(const p2p_provider::P2PClientId& source
     }
 
     case ResponseMessage_NONE:
-      FXL_LOG(ERROR) << "The message received is malformed";
+      LEDGER_LOG(ERROR) << "The message received is malformed";
       return;
   }
 }
@@ -402,13 +403,13 @@ void PageCommunicatorImpl::GetDiff(
     storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
     fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
         callback) {
-  FXL_NOTIMPLEMENTED();
+  LEDGER_NOTIMPLEMENTED();
   callback(ledger::Status::NOT_IMPLEMENTED, {}, {});
 }
 
 void PageCommunicatorImpl::UpdateClock(storage::Clock /*clock*/,
                                        fit::function<void(ledger::Status)> /*callback*/) {
-  FXL_NOTIMPLEMENTED();
+  LEDGER_NOTIMPLEMENTED();
 };
 
 void PageCommunicatorImpl::OnNewCommits(
@@ -654,7 +655,7 @@ void PageCommunicatorImpl::ProcessObjectRequest(p2p_provider::P2PClientId source
         }
 
         if (status != ledger::Status::OK) {
-          FXL_LOG(WARNING) << "Error while retrieving objects: " << status;
+          LEDGER_LOG(WARNING) << "Error while retrieving objects: " << status;
           return;
         }
 
@@ -727,7 +728,7 @@ void PageCommunicatorImpl::SendHead(const p2p_provider::P2PClientId& device) {
   if (status != ledger::Status::OK) {
     return;
   }
-  FXL_DCHECK(head_commits.size() > 0);
+  LEDGER_DCHECK(head_commits.size() > 0);
   if (head_commits.size() != 1) {
     // We'll wait for the merge to happen, and send the head when storage notifies us.
     return;

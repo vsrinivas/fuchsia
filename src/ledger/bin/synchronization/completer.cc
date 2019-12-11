@@ -5,6 +5,7 @@
 #include "src/ledger/bin/synchronization/completer.h"
 
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/logging.h"
 
@@ -15,7 +16,7 @@ Completer::Completer(async_dispatcher_t* dispatcher) : task_runner_(dispatcher) 
 Completer::~Completer() = default;
 
 void Completer::Complete(Status status) {
-  FXL_DCHECK(!completed_);
+  LEDGER_DCHECK(!completed_);
   completed_ = true;
   status_ = status;
   // We need to move the callbacks in the stack since calling any of the

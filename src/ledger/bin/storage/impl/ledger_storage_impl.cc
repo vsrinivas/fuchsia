@@ -17,6 +17,7 @@
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/fxl/logging.h"
@@ -37,7 +38,7 @@ std::string GetDirectoryName(absl::string_view bytes) { return absl::WebSafeBase
 std::string GetId(absl::string_view bytes) {
   std::string decoded;
   bool result = absl::WebSafeBase64Unescape(bytes, &decoded);
-  FXL_DCHECK(result);
+  LEDGER_DCHECK(result);
   return decoded;
 }
 
@@ -61,7 +62,7 @@ LedgerStorageImpl::~LedgerStorageImpl() = default;
 
 Status LedgerStorageImpl::Init() {
   if (!environment_->file_system()->CreateDirectory(storage_dir_)) {
-    FXL_LOG(ERROR) << "Failed to create the storage directory in " << storage_dir_.path();
+    LEDGER_LOG(ERROR) << "Failed to create the storage directory in " << storage_dir_.path();
     return Status::INTERNAL_ERROR;
   }
   return Status::OK;
@@ -129,14 +130,14 @@ void LedgerStorageImpl::DeletePageStorage(PageIdView page_id,
         // <storage_dir_>/staging/<random_temporary_name>/graveyard/<base64(page)>
         if (file_system->Rename(
                 path, ledger::DetachedPath(tmp_directory_path.root_fd(), destination)) != 0) {
-          FXL_LOG(ERROR) << "Unable to move local page storage to " << destination << ".";
+          LEDGER_LOG(ERROR) << "Unable to move local page storage to " << destination << ".";
           callback(Status::IO_ERROR);
           return;
         }
 
         if (!file_system->DeletePathRecursively(
                 ledger::DetachedPath(tmp_directory_path.root_fd(), destination))) {
-          FXL_LOG(ERROR) << "Unable to delete local staging storage at: " << destination;
+          LEDGER_LOG(ERROR) << "Unable to delete local staging storage at: " << destination;
           callback(Status::IO_ERROR);
           return;
         }
@@ -157,7 +158,7 @@ void LedgerStorageImpl::InitializePageStorage(
     storage_in_initialization_.erase(storage_ptr);
 
     if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << status;
+      LEDGER_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << status;
       callback(status, nullptr);
       return;
     }
@@ -183,7 +184,7 @@ void LedgerStorageImpl::GetOrCreateDb(
 }
 
 ledger::DetachedPath LedgerStorageImpl::GetPathFor(PageIdView page_id) {
-  FXL_DCHECK(!page_id.empty());
+  LEDGER_DCHECK(!page_id.empty());
   return storage_dir_.SubPath(GetDirectoryName(page_id));
 }
 

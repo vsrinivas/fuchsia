@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -69,7 +70,7 @@ void DiffAccumulator::AddEntry(CloudDiffEntry entry) {
   if (!inserted) {
     // There should never be two entries with the same entry id in a state. We are either
     // cancelling an insertion with a deletion, or a deletion with an insertion.
-    FXL_DCHECK(added_operation != it->operation) << "Double insertion or deletion";
+    LEDGER_DCHECK(added_operation != it->operation) << "Double insertion or deletion";
     entries_.erase(it);
   }
 }
@@ -96,7 +97,7 @@ void DiffTree::AddDiff(std::string target_commit, PageState base_state,
   DiffTreeEntry entry = {std::move(base_state), parent_origin, 1 + parent_depth,
                          std::move(entries)};
   bool inserted = diffs_.emplace(std::move(target_commit), std::move(entry)).second;
-  FXL_DCHECK(inserted) << "Only one diff can be added for a given commit";
+  LEDGER_DCHECK(inserted) << "Only one diff can be added for a given commit";
 }
 
 bool DiffTree::GetDiff(PageState left_state, PageState right_state,
@@ -131,16 +132,16 @@ bool DiffTree::GetDiff(PageState left_state, PageState right_state,
     }
     // If the left and right depth are zero, the left and right states are their own origins, and
     // are equal.
-    FXL_DCHECK(left_depth > 0 || right_depth > 0);
+    LEDGER_DCHECK(left_depth > 0 || right_depth > 0);
 
     if (left_depth >= right_depth) {
-      FXL_DCHECK(left_state);
+      LEDGER_DCHECK(left_state);
       // The entry exists because the depth is non-zero.
       const DiffTreeEntry& left_entry = diffs_[*left_state];
       left_diff.push_back(&left_entry.entries);
       left_state = left_entry.parent_state;
     } else {
-      FXL_DCHECK(right_state);
+      LEDGER_DCHECK(right_state);
       // The entry exists because the depth is non-zero.
       const DiffTreeEntry& right_entry = diffs_[*right_state];
       right_diff.push_back(&right_entry.entries);
@@ -182,7 +183,7 @@ std::pair<PageState, std::vector<CloudDiffEntry>> DiffTree::GetSmallestDiff(
   std::vector<CloudDiffEntry> smallest_diff;
   // This always succeeds: by definition there is a path from a state to its origin.
   bool has_diff_from_origin = GetDiff(base_state, target_state, &smallest_diff);
-  FXL_DCHECK(has_diff_from_origin);
+  LEDGER_DCHECK(has_diff_from_origin);
 
   // Try from the known commits.
   for (auto state : known_commit_ids) {

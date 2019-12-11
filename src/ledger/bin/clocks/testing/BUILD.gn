@@ -12,6 +12,7 @@ source_set("testing") {
 
   deps = [
     "//src/ledger/bin/clocks/public",
+    "//src/ledger/lib/logging",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

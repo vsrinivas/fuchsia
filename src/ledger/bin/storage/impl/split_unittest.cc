@@ -23,6 +23,7 @@
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -146,7 +147,7 @@ void DoSplit(DataSource* source, ObjectIdentifierFactory* factory, ObjectType ob
     auto content = pieces.at(digest)->GetData();
     result->append(content.data(), content.size());
   } else {
-    FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+    LEDGER_DCHECK(digest_info.piece_type == PieceType::INDEX);
     if (pieces.count(digest) == 0) {
       return ::testing::AssertionFailure() << "Unknown object.";
     }

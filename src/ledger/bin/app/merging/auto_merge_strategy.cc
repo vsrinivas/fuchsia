@@ -13,6 +13,7 @@
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/merging/conflict_resolver_client.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -72,7 +73,7 @@ AutoMergeStrategy::AutoMerger::AutoMerger(storage::PageStorage* storage,
       ancestor_(std::move(ancestor)),
       callback_(std::move(callback)),
       weak_factory_(this) {
-  FXL_DCHECK(callback_);
+  LEDGER_DCHECK(callback_);
 }
 
 AutoMergeStrategy::AutoMerger::~AutoMerger() = default;
@@ -113,7 +114,7 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
   }
 
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "Unable to compute right diff due to error " << status << ", aborting.";
+    LEDGER_LOG(ERROR) << "Unable to compute right diff due to error " << status << ", aborting.";
     Done(status);
     return;
   }
@@ -175,7 +176,7 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
   }
 
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << "Unable to compute left diff due to error " << status << ", aborting.";
+    LEDGER_LOG(ERROR) << "Unable to compute left diff due to error " << status << ", aborting.";
     Done(status);
     return;
   }
@@ -222,7 +223,7 @@ void AutoMergeStrategy::AutoMerger::ApplyDiffOnJournal(
                           [weak_this = weak_factory_.GetWeakPtr()](
                               Status s, std::unique_ptr<const storage::Commit> /*commit*/) {
                             if (s != Status::OK) {
-                              FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+                              LEDGER_LOG(ERROR) << "Unable to commit merge journal: " << s;
                             }
                             if (weak_this) {
                               weak_this->Done(s);
@@ -270,8 +271,8 @@ void AutoMergeStrategy::Merge(storage::PageStorage* storage, ActivePageManager* 
                               std::unique_ptr<const storage::Commit> head_2,
                               std::unique_ptr<const storage::Commit> ancestor,
                               fit::function<void(Status)> callback) {
-  FXL_DCHECK(storage::Commit::TimestampOrdered(head_1, head_2));
-  FXL_DCHECK(!in_progress_merge_);
+  LEDGER_DCHECK(storage::Commit::TimestampOrdered(head_1, head_2));
+  LEDGER_DCHECK(!in_progress_merge_);
 
   in_progress_merge_ = std::make_unique<AutoMergeStrategy::AutoMerger>(
       storage, active_page_manager, conflict_resolver_.get(), std::move(head_2), std::move(head_1),

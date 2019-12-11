@@ -10,6 +10,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
 
@@ -146,11 +147,11 @@ void TestPageCloud::GetDiff(std::vector<uint8_t> commit_id,
 
   cloud_provider::Diff diff;
   zx_status_t status = diff_to_return.Clone(&diff);
-  FXL_DCHECK(status == ZX_OK);
+  LEDGER_DCHECK(status == ZX_OK);
   std::unique_ptr<cloud_provider::DiffPack> diff_pack =
       std::make_unique<cloud_provider::DiffPack>();
   bool encoded = ledger::EncodeToBuffer(&diff, &diff_pack->buffer);
-  FXL_DCHECK(encoded);
+  LEDGER_DCHECK(encoded);
   callback(cloud_provider::Status::OK, std::move(diff_pack));
 }
 

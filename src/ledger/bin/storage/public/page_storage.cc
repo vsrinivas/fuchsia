@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/storage/public/page_storage.h"
 
+#include "src/ledger/lib/logging/logging.h"
+
 namespace storage {
 
 PageStorage::CommitIdAndBytes::CommitIdAndBytes() = default;
@@ -46,7 +48,7 @@ bool PageStorage::Location::is_network() const {
 }
 
 const CommitId& PageStorage::Location::in_commit() const {
-  FXL_DCHECK(is_tree_node_from_network());
+  LEDGER_DCHECK(is_tree_node_from_network());
   return in_commit_;
 }
 

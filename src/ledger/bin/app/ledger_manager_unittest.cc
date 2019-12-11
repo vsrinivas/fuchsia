@@ -38,6 +38,7 @@
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/callback/waiter.h"
@@ -421,13 +422,13 @@ class DelayingLedgerStorage : public storage::LedgerStorage {
 
   void DeletePageStorage(storage::PageIdView /*page_id*/,
                          fit::function<void(storage::Status)> callback) override {
-    FXL_NOTIMPLEMENTED();
+    LEDGER_NOTIMPLEMENTED();
     callback(Status::NOT_IMPLEMENTED);
   }
 
   void ListPages(
       fit::function<void(storage::Status, std::set<storage::PageId>)> callback) override {
-    FXL_NOTIMPLEMENTED();
+    LEDGER_NOTIMPLEMENTED();
     callback(Status::NOT_IMPLEMENTED, {});
   };
 

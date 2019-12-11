@@ -41,6 +41,7 @@ source_set("lib") {
     "//src/ledger/bin/storage/impl:object_identifier_lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/logging",
     "//src/lib/callback",
     "//src/lib/fxl",
     "//third_party/abseil-cpp",
@@ -70,6 +71,10 @@ source_set("internal") {
 
   public_deps = [
     "//src/ledger/bin/storage/public",
+  ]
+
+  deps = [
+    "//src/ledger/lib/logging",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

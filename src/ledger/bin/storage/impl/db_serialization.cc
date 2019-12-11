@@ -11,6 +11,7 @@
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -74,7 +75,7 @@ std::string ReferenceRow::GetKeyForCommit(CommitIdView source, const ObjectDiges
 std::string ReferenceRow::GetKeyPrefixFor(const ObjectDigest& destination) {
   // Check that |destination| size is fixed, ie. |destination| is not a reference to an inline
   // object, to ensure there is no ambiguity in the encoding.
-  FXL_DCHECK(destination.Serialize().size() == kStorageHashSize + 1);
+  LEDGER_DCHECK(destination.Serialize().size() == kStorageHashSize + 1);
   return absl::StrCat(kPrefix, destination.Serialize());
 };
 
@@ -122,7 +123,7 @@ std::string ObjectStatusRow::GetPrefixFor(PageDbObjectStatus object_status,
 absl::string_view ObjectStatusRow::GetPrefixFor(PageDbObjectStatus object_status) {
   switch (object_status) {
     case PageDbObjectStatus::UNKNOWN:
-      FXL_NOTREACHED();
+      LEDGER_NOTREACHED();
       return "";
     case PageDbObjectStatus::TRANSIENT:
       return kTransientPrefix;

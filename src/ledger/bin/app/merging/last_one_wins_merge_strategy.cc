@@ -11,6 +11,7 @@
 
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -58,7 +59,7 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
       ancestor_(std::move(ancestor)),
       callback_(std::move(callback)),
       weak_factory_(this) {
-  FXL_DCHECK(callback_);
+  LEDGER_DCHECK(callback_);
 }
 
 LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() = default;
@@ -105,7 +106,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
       return;
     }
     if (s != Status::OK) {
-      FXL_LOG(ERROR) << "Unable to create diff for merging: " << s;
+      LEDGER_LOG(ERROR) << "Unable to create diff for merging: " << s;
       weak_this->Done(s);
       return;
     }
@@ -114,7 +115,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
         std::move(weak_this->journal_),
         [weak_this](Status s, std::unique_ptr<const storage::Commit>) {
           if (s != Status::OK) {
-            FXL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+            LEDGER_LOG(ERROR) << "Unable to commit merge journal: " << s;
           }
           if (weak_this) {
             weak_this->Done(s);
@@ -137,8 +138,8 @@ void LastOneWinsMergeStrategy::Merge(storage::PageStorage* storage,
                                      std::unique_ptr<const storage::Commit> head_2,
                                      std::unique_ptr<const storage::Commit> ancestor,
                                      fit::function<void(Status)> callback) {
-  FXL_DCHECK(!in_progress_merge_);
-  FXL_DCHECK(storage::Commit::TimestampOrdered(head_1, head_2));
+  LEDGER_DCHECK(!in_progress_merge_);
+  LEDGER_DCHECK(storage::Commit::TimestampOrdered(head_1, head_2));
 
   in_progress_merge_ = std::make_unique<LastOneWinsMergeStrategy::LastOneWinsMerger>(
       storage, std::move(head_1), std::move(head_2), std::move(ancestor),

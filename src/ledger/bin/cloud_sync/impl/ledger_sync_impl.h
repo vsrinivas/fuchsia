@@ -17,6 +17,7 @@
 #include "src/ledger/bin/cloud_sync/public/user_config.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
@@ -39,7 +40,7 @@ class LedgerSyncImpl : public LedgerSync {
 
   // |on_delete| will be called when this class is deleted.
   void set_on_delete(fit::function<void()> on_delete) {
-    FXL_DCHECK(!on_delete_);
+    LEDGER_DCHECK(!on_delete_);
     on_delete_ = std::move(on_delete);
   }
 

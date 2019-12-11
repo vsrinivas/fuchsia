@@ -11,6 +11,7 @@
 
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/waiter.h"
 
 namespace storage {
@@ -58,12 +59,12 @@ void CommitPruner::SchedulePruning() {
   } else if (state_ == PruningState::PRUNING) {
     state_ = PruningState::PRUNING_AND_SCHEDULED;
   } else {
-    FXL_DCHECK(state_ == PruningState::PRUNING_AND_SCHEDULED);
+    LEDGER_DCHECK(state_ == PruningState::PRUNING_AND_SCHEDULED);
   }
 }
 
 void CommitPruner::Prune() {
-  FXL_DCHECK(state_ == PruningState::IDLE);
+  LEDGER_DCHECK(state_ == PruningState::IDLE);
   state_ = PruningState::PRUNING;
 
   coroutine_manager_.StartCoroutine([this](coroutine::CoroutineHandler* handler) {
@@ -76,7 +77,7 @@ void CommitPruner::Prune() {
     Status s = SynchronousPrune(handler);
     if (s != Status::OK) {
       if (s != Status::INTERRUPTED) {
-        FXL_LOG(ERROR) << "Commit pruning failed with status " << s;
+        LEDGER_LOG(ERROR) << "Commit pruning failed with status " << s;
       }
       state_ = PruningState::IDLE;
       return;
@@ -85,7 +86,7 @@ void CommitPruner::Prune() {
       state_ = PruningState::IDLE;
       Prune();
     } else {
-      FXL_DCHECK(state_ == PruningState::PRUNING);
+      LEDGER_DCHECK(state_ == PruningState::PRUNING);
       state_ = PruningState::IDLE;
     }
   });
@@ -101,7 +102,7 @@ Status CommitPruner::SynchronousPrune(coroutine::CoroutineHandler* handler) {
     return Status::OK;
   }
 
-  FXL_DCHECK(policy_ == CommitPruningPolicy::LOCAL_IMMEDIATE);
+  LEDGER_DCHECK(policy_ == CommitPruningPolicy::LOCAL_IMMEDIATE);
 
   std::unique_ptr<const storage::Commit> luca;
   RETURN_ON_ERROR(FindLatestUniqueCommonAncestorSync(handler, &luca));
@@ -145,7 +146,7 @@ Status CommitPruner::FindLatestUniqueCommonAncestorSync(
       commits.insert(std::move(parent));
     }
   }
-  FXL_DCHECK(commits.size() == 1);
+  LEDGER_DCHECK(commits.size() == 1);
   *result = std::move(commits.extract(commits.begin()).value());
   return Status::OK;
 }

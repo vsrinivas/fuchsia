@@ -10,6 +10,7 @@
 #include "src/ledger/bin/environment/thread_notification.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
@@ -35,15 +36,15 @@ Environment::Environment(std::unique_ptr<Platform> platform, bool disable_statis
       random_(std::move(random)),
       gc_policy_(gc_policy),
       diff_compatibility_policy_(diff_compatibility_policy) {
-  FXL_DCHECK(dispatcher_);
-  FXL_DCHECK(io_dispatcher_);
-  FXL_DCHECK(dispatcher_ != io_dispatcher_);
-  FXL_DCHECK(component_context_);
-  FXL_DCHECK(coroutine_service_);
-  FXL_DCHECK(backoff_factory_);
-  FXL_DCHECK(notification_factory_);
-  FXL_DCHECK(clock_);
-  FXL_DCHECK(random_);
+  LEDGER_DCHECK(dispatcher_);
+  LEDGER_DCHECK(io_dispatcher_);
+  LEDGER_DCHECK(dispatcher_ != io_dispatcher_);
+  LEDGER_DCHECK(component_context_);
+  LEDGER_DCHECK(coroutine_service_);
+  LEDGER_DCHECK(backoff_factory_);
+  LEDGER_DCHECK(notification_factory_);
+  LEDGER_DCHECK(clock_);
+  LEDGER_DCHECK(random_);
 }
 
 Environment::Environment(Environment&& other) noexcept { *this = std::move(other); }

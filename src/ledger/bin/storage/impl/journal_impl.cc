@@ -19,6 +19,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -36,7 +37,7 @@ JournalImpl::~JournalImpl() = default;
 std::unique_ptr<Journal> JournalImpl::Simple(ledger::Environment* environment,
                                              PageStorageImpl* page_storage,
                                              std::unique_ptr<const storage::Commit> base) {
-  FXL_DCHECK(base);
+  LEDGER_DCHECK(base);
 
   return std::make_unique<JournalImpl>(Token(), environment, page_storage, std::move(base));
 }
@@ -45,8 +46,8 @@ std::unique_ptr<Journal> JournalImpl::Merge(ledger::Environment* environment,
                                             PageStorageImpl* page_storage,
                                             std::unique_ptr<const storage::Commit> base,
                                             std::unique_ptr<const storage::Commit> other) {
-  FXL_DCHECK(base);
-  FXL_DCHECK(other);
+  LEDGER_DCHECK(base);
+  LEDGER_DCHECK(other);
   auto journal = std::make_unique<JournalImpl>(Token(), environment, page_storage, std::move(base));
   journal->other_ = std::move(other);
   return journal;
@@ -55,7 +56,7 @@ std::unique_ptr<Journal> JournalImpl::Merge(ledger::Environment* environment,
 Status JournalImpl::Commit(coroutine::CoroutineHandler* handler,
                            std::unique_ptr<const storage::Commit>* commit,
                            std::vector<ObjectIdentifier>* objects_to_sync) {
-  FXL_DCHECK(!committed_);
+  LEDGER_DCHECK(!committed_);
   committed_ = true;
   objects_to_sync->clear();
 
@@ -109,7 +110,7 @@ Status JournalImpl::Commit(coroutine::CoroutineHandler* handler,
 
 void JournalImpl::Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,
                       KeyPriority priority) {
-  FXL_DCHECK(!committed_);
+  LEDGER_DCHECK(!committed_);
   EntryChange change;
   change.entry = {convert::ToString(key), std::move(object_identifier), priority, EntryId()};
   change.deleted = false;
@@ -117,7 +118,7 @@ void JournalImpl::Put(convert::ExtendedStringView key, ObjectIdentifier object_i
 }
 
 void JournalImpl::Delete(convert::ExtendedStringView key) {
-  FXL_DCHECK(!committed_);
+  LEDGER_DCHECK(!committed_);
   EntryChange change;
   change.entry = {convert::ToString(key), ObjectIdentifier(), KeyPriority::EAGER, EntryId()};
   change.deleted = true;
@@ -125,7 +126,7 @@ void JournalImpl::Delete(convert::ExtendedStringView key) {
 }
 
 void JournalImpl::Clear() {
-  FXL_DCHECK(!committed_);
+  LEDGER_DCHECK(!committed_);
   cleared_ = JournalContainsClearOperation::YES;
   journal_entries_.clear();
 }
@@ -197,7 +198,7 @@ void JournalImpl::GetObjectsToSync(
       callback(status, {});
       return;
     }
-    FXL_DCHECK(added_values.size() == is_untracked.size());
+    LEDGER_DCHECK(added_values.size() == is_untracked.size());
 
     // Only untracked objects should be synced.
     std::vector<ObjectIdentifier> objects_to_sync;
@@ -219,7 +220,7 @@ void JournalImpl::SetEntryIds(std::vector<EntryChange>* changes) {
 }
 
 void JournalImpl::SetEntryIdsSimpleCommit(std::vector<EntryChange>* changes) {
-  FXL_DCHECK(!other_);
+  LEDGER_DCHECK(!other_);
 
   for (EntryChange& change : *changes) {
     if (!change.deleted) {
@@ -229,7 +230,7 @@ void JournalImpl::SetEntryIdsSimpleCommit(std::vector<EntryChange>* changes) {
 }
 
 void JournalImpl::SetEntryIdsMergeCommit(std::vector<EntryChange>* changes) {
-  FXL_DCHECK(other_);
+  LEDGER_DCHECK(other_);
 
   // Serialize the list of changes.
   std::string operation_list;

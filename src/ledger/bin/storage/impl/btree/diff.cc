@@ -12,6 +12,7 @@
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
 #include "src/ledger/bin/storage/impl/btree/synchronous_storage.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -42,14 +43,14 @@ class IteratorPair {
   }
 
   bool Finished() const {
-    FXL_DCHECK(IsNormalized());
+    LEDGER_DCHECK(IsNormalized());
     return right_.Finished();
   }
 
   // Send the actual diff to the client. Returns |false| if the iteration must
   // be stopped.
   bool SendDiff() {
-    FXL_DCHECK(HasDiff());
+    LEDGER_DCHECK(HasDiff());
 
     // If the 2 iterators are on 2 equals values, nothing to do.
     if (left_.HasValue() && right_.HasValue() && left_.CurrentEntry() == right_.CurrentEntry()) {
@@ -79,9 +80,9 @@ class IteratorPair {
 
   // Advance the iterator until there is potentially a diff to send.
   Status Advance() {
-    FXL_DCHECK(!Finished());
+    LEDGER_DCHECK(!Finished());
     do {
-      FXL_DCHECK(IsNormalized());
+      LEDGER_DCHECK(IsNormalized());
 
       // If the 2 next children are identical, skip these.
       if (HasSameNextChild()) {
@@ -223,7 +224,7 @@ class IteratorPair {
 
   // Returns whether there is a potential diff to send at the current state.
   bool HasDiff() const {
-    FXL_DCHECK(IsNormalized());
+    LEDGER_DCHECK(IsNormalized());
     return (right_.HasValue() && (left_.Finished() || left_.HasValue())) ||
            (left_.HasValue() && HasSameNextChild());
   }
@@ -350,7 +351,7 @@ class ThreeWayIterator {
   }
 
   Status Advance() {
-    FXL_DCHECK(!Finished());
+    LEDGER_DCHECK(!Finished());
     if (base_left_iterators_->Finished() && !base_left_ && !left_) {
       RETURN_ON_ERROR(AdvanceRight());
     } else if (base_right_iterators_->Finished() && !base_right_ && !right_) {
@@ -367,7 +368,7 @@ class ThreeWayIterator {
   }
 
   ThreeWayChange GetCurrentDiff() {
-    FXL_DCHECK(!Finished());
+    LEDGER_DCHECK(!Finished());
     ThreeWayChange change;
     change.base = GetBase();
     change.left = GetEntry(change.base, base_left_iterators_, left_, right_);
@@ -379,7 +380,7 @@ class ThreeWayIterator {
   // GetLeftKey (resp. GetRightKey) should not be called if the left (resp.
   // right) IteratorPair is finished.
   const std::string& GetLeftKey() {
-    FXL_DCHECK(base_left_ || left_);
+    LEDGER_DCHECK(base_left_ || left_);
     if (base_left_) {
       return base_left_->key;
     }
@@ -387,7 +388,7 @@ class ThreeWayIterator {
   }
 
   const std::string& GetRightKey() {
-    FXL_DCHECK(base_right_ || right_);
+    LEDGER_DCHECK(base_right_ || right_);
     if (base_right_) {
       return base_right_->key;
     }
@@ -478,8 +479,8 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
                            LocatedObjectIdentifier left_node_identifier,
                            LocatedObjectIdentifier right_node_identifier, std::string min_key,
                            fit::function<bool(TwoWayChange)> on_next) {
-  FXL_DCHECK(storage::IsDigestValid(left_node_identifier.identifier.object_digest()));
-  FXL_DCHECK(storage::IsDigestValid(right_node_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(storage::IsDigestValid(left_node_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(storage::IsDigestValid(right_node_identifier.identifier.object_digest()));
 
   if (left_node_identifier.identifier == right_node_identifier.identifier) {
     return Status::OK;
@@ -510,9 +511,9 @@ Status ForEachThreeWayDiffInternal(SynchronousStorage* storage,
                                    LocatedObjectIdentifier right_node_identifier,
                                    std::string min_key,
                                    fit::function<bool(ThreeWayChange)> on_next) {
-  FXL_DCHECK(IsDigestValid(base_node_identifier.identifier.object_digest()));
-  FXL_DCHECK(IsDigestValid(left_node_identifier.identifier.object_digest()));
-  FXL_DCHECK(IsDigestValid(right_node_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(IsDigestValid(base_node_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(IsDigestValid(left_node_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(IsDigestValid(right_node_identifier.identifier.object_digest()));
 
   if (base_node_identifier.identifier == left_node_identifier.identifier &&
       base_node_identifier.identifier == right_node_identifier.identifier) {
@@ -560,8 +561,8 @@ void ForEachTwoWayDiff(coroutine::CoroutineService* coroutine_service, PageStora
                        LocatedObjectIdentifier other_root_identifier, std::string min_key,
                        fit::function<bool(TwoWayChange)> on_next,
                        fit::function<void(Status)> on_done) {
-  FXL_DCHECK(storage::IsDigestValid(base_root_identifier.identifier.object_digest()));
-  FXL_DCHECK(storage::IsDigestValid(other_root_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(storage::IsDigestValid(base_root_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(storage::IsDigestValid(other_root_identifier.identifier.object_digest()));
   coroutine_service->StartCoroutine(
       [page_storage, base_root_identifier = std::move(base_root_identifier),
        other_root_identifier = std::move(other_root_identifier), on_next = std::move(on_next),
@@ -581,9 +582,9 @@ void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service, PageSto
                          LocatedObjectIdentifier right_root_identifier, std::string min_key,
                          fit::function<bool(ThreeWayChange)> on_next,
                          fit::function<void(Status)> on_done) {
-  FXL_DCHECK(storage::IsDigestValid(base_root_identifier.identifier.object_digest()));
-  FXL_DCHECK(storage::IsDigestValid(left_root_identifier.identifier.object_digest()));
-  FXL_DCHECK(storage::IsDigestValid(right_root_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(storage::IsDigestValid(base_root_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(storage::IsDigestValid(left_root_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(storage::IsDigestValid(right_root_identifier.identifier.object_digest()));
   coroutine_service->StartCoroutine(
       [page_storage, base_root_identifier = std::move(base_root_identifier),
        left_root_identifier = std::move(left_root_identifier),

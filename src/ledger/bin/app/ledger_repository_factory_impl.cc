@@ -36,6 +36,7 @@
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
@@ -107,7 +108,7 @@ bool GetRepositoryName(rng::Random* random, FileSystem* file_system,
   new_name.resize(16);
   random->Draw(&new_name);
   if (!file_system->WriteFile(name_path, new_name)) {
-    FXL_LOG(ERROR) << "Unable to write file at: " << name_path.path();
+    LEDGER_LOG(ERROR) << "Unable to write file at: " << name_path.path();
     return false;
   }
 
@@ -132,10 +133,10 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
         fd_chan_.get(), ZX_CHANNEL_PEER_CLOSED, 0,
         [](async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
            const zx_packet_signal* signal) {
-          FXL_CHECK(false) << "Ledger file system has been closed while Ledger is running.";
+          LEDGER_CHECK(false) << "Ledger file system has been closed while Ledger is running.";
         });
     zx_status_t status = fd_wait_->Begin(async_get_default_dispatcher());
-    FXL_DCHECK(status == ZX_OK);
+    LEDGER_DCHECK(status == ZX_OK);
   }
 
   LedgerRepositoryContainer(const LedgerRepositoryContainer&) = delete;
@@ -174,8 +175,8 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   // Sets the implementation or the error status for the container. This
   // notifies all awaiting callbacks and binds all pages in case of success.
   void SetRepository(Status status, std::unique_ptr<LedgerRepositoryImpl> ledger_repository) {
-    FXL_DCHECK(!ledger_repository_);
-    FXL_DCHECK(status != Status::OK || ledger_repository);
+    LEDGER_DCHECK(!ledger_repository_);
+    LEDGER_DCHECK(status != Status::OK || ledger_repository);
     status_ = status;
     ledger_repository_ = std::move(ledger_repository);
     for (auto& request : requests_) {
@@ -355,8 +356,8 @@ Status LedgerRepositoryFactoryImpl::SynchronousCreateLedgerRepository(
   std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync = CreateUserSync(
       repository_information, std::move(cloud_provider), watchers.get(), device_id_manager.get());
   if (!user_sync) {
-    FXL_LOG(WARNING) << "No cloud provider nor P2P communicator - Ledger will work locally but "
-                     << "not sync. (running in Guest mode?)";
+    LEDGER_LOG(WARNING) << "No cloud provider nor P2P communicator - Ledger will work locally but "
+                        << "not sync. (running in Guest mode?)";
   }
 
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
@@ -402,7 +403,7 @@ std::unique_ptr<cloud_sync::UserSyncImpl> LedgerRepositoryFactoryImpl::CreateClo
 
   auto cloud_provider_ptr = cloud_provider.Bind();
   cloud_provider_ptr.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "Lost connection to cloud provider; cloud sync will no longer work.";
+    LEDGER_LOG(ERROR) << "Lost connection to cloud provider; cloud sync will no longer work.";
   });
 
   cloud_sync::UserConfig user_config;
@@ -433,13 +434,13 @@ std::unique_ptr<p2p_sync::UserCommunicator> LedgerRepositoryFactoryImpl::CreateP
 }
 
 void LedgerRepositoryFactoryImpl::OnVersionMismatch(RepositoryInformation repository_information) {
-  FXL_LOG(WARNING) << "Data in the cloud was wiped out, erasing local state. "
-                   << "This should log you out, log back in to start syncing again.";
+  LEDGER_LOG(WARNING) << "Data in the cloud was wiped out, erasing local state. "
+                      << "This should log you out, log back in to start syncing again.";
 
   // First, shut down the repository so that we can delete the files while it's
   // not running.
   auto find_repository = repositories_.find(repository_information.name);
-  FXL_DCHECK(find_repository != repositories_.end());
+  LEDGER_DCHECK(find_repository != repositories_.end());
   repositories_.erase(find_repository);
   DeleteRepositoryDirectory(repository_information);
 }
@@ -456,13 +457,13 @@ void LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
   // <base_path>/<random temporary name>/graveyard/<serialization_version>
   if (file_system->Rename(repository_information.content_path,
                           DetachedPath(tmp_directory_path.root_fd(), destination)) != 0) {
-    FXL_LOG(ERROR) << "Unable to move repository local storage to " << destination
-                   << ". Error: " << strerror(errno);
+    LEDGER_LOG(ERROR) << "Unable to move repository local storage to " << destination
+                      << ". Error: " << strerror(errno);
     return;
   }
   if (!file_system->DeletePathRecursively(
           DetachedPath(tmp_directory_path.root_fd(), destination))) {
-    FXL_LOG(ERROR) << "Unable to delete repository staging storage at " << destination;
+    LEDGER_LOG(ERROR) << "Unable to delete repository staging storage at " << destination;
     return;
   }
 }

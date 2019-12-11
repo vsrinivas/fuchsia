@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -15,7 +16,7 @@ Status Object::GetVmo(ledger::SizedVmo* vmo) const {
   RETURN_ON_ERROR(GetData(&data));
 
   if (!ledger::VmoFromString(data, vmo)) {
-    FXL_LOG(WARNING) << "Unable to produce VMO for object " << GetIdentifier();
+    LEDGER_LOG(WARNING) << "Unable to produce VMO for object " << GetIdentifier();
     return Status::INTERNAL_ERROR;
   }
 

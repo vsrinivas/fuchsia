@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -37,7 +38,7 @@ void SocketWriter::Start(zx::socket destination) {
 }
 
 void SocketWriter::GetData() {
-  FXL_DCHECK(data_.empty());
+  LEDGER_DCHECK(data_.empty());
   wait_.Cancel();
   client_->GetNext(offset_, kDefaultSocketBufferSize, [this](absl::string_view data) {
     if (data.empty()) {
@@ -60,14 +61,14 @@ void SocketWriter::WriteData(absl::string_view data) {
   }
 
   if (status == ZX_OK) {
-    FXL_DCHECK(data.empty());
+    LEDGER_DCHECK(data.empty());
     data_.clear();
     data_view_ = "";
     GetData();
     return;
   }
 
-  FXL_DCHECK(!data.empty());
+  LEDGER_DCHECK(!data.empty());
 
   if (status == ZX_ERR_PEER_CLOSED) {
     Done();
@@ -85,7 +86,7 @@ void SocketWriter::WriteData(absl::string_view data) {
       wait_.Begin(dispatcher_);
     return;
   }
-  FXL_DCHECK(false) << "Unhandled zx_status_t: " << status;
+  LEDGER_DCHECK(false) << "Unhandled zx_status_t: " << status;
 }
 
 void SocketWriter::Done() {

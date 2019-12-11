@@ -4,6 +4,7 @@
 
 #include "src/ledger/lib/coroutine/context/context.h"
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace context {
@@ -15,7 +16,7 @@ void SwapContext(Context* out_context, Context* in_context) {
   }
   SetContext(in_context);
 
-  FXL_NOTREACHED() << "SetContext should not return.";
+  LEDGER_NOTREACHED() << "SetContext should not return.";
 }
 
 void MakeContext(Context* context, Stack* stack, void (*func)(void*), void* data) {

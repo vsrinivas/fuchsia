@@ -29,6 +29,7 @@
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/backoff/exponential_backoff.h"
@@ -50,7 +51,7 @@ namespace {
 std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   std::string value;
   bool status = ledger::StringFromVmo(*vmo, &value);
-  FXL_DCHECK(status);
+  LEDGER_DCHECK(status);
   return value;
 }
 
@@ -142,7 +143,7 @@ class PageImplTest : public TestWithEnvironment {
   }
 
   void AddEntries(int entry_count, size_t min_key_size = 0u, size_t min_value_size = 0u) {
-    FXL_DCHECK(entry_count <= 10000);
+    LEDGER_DCHECK(entry_count <= 10000);
     page_ptr_->StartTransaction();
 
     for (int i = 0; i < entry_count; ++i) {

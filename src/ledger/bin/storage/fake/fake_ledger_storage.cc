@@ -7,6 +7,7 @@
 
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace storage {
 namespace fake {
@@ -57,7 +58,7 @@ FakeLedgerStorage::~FakeLedgerStorage() = default;
 
 void FakeLedgerStorage::ListPages(
     fit::function<void(storage::Status, std::set<storage::PageId>)> callback) {
-  FXL_NOTREACHED() << "Maybe implement this later on if needed?";
+  LEDGER_NOTREACHED() << "Maybe implement this later on if needed?";
 }
 
 void FakeLedgerStorage::CreatePageStorage(
@@ -112,7 +113,7 @@ bool FakeLedgerStorage::ShouldDelayIsSyncedCallback(storage::PageIdView page_id)
 
 void FakeLedgerStorage::CallIsSyncedCallback(storage::PageIdView page_id) {
   auto it = page_storages_.find(convert::ToString(page_id));
-  FXL_CHECK(it != page_storages_.end());
+  LEDGER_CHECK(it != page_storages_.end());
   it->second->CallIsSyncedCallback();
 }
 
@@ -127,7 +128,7 @@ void FakeLedgerStorage::set_page_storage_synced(storage::PageIdView page_id, boo
     }
   }
 
-  FXL_CHECK(page_storages_.find(page_id_string) != page_storages_.end());
+  LEDGER_CHECK(page_storages_.find(page_id_string) != page_storages_.end());
   page_storages_[page_id_string]->set_synced(is_synced);
 }
 

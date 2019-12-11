@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -22,10 +23,10 @@ bool BlockingDrainFrom(zx::socket source,
     if (result == ZX_OK) {
       size_t bytes_written = write_bytes(buffer.data(), bytes_read);
       if (bytes_written < bytes_read) {
-        FXL_LOG(ERROR) << "write_bytes callback wrote fewer bytes (" << bytes_written
-                       << ") than expected (" << bytes_read
-                       << ") in BlockingDrainFrom (socket closed? out of disk "
-                          "space?)";
+        LEDGER_LOG(ERROR) << "write_bytes callback wrote fewer bytes (" << bytes_written
+                          << ") than expected (" << bytes_read
+                          << ") in BlockingDrainFrom (socket closed? out of disk "
+                             "space?)";
         return false;
       }
     } else if (result == ZX_ERR_SHOULD_WAIT) {
@@ -39,7 +40,7 @@ bool BlockingDrainFrom(zx::socket source,
       // If the socket was closed, then treat as EOF.
       return true;
     } else {
-      FXL_LOG(ERROR) << "Unhandled error " << result << " in BlockingDrainFrom";
+      LEDGER_LOG(ERROR) << "Unhandled error " << result << " in BlockingDrainFrom";
       // Some other error occurred.
       return false;
     }

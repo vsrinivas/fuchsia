@@ -25,6 +25,7 @@ executable("ledger_benchmark_delete_entry") {
     "//src/ledger/bin/testing:get_ledger",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
     "//src/lib/callback",
     "//src/lib/fxl",

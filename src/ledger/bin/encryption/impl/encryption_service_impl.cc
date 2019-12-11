@@ -19,6 +19,7 @@
 #include "src/ledger/bin/encryption/primitives/hmac.h"
 #include "src/ledger/bin/encryption/primitives/kdf.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/logging.h"
@@ -129,7 +130,7 @@ void EncryptionServiceImpl::GetPageId(std::string page_name,
 void EncryptionServiceImpl::DecryptCommit(convert::ExtendedStringView storage_bytes,
                                           fit::function<void(Status, std::string)> callback) {
   if (!CheckValidEncryptedCommitSerialization(storage_bytes)) {
-    FXL_LOG(WARNING) << "Received invalid data. Cannot decrypt commit.";
+    LEDGER_LOG(WARNING) << "Received invalid data. Cannot decrypt commit.";
     callback(Status::INVALID_ARGUMENT, "");
     return;
   }
@@ -166,7 +167,7 @@ void EncryptionServiceImpl::EncryptEntryPayload(std::string entry_storage,
 void EncryptionServiceImpl::DecryptEntryPayload(std::string encrypted_data,
                                                 fit::function<void(Status, std::string)> callback) {
   if (!CheckValidEncryptedEntrySerialization(encrypted_data)) {
-    FXL_LOG(WARNING) << "Received invalid data. Cannot decrypt the entry payload.";
+    LEDGER_LOG(WARNING) << "Received invalid data. Cannot decrypt the entry payload.";
     callback(Status::INVALID_ARGUMENT, "");
     return;
   }
@@ -285,7 +286,7 @@ bool EncryptionServiceImpl::IsSameVersion(convert::ExtendedStringView remote_com
                                  remote_commit_id.size());
 
   if (!VerifyRemoteCommitIdBuffer(verifier)) {
-    FXL_LOG(WARNING) << "Received invalid data. Cannot check the version.";
+    LEDGER_LOG(WARNING) << "Received invalid data. Cannot check the version.";
     return false;
   }
 

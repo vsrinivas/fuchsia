@@ -7,6 +7,7 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/storage/impl/btree/internal_helper.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -48,7 +49,7 @@ void ForEachEntryInternal(coroutine::CoroutineService* coroutine_service, PageSt
                           fit::function<bool(Entry)> on_next_entry,
                           fit::function<bool(ObjectIdentifier)> on_next_node,
                           fit::function<void(Status)> on_done) {
-  FXL_DCHECK(root_identifier.identifier.object_digest().IsValid());
+  LEDGER_DCHECK(root_identifier.identifier.object_digest().IsValid());
   coroutine_service->StartCoroutine(
       [page_storage, root_identifier = std::move(root_identifier), min_key = std::move(min_key),
        on_next_entry = std::move(on_next_entry), on_next_node = std::move(on_next_node),
@@ -120,7 +121,7 @@ bool BTreeIterator::IsNewNode() const {
 bool BTreeIterator::Finished() const { return stack_.empty(); }
 
 const Entry& BTreeIterator::CurrentEntry() const {
-  FXL_DCHECK(HasValue());
+  LEDGER_DCHECK(HasValue());
   return CurrentNode().entries()[CurrentIndex()];
 }
 
@@ -173,7 +174,7 @@ size_t BTreeIterator::CurrentIndex() const { return stack_.back().second; }
 const TreeNode& BTreeIterator::CurrentNode() const { return *stack_.back().first; }
 
 Status BTreeIterator::Descend(const ObjectIdentifier& node_identifier) {
-  FXL_DCHECK(descending_);
+  LEDGER_DCHECK(descending_);
   std::unique_ptr<const TreeNode> node;
   RETURN_ON_ERROR(storage_->TreeNodeFromIdentifier({node_identifier, location_}, &node));
   stack_.emplace_back(std::move(node), 0);
@@ -183,7 +184,7 @@ Status BTreeIterator::Descend(const ObjectIdentifier& node_identifier) {
 void GetObjectIdentifiers(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
                           LocatedObjectIdentifier root_identifier,
                           fit::function<void(Status, std::set<ObjectIdentifier>)> callback) {
-  FXL_DCHECK(root_identifier.identifier.object_digest().IsValid());
+  LEDGER_DCHECK(root_identifier.identifier.object_digest().IsValid());
   auto object_digests = std::make_unique<std::set<ObjectIdentifier>>();
   object_digests->insert(root_identifier.identifier);
 

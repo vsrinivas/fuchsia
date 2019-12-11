@@ -14,6 +14,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -51,7 +52,7 @@ bool IsTreeNodeEntryValid(const EntryStorage* entry) {
 }
 
 Entry ToEntry(const EntryStorage* entry_storage, ObjectIdentifierFactory* factory) {
-  FXL_DCHECK(IsTreeNodeEntryValid(entry_storage));
+  LEDGER_DCHECK(IsTreeNodeEntryValid(entry_storage));
   EntryId entry_id = entry_storage->entry_id() ? convert::ToString(entry_storage->entry_id()) : "";
   Entry entry{convert::ToString(entry_storage->key()),
               ToObjectIdentifier(entry_storage->object_id(), factory),
@@ -121,7 +122,7 @@ bool CheckValidTreeNodeSerialization(absl::string_view data) {
   // order.
   auto it = std::adjacent_find(tree_node->entries()->begin(), tree_node->entries()->end(),
                                [](const auto* e1, const auto* e2) {
-                                 FXL_DCHECK(IsTreeNodeEntryValid(e1));
+                                 LEDGER_DCHECK(IsTreeNodeEntryValid(e1));
                                  if (!IsTreeNodeEntryValid(e2)) {
                                    return true;
                                  }
@@ -139,7 +140,7 @@ std::string EncodeNode(uint8_t level, const std::vector<Entry>& entries,
       entries.size(), static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>(
                           [&builder, &entries](size_t i) {
                             const auto& entry = entries[i];
-                            FXL_DCHECK(!entry.entry_id.empty());
+                            LEDGER_DCHECK(!entry.entry_id.empty());
                             return CreateEntryStorage(
                                 builder, convert::ToFlatBufferVector(&builder, entry.key),
                                 ToObjectIdentifierStorage(&builder, entry.object_identifier),

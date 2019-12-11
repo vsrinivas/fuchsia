@@ -6,6 +6,7 @@
 
 #include <cctype>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -13,7 +14,7 @@
 namespace encryption {
 
 std::string FromHex(absl::string_view data) {
-  FXL_DCHECK(
+  LEDGER_DCHECK(
       std::all_of(data.begin(), data.end(), [](unsigned char c) { return std::isxdigit(c); }));
   return absl::HexStringToBytes(data);
 }

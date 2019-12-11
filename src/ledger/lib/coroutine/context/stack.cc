@@ -7,6 +7,7 @@
 #include <lib/zx/vmar.h>
 #include <stdlib.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace context {
@@ -22,7 +23,7 @@ static_assert(!__has_feature(safe_stack), "Add support for safe stack under ASAN
 
 void AllocateASAN(size_t stack_size, uintptr_t* stack) {
   *stack = reinterpret_cast<uintptr_t>(malloc(stack_size));
-  FXL_DCHECK(*stack);
+  LEDGER_DCHECK(*stack);
 }
 
 void ReleaseASAN(uintptr_t stack) { free(reinterpret_cast<void*>(stack)); }
@@ -47,11 +48,11 @@ void AllocateStack(const zx::vmo& vmo, size_t vmo_offset, size_t stack_size, zx:
   zx_status_t status = zx::vmar::root_self()->allocate(
       0, stack_size + 2 * kStackGuardSize,
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, vmar, &allocate_address);
-  FXL_DCHECK(status == ZX_OK);
+  LEDGER_DCHECK(status == ZX_OK);
 
   status = vmar->map(kStackGuardSize, vmo, vmo_offset, stack_size,
                      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC, addr);
-  FXL_DCHECK(status == ZX_OK);
+  LEDGER_DCHECK(status == ZX_OK);
 }
 
 #endif  // __has_feature(address_sanitizer)
@@ -60,7 +61,7 @@ void AllocateStack(const zx::vmo& vmo, size_t vmo_offset, size_t stack_size, zx:
 #if __has_feature(address_sanitizer)
 
 Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
-  FXL_DCHECK(stack_size_);
+  LEDGER_DCHECK(stack_size_);
 
   AllocateASAN(stack_size_, &safe_stack_);
 
@@ -90,22 +91,22 @@ void Stack::Release() {
 #else  // __has_feature(address_sanitizer)
 
 Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
-  FXL_DCHECK(stack_size_);
+  LEDGER_DCHECK(stack_size_);
   zx_status_t status = zx::vmo::create(VmoSize(stack_size_), 0, &vmo_);
-  FXL_DCHECK(status == ZX_OK);
+  LEDGER_DCHECK(status == ZX_OK);
 
   AllocateStack(vmo_, 0, stack_size_, &safe_stack_mapping_, &safe_stack_);
-  FXL_DCHECK(safe_stack_);
+  LEDGER_DCHECK(safe_stack_);
 
 #if __has_feature(safe_stack)
   AllocateStack(vmo_, stack_size_, stack_size_, &unsafe_stack_mapping_, &unsafe_stack_);
-  FXL_DCHECK(unsafe_stack_);
+  LEDGER_DCHECK(unsafe_stack_);
 #endif
 
 #if __has_feature(shadow_call_stack)
   AllocateStack(vmo_, stack_size_ * kVmoSizeMultiplier, kShadowCallStackSize,
                 &shadow_call_stack_mapping_, &shadow_call_stack_);
-  FXL_DCHECK(shadow_call_stack_);
+  LEDGER_DCHECK(shadow_call_stack_);
 #endif
 }
 
@@ -121,7 +122,7 @@ Stack::~Stack() {
 
 void Stack::Release() {
   zx_status_t status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, 0, VmoSize(stack_size_), nullptr, 0);
-  FXL_DCHECK(status == ZX_OK);
+  LEDGER_DCHECK(status == ZX_OK);
 }
 
 #endif  // __has_feature(address_sanitizer)

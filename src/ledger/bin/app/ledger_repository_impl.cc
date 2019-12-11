@@ -22,6 +22,7 @@
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
@@ -121,7 +122,7 @@ void LedgerRepositoryImpl::PageIsClosedAndSynced(
     return;
   }
 
-  FXL_DCHECK(ledger_manager);
+  LEDGER_DCHECK(ledger_manager);
   // |ledger_manager| can be destructed if empty, or if the
   // |LedgerRepositoryImpl| is destructed. In the second case, the callback
   // should not be called. The first case will not happen before the callback
@@ -138,7 +139,7 @@ void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
     callback(status, PagePredicateResult::PAGE_OPENED);
     return;
   }
-  FXL_DCHECK(ledger_manager);
+  LEDGER_DCHECK(ledger_manager);
   // |ledger_manager| can be destructed if empty, or if the
   // |LedgerRepositoryImpl| is destructed. In the second case, the callback
   // should not be called. The first case will not happen before the callback
@@ -164,7 +165,7 @@ void LedgerRepositoryImpl::DeletePageStorage(absl::string_view ledger_name,
         if (status != Status::OK) {
           return status;
         }
-        FXL_DCHECK(ledger_manager);
+        LEDGER_DCHECK(ledger_manager);
 
         if (coroutine::SyncCall(
                 handler,
@@ -185,7 +186,7 @@ void LedgerRepositoryImpl::TrySyncClosedPage(absl::string_view ledger_name,
   if (status != Status::OK) {
     return;
   }
-  FXL_DCHECK(ledger_manager);
+  LEDGER_DCHECK(ledger_manager);
   return ledger_manager->TrySyncClosedPage(page_id);
 }
 
@@ -196,7 +197,7 @@ void LedgerRepositoryImpl::GetNames(fit::function<void(std::set<std::string>)> c
   std::set<std::string> child_names;
   std::vector<std::string> contents;
   if (!environment_->file_system()->GetDirectoryContents(content_path_, &contents)) {
-    FXL_LOG(ERROR) << "Failed to get directory entries at " << content_path_.path();
+    LEDGER_LOG(ERROR) << "Failed to get directory entries at " << content_path_.path();
     callback({});
     return;
   }
@@ -210,7 +211,7 @@ void LedgerRepositoryImpl::GetNames(fit::function<void(std::set<std::string>)> c
       // means to indicate errors; our response to an error here is to
       // simply log and refrain from telling Inspect that the problematic
       // child exists.
-      FXL_LOG(ERROR) << "Failed to decode encoded ledger name \"" << content << "\"!";
+      LEDGER_LOG(ERROR) << "Failed to decode encoded ledger name \"" << content << "\"!";
       break;
     }
   };
@@ -234,7 +235,7 @@ void LedgerRepositoryImpl::Attach(std::string ledger_name,
 
 Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger_name,
                                               LedgerManager** ledger_manager) {
-  FXL_DCHECK(!ledger_name.empty());
+  LEDGER_DCHECK(!ledger_name.empty());
 
   // If the Ledger instance is already open return it directly.
   auto it = ledger_managers_.find(ledger_name);
@@ -262,7 +263,7 @@ Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger
       name_as_string, environment_, name_as_string,
       ledgers_inspect_node_.CreateChild(name_as_string), std::move(encryption_service),
       std::move(ledger_storage), std::move(ledger_sync), page_usage_listeners_);
-  FXL_DCHECK(result.second);
+  LEDGER_DCHECK(result.second);
   *ledger_manager = &(result.first->second);
   return Status::OK;
 }
@@ -290,7 +291,7 @@ void LedgerRepositoryImpl::GetLedger(std::vector<uint8_t> ledger_name,
     callback(status);
     return;
   }
-  FXL_DCHECK(ledger_manager);
+  LEDGER_DCHECK(ledger_manager);
   ledger_manager->BindLedger(std::move(ledger_request));
   callback(Status::OK);
 }
@@ -353,7 +354,7 @@ void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
     return;
   }
   disk_cleanup_manager_->TryCleanUp([this](Status status) {
-    FXL_DCHECK(!cleanup_callbacks_.empty());
+    LEDGER_DCHECK(!cleanup_callbacks_.empty());
 
     auto callbacks = std::move(cleanup_callbacks_);
     cleanup_callbacks_.clear();
@@ -364,7 +365,7 @@ void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
 }
 
 DetachedPath LedgerRepositoryImpl::GetPathFor(absl::string_view ledger_name) {
-  FXL_DCHECK(!ledger_name.empty());
+  LEDGER_DCHECK(!ledger_name.empty());
   return content_path_.SubPath(GetDirectoryName(ledger_name));
 }
 

@@ -10,6 +10,7 @@
 #include "src/ledger/bin/platform/fuchsia_scoped_tmp_dir.h"
 #include "src/ledger/bin/platform/fuchsia_scoped_tmp_location.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -61,7 +62,7 @@ std::unique_ptr<leveldb::Env> FuchsiaFileSystem::MakeLevelDbEnvironment(
     // Open a FileDescriptor at the db path.
     unique_fd = OpenFD(db_path, updated_db_path);
     if (!unique_fd->IsValid()) {
-      FXL_LOG(ERROR) << "Unable to open directory at " << db_path.path() << ". errno: " << errno;
+      LEDGER_LOG(ERROR) << "Unable to open directory at " << db_path.path() << ". errno: " << errno;
       return nullptr;
     }
   }
@@ -99,7 +100,7 @@ bool FuchsiaFileSystem::GetDirectoryContents(DetachedPath path,
   }
   // Remove the current directory string from the result.
   auto it = std::find(dir_contents->begin(), dir_contents->end(), convert::ToString(kCurrentPath));
-  FXL_DCHECK(it != dir_contents->end());
+  LEDGER_DCHECK(it != dir_contents->end());
   dir_contents->erase(it);
   return true;
 }

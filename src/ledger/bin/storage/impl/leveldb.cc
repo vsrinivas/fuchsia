@@ -15,6 +15,7 @@
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -50,7 +51,7 @@ Status ConvertStatus(leveldb::Status s) {
     return Status::INTERNAL_NOT_FOUND;
   }
   if (!s.ok()) {
-    FXL_LOG(ERROR) << "LevelDB error: " << s.ToString();
+    LEDGER_LOG(ERROR) << "LevelDB error: " << s.ToString();
     return Status::INTERNAL_ERROR;
   }
   return Status::OK;
@@ -69,13 +70,13 @@ class BatchImpl : public Db::Batch {
   ~BatchImpl() override {
     if (batch_) {
       Status status = callback_(nullptr);
-      FXL_DCHECK(status == Status::OK);
+      LEDGER_DCHECK(status == Status::OK);
     }
   }
 
   Status Put(CoroutineHandler* handler, convert::ExtendedStringView key,
              absl::string_view value) override {
-    FXL_DCHECK(batch_);
+    LEDGER_DCHECK(batch_);
     if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
@@ -84,7 +85,7 @@ class BatchImpl : public Db::Batch {
   }
 
   Status Delete(CoroutineHandler* handler, convert::ExtendedStringView key) override {
-    FXL_DCHECK(batch_);
+    LEDGER_DCHECK(batch_);
     if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
@@ -93,7 +94,7 @@ class BatchImpl : public Db::Batch {
   }
 
   Status Execute(CoroutineHandler* handler) override {
-    FXL_DCHECK(batch_);
+    LEDGER_DCHECK(batch_);
     if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
@@ -163,14 +164,14 @@ LevelDb::LevelDb(ledger::FileSystem* file_system, async_dispatcher_t* dispatcher
     : file_system_(file_system), dispatcher_(dispatcher), db_path_(std::move(db_path)) {}
 
 LevelDb::~LevelDb() {
-  FXL_DCHECK(!active_batches_count_)
+  LEDGER_DCHECK(!active_batches_count_)
       << "Not all LevelDb batches have been executed or rolled back.";
 }
 
 Status LevelDb::Init() {
   TRACE_DURATION("ledger", "leveldb_init");
   if (!file_system_->CreateDirectory(db_path_)) {
-    FXL_LOG(ERROR) << "Failed to create directory under " << db_path_.path();
+    LEDGER_LOG(ERROR) << "Failed to create directory under " << db_path_.path();
     return Status::INTERNAL_ERROR;
   }
   ledger::DetachedPath updated_db_path;
@@ -184,25 +185,25 @@ Status LevelDb::Init() {
   leveldb::DB* db = nullptr;
   leveldb::Status status = leveldb::DB::Open(options, updated_db_path.path(), &db);
   if (status.IsCorruption()) {
-    FXL_LOG(ERROR) << "Ledger state corrupted at " << db_path_.path()
-                   << " with leveldb status: " << status.ToString();
-    FXL_LOG(WARNING) << "Trying to recover by erasing the local state.";
-    FXL_LOG(WARNING) << "***** ALL LOCAL CHANGES IN THIS PAGE WILL BE LOST *****";
+    LEDGER_LOG(ERROR) << "Ledger state corrupted at " << db_path_.path()
+                      << " with leveldb status: " << status.ToString();
+    LEDGER_LOG(WARNING) << "Trying to recover by erasing the local state.";
+    LEDGER_LOG(WARNING) << "***** ALL LOCAL CHANGES IN THIS PAGE WILL BE LOST *****";
     ledger::ReportEvent(ledger::CobaltEvent::LEDGER_LEVELDB_STATE_CORRUPTED);
 
     if (!file_system_->DeletePathRecursively(db_path_)) {
-      FXL_LOG(ERROR) << "Failed to delete corrupted ledger at " << db_path_.path();
+      LEDGER_LOG(ERROR) << "Failed to delete corrupted ledger at " << db_path_.path();
       return Status::INTERNAL_ERROR;
     }
     leveldb::Status status = leveldb::DB::Open(options, updated_db_path.path(), &db);
     if (!status.ok()) {
-      FXL_LOG(ERROR) << "Failed to create a new LevelDB at " << db_path_.path()
-                     << " with leveldb status: " << status.ToString();
+      LEDGER_LOG(ERROR) << "Failed to create a new LevelDB at " << db_path_.path()
+                        << " with leveldb status: " << status.ToString();
       return Status::INTERNAL_ERROR;
     }
   } else if (!status.ok()) {
-    FXL_LOG(ERROR) << "Failed to open ledger at " << db_path_.path()
-                   << " with leveldb status: " << status.ToString();
+    LEDGER_LOG(ERROR) << "Failed to open ledger at " << db_path_.path()
+                      << " with leveldb status: " << status.ToString();
     return Status::INTERNAL_ERROR;
   }
   db_.reset(db);
@@ -221,7 +222,7 @@ Status LevelDb::StartBatch(CoroutineHandler* handler, std::unique_ptr<Db::Batch>
         if (db_batch) {
           leveldb::Status status = db_->Write(write_options_, db_batch.get());
           if (!status.ok()) {
-            FXL_LOG(ERROR) << "Failed to execute batch with status: " << status.ToString();
+            LEDGER_LOG(ERROR) << "Failed to execute batch with status: " << status.ToString();
             return Status::INTERNAL_ERROR;
           }
         }
@@ -264,7 +265,7 @@ Status LevelDb::HasPrefix(CoroutineHandler* handler, convert::ExtendedStringView
 
 Status LevelDb::GetObject(CoroutineHandler* handler, convert::ExtendedStringView key,
                           ObjectIdentifier object_identifier, std::unique_ptr<const Piece>* piece) {
-  FXL_DCHECK(piece);
+  LEDGER_DCHECK(piece);
   if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
     return Status::INTERRUPTED;
   }

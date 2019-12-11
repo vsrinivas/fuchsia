@@ -10,6 +10,7 @@
 
 #include <sstream>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -68,7 +69,7 @@ bool QuitOnError(fit::closure quit_callback, internal::StatusTranslater status,
   if (status.ok()) {
     return false;
   }
-  FXL_LOG(ERROR) << description << " failed with status " << status.description() << ".";
+  LEDGER_LOG(ERROR) << description << " failed with status " << status.description() << ".";
   quit_callback();
   return true;
 }

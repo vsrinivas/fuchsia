@@ -21,6 +21,7 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/waiter.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -34,9 +35,10 @@ void LogOnPageUpdateError(absl::string_view operation_description, Status status
   // interrupted, because PageEvictionManagerImpl was destroyed before being
   // empty.
   if (status != Status::OK && status != Status::INTERRUPTED) {
-    FXL_LOG(ERROR) << "Failed to " << operation_description
-                   << " in PageUsage DB. Status: " << fidl::ToUnderlying(status)
-                   << ". Ledger name: " << ledger_name << ". Page ID: " << convert::ToHex(page_id);
+    LEDGER_LOG(ERROR) << "Failed to " << operation_description
+                      << " in PageUsage DB. Status: " << fidl::ToUnderlying(status)
+                      << ". Ledger name: " << ledger_name
+                      << ". Page ID: " << convert::ToHex(page_id);
   }
 }
 }  // namespace
@@ -47,8 +49,8 @@ PageEvictionManagerImpl::PageEvictionManagerImpl(Environment* environment, PageU
 PageEvictionManagerImpl::~PageEvictionManagerImpl() = default;
 
 void PageEvictionManagerImpl::SetDelegate(PageEvictionManager::Delegate* delegate) {
-  FXL_DCHECK(delegate);
-  FXL_DCHECK(!delegate_);
+  LEDGER_DCHECK(delegate);
+  LEDGER_DCHECK(!delegate_);
   delegate_ = delegate;
 }
 
@@ -120,7 +122,7 @@ void PageEvictionManagerImpl::TryEvictPage(absl::string_view ledger_name,
 
 void PageEvictionManagerImpl::EvictPage(absl::string_view ledger_name, storage::PageIdView page_id,
                                         fit::function<void(Status)> callback) {
-  FXL_DCHECK(delegate_);
+  LEDGER_DCHECK(delegate_);
   // We cannot delete the page storage and mark the deletion atomically. We thus
   // delete the page first, and then mark it as evicted in Page Usage DB.
   delegate_->DeletePageStorage(
@@ -129,7 +131,7 @@ void PageEvictionManagerImpl::EvictPage(absl::string_view ledger_name, storage::
        callback = std::move(callback)](Status status) mutable {
         // |PAGE_NOT_FOUND| is not an error, but it must have been handled
         // before we try to evict the page.
-        FXL_DCHECK(status != Status::PAGE_NOT_FOUND);
+        LEDGER_DCHECK(status != Status::PAGE_NOT_FOUND);
         if (status == Status::OK) {
           MarkPageEvicted(std::move(ledger_name), std::move(page_id));
         }
@@ -140,7 +142,7 @@ void PageEvictionManagerImpl::EvictPage(absl::string_view ledger_name, storage::
 Status PageEvictionManagerImpl::CanEvictPage(coroutine::CoroutineHandler* handler,
                                              absl::string_view ledger_name,
                                              storage::PageIdView page_id, bool* can_evict) {
-  FXL_DCHECK(delegate_);
+  LEDGER_DCHECK(delegate_);
 
   auto waiter = fxl::MakeRefCounted<callback::Waiter<Status, PagePredicateResult>>(Status::OK);
 
@@ -154,7 +156,7 @@ Status PageEvictionManagerImpl::CanEvictPage(coroutine::CoroutineHandler* handle
     return Status::INTERRUPTED;
   }
   RETURN_ON_ERROR(status);
-  FXL_DCHECK(can_evict_states.size() == 2);
+  LEDGER_DCHECK(can_evict_states.size() == 2);
   // Receiving status |PAGE_OPENED| means that the page was opened during the
   // query. If either result is |PAGE_OPENED| the page cannot be evicted, as the
   // result of the other might be invalid at this point.
@@ -171,7 +173,7 @@ Status PageEvictionManagerImpl::CanEvictPage(coroutine::CoroutineHandler* handle
 Status PageEvictionManagerImpl::CanEvictEmptyPage(coroutine::CoroutineHandler* handler,
                                                   absl::string_view ledger_name,
                                                   storage::PageIdView page_id, bool* can_evict) {
-  FXL_DCHECK(delegate_);
+  LEDGER_DCHECK(delegate_);
 
   Status status;
   PagePredicateResult empty_state;

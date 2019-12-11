@@ -21,6 +21,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_generated.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -127,10 +128,10 @@ CommitFactory::CommitImpl::CommitImpl(CommitId id, zx::time_utc timestamp, uint6
       salt_(std::move(salt)),
       storage_bytes_(std::move(storage_bytes)),
       factory_(std::move(factory)) {
-  FXL_DCHECK(id_ == kFirstPageCommitId || (!parent_ids_.empty() && parent_ids_.size() <= 2));
-  FXL_DCHECK((parent_ids_.size() == 1 && !salt_.empty()) ||
-             (parent_ids_.size() != 1 && salt_.empty()));
-  FXL_DCHECK(factory_);
+  LEDGER_DCHECK(id_ == kFirstPageCommitId || (!parent_ids_.empty() && parent_ids_.size() <= 2));
+  LEDGER_DCHECK((parent_ids_.size() == 1 && !salt_.empty()) ||
+                (parent_ids_.size() != 1 && salt_.empty()));
+  LEDGER_DCHECK(factory_);
   factory_->RegisterCommit(this);
 }
 
@@ -180,7 +181,7 @@ CommitFactory::~CommitFactory() = default;
 
 Status CommitFactory::FromStorageBytes(CommitId id, std::string storage_bytes,
                                        std::unique_ptr<const Commit>* commit) {
-  FXL_DCHECK(id != kFirstPageCommitId);
+  LEDGER_DCHECK(id != kFirstPageCommitId);
 
   if (!CheckValidSerialization(storage_bytes)) {
     return Status::DATA_INTEGRITY_ERROR;
@@ -210,11 +211,11 @@ Status CommitFactory::FromStorageBytes(CommitId id, std::string storage_bytes,
 std::unique_ptr<const Commit> CommitFactory::FromContentAndParents(
     timekeeper::Clock* clock, rng::Random* random, ObjectIdentifier root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
-  FXL_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
+  LEDGER_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
 
   uint64_t parent_generation = 0;
   for (const auto& commit : parent_commits) {
-    FXL_DCHECK(commit->IsAlive());
+    LEDGER_DCHECK(commit->IsAlive());
     parent_generation = std::max(parent_generation, commit->GetGeneration());
   }
   uint64_t generation = parent_generation + 1;
@@ -230,7 +231,7 @@ std::unique_ptr<const Commit> CommitFactory::FromContentAndParents(
     timestamp = std::max(parent_commits[0]->GetTimestamp(), parent_commits[1]->GetTimestamp());
   } else {
     zx_status_t status = clock->Now(&timestamp);
-    FXL_CHECK(status == ZX_OK);
+    LEDGER_CHECK(status == ZX_OK);
   }
   // Compute salt.
   std::string salt;
@@ -246,7 +247,7 @@ std::unique_ptr<const Commit> CommitFactory::FromContentAndParents(
 
   std::unique_ptr<const Commit> commit;
   Status status = FromStorageBytes(std::move(id), std::move(storage_bytes), &commit);
-  FXL_DCHECK(status == Status::OK);
+  LEDGER_DCHECK(status == Status::OK);
   return commit;
 }
 
@@ -260,7 +261,7 @@ void CommitFactory::Empty(PageStorage* page_storage,
           return;
         }
 
-        FXL_DCHECK(IsDigestValid(root_identifier.object_digest()));
+        LEDGER_DCHECK(IsDigestValid(root_identifier.object_digest()));
 
         auto storage_ptr = fxl::MakeRefCounted<SharedStorageBytes>("");
 
@@ -301,8 +302,8 @@ void CommitFactory::AddCommitDependencies(CommitIdView commit_id,
   // TODO(https://bugs.llvm.org/show_bug.cgi?id=43440): Remove lint suppression after clang-tidy
   // understands that post-|try_emplace| use of |root_identifiers| is legitimate if no emplacement
   // occurred.
-  FXL_DCHECK(created ||
-             root_identifiers == live_root_identifiers_[convert::ToString(commit_id)]);  // NOLINT
+  LEDGER_DCHECK(created || root_identifiers ==
+                               live_root_identifiers_[convert::ToString(commit_id)]);  // NOLINT
 }
 
 void CommitFactory::RemoveCommitDependencies(CommitIdView commit_id) {
@@ -329,13 +330,13 @@ std::set<ObjectIdentifier> CommitFactory::GetLiveRootIdentifiers() const {
 void CommitFactory::RegisterCommit(Commit* commit) {
   auto result = live_commits_.insert(commit);
   // Verifies that this is indeed a new commit, and not an already known commit.
-  FXL_DCHECK(result.second);
+  LEDGER_DCHECK(result.second);
 }
 
 void CommitFactory::UnregisterCommit(Commit* commit) {
   auto erased = live_commits_.erase(commit);
   // Verifies that the commit was registered previously.
-  FXL_DCHECK(erased != 0);
+  LEDGER_DCHECK(erased != 0);
 }
 
 std::vector<std::unique_ptr<const Commit>> CommitFactory::GetLiveCommits() const {

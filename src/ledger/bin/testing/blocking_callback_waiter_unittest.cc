@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "gtest/gtest.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace ledger {
 namespace {
@@ -25,7 +26,7 @@ class FakeLoopController : public LoopController {
   void StopLoop() override { on_stop_(); };
 
   std::unique_ptr<SubLoop> StartNewLoop() override {
-    FXL_NOTREACHED();
+    LEDGER_NOTREACHED();
     return nullptr;
   }
 
@@ -34,16 +35,16 @@ class FakeLoopController : public LoopController {
   }
 
   async_dispatcher_t* dispatcher() override {
-    FXL_NOTREACHED();
+    LEDGER_NOTREACHED();
     return nullptr;
   }
 
   bool RunLoopUntil(fit::function<bool()> /* condition */) override {
-    FXL_NOTREACHED();
+    LEDGER_NOTREACHED();
     return false;
   }
 
-  void RunLoopFor(zx::duration /* duration */) override { FXL_NOTREACHED(); }
+  void RunLoopFor(zx::duration /* duration */) override { LEDGER_NOTREACHED(); }
 
  private:
   fit::function<void()> on_run_;

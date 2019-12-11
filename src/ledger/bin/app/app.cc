@@ -28,6 +28,7 @@
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_factory_impl.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
@@ -83,7 +84,7 @@ class App : public ledger_internal::LedgerController {
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics, loop_.dispatcher(),
                                     component_context_.get())),
         factory_bindings_(loop_.dispatcher()) {
-    FXL_DCHECK(component_context_);
+    LEDGER_DCHECK(component_context_);
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);
   }

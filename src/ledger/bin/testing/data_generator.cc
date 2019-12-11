@@ -11,6 +11,7 @@
 #include <string>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -29,7 +30,7 @@ DataGenerator::~DataGenerator() = default;
 
 std::vector<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
   std::string i_str = std::to_string(i);
-  FXL_DCHECK(i_str.size() + kKeyIdSeparator.size() <= size);
+  LEDGER_DCHECK(i_str.size() + kKeyIdSeparator.size() <= size);
   auto rand_bytes = MakeValue(size - i_str.size() - kKeyIdSeparator.size());
 
   return convert::ToArray(
@@ -50,7 +51,7 @@ std::vector<uint8_t> DataGenerator::MakeValue(size_t size) {
 
 std::vector<std::vector<uint8_t>> DataGenerator::MakeKeys(size_t key_count, size_t key_size,
                                                           size_t unique_key_count) {
-  FXL_DCHECK(unique_key_count <= key_count);
+  LEDGER_DCHECK(unique_key_count <= key_count);
   std::vector<std::vector<uint8_t>> keys(key_count);
   for (size_t i = 0; i < unique_key_count; i++) {
     keys[i] = MakeKey(i, key_size);
@@ -64,8 +65,8 @@ std::vector<std::vector<uint8_t>> DataGenerator::MakeKeys(size_t key_count, size
 size_t DataGenerator::GetKeyId(const std::vector<uint8_t>& key) {
   std::string key_str = convert::ToString(key);
   size_t split_index = key_str.find_last_of(convert::ToString(kKeyIdSeparator));
-  FXL_CHECK(split_index != std::string::npos &&
-            split_index + kKeyIdSeparator.size() < key_str.size());
+  LEDGER_CHECK(split_index != std::string::npos &&
+               split_index + kKeyIdSeparator.size() < key_str.size());
   return std::stoul(key_str.substr(split_index + kKeyIdSeparator.size()));
 }
 

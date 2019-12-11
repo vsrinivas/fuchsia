@@ -30,6 +30,7 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
@@ -91,7 +92,7 @@ class FakePageSyncDelegate : public storage::PageSyncDelegate {
 
   void UpdateClock(storage::Clock /*clock*/,
                    fit::function<void(ledger::Status)> /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
+    LEDGER_NOTIMPLEMENTED();
   }
 
  private:
@@ -533,7 +534,7 @@ class BasePageDownloadDiffTest
   void SetUp() override {
     this->page_download_->StartDownload();
     this->RunLoopUntilIdle();
-    FXL_DCHECK(this->states_.back() == DOWNLOAD_IDLE);
+    LEDGER_DCHECK(this->states_.back() == DOWNLOAD_IDLE);
     this->states_.clear();
   }
 

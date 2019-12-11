@@ -22,6 +22,7 @@
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/destruction_sentinel.h"
 #include "src/lib/callback/scoped_task_runner.h"
@@ -70,7 +71,7 @@ class PageSyncImpl : public PageSync,
 
   // |on_delete| will be called when this class is deleted.
   void set_on_delete(fit::function<void()> on_delete) {
-    FXL_DCHECK(!on_delete_);
+    LEDGER_DCHECK(!on_delete_);
     on_delete_ = std::move(on_delete);
   }
 

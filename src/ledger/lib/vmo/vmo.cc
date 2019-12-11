@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
@@ -18,20 +19,20 @@ namespace {
 
 template <typename Container>
 bool VmoFromContainer(const Container& container, SizedVmo* sized_vmo_ptr) {
-  FXL_CHECK(sized_vmo_ptr);
+  LEDGER_CHECK(sized_vmo_ptr);
 
   uint64_t num_bytes = container.size();
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(num_bytes, 0u, &vmo);
   if (status < 0) {
-    FXL_LOG(WARNING) << "zx::vmo::create failed: " << zx_status_get_string(status);
+    LEDGER_LOG(WARNING) << "zx::vmo::create failed: " << zx_status_get_string(status);
     return false;
   }
 
   if (num_bytes > 0) {
     status = vmo.write(container.data(), 0, num_bytes);
     if (status < 0) {
-      FXL_LOG(WARNING) << "zx::vmo::write failed: " << zx_status_get_string(status);
+      LEDGER_LOG(WARNING) << "zx::vmo::write failed: " << zx_status_get_string(status);
       return false;
     }
   }
@@ -43,7 +44,7 @@ bool VmoFromContainer(const Container& container, SizedVmo* sized_vmo_ptr) {
 
 template <typename Container>
 bool ContainerFromVmo(const zx::vmo& buffer, uint64_t num_bytes, Container* container_ptr) {
-  FXL_CHECK(container_ptr);
+  LEDGER_CHECK(container_ptr);
 
   container_ptr->resize(num_bytes);
 
@@ -53,7 +54,7 @@ bool ContainerFromVmo(const zx::vmo& buffer, uint64_t num_bytes, Container* cont
 
   zx_status_t status = buffer.read(&(*container_ptr)[0], 0, num_bytes);
   if (status < 0) {
-    FXL_LOG(WARNING) << "zx::vmo::read failed: " << zx_status_get_string(status);
+    LEDGER_LOG(WARNING) << "zx::vmo::read failed: " << zx_status_get_string(status);
     return false;
   }
 

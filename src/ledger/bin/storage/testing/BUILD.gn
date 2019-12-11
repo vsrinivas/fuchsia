@@ -28,6 +28,7 @@ source_set("testing") {
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/logging",
     "//src/ledger/lib/socket",
     "//src/lib/callback",
     "//src/lib/fxl",

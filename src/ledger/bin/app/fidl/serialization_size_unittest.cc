@@ -15,6 +15,7 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
@@ -64,7 +65,7 @@ class FakeSnapshotImpl : public PageSnapshot {
   GetInlineCallback get_inline_callback;
 
   // PageSnapshot:
-  void Sync(SyncCallback /*callback*/) override { FXL_NOTIMPLEMENTED(); }
+  void Sync(SyncCallback /*callback*/) override { LEDGER_NOTIMPLEMENTED(); }
 
   void GetEntriesInline(std::vector<uint8_t> /*key_start*/, std::unique_ptr<Token> /*token*/,
                         GetEntriesInlineCallback callback) override {
@@ -78,7 +79,7 @@ class FakeSnapshotImpl : public PageSnapshot {
 
   void GetKeys(std::vector<uint8_t> /*key_start*/, std::unique_ptr<Token> /*token*/,
                GetKeysCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
+    LEDGER_NOTIMPLEMENTED();
   }
 
   void Get(std::vector<uint8_t> /*key*/, GetCallback callback) override {
@@ -90,12 +91,12 @@ class FakeSnapshotImpl : public PageSnapshot {
   }
 
   void Fetch(std::vector<uint8_t> /*key*/, FetchCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
+    LEDGER_NOTIMPLEMENTED();
   }
 
   void FetchPartial(std::vector<uint8_t> /*key*/, int64_t /*offset*/, int64_t /*max_size*/,
                     FetchPartialCallback /*callback*/) override {
-    FXL_NOTIMPLEMENTED();
+    LEDGER_NOTIMPLEMENTED();
   }
 };
 

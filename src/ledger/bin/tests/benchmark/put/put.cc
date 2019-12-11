@@ -27,6 +27,7 @@
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -147,29 +148,29 @@ PutBenchmark::PutBenchmark(async::Loop* loop,
       update_(update),
       page_watcher_binding_(this),
       reference_strategy_(reference_strategy) {
-  FXL_DCHECK(loop_);
-  FXL_DCHECK(entry_count > 0);
-  FXL_DCHECK(transaction_size >= 0);
-  FXL_DCHECK(key_size > 0);
-  FXL_DCHECK(value_size > 0);
+  LEDGER_DCHECK(loop_);
+  LEDGER_DCHECK(entry_count > 0);
+  LEDGER_DCHECK(transaction_size >= 0);
+  LEDGER_DCHECK(key_size > 0);
+  LEDGER_DCHECK(value_size > 0);
 }
 
 void PutBenchmark::Run() {
-  FXL_LOG(INFO) << "--" << FLAGS_entry_count.Name() << "=" << entry_count_             //
-                << " --" << FLAGS_transaction_size.Name() << "=" << transaction_size_  //
-                << " --" << FLAGS_key_size.Name() << "=" << key_size_                  //
-                << " --" << FLAGS_value_size.Name() << "=" << value_size_              //
-                << " --" << FLAGS_refs.Name() << "="
-                << (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE ? "false"
-                                                                                        : "true")
-                << (update_ ? absl::StrCat(" --", FLAGS_update.Name()) : "");
+  LEDGER_LOG(INFO) << "--" << FLAGS_entry_count.Name() << "=" << entry_count_             //
+                   << " --" << FLAGS_transaction_size.Name() << "=" << transaction_size_  //
+                   << " --" << FLAGS_key_size.Name() << "=" << key_size_                  //
+                   << " --" << FLAGS_value_size.Name() << "=" << value_size_              //
+                   << " --" << FLAGS_refs.Name() << "="
+                   << (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE ? "false"
+                                                                                           : "true")
+                   << (update_ ? absl::StrCat(" --", FLAGS_update.Name()) : "");
   Status status =
       GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr, "", "put",
                 tmp_dir_->path(), QuitLoopClosure(), &ledger_, kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
-  FXL_CHECK(memory_estimator_.Init());
+  LEDGER_CHECK(memory_estimator_.Init());
 
   GetPageEnsureInitialized(
       &ledger_, nullptr, DelayCallback::YES, QuitLoopClosure(),
@@ -261,7 +262,7 @@ void PutBenchmark::RunSingle(int i, std::vector<std::vector<uint8_t>> keys) {
   PutEntry(std::move(keys[i]), std::move(value),
            [this, i, key_number, keys = std::move(keys)]() mutable {
              uint64_t memory;
-             FXL_CHECK(memory_estimator_.GetLedgerMemoryUsage(&memory));
+             LEDGER_CHECK(memory_estimator_.GetLedgerMemoryUsage(&memory));
              TRACE_COUNTER("benchmark", "ledger_memory_put", i, "memory", TA_UINT64(memory));
              if (transaction_size_ > 0 &&
                  (i % transaction_size_ == transaction_size_ - 1 || i + 1 == entry_count_)) {
@@ -285,7 +286,7 @@ void PutBenchmark::PutEntry(std::vector<uint8_t> key, std::vector<uint8_t> value
     return;
   }
   ledger::SizedVmo vmo;
-  FXL_CHECK(ledger::VmoFromString(convert::ToStringView(value), &vmo));
+  LEDGER_CHECK(ledger::VmoFromString(convert::ToStringView(value), &vmo));
   TRACE_ASYNC_BEGIN("benchmark", "create_reference", trace_event_id);
   page_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),

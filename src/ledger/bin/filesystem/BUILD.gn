@@ -16,6 +16,10 @@ source_set("filesystem") {
     "//third_party/abseil-cpp",
     "//zircon/public/lib/fit",
   ]
+
+  deps = [
+    "//src/ledger/lib/logging",
+  ]
 }
 
 source_set("unittests") {

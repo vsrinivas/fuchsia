@@ -7,6 +7,7 @@
 #include <queue>
 #include <string>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -21,7 +22,7 @@ bool GetDirectoryContentSize(FileSystem* file_system, DetachedPath directory, ui
     directories.pop();
     std::vector<std::string> children;
     if (!file_system->GetDirectoryContents(parent, &children)) {
-      FXL_LOG(ERROR) << "Couldn't retrieve contents of " << parent.path();
+      LEDGER_LOG(ERROR) << "Couldn't retrieve contents of " << parent.path();
       return false;
     }
     for (const std::string& child : children) {
@@ -31,7 +32,7 @@ bool GetDirectoryContentSize(FileSystem* file_system, DetachedPath directory, ui
       } else {
         uint64_t file_size = 0;
         if (!file_system->GetFileSize(child_path, &file_size)) {
-          FXL_LOG(ERROR) << "Couldn't get file size of " << child_path.path();
+          LEDGER_LOG(ERROR) << "Couldn't get file size of " << child_path.path();
           return false;
         }
         *size += file_size;

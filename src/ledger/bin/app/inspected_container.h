@@ -10,6 +10,7 @@
 #include <variant>
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -27,7 +28,7 @@ class InspectedContainer {
   ~InspectedContainer() = default;
 
   void SetOnDiscardable(fit::closure on_discardable) {
-    FXL_DCHECK(!std::holds_alternative<Abandoned>(variant_));
+    LEDGER_DCHECK(!std::holds_alternative<Abandoned>(variant_));
     if (std::holds_alternative<CallbackList>(variant_)) {
       on_discardable_ = std::move(on_discardable);
       return;
@@ -55,7 +56,7 @@ class InspectedContainer {
     }
     if (std::holds_alternative<CallbackList>(variant_)) {
       auto& callbacks = std::get<CallbackList>(variant_);
-      FXL_DCHECK(!callbacks.empty());
+      LEDGER_DCHECK(!callbacks.empty());
       callbacks.emplace_back(std::move(callback));
       return;
     }
@@ -67,10 +68,10 @@ class InspectedContainer {
   // during the lifetime of ths object.
   template <typename... Args>
   void Mature(Args&&... args) {
-    FXL_DCHECK(std::holds_alternative<CallbackList>(variant_));
+    LEDGER_DCHECK(std::holds_alternative<CallbackList>(variant_));
     CallbackList callbacks;
     callbacks.swap(std::get<CallbackList>(variant_));
-    FXL_DCHECK(!callbacks.empty());
+    LEDGER_DCHECK(!callbacks.empty());
 
     T& emplaced_inspected = variant_.template emplace<T>(std::forward<Args>(args)...);
     emplaced_inspected.SetOnDiscardable(std::move(on_discardable_));
@@ -88,14 +89,14 @@ class InspectedContainer {
   // Signals to this object that the data for which it is waiting will never arrive, and that this
   // object should call all stored callbacks indicating as much and then signal its emptiness.
   void Abandon() {
-    FXL_DCHECK(std::holds_alternative<CallbackList>(variant_));
+    LEDGER_DCHECK(std::holds_alternative<CallbackList>(variant_));
     CallbackList callbacks;
     callbacks.swap(std::get<CallbackList>(variant_));
     variant_.template emplace<Abandoned>();
     for (auto& callback : callbacks) {
       callback([] {});
     }
-    FXL_DCHECK(IsDiscardable());
+    LEDGER_DCHECK(IsDiscardable());
     if (on_discardable_) {
       on_discardable_();
     }

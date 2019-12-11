@@ -6,6 +6,7 @@
 
 #include <lib/fit/function.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
@@ -25,7 +26,7 @@ bool InspectedHead::IsDiscardable() const { return outstanding_detachers_ == 0; 
 fit::closure InspectedHead::CreateDetacher() {
   outstanding_detachers_++;
   return [this]() {
-    FXL_DCHECK(outstanding_detachers_ > 0);
+    LEDGER_DCHECK(outstanding_detachers_ > 0);
     outstanding_detachers_--;
     if (IsDiscardable() && on_discardable_) {
       on_discardable_();

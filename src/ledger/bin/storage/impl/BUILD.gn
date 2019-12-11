@@ -68,6 +68,7 @@ source_set("object_identifier_lib") {
   deps = [
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/encryption/public",
+    "//src/ledger/lib/logging",
   ]
 
   public_deps = [
@@ -90,6 +91,7 @@ source_set("data_serialization") {
   ]
 
   public_deps = [
+    "//src/ledger/lib/logging",
     "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
@@ -146,6 +148,7 @@ source_set("lib") {
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:lock",
+    "//src/ledger/lib/logging",
     "//src/lib/callback",
     "//src/lib/fxl",
     "//third_party/abseil-cpp",
@@ -238,6 +241,7 @@ source_set("unittests") {
     "//src/ledger/bin/storage/public:parametrized_tests",
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
     "//src/lib/fxl",
     "//third_party/abseil-cpp",
@@ -256,6 +260,7 @@ fuzzer("leveldb_fuzzer") {
     ":lib",
     "//src/ledger/bin/platform:implementation",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/logging",
     "//zircon/public/lib/async-testing",
   ]
 }

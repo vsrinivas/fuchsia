@@ -9,6 +9,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace coroutine {
 namespace {
@@ -290,7 +291,7 @@ TEST(Coroutine, DoubleResume) {
   // This tests the existence of a debug assertion.
   // Skip this test when debug assertions are not enabled.
   bool running_debug = false;
-  FXL_DCHECK(running_debug = true);
+  LEDGER_DCHECK(running_debug = true);
   if (!running_debug) {
     GTEST_SKIP();
   }
@@ -309,7 +310,7 @@ TEST(Coroutine, DoubleYield) {
   // This tests the existence of a debug assertion.
   // Skip this test when debug assertions are not enabled.
   bool running_debug = false;
-  FXL_DCHECK(running_debug = true);
+  LEDGER_DCHECK(running_debug = true);
   if (!running_debug) {
     GTEST_SKIP();
   }

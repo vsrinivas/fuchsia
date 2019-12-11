@@ -12,6 +12,7 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -36,7 +37,7 @@ bool IsHex(absl::string_view input) {
 // Modifies |page_id| to be the hex-decoding of |data|. (Preconditions: |data|
 // must be the hex-encoding of some PageId and |page_id| must be empty.)
 bool FromHex(absl::string_view data, storage::PageId* page_id) {
-  FXL_DCHECK(page_id->empty());
+  LEDGER_DCHECK(page_id->empty());
   if (!IsHex(data)) {
     return false;
   }

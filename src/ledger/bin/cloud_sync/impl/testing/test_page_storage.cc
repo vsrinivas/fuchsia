@@ -16,6 +16,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/lib/callback/capture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -67,7 +68,7 @@ void TestPageStorage::AddCommitsFromSync(std::vector<PageStorage::CommitIdAndByt
                           callback = std::move(callback)]() mutable {
     for (auto& commit : ids_and_bytes) {
       if (commit.id != storage::ComputeCommitId(commit.bytes)) {
-        FXL_LOG(ERROR) << "Commit id doesn't match its content";
+        LEDGER_LOG(ERROR) << "Commit id doesn't match its content";
         async::PostTask(dispatcher_,
                         [callback = std::move(callback)]() { callback(ledger::Status::IO_ERROR); });
         return;
@@ -111,12 +112,12 @@ void TestPageStorage::GetUnsyncedPieces(
 }
 
 void TestPageStorage::AddCommitWatcher(storage::CommitWatcher* watcher) {
-  FXL_DCHECK(watcher_ == nullptr);
+  LEDGER_DCHECK(watcher_ == nullptr);
   watcher_ = watcher;
 }
 
 void TestPageStorage::RemoveCommitWatcher(storage::CommitWatcher* watcher) {
-  FXL_DCHECK(watcher_ == watcher);
+  LEDGER_DCHECK(watcher_ == watcher);
   watcher_ = nullptr;
 }
 

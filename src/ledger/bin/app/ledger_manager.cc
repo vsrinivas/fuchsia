@@ -26,6 +26,7 @@
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/ensure_called.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/logging.h"
@@ -72,7 +73,7 @@ fit::closure LedgerManager::CreateDetacher() {
   outstanding_detachers_++;
   return [this]() {
     outstanding_detachers_--;
-    FXL_DCHECK(outstanding_detachers_ >= 0);
+    LEDGER_DCHECK(outstanding_detachers_ >= 0);
     CheckDiscardable();
   };
 }
@@ -113,7 +114,7 @@ void LedgerManager::GetNames(fit::function<void(std::set<std::string>)> callback
   storage_->ListPages(
       [callback = std::move(callback)](storage::Status status, std::set<storage::PageId> page_ids) {
         if (status != storage::Status::OK) {
-          FXL_LOG(WARNING) << "Status wasn't OK; rather it was " << status << "!";
+          LEDGER_LOG(WARNING) << "Status wasn't OK; rather it was " << status << "!";
         }
         std::set<std::string> display_names;
         for (const auto& page_id : page_ids) {
@@ -126,7 +127,7 @@ void LedgerManager::GetNames(fit::function<void(std::set<std::string>)> callback
 void LedgerManager::Attach(std::string name, fit::function<void(fit::closure)> callback) {
   storage::PageId page_id;
   if (!PageDisplayNameToPageId(name, &page_id)) {
-    FXL_DCHECK(false) << "Page display name \"" << name << "\" not convertable into a PageId!";
+    LEDGER_DCHECK(false) << "Page display name \"" << name << "\" not convertable into a PageId!";
     callback([]() {});
     return;
   }
@@ -143,7 +144,7 @@ PageManager* LedgerManager::GetOrCreatePageManager(convert::ExtendedStringView p
       convert::ToString(page_id), environment_, ledger_name_, convert::ToString(page_id),
       page_usage_listeners_, storage_.get(), ledger_sync_.get(), &merge_manager_,
       pages_node_.CreateChild(PageIdToDisplayName(convert::ToString(page_id))));
-  FXL_DCHECK(ret.second);
+  LEDGER_DCHECK(ret.second);
   return &ret.first->second;
 }
 

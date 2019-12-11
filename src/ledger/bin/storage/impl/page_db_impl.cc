@@ -17,6 +17,7 @@
 #include "src/ledger/bin/storage/impl/page_db_batch_impl.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -49,9 +50,9 @@ PageDbImpl::PageDbImpl(ledger::Environment* environment,
     : environment_(environment),
       object_identifier_factory_(object_identifier_factory),
       db_(std::move(db)) {
-  FXL_DCHECK(environment_);
-  FXL_DCHECK(object_identifier_factory_);
-  FXL_DCHECK(db_);
+  LEDGER_DCHECK(environment_);
+  LEDGER_DCHECK(object_identifier_factory_);
+  LEDGER_DCHECK(db_);
 }
 
 PageDbImpl::~PageDbImpl() = default;
@@ -84,7 +85,7 @@ Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler, CommitIdView
 
 Status PageDbImpl::ReadObject(CoroutineHandler* handler, const ObjectIdentifier& object_identifier,
                               std::unique_ptr<const Piece>* piece) {
-  FXL_DCHECK(piece);
+  LEDGER_DCHECK(piece);
   const Status status = db_->GetObject(
       handler, ObjectRow::GetKeyFor(object_identifier.object_digest()), object_identifier, piece);
   return status;
@@ -144,7 +145,7 @@ Status PageDbImpl::GetObjectStatusKeys(coroutine::CoroutineHandler* handler,
 Status PageDbImpl::GetInboundObjectReferences(coroutine::CoroutineHandler* handler,
                                               const ObjectIdentifier& object_identifier,
                                               ObjectReferencesAndPriority* references) {
-  FXL_DCHECK(references);
+  LEDGER_DCHECK(references);
   references->clear();
   std::vector<std::string> keys;
   RETURN_ON_ERROR(db_->GetByPrefix(
@@ -163,7 +164,7 @@ Status PageDbImpl::GetInboundObjectReferences(coroutine::CoroutineHandler* handl
 Status PageDbImpl::GetInboundCommitReferences(coroutine::CoroutineHandler* handler,
                                               const ObjectIdentifier& object_identifier,
                                               std::vector<CommitId>* references) {
-  FXL_DCHECK(references);
+  LEDGER_DCHECK(references);
   references->clear();
   return db_->GetByPrefix(
       handler, ReferenceRow::GetCommitKeyPrefixFor(object_identifier.object_digest()), references);
@@ -172,7 +173,7 @@ Status PageDbImpl::GetInboundCommitReferences(coroutine::CoroutineHandler* handl
 Status PageDbImpl::EnsureObjectDeletable(coroutine::CoroutineHandler* handler,
                                          const ObjectDigest& object_digest,
                                          std::vector<std::string>* object_status_keys) {
-  FXL_DCHECK(object_status_keys);
+  LEDGER_DCHECK(object_status_keys);
 
   // If there is any object-object reference to the object, it cannot be garbage collected.
   Status status = db_->HasPrefix(handler, ReferenceRow::GetObjectKeyPrefixFor(object_digest));
@@ -192,7 +193,7 @@ Status PageDbImpl::EnsureObjectDeletable(coroutine::CoroutineHandler* handler,
     object_status_keys->push_back(object_status_key);
     switch (object_status) {
       case PageDbObjectStatus::UNKNOWN:
-        FXL_NOTREACHED();
+        LEDGER_NOTREACHED();
         return Status::INTERNAL_ERROR;
       case PageDbObjectStatus::TRANSIENT:
       case PageDbObjectStatus::LOCAL:
@@ -427,7 +428,7 @@ Status PageDbImpl::DCheckDeviceIdNotSet(coroutine::CoroutineHandler* handler) {
   if (status == Status::INTERRUPTED) {
     return status;
   }
-  FXL_DCHECK(status == Status::INTERNAL_NOT_FOUND);
+  LEDGER_DCHECK(status == Status::INTERNAL_NOT_FOUND);
   return Status::OK;
 #endif
 }

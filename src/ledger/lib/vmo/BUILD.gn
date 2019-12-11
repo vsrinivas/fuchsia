@@ -18,6 +18,7 @@ source_set("vmo") {
   ]
 
   deps = [
+    "//src/ledger/lib/logging",
     "//zircon/public/lib/fdio",
   ]
 

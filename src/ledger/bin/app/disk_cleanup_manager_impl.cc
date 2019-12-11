@@ -5,6 +5,7 @@
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -44,8 +45,8 @@ void DiskCleanupManagerImpl::OnExternallyUsed(absl::string_view ledger_name,
 void DiskCleanupManagerImpl::OnExternallyUnused(absl::string_view ledger_name,
                                                 storage::PageIdView page_id) {
   auto it = pages_state_.find({convert::ToString(ledger_name), convert::ToString(page_id)});
-  FXL_DCHECK(it != pages_state_.end());
-  FXL_DCHECK(it->second.external_connections_count > 0);
+  LEDGER_DCHECK(it != pages_state_.end());
+  LEDGER_DCHECK(it->second.external_connections_count > 0);
   it->second.external_connections_count--;
   HandlePageIfUnused(it, ledger_name, page_id);
 
@@ -61,8 +62,8 @@ void DiskCleanupManagerImpl::OnInternallyUsed(absl::string_view ledger_name,
 void DiskCleanupManagerImpl::OnInternallyUnused(absl::string_view ledger_name,
                                                 storage::PageIdView page_id) {
   auto it = pages_state_.find({convert::ToString(ledger_name), convert::ToString(page_id)});
-  FXL_DCHECK(it != pages_state_.end());
-  FXL_DCHECK(it->second.internal_connections_count > 0);
+  LEDGER_DCHECK(it != pages_state_.end());
+  LEDGER_DCHECK(it->second.internal_connections_count > 0);
   it->second.internal_connections_count--;
   HandlePageIfUnused(it, ledger_name, page_id);
 }
@@ -84,11 +85,11 @@ void DiskCleanupManagerImpl::HandlePageIfUnused(
         ledger_name, page_id, PageEvictionCondition::IF_EMPTY,
         [ledger_name = convert::ToString(ledger_name), page_id = convert::ToString(page_id)](
             Status status, PageWasEvicted) {
-          FXL_DCHECK(status != Status::INTERRUPTED);
+          LEDGER_DCHECK(status != Status::INTERRUPTED);
           if (status != Status::OK) {
-            FXL_LOG(ERROR) << "Failed to check if page is empty and/or evict it. Status: "
-                           << fidl::ToUnderlying(status) << ". Ledger name: " << ledger_name
-                           << ". Page ID: " << convert::ToHex(page_id);
+            LEDGER_LOG(ERROR) << "Failed to check if page is empty and/or evict it. Status: "
+                              << fidl::ToUnderlying(status) << ". Ledger name: " << ledger_name
+                              << ". Page ID: " << convert::ToHex(page_id);
           }
         });
   }

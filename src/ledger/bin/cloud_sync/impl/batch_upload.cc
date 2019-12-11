@@ -20,6 +20,7 @@
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/encoding/encoding.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
@@ -59,7 +60,7 @@ BatchUpload::UploadStatus BatchUpload::CloudStatusToUploadStatus(cloud_provider:
 BatchUpload::ErrorType BatchUpload::UploadStatusToErrorType(BatchUpload::UploadStatus status) {
   switch (status) {
     case UploadStatus::OK:
-      FXL_DCHECK(false) << "Not an error";
+      LEDGER_DCHECK(false) << "Not an error";
       return ErrorType::PERMANENT;
     case UploadStatus::TEMPORARY_ERROR:
       return ErrorType::TEMPORARY;
@@ -84,8 +85,8 @@ BatchUpload::BatchUpload(coroutine::CoroutineService* coroutine_service,
       coroutine_manager_(coroutine_service, max_concurrent_uploads),
       weak_ptr_factory_(this) {
   TRACE_ASYNC_BEGIN("ledger", "batch_upload", reinterpret_cast<uintptr_t>(this));
-  FXL_DCHECK(storage_);
-  FXL_DCHECK(page_cloud_);
+  LEDGER_DCHECK(storage_);
+  LEDGER_DCHECK(page_cloud_);
 }
 
 BatchUpload::~BatchUpload() {
@@ -93,8 +94,8 @@ BatchUpload::~BatchUpload() {
 }
 
 void BatchUpload::Start() {
-  FXL_DCHECK(!started_);
-  FXL_DCHECK(status_ == UploadStatus::OK);
+  LEDGER_DCHECK(!started_);
+  LEDGER_DCHECK(status_ == UploadStatus::OK);
   started_ = true;
   storage_->GetUnsyncedPieces(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
@@ -110,8 +111,8 @@ void BatchUpload::Start() {
 }
 
 void BatchUpload::Retry() {
-  FXL_DCHECK(started_);
-  FXL_DCHECK(status_ == UploadStatus::TEMPORARY_ERROR);
+  LEDGER_DCHECK(started_);
+  LEDGER_DCHECK(status_ == UploadStatus::TEMPORARY_ERROR);
   status_ = UploadStatus::OK;
   StartObjectUpload();
 }
@@ -150,7 +151,7 @@ void BatchUpload::StartObjectUpload() {
 
 void BatchUpload::SynchronousUploadObject(coroutine::CoroutineHandler* handler,
                                           storage::ObjectIdentifier object_identifier) {
-  FXL_DCHECK(status_ == UploadStatus::OK);
+  LEDGER_DCHECK(status_ == UploadStatus::OK);
 
   // While this waiter is alive and not cancelled, this function's stack frame is alive.
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<UploadStatus>>(UploadStatus::OK);
@@ -375,7 +376,7 @@ void BatchUpload::EncodeEntry(
 }
 
 void BatchUpload::UploadCommits() {
-  FXL_DCHECK(status_ == UploadStatus::OK);
+  LEDGER_DCHECK(status_ == UploadStatus::OK);
   std::vector<storage::CommitId> ids;
   auto waiter =
       fxl::MakeRefCounted<callback::Waiter<UploadStatus, cloud_provider::Commit>>(UploadStatus::OK);
@@ -409,7 +410,7 @@ void BatchUpload::UploadCommits() {
                                // UploadCommit() is called as a last step of a
                                // so-far-successful upload attempt, so we couldn't have
                                // failed before.
-                               FXL_DCHECK(status_ == UploadStatus::OK);
+                               LEDGER_DCHECK(status_ == UploadStatus::OK);
                                if (status != cloud_provider::Status::OK) {
                                  SetUploadStatus(CloudStatusToUploadStatus(status));
                                  SignalError();

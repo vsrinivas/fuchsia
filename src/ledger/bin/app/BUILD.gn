@@ -30,6 +30,7 @@ executable("app") {
     "//src/ledger/bin/p2p_sync/impl",
     "//src/ledger/bin/storage/impl:lib",
     "//src/ledger/bin/storage/public",
+    "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
     "//src/lib/backoff",
     "//src/lib/fxl",
@@ -167,6 +168,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/lib/sys/cpp",
+    "//src/ledger/lib/logging",
     "//src/lib/inspect_deprecated",
   ]
 
@@ -278,6 +280,7 @@ source_set("unittests") {
     "//src/ledger/bin/sync_coordinator/testing",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
     "//src/lib/backoff/testing",
     "//src/lib/fxl",

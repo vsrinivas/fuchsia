@@ -16,6 +16,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/sync_helper/sync_helper.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -93,9 +94,9 @@ class SyncableBinding {
         callback(std::forward<Args>(args)...);
         return;
       }
-      FXL_LOG(INFO) << "FIDL call " << D::Impl::kInterfaceName << "::" << function_name
-                    << " failed with status: " << status
-                    << ". Sending the epitaph and closing the connection.";
+      LEDGER_LOG(INFO) << "FIDL call " << D::Impl::kInterfaceName << "::" << function_name
+                       << " failed with status: " << status
+                       << ". Sending the epitaph and closing the connection.";
       Close(ConvertToEpitaph(status));
     });
   }

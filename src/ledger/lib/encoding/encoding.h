@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 
@@ -22,8 +23,8 @@ namespace ledger {
 // TODO(ambre): rewrite this using a more-supported API when available.
 template <typename T>
 bool EncodeToBuffer(T* data, fuchsia::mem::Buffer* buffer) {
-  FXL_DCHECK(data);
-  FXL_DCHECK(buffer);
+  LEDGER_DCHECK(data);
+  LEDGER_DCHECK(buffer);
 
   fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
   // We need to preallocate the size of the structure in the encoder, the rest
@@ -38,7 +39,7 @@ bool EncodeToBuffer(T* data, fuchsia::mem::Buffer* buffer) {
 // TODO(ambre): rewrite this using a supported API when available.
 template <typename T>
 bool DecodeFromBuffer(const fuchsia::mem::Buffer& buffer, T* data) {
-  FXL_DCHECK(data);
+  LEDGER_DCHECK(data);
 
   std::vector<uint8_t> bytes;
   if (!ledger::VectorFromVmo(buffer, &bytes)) {

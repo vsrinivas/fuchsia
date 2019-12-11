@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -16,8 +17,8 @@ MessageRelayBase::MessageRelayBase() = default;
 MessageRelayBase::~MessageRelayBase() = default;
 
 void MessageRelayBase::SetChannel(zx::channel channel) {
-  FXL_DCHECK(channel);
-  FXL_DCHECK(!channel_) << "SetChannel called twice without intervening call to CloseChannel";
+  LEDGER_DCHECK(channel);
+  LEDGER_DCHECK(!channel_) << "SetChannel called twice without intervening call to CloseChannel";
 
   channel_.swap(channel);
 
@@ -65,7 +66,7 @@ void MessageRelayBase::ReadChannelMessages(async_dispatcher_t* dispatcher, async
     if (status == ZX_ERR_SHOULD_WAIT) {
       status = wait->Begin(dispatcher);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to wait on read channel, status " << status;
+        LEDGER_LOG(ERROR) << "Failed to wait on read channel, status " << status;
         CloseChannel();
       }
       break;
@@ -78,13 +79,13 @@ void MessageRelayBase::ReadChannelMessages(async_dispatcher_t* dispatcher, async
     }
 
     if (status != ZX_ERR_BUFFER_TOO_SMALL) {
-      FXL_LOG(ERROR) << "Failed to read (peek) from channel, status " << status;
+      LEDGER_LOG(ERROR) << "Failed to read (peek) from channel, status " << status;
       CloseChannel();
       break;
     }
 
     if (actual_handle_count != 0) {
-      FXL_LOG(ERROR) << "Message received over channel has handles, closing connection";
+      LEDGER_LOG(ERROR) << "Message received over channel has handles, closing connection";
       CloseChannel();
       break;
     }
@@ -94,12 +95,12 @@ void MessageRelayBase::ReadChannelMessages(async_dispatcher_t* dispatcher, async
                            &actual_handle_count);
 
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to read from channel, status " << status;
+      LEDGER_LOG(ERROR) << "Failed to read from channel, status " << status;
       CloseChannel();
       break;
     }
 
-    FXL_DCHECK(actual_byte_count == message.size());
+    LEDGER_DCHECK(actual_byte_count == message.size());
 
     if (destruction_sentinel_.DestructedWhile(
             [this, &message] { OnMessageReceived(std::move(message)); })) {
@@ -122,7 +123,7 @@ void MessageRelayBase::WriteChannelMessages(async_dispatcher_t* dispatcher, asyn
     if (status == ZX_ERR_SHOULD_WAIT) {
       status = wait->Begin(dispatcher);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to wait on write channel, status " << status;
+        LEDGER_LOG(ERROR) << "Failed to wait on write channel, status " << status;
         CloseChannel();
       }
       break;
@@ -135,7 +136,7 @@ void MessageRelayBase::WriteChannelMessages(async_dispatcher_t* dispatcher, asyn
     }
 
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "zx::channel::write failed, status " << status;
+      LEDGER_LOG(ERROR) << "zx::channel::write failed, status " << status;
       CloseChannel();
       break;
     }

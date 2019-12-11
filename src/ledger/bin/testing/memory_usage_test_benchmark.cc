@@ -14,6 +14,7 @@
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
+#include "src/ledger/lib/logging/logging.h"
 
 // A test application meant to be executed as a benchmark. It will complete
 // successfully if LedgerMemoryEstimator successfully gets Ledger's memory
@@ -29,19 +30,19 @@ int TryGetMemory(sys::ComponentContext* context, fuchsia::sys::ComponentControll
       ledger::DetachedPath(root_fd), [] {}, &benchmark_ledger,
       ledger::kTestingGarbageCollectionPolicy);
   if (status != ledger::Status::OK) {
-    FXL_LOG(INFO) << "GetLedger failed with status " << fidl::ToUnderlying(status);
+    LEDGER_LOG(INFO) << "GetLedger failed with status " << fidl::ToUnderlying(status);
     return EXIT_FAILURE;
   }
 
   ledger::LedgerMemoryEstimator memory_estimator;
   if (!memory_estimator.Init()) {
-    FXL_LOG(ERROR) << "MemoryEstimator::Init() failed";
+    LEDGER_LOG(ERROR) << "MemoryEstimator::Init() failed";
     return EXIT_FAILURE;
   }
 
   uint64_t memory;
   if (!memory_estimator.GetLedgerMemoryUsage(&memory)) {
-    FXL_LOG(ERROR) << "MemoryEstimator::GetLedgerMemoryUsage() failed";
+    LEDGER_LOG(ERROR) << "MemoryEstimator::GetLedgerMemoryUsage() failed";
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

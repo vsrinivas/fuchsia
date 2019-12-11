@@ -6,6 +6,7 @@
 
 #include "src/ledger/bin/sync_coordinator/impl/ledger_sync_impl.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace sync_coordinator {
@@ -13,13 +14,13 @@ namespace sync_coordinator {
 UserSyncImpl::UserSyncImpl(std::unique_ptr<cloud_sync::UserSync> cloud_sync,
                            std::unique_ptr<p2p_sync::UserCommunicator> p2p_sync)
     : cloud_sync_(std::move(cloud_sync)), p2p_sync_(std::move(p2p_sync)) {
-  FXL_DCHECK(cloud_sync_ || p2p_sync_);
+  LEDGER_DCHECK(cloud_sync_ || p2p_sync_);
 }
 
 UserSyncImpl::~UserSyncImpl() = default;
 
 void UserSyncImpl::Start() {
-  FXL_DCHECK(!started_);
+  LEDGER_DCHECK(!started_);
   started_ = true;
   if (cloud_sync_) {
     cloud_sync_->Start();
@@ -37,7 +38,7 @@ void UserSyncImpl::SetWatcher(SyncStateWatcher* watcher) {
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
     absl::string_view app_id, encryption::EncryptionService* encryption_service) {
-  FXL_DCHECK(started_);
+  LEDGER_DCHECK(started_);
   std::unique_ptr<cloud_sync::LedgerSync> cloud_ledger_sync;
   if (cloud_sync_) {
     cloud_ledger_sync = cloud_sync_->CreateLedgerSync(app_id, encryption_service);

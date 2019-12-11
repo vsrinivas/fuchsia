@@ -17,6 +17,7 @@
 #include "src/ledger/bin/storage/public/read_data_source.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/waiter.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -130,12 +131,12 @@ void PageDownload::StartDownload() {
           return;
         }
         if (last_commit_token_id.empty()) {
-          FXL_VLOG(1) << log_prefix_ << "starting sync for the first time, "
-                      << "retrieving all remote commits";
+          LEDGER_VLOG(1) << log_prefix_ << "starting sync for the first time, "
+                         << "retrieving all remote commits";
         } else {
           // TODO(ppi): print the timestamp out as human-readable wall time.
-          FXL_VLOG(1) << log_prefix_ << "starting sync again, "
-                      << "retrieving commits uploaded after: " << last_commit_token_id;
+          LEDGER_VLOG(1) << log_prefix_ << "starting sync again, "
+                         << "retrieving commits uploaded after: " << last_commit_token_id;
         }
 
         std::unique_ptr<cloud_provider::PositionToken> position_token;
@@ -151,7 +152,7 @@ void PageDownload::StartDownload() {
                        std::unique_ptr<cloud_provider::PositionToken> position_token) {
                   if (cloud_status != cloud_provider::Status::OK) {
                     // Fetching the remote commits failed, schedule a retry.
-                    FXL_LOG(WARNING)
+                    LEDGER_LOG(WARNING)
                         << log_prefix_ << "fetching the remote commits failed due to a "
                         << "connection error, status: " << fidl::ToUnderlying(cloud_status)
                         << ", retrying.";
@@ -160,7 +161,7 @@ void PageDownload::StartDownload() {
                     return;
                   }
                   if (!commit_pack) {
-                    FXL_LOG(ERROR) << "Null commits despite status OK.";
+                    LEDGER_LOG(ERROR) << "Null commits despite status OK.";
                     SetCommitState(DOWNLOAD_PERMANENT_ERROR);
                     return;
                   }
@@ -168,7 +169,7 @@ void PageDownload::StartDownload() {
 
                   cloud_provider::Commits commits_container;
                   if (!ledger::DecodeFromBuffer(commit_pack->buffer, &commits_container)) {
-                    FXL_LOG(ERROR) << "Failed to decode the commits.";
+                    LEDGER_LOG(ERROR) << "Failed to decode the commits.";
                     SetCommitState(DOWNLOAD_PERMANENT_ERROR);
                     return;
                   }
@@ -178,19 +179,19 @@ void PageDownload::StartDownload() {
                   if (commits.empty()) {
                     // If there is no remote commits to add, announce that
                     // we're done.
-                    FXL_VLOG(1) << log_prefix_ << "initial sync finished, no new remote commits";
+                    LEDGER_VLOG(1) << log_prefix_ << "initial sync finished, no new remote commits";
                     BacklogDownloaded();
                   } else {
-                    FXL_VLOG(1) << log_prefix_ << "retrieved " << commits.size()
-                                << " (possibly) new remote commits, "
-                                << "adding them to storage.";
+                    LEDGER_VLOG(1) << log_prefix_ << "retrieved " << commits.size()
+                                   << " (possibly) new remote commits, "
+                                   << "adding them to storage.";
                     // If not, fire the backlog download callback when the
                     // remote commits are downloaded.
                     const auto commit_count = commits.size();
                     DownloadBatch(std::move(commits), std::move(position_token),
                                   [this, commit_count] {
-                                    FXL_VLOG(1) << log_prefix_ << "initial sync finished, added "
-                                                << commit_count << " remote commits.";
+                                    LEDGER_VLOG(1) << log_prefix_ << "initial sync finished, added "
+                                                   << commit_count << " remote commits.";
                                     BacklogDownloaded();
                                   });
                   }
@@ -221,7 +222,7 @@ bool PageDownload::IsIdle() {
 void PageDownload::BacklogDownloaded() { SetRemoteWatcher(false); }
 
 void PageDownload::SetRemoteWatcher(bool is_retry) {
-  FXL_DCHECK(commit_state_ == DOWNLOAD_BACKLOG || commit_state_ == DOWNLOAD_TEMPORARY_ERROR)
+  LEDGER_DCHECK(commit_state_ == DOWNLOAD_BACKLOG || commit_state_ == DOWNLOAD_TEMPORARY_ERROR)
       << "Current state: " << commit_state_;
   SetCommitState(DOWNLOAD_SETTING_REMOTE_WATCHER);
   // Retrieve the server-side token of the last commit we received.
@@ -251,7 +252,7 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
             });
         SetCommitState(DOWNLOAD_IDLE);
         if (is_retry) {
-          FXL_LOG(INFO) << log_prefix_ << "Cloud watcher re-established";
+          LEDGER_LOG(INFO) << log_prefix_ << "Cloud watcher re-established";
         }
       }));
 }
@@ -285,18 +286,19 @@ void PageDownload::OnNewObject(std::vector<uint8_t> /*id*/, fuchsia::mem::Buffer
   // No known cloud provider implementations use this method.
   // TODO(ppi): implement this method when we have such cloud provider
   // implementations.
-  FXL_NOTIMPLEMENTED();
+  LEDGER_NOTIMPLEMENTED();
 }
 
 void PageDownload::OnError(cloud_provider::Status status) {
-  FXL_DCHECK(commit_state_ == DOWNLOAD_IDLE || commit_state_ == DOWNLOAD_IN_PROGRESS);
+  LEDGER_DCHECK(commit_state_ == DOWNLOAD_IDLE || commit_state_ == DOWNLOAD_IN_PROGRESS);
   if (!IsPermanentError(status)) {
     // Reset the watcher and schedule a retry.
     if (watcher_binding_.is_bound()) {
       watcher_binding_.Unbind();
     }
     SetCommitState(DOWNLOAD_TEMPORARY_ERROR);
-    FXL_LOG(WARNING) << log_prefix_ << "Connection error in the remote commit watcher, retrying.";
+    LEDGER_LOG(WARNING) << log_prefix_
+                        << "Connection error in the remote commit watcher, retrying.";
     RetryWithBackoff([this] { SetRemoteWatcher(true); });
     return;
   }
@@ -306,15 +308,15 @@ void PageDownload::OnError(cloud_provider::Status status) {
     return;
   }
 
-  FXL_LOG(WARNING) << "Received unexpected error from PageCloudWatcher: "
-                   << fidl::ToUnderlying(status);
+  LEDGER_LOG(WARNING) << "Received unexpected error from PageCloudWatcher: "
+                      << fidl::ToUnderlying(status);
   HandleDownloadCommitError("Received unexpected error from PageCloudWatcher.");
 }
 
 void PageDownload::DownloadBatch(std::vector<cloud_provider::Commit> commits,
                                  std::unique_ptr<cloud_provider::PositionToken> position_token,
                                  fit::closure on_done) {
-  FXL_DCHECK(!batch_download_);
+  LEDGER_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
       storage_, encryption_service_, std::move(commits), std::move(position_token),
       [this, on_done = std::move(on_done)] {
@@ -584,16 +586,16 @@ void PageDownload::HandleGetObjectError(
         callback) {
   if (is_permanent) {
     backoff_->Reset();
-    FXL_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a permanent " << error_name
-                     << " error.";
+    LEDGER_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a permanent " << error_name
+                        << " error.";
     callback(ledger::Status::IO_ERROR, storage::ChangeSource::CLOUD, storage::IsObjectSynced::YES,
              nullptr);
     current_get_calls_--;
     UpdateDownloadState();
     return;
   }
-  FXL_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a " << error_name
-                   << " error, retrying.";
+  LEDGER_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a " << error_name
+                      << " error, retrying.";
   current_get_calls_--;
   UpdateDownloadState();
   RetryWithBackoff([this, object_identifier = std::move(object_identifier),
@@ -609,15 +611,15 @@ void PageDownload::HandleGetDiffError(
         callback) {
   if (is_permanent) {
     backoff_->Reset();
-    FXL_LOG(WARNING) << log_prefix_ << "GetDiff() failed due to a permanent " << error_name
-                     << " error.";
+    LEDGER_LOG(WARNING) << log_prefix_ << "GetDiff() failed due to a permanent " << error_name
+                        << " error.";
     callback(ledger::Status::IO_ERROR, "", {});
     current_get_calls_--;
     UpdateDownloadState();
     return;
   }
-  FXL_LOG(WARNING) << log_prefix_ << "GetDiff() failed due to a " << error_name
-                   << " error, retrying.";
+  LEDGER_LOG(WARNING) << log_prefix_ << "GetDiff() failed due to a " << error_name
+                      << " error, retrying.";
   current_get_calls_--;
   UpdateDownloadState();
   RetryWithBackoff([this, commit_id = std::move(commit_id),
@@ -628,7 +630,7 @@ void PageDownload::HandleGetDiffError(
 }
 
 void PageDownload::HandleDownloadCommitError(absl::string_view error_description) {
-  FXL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
+  LEDGER_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
   if (watcher_binding_.is_bound()) {
     watcher_binding_.Unbind();
   }

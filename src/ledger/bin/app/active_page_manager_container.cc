@@ -15,6 +15,7 @@
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -81,9 +82,9 @@ void ActivePageManagerContainer::NewInternalRequest(
 void ActivePageManagerContainer::SetActivePageManager(
     Status status, std::unique_ptr<ActivePageManager> active_page_manager) {
   TRACE_DURATION("ledger", "active_page_manager_container_set_active_page_manager");
-  FXL_DCHECK(!active_page_manager_is_set_);
-  FXL_DCHECK((status != Status::OK) == !active_page_manager);
-  FXL_DCHECK(token_manager_.IsDiscardable());
+  LEDGER_DCHECK(!active_page_manager_is_set_);
+  LEDGER_DCHECK((status != Status::OK) == !active_page_manager);
+  LEDGER_DCHECK(token_manager_.IsDiscardable());
 
   for (auto& [page_impl, callback] : page_impls_) {
     if (active_page_manager) {

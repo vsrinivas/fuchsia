@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/logging.h"
@@ -52,8 +53,8 @@ void CommitBatch::AddToBatch(std::vector<storage::PageStorage::CommitIdAndBytes>
                                     std::vector<storage::CommitId>>>
                  commits_to_add) {
         if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR) << "Error while getting commit parents and generations, aborting batch: "
-                         << status;
+          LEDGER_LOG(ERROR)
+              << "Error while getting commit parents and generations, aborting batch: " << status;
           if (on_discardable_) {
             on_discardable_();
           }
@@ -123,7 +124,7 @@ void CommitBatch::AddCommits() {
       std::move(commits), storage::ChangeSource::P2P,
       callback::MakeScoped(weak_factory_.GetWeakPtr(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR) << "Error while adding commits, aborting batch: " << status;
+          LEDGER_LOG(ERROR) << "Error while adding commits, aborting batch: " << status;
         }
         discardable_ = true;
         if (on_discardable_) {

@@ -6,6 +6,7 @@
 #include <lib/async/cpp/task.h>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/waiter.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -56,8 +57,8 @@ BackgroundSyncManager::BackgroundSyncManager(Environment* environment, PageUsage
       open_pages_limit_(open_pages_limit) {}
 
 void BackgroundSyncManager::SetDelegate(Delegate* delegate) {
-  FXL_DCHECK(delegate);
-  FXL_DCHECK(!sync_delegate_);
+  LEDGER_DCHECK(delegate);
+  LEDGER_DCHECK(!sync_delegate_);
   sync_delegate_ = delegate;
 }
 
@@ -70,8 +71,8 @@ void BackgroundSyncManager::OnExternallyUnused(absl::string_view ledger_name,
                                                storage::PageIdView page_id) {
   auto it =
       pages_connection_count_.find({convert::ToString(ledger_name), convert::ToString(page_id)});
-  FXL_DCHECK(it != pages_connection_count_.end());
-  FXL_DCHECK(it->second > 0);
+  LEDGER_DCHECK(it != pages_connection_count_.end());
+  LEDGER_DCHECK(it->second > 0);
   it->second--;
   HandlePageIfUnused(it);
 }
@@ -104,7 +105,7 @@ void BackgroundSyncManager::HandlePageIfUnused(
 }
 
 void BackgroundSyncManager::TrySync() {
-  FXL_DCHECK(sync_delegate_);
+  LEDGER_DCHECK(sync_delegate_);
   coroutine_manager_.StartCoroutine([this](coroutine::CoroutineHandler* handler) {
     // Ensure |this| is not destructed until the coroutine has completed.
     ExpiringToken token = token_manager_.CreateToken();

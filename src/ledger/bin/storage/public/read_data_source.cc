@@ -6,6 +6,8 @@
 
 #include <lib/fit/function.h>
 
+#include "src/ledger/lib/logging/logging.h"
+
 namespace storage {
 
 void ReadDataSource(ledger::ManagedContainer* managed_container,
@@ -18,7 +20,7 @@ void ReadDataSource(ledger::ManagedContainer* managed_container,
              callback = std::move(callback)](std::unique_ptr<DataSource::DataChunk> chunk,
                                              DataSource::Status status) mutable {
         if (status == DataSource::Status::ERROR) {
-          FXL_LOG(WARNING) << "Error while reading data source content.";
+          LEDGER_LOG(WARNING) << "Error while reading data source content.";
           callback(Status::INTERNAL_ERROR, nullptr);
           return;
         }
@@ -31,7 +33,7 @@ void ReadDataSource(ledger::ManagedContainer* managed_container,
           return;
         }
 
-        FXL_DCHECK(status == DataSource::Status::DONE);
+        LEDGER_DCHECK(status == DataSource::Status::DONE);
 
         if (chunks.empty()) {
           callback(Status::OK, DataSource::DataChunk::Create(""));

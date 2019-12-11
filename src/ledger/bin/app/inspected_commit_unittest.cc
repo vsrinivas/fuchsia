@@ -26,6 +26,7 @@
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/set_when_called.h"
@@ -90,13 +91,13 @@ class SubstitutePageStorage final : public storage::PageStorageEmptyImpl {
                      storage::PageStorage::Location location,
                      fit::function<void(storage::Status, ledger::SizedVmo)> callback) override {
     if (offset != 0) {
-      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+      LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
     }
     if (max_size != 1024) {
-      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+      LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
     }
     if (location != storage::PageStorage::Location::Local()) {
-      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+      LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
     }
 
     auto implementation = [this, index = object_identifier.key_index(),
@@ -121,7 +122,7 @@ class SubstitutePageStorage final : public storage::PageStorageEmptyImpl {
       }
       ledger::SizedVmo sized_vmo;
       bool result = ledger::VmoFromVector(value_it->second.first, &sized_vmo);
-      FXL_DCHECK(result) << "That was really not expected to fail in this test!";
+      LEDGER_DCHECK(result) << "That was really not expected to fail in this test!";
       callback(storage::Status::OK, std::move(sized_vmo));
     };
     if (NextBool(random_)) {
@@ -134,7 +135,7 @@ class SubstitutePageStorage final : public storage::PageStorageEmptyImpl {
                          fit::function<bool(storage::Entry)> on_next,
                          fit::function<void(storage::Status)> on_done) override {
     if (!min_key.empty()) {
-      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+      LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
     }
 
     auto implementation = [this, on_next = std::move(on_next), on_done = std::move(on_done)] {
@@ -150,7 +151,7 @@ class SubstitutePageStorage final : public storage::PageStorageEmptyImpl {
       // and before the on-done call.
       for (const auto& [key, value_and_index] : entries_) {
         if (!on_next(CreateStorageEntry(key, value_and_index.second))) {
-          FXL_NOTIMPLEMENTED();  // Feel free to implement!
+          LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
         }
       }
       on_done(storage::Status::OK);

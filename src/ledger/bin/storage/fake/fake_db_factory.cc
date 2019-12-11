@@ -6,6 +6,7 @@
 
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace storage {
 namespace fake {
@@ -20,7 +21,7 @@ void FakeDbFactory::GetOrCreateDb(ledger::DetachedPath db_path,
     }
     // Create the path to fake the creation of the Db at the expected destination.
     if (!file_system_->CreateDirectory(db_path)) {
-      FXL_LOG(ERROR) << "Failed to create the storage directory in " << db_path.path();
+      LEDGER_LOG(ERROR) << "Failed to create the storage directory in " << db_path.path();
       callback(Status::INTERNAL_ERROR, nullptr);
       return;
     }

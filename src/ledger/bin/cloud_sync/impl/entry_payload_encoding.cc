@@ -7,6 +7,7 @@
 #include "src/ledger/bin/cloud_sync/impl/entry_payload_generated.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace cloud_sync {
 
@@ -28,13 +29,13 @@ bool DecodeEntryPayload(convert::ExtendedStringView entry_id, convert::ExtendedS
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(payload.data()),
                                  payload.size());
   if (!VerifyEntryPayloadBuffer(verifier)) {
-    FXL_LOG(ERROR) << "Received invalid entry payload from the cloud.";
+    LEDGER_LOG(ERROR) << "Received invalid entry payload from the cloud.";
     return false;
   }
   const EntryPayload* entry_payload =
       GetEntryPayload(reinterpret_cast<const unsigned char*>(payload.data()));
   if (entry_payload->entry_name() == nullptr || entry_payload->object_identifier() == nullptr) {
-    FXL_LOG(ERROR) << "Received invalid entry payload from the cloud.";
+    LEDGER_LOG(ERROR) << "Received invalid entry payload from the cloud.";
     return false;
   }
 
@@ -44,7 +45,7 @@ bool DecodeEntryPayload(convert::ExtendedStringView entry_id, convert::ExtendedS
                                                                    : storage::KeyPriority::LAZY;
   if (!factory->MakeObjectIdentifierFromStorageBytes(entry_payload->object_identifier(),
                                                      &entry->object_identifier)) {
-    FXL_LOG(ERROR) << "Received invalid entry payload from the cloud.";
+    LEDGER_LOG(ERROR) << "Received invalid entry payload from the cloud.";
     return false;
   }
 

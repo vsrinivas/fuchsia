@@ -15,6 +15,7 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -32,10 +33,10 @@ UserSyncImpl::UserSyncImpl(ledger::Environment* environment, UserConfig user_con
       fingerprint_manager_(fingerprint_manager),
       coroutine_manager_(environment_->coroutine_service()),
       task_runner_(environment_->dispatcher()) {
-  FXL_DCHECK(on_version_mismatch_);
+  LEDGER_DCHECK(on_version_mismatch_);
 }
 
-UserSyncImpl::~UserSyncImpl() { FXL_DCHECK(active_ledger_syncs_.empty()); }
+UserSyncImpl::~UserSyncImpl() { LEDGER_DCHECK(active_ledger_syncs_.empty()); }
 
 void UserSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
   aggregator_.SetBaseWatcher(watcher);
@@ -43,7 +44,7 @@ void UserSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
     absl::string_view app_id, encryption::EncryptionService* encryption_service) {
-  FXL_DCHECK(started_);
+  LEDGER_DCHECK(started_);
 
   auto result = std::make_unique<LedgerSyncImpl>(environment_, &user_config_, encryption_service,
                                                  app_id, aggregator_.GetNewStateWatcher());
@@ -71,11 +72,11 @@ void UserSyncImpl::OnError(cloud_provider::Status status) {
 }
 
 void UserSyncImpl::Start() {
-  FXL_DCHECK(!started_);
+  LEDGER_DCHECK(!started_);
   if (!user_config_.cloud_provider) {
     // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
-    FXL_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
-                     << "the cloud fingerprint";
+    LEDGER_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
+                        << "the cloud fingerprint";
     return;
   }
 
@@ -83,8 +84,8 @@ void UserSyncImpl::Start() {
       device_set_.NewRequest(),
       task_runner_.MakeScoped([this](fuchsia::ledger::cloud::Status status) {
         if (status != cloud_provider::Status::OK) {
-          FXL_LOG(ERROR) << "Failed to retrieve the device map: " << fidl::ToUnderlying(status)
-                         << ", sync upload will not work.";
+          LEDGER_LOG(ERROR) << "Failed to retrieve the device map: " << fidl::ToUnderlying(status)
+                            << ", sync upload will not work.";
           return;
         }
         CheckCloudNotErased();
@@ -95,8 +96,8 @@ void UserSyncImpl::Start() {
 void UserSyncImpl::CheckCloudNotErased() {
   if (!device_set_) {
     // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
-    FXL_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
-                     << "the cloud fingerprint";
+    LEDGER_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
+                        << "the cloud fingerprint";
     return;
   }
 
@@ -158,8 +159,8 @@ void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
       task_runner_.PostTask(std::move(on_version_mismatch_));
       return;
     default:
-      FXL_LOG(ERROR) << "Unexpected status returned from device set: " << fidl::ToUnderlying(status)
-                     << ", sync upload will not work.";
+      LEDGER_LOG(ERROR) << "Unexpected status returned from device set: "
+                        << fidl::ToUnderlying(status) << ", sync upload will not work.";
       return;
   }
 }
@@ -167,8 +168,8 @@ void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
 void UserSyncImpl::SetCloudErasedWatcher() {
   if (!device_set_) {
     // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
-    FXL_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
-                     << "the cloud fingerprint";
+    LEDGER_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
+                        << "the cloud fingerprint";
     return;
   }
 

@@ -18,6 +18,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/third_party/bup/bupsplit.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -83,7 +84,7 @@ class SplitContext {
       return;
     }
 
-    FXL_DCHECK(chunk || status == DataSource::Status::DONE);
+    LEDGER_DCHECK(chunk || status == DataSource::Status::DONE);
 
     if (chunk) {
       ProcessChunk(std::move(chunk));
@@ -100,10 +101,10 @@ class SplitContext {
     }
 
     // No data remains.
-    FXL_DCHECK(current_chunks_.empty());
+    LEDGER_DCHECK(current_chunks_.empty());
 
     // The final id to send exists.
-    FXL_DCHECK(!current_identifiers_per_level_.back().empty());
+    LEDGER_DCHECK(!current_identifiers_per_level_.back().empty());
 
     // This traverses the stack of indices, sending each level until a single
     // top level index is produced.
@@ -119,14 +120,14 @@ class SplitContext {
         // This identifier may be recomputed by SendDone, so this is not
         // necessarily the final value that we are going to send, but we check
         // that we last called |SendInProgress| on it for consistency.
-        FXL_DCHECK(current_identifiers_per_level_[i][0].identifier == latest_piece_.identifier);
+        LEDGER_DCHECK(current_identifiers_per_level_[i][0].identifier == latest_piece_.identifier);
         SendDone();
         return;
       }
 
       BuildIndexAtLevel(i);
     }
-    FXL_NOTREACHED();
+    LEDGER_NOTREACHED();
   }
 
  private:
@@ -166,7 +167,7 @@ class SplitContext {
   // the root of the piece hierarchy, it needs to have the |tree_node| bit set
   // if we are splitting a TreeNode. Then sends this object identifier as DONE.
   void SendDone() {
-    FXL_DCHECK(latest_piece_.ready());
+    LEDGER_DCHECK(latest_piece_.ready());
     auto data_view = latest_piece_.data->Get();
     ObjectDigest object_digest = ComputeObjectDigest(
         GetObjectDigestInfo(latest_piece_.identifier.object_digest()).piece_type, object_type_,
@@ -179,7 +180,7 @@ class SplitContext {
 
   std::vector<ObjectIdentifierAndSize>& GetCurrentIdentifiersAtLevel(size_t level) {
     if (level >= current_identifiers_per_level_.size()) {
-      FXL_DCHECK(level == current_identifiers_per_level_.size());
+      LEDGER_DCHECK(level == current_identifiers_per_level_.size());
       current_identifiers_per_level_.resize(level + 1);
     }
     return current_identifiers_per_level_[level];
@@ -204,7 +205,7 @@ class SplitContext {
 
       size_t level = GetLevel(bits);
       for (size_t i = 0; i < level; ++i) {
-        FXL_DCHECK(!current_identifiers_per_level_[i].empty());
+        LEDGER_DCHECK(!current_identifiers_per_level_[i].empty());
         BuildIndexAtLevel(i);
       }
     }
@@ -225,7 +226,7 @@ class SplitContext {
       return;
     }
 
-    FXL_DCHECK(current_identifiers_per_level_[level].size() == kMaxIdentifiersPerIndex);
+    LEDGER_DCHECK(current_identifiers_per_level_[level].size() == kMaxIdentifiersPerIndex);
     // The level contains the max number of identifiers. Creating the index
     // file.
 
@@ -248,14 +249,14 @@ class SplitContext {
 
   ObjectIdentifierAndSize BuildAndSendIndex(
       std::vector<ObjectIdentifierAndSize> identifiers_and_sizes) {
-    FXL_DCHECK(identifiers_and_sizes.size() > 1);
-    FXL_DCHECK(identifiers_and_sizes.size() <= kMaxIdentifiersPerIndex);
+    LEDGER_DCHECK(identifiers_and_sizes.size() > 1);
+    LEDGER_DCHECK(identifiers_and_sizes.size() <= kMaxIdentifiersPerIndex);
 
     std::unique_ptr<DataSource::DataChunk> chunk;
     size_t total_size;
     FileIndexSerialization::BuildFileIndex(identifiers_and_sizes, &chunk, &total_size);
 
-    FXL_DCHECK(chunk->Get().size() <= kMaxChunkSize)
+    LEDGER_DCHECK(chunk->Get().size() <= kMaxChunkSize)
         << "Expected maximum of: " << kMaxChunkSize << ", but got: " << chunk->Get().size();
 
     auto identifier = SendInProgress(PieceType::INDEX, std::move(chunk));
@@ -263,14 +264,14 @@ class SplitContext {
   }
 
   static size_t GetLevel(size_t bits) {
-    FXL_DCHECK(bits >= bup::kBlobBits);
+    LEDGER_DCHECK(bits >= bup::kBlobBits);
     return (bits - bup::kBlobBits) / kBitsPerLevel;
   }
 
   std::unique_ptr<DataSource::DataChunk> BuildNextChunk(size_t index) {
-    FXL_DCHECK(current_chunks_.size() == views_.size());
-    FXL_DCHECK(!current_chunks_.empty());
-    FXL_DCHECK(views_.back().size() >= index);
+    LEDGER_DCHECK(current_chunks_.size() == views_.size());
+    LEDGER_DCHECK(!current_chunks_.empty());
+    LEDGER_DCHECK(views_.back().size() >= index);
 
     if (views_.size() == 1 && views_.front().size() == index &&
         views_.front().size() == current_chunks_.front()->Get().size()) {
@@ -306,7 +307,7 @@ class SplitContext {
       views_.clear();
     }
 
-    FXL_DCHECK(current_chunks_.size() == views_.size());
+    LEDGER_DCHECK(current_chunks_.size() == views_.size());
     return DataSource::DataChunk::Create(std::move(data));
   }
 
@@ -356,7 +357,7 @@ void CollectPiecesInternal(ObjectIdentifier root, fxl::RefPtr<CollectPiecesState
     }
 
     if (status != Status::OK) {
-      FXL_LOG(WARNING) << "Unable to read object content.";
+      LEDGER_LOG(WARNING) << "Unable to read object content.";
       state->running = false;
       on_done();
       return;

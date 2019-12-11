@@ -28,6 +28,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/ensure_called.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/logging.h"
@@ -69,7 +70,7 @@ fit::closure PageManager::CreateDetacher() {
   outstanding_detachers_++;
   return [this]() {
     outstanding_detachers_--;
-    FXL_DCHECK(outstanding_detachers_ >= 0);
+    LEDGER_DCHECK(outstanding_detachers_ >= 0);
     CheckDiscardable();
   };
 }
@@ -144,7 +145,7 @@ void PageManager::NewInspection(fit::function<void(storage::Status status, Expir
       if (status != Status::OK) {
         // It's odd that the page storage failed to come up; we will just report to Inspect that
         // there is no data for the page.
-        FXL_LOG(WARNING) << "Tried to bring up a page for Inspect but got status: " << status;
+        LEDGER_LOG(WARNING) << "Tried to bring up a page for Inspect but got status: " << status;
       }
     });
   }
@@ -199,7 +200,7 @@ void PageManager::InitActivePageManagerContainer(ActivePageManagerContainer* con
           }
 
           // If the page was found locally, just use it and return.
-          FXL_DCHECK(page_storage);
+          LEDGER_DCHECK(page_storage);
           NewActivePageManager(
               std::move(page_storage), ActivePageManager::PageStorageState::AVAILABLE,
               [container, callback = std::move(callback)](
@@ -236,7 +237,7 @@ void PageManager::CreatePageStorage(LedgerImpl::Delegate::PageState page_state,
 }
 
 ActivePageManagerContainer* PageManager::CreateActivePageManagerContainer() {
-  FXL_DCHECK(!active_page_manager_container_);
+  LEDGER_DCHECK(!active_page_manager_container_);
   auto& active_page_manager_container = active_page_manager_container_.emplace(
       environment_, ledger_name_, page_id_, page_usage_listeners_);
   active_page_manager_container_->SetOnDiscardable([this]() {
@@ -306,7 +307,7 @@ void PageManager::PageIsClosedAndSatisfiesPredicate(
       callback(status, PagePredicateResult::PAGE_OPENED);
       return;
     }
-    FXL_DCHECK(active_page_manager);
+    LEDGER_DCHECK(active_page_manager);
     predicate(active_page_manager,
               callback::MakeScoped(
                   weak_factory_.GetWeakPtr(),

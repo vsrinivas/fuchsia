@@ -13,6 +13,7 @@
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -69,7 +70,7 @@ Status PageDbBatchImpl::DeleteCommit(coroutine::CoroutineHandler* handler, Commi
 Status PageDbBatchImpl::WriteObject(CoroutineHandler* handler, const Piece& piece,
                                     PageDbObjectStatus object_status,
                                     const ObjectReferencesAndPriority& references) {
-  FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
+  LEDGER_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
 
   const ObjectIdentifier& object_identifier = piece.GetIdentifier();
   Status status = page_db_->HasObject(handler, object_identifier);
@@ -86,7 +87,7 @@ Status PageDbBatchImpl::WriteObject(CoroutineHandler* handler, const Piece& piec
   RETURN_ON_ERROR(batch_->Put(handler, ObjectRow::GetKeyFor(object_identifier.object_digest()),
                               piece.GetData()));
   for (const auto& [child, priority] : references) {
-    FXL_DCHECK(!GetObjectDigestInfo(child).is_inlined());
+    LEDGER_DCHECK(!GetObjectDigestInfo(child).is_inlined());
     RETURN_ON_ERROR(batch_->Put(
         handler, ReferenceRow::GetKeyForObject(object_identifier.object_digest(), child, priority),
         ""));
@@ -117,14 +118,14 @@ Status PageDbBatchImpl::DeleteObject(coroutine::CoroutineHandler* handler,
                                      const ObjectDigest& object_digest,
                                      const ObjectReferencesAndPriority& references) {
   if (!factory_->TrackDeletion(object_digest)) {
-    FXL_VLOG(1) << "Object is live, cannot be deleted: " << object_digest;
+    LEDGER_VLOG(1) << "Object is live, cannot be deleted: " << object_digest;
     return Status::CANCELED;
   }
   std::vector<std::string> object_status_keys;
   Status status = page_db_->EnsureObjectDeletable(handler, object_digest, &object_status_keys);
   if (status == Status::CANCELED) {
     (void)factory_->UntrackDeletion(object_digest);
-    FXL_VLOG(1) << "Object is not garbage collectable, cannot be deleted: " << object_digest;
+    LEDGER_VLOG(1) << "Object is not garbage collectable, cannot be deleted: " << object_digest;
     return Status::CANCELED;
   }
   RETURN_ON_ERROR(status);
@@ -133,7 +134,7 @@ Status PageDbBatchImpl::DeleteObject(coroutine::CoroutineHandler* handler,
   }
   RETURN_ON_ERROR(batch_->Delete(handler, ObjectRow::GetKeyFor(object_digest)));
   for (const auto& [child, priority] : references) {
-    FXL_DCHECK(!GetObjectDigestInfo(child).is_inlined());
+    LEDGER_DCHECK(!GetObjectDigestInfo(child).is_inlined());
     RETURN_ON_ERROR(
         batch_->Delete(handler, ReferenceRow::GetKeyForObject(object_digest, child, priority)));
   }
@@ -144,7 +145,7 @@ Status PageDbBatchImpl::DeleteObject(coroutine::CoroutineHandler* handler,
 Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
                                         const ObjectIdentifier& object_identifier,
                                         PageDbObjectStatus object_status) {
-  FXL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
+  LEDGER_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
   RETURN_ON_ERROR(DCheckHasObject(handler, object_identifier));
 
   PageDbObjectStatus previous_object_status;
@@ -201,7 +202,7 @@ bool PageDbBatchImpl::UntrackPendingDeletions() {
   bool aborted = false;
   for (const ObjectDigest& object_digest : pending_deletion_) {
     if (!factory_->UntrackDeletion(object_digest)) {
-      FXL_VLOG(1) << "Deletion has been aborted, object cannot be deleted: " << object_digest;
+      LEDGER_VLOG(1) << "Deletion has been aborted, object cannot be deleted: " << object_digest;
       aborted = true;
     }
   }
@@ -217,7 +218,7 @@ Status PageDbBatchImpl::DCheckHasObject(CoroutineHandler* handler, const ObjectI
   if (status == Status::INTERRUPTED) {
     return status;
   }
-  FXL_DCHECK(status == Status::OK) << key;
+  LEDGER_DCHECK(status == Status::OK) << key;
   return Status::OK;
 #endif
 }

@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -17,7 +18,7 @@ SocketDrainer::Client::~Client() = default;
 
 SocketDrainer::SocketDrainer(Client* client, async_dispatcher_t* dispatcher)
     : client_(client), dispatcher_(dispatcher), destruction_sentinel_(nullptr) {
-  FXL_DCHECK(client_);
+  LEDGER_DCHECK(client_);
 }
 
 SocketDrainer::~SocketDrainer() {
@@ -63,7 +64,7 @@ void SocketDrainer::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBas
     return;
   }
 
-  FXL_DCHECK(status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE)
+  LEDGER_DCHECK(status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE)
       << "Unhandled zx_status_t: " << status;
   client_->OnDataComplete();
 }

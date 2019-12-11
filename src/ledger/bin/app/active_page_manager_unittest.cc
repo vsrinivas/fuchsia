@@ -33,6 +33,7 @@
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/backoff/exponential_backoff.h"
@@ -188,13 +189,13 @@ class EntriesPageStorage final : public storage::PageStorageEmptyImpl {
                      storage::PageStorage::Location location,
                      fit::function<void(storage::Status, ledger::SizedVmo)> callback) override {
     if (offset != 0) {
-      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+      LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
     }
     if (max_size != 1024) {
-      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+      LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
     }
     if (location != storage::PageStorage::Location::Local()) {
-      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+      LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
     }
 
     auto implementation = [this, index = object_identifier.key_index(),
@@ -233,7 +234,7 @@ class EntriesPageStorage final : public storage::PageStorageEmptyImpl {
                          fit::function<bool(storage::Entry)> on_next,
                          fit::function<void(storage::Status)> on_done) override {
     if (!min_key.empty()) {
-      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+      LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
     }
     auto implementation = [this, on_next = std::move(on_next),
                            on_done = std::move(on_done)]() mutable {
@@ -248,7 +249,7 @@ class EntriesPageStorage final : public storage::PageStorageEmptyImpl {
       // calls.
       for (const auto& [key, value_and_index] : entries_) {
         if (!on_next(CreateStorageEntry(key, value_and_index.second))) {
-          FXL_NOTIMPLEMENTED();  // Feel free to implement!
+          LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
         }
       }
       switch (get_commit_contents_second_synchrony_) {

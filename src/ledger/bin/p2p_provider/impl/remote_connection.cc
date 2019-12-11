@@ -7,6 +7,7 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -18,7 +19,7 @@ RemoteConnection::RemoteConnection() {
 }
 
 void RemoteConnection::Start(zx::channel channel) {
-  FXL_DCHECK(!started_);
+  LEDGER_DCHECK(!started_);
   started_ = true;
   message_relay_.SetChannel(std::move(channel));
 }
@@ -28,7 +29,7 @@ void RemoteConnection::SendMessage(absl::string_view data) {
 }
 
 void RemoteConnection::Disconnect() {
-  FXL_DCHECK(started_);
+  LEDGER_DCHECK(started_);
   message_relay_.SetChannelClosedCallback(nullptr);
   message_relay_.CloseChannel();
 
@@ -62,7 +63,7 @@ void RemoteConnection::OnChannelClosed() {
 }
 
 void RemoteConnection::OnNewMessage(std::vector<uint8_t> data) {
-  FXL_DCHECK(on_message_) << "No message handler has been set. We would be dropping messages.";
+  LEDGER_DCHECK(on_message_) << "No message handler has been set. We would be dropping messages.";
 
   if (on_message_) {
     on_message_(std::move(data));

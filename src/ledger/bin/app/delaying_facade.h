@@ -10,6 +10,8 @@
 #include <tuple>
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
+#include "src/lib/fxl/functional/apply.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/utility/utility.h"
 
@@ -59,8 +61,8 @@ class DelayingFacade {
   // methods added from previous calls to Front, and also all future ones.
   void SetTargetObject(A* object) {
     // Check that the object was not set before.
-    FXL_DCHECK(!object_);
-    FXL_DCHECK(object);
+    LEDGER_DCHECK(!object_);
+    LEDGER_DCHECK(object);
     object_ = object;
     auto calls = std::move(delayed_calls_);
     for (auto& f : calls) {

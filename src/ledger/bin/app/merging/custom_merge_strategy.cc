@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "src/ledger/bin/app/active_page_manager.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace ledger {
 CustomMergeStrategy::CustomMergeStrategy(ConflictResolverPtr conflict_resolver)
@@ -38,8 +39,8 @@ void CustomMergeStrategy::Merge(storage::PageStorage* storage,
                                 std::unique_ptr<const storage::Commit> head_2,
                                 std::unique_ptr<const storage::Commit> ancestor,
                                 fit::function<void(Status)> callback) {
-  FXL_DCHECK(storage::Commit::TimestampOrdered(head_1, head_2));
-  FXL_DCHECK(!in_progress_merge_);
+  LEDGER_DCHECK(storage::Commit::TimestampOrdered(head_1, head_2));
+  LEDGER_DCHECK(!in_progress_merge_);
 
   in_progress_merge_ = std::make_unique<ConflictResolverClient>(
       storage, active_page_manager, conflict_resolver_.get(), std::move(head_2), std::move(head_1),

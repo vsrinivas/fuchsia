@@ -12,6 +12,7 @@
 #include "src/ledger/bin/storage/fake/fake_commit.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace storage {
 namespace fake {
@@ -51,14 +52,14 @@ FakeJournalDelegate::~FakeJournalDelegate() = default;
 
 void FakeJournalDelegate::SetValue(convert::ExtendedStringView key, ObjectIdentifier value,
                                    KeyPriority priority) {
-  FXL_DCHECK(!is_committed_);
+  LEDGER_DCHECK(!is_committed_);
   data_.insert(
       {convert::ToString(key),
        {convert::ToString(key), std::move(value), priority, EntryId(convert::ToString(key))}});
 }
 
 void FakeJournalDelegate::Delete(convert::ExtendedStringView key) {
-  FXL_DCHECK(!is_committed_);
+  LEDGER_DCHECK(!is_committed_);
   auto it = data_.find(key);
   if (it != data_.end()) {
     data_.erase(it);
@@ -66,7 +67,7 @@ void FakeJournalDelegate::Delete(convert::ExtendedStringView key) {
 }
 
 void FakeJournalDelegate::Clear() {
-  FXL_DCHECK(!is_committed_);
+  LEDGER_DCHECK(!is_committed_);
   data_.clear();
 }
 

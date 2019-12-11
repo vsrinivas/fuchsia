@@ -11,6 +11,7 @@
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/murmurhash/murmurhash.h"
@@ -73,7 +74,7 @@ class NodeBuilder {
                                NodeBuilder* node_builder);
 
   // Creates a null builder.
-  NodeBuilder() { FXL_DCHECK(Validate()); }
+  NodeBuilder() { LEDGER_DCHECK(Validate()); }
 
   NodeBuilder(NodeBuilder&&) = default;
   NodeBuilder(const NodeBuilder&) = delete;
@@ -120,7 +121,7 @@ class NodeBuilder {
         location_(std::move(object_identifier.location)),
         entries_(std::move(entries)),
         children_(std::move(children)) {
-    FXL_DCHECK(Validate());
+    LEDGER_DCHECK(Validate());
   }
 
   // Ensures that the entries and children of this builder are computed.
@@ -175,7 +176,7 @@ class NodeBuilder {
     if (!*this) {
       return *this;
     }
-    FXL_DCHECK(target_level >= level_);
+    LEDGER_DCHECK(target_level >= level_);
     while (level_ < target_level) {
       std::vector<NodeBuilder> children;
       children.push_back(std::move(*this));
@@ -216,7 +217,7 @@ Status NodeBuilder::FromIdentifier(SynchronousStorage* page_storage,
                                    NodeBuilder* node_builder) {
   std::unique_ptr<const TreeNode> node;
   RETURN_ON_ERROR(page_storage->TreeNodeFromIdentifier(object_identifier, &node));
-  FXL_DCHECK(node);
+  LEDGER_DCHECK(node);
 
   std::vector<Entry> entries;
   std::vector<NodeBuilder> children;
@@ -263,7 +264,7 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
     RETURN_ON_ERROR(ComputeContent(page_storage));
 
     size_t index = GetEntryOrChildIndex(entries_, change.entry.key);
-    FXL_DCHECK(index == entries_.size() || entries_[index].key != change.entry.key);
+    LEDGER_DCHECK(index == entries_.size() || entries_[index].key != change.entry.key);
 
     NodeBuilder& child = children_[index];
     RETURN_ON_ERROR(
@@ -311,7 +312,7 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage, ObjectIdentifier* ob
       std::map<size_t, ObjectIdentifier> children;
       for (size_t index = 0; index < child->children_.size(); ++index) {
         const auto& sub_child = child->children_[index];
-        FXL_DCHECK(sub_child.type_ != BuilderType::NEW_NODE);
+        LEDGER_DCHECK(sub_child.type_ != BuilderType::NEW_NODE);
         if (sub_child) {
           children[index] = sub_child.object_identifier_;
         }
@@ -338,24 +339,24 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage, ObjectIdentifier* ob
     to_build.clear();
   }
 
-  FXL_DCHECK(type_ == BuilderType::EXISTING_NODE);
+  LEDGER_DCHECK(type_ == BuilderType::EXISTING_NODE);
   *object_identifier = object_identifier_;
 
   return Status::OK;
 }
 
 Status NodeBuilder::ComputeContent(SynchronousStorage* page_storage) {
-  FXL_DCHECK(*this);
+  LEDGER_DCHECK(*this);
 
   if (!children_.empty()) {
     return Status::OK;
   }
 
-  FXL_DCHECK(type_ == BuilderType::EXISTING_NODE);
+  LEDGER_DCHECK(type_ == BuilderType::EXISTING_NODE);
 
   std::unique_ptr<const TreeNode> node;
   RETURN_ON_ERROR(page_storage->TreeNodeFromIdentifier({object_identifier_, location_}, &node));
-  FXL_DCHECK(node);
+  LEDGER_DCHECK(node);
 
   ExtractContent(*node, &entries_, &children_, location_);
   return Status::OK;
@@ -363,8 +364,8 @@ Status NodeBuilder::ComputeContent(SynchronousStorage* page_storage) {
 
 Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level, DiffType diff_type,
                            Entry entry, bool* did_mutate) {
-  FXL_DCHECK(*this);
-  FXL_DCHECK(key_level >= level_);
+  LEDGER_DCHECK(*this);
+  LEDGER_DCHECK(key_level >= level_);
 
   // If the change is at a higher level than this node, then it is a no-op.
   if (key_level > level_) {
@@ -410,8 +411,8 @@ Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level, 
 
 Status NodeBuilder::Update(SynchronousStorage* page_storage, uint8_t change_level,
                            DiffType diff_type, Entry entry, bool* did_mutate) {
-  FXL_DCHECK(*this);
-  FXL_DCHECK(change_level >= level_);
+  LEDGER_DCHECK(*this);
+  LEDGER_DCHECK(change_level >= level_);
 
   // If the change is at a greater level than the node level, the current node
   // must be splitted in 2, and the new root is composed of the new entry and
@@ -484,7 +485,7 @@ Status NodeBuilder::Split(SynchronousStorage* page_storage, std::string key, Nod
   size_t split_index = GetEntryOrChildIndex(entries_, key);
 
   // Ensure that |key| is not part of the entries.
-  FXL_DCHECK(split_index == entries_.size() || entries_[split_index].key != key);
+  LEDGER_DCHECK(split_index == entries_.size() || entries_[split_index].key != key);
 
   auto& child_to_split = children_[split_index];
 
@@ -527,7 +528,7 @@ Status NodeBuilder::Split(SynchronousStorage* page_storage, std::string key, Nod
   if (entries_.empty() && !children_[0]) {
     *this = NodeBuilder();
   }
-  FXL_DCHECK(Validate());
+  LEDGER_DCHECK(Validate());
 
   return Status::OK;
 }
@@ -544,7 +545,7 @@ Status NodeBuilder::Merge(SynchronousStorage* page_storage, NodeBuilder other) {
 
   // |NULL_NODE|s do not have the level_ assigned. Only check the level if both
   // are non-null.
-  FXL_DCHECK(level_ == other.level_);
+  LEDGER_DCHECK(level_ == other.level_);
 
   RETURN_ON_ERROR(ComputeContent(page_storage));
   RETURN_ON_ERROR(other.ComputeContent(page_storage));
@@ -568,8 +569,8 @@ Status NodeBuilder::Merge(SynchronousStorage* page_storage, NodeBuilder other) {
 void NodeBuilder::ExtractContent(const TreeNode& node, std::vector<Entry>* entries,
                                  std::vector<NodeBuilder>* children,
                                  PageStorage::Location location) {
-  FXL_DCHECK(entries);
-  FXL_DCHECK(children);
+  LEDGER_DCHECK(entries);
+  LEDGER_DCHECK(children);
   *entries = std::vector<Entry>(node.entries().begin(), node.entries().end());
   children->clear();
   size_t next_index = 0;
@@ -609,7 +610,7 @@ Status ApplyChanges(coroutine::CoroutineHandler* handler, PageStorage* page_stor
                     ObjectIdentifier* new_root_identifier,
                     std::set<ObjectIdentifier>* new_identifiers,
                     const NodeLevelCalculator* node_level_calculator) {
-  FXL_DCHECK(storage::IsDigestValid(root_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(storage::IsDigestValid(root_identifier.identifier.object_digest()));
   SynchronousStorage storage(page_storage, handler);
   new_identifiers->clear();
   NodeBuilder root;
@@ -618,7 +619,7 @@ Status ApplyChanges(coroutine::CoroutineHandler* handler, PageStorage* page_stor
                                      DiffType::JOURNAL, std::move(changes), new_root_identifier,
                                      new_identifiers));
 
-  FXL_CHECK(new_root_identifier->object_digest().IsValid());
+  LEDGER_CHECK(new_root_identifier->object_digest().IsValid());
   return Status::OK;
 }
 
@@ -628,7 +629,7 @@ Status ApplyChangesFromCloud(coroutine::CoroutineHandler* handler, PageStorage* 
                              ObjectIdentifier* new_root_identifier,
                              std::set<ObjectIdentifier>* new_identifiers,
                              const NodeLevelCalculator* node_level_calculator) {
-  FXL_DCHECK(storage::IsDigestValid(root_identifier.identifier.object_digest()));
+  LEDGER_DCHECK(storage::IsDigestValid(root_identifier.identifier.object_digest()));
   SynchronousStorage storage(page_storage, handler);
   new_identifiers->clear();
   NodeBuilder root;
@@ -637,7 +638,7 @@ Status ApplyChangesFromCloud(coroutine::CoroutineHandler* handler, PageStorage* 
                                      DiffType::CLOUD, std::move(changes), new_root_identifier,
                                      new_identifiers));
 
-  FXL_CHECK(new_root_identifier->object_digest().IsValid());
+  LEDGER_CHECK(new_root_identifier->object_digest().IsValid());
   return Status::OK;
 }
 

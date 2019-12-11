@@ -18,6 +18,7 @@
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
@@ -153,7 +154,7 @@ void FillEntries(
   auto on_done = [waiter, context = std::move(context),
                   callback = std::move(timed_callback)](Status status) mutable {
     if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Error while reading: " << status;
+      LEDGER_LOG(ERROR) << "Error while reading: " << status;
       callback(Status::IO_ERROR, std::vector<EntryType>(), nullptr);
       return;
     }
@@ -162,11 +163,11 @@ void FillEntries(
                               Status status,
                               std::vector<std::unique_ptr<const storage::Object>> results) mutable {
           if (status != Status::OK) {
-            FXL_LOG(ERROR) << "Error while reading: " << status;
+            LEDGER_LOG(ERROR) << "Error while reading: " << status;
             callback(Status::IO_ERROR, std::vector<EntryType>(), nullptr);
             return;
           }
-          FXL_DCHECK(context->entries.size() == results.size());
+          LEDGER_DCHECK(context->entries.size() == results.size());
           size_t real_size = 0;
           size_t i = 0;
           for (; i < results.size(); i++) {
@@ -285,7 +286,7 @@ void PageSnapshotImpl::GetKeys(
   auto on_done = [context = std::move(context),
                   callback = std::move(timed_callback)](Status status) {
     if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Error while reading: " << status;
+      LEDGER_LOG(ERROR) << "Error while reading: " << status;
       callback(Status::IO_ERROR, std::vector<std::vector<uint8_t>>(), nullptr);
       return;
     }

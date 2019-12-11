@@ -16,6 +16,7 @@
 #include <task-utils/walker.h>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -65,8 +66,8 @@ class Walker final : public TaskEnumerator {
  public:
   Walker() {
     zx_info_handle_basic_t info;
-    FXL_CHECK(zx::job::default_job()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
-                                               nullptr) == ZX_OK);
+    LEDGER_CHECK(zx::job::default_job()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                                  nullptr, nullptr) == ZX_OK);
     test_env_koid_ = info.related_koid;
   }
 
@@ -85,7 +86,7 @@ class Walker final : public TaskEnumerator {
                         zx_koid_t parent_koid) override {
     zx::unowned<zx::process> unowned_task(task);
     std::string process_name;
-    FXL_CHECK(GetTaskName(unowned_task, &process_name));
+    LEDGER_CHECK(GetTaskName(unowned_task, &process_name));
     // The parent of the Ledger process must be a child of |test_env_koid_|.
     if (process_name == kLedgerBinaryName &&
         test_env_children_.find(parent_koid) != test_env_children_.end()) {
@@ -95,7 +96,7 @@ class Walker final : public TaskEnumerator {
         return ZX_ERR_ALREADY_EXISTS;
       }
       // This process corresponds to the right instance of Ledger.
-      FXL_CHECK(unowned_task->duplicate(ZX_RIGHT_SAME_RIGHTS, &ledger_handle_) == ZX_OK);
+      LEDGER_CHECK(unowned_task->duplicate(ZX_RIGHT_SAME_RIGHTS, &ledger_handle_) == ZX_OK);
     }
     return ZX_OK;
   }
@@ -127,24 +128,24 @@ LedgerMemoryEstimator::LedgerMemoryEstimator() = default;
 LedgerMemoryEstimator::~LedgerMemoryEstimator() = default;
 
 bool LedgerMemoryEstimator::Init() {
-  FXL_DCHECK(!ledger_task_.is_valid()) << "Init should only be called once";
+  LEDGER_DCHECK(!ledger_task_.is_valid()) << "Init should only be called once";
   Walker walker;
   zx_status_t status = walker.WalkRootJobTree();
   if (status == ZX_ERR_ALREADY_EXISTS) {
-    FXL_LOG(ERROR) << "More than one Ledger processes are running in this test. Did you "
-                      "set the environment name for this benchmark?";
+    LEDGER_LOG(ERROR) << "More than one Ledger processes are running in this test. Did you "
+                         "set the environment name for this benchmark?";
     return false;
   }
   ledger_task_ = walker.TakeLedgerHandle();
   if (!ledger_task_.is_valid()) {
-    FXL_LOG(ERROR) << "Failed to find a Ledger process.";
+    LEDGER_LOG(ERROR) << "Failed to find a Ledger process.";
     return false;
   }
   return true;
 }
 
 bool LedgerMemoryEstimator::GetLedgerMemoryUsage(uint64_t* memory) {
-  FXL_CHECK(ledger_task_);
+  LEDGER_CHECK(ledger_task_);
   return GetMemoryUsageForTask(ledger_task_, memory);
 }
 

@@ -10,6 +10,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace cloud_sync {
 namespace {
@@ -63,15 +64,15 @@ ledger::Status DecodeClock(coroutine::CoroutineHandler* handler, storage::PageSt
                            cloud_provider::ClockPack clock_pack, storage::Clock* clock) {
   cloud_provider::Clock unpacked_clock;
   if (!ledger::DecodeFromBuffer(clock_pack.buffer, &unpacked_clock)) {
-    FXL_LOG(ERROR) << "Unable to decode from buffer";
+    LEDGER_LOG(ERROR) << "Unable to decode from buffer";
     return ledger::Status::DATA_INTEGRITY_ERROR;
   }
   storage::Clock result;
   if (unpacked_clock.has_devices()) {
     for (const auto& dv : unpacked_clock.devices()) {
       if (!dv.has_fingerprint() || !dv.has_counter() || !dv.has_device_entry()) {
-        FXL_LOG(ERROR) << "Missing elements" << dv.has_fingerprint() << " " << dv.has_counter()
-                       << " " << dv.has_device_entry();
+        LEDGER_LOG(ERROR) << "Missing elements" << dv.has_fingerprint() << " " << dv.has_counter()
+                          << " " << dv.has_device_entry();
         return ledger::Status::DATA_INTEGRITY_ERROR;
       }
       clocks::DeviceId device_id;

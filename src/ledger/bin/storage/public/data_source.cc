@@ -8,6 +8,7 @@
 #include <lib/zx/vmar.h>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/socket_drainer.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -36,7 +37,7 @@ class StringLikeDataSource : public DataSource {
 
   void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) override {
 #ifndef NDEBUG
-    FXL_DCHECK(!called_);
+    LEDGER_DCHECK(!called_);
     called_ = true;
 #endif
     callback(std::make_unique<StringLikeDataChunk<S>>(std::move(value_)), Status::DONE);
@@ -84,14 +85,14 @@ class VmoDataChunk : public DataSource::DataChunk {
 
 class VmoDataSource : public DataSource {
  public:
-  explicit VmoDataSource(ledger::SizedVmo vmo) : vmo_(std::move(vmo)) { FXL_DCHECK(vmo_); }
+  explicit VmoDataSource(ledger::SizedVmo vmo) : vmo_(std::move(vmo)) { LEDGER_DCHECK(vmo_); }
 
  private:
   uint64_t GetSize() override { return vmo_.size(); }
 
   void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) override {
 #ifndef NDEBUG
-    FXL_DCHECK(!called_);
+    LEDGER_DCHECK(!called_);
     called_ = true;
 #endif
     if (!vmo_) {
@@ -116,14 +117,14 @@ class SocketDataSource : public DataSource, public ledger::SocketDrainer::Client
  public:
   SocketDataSource(zx::socket socket, uint64_t expected_size)
       : socket_(std::move(socket)), expected_size_(expected_size), remaining_bytes_(expected_size) {
-    FXL_DCHECK(socket_);
+    LEDGER_DCHECK(socket_);
   }
 
  private:
   uint64_t GetSize() override { return expected_size_; }
 
   void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) override {
-    FXL_DCHECK(socket_);
+    LEDGER_DCHECK(socket_);
     callback_ = std::move(callback);
     socket_drainer_ = std::make_unique<ledger::SocketDrainer>(this);
     socket_drainer_->Start(std::move(socket_));
@@ -132,8 +133,8 @@ class SocketDataSource : public DataSource, public ledger::SocketDrainer::Client
 
   void OnDataAvailable(const void* data, size_t num_bytes) override {
     if (num_bytes > remaining_bytes_) {
-      FXL_LOG(ERROR) << "Received incorrect number of bytes. Expected: " << expected_size_
-                     << ", but received at least " << (num_bytes - remaining_bytes_) << " more.";
+      LEDGER_LOG(ERROR) << "Received incorrect number of bytes. Expected: " << expected_size_
+                        << ", but received at least " << (num_bytes - remaining_bytes_) << " more.";
       socket_drainer_.reset();
       callback_(nullptr, Status::ERROR);
       return;
@@ -148,8 +149,8 @@ class SocketDataSource : public DataSource, public ledger::SocketDrainer::Client
   void OnDataComplete() override {
     socket_drainer_.reset();
     if (remaining_bytes_ != 0) {
-      FXL_LOG(ERROR) << "Received incorrect number of bytes. Expected: " << expected_size_
-                     << ", but received " << (expected_size_ - remaining_bytes_);
+      LEDGER_LOG(ERROR) << "Received incorrect number of bytes. Expected: " << expected_size_
+                        << ", but received " << (expected_size_ - remaining_bytes_);
       callback_(nullptr, Status::ERROR);
       return;
     }

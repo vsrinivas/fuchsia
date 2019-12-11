@@ -15,6 +15,7 @@
 #include <type_traits>
 
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/destruction_sentinel.h"
 #include "third_party/abseil-cpp/absl/utility/utility.h"
 
@@ -71,7 +72,7 @@ class CoroutineManager {
 
       // Verify that the handler is correctly unregistered. It would be a
       // bug otherwise.
-      FXL_DCHECK(callback_called);
+      LEDGER_DCHECK(callback_called);
     });
   }
 
@@ -128,7 +129,7 @@ class CoroutineManager {
     while (!handlers_.empty()) {
       (*handlers_.begin())->Resume(coroutine::ContinuationStatus::INTERRUPTED);
     }
-    FXL_DCHECK(handlers_.empty());
+    LEDGER_DCHECK(handlers_.empty());
   }
 
   // Enqueues |to_run|. Then either:

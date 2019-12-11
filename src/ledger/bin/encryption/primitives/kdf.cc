@@ -7,6 +7,7 @@
 #include <openssl/digest.h>
 #include <openssl/hkdf.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -18,7 +19,7 @@ std::string HMAC256KDF(absl::string_view data, size_t length) {
   int result =
       HKDF(reinterpret_cast<uint8_t*>(&output[0]), output.size(), EVP_sha256(),
            reinterpret_cast<const uint8_t*>(data.data()), data.size(), nullptr, 0u, nullptr, 0u);
-  FXL_CHECK(result == 1);
+  LEDGER_CHECK(result == 1);
   return output;
 }
 

@@ -6,12 +6,17 @@
 
 #include <lib/fit/function.h>
 
+#include "src/ledger/lib/logging/logging.h"
+
 #if __has_feature(address_sanitizer)
 #include <sanitizer/common_interface_defs.h>
+
+#include "src/ledger/lib/logging/logging.h"
 #endif
 
 #include "src/ledger/lib/coroutine/context/context.h"
 #include "src/ledger/lib/coroutine/context/stack.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace coroutine {
@@ -57,14 +62,14 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
 CoroutineServiceImpl::CoroutineHandlerImpl::CoroutineHandlerImpl(
     std::unique_ptr<context::Stack> stack, fit::function<void(CoroutineHandler*)> runnable)
     : stack_(std::move(stack)), runnable_(std::move(runnable)) {
-  FXL_DCHECK(stack_);
-  FXL_DCHECK(runnable_);
+  LEDGER_DCHECK(stack_);
+  LEDGER_DCHECK(runnable_);
 }
 
-CoroutineServiceImpl::CoroutineHandlerImpl::~CoroutineHandlerImpl() { FXL_DCHECK(!stack_); }
+CoroutineServiceImpl::CoroutineHandlerImpl::~CoroutineHandlerImpl() { LEDGER_DCHECK(!stack_); }
 
 ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::Yield() {
-  FXL_DCHECK(!interrupted_);
+  LEDGER_DCHECK(!interrupted_);
 
   if (interrupted_) {
     return ContinuationStatus::INTERRUPTED;
@@ -74,8 +79,8 @@ ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::Yield() {
 }
 
 void CoroutineServiceImpl::CoroutineHandlerImpl::Resume(ContinuationStatus status) {
-  FXL_DCHECK(!finished_);
-  FXL_DCHECK(suspended_) << "Attempting to resume a running coroutine.";
+  LEDGER_DCHECK(!finished_);
+  LEDGER_DCHECK(suspended_) << "Attempting to resume a running coroutine.";
 
   interrupted_ = interrupted_ || (status == ContinuationStatus::INTERRUPTED);
 #if __has_feature(address_sanitizer)
@@ -116,15 +121,15 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Run() {
   runnable_ = [](CoroutineHandler*) {};
   finished_ = true;
   DoYield();
-  FXL_NOTREACHED() << "Last yield should never return.";
+  LEDGER_NOTREACHED() << "Last yield should never return.";
 }
 
 ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::DoYield() {
-  FXL_DCHECK(!suspended_) << "Attempting to yield from outside the coroutine.";
+  LEDGER_DCHECK(!suspended_) << "Attempting to yield from outside the coroutine.";
   suspended_ = true;
 #if __has_feature(address_sanitizer)
-  FXL_DCHECK(origin_stack_);
-  FXL_DCHECK(origin_stacksize_);
+  LEDGER_DCHECK(origin_stack_);
+  LEDGER_DCHECK(origin_stacksize_);
   void* fake_stack_save = nullptr;
   __sanitizer_start_switch_fiber(finished_ ? nullptr : &fake_stack_save, origin_stack_,
                                  origin_stacksize_);

@@ -7,6 +7,7 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -22,7 +23,7 @@ void GetPageEnsureInitialized(LedgerPtr* ledger, PageIdPtr requested_id,
   auto request = page->NewRequest();
   (*ledger)->GetPage(std::move(requested_id), std::move(request));
   page->set_error_handler([error_handler = std::move(error_handler)](zx_status_t status) {
-    FXL_LOG(ERROR) << "The page connection was closed, quitting.";
+    LEDGER_LOG(ERROR) << "The page connection was closed, quitting.";
     error_handler();
   });
 

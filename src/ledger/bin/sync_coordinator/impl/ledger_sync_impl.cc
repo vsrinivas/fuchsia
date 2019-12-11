@@ -8,13 +8,14 @@
 
 #include "src/ledger/bin/sync_coordinator/impl/page_sync_impl.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 
 namespace sync_coordinator {
 
 LedgerSyncImpl::LedgerSyncImpl(std::unique_ptr<cloud_sync::LedgerSync> cloud_sync,
                                std::unique_ptr<p2p_sync::LedgerCommunicator> p2p_sync)
     : cloud_sync_(std::move(cloud_sync)), p2p_sync_(std::move(p2p_sync)) {
-  FXL_DCHECK(cloud_sync_ || p2p_sync_);
+  LEDGER_DCHECK(cloud_sync_ || p2p_sync_);
 }
 
 LedgerSyncImpl::~LedgerSyncImpl() = default;
@@ -40,8 +41,8 @@ void LedgerSyncImpl::CreatePageSync(
           storage::Status status, std::unique_ptr<cloud_sync::PageSync> cloud_page_sync) mutable {
         if (status != storage::Status::OK) {
           // Only print a warning there, cloud errors should be handled in cloud_sync.
-          FXL_LOG(WARNING) << "cloud_sync set, but failed to get a PageSync for the page "
-                           << convert::ToHex(page_storage->GetId());
+          LEDGER_LOG(WARNING) << "cloud_sync set, but failed to get a PageSync for the page "
+                              << convert::ToHex(page_storage->GetId());
         }
         combined_sync->SetCloudSync(std::move(cloud_page_sync));
         callback(storage::Status::OK, std::move(combined_sync));

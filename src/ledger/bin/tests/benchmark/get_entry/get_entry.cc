@@ -26,6 +26,7 @@
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
@@ -105,10 +106,10 @@ GetEntryBenchmark::GetEntryBenchmark(async::Loop* loop,
       key_size_(key_size),
       value_size_(value_size),
       use_inline_(use_inline) {
-  FXL_DCHECK(loop_);
-  FXL_DCHECK(entry_count_ > 0);
-  FXL_DCHECK(key_size_ > 0);
-  FXL_DCHECK(value_size_ > 0);
+  LEDGER_DCHECK(loop_);
+  LEDGER_DCHECK(entry_count_ > 0);
+  LEDGER_DCHECK(key_size_ > 0);
+  LEDGER_DCHECK(value_size_ > 0);
 }
 
 void GetEntryBenchmark::Run() {

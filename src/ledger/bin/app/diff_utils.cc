@@ -14,6 +14,7 @@
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/storage/public/object.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/util/ptr.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
@@ -152,7 +153,7 @@ void ComputePageChange(
   auto on_done = [waiter = std::move(waiter), context = std::move(context),
                   callback = std::move(callback)](Status status) mutable {
     if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Unable to compute diff for PageChange: " << fidl::ToUnderlying(status);
+      LEDGER_LOG(ERROR) << "Unable to compute diff for PageChange: " << fidl::ToUnderlying(status);
       callback(status, std::make_pair(nullptr, ""));
       return;
     }
@@ -172,15 +173,15 @@ void ComputePageChange(
                                Status status,
                                std::vector<std::unique_ptr<fuchsia::mem::Buffer>> results) mutable {
       if (status != Status::OK) {
-        FXL_LOG(ERROR) << "Error while reading changed values when computing PageChange: "
-                       << fidl::ToUnderlying(status);
+        LEDGER_LOG(ERROR) << "Error while reading changed values when computing PageChange: "
+                          << fidl::ToUnderlying(status);
         callback(status, std::make_pair(nullptr, ""));
         return;
       }
-      FXL_DCHECK(results.size() == context->page_change->changed_entries.size());
+      LEDGER_DCHECK(results.size() == context->page_change->changed_entries.size());
       for (size_t i = 0; i < results.size(); i++) {
         if (results[i]) {
-          FXL_DCHECK(results[i]->vmo);
+          LEDGER_DCHECK(results[i]->vmo);
           context->page_change->changed_entries.at(i).value = std::move(results[i]);
         }
       }
@@ -257,7 +258,7 @@ void ComputeThreeWayDiff(
   auto on_done = [waiter = std::move(waiter), context = std::move(context),
                   callback = std::move(callback)](Status status) mutable {
     if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
+      LEDGER_LOG(ERROR) << "Unable to compute diff for PageChange: " << status;
       callback(status, std::make_pair(std::vector<DiffEntry>(), ""));
       return;
     }
@@ -272,12 +273,12 @@ void ComputeThreeWayDiff(
     auto result_callback = [context = std::move(context), callback = std::move(callback)](
                                Status status, std::vector<ledger::SizedVmo> results) mutable {
       if (status != Status::OK) {
-        FXL_LOG(ERROR) << "Error while reading changed values when computing PageChange: "
-                       << fidl::ToUnderlying(status);
+        LEDGER_LOG(ERROR) << "Error while reading changed values when computing PageChange: "
+                          << fidl::ToUnderlying(status);
         callback(status, std::make_pair(std::vector<DiffEntry>(), ""));
         return;
       }
-      FXL_DCHECK(results.size() == 3 * context->changes.size());
+      LEDGER_DCHECK(results.size() == 3 * context->changes.size());
       for (size_t i = 0; i < context->changes.size(); i++) {
         if (results[3 * i]) {
           context->changes.at(i).base->value =

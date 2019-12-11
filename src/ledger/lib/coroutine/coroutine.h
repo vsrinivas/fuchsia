@@ -87,7 +87,7 @@ class CoroutineService {
 //     ContinuationStatus::INTERRUPTED) {
 //   return ContinuationStatus::INTERRUPTED;
 // }
-// FXL_LOG(INFO) << "LongAsyncComputation returned: " << s << " " << i;
+// LEDGER_LOG(INFO) << "LongAsyncComputation returned: " << s << " " << i;
 //
 // Another usage pattern is to have a lambda in place of LongAsyncComputation,
 // that will immediately store the callback provided by SyncCall in some
@@ -101,7 +101,7 @@ class CoroutineService {
 //              &s, &i) == ContinuationStatus::INTERRUPTED) {
 //   return ContinuationStatus::INTERRUPTED;
 // }
-// FXL_LOG(INFO) << "Some background task computed: " << s << " " << i;
+// LEDGER_LOG(INFO) << "Some background task computed: " << s << " " << i;
 //
 template <typename A, typename... Args>
 ABSL_MUST_USE_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler, A async_call,

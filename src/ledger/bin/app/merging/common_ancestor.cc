@@ -11,6 +11,7 @@
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -39,7 +40,7 @@ class CommitWalkMap {
   // Pops and returns the first commit for GenerationOrder. Precondition:
   // interesting_size() > 0.
   std::pair<std::unique_ptr<const storage::Commit>, WalkFlags> Pop() {
-    FXL_DCHECK(interesting_size() > 0);
+    LEDGER_DCHECK(interesting_size() > 0);
     auto e = map_.extract(map_.begin());
     if (IsInteresting(e.mapped())) {
       interesting_nodes_--;
@@ -62,7 +63,7 @@ class CommitWalkMap {
     if (IsInteresting(it->second)) {
       interesting_nodes_++;
     }
-    FXL_DCHECK(interesting_nodes_ <= map_.size());
+    LEDGER_DCHECK(interesting_nodes_ <= map_.size());
   }
 
  private:
@@ -84,7 +85,7 @@ Status FindCommonAncestors(coroutine::CoroutineHandler* handler, storage::PageSt
                            std::unique_ptr<const storage::Commit> right,
                            CommitComparison* comparison,
                            std::vector<std::unique_ptr<const storage::Commit>>* ancestors) {
-  FXL_DCHECK(ancestors->empty());
+  LEDGER_DCHECK(ancestors->empty());
 
   // The merge base is found by a highest-generation-first search in the commit
   // graph starting from the two heads.  The search order guarantees that child

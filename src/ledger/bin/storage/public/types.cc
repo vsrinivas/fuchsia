@@ -5,6 +5,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/util/ptr.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -37,7 +38,7 @@ ObjectDigest& ObjectDigest::operator=(ObjectDigest&&) noexcept = default;
 
 bool ObjectDigest::IsValid() const { return digest_.has_value(); }
 const std::string& ObjectDigest::Serialize() const {
-  FXL_DCHECK(IsValid());
+  LEDGER_DCHECK(IsValid());
   return digest_.value();
 }
 

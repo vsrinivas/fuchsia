@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -35,6 +36,7 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
+#include "src/ledger/lib/logging/logging.h"
 
 using storage::MatchesCommitIdAndBytes;
 using testing::ElementsAre;
@@ -161,7 +163,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
   }
 
   void AddCommitWatcher(storage::CommitWatcher* watcher) override {
-    FXL_DCHECK(!watcher_);
+    LEDGER_DCHECK(!watcher_);
     watcher_ = watcher;
   }
 
@@ -379,7 +381,7 @@ TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
       mesh.messages_[0].second.size());
   if (!VerifyMessageBuffer(verifier)) {
     // Wrong serialization, abort.
-    FXL_LOG(ERROR) << "The message received is malformed.";
+    LEDGER_LOG(ERROR) << "The message received is malformed.";
     return;
   };
   const Message* message = GetMessage(mesh.messages_[0].second.data());
@@ -411,7 +413,7 @@ TEST_F(PageCommunicatorImplTest, ConnectToNewMeshParticipant) {
       mesh.messages_[0].second.size());
   if (!VerifyMessageBuffer(verifier)) {
     // Wrong serialization, abort.
-    FXL_LOG(ERROR) << "The message received is malformed.";
+    LEDGER_LOG(ERROR) << "The message received is malformed.";
     return;
   };
   const Message* message = GetMessage(mesh.messages_[0].second.data());

@@ -11,6 +11,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace storage {
@@ -38,15 +39,16 @@ class ObjectIdentifierFactoryImpl::TokenImpl : public ObjectIdentifier::Token {
 
   ~TokenImpl() override {
     if (!tracker_) {
-      FXL_VLOG(1) << "ObjectIdentifier: stop tracking an object after the factory was destructed";
+      LEDGER_VLOG(1)
+          << "ObjectIdentifier: stop tracking an object after the factory was destructed";
       return;
     }
 
     ObjectDigest object_digest = map_entry_->first;
-    FXL_VLOG(2) << "ObjectIdentifier: stop tracking " << object_digest;
-    FXL_DCHECK(tracker_->thread_checker_.IsCreationThreadCurrent());
-    FXL_DCHECK(tracker_->dispatcher_checker_.IsCreationDispatcherCurrent());
-    FXL_DCHECK(map_entry_->second.expired());
+    LEDGER_VLOG(2) << "ObjectIdentifier: stop tracking " << object_digest;
+    LEDGER_DCHECK(tracker_->thread_checker_.IsCreationThreadCurrent());
+    LEDGER_DCHECK(tracker_->dispatcher_checker_.IsCreationDispatcherCurrent());
+    LEDGER_DCHECK(map_entry_->second.expired());
 
     tracker_->tokens_.erase(map_entry_);
     // Check if we need to notify the on_untracked_object_ callback.
@@ -80,25 +82,25 @@ ObjectIdentifierFactoryImpl::ObjectIdentifierFactoryImpl(NotificationPolicy noti
 
 ObjectIdentifierFactoryImpl::~ObjectIdentifierFactoryImpl() {
   if (!tokens_.empty()) {
-    FXL_VLOG(1) << "Destructing ObjectIdentifierFactory with remaining live tokens: "
-                << TokenCountsToString(tokens_);
+    LEDGER_VLOG(1) << "Destructing ObjectIdentifierFactory with remaining live tokens: "
+                   << TokenCountsToString(tokens_);
   }
 }
 
 std::shared_ptr<ObjectIdentifier::Token> ObjectIdentifierFactoryImpl::GetToken(
     ObjectDigest digest) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
+  LEDGER_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  LEDGER_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
 
   auto [it, created] = tokens_.try_emplace(std::move(digest));
   if (!created) {
-    FXL_DCHECK(!it->second.expired());
+    LEDGER_DCHECK(!it->second.expired());
     return it->second.lock();
   }
-  FXL_VLOG(2) << "ObjectIdentifier: start tracking " << it->first;
+  LEDGER_VLOG(2) << "ObjectIdentifier: start tracking " << it->first;
   auto token = std::make_shared<TokenImpl>(weak_factory_.GetWeakPtr(), it);
   it->second = token;
-  FXL_DCHECK(it->second.use_count() == 1);
+  LEDGER_DCHECK(it->second.use_count() == 1);
   return token;
 }
 
@@ -130,8 +132,8 @@ void ObjectIdentifierFactoryImpl::NotifyOnUntracked(ObjectDigest object_digest) 
 }
 
 bool ObjectIdentifierFactoryImpl::TrackDeletion(const ObjectDigest& object_digest) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
+  LEDGER_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  LEDGER_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
 
   if (tokens_.find(object_digest) != tokens_.end()) {
     // The object is tracked currently.
@@ -141,34 +143,35 @@ bool ObjectIdentifierFactoryImpl::TrackDeletion(const ObjectDigest& object_diges
     // The object is already pending deletion.
     return false;
   }
-  FXL_VLOG(1) << "Start deletion " << object_digest;
+  LEDGER_VLOG(1) << "Start deletion " << object_digest;
   return true;
 }
 
 void ObjectIdentifierFactoryImpl::AbortDeletion(const ObjectDigest& object_digest) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
+  LEDGER_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  LEDGER_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
 
   auto it = deletion_aborted_.find(object_digest);
   if (it == deletion_aborted_.end()) {
     // The object is not pending deletion.
     return;
   }
-  FXL_VLOG(1) << "Abort deletion " << object_digest;
+  LEDGER_VLOG(1) << "Abort deletion " << object_digest;
   it->second = true;
 }
 
 bool ObjectIdentifierFactoryImpl::UntrackDeletion(const ObjectDigest& object_digest) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
+  LEDGER_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  LEDGER_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
 
   auto it = deletion_aborted_.find(object_digest);
   if (it == deletion_aborted_.end()) {
     // The object is not pending deletion.
-    FXL_NOTREACHED() << "Unbalanced calls to start and abort deletion of object " << object_digest;
+    LEDGER_NOTREACHED() << "Unbalanced calls to start and abort deletion of object "
+                        << object_digest;
     return false;
   }
-  FXL_VLOG(1) << "Complete deletion " << object_digest;
+  LEDGER_VLOG(1) << "Complete deletion " << object_digest;
   const bool deletion_aborted = it->second;
   deletion_aborted_.erase(it);
   return !deletion_aborted;

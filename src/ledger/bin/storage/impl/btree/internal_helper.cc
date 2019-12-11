@@ -6,6 +6,7 @@
 
 #include <algorithm>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -18,7 +19,7 @@ size_t GetEntryOrChildIndex(const std::vector<Entry>& entries, absl::string_view
   auto lower =
       std::lower_bound(entries.begin(), entries.end(), key,
                        [](const Entry& entry, absl::string_view key) { return entry.key < key; });
-  FXL_DCHECK(lower == entries.end() || lower->key >= key);
+  LEDGER_DCHECK(lower == entries.end() || lower->key >= key);
   return lower - entries.begin();
 }
 

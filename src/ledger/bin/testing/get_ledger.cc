@@ -19,6 +19,7 @@
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
@@ -50,8 +51,8 @@ Status GetLedger(sys::ComponentContext* context,
   fbl::unique_fd dir(
       openat(ledger_repository_path.root_fd(), ledger_repository_path.path().c_str(), O_RDONLY));
   if (!dir.is_valid()) {
-    FXL_LOG(ERROR) << "Unable to open directory at " << ledger_repository_path.path()
-                   << ". errno: " << errno;
+    LEDGER_LOG(ERROR) << "Unable to open directory at " << ledger_repository_path.path()
+                      << ". errno: " << errno;
     return Status::IO_ERROR;
   }
 
@@ -77,7 +78,7 @@ Status GetLedger(sys::ComponentContext* context,
                                     repository.NewRequest());
 
   (*ledger).set_error_handler([error_handler = std::move(error_handler)](zx_status_t status) {
-    FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
+    LEDGER_LOG(ERROR) << "The ledger connection was closed, quitting.";
     error_handler();
   });
   repository->GetLedger(convert::ToArray(ledger_name), ledger->NewRequest());

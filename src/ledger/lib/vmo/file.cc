@@ -9,12 +9,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
 
 bool VmoFromFd(fbl::unique_fd fd, SizedVmo* handle_ptr) {
-  FXL_CHECK(handle_ptr);
+  LEDGER_CHECK(handle_ptr);
 
   struct stat stat_struct;
   if (fstat(fd.get(), &stat_struct) == -1)

@@ -21,6 +21,7 @@
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
@@ -101,7 +102,7 @@ void MergeResolver::MergeCandidates::OnMergeError(Status status) {
     had_network_errors_ = true;
     PrepareNext();
   } else {
-    FXL_LOG(WARNING) << "Merging failed. Will try again later.";
+    LEDGER_LOG(WARNING) << "Merging failed. Will try again later.";
   }
 }
 
@@ -146,7 +147,7 @@ bool MergeResolver::HasUnfinishedMerges() {
 
 void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
   if (merge_in_progress_) {
-    FXL_DCHECK(strategy_);
+    LEDGER_DCHECK(strategy_);
     // The new strategy can be the empty strategy (nullptr), so we need a
     // separate boolean to know if we have a pending strategy change to make.
     has_next_strategy_ = true;
@@ -161,7 +162,7 @@ void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
 }
 
 void MergeResolver::SetActivePageManager(ActivePageManager* active_page_manager) {
-  FXL_DCHECK(active_page_manager_ == nullptr);
+  LEDGER_DCHECK(active_page_manager_ == nullptr);
   active_page_manager_ = active_page_manager;
 }
 
@@ -201,14 +202,14 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
   if (merge_candidates_->NeedsReset()) {
     merge_candidates_->ResetCandidates(heads.size());
   }
-  FXL_DCHECK(merge_candidates_->head_count() == heads.size())
+  LEDGER_DCHECK(merge_candidates_->head_count() == heads.size())
       << merge_candidates_->head_count() << " != " << heads.size();
 
   if (s != Status::OK || heads.size() == 1 || !(merge_candidates_->HasCandidate())) {
     // An error occurred, or there is no conflict we can resolve. In
     // either case, return early.
     if (s != Status::OK) {
-      FXL_LOG(ERROR) << "Failed to get head commits with status " << s;
+      LEDGER_LOG(ERROR) << "Failed to get head commits with status " << s;
     } else if (heads.size() == 1) {
       for (auto& callback : no_conflict_callbacks_) {
         callback(has_merged_ ? ConflictResolutionWaitStatus::CONFLICTS_RESOLVED
@@ -258,7 +259,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
   TRACE_ASYNC_BEGIN("ledger", "merge", id);
   auto tracing = fit::defer([id] { TRACE_ASYNC_END("ledger", "merge", id); });
 
-  FXL_DCHECK(storage::Commit::TimestampOrdered(head1, head2));
+  LEDGER_DCHECK(storage::Commit::TimestampOrdered(head1, head2));
 
   if (head1->GetParentIds().size() == 2 && head2->GetParentIds().size() == 2) {
     if (delayed_status == DelayedStatus::MAY_DELAY) {
@@ -308,7 +309,7 @@ void MergeResolver::RecursiveMergeOneStep(std::unique_ptr<const storage::Commit>
       return;
     }
     if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Recursive merge failed";
+      LEDGER_LOG(ERROR) << "Recursive merge failed";
       return;
     }
     on_successful_merge();
@@ -403,7 +404,7 @@ Status MergeResolver::FindMergesSync(coroutine::CoroutineHandler* handler,
 Status MergeResolver::MergeSetSync(coroutine::CoroutineHandler* handler,
                                    std::vector<std::unique_ptr<const storage::Commit>> ancestors,
                                    std::unique_ptr<const storage::Commit>* final_merge) {
-  FXL_DCHECK(!ancestors.empty());
+  LEDGER_DCHECK(!ancestors.empty());
 
   // Sort ancestors by timestamp. This guarantees that, when we call the merge
   // strategy, the right-hand side commit is always the most recent, and also
@@ -439,7 +440,7 @@ Status MergeResolver::MergeSetSync(coroutine::CoroutineHandler* handler,
       // next_ancestor->GetTimestamp()| but the commit id of |last_merge| may be
       // higher. In case of equality we need to reorder the calls.
       if (!storage::Commit::TimestampOrdered(last_merge, next_ancestor)) {
-        FXL_DCHECK(last_merge->GetTimestamp() == next_ancestor->GetTimestamp());
+        LEDGER_DCHECK(last_merge->GetTimestamp() == next_ancestor->GetTimestamp());
         return RecursiveMergeSync(handler, std::move(next_ancestor), std::move(last_merge));
       }
       return RecursiveMergeSync(handler, std::move(last_merge), std::move(next_ancestor));
@@ -447,7 +448,7 @@ Status MergeResolver::MergeSetSync(coroutine::CoroutineHandler* handler,
     merges = std::move(next_merges);
   }
 
-  FXL_DCHECK(!merges.empty());
+  LEDGER_DCHECK(!merges.empty());
 
   // Try to create the merge in a deterministic way: order by id.
   std::sort(merges.begin(), merges.end());
@@ -461,7 +462,7 @@ Status MergeResolver::MergeSetSync(coroutine::CoroutineHandler* handler,
 Status MergeResolver::RecursiveMergeSync(coroutine::CoroutineHandler* handler,
                                          std::unique_ptr<const storage::Commit> left,
                                          std::unique_ptr<const storage::Commit> right) {
-  FXL_DCHECK(storage::Commit::TimestampOrdered(left, right));
+  LEDGER_DCHECK(storage::Commit::TimestampOrdered(left, right));
 
   CommitComparison comparison;
   std::vector<std::unique_ptr<const storage::Commit>> common_ancestors;
@@ -485,7 +486,7 @@ Status MergeResolver::RecursiveMergeSync(coroutine::CoroutineHandler* handler,
     return MergeCommitsToContentOfLeftSync(handler, std::move(left), std::move(right));
   }
 
-  FXL_DCHECK(!common_ancestors.empty());
+  LEDGER_DCHECK(!common_ancestors.empty());
 
   // MergeSetSync has 3 possible results:
   //  - a non-OK Status

@@ -19,6 +19,7 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/fxl/logging.h"
@@ -39,7 +40,7 @@ void GatherCommits(
     std::set<storage::CommitId> known_commit_ids,
     fit::function<void(Status, std::vector<std::unique_ptr<const storage::Commit>>)> callback,
     storage::PageStorage* page_storage) {
-  FXL_DCHECK(!ids_to_explore.empty());
+  LEDGER_DCHECK(!ids_to_explore.empty());
   storage::CommitId id_to_explore = ids_to_explore.top();
   ids_to_explore.pop();
   page_storage->GetCommit(
@@ -109,9 +110,9 @@ ActivePageManager::ActivePageManager(Environment* environment,
       task_runner_.PostDelayedTask(
           [this] {
             if (!sync_backlog_downloaded_) {
-              FXL_LOG(INFO) << "Initial sync will continue in background, "
-                            << "in the meantime binding to local page data "
-                            << "(might be stale or empty).";
+              LEDGER_LOG(INFO) << "Initial sync will continue in background, "
+                               << "in the meantime binding to local page data "
+                               << "(might be stale or empty).";
               OnSyncBacklogDownloaded();
             }
           },
@@ -157,7 +158,7 @@ void ActivePageManager::BindPageSnapshot(std::unique_ptr<const storage::Commit> 
 
 Reference ActivePageManager::CreateReference(storage::ObjectIdentifier object_identifier) {
   uint64_t index = environment_->random()->Draw<uint64_t>();
-  FXL_DCHECK(references_.find(index) == references_.end());
+  LEDGER_DCHECK(references_.find(index) == references_.end());
   references_[index] = std::move(object_identifier);
   Reference reference;
   reference.opaque_id = convert::ToArray(storage::SerializeData(index));
@@ -213,7 +214,7 @@ void ActivePageManager::GetCommits(
   std::vector<std::unique_ptr<const storage::Commit>> head_commits;
   storage::Status status = page_storage_->GetHeadCommits(&head_commits);
   if (status != storage::Status::OK) {
-    FXL_LOG(WARNING) << "GetHeadCommits returned non-OK status: " << status;
+    LEDGER_LOG(WARNING) << "GetHeadCommits returned non-OK status: " << status;
     callback(status, {});
     return;
   }
@@ -294,8 +295,8 @@ void ActivePageManager::GetValue(const storage::Commit& commit, std::string key,
               }
               std::vector<uint8_t> value{};
               if (!ledger::VectorFromVmo(sized_vmo, &value)) {
-                FXL_LOG(ERROR) << "VMO of size " << sized_vmo.size()
-                               << " not converted to vector<uint8_t>.";
+                LEDGER_LOG(ERROR) << "VMO of size " << sized_vmo.size()
+                                  << " not converted to vector<uint8_t>.";
                 callback(Status::INTERNAL_ERROR, std::vector<uint8_t>{});
                 CheckDiscardable();
                 return;
