@@ -476,10 +476,6 @@ config("icf") {
   }
 }
 
-config("no-icf") {
-  ldflags = [ "-Wl,--icf=none" ]
-}
-
 config("exceptions") {
   cflags_cc = [ "-fexceptions" ]
   cflags_objcc = cflags_cc
