@@ -737,7 +737,7 @@ zx_status_t fdio_ns_get_installed(fdio_ns_t** ns) {
   return status;
 }
 
-static zx_status_t fdio_wait_signals(fdio_t* io, uint32_t events, zx_time_t deadline,
+static zx_status_t fdio_wait_signals(fdio_t* io, uint32_t events, zx::time deadline,
                                      uint32_t* out_events, zx_signals_t* out_signals) {
   zx_handle_t h = ZX_HANDLE_INVALID;
   zx_signals_t signals = 0;
@@ -747,7 +747,7 @@ static zx_status_t fdio_wait_signals(fdio_t* io, uint32_t events, zx_time_t dead
     return ZX_ERR_INVALID_ARGS;
 
   zx_signals_t pending;
-  zx_status_t status = zx_object_wait_one(h, signals, deadline, &pending);
+  zx_status_t status = zx_object_wait_one(h, signals, deadline.get(), &pending);
   if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
     fdio_get_ops(io)->wait_end(io, pending, &events);
     if (out_events != nullptr)
@@ -759,17 +759,17 @@ static zx_status_t fdio_wait_signals(fdio_t* io, uint32_t events, zx_time_t dead
   return status;
 }
 
-zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline, uint32_t* out_pending) {
+zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* out_pending) {
   return fdio_wait_signals(io, events, deadline, out_pending, nullptr);
 }
 
 __EXPORT
-zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* _pending, zx_time_t deadline) {
+zx_status_t fdio_wait_fd(int fd, uint32_t events, uint32_t* out_pending, zx_time_t deadline) {
   fdio_t* io = fd_to_io(fd);
   if (io == NULL)
     return ZX_ERR_BAD_HANDLE;
 
-  zx_status_t status = fdio_wait(io, events, deadline, _pending);
+  zx_status_t status = fdio_wait(io, events, zx::time(deadline), out_pending);
 
   fdio_release(io);
   return status;
@@ -946,7 +946,7 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
     return ERRNO(EBADF);
   }
   bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
-  zx_time_t deadline = zx::deadline_after(*fdio_get_rcvtimeo(io)).get();
+  zx::time deadline = zx::deadline_after(*fdio_get_rcvtimeo(io));
 
   zx_iovec_t zx_iov[iovcnt];
   for (int i = 0; i < iovcnt; ++i) {
@@ -980,7 +980,7 @@ ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
     return ERRNO(EBADF);
   }
   bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
-  zx_time_t deadline = zx::deadline_after(*fdio_get_sndtimeo(io)).get();
+  zx::time deadline = zx::deadline_after(*fdio_get_sndtimeo(io));
 
   zx_iovec_t zx_iov[iovcnt];
   for (int i = 0; i < iovcnt; ++i) {
@@ -2198,7 +2198,7 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
   // been closed by remote end.
   bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
   flags &= ~MSG_DONTWAIT;
-  zx_time_t deadline = zx::deadline_after(*fdio_get_sndtimeo(io)).get();
+  zx::time deadline = zx::deadline_after(*fdio_get_sndtimeo(io));
   for (;;) {
     size_t actual;
     zx_status_t status = fdio_get_ops(io)->sendmsg(io, msg, flags, &actual);
@@ -2234,7 +2234,7 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
   }
   bool nonblocking = (*fdio_get_ioflag(io) & IOFLAG_NONBLOCK) || (flags & MSG_DONTWAIT);
   flags &= ~MSG_DONTWAIT;
-  zx_time_t deadline = zx::deadline_after(*fdio_get_rcvtimeo(io)).get();
+  zx::time deadline = zx::deadline_after(*fdio_get_rcvtimeo(io));
   for (;;) {
     size_t actual;
     zx_status_t status = fdio_get_ops(io)->recvmsg(io, msg, flags, &actual);

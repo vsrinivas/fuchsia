@@ -24,7 +24,7 @@ static zx_status_t read_at(fdio_t* io, void* buf, size_t len, off_t offset, size
     if (status != ZX_ERR_SHOULD_WAIT) {
       break;
     }
-    status = fdio_wait(io, FDIO_EVT_READABLE, ZX_TIME_INFINITE, NULL);
+    status = fdio_wait(io, FDIO_EVT_READABLE, zx::time::infinite(), NULL);
     if (status != ZX_OK) {
       break;
     }

@@ -143,7 +143,7 @@ zx::duration* fdio_get_sndtimeo(fdio_t* io);
 // closes the underlying object when it reaches zero.
 
 zx_status_t fdio_close(fdio_t* io);
-zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline, uint32_t* out_pending);
+zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* out_pending);
 
 // Wraps a channel with an fdio_t using remote io.
 // Takes ownership of h and e.
