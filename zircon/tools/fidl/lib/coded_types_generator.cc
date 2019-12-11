@@ -249,19 +249,23 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
   auto update_xunion =
       [this, wire_format](
           coded::XUnionType* coded_xunion,
-          const std::vector<std::tuple<const flat::Type*, raw::Ordinal32*>>& members) {
+          const std::vector<std::tuple<const flat::Type*, raw::Ordinal32*, raw::Ordinal32*,
+                                       raw::Ordinal32*>>& members) {
         assert(coded_xunion->fields.size() == 0 &&
                "The coded xunion fields are being compiled twice!");
 
         coded::XUnionType* nullable_coded_xunion = coded_xunion->maybe_reference_type;
 
-        for (const auto& [type, ordinal] : members) {
+        for (const auto& [type, write_ordinal, hashed_ordinal, explicit_ordinal] : members) {
           auto coded_member_type =
               CompileType(type, coded::CodingContext::kInsideEnvelope, wire_format);
-          coded_xunion->fields.emplace_back(coded_member_type, ordinal->value);
+          coded_xunion->fields.emplace_back(coded_member_type, write_ordinal->value,
+                                            hashed_ordinal->value, explicit_ordinal->value);
 
           if (nullable_coded_xunion)
-            nullable_coded_xunion->fields.emplace_back(coded_member_type, ordinal->value);
+            nullable_coded_xunion->fields.emplace_back(coded_member_type, write_ordinal->value,
+                                                       hashed_ordinal->value,
+                                                       explicit_ordinal->value);
         }
       };
 
@@ -398,7 +402,9 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
         case WireFormat::kV1NoEe: {
           coded::XUnionType* coded_xunion = static_cast<coded::XUnionType*>(type);
 
-          std::vector<std::tuple<const flat::Type*, raw::Ordinal32*>> type_ordinals;
+          std::vector<
+              std::tuple<const flat::Type*, raw::Ordinal32*, raw::Ordinal32*, raw::Ordinal32*>>
+              type_ordinals;
           for (const auto& member_ref : union_decl->MembersSortedByXUnionOrdinal()) {
             const auto& member = member_ref.get();
 
@@ -406,7 +412,8 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
               continue;
 
             type_ordinals.push_back(
-                std::make_tuple(member.maybe_used->type_ctor->type, member.xunion_ordinal.get()));
+                std::make_tuple(member.maybe_used->type_ctor->type, member.xunion_ordinal.get(),
+                                member.xunion_ordinal.get(), member.xunion_ordinal.get()));
           }
 
           update_xunion(coded_xunion, type_ordinals);
@@ -421,18 +428,20 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
 
       std::set<uint32_t> members;
       for (const auto& member : xunion_decl->members) {
-        if (!members.emplace(member.ordinal->value).second) {
+        if (!members.emplace(member.write_ordinal()->value).second) {
           assert(false && "Duplicate ordinal found in table generation");
         }
       }
 
-      std::vector<std::tuple<const flat::Type*, raw::Ordinal32*>> type_ordinals;
+      std::vector<std::tuple<const flat::Type*, raw::Ordinal32*, raw::Ordinal32*, raw::Ordinal32*>>
+          type_ordinals;
       for (const auto& member : xunion_decl->members) {
         if (!member.maybe_used)
           continue;
 
-        type_ordinals.push_back(
-            std::make_tuple(member.maybe_used->type_ctor->type, member.ordinal.get()));
+        type_ordinals.push_back(std::make_tuple(
+            member.maybe_used->type_ctor->type, member.write_ordinal().get(),
+            member.maybe_used->hashed_ordinal.get(), member.explicit_ordinal.get()));
       }
 
       update_xunion(coded_xunion, type_ordinals);

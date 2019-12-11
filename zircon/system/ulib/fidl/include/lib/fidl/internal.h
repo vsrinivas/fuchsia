@@ -97,6 +97,8 @@ struct FidlTableField {
 struct FidlXUnionField {
   const fidl_type_t* type;
   uint32_t ordinal;
+  uint32_t hashed_ordinal;
+  uint32_t explicit_ordinal;
 };
 
 // TODO(fxb/42793): Consider starting enum values for FidlTypeTag from 1, not 0.

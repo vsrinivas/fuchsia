@@ -363,8 +363,8 @@ struct ExplicitXUnion {
 
   enum class Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    kI = 1,  // 0x1
-    kF = 4,  // 0x4
+    kI = 625512649,  // 0x254890c9
+    kF = 182552961,  // 0xae18981
   };
 
   bool is_i() const { return ordinal_ == Tag::kI; }

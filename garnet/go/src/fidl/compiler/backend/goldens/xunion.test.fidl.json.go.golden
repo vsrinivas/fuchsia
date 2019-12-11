@@ -282,23 +282,23 @@ func StrictBoundedXUnionWithV(v []uint8) StrictBoundedXUnion {
 type I_explicitXUnionTag uint64
 const (
 	ExplicitXUnion_unknownData = 0  // 0x00000000
-	ExplicitXUnionI = 1 // 0x00000001
-	ExplicitXUnionF = 4 // 0x00000004
+	ExplicitXUnionI = 625512649 // 0x254890c9
+	ExplicitXUnionF = 182552961 // 0x0ae18981
 )
 
 
 type ExplicitXUnion struct {
 	I_explicitXUnionTag `fidl:"x,24,8" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
 	I_unknownData []byte
-	I int64  `fidl:"1"`
-	F float32  `fidl:"4"`
+	I int64  `fidl:"625512649"`
+	F float32  `fidl:"182552961"`
 }
 
 func (_m *ExplicitXUnion) Which() I_explicitXUnionTag {
 	switch _m.I_explicitXUnionTag {
-	case 1:
+	case 625512649:
 		return ExplicitXUnionI
-	case 4:
+	case 182552961:
 		return ExplicitXUnionF
 	default:
 		return ExplicitXUnion_unknownData

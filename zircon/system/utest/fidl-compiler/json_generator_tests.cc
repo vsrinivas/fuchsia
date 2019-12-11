@@ -1349,6 +1349,8 @@ strict xunion ExplicitStrictFoo {
       "members": [
         {
           "ordinal": 1056421836,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 1056421836,
           "reserved": false,
           "name": "s",
           "type": {
@@ -1367,6 +1369,8 @@ strict xunion ExplicitStrictFoo {
         },
         {
           "ordinal": 1911600824,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 1911600824,
           "reserved": false,
           "name": "i",
           "type": {
@@ -1430,6 +1434,8 @@ strict xunion ExplicitStrictFoo {
       "members": [
         {
           "ordinal": 215696753,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 215696753,
           "reserved": false,
           "name": "s",
           "type": {
@@ -1448,6 +1454,8 @@ strict xunion ExplicitStrictFoo {
         },
         {
           "ordinal": 2063855467,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 2063855467,
           "reserved": false,
           "name": "i",
           "type": {
@@ -1510,7 +1518,9 @@ strict xunion ExplicitStrictFoo {
       },
       "members": [
         {
-          "ordinal": 2,
+          "ordinal": 1104328308,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 1104328308,
           "reserved": false,
           "name": "s",
           "type": {
@@ -1528,7 +1538,9 @@ strict xunion ExplicitStrictFoo {
           "offset": 0
         },
         {
-          "ordinal": 1,
+          "ordinal": 239266458,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 239266458,
           "reserved": false,
           "name": "i",
           "type": {
@@ -1547,6 +1559,7 @@ strict xunion ExplicitStrictFoo {
         },
         {
           "ordinal": 3,
+          "explicit_ordinal": 3,
           "reserved": true,
           "location": {
             "filename": "json.fidl",
@@ -1601,6 +1614,7 @@ strict xunion ExplicitStrictFoo {
       "members": [
         {
           "ordinal": 1,
+          "explicit_ordinal": 1,
           "reserved": true,
           "location": {
             "filename": "json.fidl",
@@ -1609,7 +1623,9 @@ strict xunion ExplicitStrictFoo {
           }
         },
         {
-          "ordinal": 3,
+          "ordinal": 1579569872,
+          "explicit_ordinal": 3,
+          "hashed_ordinal": 1579569872,
           "reserved": false,
           "name": "s",
           "type": {
@@ -1627,7 +1643,9 @@ strict xunion ExplicitStrictFoo {
           "offset": 0
         },
         {
-          "ordinal": 2,
+          "ordinal": 1284403118,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 1284403118,
           "reserved": false,
           "name": "i",
           "type": {
@@ -2050,6 +2068,8 @@ protocol Protocol {
       "members": [
         {
           "ordinal": 1056421836,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 1056421836,
           "reserved": false,
           "name": "s",
           "type": {
@@ -2068,6 +2088,8 @@ protocol Protocol {
         },
         {
           "ordinal": 1911600824,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 1911600824,
           "reserved": false,
           "name": "i",
           "type": {
@@ -2131,6 +2153,8 @@ protocol Protocol {
       "members": [
         {
           "ordinal": 215696753,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 215696753,
           "reserved": false,
           "name": "s",
           "type": {
@@ -2149,6 +2173,8 @@ protocol Protocol {
         },
         {
           "ordinal": 2063855467,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 2063855467,
           "reserved": false,
           "name": "i",
           "type": {
@@ -5559,7 +5585,9 @@ xunion ExampleXUnion {
       ],
       "members": [
         {
-          "ordinal": 1,
+          "ordinal": 1300389554,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 1300389554,
           "reserved": false,
           "name": "variant",
           "type": {

@@ -547,8 +547,10 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
 
 void JSONGenerator::Generate(const flat::XUnion::Member& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
+    GenerateObjectMember("ordinal", value.write_ordinal(), Position::kFirst);
+    GenerateObjectMember("explicit_ordinal", value.explicit_ordinal);
     if (value.maybe_used) {
+      GenerateObjectMember("hashed_ordinal", value.maybe_used->hashed_ordinal);
       assert(!value.location);
       GenerateObjectMember("reserved", false);
       GenerateObjectMember("name", value.maybe_used->name);

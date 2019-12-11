@@ -477,13 +477,13 @@ const fidl_type_t example_FakeProtocolRegression9ResponseTable = {.type_tag=kFid
 
 
 static const struct FidlXUnionField Fields24example_this_is_a_xunion[] = {
-    /*FidlXUnionField*/{.type=&String4294967295nonnullableTable, .ordinal=1002815165u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=1553548889u}
+    /*FidlXUnionField*/{.type=&String4294967295nonnullableTable, .ordinal=1002815165u, .hashed_ordinal=1002815165u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=1553548889u, .hashed_ordinal=1553548889u, .explicit_ordinal=2u}
 };
 const fidl_type_t example_this_is_a_xunionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields24example_this_is_a_xunion, .nullable=kFidlNullability_Nonnullable, .name="example/this_is_a_xunion", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_this_is_a_xunionTable}}};
 static const struct FidlXUnionField Fields35example_this_is_a_xunionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&String4294967295nonnullableTable, .ordinal=1002815165u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=1553548889u}
+    /*FidlXUnionField*/{.type=&String4294967295nonnullableTable, .ordinal=1002815165u, .hashed_ordinal=1002815165u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=1553548889u, .hashed_ordinal=1553548889u, .explicit_ordinal=2u}
 };
 const fidl_type_t example_this_is_a_xunionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields35example_this_is_a_xunionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/this_is_a_xunion", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_this_is_a_xunionNullableRefTable}}};
 static const struct FidlTableField Fields23example_TableWithXUnion[] = {
@@ -616,13 +616,13 @@ static const struct FidlUnionField Fields27example_UnionSize12Aligned4[] = {
 const fidl_type_t example_UnionSize12Aligned4Table = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields27example_UnionSize12Aligned4, .field_count=4u, .data_offset=4u, .size=12u, .name="example/UnionSize12Aligned4", .alt_type=&v1_example_UnionSize12Aligned4Table}}};
 
 static const struct FidlXUnionField Fields24example_XUnionWithUnions[] = {
-    /*FidlXUnionField*/{.type=&example_UnionSize8Aligned4Table, .ordinal=156307043u},
-    /*FidlXUnionField*/{.type=&example_UnionSize12Aligned4Table, .ordinal=1987954326u}
+    /*FidlXUnionField*/{.type=&example_UnionSize8Aligned4Table, .ordinal=156307043u, .hashed_ordinal=156307043u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&example_UnionSize12Aligned4Table, .ordinal=1987954326u, .hashed_ordinal=1987954326u, .explicit_ordinal=2u}
 };
 const fidl_type_t example_XUnionWithUnionsTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields24example_XUnionWithUnions, .nullable=kFidlNullability_Nonnullable, .name="example/XUnionWithUnions", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_XUnionWithUnionsTable}}};
 static const struct FidlXUnionField Fields35example_XUnionWithUnionsNullableRef[] = {
-    /*FidlXUnionField*/{.type=&example_UnionSize8Aligned4Table, .ordinal=156307043u},
-    /*FidlXUnionField*/{.type=&example_UnionSize12Aligned4Table, .ordinal=1987954326u}
+    /*FidlXUnionField*/{.type=&example_UnionSize8Aligned4Table, .ordinal=156307043u, .hashed_ordinal=156307043u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&example_UnionSize12Aligned4Table, .ordinal=1987954326u, .hashed_ordinal=1987954326u, .explicit_ordinal=2u}
 };
 const fidl_type_t example_XUnionWithUnionsNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields35example_XUnionWithUnionsNullableRef, .nullable=kFidlNullability_Nullable, .name="example/XUnionWithUnions", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_XUnionWithUnionsNullableRefTable}}};
 static const struct FidlTableField Fields36example_TableWithUnionSize12Aligned4[] = {
@@ -652,11 +652,11 @@ static const struct FidlUnionField Fields24example_UnionAtTheBottom[] = {
 const fidl_type_t example_UnionAtTheBottomTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields24example_UnionAtTheBottom, .field_count=3u, .data_offset=4u, .size=8u, .name="example/UnionAtTheBottom", .alt_type=&v1_example_UnionAtTheBottomTable}}};
 
 static const struct FidlXUnionField Fields21example_XUnionOfUnion[] = {
-    /*FidlXUnionField*/{.type=&example_UnionAtTheBottomTable, .ordinal=1600589915u}
+    /*FidlXUnionField*/{.type=&example_UnionAtTheBottomTable, .ordinal=1600589915u, .hashed_ordinal=1600589915u, .explicit_ordinal=1u}
 };
 const fidl_type_t example_XUnionOfUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields21example_XUnionOfUnion, .nullable=kFidlNullability_Nonnullable, .name="example/XUnionOfUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_XUnionOfUnionTable}}};
 static const struct FidlXUnionField Fields32example_XUnionOfUnionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&example_UnionAtTheBottomTable, .ordinal=1600589915u}
+    /*FidlXUnionField*/{.type=&example_UnionAtTheBottomTable, .ordinal=1600589915u, .hashed_ordinal=1600589915u, .explicit_ordinal=1u}
 };
 const fidl_type_t example_XUnionOfUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields32example_XUnionOfUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/XUnionOfUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_XUnionOfUnionNullableRefTable}}};
 static const struct FidlTableField Fields30example_TableOfXUnionThenUnion[] = {
@@ -665,11 +665,11 @@ static const struct FidlTableField Fields30example_TableOfXUnionThenUnion[] = {
 const fidl_type_t example_TableOfXUnionThenUnionTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields30example_TableOfXUnionThenUnion, .field_count=1u, .name="example/TableOfXUnionThenUnion"}}};
 
 static const struct FidlXUnionField Fields40example_XUnionOfTableThenXUnionThenUnion[] = {
-    /*FidlXUnionField*/{.type=&example_TableOfXUnionThenUnionTable, .ordinal=1528140622u}
+    /*FidlXUnionField*/{.type=&example_TableOfXUnionThenUnionTable, .ordinal=1528140622u, .hashed_ordinal=1528140622u, .explicit_ordinal=1u}
 };
 const fidl_type_t example_XUnionOfTableThenXUnionThenUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields40example_XUnionOfTableThenXUnionThenUnion, .nullable=kFidlNullability_Nonnullable, .name="example/XUnionOfTableThenXUnionThenUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_XUnionOfTableThenXUnionThenUnionTable}}};
 static const struct FidlXUnionField Fields51example_XUnionOfTableThenXUnionThenUnionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&example_TableOfXUnionThenUnionTable, .ordinal=1528140622u}
+    /*FidlXUnionField*/{.type=&example_TableOfXUnionThenUnionTable, .ordinal=1528140622u, .hashed_ordinal=1528140622u, .explicit_ordinal=1u}
 };
 const fidl_type_t example_XUnionOfTableThenXUnionThenUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields51example_XUnionOfTableThenXUnionThenUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/XUnionOfTableThenXUnionThenUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_XUnionOfTableThenXUnionThenUnionNullableRefTable}}};
 static const struct FidlUnionField Fields49example_UnionOfXUnionThenTableThenXUnionThenUnion[] = {
@@ -706,19 +706,19 @@ static const struct FidlStructField Fields29example_StructSize3Alignment1[] = {
 const fidl_type_t example_StructSize3Alignment1Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields29example_StructSize3Alignment1, .field_count=1u, .size=3u, .max_out_of_line=0u, .contains_union=false, .name="example/StructSize3Alignment1", .alt_type=&v1_example_StructSize3Alignment1Table}}};
 
 static const struct FidlXUnionField Fields24example_XUnionWithStruct[] = {
-    /*FidlXUnionField*/{.type=&example_StructSize3Alignment1Table, .ordinal=78693387u}
+    /*FidlXUnionField*/{.type=&example_StructSize3Alignment1Table, .ordinal=78693387u, .hashed_ordinal=78693387u, .explicit_ordinal=1u}
 };
 const fidl_type_t example_XUnionWithStructTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields24example_XUnionWithStruct, .nullable=kFidlNullability_Nonnullable, .name="example/XUnionWithStruct", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_XUnionWithStructTable}}};
 static const struct FidlXUnionField Fields35example_XUnionWithStructNullableRef[] = {
-    /*FidlXUnionField*/{.type=&example_StructSize3Alignment1Table, .ordinal=78693387u}
+    /*FidlXUnionField*/{.type=&example_StructSize3Alignment1Table, .ordinal=78693387u, .hashed_ordinal=78693387u, .explicit_ordinal=1u}
 };
 const fidl_type_t example_XUnionWithStructNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields35example_XUnionWithStructNullableRef, .nullable=kFidlNullability_Nullable, .name="example/XUnionWithStruct", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_XUnionWithStructNullableRefTable}}};
 static const struct FidlXUnionField Fields24example_XUnionWithXUnion[] = {
-    /*FidlXUnionField*/{.type=&example_XUnionWithStructTable, .ordinal=1316738703u}
+    /*FidlXUnionField*/{.type=&example_XUnionWithStructTable, .ordinal=1316738703u, .hashed_ordinal=1316738703u, .explicit_ordinal=1u}
 };
 const fidl_type_t example_XUnionWithXUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields24example_XUnionWithXUnion, .nullable=kFidlNullability_Nonnullable, .name="example/XUnionWithXUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_XUnionWithXUnionTable}}};
 static const struct FidlXUnionField Fields35example_XUnionWithXUnionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&example_XUnionWithStructTable, .ordinal=1316738703u}
+    /*FidlXUnionField*/{.type=&example_XUnionWithStructTable, .ordinal=1316738703u, .hashed_ordinal=1316738703u, .explicit_ordinal=1u}
 };
 const fidl_type_t example_XUnionWithXUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields35example_XUnionWithXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/XUnionWithXUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_XUnionWithXUnionNullableRefTable}}};
 static const struct FidlUnionField Fields23example_UnionWithVector[] = {
@@ -1311,13 +1311,13 @@ const fidl_type_t v1_example_FakeProtocolRegression9ResponseTable = {.type_tag=k
 
 
 static const struct FidlXUnionField Fields27v1_example_this_is_a_xunion[] = {
-    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1002815165u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=1553548889u}
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1002815165u, .hashed_ordinal=1002815165u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=1553548889u, .hashed_ordinal=1553548889u, .explicit_ordinal=2u}
 };
 const fidl_type_t v1_example_this_is_a_xunionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields27v1_example_this_is_a_xunion, .nullable=kFidlNullability_Nonnullable, .name="example/this_is_a_xunion", .strictness=kFidlStrictness_Flexible, .alt_type=&example_this_is_a_xunionTable}}};
 static const struct FidlXUnionField Fields38v1_example_this_is_a_xunionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1002815165u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=1553548889u}
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1002815165u, .hashed_ordinal=1002815165u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=1553548889u, .hashed_ordinal=1553548889u, .explicit_ordinal=2u}
 };
 const fidl_type_t v1_example_this_is_a_xunionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields38v1_example_this_is_a_xunionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/this_is_a_xunion", .strictness=kFidlStrictness_Flexible, .alt_type=&example_this_is_a_xunionNullableRefTable}}};
 static const struct FidlTableField Fields26v1_example_TableWithXUnion[] = {
@@ -1331,8 +1331,8 @@ static const struct FidlStructField Fields34v1_example_StructOfTableWithXUnion[]
 const fidl_type_t v1_example_StructOfTableWithXUnionTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields34v1_example_StructOfTableWithXUnion, .field_count=1u, .size=16u, .max_out_of_line=4294967295u, .contains_union=false, .name="example/StructOfTableWithXUnion", .alt_type=&example_StructOfTableWithXUnionTable}}};
 
 static const struct FidlXUnionField Fields26v1_example_this_is_a_union[] = {
-    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=2u}
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
 };
 const fidl_type_t v1_example_this_is_a_unionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields26v1_example_this_is_a_union, .nullable=kFidlNullability_Nonnullable, .name="example/this_is_a_union", .strictness=kFidlStrictness_Strict, .alt_type=&example_this_is_a_unionTable}}};
 static const struct FidlTableField Fields26v1_example_this_is_a_table[] = {
@@ -1355,7 +1355,7 @@ static const struct FidlStructField Fields22v1_example_CompatTable[] = {
 const fidl_type_t v1_example_CompatTableTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields22v1_example_CompatTable, .field_count=2u, .size=32u, .max_out_of_line=4294967295u, .contains_union=true, .name="example/CompatTable", .alt_type=&example_CompatTableTable}}};
 
 static const struct FidlXUnionField Fields35v1_example_UnionWithVectorOfVectors[] = {
-    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable76v1_Vector4294967295nonnullable44v1_Pointer32v1_example_StructSize3Alignment1Table, .ordinal=1u}
+    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable76v1_Vector4294967295nonnullable44v1_Pointer32v1_example_StructSize3Alignment1Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u}
 };
 const fidl_type_t v1_example_UnionWithVectorOfVectorsTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields35v1_example_UnionWithVectorOfVectors, .nullable=kFidlNullability_Nonnullable, .name="example/UnionWithVectorOfVectors", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionWithVectorOfVectorsTable}}};
 static const struct FidlStructField Fields20v1_example_Sandwich9[] = {
@@ -1366,22 +1366,22 @@ static const struct FidlStructField Fields20v1_example_Sandwich9[] = {
 const fidl_type_t v1_example_Sandwich9Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields20v1_example_Sandwich9, .field_count=3u, .size=40u, .max_out_of_line=4294967295u, .contains_union=true, .name="example/Sandwich9", .alt_type=&example_Sandwich9Table}}};
 
 static const struct FidlXUnionField Fields31v1_example_UnionSize8Alignment4[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u},
-    /*FidlXUnionField*/{.type=&v1_Array4_5uint8Table, .ordinal=4u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u},
+    /*FidlXUnionField*/{.type=&v1_Array4_5uint8Table, .ordinal=4u, .hashed_ordinal=4u, .explicit_ordinal=4u}
 };
 const fidl_type_t v1_example_UnionSize8Alignment4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=4u, .fields=Fields31v1_example_UnionSize8Alignment4, .nullable=kFidlNullability_Nonnullable, .name="example/UnionSize8Alignment4", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionSize8Alignment4Table}}};
 static const struct FidlXUnionField Fields29v1_example_UnionSize8Aligned4[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=3u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u}
 };
 const fidl_type_t v1_example_UnionSize8Aligned4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields29v1_example_UnionSize8Aligned4, .nullable=kFidlNullability_Nonnullable, .name="example/UnionSize8Aligned4", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionSize8Aligned4Table}}};
 static const struct FidlXUnionField Fields41v1_Pointer29v1_example_UnionSize8Aligned4[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=3u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u}
 };
 static const fidl_type_t v1_Pointer29v1_example_UnionSize8Aligned4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields41v1_Pointer29v1_example_UnionSize8Aligned4, .nullable=kFidlNullability_Nullable, .name="example/UnionSize8Aligned4", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer26example_UnionSize8Aligned4Table}}};
 static const struct FidlStructField Fields20v1_example_Sandwich1[] = {
@@ -1399,10 +1399,10 @@ static const struct FidlStructField Fields29v1_example_OutOfLineSandwich1[] = {
 const fidl_type_t v1_example_OutOfLineSandwich1Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields29v1_example_OutOfLineSandwich1, .field_count=3u, .size=48u, .max_out_of_line=4294967295u, .contains_union=true, .name="example/OutOfLineSandwich1", .alt_type=&example_OutOfLineSandwich1Table}}};
 
 static const struct FidlXUnionField Fields32v1_example_UnionSize36Alignment4[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u},
-    /*FidlXUnionField*/{.type=&v1_Array32_5uint8Table, .ordinal=4u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u},
+    /*FidlXUnionField*/{.type=&v1_Array32_5uint8Table, .ordinal=4u, .hashed_ordinal=4u, .explicit_ordinal=4u}
 };
 const fidl_type_t v1_example_UnionSize36Alignment4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=4u, .fields=Fields32v1_example_UnionSize36Alignment4, .nullable=kFidlNullability_Nonnullable, .name="example/UnionSize36Alignment4", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionSize36Alignment4Table}}};
 static const struct FidlStructField Fields20v1_example_Sandwich4[] = {
@@ -1443,27 +1443,27 @@ static const struct FidlStructField Fields34v1_example_NoCodingTablesStresssor[]
 const fidl_type_t v1_example_NoCodingTablesStresssorTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields34v1_example_NoCodingTablesStresssor, .field_count=14u, .size=160u, .max_out_of_line=112u, .contains_union=true, .name="example/NoCodingTablesStresssor", .alt_type=&example_NoCodingTablesStresssorTable}}};
 
 static const struct FidlXUnionField Fields30v1_example_UnionSize12Aligned4[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u},
-    /*FidlXUnionField*/{.type=&v1_Array6_5uint8Table, .ordinal=4u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u},
+    /*FidlXUnionField*/{.type=&v1_Array6_5uint8Table, .ordinal=4u, .hashed_ordinal=4u, .explicit_ordinal=4u}
 };
 const fidl_type_t v1_example_UnionSize12Aligned4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=4u, .fields=Fields30v1_example_UnionSize12Aligned4, .nullable=kFidlNullability_Nonnullable, .name="example/UnionSize12Aligned4", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionSize12Aligned4Table}}};
 static const struct FidlXUnionField Fields42v1_Pointer30v1_example_UnionSize12Aligned4[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u},
-    /*FidlXUnionField*/{.type=&v1_Array6_5uint8Table, .ordinal=4u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u},
+    /*FidlXUnionField*/{.type=&v1_Array6_5uint8Table, .ordinal=4u, .hashed_ordinal=4u, .explicit_ordinal=4u}
 };
 static const fidl_type_t v1_Pointer30v1_example_UnionSize12Aligned4Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=4u, .fields=Fields42v1_Pointer30v1_example_UnionSize12Aligned4, .nullable=kFidlNullability_Nullable, .name="example/UnionSize12Aligned4", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer27example_UnionSize12Aligned4Table}}};
 static const struct FidlXUnionField Fields27v1_example_XUnionWithUnions[] = {
-    /*FidlXUnionField*/{.type=&v1_example_UnionSize8Aligned4Table, .ordinal=156307043u},
-    /*FidlXUnionField*/{.type=&v1_example_UnionSize12Aligned4Table, .ordinal=1987954326u}
+    /*FidlXUnionField*/{.type=&v1_example_UnionSize8Aligned4Table, .ordinal=156307043u, .hashed_ordinal=156307043u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_example_UnionSize12Aligned4Table, .ordinal=1987954326u, .hashed_ordinal=1987954326u, .explicit_ordinal=2u}
 };
 const fidl_type_t v1_example_XUnionWithUnionsTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields27v1_example_XUnionWithUnions, .nullable=kFidlNullability_Nonnullable, .name="example/XUnionWithUnions", .strictness=kFidlStrictness_Flexible, .alt_type=&example_XUnionWithUnionsTable}}};
 static const struct FidlXUnionField Fields38v1_example_XUnionWithUnionsNullableRef[] = {
-    /*FidlXUnionField*/{.type=&v1_example_UnionSize8Aligned4Table, .ordinal=156307043u},
-    /*FidlXUnionField*/{.type=&v1_example_UnionSize12Aligned4Table, .ordinal=1987954326u}
+    /*FidlXUnionField*/{.type=&v1_example_UnionSize8Aligned4Table, .ordinal=156307043u, .hashed_ordinal=156307043u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_example_UnionSize12Aligned4Table, .ordinal=1987954326u, .hashed_ordinal=1987954326u, .explicit_ordinal=2u}
 };
 const fidl_type_t v1_example_XUnionWithUnionsNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields38v1_example_XUnionWithUnionsNullableRef, .nullable=kFidlNullability_Nullable, .name="example/XUnionWithUnions", .strictness=kFidlStrictness_Flexible, .alt_type=&example_XUnionWithUnionsNullableRefTable}}};
 static const struct FidlTableField Fields39v1_example_TableWithUnionSize12Aligned4[] = {
@@ -1486,17 +1486,17 @@ static const struct FidlStructField Fields20v1_example_Sandwich2[] = {
 const fidl_type_t v1_example_Sandwich2Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields20v1_example_Sandwich2, .field_count=3u, .size=40u, .max_out_of_line=8u, .contains_union=true, .name="example/Sandwich2", .alt_type=&example_Sandwich2Table}}};
 
 static const struct FidlXUnionField Fields27v1_example_UnionAtTheBottom[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u}
 };
 const fidl_type_t v1_example_UnionAtTheBottomTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields27v1_example_UnionAtTheBottom, .nullable=kFidlNullability_Nonnullable, .name="example/UnionAtTheBottom", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionAtTheBottomTable}}};
 static const struct FidlXUnionField Fields24v1_example_XUnionOfUnion[] = {
-    /*FidlXUnionField*/{.type=&v1_example_UnionAtTheBottomTable, .ordinal=1600589915u}
+    /*FidlXUnionField*/{.type=&v1_example_UnionAtTheBottomTable, .ordinal=1600589915u, .hashed_ordinal=1600589915u, .explicit_ordinal=1u}
 };
 const fidl_type_t v1_example_XUnionOfUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields24v1_example_XUnionOfUnion, .nullable=kFidlNullability_Nonnullable, .name="example/XUnionOfUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&example_XUnionOfUnionTable}}};
 static const struct FidlXUnionField Fields35v1_example_XUnionOfUnionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&v1_example_UnionAtTheBottomTable, .ordinal=1600589915u}
+    /*FidlXUnionField*/{.type=&v1_example_UnionAtTheBottomTable, .ordinal=1600589915u, .hashed_ordinal=1600589915u, .explicit_ordinal=1u}
 };
 const fidl_type_t v1_example_XUnionOfUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields35v1_example_XUnionOfUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/XUnionOfUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&example_XUnionOfUnionNullableRefTable}}};
 static const struct FidlTableField Fields33v1_example_TableOfXUnionThenUnion[] = {
@@ -1505,16 +1505,16 @@ static const struct FidlTableField Fields33v1_example_TableOfXUnionThenUnion[] =
 const fidl_type_t v1_example_TableOfXUnionThenUnionTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields33v1_example_TableOfXUnionThenUnion, .field_count=1u, .name="example/TableOfXUnionThenUnion"}}};
 
 static const struct FidlXUnionField Fields43v1_example_XUnionOfTableThenXUnionThenUnion[] = {
-    /*FidlXUnionField*/{.type=&v1_example_TableOfXUnionThenUnionTable, .ordinal=1528140622u}
+    /*FidlXUnionField*/{.type=&v1_example_TableOfXUnionThenUnionTable, .ordinal=1528140622u, .hashed_ordinal=1528140622u, .explicit_ordinal=1u}
 };
 const fidl_type_t v1_example_XUnionOfTableThenXUnionThenUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields43v1_example_XUnionOfTableThenXUnionThenUnion, .nullable=kFidlNullability_Nonnullable, .name="example/XUnionOfTableThenXUnionThenUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&example_XUnionOfTableThenXUnionThenUnionTable}}};
 static const struct FidlXUnionField Fields54v1_example_XUnionOfTableThenXUnionThenUnionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&v1_example_TableOfXUnionThenUnionTable, .ordinal=1528140622u}
+    /*FidlXUnionField*/{.type=&v1_example_TableOfXUnionThenUnionTable, .ordinal=1528140622u, .hashed_ordinal=1528140622u, .explicit_ordinal=1u}
 };
 const fidl_type_t v1_example_XUnionOfTableThenXUnionThenUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields54v1_example_XUnionOfTableThenXUnionThenUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/XUnionOfTableThenXUnionThenUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&example_XUnionOfTableThenXUnionThenUnionNullableRefTable}}};
 static const struct FidlXUnionField Fields52v1_example_UnionOfXUnionThenTableThenXUnionThenUnion[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&v1_example_XUnionOfTableThenXUnionThenUnionTable, .ordinal=3u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_example_XUnionOfTableThenXUnionThenUnionTable, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u}
 };
 const fidl_type_t v1_example_UnionOfXUnionThenTableThenXUnionThenUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields52v1_example_UnionOfXUnionThenTableThenXUnionThenUnion, .nullable=kFidlNullability_Nonnullable, .name="example/UnionOfXUnionThenTableThenXUnionThenUnion", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionOfXUnionThenTableThenXUnionThenUnionTable}}};
 static const struct FidlTableField Fields61v1_example_TableOfUnionThenXUnionThenTableThenXUnionThenUnion[] = {
@@ -1545,31 +1545,31 @@ static const struct FidlStructField Fields32v1_example_StructSize3Alignment1[] =
 const fidl_type_t v1_example_StructSize3Alignment1Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32v1_example_StructSize3Alignment1, .field_count=1u, .size=3u, .max_out_of_line=0u, .contains_union=false, .name="example/StructSize3Alignment1", .alt_type=&example_StructSize3Alignment1Table}}};
 
 static const struct FidlXUnionField Fields27v1_example_XUnionWithStruct[] = {
-    /*FidlXUnionField*/{.type=&v1_example_StructSize3Alignment1Table, .ordinal=78693387u}
+    /*FidlXUnionField*/{.type=&v1_example_StructSize3Alignment1Table, .ordinal=78693387u, .hashed_ordinal=78693387u, .explicit_ordinal=1u}
 };
 const fidl_type_t v1_example_XUnionWithStructTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields27v1_example_XUnionWithStruct, .nullable=kFidlNullability_Nonnullable, .name="example/XUnionWithStruct", .strictness=kFidlStrictness_Flexible, .alt_type=&example_XUnionWithStructTable}}};
 static const struct FidlXUnionField Fields38v1_example_XUnionWithStructNullableRef[] = {
-    /*FidlXUnionField*/{.type=&v1_example_StructSize3Alignment1Table, .ordinal=78693387u}
+    /*FidlXUnionField*/{.type=&v1_example_StructSize3Alignment1Table, .ordinal=78693387u, .hashed_ordinal=78693387u, .explicit_ordinal=1u}
 };
 const fidl_type_t v1_example_XUnionWithStructNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields38v1_example_XUnionWithStructNullableRef, .nullable=kFidlNullability_Nullable, .name="example/XUnionWithStruct", .strictness=kFidlStrictness_Flexible, .alt_type=&example_XUnionWithStructNullableRefTable}}};
 static const struct FidlXUnionField Fields27v1_example_XUnionWithXUnion[] = {
-    /*FidlXUnionField*/{.type=&v1_example_XUnionWithStructTable, .ordinal=1316738703u}
+    /*FidlXUnionField*/{.type=&v1_example_XUnionWithStructTable, .ordinal=1316738703u, .hashed_ordinal=1316738703u, .explicit_ordinal=1u}
 };
 const fidl_type_t v1_example_XUnionWithXUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields27v1_example_XUnionWithXUnion, .nullable=kFidlNullability_Nonnullable, .name="example/XUnionWithXUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&example_XUnionWithXUnionTable}}};
 static const struct FidlXUnionField Fields38v1_example_XUnionWithXUnionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&v1_example_XUnionWithStructTable, .ordinal=1316738703u}
+    /*FidlXUnionField*/{.type=&v1_example_XUnionWithStructTable, .ordinal=1316738703u, .hashed_ordinal=1316738703u, .explicit_ordinal=1u}
 };
 const fidl_type_t v1_example_XUnionWithXUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields38v1_example_XUnionWithXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/XUnionWithXUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&example_XUnionWithXUnionNullableRefTable}}};
 static const struct FidlXUnionField Fields26v1_example_UnionWithVector[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable5uint8Table, .ordinal=2u},
-    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=3u},
-    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable32v1_example_StructSize3Alignment1Table, .ordinal=4u},
-    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable32v1_example_StructSize3Alignment2Table, .ordinal=5u},
-    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable26v1_HandlehandlenonnullableTable, .ordinal=6u},
-    /*FidlXUnionField*/{.type=&v1_Array6_32v1_example_StructSize3Alignment1Table, .ordinal=7u},
-    /*FidlXUnionField*/{.type=&v1_Array8_32v1_example_StructSize3Alignment2Table, .ordinal=8u},
-    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable29v1_example_UnionSize8Aligned4Table, .ordinal=9u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable5uint8Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u},
+    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable32v1_example_StructSize3Alignment1Table, .ordinal=4u, .hashed_ordinal=4u, .explicit_ordinal=4u},
+    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable32v1_example_StructSize3Alignment2Table, .ordinal=5u, .hashed_ordinal=5u, .explicit_ordinal=5u},
+    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable26v1_HandlehandlenonnullableTable, .ordinal=6u, .hashed_ordinal=6u, .explicit_ordinal=6u},
+    /*FidlXUnionField*/{.type=&v1_Array6_32v1_example_StructSize3Alignment1Table, .ordinal=7u, .hashed_ordinal=7u, .explicit_ordinal=7u},
+    /*FidlXUnionField*/{.type=&v1_Array8_32v1_example_StructSize3Alignment2Table, .ordinal=8u, .hashed_ordinal=8u, .explicit_ordinal=8u},
+    /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable29v1_example_UnionSize8Aligned4Table, .ordinal=9u, .hashed_ordinal=9u, .explicit_ordinal=9u}
 };
 const fidl_type_t v1_example_UnionWithVectorTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=9u, .fields=Fields26v1_example_UnionWithVector, .nullable=kFidlNullability_Nonnullable, .name="example/UnionWithVector", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionWithVectorTable}}};
 static const struct FidlTableField Fields47v1_example_Table_UnionWithVector_StructSandwich[] = {
@@ -1623,17 +1623,17 @@ static const struct FidlStructField Fields33v1_example_StructSize16Alignment8[] 
 const fidl_type_t v1_example_StructSize16Alignment8Table = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields33v1_example_StructSize16Alignment8, .field_count=2u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="example/StructSize16Alignment8", .alt_type=&example_StructSize16Alignment8Table}}};
 
 static const struct FidlXUnionField Fields32v1_example_UnionSize24Alignment8[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u},
-    /*FidlXUnionField*/{.type=&v1_example_StructSize16Alignment8Table, .ordinal=4u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u},
+    /*FidlXUnionField*/{.type=&v1_example_StructSize16Alignment8Table, .ordinal=4u, .hashed_ordinal=4u, .explicit_ordinal=4u}
 };
 const fidl_type_t v1_example_UnionSize24Alignment8Table = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=4u, .fields=Fields32v1_example_UnionSize24Alignment8, .nullable=kFidlNullability_Nonnullable, .name="example/UnionSize24Alignment8", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionSize24Alignment8Table}}};
 static const struct FidlXUnionField Fields23v1_example_UnionOfUnion[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&v1_example_UnionSize8Aligned4Table, .ordinal=2u},
-    /*FidlXUnionField*/{.type=&v1_example_UnionSize12Aligned4Table, .ordinal=3u},
-    /*FidlXUnionField*/{.type=&v1_example_UnionSize24Alignment8Table, .ordinal=4u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_example_UnionSize8Aligned4Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u},
+    /*FidlXUnionField*/{.type=&v1_example_UnionSize12Aligned4Table, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u},
+    /*FidlXUnionField*/{.type=&v1_example_UnionSize24Alignment8Table, .ordinal=4u, .hashed_ordinal=4u, .explicit_ordinal=4u}
 };
 const fidl_type_t v1_example_UnionOfUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=4u, .fields=Fields23v1_example_UnionOfUnion, .nullable=kFidlNullability_Nonnullable, .name="example/UnionOfUnion", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionOfUnionTable}}};
 static const struct FidlStructField Fields20v1_example_Sandwich8[] = {
@@ -1663,13 +1663,13 @@ static const struct FidlStructField Fields28v1_example_StringUnionVector[] = {
 const fidl_type_t v1_example_StringUnionVectorTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields28v1_example_StringUnionVector, .field_count=1u, .size=16u, .max_out_of_line=4294967295u, .contains_union=true, .name="example/StringUnionVector", .alt_type=&example_StringUnionVectorTable}}};
 
 static const struct FidlXUnionField Fields22v1_example_StringUnion[] = {
-    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=2u}
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
 };
 const fidl_type_t v1_example_StringUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields22v1_example_StringUnion, .nullable=kFidlNullability_Nonnullable, .name="example/StringUnion", .strictness=kFidlStrictness_Strict, .alt_type=&example_StringUnionTable}}};
 static const struct FidlXUnionField Fields34v1_Pointer22v1_example_StringUnion[] = {
-    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=2u}
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kBoolTable, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
 };
 static const fidl_type_t v1_Pointer22v1_example_StringUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields34v1_Pointer22v1_example_StringUnion, .nullable=kFidlNullability_Nullable, .name="example/StringUnion", .strictness=kFidlStrictness_Strict, .alt_type=&Pointer19example_StringUnionTable}}};
 static const struct FidlStructField Fields28v1_example_StringUnionStruct[] = {
@@ -1695,8 +1695,8 @@ static const struct FidlStructField Fields44v1_example_FakeProtocol_Regression9_
 const fidl_type_t v1_example_FakeProtocol_Regression9_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields44v1_example_FakeProtocol_Regression9_Response, .field_count=1u, .size=48u, .max_out_of_line=4294967295u, .contains_union=true, .name="example/FakeProtocol_Regression9_Response", .alt_type=&example_FakeProtocol_Regression9_ResponseTable}}};
 
 static const struct FidlXUnionField Fields42v1_example_FakeProtocol_Regression9_Result[] = {
-    /*FidlXUnionField*/{.type=&v1_example_FakeProtocol_Regression9_ResponseTable, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
+    /*FidlXUnionField*/{.type=&v1_example_FakeProtocol_Regression9_ResponseTable, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
 };
 const fidl_type_t v1_example_FakeProtocol_Regression9_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields42v1_example_FakeProtocol_Regression9_Result, .nullable=kFidlNullability_Nonnullable, .name="example/FakeProtocol_Regression9_Result", .strictness=kFidlStrictness_Strict, .alt_type=&example_FakeProtocol_Regression9_ResultTable}}};
 static const struct FidlStructField Fields22v1_example_ArrayStruct[] = {
@@ -1813,8 +1813,8 @@ static const struct FidlTableField Fields30v1_example_Regression10TableV2[] = {
 const fidl_type_t v1_example_Regression10TableV2Table = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields30v1_example_Regression10TableV2, .field_count=2u, .name="example/Regression10TableV2"}}};
 
 static const struct FidlXUnionField Fields37v1_example_UnionWithRegression10Table[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&v1_example_Regression10TableV2Table, .ordinal=3u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_example_Regression10TableV2Table, .ordinal=3u, .hashed_ordinal=3u, .explicit_ordinal=3u}
 };
 const fidl_type_t v1_example_UnionWithRegression10TableTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields37v1_example_UnionWithRegression10Table, .nullable=kFidlNullability_Nonnullable, .name="example/UnionWithRegression10Table", .strictness=kFidlStrictness_Strict, .alt_type=&example_UnionWithRegression10TableTable}}};
 static const struct FidlStructField Fields23v1_example_Regression11[] = {
@@ -1884,8 +1884,8 @@ static const struct FidlStructField Fields22v1_example_EmptyStruct[] = {};
 const fidl_type_t v1_example_EmptyStructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields22v1_example_EmptyStruct, .field_count=0u, .size=1u, .max_out_of_line=0u, .contains_union=false, .name="example/EmptyStruct", .alt_type=&example_EmptyStructTable}}};
 
 static const struct FidlXUnionField Fields27v1_example_EmptyStructUnion[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u},
-    /*FidlXUnionField*/{.type=&v1_example_EmptyStructTable, .ordinal=2u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint8Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_example_EmptyStructTable, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
 };
 const fidl_type_t v1_example_EmptyStructUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields27v1_example_EmptyStructUnion, .nullable=kFidlNullability_Nonnullable, .name="example/EmptyStructUnion", .strictness=kFidlStrictness_Strict, .alt_type=&example_EmptyStructUnionTable}}};
 static const struct FidlStructField Fields33v1_example_EmptyStructUnionStruct[] = {

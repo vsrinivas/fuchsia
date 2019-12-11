@@ -253,7 +253,7 @@ union Foo {
   ASSERT_NOT_NULL(ex_union);
 
   ASSERT_EQ(ex_union->members.front().xunion_ordinal->value, 1);
-  ASSERT_EQ(ex_xunion->members.front().ordinal->value, 1);
+  ASSERT_EQ(ex_xunion->members.front().explicit_ordinal->value, 1);
 
   END_TEST;
 }
@@ -327,6 +327,90 @@ union Foo {
   END_TEST;
 }
 
+bool write_ordinal_hashed() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library test;
+
+xunion Foo {
+  uint8 bar;
+  bool baz;
+  string qux;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  const auto xunion = library.LookupXUnion("Foo");
+  ASSERT_EQ(xunion->members.size(), 3);
+  EXPECT_EQ(xunion->members[0].explicit_ordinal->value, 1);
+  EXPECT_EQ(xunion->members[0].maybe_used->hashed_ordinal->value, 0x1b269e3);
+  EXPECT_EQ(xunion->members[0].write_ordinal()->value, 0x1b269e3);
+  EXPECT_EQ(xunion->members[1].explicit_ordinal->value, 2);
+  EXPECT_EQ(xunion->members[1].maybe_used->hashed_ordinal->value, 0x2a293370);
+  EXPECT_EQ(xunion->members[1].write_ordinal()->value, 0x2a293370);
+  EXPECT_EQ(xunion->members[2].explicit_ordinal->value, 3);
+  EXPECT_EQ(xunion->members[2].maybe_used->hashed_ordinal->value, 0x64af3380);
+  EXPECT_EQ(xunion->members[2].write_ordinal()->value, 0x64af3380);
+
+  END_TEST;
+}
+
+bool write_ordinal_explicit() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library test;
+
+xunion Foo {
+  1: uint8 bar;
+  2: bool baz;
+  3: string qux;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  const auto xunion = library.LookupXUnion("Foo");
+  ASSERT_EQ(xunion->members.size(), 3);
+  EXPECT_EQ(xunion->members[0].explicit_ordinal->value, 1);
+  EXPECT_EQ(xunion->members[0].maybe_used->hashed_ordinal->value, 0x1b269e3);
+  EXPECT_EQ(xunion->members[0].write_ordinal()->value, 0x1b269e3);
+  EXPECT_EQ(xunion->members[1].explicit_ordinal->value, 2);
+  EXPECT_EQ(xunion->members[1].maybe_used->hashed_ordinal->value, 0x2a293370);
+  EXPECT_EQ(xunion->members[1].write_ordinal()->value, 0x2a293370);
+  EXPECT_EQ(xunion->members[2].explicit_ordinal->value, 3);
+  EXPECT_EQ(xunion->members[2].maybe_used->hashed_ordinal->value, 0x64af3380);
+  EXPECT_EQ(xunion->members[2].write_ordinal()->value, 0x64af3380);
+
+  END_TEST;
+}
+
+bool write_ordinal_explicit_allowlist() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library fuchsia.ledger.cloud;
+
+xunion DeviceEntry {
+  1: uint8 bar;
+  2: bool baz;
+  3: string qux;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  const auto xunion = library.LookupXUnion("DeviceEntry");
+  ASSERT_EQ(xunion->members.size(), 3);
+  EXPECT_EQ(xunion->members[0].explicit_ordinal->value, 1);
+  EXPECT_EQ(xunion->members[0].maybe_used->hashed_ordinal->value, 0x5efcd997);
+  EXPECT_EQ(xunion->members[0].write_ordinal()->value, 1);
+  EXPECT_EQ(xunion->members[1].explicit_ordinal->value, 2);
+  EXPECT_EQ(xunion->members[1].maybe_used->hashed_ordinal->value, 0x33894275);
+  EXPECT_EQ(xunion->members[1].write_ordinal()->value, 2);
+  EXPECT_EQ(xunion->members[2].explicit_ordinal->value, 3);
+  EXPECT_EQ(xunion->members[2].maybe_used->hashed_ordinal->value, 0x5ba09b26);
+  EXPECT_EQ(xunion->members[2].write_ordinal()->value, 3);
+
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(xunion_tests)
@@ -337,4 +421,7 @@ RUN_TEST(union_xunion_same_ordinals_explicit)
 RUN_TEST(error_syntax_explicit_ordinals)
 RUN_TEST(no_nullable_members_in_xunions)
 RUN_TEST(ordinal_cutoff)
+RUN_TEST(write_ordinal_hashed)
+RUN_TEST(write_ordinal_explicit)
+RUN_TEST(write_ordinal_explicit_allowlist)
 END_TEST_CASE(xunion_tests)

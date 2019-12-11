@@ -163,6 +163,18 @@ const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
     {"fuchsia.io", "NodeInfo"},
 }};
 
+// This map is added to enable the migration of xunions to use the explicit ordinal
+// syntax in FIDL files
+//   - xunions using hashed ordinals need to continue using hashed ordinals after the
+//     FIDL file migration
+//   - however, xunions which were already using explicit ordinals *before* the FIDL
+//     format change need to continue using explicit ordinals. these xunions are
+//     tracked in this map and this data is propagated through to the xunion members and
+//     into the fidlc output (JSON IR/coding tables)
+const std::set<std::pair<std::string, std::string_view>> explicit_ordinal_xunions{{
+    {"fuchsia.ledger.cloud", "DeviceEntry"},
+}};
+
 bool IsSimple(const Type* type, const TypeShape& typeshape, ErrorReporter* error_reporter) {
   switch (type->kind) {
     case Type::Kind::kVector: {
@@ -1812,31 +1824,38 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
   auto name = Name(this, xunion_declaration->identifier->location());
 
   assert(!xunion_declaration->members.empty() && "unions must have at least one member");
+  auto xunion_name =
+      std::pair<std::string, std::string_view>(LibraryName(this, "."), name.name_part());
+  bool should_write_explicit =
+      explicit_ordinal_xunions.find(xunion_name) != explicit_ordinal_xunions.end();
   bool are_ordinals_explicit = xunion_declaration->members[0]->maybe_ordinal != nullptr;
+  uint32_t current_ordinal = 1;
   std::vector<XUnion::Member> members;
   for (auto& member : xunion_declaration->members) {
-    auto ordinal = std::move(member->maybe_ordinal);
+    auto explicit_ordinal = std::move(member->maybe_ordinal);
 
-    bool is_member_ordinal_explicit = ordinal != nullptr;
+    bool is_member_ordinal_explicit = explicit_ordinal != nullptr;
     if (are_ordinals_explicit != is_member_ordinal_explicit) {
       return Fail(member->location(), "cannot mix explicit and implicit ordinals");
     }
 
+    if (!explicit_ordinal) {
+      // implicitly set explicit ordinals by numbering from 1.
+      explicit_ordinal = std::make_unique<raw::Ordinal32>(*member, current_ordinal++);
+    }
+    if (explicit_ordinal->value > kXunionOrdinalCutoff) {
+      return Fail(member->location(), "xunion ordinal must be <= 512");
+    }
+
     if (member->maybe_used) {
-      if (!ordinal) {
-        ordinal = std::make_unique<raw::Ordinal32>(
-            fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
-        if (ordinal->value <= kXunionOrdinalCutoff) {
-          return Fail(member->location(),
-                      "hashed ordinal is <= 512, and conflicts with explicit ordinal space, try "
-                      "using a different Selector");
-        }
-      } else {
-        if (ordinal->value > kXunionOrdinalCutoff) {
-          return Fail(member->location(), "explicit union ordinal must be <= 512");
-        }
-      }
       auto location = member->maybe_used->identifier->location();
+      auto hashed_ordinal = std::make_unique<raw::Ordinal32>(
+          fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.name_part(), *member));
+      if (hashed_ordinal->value <= kXunionOrdinalCutoff) {
+        return Fail(member->location(),
+                    "hashed ordinal is <= 512, and conflicts with explicit ordinal space, try "
+                    "using a different Selector");
+      }
       std::unique_ptr<TypeConstructor> type_ctor;
       if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), location, &type_ctor))
         return false;
@@ -1845,17 +1864,18 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
         return Fail(member->location(), "Extensible union members cannot be nullable");
       }
 
-      members.emplace_back(std::move(ordinal), std::move(type_ctor), location,
-                           std::move(member->maybe_used->attributes));
+      members.emplace_back(std::move(explicit_ordinal), std::move(hashed_ordinal),
+                           std::move(type_ctor), location,
+                           std::move(member->maybe_used->attributes), should_write_explicit);
     } else {
-      assert(ordinal && "Reserved union members must have an ordinal specified");
-      members.emplace_back(std::move(ordinal), member->location());
+      assert(is_member_ordinal_explicit && "Reserved union members must have an ordinal specified");
+      members.emplace_back(std::move(explicit_ordinal), member->location());
     }
   }
 
-  return RegisterDecl(std::make_unique<XUnion>(
-      std::move(xunion_declaration->attributes), std::move(name), std::move(members),
-      xunion_declaration->strictness, are_ordinals_explicit));
+  return RegisterDecl(std::make_unique<XUnion>(std::move(xunion_declaration->attributes),
+                                               std::move(name), std::move(members),
+                                               xunion_declaration->strictness));
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
@@ -3163,15 +3183,23 @@ bool Library::CompileUnion(Union* union_declaration) {
 
 bool Library::CompileXUnion(XUnion* xunion_declaration) {
   Scope<std::string_view> scope;
-  Ordinal32Scope ordinal_scope;
+  Ordinal32Scope hashed_scope;
+  Ordinal32Scope explicit_scope;
 
   for (auto& member : xunion_declaration->members) {
-    auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->location());
+    auto ordinal_result =
+        explicit_scope.Insert(member.explicit_ordinal->value, member.explicit_ordinal->location());
     if (!ordinal_result.ok())
-      return Fail(member.ordinal->location(),
+      return Fail(member.explicit_ordinal->location(),
                   "Multiple xunion fields with the same ordinal; previous was at " +
                       ordinal_result.previous_occurrence().position_str());
     if (member.maybe_used) {
+      ordinal_result = hashed_scope.Insert(member.maybe_used->hashed_ordinal->value,
+                                           member.maybe_used->hashed_ordinal->location());
+      if (!ordinal_result.ok())
+        return Fail(member.maybe_used->hashed_ordinal->location(),
+                    "Multiple xunion fields with the same ordinal; previous was at " +
+                        ordinal_result.previous_occurrence().position_str());
       auto name_result = scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
       if (!name_result.ok())
         return Fail(member.maybe_used->name,
@@ -3183,8 +3211,7 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
     }
   }
 
-  auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope);
-  if (xunion_declaration->are_ordinals_explicit && ordinal_and_loc) {
+  if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(explicit_scope)) {
     auto [ordinal, location] = *ordinal_and_loc;
     std::ostringstream msg_stream;
     msg_stream << "missing ordinal " << ordinal;

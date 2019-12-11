@@ -108,11 +108,11 @@ fidl_xunion! {
 	members: [
 		I {
 			ty: i64,
-			ordinal: 1,
+			ordinal: 625512649,
 		},
 		F {
 			ty: f32,
-			ordinal: 4,
+			ordinal: 182552961,
 		},
 	],
 	unknown_member: __UnknownVariant,

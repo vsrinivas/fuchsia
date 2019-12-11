@@ -444,6 +444,10 @@ void TablesGenerator::Generate(const coded::XUnionField& field) {
   Generate(field.type);
   Emit(&tables_file_, ", .ordinal=");
   Emit(&tables_file_, field.ordinal);
+  Emit(&tables_file_, ", .hashed_ordinal=");
+  Emit(&tables_file_, field.hashed_ordinal);
+  Emit(&tables_file_, ", .explicit_ordinal=");
+  Emit(&tables_file_, field.explicit_ordinal);
   Emit(&tables_file_, "}");
 }
 

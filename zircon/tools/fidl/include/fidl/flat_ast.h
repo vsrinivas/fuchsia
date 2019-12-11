@@ -1033,9 +1033,14 @@ struct XUnion;
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxb/37535): Move this to a nested class inside Union.
 struct XUnionMemberUsed : public Object {
-  XUnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+  XUnionMemberUsed(std::unique_ptr<raw::Ordinal32> hashed_ordinal,
+                   std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
                    std::unique_ptr<raw::AttributeList> attributes)
-      : type_ctor(std::move(type_ctor)), name(name), attributes(std::move(attributes)) {}
+      : hashed_ordinal(std::move(hashed_ordinal)),
+        type_ctor(std::move(type_ctor)),
+        name(name),
+        attributes(std::move(attributes)) {}
+  std::unique_ptr<raw::Ordinal32> hashed_ordinal;
   std::unique_ptr<TypeConstructor> type_ctor;
   SourceLocation name;
   std::unique_ptr<raw::AttributeList> attributes;
@@ -1052,33 +1057,47 @@ struct XUnionMemberUsed : public Object {
 struct XUnionMember : public Object {
   using Used = XUnionMemberUsed;
 
-  XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
-               SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
-      : ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
-  XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceLocation location)
-      : ordinal(std::move(ordinal)), location(location) {}
+  XUnionMember(std::unique_ptr<raw::Ordinal32> explicit_ordinal,
+               std::unique_ptr<raw::Ordinal32> hashed_ordinal,
+               std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
+               std::unique_ptr<raw::AttributeList> attributes, bool using_explicit_ordinal = false)
+      : explicit_ordinal(std::move(explicit_ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(hashed_ordinal), std::move(type_ctor), name,
+                                          std::move(attributes))),
+        using_explicit_ordinal(using_explicit_ordinal) {}
+  XUnionMember(std::unique_ptr<raw::Ordinal32> explicit_ordinal, SourceLocation location)
+      : explicit_ordinal(std::move(explicit_ordinal)), location(location) {}
 
-  std::unique_ptr<raw::Ordinal32> ordinal;
+  std::unique_ptr<raw::Ordinal32> explicit_ordinal;
 
   // The location for reserved members.
   std::optional<SourceLocation> location;
 
   std::unique_ptr<Used> maybe_used;
 
+  // Indicates whether this xunion member should be writing explicit ordinals
+  // on the wire. The xunions for which this is true are tracked in the explicit_ordinal_xunions
+  // map in flat_ast.cc
+  bool using_explicit_ordinal;
+
   std::any AcceptAny(VisitorAny* visitor) const override;
+
+  const std::unique_ptr<raw::Ordinal32>& write_ordinal() const {
+    if (!maybe_used) {
+      return explicit_ordinal;
+    }
+    return using_explicit_ordinal ? explicit_ordinal : maybe_used->hashed_ordinal;
+  }
 };
 
 struct XUnion final : public TypeDecl {
   using Member = XUnionMember;
 
   XUnion(std::unique_ptr<raw::AttributeList> attributes, Name name,
-         std::vector<Member> unparented_members, types::Strictness strictness,
-         bool are_ordinals_explicit)
+         std::vector<Member> unparented_members, types::Strictness strictness)
       : TypeDecl(Kind::kXUnion, std::move(attributes), std::move(name)),
         members(std::move(unparented_members)),
-        strictness(strictness),
-        are_ordinals_explicit(are_ordinals_explicit) {
+        strictness(strictness) {
     for (auto& member : members) {
       if (member.maybe_used) {
         member.maybe_used->parent = this;
@@ -1088,7 +1107,6 @@ struct XUnion final : public TypeDecl {
 
   std::vector<Member> members;
   const types::Strictness strictness;
-  const bool are_ordinals_explicit;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 };

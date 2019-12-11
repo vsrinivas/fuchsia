@@ -108,10 +108,17 @@ struct TableField {
 };
 
 struct XUnionField {
-  XUnionField(const Type* type, uint32_t ordinal) : type(type), ordinal(ordinal) {}
+  XUnionField(const Type* type, uint32_t ordinal, uint32_t hashed_ordinal,
+              uint32_t explicit_ordinal)
+      : type(type),
+        ordinal(ordinal),
+        hashed_ordinal(hashed_ordinal),
+        explicit_ordinal(explicit_ordinal) {}
 
   const Type* type;
   const uint32_t ordinal;
+  const uint32_t hashed_ordinal;
+  const uint32_t explicit_ordinal;
 };
 
 struct Type {

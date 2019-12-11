@@ -382,6 +382,8 @@
       "members": [
         {
           "ordinal": 1026732503,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 1026732503,
           "reserved": false,
           "name": "i",
           "type": {
@@ -400,6 +402,8 @@
         },
         {
           "ordinal": 1362546558,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 1362546558,
           "reserved": false,
           "name": "f",
           "type": {
@@ -463,6 +467,8 @@
       "members": [
         {
           "ordinal": 693944286,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 693944286,
           "reserved": false,
           "name": "i",
           "type": {
@@ -481,6 +487,8 @@
         },
         {
           "ordinal": 473666119,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 473666119,
           "reserved": false,
           "name": "s",
           "type": {
@@ -499,6 +507,8 @@
         },
         {
           "ordinal": 1815655055,
+          "explicit_ordinal": 3,
+          "hashed_ordinal": 1815655055,
           "reserved": false,
           "name": "v",
           "type": {
@@ -566,6 +576,8 @@
       "members": [
         {
           "ordinal": 1851697276,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 1851697276,
           "reserved": false,
           "name": "i",
           "type": {
@@ -584,6 +596,8 @@
         },
         {
           "ordinal": 855207063,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 855207063,
           "reserved": false,
           "name": "f",
           "type": {
@@ -602,6 +616,8 @@
         },
         {
           "ordinal": 850602487,
+          "explicit_ordinal": 3,
+          "hashed_ordinal": 850602487,
           "reserved": false,
           "name": "s",
           "type": {
@@ -665,6 +681,8 @@
       "members": [
         {
           "ordinal": 424858069,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 424858069,
           "reserved": false,
           "name": "empty",
           "type": {
@@ -729,6 +747,8 @@
       "members": [
         {
           "ordinal": 2024555624,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 2024555624,
           "reserved": false,
           "name": "v",
           "type": {
@@ -797,6 +817,7 @@
       "members": [
         {
           "ordinal": 3,
+          "explicit_ordinal": 3,
           "reserved": true,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
@@ -806,6 +827,7 @@
         },
         {
           "ordinal": 2,
+          "explicit_ordinal": 2,
           "reserved": true,
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/xunion.test.fidl",
@@ -814,7 +836,9 @@
           }
         },
         {
-          "ordinal": 1,
+          "ordinal": 625512649,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 625512649,
           "reserved": false,
           "name": "i",
           "type": {
@@ -832,7 +856,9 @@
           "offset": 0
         },
         {
-          "ordinal": 4,
+          "ordinal": 182552961,
+          "explicit_ordinal": 4,
+          "hashed_ordinal": 182552961,
           "reserved": false,
           "name": "f",
           "type": {

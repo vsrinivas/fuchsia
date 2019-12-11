@@ -679,8 +679,8 @@ class ExplicitXUnion final {
   kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
   
-    kI = 1,  // 0x1
-    kF = 4,  // 0x4
+    kI = 625512649,  // 0x254890c9
+    kF = 182552961,  // 0xae18981
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
