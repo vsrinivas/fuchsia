@@ -1,5 +1,8 @@
 {
   "program": { "binary": "bin/ptysvc" },
+  "use": [
+    { "runner": "elf" },
+  ],
   "expose": [
     { "service_protocol": "/svc/fuchsia.hardware.pty.Device", "from": "self" },
   ]

@@ -1,6 +1,7 @@
 {
   "program": { "binary": "bin/console" },
   "use": [
+    { "runner": "elf" },
     { "service_protocol": "/svc/fuchsia.boot.RootResource" },
   ],
   "expose": [

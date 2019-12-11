@@ -56,6 +56,12 @@
       "from": "#ptysvc",
       "to": [ "#devcoordinator" ],
     },
+    // Offer the ELF runner to children.
+    {
+      "runner": "elf",
+      "from": "realm",
+      "to": [ "#devcoordinator", "#console", "#ptysvc" ],
+    }
   ]
 }
 

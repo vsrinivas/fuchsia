@@ -1,7 +1,11 @@
 {
   "program": { "binary": "bin/devcoordinator" },
   "use": [
-    {"directory": "/boot" , "rights": ["rx*"]},
+    { "runner": "elf" },
+    {
+      "directory": "/boot",
+      "rights": ["rx*"]
+    },
     {
       "service_protocol": [
         "/svc/console",
