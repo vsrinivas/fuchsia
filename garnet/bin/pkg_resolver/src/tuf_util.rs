@@ -19,10 +19,10 @@ use {
     std::sync::Arc,
     tuf::{
         client::Config,
-        crypto::{KeyId, PublicKey},
+        crypto::PublicKey,
         error::Error as TufError,
         interchange::Json,
-        metadata::TargetPath,
+        metadata::{MetadataVersion, TargetPath},
         repository::{EphemeralRepository, HttpRepository, HttpRepositoryBuilder},
     },
 };
@@ -95,14 +95,14 @@ impl Inner {
                 RepositoryKey::Ed25519(bytes) => PublicKey::from_ed25519(bytes.clone()),
             })
             .collect::<Result<Vec<PublicKey>, _>>()?;
-        let root_key_ids: Vec<KeyId> = root_keys.iter().map(|key| key.key_id().clone()).collect();
         Ok(Self {
-            client: tuf::client::Client::with_root_pinned(
-                &root_key_ids,
+            client: tuf::client::Client::with_trusted_root_keys(
                 Config::default(),
+                &MetadataVersion::Number(config.root_version()),
+                1,
+                &root_keys,
                 local,
                 remote,
-                config.root_version(),
             )
             .await
             .map_err(|e| format_err!("Unable to create rust tuf client, received error {:?}", e))?,
