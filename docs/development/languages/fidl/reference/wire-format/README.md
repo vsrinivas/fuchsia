@@ -1,17 +1,11 @@
 # FIDL wire format specification
 
-This document is a specification of the Fuchsia Interface Definition Language
-(**FIDL**) message format.
-
 For more information about FIDL's overall purpose, goals, and requirements,
 see [Overview](../../README.md).
 
 [TOC]
 
-## Concepts
-
-This section provides requisite background information for the concepts
-used throughout the description.
+## Core Concepts
 
 ### Message
 
