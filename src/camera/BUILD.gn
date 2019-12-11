@@ -10,10 +10,16 @@ import("//build/testing/environments.gni")
 group("camera") {
   testonly = true
   deps = [
+    ":camera_manager",
     "calibration",
-    "camera_manager2",
     "drivers",
     "lib",
+  ]
+}
+
+group("camera_manager") {
+  public_deps = [
+    "//src/camera/camera_manager2",
   ]
 }
 
