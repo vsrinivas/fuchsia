@@ -4,6 +4,7 @@
 
 #include <lib/backtrace-request/backtrace-request.h>
 
+#include <atomic>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -17,9 +18,10 @@
 
 namespace {
 
+constexpr zx_signals_t kChannelReadySignal = ZX_USER_SIGNAL_0;
+constexpr zx_signals_t kBacktraceReturnedSignal = ZX_USER_SIGNAL_1;
+
 TEST(BacktraceRequest, RequestAndResume) {
-  constexpr zx_signals_t kChannelReadySignal = ZX_USER_SIGNAL_0;
-  constexpr zx_signals_t kBacktraceReturnedSignal = ZX_USER_SIGNAL_1;
   zx::event event;
   ASSERT_OK(zx::event::create(0, &event));
 
@@ -63,8 +65,6 @@ TEST(BacktraceRequest, RequestAndResume) {
 }
 
 TEST(BacktraceRequest, RequestAndResumeManyThreads) {
-  constexpr zx_signals_t kChannelReadySignal = ZX_USER_SIGNAL_0;
-  constexpr zx_signals_t kBacktraceReturnedSignal = ZX_USER_SIGNAL_1;
   // We only care that at least one thread triggers it before creating the main thread.
   constexpr zx_signals_t kWaitThreadReady = ZX_USER_SIGNAL_2;
   constexpr zx_signals_t kTestDoneSignal = ZX_USER_SIGNAL_3;
@@ -131,22 +131,26 @@ TEST(BacktraceRequest, RequestAndResumeManyThreads) {
   }
 }
 
-void DoSegfault(uintptr_t, uintptr_t) {
-  volatile int* p = 0;
-  *p = 0;
-}
 
 TEST(BacktraceRequest, IgnoreNormalException) {
-  // Can't use std::thread here because we want to zx_task_kill() it so the
-  // exception doesn't bubble up to the system crash handler.
-  zx::thread thread;
-  ASSERT_OK(zx::thread::create(*zx::process::self(), "bt-req", strlen("bt-req"), 0, &thread));
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
 
   zx::channel exception_channel;
-  ASSERT_OK(thread.create_exception_channel(0, &exception_channel));
+  const void* exit_address = nullptr;
 
-  alignas(16) static uint8_t stack[64];
-  ASSERT_OK(thread.start(&DoSegfault, stack + sizeof(stack), 0, 0));
+  std::thread thread([&] {
+    exit_address = &&exit;   // clang and gcc extension to obtain address of a label.
+    ASSERT_OK(zx::thread::self()->create_exception_channel(0, &exception_channel));
+    ASSERT_OK(event.signal(0, kChannelReadySignal));
+    // Segfault.
+    volatile int* p = 0;
+    *p = 0;
+  exit:
+    ;
+  });
+
+  ASSERT_OK(event.wait_one(kChannelReadySignal, zx::time::infinite(), nullptr));
 
   zx_exception_info_t info;
   zx::exception exception;
@@ -160,8 +164,23 @@ TEST(BacktraceRequest, IgnoreNormalException) {
 
   ASSERT_FALSE(is_backtrace_request(info.type, &regs));
 
-  ASSERT_OK(thread.kill());
-  ASSERT_OK(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
+  // Move the program counter past the exception and resume. The thread should exit and
+  // clean up normally.
+#ifdef __aarch64__
+  regs.pc = reinterpret_cast<size_t>(exit_address);
+#elif defined(__x86_64__)
+  regs.rip = reinterpret_cast<size_t>(exit_address);
+#else
+#error "what machine?"
+#endif
+
+  ASSERT_OK(exception_thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)));
+
+  uint32_t handled = ZX_EXCEPTION_STATE_HANDLED;
+  ASSERT_OK(exception.set_property(ZX_PROP_EXCEPTION_STATE, &handled, sizeof(handled)));
+  exception.reset();
+
+  thread.join();
 }
 
 }  // namespace
