@@ -7,7 +7,7 @@
 use {
     argh::FromArgs,
     bt_a2dp::media_types::*,
-    bt_avdtp as avdtp,
+    bt_avdtp::{self as avdtp, AvdtpControllerPool},
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
@@ -24,13 +24,11 @@ use {
     std::{convert::TryInto, string::String, sync::Arc},
 };
 
-mod avdtp_controller;
 mod encoding;
 mod pcm_audio;
 mod peer;
 mod sources;
 
-use crate::avdtp_controller::AvdtpControllerPool;
 use crate::encoding::{EncodedStreamSbc, RtpPacketBuilderSbc};
 use crate::pcm_audio::PcmAudio;
 use crate::peer::Peer;
@@ -260,7 +258,7 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new();
     let pool_clone = controller_pool.clone();
-    fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connect_client(s));
+    fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connected(s));
     if let Err(e) = fs.take_and_serve_directory_handle() {
         fx_log_warn!("Unable to serve Inspect service directory: {}", e);
     }
@@ -295,7 +293,7 @@ async fn main() -> Result<(), Error> {
                 let peer_id = device_id.parse().expect("peer ids from profile should parse");
                 let connected_res = peers.connected(device_id.parse()?, channel);
                 if let Some(peer) = peers.get(&peer_id) {
-                    controller_pool.lock().add_peer(peer_id, peer.avdtp_peer());
+                    controller_pool.lock().peer_connected(peer_id, peer.avdtp_peer());
                 }
                 connected_res
             }

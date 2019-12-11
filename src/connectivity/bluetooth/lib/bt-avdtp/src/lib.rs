@@ -23,6 +23,7 @@ use {
 #[cfg(test)]
 mod tests;
 
+mod avdtp_controller;
 mod rtp;
 mod stream_endpoint;
 mod types;
@@ -32,6 +33,7 @@ use crate::types::{
 };
 
 pub use crate::{
+    avdtp_controller::AvdtpControllerPool,
     rtp::{RtpError, RtpHeader},
     stream_endpoint::{MediaStream, StreamEndpoint, StreamEndpointUpdateCallback, StreamState},
     types::{

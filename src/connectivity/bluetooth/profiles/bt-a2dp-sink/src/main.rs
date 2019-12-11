@@ -6,7 +6,8 @@
 
 use {
     bt_a2dp::media_types::*,
-    bt_a2dp_sink_metrics as metrics, bt_avdtp as avdtp,
+    bt_a2dp_sink_metrics as metrics,
+    bt_avdtp::{self as avdtp, AvdtpControllerPool},
     failure::{format_err, Error},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::{AUDIO_ENCODING_AACLATM, AUDIO_ENCODING_SBC},
@@ -28,13 +29,10 @@ use {
 
 use crate::inspect_types::StreamingInspectData;
 
-mod avdtp_controller;
 mod connected_peers;
 mod inspect_types;
 mod peer;
 mod player;
-
-use crate::avdtp_controller::AvdtpControllerPool;
 
 /// Make the SDP definition for the A2DP sink service.
 fn make_profile_service_definition() -> ServiceDefinition {
