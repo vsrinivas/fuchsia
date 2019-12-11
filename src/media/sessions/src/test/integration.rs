@@ -5,12 +5,13 @@
 use crate::Result;
 use failure::ResultExt;
 use fidl::encoding::Decodable;
-use fidl::endpoints::create_endpoints;
+use fidl::endpoints::{create_endpoints, create_proxy};
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_async as fasync;
 use fuchsia_component as comp;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::stream::TryStreamExt;
+use test_util::assert_matches;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
 
@@ -347,6 +348,31 @@ async fn players_get_ids() -> Result<()> {
     let player2 = TestPlayer::new(&service).await?;
 
     assert_ne!(player1.id, player2.id);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn users_can_watch_session_status() -> Result<()> {
+    let service = TestService::new()?;
+
+    let mut player1 = TestPlayer::new(&service).await?;
+    let mut player2 = TestPlayer::new(&service).await?;
+
+    let (session1, session1_request) = create_proxy()?;
+    service.discovery.connect_to_session(player1.id, session1_request)?;
+
+    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let status1 = session1.watch_status().await?;
+    assert_matches!(
+        status1.player_status,
+        Some(PlayerStatus { player_state: Some(PlayerState::Playing), .. })
+    );
+
+    player2.emit_delta(delta_with_state(PlayerState::Buffering)).await?;
+    player1.emit_delta(delta_with_state(PlayerState::Paused)).await?;
+    let _status2 = session1.watch_status().await?;
 
     Ok(())
 }

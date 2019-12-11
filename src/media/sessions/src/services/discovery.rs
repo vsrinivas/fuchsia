@@ -11,8 +11,9 @@ use self::{
     player_event::{PlayerEvent, SessionsWatcherEvent},
     watcher::*,
 };
-use crate::{proxies::player::Player, Result};
+use crate::{proxies::player::Player, Result, CHANNEL_BUFFER_SIZE};
 use failure::Error;
+use fidl::encoding::Decodable;
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_syslog::fx_log_warn;
 use futures::{
@@ -27,13 +28,17 @@ use mpmc;
 use std::{collections::HashMap, marker::Unpin, pin::Pin};
 use streammap::StreamMap;
 
-struct WatcherClient<F> {
+struct WatcherClient<F, S> {
     id: usize,
     event_forward: F,
-    disconnect_signal: SessionsWatcherEventStream,
+    disconnect_signal: S,
 }
 
-impl<F: Future<Output = Result<()>> + Unpin> Future for WatcherClient<F> {
+impl<F, S> Future for WatcherClient<F, S>
+where
+    F: Future<Output = Result<()>> + Unpin,
+    S: Stream<Item = ()> + Unpin,
+{
     type Output = Result<()>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if Pin::new(&mut self.disconnect_signal).poll_next(cx).is_ready() {
@@ -57,13 +62,13 @@ impl Discovery {
         Self { player_stream, catch_up_events: HashMap::new(), next_watcher_id: 0 }
     }
 
-    fn new_watcher_client(
+    fn new_watcher_client<S: Stream<Item = ()> + Unpin>(
         &mut self,
-        disconnect_signal: SessionsWatcherEventStream,
+        disconnect_signal: S,
         watcher_sink: impl Sink<(u64, SessionsWatcherEvent), Error = Error> + Unpin,
         player_events: impl Stream<Item = FilterApplicant<(u64, PlayerEvent)>> + Unpin,
         filter: Filter,
-    ) -> WatcherClient<impl Future<Output = Result<()>> + Unpin> {
+    ) -> WatcherClient<impl Future<Output = Result<()>> + Unpin, S> {
         let id = self.next_watcher_id;
         self.next_watcher_id += 1;
 
@@ -81,7 +86,8 @@ impl Discovery {
         mut self,
         mut request_stream: mpsc::Receiver<DiscoveryRequest>,
     ) -> Result<()> {
-        let mut watchers = StreamMap::new();
+        let mut collection_watchers = StreamMap::new();
+        let mut session_watchers = StreamMap::new();
 
         let mut player_updates = StreamMap::new();
         let sender = mpmc::Sender::default();
@@ -98,8 +104,40 @@ impl Discovery {
                             session_id, session_control_request, ..
                         } => {
                             if let Ok(requests) = session_control_request.into_stream() {
-                                player_updates.with_elem(session_id, |player: &mut Player| {
-                                    player.serve_controls(requests);
+                                let (watcher_send, recv) = mpsc::channel(CHANNEL_BUFFER_SIZE);
+                                let watcher_client = self.new_watcher_client(
+                                    stream::pending(),
+                                    watcher_send.sink_map_err(Error::from),
+                                    sender.new_receiver(),
+                                    Filter::new(WatchOptions {
+                                        allowed_sessions: Some(vec![session_id]),
+                                        ..Decodable::new_empty()
+                                    })
+                                );
+
+                                session_watchers.insert(
+                                    watcher_client.id,
+                                    stream::once(watcher_client).fuse()
+                                ).await;
+                                player_updates.with_elem(session_id, move |player: &mut Player| {
+                                    player.serve_controls(
+                                        requests,
+                                        recv.filter_map(move |(id, event)| {
+                                            if !(id == session_id) {
+                                                fx_log_warn!(
+                                                    "Watcher did not filter sessions by id"
+                                                );
+                                                future::ready(None)
+                                            } else {
+                                                match event {
+                                                    SessionsWatcherEvent::Updated(update) => {
+                                                        future::ready(Some(update))
+                                                    },
+                                                    _ => future::ready(None)
+                                                }
+                                            }
+                                        })
+                                    );
                                 }).await;
                             }
                         }
@@ -107,12 +145,12 @@ impl Discovery {
                             match session_watcher.into_proxy() {
                                 Ok(proxy) => {
                                     let watcher_client = self.new_watcher_client(
-                                        proxy.take_event_stream(),
+                                        proxy.take_event_stream().map(drop),
                                         FlowControlledProxySink::from(proxy),
                                         sender.new_receiver(),
                                         Filter::new(watch_options)
                                     );
-                                    watchers.insert(
+                                    collection_watchers.insert(
                                         watcher_client.id,
                                         stream::once(watcher_client).fuse()
                                     ).await;
@@ -129,7 +167,8 @@ impl Discovery {
                     }
                 }
                 // Drive dispatch of events to watcher clients.
-                _ = watchers.select_next_some() => {}
+                _ = collection_watchers.select_next_some() => {}
+                _ = session_watchers.select_next_some() => {}
                 // A new player has been published to `fuchsia.media.sessions2.Publisher`.
                 new_player = self.player_stream.select_next_some() => {
                     player_updates.insert(new_player.id(), new_player).await;

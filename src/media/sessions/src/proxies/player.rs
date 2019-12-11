@@ -7,19 +7,19 @@ use crate::{
     Result,
 };
 use failure::Error as FError;
-use fidl::client::QueryResponseFut;
 use fidl::endpoints::ClientEnd;
+use fidl::{self, client::QueryResponseFut};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
 use fidl_table_validation::*;
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_info;
+use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{
     future::{AbortHandle, Abortable},
     stream::FusedStream,
     task::{Context, Poll},
-    Future, FutureExt, Stream, TryStreamExt,
+    Future, FutureExt, Stream, StreamExt, TryStreamExt,
 };
 use std::convert::*;
 use std::pin::Pin;
@@ -182,7 +182,11 @@ impl Player {
     ///
     /// Drops the `SessionControl` channel if the backing player is disconnected at the time of a
     /// request, or if `disconnect_proxied_clients` is called.
-    pub fn serve_controls(&mut self, mut requests: SessionControlRequestStream) {
+    pub fn serve_controls(
+        &mut self,
+        requests: SessionControlRequestStream,
+        mut recv: impl FusedStream + Stream<Item = SessionInfoDelta> + Unpin + 'static,
+    ) {
         let proxy = self.inner.clone();
 
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
@@ -190,39 +194,83 @@ impl Player {
 
         let waiter = self.server_wait_group.new_waiter();
 
+        let mut requests = requests.map_err(FError::from).fuse();
+        let mut status = None;
+        let mut hanging_get = None;
+
         fasync::spawn_local(
             Abortable::new(
                 async move {
-                    while let Ok(Some(Ok(_))) = requests.try_next().await.map(|r| {
-                        r.map(|r| match r {
-                            SessionControlRequest::Play { .. } => proxy.play(),
-                            SessionControlRequest::Pause { .. } => proxy.pause(),
-                            SessionControlRequest::Stop { .. } => proxy.stop(),
-                            SessionControlRequest::Seek { position, .. } => proxy.seek(position),
-                            SessionControlRequest::SkipForward { .. } => proxy.skip_forward(),
-                            SessionControlRequest::SkipReverse { .. } => proxy.skip_reverse(),
-                            SessionControlRequest::NextItem { .. } => proxy.next_item(),
-                            SessionControlRequest::PrevItem { .. } => proxy.prev_item(),
-                            SessionControlRequest::SetPlaybackRate { playback_rate, .. } => {
-                                proxy.set_playback_rate(playback_rate)
+                    let _waiter = waiter;
+                    loop {
+                        futures::select! {
+                            request = requests.select_next_some() => {
+                                // Type inference fails dramatically here. Hand-holding required.
+                                let request = match request {
+                                    Ok(request) => request,
+                                    Err(e) => {
+                                        let e: FError = e;
+                                        return Err(e);
+                                    }
+                                };
+                                match request {
+                                    SessionControlRequest::Play { .. } => proxy.play()?,
+                                    SessionControlRequest::Pause { .. } => proxy.pause()?,
+                                    SessionControlRequest::Stop { .. } => proxy.stop()?,
+                                    SessionControlRequest::Seek { position, .. } => {
+                                        proxy.seek(position)?
+                                    }
+                                    SessionControlRequest::SkipForward { .. } => proxy.skip_forward()?,
+                                    SessionControlRequest::SkipReverse { .. } => proxy.skip_reverse()?,
+                                    SessionControlRequest::NextItem { .. } => proxy.next_item()?,
+                                    SessionControlRequest::PrevItem { .. } => proxy.prev_item()?,
+                                    SessionControlRequest::SetPlaybackRate {
+                                        playback_rate, ..
+                                    } => proxy.set_playback_rate(playback_rate)?,
+                                    SessionControlRequest::SetRepeatMode { repeat_mode, .. } => {
+                                        proxy.set_repeat_mode(repeat_mode)?
+                                    }
+                                    SessionControlRequest::SetShuffleMode { shuffle_on, .. } => {
+                                        proxy.set_shuffle_mode(shuffle_on)?
+                                    }
+                                    SessionControlRequest::BindVolumeControl {
+                                        volume_control_request,
+                                        ..
+                                    } => proxy.bind_volume_control(volume_control_request)?,
+                                    SessionControlRequest::WatchStatus { responder } => {
+                                        if hanging_get.is_some() {
+                                            fx_log_warn!(
+                                                tag: "mediasession",
+                                                "Session observer sent duplicate watch"
+                                            );
+                                            // Close the channel.
+                                            return Ok(());
+                                        }
+
+                                        if let Some(status) = status.take() {
+                                            responder.send(status)?;
+                                        } else {
+                                            hanging_get = Some(responder);
+                                        }
+                                    }
+                                }
                             }
-                            SessionControlRequest::SetRepeatMode { repeat_mode, .. } => {
-                                proxy.set_repeat_mode(repeat_mode)
+                            update = recv.select_next_some() => {
+                                if let Some(hanging_get) = hanging_get.take() {
+                                    hanging_get.send(update)?;
+                                } else {
+                                    status = Some(update);
+                                }
                             }
-                            SessionControlRequest::SetShuffleMode { shuffle_on, .. } => {
-                                proxy.set_shuffle_mode(shuffle_on)
-                            }
-                            SessionControlRequest::BindVolumeControl {
-                                volume_control_request,
-                                ..
-                            } => proxy.bind_volume_control(volume_control_request),
-                        })
-                    }) {}
-                    drop(waiter);
+                            complete => {
+                                return Ok(());
+                            },
+                        }
+                    }
                 },
                 abort_registration,
             )
-            .map(|_| ()),
+            .map(drop),
         );
     }
 
@@ -302,7 +350,12 @@ mod test {
     use super::*;
     use fidl::encoding::Decodable;
     use fidl::endpoints::*;
-    use futures::stream::StreamExt;
+    use futures::{
+        channel::mpsc::channel,
+        future,
+        sink::SinkExt,
+        stream::{self, StreamExt},
+    };
     use futures_test::task::noop_waker;
     use test_util::assert_matches;
 
@@ -321,6 +374,54 @@ mod test {
 
     #[fasync::run_singlethreaded]
     #[test]
+    async fn clients_waits_for_new_status() -> Result<()> {
+        let (mut player, _player_server) = test_player();
+
+        let (session_control_client, session_control_server) =
+            create_endpoints::<SessionControlMarker>()?;
+        let session_control_fidl_proxy: SessionControlProxy =
+            session_control_client.into_proxy()?;
+        let session_control_request_stream = session_control_server.into_stream()?;
+
+        let (mut sender, receiver) = channel(1);
+        player.serve_controls(session_control_request_stream, receiver);
+
+        let waker = noop_waker();
+        let mut ctx = Context::from_waker(&waker);
+        let mut status_fut = session_control_fidl_proxy.watch_status();
+        let poll_result = Pin::new(&mut status_fut).poll(&mut ctx);
+        assert_matches!(poll_result, Poll::Pending);
+
+        sender.send(SessionInfoDelta::new_empty()).await?;
+        let result = status_fut.await;
+        assert_matches!(result, Ok(_));
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
+    async fn client_gets_cached_player_status() -> Result<()> {
+        let (mut player, _player_server) = test_player();
+
+        let (session_control_client, session_control_server) =
+            create_endpoints::<SessionControlMarker>()?;
+        let session_control_fidl_proxy: SessionControlProxy =
+            session_control_client.into_proxy()?;
+        let session_control_request_stream = session_control_server.into_stream()?;
+
+        player.serve_controls(
+            session_control_request_stream,
+            stream::once(future::ready(SessionInfoDelta::new_empty())),
+        );
+
+        assert_matches!(session_control_fidl_proxy.watch_status().await, Ok(_));
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded]
+    #[test]
     async fn client_channel_closes_when_backing_player_disconnects() -> Result<()> {
         let (mut player, _player_server) = test_player();
 
@@ -330,7 +431,7 @@ mod test {
             session_control_client.into_proxy()?;
         let session_control_request_stream = session_control_server.into_stream()?;
 
-        player.serve_controls(session_control_request_stream);
+        player.serve_controls(session_control_request_stream, stream::empty());
 
         assert!(session_control_fidl_proxy.play().is_ok());
 

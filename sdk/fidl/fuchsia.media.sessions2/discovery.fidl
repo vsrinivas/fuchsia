@@ -67,6 +67,10 @@ protocol SessionControl {
     /// Binds to the session's volume control for control and notifications.
     BindVolumeControl(
         request<fuchsia.media.audio.VolumeControl> volume_control_request);
+    /// Watches the session status. Leave a request hanging to receive a reply when
+    /// the session status changes. The first request will be answered immediately with
+    /// the current state.
+    WatchStatus() -> (SessionInfoDelta session_info_delta);
 };
 
 /// Options that specify which sessions are watched when watching the collection.
