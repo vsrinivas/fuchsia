@@ -696,6 +696,20 @@ be skipped and only matching ones will be stepped into:
 [zxdb] s MyFunction
 ```
 
+`ss`: List function calls on the current line and step in to the call selected, automatically
+completing any of the other calls that happen to occur first.
+
+```
+[zxdb] ss
+  1 std::string::string
+  2 MyClass::MyClass
+  3 HelperFunctionCall
+  4 MyClass::~MyClass
+  5 std::string::~string
+  quit
+>
+```
+
 `finish` / `fi`: Exits the function and stops right after the call.
 
 ```
