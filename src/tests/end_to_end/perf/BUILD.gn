@@ -62,6 +62,17 @@ copy("runtime_deps") {
   ]
 }
 
+# Packages required by the Dart test wrappers in this directory.
+group("package_deps") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/zircon_benchmarks:zircon_benchmarks_perftestmode",
+    "//garnet/examples/benchmark",
+    "//src/ledger:bin",
+    "//src/ledger/bin/tests/benchmark",
+  ]
+}
+
 group("test") {
   testonly = true
 

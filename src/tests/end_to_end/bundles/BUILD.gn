@@ -41,11 +41,8 @@ group("end_to_end_deps") {
     # Needed for VP9 decode conformance testing.
     "//src/media/codec/examples:vp9_decoder_conformance_http",
 
-    # Used by perf_test.dart for running performance tests.
-    "//garnet/bin/zircon_benchmarks:zircon_benchmarks_perftestmode",
-    "//garnet/examples/benchmark",
-    "//src/ledger:bin",
-    "//src/ledger/bin/tests/benchmark",
+    # Needed for running performance tests.
+    "//src/tests/end_to_end/perf:package_deps",
   ]
 }
 
