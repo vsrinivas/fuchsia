@@ -62,7 +62,8 @@ Status GetLedger(sys::ComponentContext* context,
   launch_info.directory_request = child_directory.NewRequest().TakeChannel();
   AppendGarbageCollectionPolicyFlags(gc_policy, &launch_info);
   launch_info.arguments->push_back("--disable_reporting");
-  launch_info.arguments->push_back("--verbose=" + std::to_string(fxl::GetVlogVerbosity()));
+  launch_info.arguments->push_back("--verbose=" +
+                                   std::to_string(-static_cast<int>(GetLogSeverity())));
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), std::move(controller_request));
