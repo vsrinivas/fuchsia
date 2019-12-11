@@ -48,7 +48,7 @@ constexpr uint32_t kSysPll = 1;
 
 constexpr uint8_t kAstroClockCount = 2;
 
-constexpr uint8_t kAstroPwmCount = 0;  // TODO (rdzhuang): migrate Astro to PWM driver
+constexpr uint8_t kAstroPwmCount = 1;
 constexpr uint8_t kSherlockPwmCount = 2;
 
 }  // namespace
