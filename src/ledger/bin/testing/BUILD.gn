@@ -2,12 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+
 group("testing") {
   testonly = true
   deps = [
     ":get_ledger",
     ":ledger_instance_factory",
     ":lib",
+    ":run_all_unittests",
     ":unittests",
     "ledger_test_instance_provider",
   ]
@@ -217,4 +220,55 @@ executable("memory_usage_test_benchmark") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
+}
+
+source_set("run_all_unittests") {
+  testonly = true
+
+  sources = [
+    "run_all_unittests.cc",
+    "run_all_unittests.h",
+  ]
+
+  deps = [
+    "//src/ledger/lib/logging",
+    "//src/lib/fxl",
+    "//third_party/abseil-cpp",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("gtest_main") {
+  testonly = true
+
+  sources = [
+    "run_all_unittests_main.cc",
+  ]
+
+  deps = [
+    ":run_all_unittests",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+test("run_all_unittests_test") {
+  testonly = true
+
+  sources = [
+    "run_all_unittests_test.cc",
+  ]
+
+  deps = [
+    ":run_all_unittests",
+    "//src/ledger/lib/logging",
+    "//src/lib/fxl",
+    "//third_party/abseil-cpp",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-testing",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
 }
