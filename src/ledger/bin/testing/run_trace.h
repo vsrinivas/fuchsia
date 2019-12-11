@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_BIN_TESTING_RUN_TRACE_H_
 #define SRC_LEDGER_BIN_TESTING_RUN_TRACE_H_
 
-#include <string>
-#include <vector>
-
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <string>
+#include <vector>
 
 namespace ledger {
 

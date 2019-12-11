@@ -14,12 +14,12 @@
 // to the user.
 #if __has_feature(address_sanitizer)
 
-#include <sanitizer/asan_interface.h>
-
 #include <array>
 #include <cstdint>
 #include <map>
 #include <mutex>
+
+#include <sanitizer/asan_interface.h>
 
 namespace {
 
@@ -212,7 +212,7 @@ INTERFACE void *operator new[](size_t size, std::align_val_t align,
 
 INTERFACE void operator delete(void *ptr) noexcept { free(WrapDealloc(ptr)); }
 INTERFACE void operator delete[](void *ptr) noexcept { free(WrapDealloc(ptr)); }
-INTERFACE void operator delete(void *ptr, std::nothrow_t const &)noexcept {
+INTERFACE void operator delete(void *ptr, std::nothrow_t const &) noexcept {
   free(WrapDealloc(ptr));
 }
 INTERFACE void operator delete[](void *ptr, std::nothrow_t const &) noexcept {
@@ -226,7 +226,7 @@ INTERFACE void operator delete(void *ptr, std::align_val_t align) noexcept {
 INTERFACE void operator delete[](void *ptr, std::align_val_t align) noexcept {
   free(WrapDealloc(ptr));
 }
-INTERFACE void operator delete(void *ptr, std::align_val_t align, std::nothrow_t const &)noexcept {
+INTERFACE void operator delete(void *ptr, std::align_val_t align, std::nothrow_t const &) noexcept {
   free(WrapDealloc(ptr));
 }
 INTERFACE void operator delete[](void *ptr, std::align_val_t align,

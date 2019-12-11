@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/testing/blocking_callback_waiter.h"
 
-#include <memory>
-
 #include <lib/fit/function.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 

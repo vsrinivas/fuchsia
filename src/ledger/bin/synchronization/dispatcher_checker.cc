@@ -7,7 +7,7 @@
 namespace ledger {
 
 bool DispatcherChecker::IsCreationDispatcherCurrent() const {
-  if( async_get_default_dispatcher() == self_) {
+  if (async_get_default_dispatcher() == self_) {
     return true;
   }
   // If ASAN is enabled, log stack of creation of both dispatchers.
