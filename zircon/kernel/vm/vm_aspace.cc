@@ -657,3 +657,18 @@ uintptr_t VmAspace::vdso_code_address() const {
   Guard<fbl::Mutex> guard{&lock_};
   return vdso_code_mapping_ ? vdso_code_mapping_->base() : 0;
 }
+
+void VmAspace::DropAllUserPageTables() {
+  Guard<fbl::Mutex> guard{&aspace_list_lock};
+
+  for (auto& a : aspaces) {
+    a.DropUserPageTables();
+  }
+}
+
+void VmAspace::DropUserPageTables() {
+  if (!is_user())
+    return;
+  Guard<fbl::Mutex> guard{&lock_};
+  arch_aspace().Unmap(base(), size() / PAGE_SIZE, nullptr);
+}

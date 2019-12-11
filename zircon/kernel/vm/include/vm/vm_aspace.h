@@ -83,6 +83,9 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   void Dump(bool verbose) const;
 
+  static void DropAllUserPageTables();
+  void DropUserPageTables();
+
   // Traverses the VM tree rooted at this node, in depth-first pre-order. If
   // any methods of |ve| return false, the traversal stops and this method
   // returns false. Returns true otherwise.

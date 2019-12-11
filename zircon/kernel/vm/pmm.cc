@@ -130,6 +130,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       printf("%s free                 : periodically dump free mem count\n", argv[0].str);
       printf("%s oom                  : leak memory until oom is triggered\n", argv[0].str);
       printf("%s mem_avail_state info : dump memstate info\n", argv[0].str);
+      printf("%s drop_user_pt         : drop all user hardware page tables\n", argv[0].str);
       printf(
           "%s scan [reclaim]       : expensive scan that can optionally attempt to reclaim "
           "memory\n",
@@ -181,6 +182,8 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     } else {
       goto usage;
     }
+  } else if (!strcmp(argv[1].str, "drop_user_pt")) {
+    VmAspace::DropAllUserPageTables();
   } else if (!strcmp(argv[1].str, "scan")) {
     bool reclaim = false;
     if (argc > 2 && !strcmp(argv[2].str, "reclaim")) {
