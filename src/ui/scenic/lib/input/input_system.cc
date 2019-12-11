@@ -609,13 +609,14 @@ void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd& c
 
   if (command.delivery_request) {
     // Take this opportunity to remove dead sessions.
-    //
-    // TODO(SCN-1545): Add a test for removal, since commenting out this code resulted in all
-    // code passing.
+    std::vector<scheduling::SessionId> dead_sessions;
     for (auto& reporter : input_system_->hard_keyboard_requested()) {
       if (!reporter.second) {
-        input_system_->hard_keyboard_requested().erase(reporter.first);
+        dead_sessions.push_back(reporter.first);
       }
+    }
+    for (auto session_ids : dead_sessions) {
+      input_system_->hard_keyboard_requested().erase(session_id);
     }
 
     // This code assumes one event reporter per session id.

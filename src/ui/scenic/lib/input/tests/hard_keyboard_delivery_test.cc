@@ -48,7 +48,7 @@ class HardKeyboardDeliveryTest : public InputSystemTest {
   uint32_t test_display_height_px() const override { return 5; }
 };
 
-TEST_F(HardKeyboardDeliveryTest, Test) {
+TEST_F(HardKeyboardDeliveryTest, InputsGetCorrectlyDelivered) {
   auto [v_token, vh_token] = scenic::ViewTokenPair::New();
 
   // Set up a scene with one view.
@@ -140,6 +140,93 @@ TEST_F(HardKeyboardDeliveryTest, Test) {
 
   // Verify client's inputs include keyboard events.
   EXPECT_EQ(client.events().size(), 2u) << "Should receive exactly 2 input events.";
+}
+
+// Sets up a session, receives keyboard input, then kills the session, creates a new one and does it
+// again. Check that nothing crashes.
+TEST_F(HardKeyboardDeliveryTest, SessionDeathCleanupTest) {
+  auto [v_token1, vh_token1] = scenic::ViewTokenPair::New();
+  auto [v_token2, vh_token2] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with one view.
+  auto [root_session, root_resources] = CreateScene();
+  {
+    scenic::Session* const session = root_session.session();
+
+    // Attach the view holder.
+    scenic::ViewHolder view_holder1(session, std::move(vh_token1), "View Holder1");
+    scenic::ViewHolder view_holder2(session, std::move(vh_token2), "View Holder2");
+    view_holder1.SetViewProperties(k5x5x1);
+    view_holder2.SetViewProperties(k5x5x1);
+    root_resources.scene.AddChild(view_holder1);
+    root_resources.scene.AddChild(view_holder2);
+
+    RequestToPresent(session);
+  };
+
+  {
+    SessionWrapper client = CreateClient("View", std::move(v_token1));
+    {  // Client requests hard keyboard event delivery.
+      InputCommand input_cmd;
+      input_cmd.set_set_hard_keyboard_delivery({.delivery_request = true});
+
+      client.session()->Enqueue(std::move(input_cmd));
+    }
+
+    const uint32_t compositor_id = root_resources.compositor.id();
+
+    // Scene is now set up; send in the input.
+    {
+      scenic::Session* const session = root_session.session();
+
+      PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                      /*pointer id*/ 1, PointerEventType::TOUCH);
+      // A touch sequence that starts at the (2,2) location of the 5x5 display.
+      // We do enough to trigger a focus change to the View.
+      session->Enqueue(pointer.Add(2, 2));
+      session->Enqueue(pointer.Down(2, 2));
+
+      // The character 'a', pressed and released.
+      KeyboardCommandGenerator keyboard(compositor_id, /*device id*/ 2);
+      static constexpr uint32_t hid_usage = 0x4;
+      static constexpr uint32_t modifiers = 0x0;
+      session->Enqueue(keyboard.Pressed(hid_usage, modifiers));
+      session->Enqueue(keyboard.Released(hid_usage, modifiers));
+    }
+    RunLoopUntilIdle();
+  }
+
+  {
+    SessionWrapper client = CreateClient("View", std::move(v_token2));
+    {  // Client requests hard keyboard event delivery.
+      InputCommand input_cmd;
+      // Previously when this command got dispatched Scenic would crash.
+      input_cmd.set_set_hard_keyboard_delivery({.delivery_request = true});
+      client.session()->Enqueue(std::move(input_cmd));
+    }
+
+    const uint32_t compositor_id = root_resources.compositor.id();
+
+    // Scene is now set up; send in the input.
+    {
+      scenic::Session* const session = root_session.session();
+
+      PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                      /*pointer id*/ 1, PointerEventType::TOUCH);
+      // A touch sequence that starts at the (2,2) location of the 5x5 display.
+      // We do enough to trigger a focus change to the View.
+      session->Enqueue(pointer.Add(2, 2));
+      session->Enqueue(pointer.Down(2, 2));
+
+      // The character 'a', pressed and released.
+      KeyboardCommandGenerator keyboard(compositor_id, /*device id*/ 2);
+      static constexpr uint32_t hid_usage = 0x4;
+      static constexpr uint32_t modifiers = 0x0;
+      session->Enqueue(keyboard.Pressed(hid_usage, modifiers));
+      session->Enqueue(keyboard.Released(hid_usage, modifiers));
+    }
+    RunLoopUntilIdle();
+  }
 }
 
 }  // namespace
