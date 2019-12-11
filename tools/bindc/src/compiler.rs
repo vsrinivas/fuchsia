@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::bind_library;
-use crate::bind_program::{self, Condition, ConditionOp, Statement, Value};
+use crate::bind_program::{self, Condition, ConditionOp, Statement};
 use crate::dependency_graph::{self, DependencyGraph};
 use crate::errors::UserError;
 use crate::instruction;
 use crate::make_identifier;
-use crate::parser_common::{self, CompoundIdentifier, Include};
+use crate::parser_common::{self, CompoundIdentifier, Include, Value};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;

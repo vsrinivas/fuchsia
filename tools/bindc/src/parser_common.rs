@@ -56,6 +56,14 @@ pub struct Include {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Value {
+    NumericLiteral(u64),
+    StringLiteral(String),
+    BoolLiteral(bool),
+    Identifier(CompoundIdentifier),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum BindParserError {
     Type(String),
     StringLiteral(String),
@@ -122,6 +130,16 @@ pub fn compound_identifier(input: &str) -> IResult<&str, CompoundIdentifier, Bin
     // Segments must be nonempty, so it's safe to pop off the name.
     let name = segments.pop().unwrap();
     Ok((input, CompoundIdentifier { namespace: segments, name }))
+}
+
+pub fn condition_value(input: &str) -> IResult<&str, Value, BindParserError> {
+    let string = map(ws(string_literal), Value::StringLiteral);
+    let number = map(ws(numeric_literal), Value::NumericLiteral);
+    let boolean = map(ws(bool_literal), Value::BoolLiteral);
+    let identifer = map(ws(compound_identifier), Value::Identifier);
+
+    alt((string, number, boolean, identifer))(input)
+        .or(Err(nom::Err::Error(BindParserError::ConditionValue(input.to_string()))))
 }
 
 pub fn using(input: &str) -> IResult<&str, Include, BindParserError> {
@@ -456,6 +474,45 @@ mod test {
             assert_eq!(
                 compound_identifier(""),
                 Err(nom::Err::Error(BindParserError::Identifier("".to_string())))
+            );
+        }
+    }
+
+    mod condition_values {
+        use super::*;
+
+        #[test]
+        fn string() {
+            assert_eq!(
+                condition_value(r#""abc""#),
+                Ok(("", Value::StringLiteral("abc".to_string())))
+            );
+        }
+
+        #[test]
+        fn bool() {
+            assert_eq!(condition_value("true"), Ok(("", Value::BoolLiteral(true))));
+        }
+
+        #[test]
+        fn number() {
+            assert_eq!(condition_value("123"), Ok(("", Value::NumericLiteral(123))));
+        }
+
+        #[test]
+        fn identifier() {
+            assert_eq!(
+                condition_value("abc"),
+                Ok(("", Value::Identifier(make_identifier!["abc"])))
+            );
+        }
+
+        #[test]
+        fn empty() {
+            // Does not match empty string.
+            assert_eq!(
+                condition_value(""),
+                Err(nom::Err::Error(BindParserError::ConditionValue("".to_string())))
             );
         }
     }

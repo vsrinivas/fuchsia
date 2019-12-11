@@ -10,7 +10,7 @@ use std::io::{self, BufRead};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-use bindc::{compiler, instruction::Instruction};
+use bindc::{compiler, debugger, instruction::Instruction};
 
 #[derive(StructOpt, Debug)]
 struct Opt {
@@ -33,6 +33,12 @@ struct Opt {
     /// should be in the format described in //tools/bindc/README.md.
     #[structopt(short = "f", long = "include-file", parse(from_os_str))]
     include_file: Option<PathBuf>,
+
+    /// A file containing the properties of a specific device, as a list of key-value pairs.
+    /// This will be used as the input to the bind program debugger.
+    /// In debug mode no compiler output is produced, so --output should not be specified.
+    #[structopt(short = "d", long = "debug", parse(from_os_str))]
+    device_file: Option<PathBuf>,
 }
 
 fn write_bind_template(instructions: Vec<Instruction>) -> Option<String> {
@@ -56,11 +62,10 @@ fn write_bind_template(instructions: Vec<Instruction>) -> Option<String> {
 fn main() {
     let opt = Opt::from_iter(std::env::args());
 
-    let mut output: Box<dyn io::Write> = if let Some(output) = opt.output {
-        Box::new(File::create(output).unwrap())
-    } else {
-        Box::new(io::stdout())
-    };
+    if opt.output.is_some() && opt.device_file.is_some() {
+        eprintln!("Error: options --output and --debug are mutually exclusive.");
+        std::process::exit(1);
+    }
 
     let mut includes = opt.include;
 
@@ -76,6 +81,21 @@ fn main() {
         });
         includes.extend(filenames);
     }
+
+    if let Some(device_file) = opt.device_file {
+        if let Err(err) = debugger::debug(device_file) {
+            eprintln!("Debugger failed with error:");
+            eprintln!("{}", err);
+            std::process::exit(1);
+        }
+        return;
+    }
+
+    let mut output: Box<dyn io::Write> = if let Some(output) = opt.output {
+        Box::new(File::create(output).unwrap())
+    } else {
+        Box::new(io::stdout())
+    };
 
     match compiler::compile(opt.input, &includes) {
         Ok(instructions) => match write_bind_template(instructions) {

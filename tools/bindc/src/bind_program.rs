@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::parser_common::{
-    bool_literal, compound_identifier, many_until_eof, map_err, numeric_literal, string_literal,
-    using_list, ws, BindParserError, CompoundIdentifier, Include,
+    compound_identifier, condition_value, many_until_eof, map_err, using_list, ws, BindParserError,
+    CompoundIdentifier, Include, Value,
 };
 use nom::{
     branch::alt,
@@ -26,14 +26,6 @@ pub struct Ast {
 pub enum ConditionOp {
     Equals,
     NotEquals,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Value {
-    NumericLiteral(u64),
-    StringLiteral(String),
-    BoolLiteral(bool),
-    Identifier(CompoundIdentifier),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -71,16 +63,6 @@ fn condition_op(input: &str) -> IResult<&str, ConditionOp, BindParserError> {
     let equals = value(ConditionOp::Equals, tag("=="));
     let not_equals = value(ConditionOp::NotEquals, tag("!="));
     map_err(alt((equals, not_equals)), BindParserError::ConditionOp)(input)
-}
-
-fn condition_value(input: &str) -> IResult<&str, Value, BindParserError> {
-    let string = map(ws(string_literal), Value::StringLiteral);
-    let number = map(ws(numeric_literal), Value::NumericLiteral);
-    let boolean = map(ws(bool_literal), Value::BoolLiteral);
-    let identifer = map(ws(compound_identifier), Value::Identifier);
-
-    alt((string, number, boolean, identifer))(input)
-        .or(Err(nom::Err::Error(BindParserError::ConditionValue(input.to_string()))))
 }
 
 fn condition(input: &str) -> IResult<&str, Condition, BindParserError> {
@@ -191,45 +173,6 @@ mod test {
             assert_eq!(
                 condition_op(""),
                 Err(nom::Err::Error(BindParserError::ConditionOp("".to_string())))
-            );
-        }
-    }
-
-    mod condition_values {
-        use super::*;
-
-        #[test]
-        fn string() {
-            assert_eq!(
-                condition_value(r#""abc""#),
-                Ok(("", Value::StringLiteral("abc".to_string())))
-            );
-        }
-
-        #[test]
-        fn bool() {
-            assert_eq!(condition_value("true"), Ok(("", Value::BoolLiteral(true))));
-        }
-
-        #[test]
-        fn number() {
-            assert_eq!(condition_value("123"), Ok(("", Value::NumericLiteral(123))));
-        }
-
-        #[test]
-        fn identifier() {
-            assert_eq!(
-                condition_value("abc"),
-                Ok(("", Value::Identifier(make_identifier!["abc"])))
-            );
-        }
-
-        #[test]
-        fn empty() {
-            // Does not match empty string.
-            assert_eq!(
-                condition_value(""),
-                Err(nom::Err::Error(BindParserError::ConditionValue("".to_string())))
             );
         }
     }
