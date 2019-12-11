@@ -772,7 +772,7 @@ zx_status_t Blobfs::ReloadSuperblock() {
   return ZX_OK;
 }
 
-zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out, ServeLayout layout) {
+zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
   fbl::RefPtr<Directory> vn = fbl::AdoptRef(new Directory(this));
 
   auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
@@ -784,19 +784,7 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out, ServeLayout layout
     return status;
   }
 
-  fbl::RefPtr<fs::Vnode> export_root;
-  switch (layout) {
-    case ServeLayout::kDataRootOnly:
-      export_root = std::move(vn);
-      break;
-    case ServeLayout::kExportDirectory:
-      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
-      outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
-      export_root = std::move(outgoing);
-      break;
-  }
-
-  *out = std::move(export_root);
+  *out = std::move(vn);
   return ZX_OK;
 }
 

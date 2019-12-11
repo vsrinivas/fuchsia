@@ -4,6 +4,8 @@
 
 #include "runner.h"
 
+#include <fs/pseudo_dir.h>
+
 namespace blobfs {
 
 // static.
@@ -48,13 +50,25 @@ void Runner::Shutdown(fs::Vfs::ShutdownCallback cb) {
 
 zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
   fbl::RefPtr<fs::Vnode> vn;
-  zx_status_t status = blobfs_->OpenRootNode(&vn, layout);
+  zx_status_t status = blobfs_->OpenRootNode(&vn);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: mount failed; could not get root blob\n");
     return status;
   }
 
-  status = ServeDirectory(std::move(vn), std::move(root));
+  fbl::RefPtr<fs::Vnode> export_root;
+  switch (layout) {
+    case ServeLayout::kDataRootOnly:
+      export_root = std::move(vn);
+      break;
+    case ServeLayout::kExportDirectory:
+      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
+      outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
+      export_root = std::move(outgoing);
+      break;
+  }
+
+  status = ServeDirectory(std::move(export_root), std::move(root));
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: mount failed; could not serve root directory\n");
     return status;

@@ -138,7 +138,7 @@ class Blobfs : public TransactionManager, public UserPager {
 
   // Invokes "open" on the root directory.
   // Acts as a special-case to bootstrap filesystem mounting.
-  zx_status_t OpenRootNode(fbl::RefPtr<fs::Vnode>* out, ServeLayout layout);
+  zx_status_t OpenRootNode(fbl::RefPtr<fs::Vnode>* out);
 
   BlobCache& Cache() { return blob_cache_; }
 

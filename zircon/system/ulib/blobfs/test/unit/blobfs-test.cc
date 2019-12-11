@@ -163,7 +163,7 @@ TEST_F(BlobfsTest, RunOperationReadWrite) {
 
 TEST_F(BlobfsTest, TrimsData) {
   fbl::RefPtr<fs::Vnode> root;
-  ASSERT_OK(fs_->OpenRootNode(&root, ServeLayout::kDataRootOnly));
+  ASSERT_OK(fs_->OpenRootNode(&root));
   fs::Vnode* root_node = root.get();
 
   std::unique_ptr<fs_test_utils::BlobInfo> info;
