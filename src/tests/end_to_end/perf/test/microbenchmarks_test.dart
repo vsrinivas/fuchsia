@@ -4,7 +4,7 @@
 
 import 'package:test/test.dart';
 
-import 'perf_test.dart';
+import 'helpers.dart';
 
 void main() {
   enableLoggingOutput();
