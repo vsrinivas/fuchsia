@@ -7,6 +7,7 @@ group("lib") {
   deps = [
     "core",
     "hoist",
+    "integration_tests",
     "salt_slab",
   ]
 }
@@ -16,6 +17,7 @@ group("tests") {
   deps = [
     "core:tests",
     "hoist:tests",
+    "integration_tests:tests",
     "salt_slab:tests",
   ]
 }

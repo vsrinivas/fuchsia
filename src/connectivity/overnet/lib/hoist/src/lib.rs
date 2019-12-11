@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod fuchsia;
+#[cfg(not(target_os = "fuchsia"))]
 pub mod logger;
 mod not_fuchsia;
 
@@ -12,7 +13,14 @@ pub use fuchsia::*;
 #[cfg(not(target_os = "fuchsia"))]
 pub use not_fuchsia::*;
 
-/// Helper to connect to Overnet as a ServicePublisher, and then publish a single service.
+#[cfg(target_os = "fuchsia")]
+pub mod logger {
+    pub fn init() -> Result<(), failure::Error> {
+        Ok(())
+    }
+}
+
+/// Helper to connect to Overnet as a ServicePublisher, and then publish a single service
 pub fn publish_service(
     service_name: &str,
     provider: fidl::endpoints::ClientEnd<fidl_fuchsia_overnet::ServiceProviderMarker>,

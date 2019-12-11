@@ -328,7 +328,7 @@ pub struct Node<Runtime: NodeRuntime + 'static> {
 impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
     /// Create a new instance of App
     pub fn new(runtime: Runtime, options: NodeOptions) -> Result<Self, Error> {
-        let router = Router::new_with_options(options.router_options);
+        let router = Router::new_with_options(options.router_options)?;
         let mut node = Self {
             inner: Rc::new(RefCell::new(NodeInner {
                 service_map: HashMap::new(),
@@ -596,6 +596,13 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         connection_label: Option<String>,
         socket: fidl::Socket,
     ) -> Result<(), Error> {
+        log::info!(
+            "Begin handshake: node_link_id:{:?} connection_label:{:?} socket:{:?}",
+            node_link_id,
+            connection_label,
+            socket,
+        );
+
         const GREETING_STRING: &str = "OVERNET SOCKET LINK";
 
         // Send first frame

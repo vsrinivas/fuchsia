@@ -564,9 +564,9 @@ struct Endpoints<LinkData: Copy + Debug, Time: RouterTime> {
     /// so we can quickly send it at need.
     node_desc_packet: Vec<u8>,
     /// The servers private key file for this node.
-    server_key_file: Option<Box<dyn AsRef<Path>>>,
+    server_key_file: Box<dyn AsRef<Path>>,
     /// The servers private cert file for this node.
-    server_cert_file: Option<Box<dyn AsRef<Path>>>,
+    server_cert_file: Box<dyn AsRef<Path>>,
 }
 
 impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
@@ -782,15 +782,11 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
         let cert_file = self
             .server_cert_file
             .as_ref()
-            .ok_or_else(|| failure::format_err!("No cert file for server"))?
-            .as_ref()
             .as_ref()
             .to_str()
             .ok_or_else(|| failure::format_err!("Cannot convert path to string"))?;
         let key_file = self
             .server_key_file
-            .as_ref()
-            .ok_or_else(|| failure::format_err!("No key file for server"))?
             .as_ref()
             .as_ref()
             .to_str()
@@ -1227,11 +1223,12 @@ where
     /// message==None => end of stream.
     fn recv(&mut self, stream_type: StreamType, message: Option<&mut [u8]>) -> Result<(), Error> {
         log::trace!(
-            "{:?} Peer {:?} {:?} stream {:?} index {} gets {:?}",
+            "{:?} Peer {:?} {:?} stream {:?} type {:?} index {} gets {:?}",
             self.node_id,
             self.peer_id,
             self.peer.node_id,
             self.stream_id,
+            stream_type,
             self.stream_index,
             message
         );
@@ -1693,16 +1690,33 @@ pub fn generate_node_id() -> NodeId {
 
 impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
     /// New with some set of options
-    pub fn new_with_options(options: RouterOptions) -> Self {
+    pub fn new_with_options(options: RouterOptions) -> Result<Self, Error> {
         let node_id = options.node_id.unwrap_or_else(generate_node_id);
         let mut ack_link_status_frame = Vec::new();
         fidl::encoding::Encoder::encode(
             &mut ack_link_status_frame,
             &mut Vec::new(),
             &mut PeerReply::UpdateLinkStatusAck(fidl_fuchsia_overnet_protocol::Empty {}),
-        )
-        .unwrap();
-        Router {
+        )?;
+        let server_cert_file = options
+            .quic_server_cert_file
+            .ok_or_else(|| failure::format_err!("No server cert file"))?;
+        if !server_cert_file.as_ref().as_ref().exists() {
+            failure::bail!(
+                "Server cert file does not exist: {}",
+                server_cert_file.as_ref().as_ref().display()
+            );
+        }
+        let server_key_file = options
+            .quic_server_key_file
+            .ok_or_else(|| failure::format_err!("No server key file"))?;
+        if !server_key_file.as_ref().as_ref().exists() {
+            failure::bail!(
+                "Server key file does not exist: {}",
+                server_key_file.as_ref().as_ref().display()
+            );
+        }
+        Ok(Router {
             node_id,
             endpoints: Endpoints {
                 node_id,
@@ -1719,8 +1733,8 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                 recently_mentioned_peers: Vec::new(),
                 node_desc_packet: make_desc_packet(vec![]).unwrap(),
                 now: Time::now(),
-                server_cert_file: options.quic_server_cert_file,
-                server_key_file: options.quic_server_key_file,
+                server_cert_file,
+                server_key_file,
                 link_status_updates: BinaryHeap::new(),
                 ack_link_status_updates: BinaryHeap::new(),
                 config_response_needed: BTreeMap::new(),
@@ -1738,7 +1752,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                 },
             },
             ack_link_status_frame,
-        }
+        })
     }
 
     /// Return the key for the SaltSlab representing streams
@@ -2353,9 +2367,10 @@ mod tests {
     #[test]
     fn no_op() {
         init();
-        Router::<u8, Instant>::new_with_options(RouterOptions::new());
+        Router::<u8, Instant>::new_with_options(test_router_options()).unwrap();
         assert_eq!(
-            Router::<u8, Instant>::new_with_options(RouterOptions::new().set_node_id(1.into()))
+            Router::<u8, Instant>::new_with_options(test_router_options().set_node_id(1.into()))
+                .unwrap()
                 .node_id
                 .0,
             1
@@ -2384,8 +2399,8 @@ mod tests {
 
     impl TwoNode {
         fn new() -> Self {
-            let mut router1 = Router::new_with_options(test_router_options());
-            let mut router2 = Router::new_with_options(test_router_options());
+            let mut router1 = Router::new_with_options(test_router_options()).unwrap();
+            let mut router2 = Router::new_with_options(test_router_options()).unwrap();
             let link1 = router1.new_link(router2.node_id, 123.into(), 1).unwrap();
             let link2 = router2.new_link(router1.node_id, 456.into(), 2).unwrap();
             router1.adjust_route(router2.node_id, link1).unwrap();

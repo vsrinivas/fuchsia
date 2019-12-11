@@ -189,7 +189,7 @@ impl NodeTable {
 
     /// Mark a node as being established
     pub fn mark_established(&mut self, node_id: NodeId) {
-        log::trace!("{:?} mark node established: {:?}", self.root_node, node_id);
+        log::info!("{:?} mark node established: {:?}", self.root_node, node_id);
         let node = self.get_or_create_node_mut(node_id);
         if node.established {
             return;
