@@ -6,7 +6,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 
 namespace ledger {
 namespace {
@@ -14,8 +14,8 @@ namespace {
 TEST(FuchsiaPlatformTest, OpenFD) {
   auto file_system = std::make_unique<FuchsiaFileSystem>();
 
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  DetachedPath path(tmpfs.root_fd(), "base");
+  std::unique_ptr<ScopedTmpLocation> tmp_location_ = file_system->CreateScopedTmpLocation();
+  DetachedPath path(tmp_location_->path().root_fd(), "base");
   DetachedPath subpath = path.SubPath("foo");
   ASSERT_EQ(subpath.root_fd(), path.root_fd());
   ASSERT_EQ(subpath.path(), "base/foo");

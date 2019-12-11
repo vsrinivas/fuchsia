@@ -150,7 +150,7 @@ class DbViewTestFactory : public storage::DbTestFactory {
   DbViewTestFactory() = default;
 
   std::unique_ptr<storage::Db> GetDb(ledger::Environment* environment,
-                                     scoped_tmpfs::ScopedTmpFS* /*tmpfs*/) override {
+                                     ledger::ScopedTmpLocation* /*tmp_location*/) override {
     if (!dbview_factory_) {
       auto base_db = std::make_unique<storage::fake::FakeDb>(environment->dispatcher());
       dbview_factory_ = std::make_unique<ledger::DbViewFactory>(std::move(base_db));

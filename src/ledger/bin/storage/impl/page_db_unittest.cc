@@ -15,9 +15,9 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/impl/commit_factory.h"
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
@@ -59,8 +59,9 @@ class PageDbTest : public ledger::TestWithEnvironment {
       : ledger::TestWithEnvironment([](ledger::EnvironmentBuilder* builder) {
           builder->SetGcPolicy(GarbageCollectionPolicy::NEVER);
         }),
+        tmp_location_(environment_.file_system()->CreateScopedTmpLocation()),
         encryption_service_(dispatcher()),
-        base_path(tmpfs_.root_fd()),
+        base_path(tmp_location_->path().root_fd()),
         page_storage_(
             &environment_, &encryption_service_,
             GetLevelDb(environment_.file_system(), dispatcher(), base_path.SubPath("storage")),
@@ -103,7 +104,7 @@ class PageDbTest : public ledger::TestWithEnvironment {
   }
 
  protected:
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location_;
   encryption::FakeEncryptionService encryption_service_;
   ledger::DetachedPath base_path;
   PageStorageImpl page_storage_;

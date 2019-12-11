@@ -10,7 +10,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/file_index.h"
@@ -113,8 +113,9 @@ TEST_F(ObjectImplTest, DataChunkPiece) {
 }
 
 TEST_F(ObjectImplTest, LevelDBPiece) {
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  auto env = leveldb::MakeFuchsiaEnv(tmpfs.root_fd());
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      environment_.file_system()->CreateScopedTmpLocation();
+  auto env = leveldb::MakeFuchsiaEnv(tmp_location->path().root_fd());
 
   leveldb::DB* db = nullptr;
   leveldb::Options options;

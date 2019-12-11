@@ -29,7 +29,6 @@ source_set("unittests") {
 
   deps = [
     ":impl",
-    "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/storage/fake:lib",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/coroutine",

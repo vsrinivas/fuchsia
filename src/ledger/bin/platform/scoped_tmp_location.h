@@ -5,6 +5,8 @@
 #ifndef SRC_LEDGER_BIN_PLATFORM_SCOPED_TMP_LOCATION_H_
 #define SRC_LEDGER_BIN_PLATFORM_SCOPED_TMP_LOCATION_H_
 
+#include "src/ledger/bin/platform/detached_path.h"
+
 namespace ledger {
 
 // A temporary storage location that will be destroyed when this class is deleted.

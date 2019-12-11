@@ -15,9 +15,10 @@
 #include <trace/event.h>
 
 #include "peridot/lib/rng/test_random.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
@@ -195,7 +196,8 @@ class StoriesBenchmark {
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
 
-  scoped_tmpfs::ScopedTmpFS tmp_fs_;
+  std::unique_ptr<Platform> platform_;
+  std::unique_ptr<ScopedTmpLocation> tmp_location_;
   std::unique_ptr<sys::ComponentContext> component_context_;
   LedgerMemoryEstimator memory_estimator_;
 
@@ -232,6 +234,8 @@ StoriesBenchmark::StoriesBenchmark(async::Loop* loop,
       random_(0),
       generator_(&random_),
       page_data_generator_(&random_),
+      platform_(MakePlatform()),
+      tmp_location_(platform_->file_system()->CreateScopedTmpLocation()),
       component_context_(std::move(component_context)),
       story_count_(story_count),
       active_story_count_(active_story_count),
@@ -242,8 +246,8 @@ StoriesBenchmark::StoriesBenchmark(async::Loop* loop,
 
 void StoriesBenchmark::Run() {
   Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
-                            "", "stories_simulation", DetachedPath(tmp_fs_.root_fd()),
-                            QuitLoopClosure(), &ledger_, kDefaultGarbageCollectionPolicy);
+                            "", "stories_simulation", tmp_location_->path(), QuitLoopClosure(),
+                            &ledger_, kDefaultGarbageCollectionPolicy);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
@@ -424,7 +428,7 @@ void StoriesBenchmark::ShutDown() {
   ClearRemainingPages(i, [this] {
     FXL_DCHECK(active_stories_.empty());
 
-    // Shut down the Ledger process first as it relies on |tmp_fs_| storage.
+    // Shut down the Ledger process first as it relies on |tmp_location_| storage.
     KillLedgerProcess(&component_controller_);
     loop_->Quit();
   });

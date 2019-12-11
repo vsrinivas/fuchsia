@@ -12,7 +12,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/fit/function.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -25,7 +25,7 @@ class DbTestFactory {
  public:
   virtual ~DbTestFactory() = default;
   virtual std::unique_ptr<Db> GetDb(ledger::Environment* environment,
-                                    scoped_tmpfs::ScopedTmpFS* tmpfs) = 0;
+                                    ledger::ScopedTmpLocation* tmp_location) = 0;
 };
 
 // This class implements Value-Parameterized Abstract Tests for the Db interface.
@@ -37,7 +37,7 @@ class DbTestFactory {
 //  public:
 //   MyDbFactoryTest() = default;
 //   std::unique_ptr<Db> GetDb(ledger::Environment* environment,
-//                             scoped_tmpfs::ScopedTmpFS* tmpfs) override { ... }
+//                             ledger::ScopedTmpLocation* tmp_location) override { ... }
 // };
 // and instantiate the test suite with:
 //   INSTANTIATE_TEST_SUITE_P(DbImplTest, DbTest, ::testing::Values([] {
@@ -47,7 +47,10 @@ class DbTest
     : public ledger::TestWithEnvironment,
       public ::testing::WithParamInterface<std::function<std::unique_ptr<DbTestFactory>()>> {
  public:
-  DbTest() : db_factory_(GetParam()()), db_(db_factory_->GetDb(&environment_, &tmpfs_)) {}
+  DbTest()
+      : tmp_location_(environment_.file_system()->CreateScopedTmpLocation()),
+        db_factory_(GetParam()()),
+        db_(db_factory_->GetDb(&environment_, tmp_location_.get())) {}
 
  protected:
   void SetUp() override {
@@ -90,7 +93,7 @@ class DbTest
   void RunWriteReadTest(fit::function<void(coroutine::CoroutineHandler*, Db::Batch*)> do_write,
                         fit::function<void(coroutine::CoroutineHandler*)> do_read);
 
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location_;
   std::unique_ptr<DbTestFactory> db_factory_;
   std::unique_ptr<Db> db_;
 };

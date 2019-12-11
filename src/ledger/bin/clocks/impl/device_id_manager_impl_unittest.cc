@@ -10,7 +10,7 @@
 #include <random>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine.h"

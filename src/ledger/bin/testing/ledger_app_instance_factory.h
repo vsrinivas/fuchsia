@@ -16,7 +16,8 @@
 #include <gtest/gtest.h>
 
 #include "peridot/lib/rng/random.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/loop_controller.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 
@@ -76,7 +77,8 @@ class LedgerAppInstanceFactory {
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
     fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_;
 
-    scoped_tmpfs::ScopedTmpFS tmpfs_;
+    std::unique_ptr<Platform> platform_;
+    std::unique_ptr<ScopedTmpLocation> tmp_location_;
   };
 
   virtual ~LedgerAppInstanceFactory() = default;

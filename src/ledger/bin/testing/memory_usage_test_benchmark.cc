@@ -7,9 +7,10 @@
 #include <lib/sys/cpp/component_context.h>
 #include <stdlib.h>
 
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/platform/detached_path.h"
+#include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
@@ -52,9 +53,11 @@ int main() {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr controller;
-  scoped_tmpfs::ScopedTmpFS tmp_dir;
+  std::unique_ptr<ledger::Platform> platform = ledger::MakePlatform();
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      platform->file_system()->CreateScopedTmpLocation();
 
-  int return_code = TryGetMemory(context.get(), &controller, tmp_dir.root_fd());
+  int return_code = TryGetMemory(context.get(), &controller, tmp_location->path().root_fd());
 
   ledger::KillLedgerProcess(&controller);
   loop.Quit();

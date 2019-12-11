@@ -17,7 +17,7 @@ class FakeDbTestFactory : public DbTestFactory {
   FakeDbTestFactory() = default;
 
   std::unique_ptr<Db> GetDb(ledger::Environment* environment,
-                            scoped_tmpfs::ScopedTmpFS* /*tmpfs*/) override {
+                            ledger::ScopedTmpLocation* /*tmp_location*/) override {
     return std::make_unique<FakeDb>(environment->dispatcher());
   }
 };

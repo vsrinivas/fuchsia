@@ -14,12 +14,12 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/rng/system_random.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/serialization_version.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
@@ -143,9 +143,11 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
 TEST_F(LedgerEndToEndTest, PutAndGet) {
   Init({});
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-                                            nullptr, "", ledger_repository.NewRequest());
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      platform_->file_system()->CreateScopedTmpLocation();
+  ledger_repository_factory_->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
+      ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
   ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
@@ -183,9 +185,11 @@ TEST_F(LedgerEndToEndTest, Terminate) {
 TEST_F(LedgerEndToEndTest, ClearPage) {
   Init({});
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-                                            nullptr, "", ledger_repository.NewRequest());
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      platform_->file_system()->CreateScopedTmpLocation();
+  ledger_repository_factory_->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
+      ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
   ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
@@ -210,8 +214,8 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
     // <base64(page_id)>.
     std::string page_dir_name = absl::WebSafeBase64Escape(convert::ExtendedStringView(page_id.id));
     ledger::DetachedPath page_path;
-    ASSERT_TRUE(FindPathToDir(platform_->file_system(), ledger::DetachedPath(tmpfs.root_fd()),
-                              page_dir_name, &page_path))
+    ASSERT_TRUE(
+        FindPathToDir(platform_->file_system(), tmp_location->path(), page_dir_name, &page_path))
         << "Failed to find page's directory. Expected to find directory named "
            "`base64(page_id)`: "
         << page_dir_name;
@@ -228,8 +232,8 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
   // Make sure all directories have been deleted.
   for (const ledger::DetachedPath& path : page_paths) {
     RunLoopUntil([&] { return !platform_->file_system()->IsDirectory(path); });
-    EXPECT_FALSE(
-        platform_->file_system()->IsDirectory(ledger::DetachedPath(tmpfs.root_fd(), path.path())));
+    EXPECT_FALSE(platform_->file_system()->IsDirectory(
+        ledger::DetachedPath(tmp_location->path().root_fd(), path.path())));
   }
 
   ledger_.Unbind();
@@ -248,15 +252,14 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  const std::string content_path = convert::ToString(ledger::kSerializationVersion);
-  const std::string deletion_sentinel_path = content_path + "/sentinel";
-  ASSERT_TRUE(platform_->file_system()->CreateDirectory(
-      ledger::DetachedPath(tmpfs.root_fd(), content_path)));
-  ASSERT_TRUE(platform_->file_system()->WriteFile(
-      ledger::DetachedPath(tmpfs.root_fd(), deletion_sentinel_path), ""));
-  ASSERT_TRUE(platform_->file_system()->IsFile(
-      ledger::DetachedPath(tmpfs.root_fd(), deletion_sentinel_path)));
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      platform_->file_system()->CreateScopedTmpLocation();
+  const ledger::DetachedPath content_path(tmp_location->path().root_fd(),
+                                          convert::ToString(ledger::kSerializationVersion));
+  const ledger::DetachedPath deletion_sentinel_path = content_path.SubPath("sentinel");
+  ASSERT_TRUE(platform_->file_system()->CreateDirectory(content_path));
+  ASSERT_TRUE(platform_->file_system()->WriteFile(deletion_sentinel_path, ""));
+  ASSERT_TRUE(platform_->file_system()->IsFile(deletion_sentinel_path));
 
   // Create a cloud provider configured to trigger the cloude erase recovery on
   // initial check.
@@ -271,9 +274,9 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
     fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
         cloud_provider.get(), cloud_provider_ptr.NewRequest());
     ledger_internal::LedgerRepositoryPtr ledger_repository;
-    ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-                                              std::move(cloud_provider_ptr), "user_id",
-                                              ledger_repository.NewRequest());
+    ledger_repository_factory_->GetRepository(
+        fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+        std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
     RunLoopUntil([&] { return device_set_watcher_set; });
 
@@ -290,9 +293,9 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-                                            std::move(cloud_provider_ptr), "user_id",
-                                            ledger_repository.NewRequest());
+  ledger_repository_factory_->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
@@ -300,15 +303,16 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
-  ledger::DetachedPath path(tmpfs.root_fd(), deletion_sentinel_path);
-  RunLoopUntil([&] { return !platform_->file_system()->IsFile(path) && repo_disconnected; });
-  EXPECT_FALSE(platform_->file_system()->IsFile(path));
+  RunLoopUntil([&] {
+    return !platform_->file_system()->IsFile(deletion_sentinel_path) && repo_disconnected;
+  });
+  EXPECT_FALSE(platform_->file_system()->IsFile(deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
 
   // Make sure all the contents are deleted. Only the staging directory should be present.
   std::vector<std::string> directory_entries;
-  EXPECT_TRUE(platform_->file_system()->GetDirectoryContents(ledger::DetachedPath(tmpfs.root_fd()),
-                                                             &directory_entries));
+  EXPECT_TRUE(
+      platform_->file_system()->GetDirectoryContents(tmp_location->path(), &directory_entries));
   EXPECT_THAT(directory_entries, ElementsAre("staging"));
 
   // Verify that the Ledger app didn't crash.
@@ -326,11 +330,12 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
   ledger_internal::LedgerRepositoryPtr ledger_repository;
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  const std::string content_path_str = convert::ToString(ledger::kSerializationVersion);
-  const std::string deletion_sentinel_path = content_path_str + "/sentinel";
-  ledger::DetachedPath deletion_path(tmpfs.root_fd(), deletion_sentinel_path);
-  ledger::DetachedPath content_path(tmpfs.root_fd(), content_path_str);
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      platform_->file_system()->CreateScopedTmpLocation();
+  ledger::DetachedPath tmp_location_path = tmp_location->path();
+  ledger::DetachedPath content_path =
+      tmp_location_path.SubPath(convert::ToString(ledger::kSerializationVersion));
+  ledger::DetachedPath deletion_path = content_path.SubPath("sentinel");
   ASSERT_TRUE(platform_->file_system()->CreateDirectory(content_path));
   ASSERT_TRUE(platform_->file_system()->WriteFile(deletion_path, ""));
   ASSERT_TRUE(platform_->file_system()->IsFile(deletion_path));
@@ -344,9 +349,9 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
-  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-                                            std::move(cloud_provider_ptr), "user_id",
-                                            ledger_repository.NewRequest());
+  ledger_repository_factory_->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmp_location_path.root_fd()),
+      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
@@ -372,16 +377,17 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   Init({});
   bool ledger_app_shut_down = false;
   RegisterShutdownCallback([&ledger_app_shut_down] { ledger_app_shut_down = true; });
-  scoped_tmpfs::ScopedTmpFS tmpfs;
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      platform_->file_system()->CreateScopedTmpLocation();
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   ledger::FakeCloudProvider cloud_provider(dispatcher(), random());
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
-  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-                                            std::move(cloud_provider_ptr), "user_id",
-                                            ledger_repository.NewRequest());
+  ledger_repository_factory_->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
   ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
@@ -418,16 +424,17 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   bool ledger_app_shut_down = false;
   RegisterShutdownCallback([&ledger_app_shut_down] { ledger_app_shut_down = true; });
   ledger::Status status;
-  scoped_tmpfs::ScopedTmpFS tmpfs;
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      platform_->file_system()->CreateScopedTmpLocation();
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   ledger::FakeCloudProvider cloud_provider(dispatcher(), random());
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
-  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-                                            std::move(cloud_provider_ptr), "user_id",
-                                            ledger_repository.NewRequest());
+  ledger_repository_factory_->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
   ledger_repository->Sync(callback::Capture(QuitLoopClosure()));

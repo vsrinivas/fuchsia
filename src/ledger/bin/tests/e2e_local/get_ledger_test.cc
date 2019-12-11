@@ -8,8 +8,9 @@
 #include <lib/async-loop/default.h>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
+#include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 #include "src/lib/callback/capture.h"
 
@@ -18,7 +19,9 @@ namespace {
 
 TEST(GetLedgerTest, CreateAndDeleteLedger) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  scoped_tmpfs::ScopedTmpFS tmpfs;
+  std::unique_ptr<Platform> platform = MakePlatform();
+  std::unique_ptr<ScopedTmpLocation> tmp_location =
+      platform->file_system()->CreateScopedTmpLocation();
 
   auto component_context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr controller;
@@ -27,7 +30,7 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
   fit::function<void(fit::closure)> close_repository;
   Status status = GetLedger(
       component_context.get(), controller.NewRequest(), nullptr, "", "ledger_name",
-      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger, kTestingGarbageCollectionPolicy,
+      tmp_location->path(), [&] { loop.Quit(); }, &ledger, kTestingGarbageCollectionPolicy,
       &close_repository);
 
   // No need to |Sync| as |GetLedger| handles it.
@@ -42,7 +45,9 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
 
 TEST(GetLedgerTest, GetPageEnsureInitialized) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  scoped_tmpfs::ScopedTmpFS tmpfs;
+  std::unique_ptr<Platform> platform = MakePlatform();
+  std::unique_ptr<ScopedTmpLocation> tmp_location =
+      platform->file_system()->CreateScopedTmpLocation();
 
   auto component_context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr controller;
@@ -51,7 +56,7 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
   fit::function<void(fit::closure)> close_repository;
   Status status = GetLedger(
       component_context.get(), controller.NewRequest(), nullptr, "", "ledger_name",
-      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger, kTestingGarbageCollectionPolicy,
+      tmp_location->path(), [&] { loop.Quit(); }, &ledger, kTestingGarbageCollectionPolicy,
       &close_repository);
 
   ASSERT_EQ(status, Status::OK);

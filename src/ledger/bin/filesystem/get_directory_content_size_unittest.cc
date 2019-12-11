@@ -5,9 +5,9 @@
 #include "src/ledger/bin/filesystem/get_directory_content_size.h"
 
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 
 namespace ledger {
 namespace {
@@ -17,8 +17,10 @@ const std::string kFileContent = "file content";
 TEST(GetDirectoryContentSizeTest, GetDirectoryContentSize) {
   std::unique_ptr<Platform> platform = MakePlatform();
 
-  scoped_tmpfs::ScopedTmpFS scoped_tmpfs;
-  DetachedPath root(scoped_tmpfs.root_fd());
+  std::unique_ptr<ScopedTmpLocation> tmp_location =
+      platform->file_system()->CreateScopedTmpLocation();
+
+  DetachedPath root = tmp_location->path();
   DetachedPath foo = root.SubPath("foo");
   DetachedPath bar = root.SubPath("bar");
   DetachedPath foo_baz = foo.SubPath("baz");

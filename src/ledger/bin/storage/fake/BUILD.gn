@@ -66,6 +66,7 @@ source_set("unittests") {
 
   deps = [
     ":lib",
+    "//src/ledger/bin/platform",
     "//src/ledger/bin/storage/public:parametrized_tests",
     "//src/ledger/bin/testing:lib",
   ]

@@ -11,10 +11,10 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/db_view_factory.h"
 #include "src/ledger/bin/app/serialization.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
@@ -58,7 +58,9 @@ class FakeDelegate : public PageEvictionManager::Delegate {
 
 class PageEvictionManagerTest : public TestWithEnvironment {
  public:
-  PageEvictionManagerTest() : db_factory_(environment_.file_system(), environment_.dispatcher()) {}
+  PageEvictionManagerTest()
+      : tmp_location_(environment_.file_system()->CreateScopedTmpLocation()),
+        db_factory_(environment_.file_system(), environment_.dispatcher()) {}
   PageEvictionManagerTest(const PageEvictionManagerTest&) = delete;
   PageEvictionManagerTest& operator=(const PageEvictionManagerTest&) = delete;
 
@@ -78,7 +80,7 @@ class PageEvictionManagerTest : public TestWithEnvironment {
       if (coroutine::SyncCall(
               handler,
               [this](fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) mutable {
-                db_factory_.GetOrCreateDb(DetachedPath(tmpfs_.root_fd()),
+                db_factory_.GetOrCreateDb(tmp_location_->path(),
                                           storage::DbFactory::OnDbNotFound::CREATE,
                                           std::move(callback));
               },
@@ -94,7 +96,7 @@ class PageEvictionManagerTest : public TestWithEnvironment {
   }
 
  private:
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ScopedTmpLocation> tmp_location_;
   storage::fake::FakeDbFactory db_factory_;
   std::unique_ptr<DbViewFactory> dbview_factory_;
   std::unique_ptr<PageUsageDb> db_;

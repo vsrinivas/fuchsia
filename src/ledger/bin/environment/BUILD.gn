@@ -61,7 +61,6 @@ source_set("unittests") {
     ":environment",
     ":test_loop_notification",
     "//peridot/lib/rng:testing",
-    "//peridot/lib/scoped_tmpfs",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",

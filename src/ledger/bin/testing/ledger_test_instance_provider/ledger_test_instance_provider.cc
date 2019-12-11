@@ -11,8 +11,9 @@
 
 #include <cstdlib>
 
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
+#include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fsl/io/fd.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -47,9 +48,11 @@ int main(int argc, char const *argv[]) {
   sys::ServiceDirectory child_services(std::move(child_directory));
   child_services.Connect(repository_factory.NewRequest());
 
-  // Create memfs.
-  auto memfs = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
-  zx::channel memfs_channel = fsl::CloneChannelFromFileDescriptor(memfs->root_fd());
+  // Create a temporary location.
+  std::unique_ptr<ledger::Platform> platform = ledger::MakePlatform();
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      platform->file_system()->CreateScopedTmpLocation();
+  zx::channel memfs_channel = fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd());
 
   // Get a repository.
   fuchsia::ledger::internal::LedgerRepositorySyncPtr repository;

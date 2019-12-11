@@ -10,8 +10,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/platform/detached_path.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
@@ -48,7 +48,8 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
   };
 
   LevelDbFactoryTest()
-      : base_path_(tmpfs_.root_fd()),
+      : tmp_location_(environment_.file_system()->CreateScopedTmpLocation()),
+        base_path_(tmp_location_->path()),
         cache_path_(base_path_.SubPath("cache")),
         db_path_(base_path_.SubPath("databases")),
         db_factory_(&test_loop(), &environment_, cache_path_) {}
@@ -69,7 +70,7 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
   }
 
  private:
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location_;
   ledger::DetachedPath base_path_;
 
  protected:
@@ -212,8 +213,9 @@ TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
   // When an empty LevelDb instance is already cached from a previous
   // LevelDbFactory execution, don't create a new instance, but use the existing
   // one directly.
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  ledger::DetachedPath cache_path(tmpfs.root_fd(), "cache");
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      environment_.file_system()->CreateScopedTmpLocation();
+  ledger::DetachedPath cache_path = tmp_location->path().SubPath("cache");
   // Must be the same as |kCachedDbPath| in leveldb_factory.cc.
   ledger::DetachedPath cached_db_path = cache_path.SubPath("cached_db");
 

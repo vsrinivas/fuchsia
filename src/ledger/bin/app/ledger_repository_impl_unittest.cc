@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/db_view_factory.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
@@ -26,6 +25,7 @@
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/inspect/inspect.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
@@ -221,7 +221,8 @@ class YieldingDeviceIdManager : public clocks::DeviceIdManager {
 
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:
-  LedgerRepositoryImplTest() = default;
+  LedgerRepositoryImplTest()
+      : tmp_location_(environment_.file_system()->CreateScopedTmpLocation()) {}
   LedgerRepositoryImplTest(const LedgerRepositoryImplTest&) = delete;
   LedgerRepositoryImplTest& operator=(const LedgerRepositoryImplTest&) = delete;
 
@@ -251,7 +252,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     std::unique_ptr<DbViewFactory> dbview_factory;
     std::unique_ptr<clocks::DeviceIdManager> device_id_manager;
     std::unique_ptr<PageUsageDb> page_usage_db;
-    DetachedPath detached_path = DetachedPath(tmpfs_.root_fd());
+    DetachedPath detached_path = tmp_location_->path();
     EXPECT_TRUE(RunInCoroutine([&, this](coroutine::CoroutineHandler* handler) mutable {
       std::unique_ptr<storage::Db> leveldb;
       if (coroutine::SyncCall(
@@ -289,7 +290,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
   ~LedgerRepositoryImplTest() override = default;
 
  protected:
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ScopedTmpLocation> tmp_location_;
   FakeDiskCleanupManager* disk_cleanup_manager_;
   FakeUserSync* user_sync_;
   clocks::DeviceIdManager* device_id_manager_ptr_;

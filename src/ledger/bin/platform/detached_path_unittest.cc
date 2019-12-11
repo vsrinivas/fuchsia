@@ -5,7 +5,6 @@
 #include "src/ledger/bin/platform/detached_path.h"
 
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
 namespace {

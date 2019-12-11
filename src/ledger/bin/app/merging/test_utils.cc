@@ -21,7 +21,9 @@
 
 namespace ledger {
 
-TestWithPageStorage::TestWithPageStorage() : encryption_service_(dispatcher()) {}
+TestWithPageStorage::TestWithPageStorage()
+    : tmp_location_(environment_.file_system()->CreateScopedTmpLocation()),
+      encryption_service_(dispatcher()) {}
 
 TestWithPageStorage::~TestWithPageStorage() = default;
 
@@ -74,8 +76,8 @@ fit::function<void(storage::Journal*)> TestWithPageStorage::DeleteKeyFromJournal
 
 ::testing::AssertionResult TestWithPageStorage::CreatePageStorage(
     std::unique_ptr<storage::PageStorage>* page_storage) {
-  auto db = std::make_unique<storage::LevelDb>(
-      environment_.file_system(), environment_.dispatcher(), DetachedPath(tmpfs_.root_fd()));
+  auto db = std::make_unique<storage::LevelDb>(environment_.file_system(),
+                                               environment_.dispatcher(), tmp_location_->path());
   Status status = db->Init();
   if (status != Status::OK) {
     return ::testing::AssertionFailure() << "LevelDb::Init failed with status " << status;

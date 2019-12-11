@@ -10,7 +10,8 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/files/unique_fd.h"
@@ -20,8 +21,10 @@ namespace ledger {
 namespace {
 
 TEST(VMOAndFile, VmoFromFd) {
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  fbl::unique_fd fd(openat(tmpfs.root_fd(), "file", O_RDWR | O_CREAT));
+  std::unique_ptr<Platform> platform = MakePlatform();
+  std::unique_ptr<ScopedTmpLocation> tmp_location =
+      platform->file_system()->CreateScopedTmpLocation();
+  fbl::unique_fd fd(openat(tmp_location->path().root_fd(), "file", O_RDWR | O_CREAT));
   EXPECT_TRUE(fd.is_valid());
 
   constexpr absl::string_view payload = "Payload";
@@ -37,8 +40,10 @@ TEST(VMOAndFile, VmoFromFd) {
 }
 
 TEST(VMOAndFile, VmoFromFilename) {
-  scoped_tmpfs::ScopedTmpFS tmpfs;
-  fbl::unique_fd fd(openat(tmpfs.root_fd(), "file", O_RDWR | O_CREAT));
+  std::unique_ptr<Platform> platform = MakePlatform();
+  std::unique_ptr<ScopedTmpLocation> tmp_location =
+      platform->file_system()->CreateScopedTmpLocation();
+  fbl::unique_fd fd(openat(tmp_location->path().root_fd(), "file", O_RDWR | O_CREAT));
   EXPECT_TRUE(fd.is_valid());
 
   constexpr absl::string_view payload = "Another playload";
@@ -46,7 +51,7 @@ TEST(VMOAndFile, VmoFromFilename) {
   fd.reset();
 
   ledger::SizedVmo vmo;
-  EXPECT_TRUE(VmoFromFilenameAt(tmpfs.root_fd(), "file", &vmo));
+  EXPECT_TRUE(VmoFromFilenameAt(tmp_location->path().root_fd(), "file", &vmo));
 
   std::string data;
   EXPECT_TRUE(StringFromVmo(vmo, &data));

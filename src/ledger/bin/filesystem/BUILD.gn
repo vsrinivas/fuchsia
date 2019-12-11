@@ -27,7 +27,6 @@ source_set("unittests") {
 
   deps = [
     ":filesystem",
-    "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/platform:implementation",
     "//src/ledger/lib/convert",
     "//src/lib/fxl",

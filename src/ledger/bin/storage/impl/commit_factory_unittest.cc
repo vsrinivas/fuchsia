@@ -9,7 +9,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
@@ -58,7 +57,6 @@ class CommitFactoryTest : public ledger::TestWithEnvironment {
 
   // Test:
   void SetUp() override {
-    tmpfs_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
     auto leveldb = std::make_unique<fake::FakeDb>(dispatcher());
     PageId id = RandomString(environment_.random(), 10);
     storage_ = std::make_unique<PageStorageImpl>(
@@ -147,7 +145,6 @@ class CommitFactoryTest : public ledger::TestWithEnvironment {
   }
 
  protected:
-  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs_;
   encryption::FakeEncryptionService encryption_service_;
   std::unique_ptr<PageStorageImpl> storage_;
 };

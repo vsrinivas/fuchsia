@@ -16,11 +16,11 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
@@ -465,10 +465,10 @@ class PageStorageTest : public StorageTest {
       storage_->SetSyncDelegate(nullptr);
       storage_.reset();
     }
-    tmpfs_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
+    tmp_location_ = environment_.file_system()->CreateScopedTmpLocation();
     PageId id = RandomString(environment_.random(), 10);
     auto db = std::make_unique<ControlledLevelDb>(environment_.file_system(), dispatcher(),
-                                                  ledger::DetachedPath(tmpfs_->root_fd()));
+                                                  tmp_location_->path());
     leveldb_ = db.get();
     ASSERT_EQ(db->Init(), Status::OK);
     storage_ = std::make_unique<PageStorageImpl>(&environment_, &encryption_service_, std::move(db),
@@ -833,7 +833,7 @@ class PageStorageTest : public StorageTest {
   }
 
   ControlledLevelDb* leveldb_;
-  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs_;
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location_;
   encryption::FakeEncryptionService encryption_service_;
   std::unique_ptr<PageStorageImpl> storage_;
   // A fake factory to allocate test identifiers, ensuring they are not automatically tracked by

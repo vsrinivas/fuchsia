@@ -6,10 +6,10 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_cloud_provider.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
@@ -21,7 +21,7 @@ namespace {
 class TestSyncStateWatcher : public SyncStateWatcher {
  public:
   TestSyncStateWatcher() = default;
-  ~TestSyncStateWatcher() override{};
+  ~TestSyncStateWatcher() override = default;
 
   void Notify(SyncStateContainer sync_state) override {
     if (!states.empty() && sync_state == *states.rbegin()) {
@@ -36,8 +36,10 @@ class TestSyncStateWatcher : public SyncStateWatcher {
 class LedgerSyncImplTest : public ledger::TestWithEnvironment {
  public:
   LedgerSyncImplTest()
-      : cloud_provider_(cloud_provider_ptr_.NewRequest()), encryption_service_(dispatcher()) {
-    user_config_.user_directory = ledger::DetachedPath(tmpfs_.root_fd());
+      : tmp_location_(environment_.file_system()->CreateScopedTmpLocation()),
+        cloud_provider_(cloud_provider_ptr_.NewRequest()),
+        encryption_service_(dispatcher()) {
+    user_config_.user_directory = tmp_location_->path();
     user_config_.cloud_provider = std::move(cloud_provider_ptr_);
 
     ledger_sync_ = std::make_unique<LedgerSyncImpl>(&environment_, &user_config_,
@@ -48,7 +50,7 @@ class LedgerSyncImplTest : public ledger::TestWithEnvironment {
   ~LedgerSyncImplTest() override {}
 
  protected:
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location_;
   std::unique_ptr<LedgerSyncImpl> ledger_sync_;
   cloud_provider::CloudProviderPtr cloud_provider_ptr_;
   TestCloudProvider cloud_provider_;

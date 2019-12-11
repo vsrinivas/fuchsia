@@ -13,9 +13,9 @@
 
 #include <fuzzer/FuzzedDataProvider.h>
 
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/environment/test_loop_notification.h"
 #include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -32,8 +32,8 @@ namespace {
 
 // Initialize a Db instance backed by temporary file system.
 std::unique_ptr<storage::Db> GetDb(ledger::Environment* environment,
-                                   scoped_tmpfs::ScopedTmpFS* tmpfs) {
-  ledger::DetachedPath db_path(tmpfs->root_fd(), "db");
+                                   ledger::ScopedTmpLocation* tmp_location) {
+  ledger::DetachedPath db_path = tmp_location->path().SubPath("db");
   auto db = std::make_unique<storage::LevelDb>(environment->file_system(),
                                                environment->dispatcher(), db_path);
   auto status = db->Init();
@@ -116,7 +116,10 @@ void DoQueryHasKey(async::TestLoop* test_loop, coroutine::CoroutineService* coro
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t remaining_size) {
   async::TestLoop test_loop;
   sys::testing::ComponentContextProvider component_context_provider;
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+
+  std::unique_ptr<ledger::Platform> platform = ledger::MakePlatform();
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
+      platform->file_system()->CreateScopedTmpLocation();
   auto io_loop = test_loop.StartNewLoop();
   ledger::Environment environment =
       ledger::EnvironmentBuilder()
@@ -130,7 +133,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t remaining_size
   FuzzedDataProvider data_provider(data, remaining_size);
 
   std::unique_ptr<storage::Db::Batch> batch;
-  auto db = GetDb(&environment, &tmpfs_);
+  auto db = GetDb(&environment, tmp_location.get());
 
   FXL_VLOG(1) << "Let's try to break LevelDb!";
   // Start the batch.

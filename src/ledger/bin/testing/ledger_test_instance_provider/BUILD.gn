@@ -15,12 +15,13 @@ executable("ledger_test_instance_provider_bin") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/ledger/bin/app:flags",
     "//src/ledger/bin/fidl",
+    "//src/ledger/bin/platform",
+    "//src/ledger/bin/platform:implementation",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
 
   public_deps = [
-    "//peridot/lib/scoped_tmpfs",
     "//src/ledger/lib/convert",
   ]
 }

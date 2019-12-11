@@ -143,7 +143,6 @@ source_set("lib") {
     "//src/ledger/bin/encryption/public",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/filesystem",
-    "//src/ledger/bin/platform",
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:lock",
@@ -229,7 +228,6 @@ source_set("unittests") {
     ":lib",
     ":test_utils",
     "//peridot/lib/rng",
-    "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/clocks/testing",
     "//src/ledger/bin/cloud_sync/impl",
     "//src/ledger/bin/encryption/fake",
@@ -256,7 +254,6 @@ fuzzer("leveldb_fuzzer") {
   ]
   deps = [
     ":lib",
-    "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/platform:implementation",
     "//src/ledger/bin/testing:lib",
     "//zircon/public/lib/async-testing",

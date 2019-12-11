@@ -11,9 +11,9 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
@@ -31,11 +31,11 @@ using ::testing::IsEmpty;
 class LedgerStorageTest : public ledger::TestWithEnvironment {
  public:
   LedgerStorageTest()
-      : encryption_service_(dispatcher()),
+      : tmp_location_(environment_.file_system()->CreateScopedTmpLocation()),
+        encryption_service_(dispatcher()),
         db_factory_(environment_.file_system(), dispatcher()),
-        storage_(&environment_, &encryption_service_, &db_factory_,
-                 ledger::DetachedPath(tmpfs_.root_fd()), CommitPruningPolicy::NEVER,
-                 &device_id_manager_) {}
+        storage_(&environment_, &encryption_service_, &db_factory_, tmp_location_->path(),
+                 CommitPruningPolicy::NEVER, &device_id_manager_) {}
 
   LedgerStorageTest(const LedgerStorageTest&) = delete;
   LedgerStorageTest& operator=(const LedgerStorageTest&) = delete;
@@ -49,7 +49,7 @@ class LedgerStorageTest : public ledger::TestWithEnvironment {
   }
 
  private:
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location_;
   encryption::FakeEncryptionService encryption_service_;
 
  protected:

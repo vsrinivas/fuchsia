@@ -18,7 +18,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
@@ -26,6 +25,7 @@
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/inspect/inspect.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/fake/fake_ledger_storage.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
@@ -507,7 +507,9 @@ testing::Matcher<const inspect_deprecated::ObjectHierarchy&> HierarchyMatcher(
 // class with LedgerManagerTest.
 class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
  public:
-  LedgerManagerWithRealStorageTest() = default;
+  LedgerManagerWithRealStorageTest()
+      : tmp_location_(environment_.file_system()->CreateScopedTmpLocation()) {}
+
   LedgerManagerWithRealStorageTest(const LedgerManagerWithRealStorageTest&) = delete;
   LedgerManagerWithRealStorageTest& operator=(const LedgerManagerWithRealStorageTest&) = delete;
   ~LedgerManagerWithRealStorageTest() override = default;
@@ -519,7 +521,7 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
     db_factory_ =
         std::make_unique<storage::fake::FakeDbFactory>(environment_.file_system(), dispatcher());
     auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
-        &environment_, encryption_service.get(), db_factory_.get(), DetachedPath(tmpfs_.root_fd()),
+        &environment_, encryption_service.get(), db_factory_.get(), tmp_location_->path(),
         storage::CommitPruningPolicy::NEVER, &device_id_manager_);
     std::unique_ptr<sync_coordinator::FakeLedgerSync> sync =
         std::make_unique<sync_coordinator::FakeLedgerSync>();
@@ -550,7 +552,7 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
     return testing::AssertionSuccess();
   }
 
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ScopedTmpLocation> tmp_location_;
   clocks::DeviceIdManagerEmptyImpl device_id_manager_;
   std::unique_ptr<storage::fake::FakeDbFactory> db_factory_;
   // TODO(nathaniel): Because we use the ChildrenManager API, we need to do our

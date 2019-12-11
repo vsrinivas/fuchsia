@@ -74,7 +74,6 @@ source_set("unittests") {
 
   deps = [
     ":impl",
-    "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/cloud_sync/impl/testing",
     "//src/ledger/bin/cloud_sync/testing",
     "//src/ledger/bin/encryption/fake",

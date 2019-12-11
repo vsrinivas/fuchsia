@@ -17,8 +17,8 @@ class LevelDbTestFactory : public DbTestFactory {
   LevelDbTestFactory() = default;
 
   std::unique_ptr<Db> GetDb(ledger::Environment* environment,
-                            scoped_tmpfs::ScopedTmpFS* tmpfs) override {
-    ledger::DetachedPath db_path(tmpfs->root_fd(), "db");
+                            ledger::ScopedTmpLocation* tmp_location) override {
+    ledger::DetachedPath db_path = tmp_location->path().SubPath("db");
     auto db =
         std::make_unique<LevelDb>(environment->file_system(), environment->dispatcher(), db_path);
     Status status = db->Init();

@@ -6,7 +6,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 
 namespace ledger {

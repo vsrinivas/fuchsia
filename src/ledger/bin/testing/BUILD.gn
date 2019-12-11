@@ -109,7 +109,6 @@ source_set("ledger_instance_factory") {
 
   public_deps = [
     ":lib",
-    "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.ledger",
     "//src/ledger/bin/fidl",
     "//src/ledger/bin/fidl/include",
@@ -219,7 +218,6 @@ executable("memory_usage_test_benchmark") {
   deps = [
     ":get_ledger",
     ":lib",
-    "//peridot/lib/scoped_tmpfs",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

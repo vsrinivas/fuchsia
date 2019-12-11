@@ -9,11 +9,11 @@
 
 #include <utility>
 
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/clocks/public/device_fingerprint_manager.h"
 #include "src/ledger/bin/clocks/public/types.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_cloud_provider.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/backoff/backoff.h"
@@ -57,9 +57,11 @@ class TestDeviceFingerprintManager : public clocks::DeviceFingerprintManager {
 class UserSyncImplTest : public ledger::TestWithEnvironment {
  public:
   UserSyncImplTest()
-      : cloud_provider_(cloud_provider_ptr_.NewRequest()), encryption_service_(dispatcher()) {
+      : tmp_location_(environment_.file_system()->CreateScopedTmpLocation()),
+        cloud_provider_(cloud_provider_ptr_.NewRequest()),
+        encryption_service_(dispatcher()) {
     UserConfig user_config;
-    user_config.user_directory = ledger::DetachedPath(tmpfs_.root_fd());
+    user_config.user_directory = tmp_location_->path();
     user_config.cloud_provider = std::move(cloud_provider_ptr_);
 
     auto backoff = std::make_unique<backoff::TestBackoff>();
@@ -84,7 +86,7 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
     fingerprint_manager_.sync_status_ = true;
   }
 
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ledger::ScopedTmpLocation> tmp_location_;
   cloud_provider::CloudProviderPtr cloud_provider_ptr_;
   TestCloudProvider cloud_provider_;
   std::unique_ptr<UserSyncImpl> user_sync_;

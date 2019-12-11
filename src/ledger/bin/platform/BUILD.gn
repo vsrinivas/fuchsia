@@ -49,7 +49,6 @@ source_set("unittests") {
 
   deps = [
     ":platform",
-    "//peridot/lib/scoped_tmpfs",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -68,7 +67,6 @@ source_set("implementation_unittests") {
 
   deps = [
     ":implementation",
-    "//peridot/lib/scoped_tmpfs",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

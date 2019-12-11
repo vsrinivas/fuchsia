@@ -12,8 +12,8 @@
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/public/journal.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -47,7 +47,7 @@ class TestWithPageStorage : public TestWithEnvironment {
   fit::closure MakeQuitTaskOnce();
 
  private:
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ScopedTmpLocation> tmp_location_;
   encryption::FakeEncryptionService encryption_service_;
 };
 

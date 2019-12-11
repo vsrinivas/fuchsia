@@ -16,7 +16,6 @@ executable("ledger_benchmark_stories_simulation") {
   testonly = true
 
   deps = [
-    "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

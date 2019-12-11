@@ -12,8 +12,9 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
+#include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/run_trace.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
@@ -60,16 +61,17 @@ TEST(LedgerMemoryUsage, LaunchTwoLedgers) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr component_controller;
-  scoped_tmpfs::ScopedTmpFS tmp_dir;
+  std::unique_ptr<Platform> platform = MakePlatform();
+  std::unique_ptr<ScopedTmpLocation> tmp_location =
+      platform->file_system()->CreateScopedTmpLocation();
 
   // Start a first Ledger instance.
   LedgerPtr top_level_ledger;
   fit::function<void()> error_handler = [] { ADD_FAILURE(); };
   fit::function<void(fit::closure)> close_ledger;
-  Status status =
-      GetLedger(component_context.get(), component_controller.NewRequest(), nullptr, "",
-                "top_level_ledger", DetachedPath(tmp_dir.root_fd()), std::move(error_handler),
-                &top_level_ledger, kTestingGarbageCollectionPolicy, &close_ledger);
+  Status status = GetLedger(component_context.get(), component_controller.NewRequest(), nullptr, "",
+                            "top_level_ledger", tmp_location->path(), std::move(error_handler),
+                            &top_level_ledger, kTestingGarbageCollectionPolicy, &close_ledger);
   ASSERT_EQ(status, Status::OK);
 
   // The test benchmark will start another Ledger instance and try to get the

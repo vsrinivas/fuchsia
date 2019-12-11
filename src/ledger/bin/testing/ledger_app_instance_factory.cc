@@ -22,7 +22,9 @@ LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
     : loop_controller_(loop_controller),
       test_ledger_name_(std::move(test_ledger_name)),
       ledger_repository_factory_(std::move(ledger_repository_factory)),
-      inspect_(std::move(inspect)) {
+      inspect_(std::move(inspect)),
+      platform_(MakePlatform()),
+      tmp_location_(platform_->file_system()->CreateScopedTmpLocation()) {
   ledger_repository_factory_.set_error_handler([](zx_status_t status) {
     if (status != ZX_ERR_PEER_CLOSED) {
       ADD_FAILURE() << "|LedgerRepositoryFactory| failed with an error: " << status;
@@ -45,9 +47,9 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
       ADD_FAILURE() << "|LedgerRepository| failed with an error: " << status;
     }
   });
-  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs_.root_fd()),
-                                            MakeCloudProvider(), GetUserId(),
-                                            repository.NewRequest());
+  ledger_repository_factory_->GetRepository(
+      fsl::CloneChannelFromFileDescriptor(tmp_location_->path().root_fd()), MakeCloudProvider(),
+      GetUserId(), repository.NewRequest());
   return repository;
 }
 

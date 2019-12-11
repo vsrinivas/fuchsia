@@ -9,10 +9,10 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/platform/detached_path.h"
+#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
@@ -44,6 +44,7 @@ constexpr char kUserID[] = "test user ID";
 class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryFactoryImplTest() {
+    tmp_location_ = environment_.file_system()->CreateScopedTmpLocation();
     top_level_inspect_node_ = inspect_deprecated::Node(kTestTopLevelNodeName);
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         &environment_, nullptr,
@@ -69,14 +70,15 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
   // called while the loop is running.
   void CloseFactory(std::unique_ptr<LedgerRepositoryFactoryImpl> factory);
 
-  scoped_tmpfs::ScopedTmpFS tmpfs_;
+  std::unique_ptr<ScopedTmpLocation> tmp_location_;
   inspect_deprecated::Node top_level_inspect_node_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> repository_factory_;
 };
 
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CreateDirectory(
     const std::string& name) {
-  if (!environment_.file_system()->CreateDirectory(ledger::DetachedPath(tmpfs_.root_fd(), name))) {
+  if (!environment_.file_system()->CreateDirectory(
+          ledger::DetachedPath(tmp_location_->path().root_fd(), name))) {
     return ::testing::AssertionFailure() << "Failed to create directory \"" << name << "\"!";
   }
   return ::testing::AssertionSuccess();
@@ -84,7 +86,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CallGetRepository(
     const std::string& name, ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr) {
-  fbl::unique_fd fd(openat(tmpfs_.root_fd(), name.c_str(), O_RDONLY));
+  fbl::unique_fd fd(openat(tmp_location_->path().root_fd(), name.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
     return ::testing::AssertionFailure() << "Failed to validate directory \"" << name << "\"!";
   }
@@ -266,14 +268,15 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseFactory) {
       &environment_, nullptr,
       top_level_inspect_node.CreateChild(convert::ToString(kRepositoriesInspectPathComponent)));
 
-  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
+  std::unique_ptr<ScopedTmpLocation> tmp_location =
+      environment_.file_system()->CreateScopedTmpLocation();
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
 
   bool get_repository_called;
   Status status;
 
   repository_factory->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmpfs->root_fd()), nullptr, "",
+      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
       ledger_repository_ptr.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&get_repository_called), &status));
 
