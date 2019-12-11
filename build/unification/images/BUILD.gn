@@ -44,7 +44,6 @@ group("images") {
 
 aggregate_manifest("legacy-image") {
   deps = [
-    ":bin.backlight",
     ":bin.biotime",
     ":bin.blktest",
     ":bin.blobfs-load-generator",
@@ -1526,6 +1525,7 @@ aggregate_manifest("migrated-image") {
   deps = [
     "//zircon/system/uapp/audio:bin-manifest",
     "//zircon/system/uapp/audio:test-manifest",
+    "//zircon/system/uapp/backlight:backlight-manifest",
   ]
 }
 
