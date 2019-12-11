@@ -123,3 +123,118 @@ accessible from Zircon.
   ```
   > df <PATH>
   ```
+
+## Minfs operations
+
+The following section describes what IOs are performed to complete a simple end
+user operation like read()/write().
+
+### Assumptions
+
+* No operation, read or write, is cached or batched. Each of these operations
+  are like calling with sync and direct io set.
+* For rename: The destination file does not exist. Rename can delete a file if
+  the destination of the rename operation is a valid file. This assumption keeps
+  the math simple.
+* The "Write" operation issues a single data block write to a previously
+  unaccessed portion of the vnode.
+* The "Overwrite" operation issues a single data block write to a portion of the
+  block which has previously been allocated from an earlier "Write" operation.
+
+### Keys to the columns.
+1. OPERATION: The action requested by a client of the filesystem.
+1. BLOCK TYPE: Each fileystem operation results in accessing one or more types
+   of blocks.
+    * Data: Contains user data and directory entries.
+    * Indirect: Indirect block in file block map tree
+    * Dindirect: Double indirect block in file block map tree.
+    * Inode table: Inode table block that holds one or more inodes.
+    * Inode bitmap: Contains an array of bits each representing free/used state
+      of inodes.
+    * Data bitmap: Contains an array of bits each representing free/used state
+      of data blocks.
+    * Superblock: Contains data describing layout and state of the filesystem.
+1. IO TYPE: What type, read/write, of IO access it is.
+1. JOURNALED: Whether the IO will be journaled. Reads are not journaled but some
+   of the writes are journaled.
+1. CONDITIONALLY ACCESSED: Depending on the OPERATION's input parameter and
+   state of the filesystem, some blocks are conditionally accessed.
+    * No:   IO is always performed.
+    * Yes:  Filesystem state and input parameters decide whether this IO is
+      needed or not.
+1. READ COUNT: Number of filesystem blocks read.
+1. WRITE COUNT (IGNORING JOURNAL): Number of filesystem blocks written. Writing
+   to journal or journaling overhead are not counted towards this number.
+1. WRITE COUNT (WITH JOURNAL): Number of filesystem blocks written to journal
+   and then to the final location. This does not include the blocks journal
+   writes to maintain the journal state.
+
+A row \<operation\> Total, like "Create Total", gives the total number of blocks
+read/written. For operations involving journaling, the journal writes two more
+blocks, journal entry header and commit block, per operation. The number under
+write count for <operations> Total is the sum of WRITE COUNT (WITH JOURNALING)
+and journaling overhead, which is 2 blocks per operation.
+
+Superblock, Inode table, Inode bitmap, Data bitmap, and a part of Journal are
+cached in memory while starting(mount/fsck) the filesystem. So, Read IOs are
+never issued for those BLOCK TYPES.
+
+|  OPERATION   |  BLOCK TYPE  | IO TYPE | JOURNALED | CONDITIONALLY ACCESSED | READ COUNT  | WRITE COUNT(IGNORING JOURNAL) |  WRITE COUNT(WITH JOURNAL)  | COMMENTS    |
+|--------------|--------------|---------|-----------|------------------------|------------:|------------:|---------------------------:|--------------------------------|
+| Lookup/Open  | Data         | Read    | No        | No                     | >=1         | 0           | 0                          | If the directory is large, multiple blocks are read. |
+|              | Indirect     | Read    | No        | Yes                    | >=0         | 0           | 0                          | Lookup can be served by direct blocks. So indirect is optional.  |
+|              | DIndirect    | Read    | No        | Yes                    | >=0         | 0           | 0                          | Lookup can be served by direct blocks. So dindirect is optional. |
+| **Lookup/Open Total** |     |         |           |                        | >=1         | 0           | 0                          |                                |
+| Create       | Data         | Read    | No        | No                     | >=1         | 0           | 0                          | Create involves lookup first for name collisions. |
+|              | Indirect     | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+|              | DIndirect    | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+|              | Data         | Write   | Yes       | No                     | 0           | >=1         | >=2                        |                                |
+|              | Indirect     | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        |                                |
+|              | DIndirect    | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        |                                |
+|              | Inode table  | Write   | Yes       | No                     | 0           | 1           | 2                          | Inode for the new file.        |
+|              | Inode bitmap | Write   | Yes       | No                     | 0           | 1           | 2                          | Mark inode as allocated.       |
+|              | Data bitmap  | Write   | Yes       | No                     | 0           | >=0         | >=0                        | Directory may grow to contain new directory entry.  |
+|              | Superblock   | Write   | Yes       | No                     | 0           | 1           | 2                          | Among other things, allocated inode number changes. |
+| **Create Total** |          |         |           |                        | >=1         | >=4         | >=10                       | Includes 2 blocks for journal entry. |
+| Rename       | Data         | Read    | No        | No                     | >=1         | 0           | 0                          | Rename involves a lookup in source directory. |
+|              | Indirect     | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+|              | DIndirect    | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+|              | Data         | Write   | Yes       | No                     | 0           | >=1         | >=2                        | Source directory entry.        |
+|              | Indirect     | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        |                                |
+|              | DIndirect    | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        |                                |
+|              | Inode table  | Write   | Yes       | No                     | 0           | 1           | 2                          | To update source directory inode. |
+|              | Data         | Read    | No        | No                     | >=0         | 0           | 0                          | Rename involves a lookup in source directory. |
+|              | Indirect     | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+|              | DIndirect    | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+|              | Data         | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        | Writing destination directory entry. |
+|              | Indirect     | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        |                                |
+|              | DIndirect    | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        |                                |
+|              | Inode table  | Write   | Yes       | Yes                    | 0           | 1           | 2                          | To update destination directory inode. |
+|              | Inode table  | Write   | Yes       | No                     | 0           | 1           | 2                          | Renamed file’s mtime.          |
+|              | Data bitmap  | Write   | Yes       | No                     | 0           | >=0         | >=0                        | In case we allocated data, indirect or Dindirect block(s). |
+|              | Superblock   | Write   | Yes       | No                     | 0           | 1           | 2                          |                                |
+| **Rename Total** |          |         |           |                        | >=1         | >=5         | >=12                       | Includes 2 blocks for journal entry. |
+| Read         | Data         | Read    | No        | No                     | >=1         | 0           | 0                          |                                |
+|              | Indirect     | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+|              | DIndirect    | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+| **Read Total** |            |         |           |                        | >=1         | 0           | 0                          |                                |
+| Write        | Indirect     | Read    | No        | Yes                    | >=0         | 0           | 0                          | Even if the write is not overwriting, we may share (D)indirect block with existing data. Leading to read modify write. |
+|              | DIndirect    | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+|              | Data         | Write   | No        | No                     | 0           | 1           | 1                          |                                |
+|              | Indirect     | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        |                                |
+|              | DIndirect    | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        |                                |
+|              | Inode table  | Write   | Yes       | No                     | 0           | 1           | 2                          | Inode's mtime update.          |
+|              | Data bitmap  | Write   | Yes       | No                     | 0           | 1           | 2                          | For the allocated block.       |
+|              | Superblock   | Write   | Yes       | No                     | 0           | 1           | 2                          | Change in number of allocated blocks. |
+| **Write Total** |           |         |           |                        | >=0        | >=4        | >=9                          | Includes 2 blocks for journal entry. |
+| Overwrite    | Data         | Read    | No        | Yes                    | >=0         | 0           | 0                          | Read modify write.             |
+|              | Indirect     | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+|              | DIndirect    | Read    | No        | Yes                    | >=0         | 0           | 0                          |                                |
+|              | Data         | Write   | No        | No                     | 0           | 1           | 1                          |                                |
+|              | Indirect     | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        |                                |
+|              | DIndirect    | Write   | Yes       | Yes                    | 0           | >=0         | >=0                        |                                |
+|              | Inode table  | Write   | Yes       | No                     | 0           | 1           | 2                          |                                |
+|              | Data bitmap  | Write   | Yes       | No                     | 0           | 1           | 2                          | Write new allocation.          |
+|              | Data bitmap  | Write   | Yes       | No                     | 0           | >=0         | >=0                        | Free old block. This block bit may belong to allocated block bitmap.|
+|              | Superblock   | Write   | Yes       | No                     | 0           | 1           | 2                          |                                |
+| **Overwrite Total** |       |         |           |                        | >=0         | >=4         | >=9                        | Includes 2 blocks for journal entry. |
