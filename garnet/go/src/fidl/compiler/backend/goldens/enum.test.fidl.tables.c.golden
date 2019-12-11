@@ -2,7 +2,8 @@
 
 #include <lib/fidl/internal.h>
 
-extern "C" {
+// Forward declarations for old <-> V1 mappings
+
 
 // Coding tables for old wire format.
 
@@ -11,11 +12,11 @@ extern const fidl_type_t test_name_MyEnumTable;
 
 
 
-static constexpr bool EnumValidatorFor_test_name_MyStrictEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t test_name_MyStrictEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_test_name_MyStrictEnum, "test.name/MyStrictEnum"));
+static bool EnumValidatorFor_test_name_MyStrictEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
+const fidl_type_t test_name_MyStrictEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_test_name_MyStrictEnum, .name="test.name/MyStrictEnum"}}};
 
-static constexpr bool EnumValidatorFor_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t test_name_MyEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_test_name_MyEnum, "test.name/MyEnum"));
+static bool EnumValidatorFor_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
+const fidl_type_t test_name_MyEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_test_name_MyEnum, .name="test.name/MyEnum"}}};
 
 // Coding tables for v1 wire format.
 
@@ -24,12 +25,9 @@ extern const fidl_type_t v1_test_name_MyEnumTable;
 
 
 
-static constexpr bool EnumValidatorFor_v1_test_name_MyStrictEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t v1_test_name_MyStrictEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_v1_test_name_MyStrictEnum, "test.name/MyStrictEnum"));
+static bool EnumValidatorFor_v1_test_name_MyStrictEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
+const fidl_type_t v1_test_name_MyStrictEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_v1_test_name_MyStrictEnum, .name="test.name/MyStrictEnum"}}};
 
-static constexpr bool EnumValidatorFor_v1_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t v1_test_name_MyEnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_v1_test_name_MyEnum, "test.name/MyEnum"));
+static bool EnumValidatorFor_v1_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
+const fidl_type_t v1_test_name_MyEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_v1_test_name_MyEnum, .name="test.name/MyEnum"}}};
 
-// Old <-> V1 map.
-
-} // extern "C"

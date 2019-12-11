@@ -2,53 +2,60 @@
 
 #include <lib/fidl/internal.h>
 
-extern "C" {
+// Forward declarations for old <-> V1 mappings
+
+extern const fidl_type_t test_name_ParentGetChildRequestTable;
+extern const fidl_type_t test_name_ParentGetChildResponseTable;
+extern const fidl_type_t test_name_ParentGetChildRequestRequestTable;
+extern const fidl_type_t test_name_ParentGetChildRequestResponseTable;
+extern const fidl_type_t test_name_ParentTakeChildRequestTable;
+extern const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
+extern const fidl_type_t v1_test_name_ParentGetChildRequestTable;
+extern const fidl_type_t v1_test_name_ParentGetChildResponseTable;
+extern const fidl_type_t v1_test_name_ParentGetChildRequestRequestTable;
+extern const fidl_type_t v1_test_name_ParentGetChildRequestResponseTable;
+extern const fidl_type_t v1_test_name_ParentTakeChildRequestTable;
+extern const fidl_type_t v1_test_name_ParentTakeChildRequestRequestTable;
 
 // Coding tables for old wire format.
 
 
 
 extern const fidl_type_t test_name_ParentGetChildRequestTable;
-static const ::fidl::FidlStructField Fields31test_name_ParentGetChildRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ParentGetChildRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields31test_name_ParentGetChildRequest, 0u, 16u, 0u, false, "test.name/ParentGetChildRequest", test_name_ParentGetChildRequestAltTypePointerTable()));
+static const struct FidlStructField Fields31test_name_ParentGetChildRequest[] = {};
+const fidl_type_t test_name_ParentGetChildRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields31test_name_ParentGetChildRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequest", .alt_type=&v1_test_name_ParentGetChildRequestTable}}};
 
-static const fidl_type_t Protocol15test_name_ChildnonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, ::fidl::kNonnullable));
+static const fidl_type_t Protocol15test_name_ChildnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
 
 extern const fidl_type_t test_name_ParentGetChildResponseTable;
-static const ::fidl::FidlStructField Fields32test_name_ParentGetChildResponse[] = {
-    ::fidl::FidlStructField(&Protocol15test_name_ChildnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields32test_name_ParentGetChildResponse[] = {
+    /*FidlStructField*/{.type=&Protocol15test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ParentGetChildResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32test_name_ParentGetChildResponse, 1u, 24u, 0u, false, "test.name/ParentGetChildResponse", test_name_ParentGetChildResponseAltTypePointerTable()));
+const fidl_type_t test_name_ParentGetChildResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32test_name_ParentGetChildResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildResponse", .alt_type=&v1_test_name_ParentGetChildResponseTable}}};
 
 extern const fidl_type_t test_name_ParentGetChildRequestRequestTable;
-static const ::fidl::FidlStructField Fields38test_name_ParentGetChildRequestRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildRequestRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ParentGetChildRequestRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38test_name_ParentGetChildRequestRequest, 0u, 16u, 0u, false, "test.name/ParentGetChildRequestRequest", test_name_ParentGetChildRequestRequestAltTypePointerTable()));
+static const struct FidlStructField Fields38test_name_ParentGetChildRequestRequest[] = {};
+const fidl_type_t test_name_ParentGetChildRequestRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields38test_name_ParentGetChildRequestRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequestRequest", .alt_type=&v1_test_name_ParentGetChildRequestRequestTable}}};
 
-static const fidl_type_t Request15test_name_ChildnonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, ::fidl::kNonnullable));
+static const fidl_type_t Request15test_name_ChildnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
 
 extern const fidl_type_t test_name_ParentGetChildRequestResponseTable;
-static const ::fidl::FidlStructField Fields39test_name_ParentGetChildRequestResponse[] = {
-    ::fidl::FidlStructField(&Request15test_name_ChildnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields39test_name_ParentGetChildRequestResponse[] = {
+    /*FidlStructField*/{.type=&Request15test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildRequestResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ParentGetChildRequestResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39test_name_ParentGetChildRequestResponse, 1u, 24u, 0u, false, "test.name/ParentGetChildRequestResponse", test_name_ParentGetChildRequestResponseAltTypePointerTable()));
+const fidl_type_t test_name_ParentGetChildRequestResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39test_name_ParentGetChildRequestResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequestResponse", .alt_type=&v1_test_name_ParentGetChildRequestResponseTable}}};
 
 extern const fidl_type_t test_name_ParentTakeChildRequestTable;
-static const ::fidl::FidlStructField Fields32test_name_ParentTakeChildRequest[] = {
-    ::fidl::FidlStructField(&Protocol15test_name_ChildnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields32test_name_ParentTakeChildRequest[] = {
+    /*FidlStructField*/{.type=&Protocol15test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentTakeChildRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ParentTakeChildRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32test_name_ParentTakeChildRequest, 1u, 24u, 0u, false, "test.name/ParentTakeChildRequest", test_name_ParentTakeChildRequestAltTypePointerTable()));
+const fidl_type_t test_name_ParentTakeChildRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32test_name_ParentTakeChildRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentTakeChildRequest", .alt_type=&v1_test_name_ParentTakeChildRequestTable}}};
 
 extern const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
-static const ::fidl::FidlStructField Fields39test_name_ParentTakeChildRequestRequest[] = {
-    ::fidl::FidlStructField(&Request15test_name_ChildnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields39test_name_ParentTakeChildRequestRequest[] = {
+    /*FidlStructField*/{.type=&Request15test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentTakeChildRequestRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ParentTakeChildRequestRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39test_name_ParentTakeChildRequestRequest, 1u, 24u, 0u, false, "test.name/ParentTakeChildRequestRequest", test_name_ParentTakeChildRequestRequestAltTypePointerTable()));
+const fidl_type_t test_name_ParentTakeChildRequestRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39test_name_ParentTakeChildRequestRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentTakeChildRequestRequest", .alt_type=&v1_test_name_ParentTakeChildRequestRequestTable}}};
 
 
 // Coding tables for v1 wire format.
@@ -56,114 +63,39 @@ const fidl_type_t test_name_ParentTakeChildRequestRequestTable = fidl_type_t(::f
 
 
 extern const fidl_type_t v1_test_name_ParentGetChildRequestTable;
-static const ::fidl::FidlStructField Fields34v1_test_name_ParentGetChildRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ParentGetChildRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields34v1_test_name_ParentGetChildRequest, 0u, 16u, 0u, false, "test.name/ParentGetChildRequest", v1_test_name_ParentGetChildRequestAltTypePointerTable()));
+static const struct FidlStructField Fields34v1_test_name_ParentGetChildRequest[] = {};
+const fidl_type_t v1_test_name_ParentGetChildRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields34v1_test_name_ParentGetChildRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequest", .alt_type=&test_name_ParentGetChildRequestTable}}};
 
-static const fidl_type_t v1_Protocol18v1_test_name_ChildnonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, ::fidl::kNonnullable));
+static const fidl_type_t v1_Protocol18v1_test_name_ChildnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
 
 extern const fidl_type_t v1_test_name_ParentGetChildResponseTable;
-static const ::fidl::FidlStructField Fields35v1_test_name_ParentGetChildResponse[] = {
-    ::fidl::FidlStructField(&v1_Protocol18v1_test_name_ChildnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields35v1_test_name_ParentGetChildResponse[] = {
+    /*FidlStructField*/{.type=&v1_Protocol18v1_test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ParentGetChildResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_test_name_ParentGetChildResponse, 1u, 24u, 0u, false, "test.name/ParentGetChildResponse", v1_test_name_ParentGetChildResponseAltTypePointerTable()));
+const fidl_type_t v1_test_name_ParentGetChildResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35v1_test_name_ParentGetChildResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildResponse", .alt_type=&test_name_ParentGetChildResponseTable}}};
 
 extern const fidl_type_t v1_test_name_ParentGetChildRequestRequestTable;
-static const ::fidl::FidlStructField Fields41v1_test_name_ParentGetChildRequestRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildRequestRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ParentGetChildRequestRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields41v1_test_name_ParentGetChildRequestRequest, 0u, 16u, 0u, false, "test.name/ParentGetChildRequestRequest", v1_test_name_ParentGetChildRequestRequestAltTypePointerTable()));
+static const struct FidlStructField Fields41v1_test_name_ParentGetChildRequestRequest[] = {};
+const fidl_type_t v1_test_name_ParentGetChildRequestRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields41v1_test_name_ParentGetChildRequestRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequestRequest", .alt_type=&test_name_ParentGetChildRequestRequestTable}}};
 
-static const fidl_type_t v1_Request18v1_test_name_ChildnonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_CHANNEL, ::fidl::kNonnullable));
+static const fidl_type_t v1_Request18v1_test_name_ChildnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
 
 extern const fidl_type_t v1_test_name_ParentGetChildRequestResponseTable;
-static const ::fidl::FidlStructField Fields42v1_test_name_ParentGetChildRequestResponse[] = {
-    ::fidl::FidlStructField(&v1_Request18v1_test_name_ChildnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields42v1_test_name_ParentGetChildRequestResponse[] = {
+    /*FidlStructField*/{.type=&v1_Request18v1_test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildRequestResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ParentGetChildRequestResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields42v1_test_name_ParentGetChildRequestResponse, 1u, 24u, 0u, false, "test.name/ParentGetChildRequestResponse", v1_test_name_ParentGetChildRequestResponseAltTypePointerTable()));
+const fidl_type_t v1_test_name_ParentGetChildRequestResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields42v1_test_name_ParentGetChildRequestResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentGetChildRequestResponse", .alt_type=&test_name_ParentGetChildRequestResponseTable}}};
 
 extern const fidl_type_t v1_test_name_ParentTakeChildRequestTable;
-static const ::fidl::FidlStructField Fields35v1_test_name_ParentTakeChildRequest[] = {
-    ::fidl::FidlStructField(&v1_Protocol18v1_test_name_ChildnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields35v1_test_name_ParentTakeChildRequest[] = {
+    /*FidlStructField*/{.type=&v1_Protocol18v1_test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentTakeChildRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ParentTakeChildRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_test_name_ParentTakeChildRequest, 1u, 24u, 0u, false, "test.name/ParentTakeChildRequest", v1_test_name_ParentTakeChildRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_ParentTakeChildRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35v1_test_name_ParentTakeChildRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentTakeChildRequest", .alt_type=&test_name_ParentTakeChildRequestTable}}};
 
 extern const fidl_type_t v1_test_name_ParentTakeChildRequestRequestTable;
-static const ::fidl::FidlStructField Fields42v1_test_name_ParentTakeChildRequestRequest[] = {
-    ::fidl::FidlStructField(&v1_Request18v1_test_name_ChildnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields42v1_test_name_ParentTakeChildRequestRequest[] = {
+    /*FidlStructField*/{.type=&v1_Request18v1_test_name_ChildnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentTakeChildRequestRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ParentTakeChildRequestRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields42v1_test_name_ParentTakeChildRequestRequest, 1u, 24u, 0u, false, "test.name/ParentTakeChildRequestRequest", v1_test_name_ParentTakeChildRequestRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_ParentTakeChildRequestRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields42v1_test_name_ParentTakeChildRequestRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ParentTakeChildRequestRequest", .alt_type=&test_name_ParentTakeChildRequestRequestTable}}};
 
 
-// Old <-> V1 map.
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildRequestAltTypePointerTable() {
-  return &v1_test_name_ParentGetChildRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildRequestAltTypePointerTable() {
-  return &test_name_ParentGetChildRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildResponseAltTypePointerTable() {
-  return &v1_test_name_ParentGetChildResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildResponseAltTypePointerTable() {
-  return &test_name_ParentGetChildResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildRequestRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildRequestRequestAltTypePointerTable() {
-  return &v1_test_name_ParentGetChildRequestRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildRequestRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildRequestRequestAltTypePointerTable() {
-  return &test_name_ParentGetChildRequestRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildRequestResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentGetChildRequestResponseAltTypePointerTable() {
-  return &v1_test_name_ParentGetChildRequestResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildRequestResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentGetChildRequestResponseAltTypePointerTable() {
-  return &test_name_ParentGetChildRequestResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentTakeChildRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentTakeChildRequestAltTypePointerTable() {
-  return &v1_test_name_ParentTakeChildRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentTakeChildRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentTakeChildRequestAltTypePointerTable() {
-  return &test_name_ParentTakeChildRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentTakeChildRequestRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ParentTakeChildRequestRequestAltTypePointerTable() {
-  return &v1_test_name_ParentTakeChildRequestRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentTakeChildRequestRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ParentTakeChildRequestRequestAltTypePointerTable() {
-  return &test_name_ParentTakeChildRequestRequestTable.coded_struct;
-}
-
-
-} // extern "C"

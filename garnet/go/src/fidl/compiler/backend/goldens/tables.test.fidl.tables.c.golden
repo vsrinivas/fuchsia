@@ -2,7 +2,8 @@
 
 #include <lib/fidl/internal.h>
 
-extern "C" {
+// Forward declarations for old <-> V1 mappings
+
 
 // Coding tables for old wire format.
 
@@ -14,33 +15,33 @@ extern const fidl_type_t test_name_EmptyTableTable;
 
 
 
-static const ::fidl::FidlTableField Fields21test_name_SimpleTable[] = {
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,5u)
+static const struct FidlTableField Fields21test_name_SimpleTable[] = {
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=5u}
 };
-const fidl_type_t test_name_SimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields21test_name_SimpleTable, 2u, "test.name/SimpleTable"));
+const fidl_type_t test_name_SimpleTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields21test_name_SimpleTable, .field_count=2u, .name="test.name/SimpleTable"}}};
 
-static const ::fidl::FidlTableField Fields29test_name_ReverseOrdinalTable[] = {
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,2u),
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,3u)
+static const struct FidlTableField Fields29test_name_ReverseOrdinalTable[] = {
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=2u},
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=3u}
 };
-const fidl_type_t test_name_ReverseOrdinalTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields29test_name_ReverseOrdinalTable, 3u, "test.name/ReverseOrdinalTable"));
+const fidl_type_t test_name_ReverseOrdinalTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields29test_name_ReverseOrdinalTable, .field_count=3u, .name="test.name/ReverseOrdinalTable"}}};
 
-static const ::fidl::FidlTableField Fields26test_name_OlderSimpleTable[] = {
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u)
+static const struct FidlTableField Fields26test_name_OlderSimpleTable[] = {
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u}
 };
-const fidl_type_t test_name_OlderSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields26test_name_OlderSimpleTable, 1u, "test.name/OlderSimpleTable"));
+const fidl_type_t test_name_OlderSimpleTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields26test_name_OlderSimpleTable, .field_count=1u, .name="test.name/OlderSimpleTable"}}};
 
-static const ::fidl::FidlTableField Fields26test_name_NewerSimpleTable[] = {
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,5u),
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,6u)
+static const struct FidlTableField Fields26test_name_NewerSimpleTable[] = {
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=5u},
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=6u}
 };
-const fidl_type_t test_name_NewerSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields26test_name_NewerSimpleTable, 3u, "test.name/NewerSimpleTable"));
+const fidl_type_t test_name_NewerSimpleTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields26test_name_NewerSimpleTable, .field_count=3u, .name="test.name/NewerSimpleTable"}}};
 
-static const ::fidl::FidlTableField Fields20test_name_EmptyTable[] = {};
-const fidl_type_t test_name_EmptyTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields20test_name_EmptyTable, 0u, "test.name/EmptyTable"));
+static const struct FidlTableField Fields20test_name_EmptyTable[] = {};
+const fidl_type_t test_name_EmptyTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields20test_name_EmptyTable, .field_count=0u, .name="test.name/EmptyTable"}}};
 
 // Coding tables for v1 wire format.
 
@@ -52,34 +53,31 @@ extern const fidl_type_t v1_test_name_EmptyTableTable;
 
 
 
-static const ::fidl::FidlTableField Fields24v1_test_name_SimpleTable[] = {
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,5u)
+static const struct FidlTableField Fields24v1_test_name_SimpleTable[] = {
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=5u}
 };
-const fidl_type_t v1_test_name_SimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields24v1_test_name_SimpleTable, 2u, "test.name/SimpleTable"));
+const fidl_type_t v1_test_name_SimpleTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields24v1_test_name_SimpleTable, .field_count=2u, .name="test.name/SimpleTable"}}};
 
-static const ::fidl::FidlTableField Fields32v1_test_name_ReverseOrdinalTable[] = {
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,2u),
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,3u)
+static const struct FidlTableField Fields32v1_test_name_ReverseOrdinalTable[] = {
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=2u},
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=3u}
 };
-const fidl_type_t v1_test_name_ReverseOrdinalTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields32v1_test_name_ReverseOrdinalTable, 3u, "test.name/ReverseOrdinalTable"));
+const fidl_type_t v1_test_name_ReverseOrdinalTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields32v1_test_name_ReverseOrdinalTable, .field_count=3u, .name="test.name/ReverseOrdinalTable"}}};
 
-static const ::fidl::FidlTableField Fields29v1_test_name_OlderSimpleTable[] = {
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u)
+static const struct FidlTableField Fields29v1_test_name_OlderSimpleTable[] = {
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u}
 };
-const fidl_type_t v1_test_name_OlderSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields29v1_test_name_OlderSimpleTable, 1u, "test.name/OlderSimpleTable"));
+const fidl_type_t v1_test_name_OlderSimpleTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields29v1_test_name_OlderSimpleTable, .field_count=1u, .name="test.name/OlderSimpleTable"}}};
 
-static const ::fidl::FidlTableField Fields29v1_test_name_NewerSimpleTable[] = {
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,5u),
-    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,6u)
+static const struct FidlTableField Fields29v1_test_name_NewerSimpleTable[] = {
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=1u},
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=5u},
+    /*FidlTableField*/{.type=&fidl_internal_kInt64Table, .ordinal=6u}
 };
-const fidl_type_t v1_test_name_NewerSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields29v1_test_name_NewerSimpleTable, 3u, "test.name/NewerSimpleTable"));
+const fidl_type_t v1_test_name_NewerSimpleTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields29v1_test_name_NewerSimpleTable, .field_count=3u, .name="test.name/NewerSimpleTable"}}};
 
-static const ::fidl::FidlTableField Fields23v1_test_name_EmptyTable[] = {};
-const fidl_type_t v1_test_name_EmptyTableTable = fidl_type_t(::fidl::FidlCodedTable(Fields23v1_test_name_EmptyTable, 0u, "test.name/EmptyTable"));
+static const struct FidlTableField Fields23v1_test_name_EmptyTable[] = {};
+const fidl_type_t v1_test_name_EmptyTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields23v1_test_name_EmptyTable, .field_count=0u, .name="test.name/EmptyTable"}}};
 
-// Old <-> V1 map.
-
-} // extern "C"

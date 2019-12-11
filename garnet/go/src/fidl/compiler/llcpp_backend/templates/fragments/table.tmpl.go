@@ -63,7 +63,12 @@ struct {{ .Name }} final : private ::fidl::VectorView<fidl_envelope_t> {
 
 class {{ .Name }}::Builder {
  public:
+  {{- if eq .BiggestOrdinal 0 }}
+  {{- /* Zero-sized arrays are questionable in C++ */}}
+  {{ .Name }} view() { return {{ .Name }}(0, nullptr); }
+  {{- else }}
   {{ .Name }} view() { return {{ .Name }}(max_ordinal_, envelopes_.data_); }
+  {{- end }}
   ~Builder() = default;
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -81,8 +86,13 @@ class {{ .Name }}::Builder {
   Builder() = default;
   friend Builder {{ .Name }}::Build();
 
+  {{- if eq .BiggestOrdinal 0 }}
+  {{- /* Zero-sized arrays are questionable in C++ */}}
+  {{- else }}
+
   uint64_t max_ordinal_ = 0;
   ::fidl::Array<fidl_envelope_t, {{ .BiggestOrdinal }}> envelopes_ = {};
+  {{- end }}
 };
 {{- end }}
 

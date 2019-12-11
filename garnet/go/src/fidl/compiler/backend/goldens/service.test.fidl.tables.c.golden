@@ -2,21 +2,24 @@
 
 #include <lib/fidl/internal.h>
 
-extern "C" {
+// Forward declarations for old <-> V1 mappings
+
+extern const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
+extern const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
+extern const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable;
+extern const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable;
 
 // Coding tables for old wire format.
 
 
 
 extern const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
-static const ::fidl::FidlStructField Fields45test_name_SecondProtocolMethodOnSecondRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields45test_name_SecondProtocolMethodOnSecondRequest, 0u, 16u, 0u, false, "test.name/SecondProtocolMethodOnSecondRequest", test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable()));
+static const struct FidlStructField Fields45test_name_SecondProtocolMethodOnSecondRequest[] = {};
+const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields45test_name_SecondProtocolMethodOnSecondRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/SecondProtocolMethodOnSecondRequest", .alt_type=&v1_test_name_SecondProtocolMethodOnSecondRequestTable}}};
 
 extern const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
-static const ::fidl::FidlStructField Fields43test_name_FirstProtocolMethodOnFirstRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields43test_name_FirstProtocolMethodOnFirstRequest, 0u, 16u, 0u, false, "test.name/FirstProtocolMethodOnFirstRequest", test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable()));
+static const struct FidlStructField Fields43test_name_FirstProtocolMethodOnFirstRequest[] = {};
+const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields43test_name_FirstProtocolMethodOnFirstRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/FirstProtocolMethodOnFirstRequest", .alt_type=&v1_test_name_FirstProtocolMethodOnFirstRequestTable}}};
 
 
 // Coding tables for v1 wire format.
@@ -24,38 +27,11 @@ const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable = fidl_type_t
 
 
 extern const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable;
-static const ::fidl::FidlStructField Fields48v1_test_name_SecondProtocolMethodOnSecondRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields48v1_test_name_SecondProtocolMethodOnSecondRequest, 0u, 16u, 0u, false, "test.name/SecondProtocolMethodOnSecondRequest", v1_test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable()));
+static const struct FidlStructField Fields48v1_test_name_SecondProtocolMethodOnSecondRequest[] = {};
+const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields48v1_test_name_SecondProtocolMethodOnSecondRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/SecondProtocolMethodOnSecondRequest", .alt_type=&test_name_SecondProtocolMethodOnSecondRequestTable}}};
 
 extern const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable;
-static const ::fidl::FidlStructField Fields46v1_test_name_FirstProtocolMethodOnFirstRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields46v1_test_name_FirstProtocolMethodOnFirstRequest, 0u, 16u, 0u, false, "test.name/FirstProtocolMethodOnFirstRequest", v1_test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable()));
+static const struct FidlStructField Fields46v1_test_name_FirstProtocolMethodOnFirstRequest[] = {};
+const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields46v1_test_name_FirstProtocolMethodOnFirstRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/FirstProtocolMethodOnFirstRequest", .alt_type=&test_name_FirstProtocolMethodOnFirstRequestTable}}};
 
 
-// Old <-> V1 map.
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable() {
-  return &v1_test_name_SecondProtocolMethodOnSecondRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable() {
-  return &test_name_SecondProtocolMethodOnSecondRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable() {
-  return &v1_test_name_FirstProtocolMethodOnFirstRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable() {
-  return &test_name_FirstProtocolMethodOnFirstRequestTable.coded_struct;
-}
-
-
-} // extern "C"

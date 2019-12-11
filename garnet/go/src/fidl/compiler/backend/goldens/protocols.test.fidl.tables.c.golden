@@ -2,7 +2,68 @@
 
 #include <lib/fidl/internal.h>
 
-extern "C" {
+// Forward declarations for old <-> V1 mappings
+
+extern const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
+extern const fidl_type_t test_name_ChannelProtocolEventAEventTable;
+extern const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
+extern const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
+extern const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
+extern const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+extern const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+extern const fidl_type_t test_name_WithErrorSyntaxResponseAsStructRequestTable;
+extern const fidl_type_t test_name_WithErrorSyntaxResponseAsStructResponseTable;
+extern const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+extern const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+extern const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
+extern const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+extern const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+extern const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+extern const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+extern const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+extern const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+extern const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+extern const fidl_type_t v1_test_name_ChannelProtocolMethodARequestTable;
+extern const fidl_type_t v1_test_name_ChannelProtocolEventAEventTable;
+extern const fidl_type_t v1_test_name_ChannelProtocolMethodBRequestTable;
+extern const fidl_type_t v1_test_name_ChannelProtocolMethodBResponseTable;
+extern const fidl_type_t v1_test_name_ChannelProtocolMutateSocketRequestTable;
+extern const fidl_type_t v1_test_name_ChannelProtocolMutateSocketResponseTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructRequestTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
 // Coding tables for old wire format.
 
@@ -16,202 +77,172 @@ extern const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
 
 extern const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
-static const ::fidl::FidlStructField Fields39test_name_ChannelProtocolMethodARequest[] = {
-    ::fidl::FidlStructField(nullptr, 24u, 0u),
-    ::fidl::FidlStructField(nullptr, 32u, 0u)
+static const struct FidlStructField Fields39test_name_ChannelProtocolMethodARequest[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=32u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMethodARequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ChannelProtocolMethodARequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39test_name_ChannelProtocolMethodARequest, 2u, 32u, 0u, false, "test.name/ChannelProtocolMethodARequest", test_name_ChannelProtocolMethodARequestAltTypePointerTable()));
+const fidl_type_t test_name_ChannelProtocolMethodARequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39test_name_ChannelProtocolMethodARequest, .field_count=2u, .size=32u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolMethodARequest", .alt_type=&v1_test_name_ChannelProtocolMethodARequestTable}}};
 
 extern const fidl_type_t test_name_ChannelProtocolEventAEventTable;
-static const ::fidl::FidlStructField Fields36test_name_ChannelProtocolEventAEvent[] = {
-    ::fidl::FidlStructField(nullptr, 24u, 0u),
-    ::fidl::FidlStructField(nullptr, 32u, 0u)
+static const struct FidlStructField Fields36test_name_ChannelProtocolEventAEvent[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=32u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolEventAEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ChannelProtocolEventAEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36test_name_ChannelProtocolEventAEvent, 2u, 32u, 0u, false, "test.name/ChannelProtocolEventAEvent", test_name_ChannelProtocolEventAEventAltTypePointerTable()));
+const fidl_type_t test_name_ChannelProtocolEventAEventTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields36test_name_ChannelProtocolEventAEvent, .field_count=2u, .size=32u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolEventAEvent", .alt_type=&v1_test_name_ChannelProtocolEventAEventTable}}};
 
 extern const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
-static const ::fidl::FidlStructField Fields39test_name_ChannelProtocolMethodBRequest[] = {
-    ::fidl::FidlStructField(nullptr, 24u, 0u),
-    ::fidl::FidlStructField(nullptr, 32u, 0u)
+static const struct FidlStructField Fields39test_name_ChannelProtocolMethodBRequest[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=32u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMethodBRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ChannelProtocolMethodBRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39test_name_ChannelProtocolMethodBRequest, 2u, 32u, 0u, false, "test.name/ChannelProtocolMethodBRequest", test_name_ChannelProtocolMethodBRequestAltTypePointerTable()));
+const fidl_type_t test_name_ChannelProtocolMethodBRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39test_name_ChannelProtocolMethodBRequest, .field_count=2u, .size=32u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolMethodBRequest", .alt_type=&v1_test_name_ChannelProtocolMethodBRequestTable}}};
 
 extern const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
-static const ::fidl::FidlStructField Fields40test_name_ChannelProtocolMethodBResponse[] = {
-    ::fidl::FidlStructField(nullptr, 24u, 0u)
+static const struct FidlStructField Fields40test_name_ChannelProtocolMethodBResponse[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMethodBResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ChannelProtocolMethodBResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields40test_name_ChannelProtocolMethodBResponse, 1u, 24u, 0u, false, "test.name/ChannelProtocolMethodBResponse", test_name_ChannelProtocolMethodBResponseAltTypePointerTable()));
+const fidl_type_t test_name_ChannelProtocolMethodBResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields40test_name_ChannelProtocolMethodBResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolMethodBResponse", .alt_type=&v1_test_name_ChannelProtocolMethodBResponseTable}}};
 
-static const fidl_type_t HandlesocketnonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_SOCKET, ::fidl::kNonnullable));
+static const fidl_type_t HandlesocketnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_SOCKET, .nullable=kFidlNullability_Nonnullable}}};
 
 extern const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
-static const ::fidl::FidlStructField Fields44test_name_ChannelProtocolMutateSocketRequest[] = {
-    ::fidl::FidlStructField(&HandlesocketnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields44test_name_ChannelProtocolMutateSocketRequest[] = {
+    /*FidlStructField*/{.type=&HandlesocketnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMutateSocketRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields44test_name_ChannelProtocolMutateSocketRequest, 1u, 24u, 0u, false, "test.name/ChannelProtocolMutateSocketRequest", test_name_ChannelProtocolMutateSocketRequestAltTypePointerTable()));
+const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields44test_name_ChannelProtocolMutateSocketRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolMutateSocketRequest", .alt_type=&v1_test_name_ChannelProtocolMutateSocketRequestTable}}};
 
 extern const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
-static const ::fidl::FidlStructField Fields45test_name_ChannelProtocolMutateSocketResponse[] = {
-    ::fidl::FidlStructField(&HandlesocketnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields45test_name_ChannelProtocolMutateSocketResponse[] = {
+    /*FidlStructField*/{.type=&HandlesocketnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMutateSocketResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields45test_name_ChannelProtocolMutateSocketResponse, 1u, 24u, 0u, false, "test.name/ChannelProtocolMutateSocketResponse", test_name_ChannelProtocolMutateSocketResponseAltTypePointerTable()));
+const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields45test_name_ChannelProtocolMutateSocketResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolMutateSocketResponse", .alt_type=&v1_test_name_ChannelProtocolMutateSocketResponseTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
-static const ::fidl::FidlStructField Fields65test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields65test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseNoRequestNoResponseRequest", test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestAltTypePointerTable()));
+static const struct FidlStructField Fields65test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest[] = {};
+const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields65test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseNoRequestNoResponseRequest", .alt_type=&v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
-static const ::fidl::FidlStructField Fields68test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields68test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest", test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestAltTypePointerTable()));
+static const struct FidlStructField Fields68test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest[] = {};
+const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields68test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest", .alt_type=&v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
-static const ::fidl::FidlStructField Fields69test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields69test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse", test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseAltTypePointerTable()));
+static const struct FidlStructField Fields69test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse[] = {};
+const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields69test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse", .alt_type=&v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
-static const ::fidl::FidlStructField Fields67test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields67test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseNoRequestWithResponseRequest", test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestAltTypePointerTable()));
+static const struct FidlStructField Fields67test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest[] = {};
+const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields67test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseNoRequestWithResponseRequest", .alt_type=&v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable}}};
 
-static const fidl_type_t String4294967295nonnullableTable = fidl_type_t(::fidl::FidlCodedString(4294967295u, ::fidl::kNonnullable));
+static const fidl_type_t String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
-static const ::fidl::FidlStructField Fields68test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse[] = {
-    ::fidl::FidlStructField(&String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields68test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse[] = {
+    /*FidlStructField*/{.type=&String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields68test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseNoRequestWithResponseResponse", test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseAltTypePointerTable()));
+const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields68test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseNoRequestWithResponseResponse", .alt_type=&v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
-static const ::fidl::FidlStructField Fields67test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest[] = {
-    ::fidl::FidlStructField(&String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields67test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest[] = {
+    /*FidlStructField*/{.type=&String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields67test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseWithRequestNoResponseRequest", test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestAltTypePointerTable()));
+const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields67test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseWithRequestNoResponseRequest", .alt_type=&v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
-static const ::fidl::FidlStructField Fields70test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest[] = {
-    ::fidl::FidlStructField(&String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields70test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest[] = {
+    /*FidlStructField*/{.type=&String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields70test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest", test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestAltTypePointerTable()));
+const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields70test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest", .alt_type=&v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
-static const ::fidl::FidlStructField Fields71test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields71test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse", test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseAltTypePointerTable()));
+static const struct FidlStructField Fields71test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse[] = {};
+const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields71test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse", .alt_type=&v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
-static const ::fidl::FidlStructField Fields69test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest[] = {
-    ::fidl::FidlStructField(&String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields69test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest[] = {
+    /*FidlStructField*/{.type=&String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields69test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseWithRequestWithResponseRequest", test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestAltTypePointerTable()));
+const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields69test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseWithRequestWithResponseRequest", .alt_type=&v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
-static const ::fidl::FidlStructField Fields70test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse[] = {
-    ::fidl::FidlStructField(&String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields70test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse[] = {
+    /*FidlStructField*/{.type=&String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields70test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseWithRequestWithResponseResponse", test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseAltTypePointerTable()));
+const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields70test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseWithRequestWithResponseResponse", .alt_type=&v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
-static const ::fidl::FidlStructField Fields59test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseOnEmptyResponseEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields59test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseOnEmptyResponseEvent", test_name_WithAndWithoutRequestResponseOnEmptyResponseEventAltTypePointerTable()));
+static const struct FidlStructField Fields59test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent[] = {};
+const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields59test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseOnEmptyResponseEvent", .alt_type=&v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable}}};
 
 extern const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
-static const ::fidl::FidlStructField Fields58test_name_WithAndWithoutRequestResponseOnWithResponseEvent[] = {
-    ::fidl::FidlStructField(&String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields58test_name_WithAndWithoutRequestResponseOnWithResponseEvent[] = {
+    /*FidlStructField*/{.type=&String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseOnWithResponseEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields58test_name_WithAndWithoutRequestResponseOnWithResponseEvent, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseOnWithResponseEvent", test_name_WithAndWithoutRequestResponseOnWithResponseEventAltTypePointerTable()));
+const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields58test_name_WithAndWithoutRequestResponseOnWithResponseEvent, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseOnWithResponseEvent", .alt_type=&v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable}}};
 
 extern const fidl_type_t test_name_WithErrorSyntaxResponseAsStructRequestTable;
-static const ::fidl::FidlStructField Fields48test_name_WithErrorSyntaxResponseAsStructRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxResponseAsStructRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntaxResponseAsStructRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields48test_name_WithErrorSyntaxResponseAsStructRequest, 0u, 16u, 0u, false, "test.name/WithErrorSyntaxResponseAsStructRequest", test_name_WithErrorSyntaxResponseAsStructRequestAltTypePointerTable()));
+static const struct FidlStructField Fields48test_name_WithErrorSyntaxResponseAsStructRequest[] = {};
+const fidl_type_t test_name_WithErrorSyntaxResponseAsStructRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields48test_name_WithErrorSyntaxResponseAsStructRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntaxResponseAsStructRequest", .alt_type=&v1_test_name_WithErrorSyntaxResponseAsStructRequestTable}}};
 
 extern const fidl_type_t test_name_WithErrorSyntaxResponseAsStructResponseTable;
-static const ::fidl::FidlStructField Fields49test_name_WithErrorSyntaxResponseAsStructResponse[] = {
-    ::fidl::FidlStructField(&test_name_WithErrorSyntax_ResponseAsStruct_ResultTable, 16u, 0u)
+static const struct FidlStructField Fields49test_name_WithErrorSyntaxResponseAsStructResponse[] = {
+    /*FidlStructField*/{.type=&test_name_WithErrorSyntax_ResponseAsStruct_ResultTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxResponseAsStructResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntaxResponseAsStructResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields49test_name_WithErrorSyntaxResponseAsStructResponse, 1u, 48u, 0u, true, "test.name/WithErrorSyntaxResponseAsStructResponse", test_name_WithErrorSyntaxResponseAsStructResponseAltTypePointerTable()));
+const fidl_type_t test_name_WithErrorSyntaxResponseAsStructResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields49test_name_WithErrorSyntaxResponseAsStructResponse, .field_count=1u, .size=48u, .max_out_of_line=0u, .contains_union=true, .name="test.name/WithErrorSyntaxResponseAsStructResponse", .alt_type=&v1_test_name_WithErrorSyntaxResponseAsStructResponseTable}}};
 
 extern const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
-static const ::fidl::FidlStructField Fields48test_name_WithErrorSyntaxErrorAsPrimitiveRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsPrimitiveRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields48test_name_WithErrorSyntaxErrorAsPrimitiveRequest, 0u, 16u, 0u, false, "test.name/WithErrorSyntaxErrorAsPrimitiveRequest", test_name_WithErrorSyntaxErrorAsPrimitiveRequestAltTypePointerTable()));
+static const struct FidlStructField Fields48test_name_WithErrorSyntaxErrorAsPrimitiveRequest[] = {};
+const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields48test_name_WithErrorSyntaxErrorAsPrimitiveRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntaxErrorAsPrimitiveRequest", .alt_type=&v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable}}};
 
 extern const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
-static const ::fidl::FidlStructField Fields49test_name_WithErrorSyntaxErrorAsPrimitiveResponse[] = {
-    ::fidl::FidlStructField(&test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable, 16u, 0u)
+static const struct FidlStructField Fields49test_name_WithErrorSyntaxErrorAsPrimitiveResponse[] = {
+    /*FidlStructField*/{.type=&test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsPrimitiveResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields49test_name_WithErrorSyntaxErrorAsPrimitiveResponse, 1u, 24u, 0u, true, "test.name/WithErrorSyntaxErrorAsPrimitiveResponse", test_name_WithErrorSyntaxErrorAsPrimitiveResponseAltTypePointerTable()));
+const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields49test_name_WithErrorSyntaxErrorAsPrimitiveResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=true, .name="test.name/WithErrorSyntaxErrorAsPrimitiveResponse", .alt_type=&v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable}}};
 
 extern const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
-static const ::fidl::FidlStructField Fields43test_name_WithErrorSyntaxErrorAsEnumRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsEnumRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields43test_name_WithErrorSyntaxErrorAsEnumRequest, 0u, 16u, 0u, false, "test.name/WithErrorSyntaxErrorAsEnumRequest", test_name_WithErrorSyntaxErrorAsEnumRequestAltTypePointerTable()));
+static const struct FidlStructField Fields43test_name_WithErrorSyntaxErrorAsEnumRequest[] = {};
+const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields43test_name_WithErrorSyntaxErrorAsEnumRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntaxErrorAsEnumRequest", .alt_type=&v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable}}};
 
 extern const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
-static const ::fidl::FidlStructField Fields44test_name_WithErrorSyntaxErrorAsEnumResponse[] = {
-    ::fidl::FidlStructField(&test_name_WithErrorSyntax_ErrorAsEnum_ResultTable, 16u, 0u)
+static const struct FidlStructField Fields44test_name_WithErrorSyntaxErrorAsEnumResponse[] = {
+    /*FidlStructField*/{.type=&test_name_WithErrorSyntax_ErrorAsEnum_ResultTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsEnumResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields44test_name_WithErrorSyntaxErrorAsEnumResponse, 1u, 24u, 0u, true, "test.name/WithErrorSyntaxErrorAsEnumResponse", test_name_WithErrorSyntaxErrorAsEnumResponseAltTypePointerTable()));
+const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields44test_name_WithErrorSyntaxErrorAsEnumResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=true, .name="test.name/WithErrorSyntaxErrorAsEnumResponse", .alt_type=&v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable}}};
 
 
-static const ::fidl::FidlStructField Fields51test_name_WithErrorSyntax_ResponseAsStruct_Response[] = {
-    ::fidl::FidlStructField(nullptr, 8u, 0u),
-    ::fidl::FidlStructField(nullptr, 16u, 0u),
-    ::fidl::FidlStructField(nullptr, 24u, 0u)
+static const struct FidlStructField Fields51test_name_WithErrorSyntax_ResponseAsStruct_Response[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=16u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntax_ResponseAsStruct_ResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields51test_name_WithErrorSyntax_ResponseAsStruct_Response, 3u, 24u, 0u, false, "test.name/WithErrorSyntax_ResponseAsStruct_Response", test_name_WithErrorSyntax_ResponseAsStruct_ResponseAltTypePointerTable()));
+const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields51test_name_WithErrorSyntax_ResponseAsStruct_Response, .field_count=3u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntax_ResponseAsStruct_Response", .alt_type=&v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable}}};
 
-static const ::fidl::FidlUnionField Fields49test_name_WithErrorSyntax_ResponseAsStruct_Result[] = {
-    ::fidl::FidlUnionField(&test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable, 0u, 1u),
-    ::fidl::FidlUnionField(nullptr, 20u, 2u)
+static const struct FidlUnionField Fields49test_name_WithErrorSyntax_ResponseAsStruct_Result[] = {
+    /*FidlUnionField*/{.type=&test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable, .padding=0u, .xunion_ordinal=1u},
+    /*FidlUnionField*/{.type=NULL, .padding=20u, .xunion_ordinal=2u}
 };
-constexpr static inline const ::fidl::FidlCodedUnion* test_name_WithErrorSyntax_ResponseAsStruct_ResultAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResultTable = fidl_type_t(::fidl::FidlCodedUnion(Fields49test_name_WithErrorSyntax_ResponseAsStruct_Result, 2u, 8u, 32u, "test.name/WithErrorSyntax_ResponseAsStruct_Result", test_name_WithErrorSyntax_ResponseAsStruct_ResultAltTypePointerTable()));
+const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResultTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields49test_name_WithErrorSyntax_ResponseAsStruct_Result, .field_count=2u, .data_offset=8u, .size=32u, .name="test.name/WithErrorSyntax_ResponseAsStruct_Result", .alt_type=&v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable}}};
 
-static const ::fidl::FidlStructField Fields51test_name_WithErrorSyntax_ErrorAsPrimitive_Response[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields51test_name_WithErrorSyntax_ErrorAsPrimitive_Response, 0u, 1u, 0u, false, "test.name/WithErrorSyntax_ErrorAsPrimitive_Response", test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseAltTypePointerTable()));
+static const struct FidlStructField Fields51test_name_WithErrorSyntax_ErrorAsPrimitive_Response[] = {};
+const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields51test_name_WithErrorSyntax_ErrorAsPrimitive_Response, .field_count=0u, .size=1u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Response", .alt_type=&v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable}}};
 
-static const ::fidl::FidlUnionField Fields49test_name_WithErrorSyntax_ErrorAsPrimitive_Result[] = {
-    ::fidl::FidlUnionField(&test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable, 3u, 1u),
-    ::fidl::FidlUnionField(nullptr, 0u, 2u)
+static const struct FidlUnionField Fields49test_name_WithErrorSyntax_ErrorAsPrimitive_Result[] = {
+    /*FidlUnionField*/{.type=&test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable, .padding=3u, .xunion_ordinal=1u},
+    /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=2u}
 };
-constexpr static inline const ::fidl::FidlCodedUnion* test_name_WithErrorSyntax_ErrorAsPrimitive_ResultAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable = fidl_type_t(::fidl::FidlCodedUnion(Fields49test_name_WithErrorSyntax_ErrorAsPrimitive_Result, 2u, 4u, 8u, "test.name/WithErrorSyntax_ErrorAsPrimitive_Result", test_name_WithErrorSyntax_ErrorAsPrimitive_ResultAltTypePointerTable()));
+const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields49test_name_WithErrorSyntax_ErrorAsPrimitive_Result, .field_count=2u, .data_offset=4u, .size=8u, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .alt_type=&v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable}}};
 
-static const ::fidl::FidlStructField Fields46test_name_WithErrorSyntax_ErrorAsEnum_Response[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntax_ErrorAsEnum_ResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields46test_name_WithErrorSyntax_ErrorAsEnum_Response, 0u, 1u, 0u, false, "test.name/WithErrorSyntax_ErrorAsEnum_Response", test_name_WithErrorSyntax_ErrorAsEnum_ResponseAltTypePointerTable()));
+static const struct FidlStructField Fields46test_name_WithErrorSyntax_ErrorAsEnum_Response[] = {};
+const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields46test_name_WithErrorSyntax_ErrorAsEnum_Response, .field_count=0u, .size=1u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntax_ErrorAsEnum_Response", .alt_type=&v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable}}};
 
-static constexpr bool EnumValidatorFor_test_name_ErrorEnun(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t test_name_ErrorEnunTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_test_name_ErrorEnun, "test.name/ErrorEnun"));
+static bool EnumValidatorFor_test_name_ErrorEnun(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
+const fidl_type_t test_name_ErrorEnunTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_test_name_ErrorEnun, .name="test.name/ErrorEnun"}}};
 
-static const ::fidl::FidlUnionField Fields44test_name_WithErrorSyntax_ErrorAsEnum_Result[] = {
-    ::fidl::FidlUnionField(&test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable, 3u, 1u),
-    ::fidl::FidlUnionField(&test_name_ErrorEnunTable, 0u, 2u)
+static const struct FidlUnionField Fields44test_name_WithErrorSyntax_ErrorAsEnum_Result[] = {
+    /*FidlUnionField*/{.type=&test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable, .padding=3u, .xunion_ordinal=1u},
+    /*FidlUnionField*/{.type=&test_name_ErrorEnunTable, .padding=0u, .xunion_ordinal=2u}
 };
-constexpr static inline const ::fidl::FidlCodedUnion* test_name_WithErrorSyntax_ErrorAsEnum_ResultAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable = fidl_type_t(::fidl::FidlCodedUnion(Fields44test_name_WithErrorSyntax_ErrorAsEnum_Result, 2u, 4u, 8u, "test.name/WithErrorSyntax_ErrorAsEnum_Result", test_name_WithErrorSyntax_ErrorAsEnum_ResultAltTypePointerTable()));
+const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields44test_name_WithErrorSyntax_ErrorAsEnum_Result, .field_count=2u, .data_offset=4u, .size=8u, .name="test.name/WithErrorSyntax_ErrorAsEnum_Result", .alt_type=&v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable}}};
 
 // Coding tables for v1 wire format.
 
@@ -225,533 +256,167 @@ extern const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
 
 extern const fidl_type_t v1_test_name_ChannelProtocolMethodARequestTable;
-static const ::fidl::FidlStructField Fields42v1_test_name_ChannelProtocolMethodARequest[] = {
-    ::fidl::FidlStructField(nullptr, 24u, 0u),
-    ::fidl::FidlStructField(nullptr, 32u, 0u)
+static const struct FidlStructField Fields42v1_test_name_ChannelProtocolMethodARequest[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=32u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMethodARequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ChannelProtocolMethodARequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields42v1_test_name_ChannelProtocolMethodARequest, 2u, 32u, 0u, false, "test.name/ChannelProtocolMethodARequest", v1_test_name_ChannelProtocolMethodARequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_ChannelProtocolMethodARequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields42v1_test_name_ChannelProtocolMethodARequest, .field_count=2u, .size=32u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolMethodARequest", .alt_type=&test_name_ChannelProtocolMethodARequestTable}}};
 
 extern const fidl_type_t v1_test_name_ChannelProtocolEventAEventTable;
-static const ::fidl::FidlStructField Fields39v1_test_name_ChannelProtocolEventAEvent[] = {
-    ::fidl::FidlStructField(nullptr, 24u, 0u),
-    ::fidl::FidlStructField(nullptr, 32u, 0u)
+static const struct FidlStructField Fields39v1_test_name_ChannelProtocolEventAEvent[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=32u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolEventAEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ChannelProtocolEventAEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields39v1_test_name_ChannelProtocolEventAEvent, 2u, 32u, 0u, false, "test.name/ChannelProtocolEventAEvent", v1_test_name_ChannelProtocolEventAEventAltTypePointerTable()));
+const fidl_type_t v1_test_name_ChannelProtocolEventAEventTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39v1_test_name_ChannelProtocolEventAEvent, .field_count=2u, .size=32u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolEventAEvent", .alt_type=&test_name_ChannelProtocolEventAEventTable}}};
 
 extern const fidl_type_t v1_test_name_ChannelProtocolMethodBRequestTable;
-static const ::fidl::FidlStructField Fields42v1_test_name_ChannelProtocolMethodBRequest[] = {
-    ::fidl::FidlStructField(nullptr, 24u, 0u),
-    ::fidl::FidlStructField(nullptr, 32u, 0u)
+static const struct FidlStructField Fields42v1_test_name_ChannelProtocolMethodBRequest[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=32u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMethodBRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ChannelProtocolMethodBRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields42v1_test_name_ChannelProtocolMethodBRequest, 2u, 32u, 0u, false, "test.name/ChannelProtocolMethodBRequest", v1_test_name_ChannelProtocolMethodBRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_ChannelProtocolMethodBRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields42v1_test_name_ChannelProtocolMethodBRequest, .field_count=2u, .size=32u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolMethodBRequest", .alt_type=&test_name_ChannelProtocolMethodBRequestTable}}};
 
 extern const fidl_type_t v1_test_name_ChannelProtocolMethodBResponseTable;
-static const ::fidl::FidlStructField Fields43v1_test_name_ChannelProtocolMethodBResponse[] = {
-    ::fidl::FidlStructField(nullptr, 24u, 0u)
+static const struct FidlStructField Fields43v1_test_name_ChannelProtocolMethodBResponse[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMethodBResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ChannelProtocolMethodBResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields43v1_test_name_ChannelProtocolMethodBResponse, 1u, 24u, 0u, false, "test.name/ChannelProtocolMethodBResponse", v1_test_name_ChannelProtocolMethodBResponseAltTypePointerTable()));
+const fidl_type_t v1_test_name_ChannelProtocolMethodBResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields43v1_test_name_ChannelProtocolMethodBResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolMethodBResponse", .alt_type=&test_name_ChannelProtocolMethodBResponseTable}}};
 
-static const fidl_type_t v1_HandlesocketnonnullableTable = fidl_type_t(::fidl::FidlCodedHandle(ZX_OBJ_TYPE_SOCKET, ::fidl::kNonnullable));
+static const fidl_type_t v1_HandlesocketnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_SOCKET, .nullable=kFidlNullability_Nonnullable}}};
 
 extern const fidl_type_t v1_test_name_ChannelProtocolMutateSocketRequestTable;
-static const ::fidl::FidlStructField Fields47v1_test_name_ChannelProtocolMutateSocketRequest[] = {
-    ::fidl::FidlStructField(&v1_HandlesocketnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields47v1_test_name_ChannelProtocolMutateSocketRequest[] = {
+    /*FidlStructField*/{.type=&v1_HandlesocketnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMutateSocketRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ChannelProtocolMutateSocketRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields47v1_test_name_ChannelProtocolMutateSocketRequest, 1u, 24u, 0u, false, "test.name/ChannelProtocolMutateSocketRequest", v1_test_name_ChannelProtocolMutateSocketRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_ChannelProtocolMutateSocketRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields47v1_test_name_ChannelProtocolMutateSocketRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolMutateSocketRequest", .alt_type=&test_name_ChannelProtocolMutateSocketRequestTable}}};
 
 extern const fidl_type_t v1_test_name_ChannelProtocolMutateSocketResponseTable;
-static const ::fidl::FidlStructField Fields48v1_test_name_ChannelProtocolMutateSocketResponse[] = {
-    ::fidl::FidlStructField(&v1_HandlesocketnonnullableTable, 16u, 4u)
+static const struct FidlStructField Fields48v1_test_name_ChannelProtocolMutateSocketResponse[] = {
+    /*FidlStructField*/{.type=&v1_HandlesocketnonnullableTable, .offset=16u, .padding=4u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMutateSocketResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_ChannelProtocolMutateSocketResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields48v1_test_name_ChannelProtocolMutateSocketResponse, 1u, 24u, 0u, false, "test.name/ChannelProtocolMutateSocketResponse", v1_test_name_ChannelProtocolMutateSocketResponseAltTypePointerTable()));
+const fidl_type_t v1_test_name_ChannelProtocolMutateSocketResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields48v1_test_name_ChannelProtocolMutateSocketResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/ChannelProtocolMutateSocketResponse", .alt_type=&test_name_ChannelProtocolMutateSocketResponseTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
-static const ::fidl::FidlStructField Fields68v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields68v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseNoRequestNoResponseRequest", v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestAltTypePointerTable()));
+static const struct FidlStructField Fields68v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest[] = {};
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields68v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseNoRequestNoResponseRequest", .alt_type=&test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
-static const ::fidl::FidlStructField Fields71v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields71v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest", v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestAltTypePointerTable()));
+static const struct FidlStructField Fields71v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest[] = {};
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields71v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseRequest", .alt_type=&test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
-static const ::fidl::FidlStructField Fields72v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields72v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse", v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseAltTypePointerTable()));
+static const struct FidlStructField Fields72v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse[] = {};
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields72v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponse, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseNoRequestEmptyResponseResponse", .alt_type=&test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
-static const ::fidl::FidlStructField Fields70v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields70v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseNoRequestWithResponseRequest", v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestAltTypePointerTable()));
+static const struct FidlStructField Fields70v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest[] = {};
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields70v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseNoRequestWithResponseRequest", .alt_type=&test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable}}};
 
-static const fidl_type_t v1_String4294967295nonnullableTable = fidl_type_t(::fidl::FidlCodedString(4294967295u, ::fidl::kNonnullable));
+static const fidl_type_t v1_String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
-static const ::fidl::FidlStructField Fields71v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse[] = {
-    ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields71v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse[] = {
+    /*FidlStructField*/{.type=&v1_String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields71v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseNoRequestWithResponseResponse", v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields71v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseNoRequestWithResponseResponse", .alt_type=&test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
-static const ::fidl::FidlStructField Fields70v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest[] = {
-    ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields70v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest[] = {
+    /*FidlStructField*/{.type=&v1_String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields70v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseWithRequestNoResponseRequest", v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields70v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseWithRequestNoResponseRequest", .alt_type=&test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
-static const ::fidl::FidlStructField Fields73v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest[] = {
-    ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields73v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest[] = {
+    /*FidlStructField*/{.type=&v1_String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields73v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest", v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields73v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest", .alt_type=&test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
-static const ::fidl::FidlStructField Fields74v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields74v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse", v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseAltTypePointerTable()));
+static const struct FidlStructField Fields74v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse[] = {};
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields74v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponse, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseResponse", .alt_type=&test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
-static const ::fidl::FidlStructField Fields72v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest[] = {
-    ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields72v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest[] = {
+    /*FidlStructField*/{.type=&v1_String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields72v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseWithRequestWithResponseRequest", v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields72v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseWithRequestWithResponseRequest", .alt_type=&test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
-static const ::fidl::FidlStructField Fields73v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse[] = {
-    ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields73v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse[] = {
+    /*FidlStructField*/{.type=&v1_String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields73v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseWithRequestWithResponseResponse", v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields73v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseWithRequestWithResponseResponse", .alt_type=&test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
-static const ::fidl::FidlStructField Fields62v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields62v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent, 0u, 16u, 0u, false, "test.name/WithAndWithoutRequestResponseOnEmptyResponseEvent", v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventAltTypePointerTable()));
+static const struct FidlStructField Fields62v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent[] = {};
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields62v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEvent, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseOnEmptyResponseEvent", .alt_type=&test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable}}};
 
 extern const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
-static const ::fidl::FidlStructField Fields61v1_test_name_WithAndWithoutRequestResponseOnWithResponseEvent[] = {
-    ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 16u, 0u)
+static const struct FidlStructField Fields61v1_test_name_WithAndWithoutRequestResponseOnWithResponseEvent[] = {
+    /*FidlStructField*/{.type=&v1_String4294967295nonnullableTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields61v1_test_name_WithAndWithoutRequestResponseOnWithResponseEvent, 1u, 32u, 4294967295u, false, "test.name/WithAndWithoutRequestResponseOnWithResponseEvent", v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields61v1_test_name_WithAndWithoutRequestResponseOnWithResponseEvent, .field_count=1u, .size=32u, .max_out_of_line=4294967295u, .contains_union=false, .name="test.name/WithAndWithoutRequestResponseOnWithResponseEvent", .alt_type=&test_name_WithAndWithoutRequestResponseOnWithResponseEventTable}}};
 
 extern const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructRequestTable;
-static const ::fidl::FidlStructField Fields51v1_test_name_WithErrorSyntaxResponseAsStructRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxResponseAsStructRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields51v1_test_name_WithErrorSyntaxResponseAsStructRequest, 0u, 16u, 0u, false, "test.name/WithErrorSyntaxResponseAsStructRequest", v1_test_name_WithErrorSyntaxResponseAsStructRequestAltTypePointerTable()));
+static const struct FidlStructField Fields51v1_test_name_WithErrorSyntaxResponseAsStructRequest[] = {};
+const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields51v1_test_name_WithErrorSyntaxResponseAsStructRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntaxResponseAsStructRequest", .alt_type=&test_name_WithErrorSyntaxResponseAsStructRequestTable}}};
 
 extern const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
-static const ::fidl::FidlStructField Fields52v1_test_name_WithErrorSyntaxResponseAsStructResponse[] = {
-    ::fidl::FidlStructField(&v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable, 16u, 0u)
+static const struct FidlStructField Fields52v1_test_name_WithErrorSyntaxResponseAsStructResponse[] = {
+    /*FidlStructField*/{.type=&v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxResponseAsStructResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields52v1_test_name_WithErrorSyntaxResponseAsStructResponse, 1u, 40u, 24u, true, "test.name/WithErrorSyntaxResponseAsStructResponse", v1_test_name_WithErrorSyntaxResponseAsStructResponseAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields52v1_test_name_WithErrorSyntaxResponseAsStructResponse, .field_count=1u, .size=40u, .max_out_of_line=24u, .contains_union=true, .name="test.name/WithErrorSyntaxResponseAsStructResponse", .alt_type=&test_name_WithErrorSyntaxResponseAsStructResponseTable}}};
 
 extern const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
-static const ::fidl::FidlStructField Fields51v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields51v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequest, 0u, 16u, 0u, false, "test.name/WithErrorSyntaxErrorAsPrimitiveRequest", v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestAltTypePointerTable()));
+static const struct FidlStructField Fields51v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequest[] = {};
+const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields51v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntaxErrorAsPrimitiveRequest", .alt_type=&test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable}}};
 
 extern const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
-static const ::fidl::FidlStructField Fields52v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponse[] = {
-    ::fidl::FidlStructField(&v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable, 16u, 0u)
+static const struct FidlStructField Fields52v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponse[] = {
+    /*FidlStructField*/{.type=&v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields52v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponse, 1u, 40u, 8u, true, "test.name/WithErrorSyntaxErrorAsPrimitiveResponse", v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields52v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponse, .field_count=1u, .size=40u, .max_out_of_line=8u, .contains_union=true, .name="test.name/WithErrorSyntaxErrorAsPrimitiveResponse", .alt_type=&test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable}}};
 
 extern const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable;
-static const ::fidl::FidlStructField Fields46v1_test_name_WithErrorSyntaxErrorAsEnumRequest[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsEnumRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields46v1_test_name_WithErrorSyntaxErrorAsEnumRequest, 0u, 16u, 0u, false, "test.name/WithErrorSyntaxErrorAsEnumRequest", v1_test_name_WithErrorSyntaxErrorAsEnumRequestAltTypePointerTable()));
+static const struct FidlStructField Fields46v1_test_name_WithErrorSyntaxErrorAsEnumRequest[] = {};
+const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields46v1_test_name_WithErrorSyntaxErrorAsEnumRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntaxErrorAsEnumRequest", .alt_type=&test_name_WithErrorSyntaxErrorAsEnumRequestTable}}};
 
 extern const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
-static const ::fidl::FidlStructField Fields47v1_test_name_WithErrorSyntaxErrorAsEnumResponse[] = {
-    ::fidl::FidlStructField(&v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable, 16u, 0u)
+static const struct FidlStructField Fields47v1_test_name_WithErrorSyntaxErrorAsEnumResponse[] = {
+    /*FidlStructField*/{.type=&v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable, .offset=16u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsEnumResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields47v1_test_name_WithErrorSyntaxErrorAsEnumResponse, 1u, 40u, 8u, true, "test.name/WithErrorSyntaxErrorAsEnumResponse", v1_test_name_WithErrorSyntaxErrorAsEnumResponseAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields47v1_test_name_WithErrorSyntaxErrorAsEnumResponse, .field_count=1u, .size=40u, .max_out_of_line=8u, .contains_union=true, .name="test.name/WithErrorSyntaxErrorAsEnumResponse", .alt_type=&test_name_WithErrorSyntaxErrorAsEnumResponseTable}}};
 
 
-static const ::fidl::FidlStructField Fields54v1_test_name_WithErrorSyntax_ResponseAsStruct_Response[] = {
-    ::fidl::FidlStructField(nullptr, 8u, 0u),
-    ::fidl::FidlStructField(nullptr, 16u, 0u),
-    ::fidl::FidlStructField(nullptr, 24u, 0u)
+static const struct FidlStructField Fields54v1_test_name_WithErrorSyntax_ResponseAsStruct_Response[] = {
+    /*FidlStructField*/{.type=NULL, .padding_offset=8u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=16u, .padding=0u},
+    /*FidlStructField*/{.type=NULL, .padding_offset=24u, .padding=0u}
 };
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields54v1_test_name_WithErrorSyntax_ResponseAsStruct_Response, 3u, 24u, 0u, false, "test.name/WithErrorSyntax_ResponseAsStruct_Response", v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields54v1_test_name_WithErrorSyntax_ResponseAsStruct_Response, .field_count=3u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntax_ResponseAsStruct_Response", .alt_type=&test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable}}};
 
-static const ::fidl::FidlUnionField Fields52v1_test_name_WithErrorSyntax_ResponseAsStruct_Result[] = {
-    ::fidl::FidlUnionField(&v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable, 0u, 1u),
-    ::fidl::FidlUnionField(nullptr, 4u, 2u)
+static const struct FidlXUnionField Fields52v1_test_name_WithErrorSyntax_ResponseAsStruct_Result[] = {
+    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
 };
-constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable = fidl_type_t(::fidl::FidlCodedUnion(Fields52v1_test_name_WithErrorSyntax_ResponseAsStruct_Result, 2u, 8u, 24u, "test.name/WithErrorSyntax_ResponseAsStruct_Result", v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields52v1_test_name_WithErrorSyntax_ResponseAsStruct_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ResponseAsStruct_Result", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_WithErrorSyntax_ResponseAsStruct_ResultTable}}};
+static const struct FidlStructField Fields54v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Response[] = {};
+const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields54v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Response, .field_count=0u, .size=1u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Response", .alt_type=&test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable}}};
 
-static const ::fidl::FidlStructField Fields54v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Response[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields54v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Response, 0u, 1u, 0u, false, "test.name/WithErrorSyntax_ErrorAsPrimitive_Response", v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseAltTypePointerTable()));
-
-static const ::fidl::FidlUnionField Fields52v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Result[] = {
-    ::fidl::FidlUnionField(&v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable, 7u, 1u),
-    ::fidl::FidlUnionField(nullptr, 4u, 2u)
+static const struct FidlXUnionField Fields52v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Result[] = {
+    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
 };
-constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable = fidl_type_t(::fidl::FidlCodedUnion(Fields52v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Result, 2u, 8u, 24u, "test.name/WithErrorSyntax_ErrorAsPrimitive_Result", v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultAltTypePointerTable()));
+const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields52v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable}}};
+static const struct FidlStructField Fields49v1_test_name_WithErrorSyntax_ErrorAsEnum_Response[] = {};
+const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields49v1_test_name_WithErrorSyntax_ErrorAsEnum_Response, .field_count=0u, .size=1u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntax_ErrorAsEnum_Response", .alt_type=&test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable}}};
 
-static const ::fidl::FidlStructField Fields49v1_test_name_WithErrorSyntax_ErrorAsEnum_Response[] = {};
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable = fidl_type_t(::fidl::FidlCodedStruct(Fields49v1_test_name_WithErrorSyntax_ErrorAsEnum_Response, 0u, 1u, 0u, false, "test.name/WithErrorSyntax_ErrorAsEnum_Response", v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseAltTypePointerTable()));
+static bool EnumValidatorFor_v1_test_name_ErrorEnun(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
+const fidl_type_t v1_test_name_ErrorEnunTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_v1_test_name_ErrorEnun, .name="test.name/ErrorEnun"}}};
 
-static constexpr bool EnumValidatorFor_v1_test_name_ErrorEnun(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
-const fidl_type_t v1_test_name_ErrorEnunTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_v1_test_name_ErrorEnun, "test.name/ErrorEnun"));
-
-static const ::fidl::FidlUnionField Fields47v1_test_name_WithErrorSyntax_ErrorAsEnum_Result[] = {
-    ::fidl::FidlUnionField(&v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable, 7u, 1u),
-    ::fidl::FidlUnionField(&v1_test_name_ErrorEnunTable, 4u, 2u)
+static const struct FidlXUnionField Fields47v1_test_name_WithErrorSyntax_ErrorAsEnum_Result[] = {
+    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_test_name_ErrorEnunTable, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
 };
-constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable = fidl_type_t(::fidl::FidlCodedUnion(Fields47v1_test_name_WithErrorSyntax_ErrorAsEnum_Result, 2u, 8u, 24u, "test.name/WithErrorSyntax_ErrorAsEnum_Result", v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultAltTypePointerTable()));
-
-// Old <-> V1 map.
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMethodARequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMethodARequestAltTypePointerTable() {
-  return &v1_test_name_ChannelProtocolMethodARequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMethodARequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMethodARequestAltTypePointerTable() {
-  return &test_name_ChannelProtocolMethodARequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolEventAEventAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolEventAEventAltTypePointerTable() {
-  return &v1_test_name_ChannelProtocolEventAEventTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolEventAEventAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolEventAEventAltTypePointerTable() {
-  return &test_name_ChannelProtocolEventAEventTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMethodBRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMethodBRequestAltTypePointerTable() {
-  return &v1_test_name_ChannelProtocolMethodBRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMethodBRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMethodBRequestAltTypePointerTable() {
-  return &test_name_ChannelProtocolMethodBRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMethodBResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMethodBResponseAltTypePointerTable() {
-  return &v1_test_name_ChannelProtocolMethodBResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMethodBResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMethodBResponseAltTypePointerTable() {
-  return &test_name_ChannelProtocolMethodBResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMutateSocketRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMutateSocketRequestAltTypePointerTable() {
-  return &v1_test_name_ChannelProtocolMutateSocketRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMutateSocketRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMutateSocketRequestAltTypePointerTable() {
-  return &test_name_ChannelProtocolMutateSocketRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMutateSocketResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_ChannelProtocolMutateSocketResponseAltTypePointerTable() {
-  return &v1_test_name_ChannelProtocolMutateSocketResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMutateSocketResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_ChannelProtocolMutateSocketResponseAltTypePointerTable() {
-  return &test_name_ChannelProtocolMutateSocketResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseOnEmptyResponseEventAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseOnEmptyResponseEventAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseOnEmptyResponseEventAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseOnWithResponseEventAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithAndWithoutRequestResponseOnWithResponseEventAltTypePointerTable() {
-  return &v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventAltTypePointerTable() {
-  return &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxResponseAsStructRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxResponseAsStructRequestAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntaxResponseAsStructRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxResponseAsStructRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxResponseAsStructRequestAltTypePointerTable() {
-  return &test_name_WithErrorSyntaxResponseAsStructRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxResponseAsStructResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxResponseAsStructResponseAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntaxResponseAsStructResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxResponseAsStructResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxResponseAsStructResponseAltTypePointerTable() {
-  return &test_name_WithErrorSyntaxResponseAsStructResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsPrimitiveRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsPrimitiveRequestAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsPrimitiveRequestAltTypePointerTable() {
-  return &test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsPrimitiveResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsPrimitiveResponseAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseAltTypePointerTable() {
-  return &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsEnumRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsEnumRequestAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntaxErrorAsEnumRequestTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsEnumRequestAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsEnumRequestAltTypePointerTable() {
-  return &test_name_WithErrorSyntaxErrorAsEnumRequestTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsEnumResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntaxErrorAsEnumResponseAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsEnumResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntaxErrorAsEnumResponseAltTypePointerTable() {
-  return &test_name_WithErrorSyntaxErrorAsEnumResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntax_ErrorAsEnum_ResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntax_ErrorAsEnum_ResponseAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseAltTypePointerTable() {
-  return &test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedUnion* test_name_WithErrorSyntax_ErrorAsEnum_ResultAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedUnion* test_name_WithErrorSyntax_ErrorAsEnum_ResultAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable.coded_union;
-}
-
-constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultAltTypePointerTable() {
-  return &test_name_WithErrorSyntax_ErrorAsEnum_ResultTable.coded_union;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseAltTypePointerTable() {
-  return &test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedUnion* test_name_WithErrorSyntax_ErrorAsPrimitive_ResultAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedUnion* test_name_WithErrorSyntax_ErrorAsPrimitive_ResultAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable.coded_union;
-}
-
-constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultAltTypePointerTable() {
-  return &test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable.coded_union;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntax_ResponseAsStruct_ResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* test_name_WithErrorSyntax_ResponseAsStruct_ResponseAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable.coded_struct;
-}
-
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseAltTypePointerTable() {
-  return &test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable.coded_struct;
-}
-
-
-constexpr static inline const ::fidl::FidlCodedUnion* test_name_WithErrorSyntax_ResponseAsStruct_ResultAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedUnion* test_name_WithErrorSyntax_ResponseAsStruct_ResultAltTypePointerTable() {
-  return &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable.coded_union;
-}
-
-constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultAltTypePointerTable() __attribute__((unused));
-constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultAltTypePointerTable() {
-  return &test_name_WithErrorSyntax_ResponseAsStruct_ResultTable.coded_union;
-}
-
-
-} // extern "C"
+const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields47v1_test_name_WithErrorSyntax_ErrorAsEnum_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ErrorAsEnum_Result", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_WithErrorSyntax_ErrorAsEnum_ResultTable}}};

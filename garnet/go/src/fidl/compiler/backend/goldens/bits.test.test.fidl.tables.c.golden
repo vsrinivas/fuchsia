@@ -2,7 +2,8 @@
 
 #include <lib/fidl/internal.h>
 
-extern "C" {
+// Forward declarations for old <-> V1 mappings
+
 
 // Coding tables for old wire format.
 
@@ -10,7 +11,7 @@ extern const fidl_type_t test_name_MyBitsTable;
 
 
 
-const fidl_type_t test_name_MyBitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint32, 3ul, "test.name/MyBits"));
+const fidl_type_t test_name_MyBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=3ul, .name="test.name/MyBits"}}};
 
 // Coding tables for v1 wire format.
 
@@ -18,8 +19,5 @@ extern const fidl_type_t v1_test_name_MyBitsTable;
 
 
 
-const fidl_type_t v1_test_name_MyBitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint32, 3ul, "test.name/MyBits"));
+const fidl_type_t v1_test_name_MyBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=3ul, .name="test.name/MyBits"}}};
 
-// Old <-> V1 map.
-
-} // extern "C"

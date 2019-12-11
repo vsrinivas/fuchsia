@@ -39,3 +39,10 @@ TEST(Table, BuildTableVectorOfStruct) {
   ASSERT_EQ(table.vector_of_struct()[0].x, structs[0].x);
   ASSERT_EQ(table.vector_of_struct()[1].x, structs[1].x);
 }
+
+TEST(Table, BuildEmptyTable) {
+  namespace test = llcpp::fidl::llcpp::types::test;
+  auto builder = test::SampleEmptyTable::Build();
+  const auto& table = builder.view();
+  ASSERT_TRUE(table.IsEmpty());
+}

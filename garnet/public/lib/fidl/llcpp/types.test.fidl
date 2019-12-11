@@ -41,6 +41,10 @@ table SampleTable {
     3: vector<CopyableStruct> vector_of_struct;
 };
 
+/// Verifies that an empty table compiles.
+table SampleEmptyTable {
+};
+
 protocol TestInterface {
     TestMethod(TestUnion u) -> (TestUnion u);
 };

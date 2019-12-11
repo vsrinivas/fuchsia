@@ -139,13 +139,13 @@ struct Regression3 {
     Regression2? opt_value;
 };
 
-// TODO(fxb/40782): Add these back once it compiles in LLCPP.
-// table Table_NoFields {
-// };
-// table Table_TwoReservedFields {
-//     1: reserved;
-//     2: reserved;
-// };
+table Table_NoFields {
+};
+
+table Table_TwoReservedFields {
+    1: reserved;
+    2: reserved;
+};
 
 table Table_StructWithReservedSandwich {
     1: reserved;

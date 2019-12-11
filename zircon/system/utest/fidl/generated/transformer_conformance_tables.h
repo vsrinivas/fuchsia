@@ -355,6 +355,8 @@ extern const fidl_type_t conformance_ThreeByteInVectorTable;
 extern const fidl_type_t conformance_ThreeByteInStructTable;
 extern const fidl_type_t conformance_ThreeByteInArrayTable;
 extern const fidl_type_t conformance_TestOptionalXUnionInStructTable;
+extern const fidl_type_t conformance_Table_TwoReservedFieldsTable;
+extern const fidl_type_t conformance_Table_NoFieldsTable;
 extern const fidl_type_t conformance_TableWithStringAndVectorTable;
 extern const fidl_type_t conformance_StructOfTableWithStringAndVectorTable;
 extern const fidl_type_t conformance_StructWithIntTable;
@@ -1202,6 +1204,20 @@ const fidl_type_t conformance_TestOptionalXUnionInStructTable = {
                       .contains_union = true,
                       .name = "conformance/TestOptionalXUnionInStruct",
                       .alt_type = &v1_conformance_TestOptionalXUnionInStructTable}}};
+
+static const struct FidlTableField Fields35conformance_Table_TwoReservedFields[] = {};
+const fidl_type_t conformance_Table_TwoReservedFieldsTable = {
+    .type_tag = kFidlTypeTable,
+    {.coded_table = {.fields = Fields35conformance_Table_TwoReservedFields,
+                     .field_count = 0u,
+                     .name = "conformance/Table_TwoReservedFields"}}};
+
+static const struct FidlTableField Fields26conformance_Table_NoFields[] = {};
+const fidl_type_t conformance_Table_NoFieldsTable = {
+    .type_tag = kFidlTypeTable,
+    {.coded_table = {.fields = Fields26conformance_Table_NoFields,
+                     .field_count = 0u,
+                     .name = "conformance/Table_NoFields"}}};
 
 static const struct FidlTableField Fields36conformance_TableWithStringAndVector[] = {
     /*FidlTableField*/ {.type = &String4294967295nonnullableTable, .ordinal = 1u},
@@ -2610,6 +2626,8 @@ extern const fidl_type_t v1_conformance_ThreeByteInVectorTable;
 extern const fidl_type_t v1_conformance_ThreeByteInStructTable;
 extern const fidl_type_t v1_conformance_ThreeByteInArrayTable;
 extern const fidl_type_t v1_conformance_TestOptionalXUnionInStructTable;
+extern const fidl_type_t v1_conformance_Table_TwoReservedFieldsTable;
+extern const fidl_type_t v1_conformance_Table_NoFieldsTable;
 extern const fidl_type_t v1_conformance_TableWithStringAndVectorTable;
 extern const fidl_type_t v1_conformance_StructOfTableWithStringAndVectorTable;
 extern const fidl_type_t v1_conformance_StructWithIntTable;
@@ -3512,6 +3530,20 @@ const fidl_type_t v1_conformance_TestOptionalXUnionInStructTable = {
                       .contains_union = true,
                       .name = "conformance/TestOptionalXUnionInStruct",
                       .alt_type = &conformance_TestOptionalXUnionInStructTable}}};
+
+static const struct FidlTableField Fields38v1_conformance_Table_TwoReservedFields[] = {};
+const fidl_type_t v1_conformance_Table_TwoReservedFieldsTable = {
+    .type_tag = kFidlTypeTable,
+    {.coded_table = {.fields = Fields38v1_conformance_Table_TwoReservedFields,
+                     .field_count = 0u,
+                     .name = "conformance/Table_TwoReservedFields"}}};
+
+static const struct FidlTableField Fields29v1_conformance_Table_NoFields[] = {};
+const fidl_type_t v1_conformance_Table_NoFieldsTable = {
+    .type_tag = kFidlTypeTable,
+    {.coded_table = {.fields = Fields29v1_conformance_Table_NoFields,
+                     .field_count = 0u,
+                     .name = "conformance/Table_NoFields"}}};
 
 static const struct FidlTableField Fields39v1_conformance_TableWithStringAndVector[] = {
     /*FidlTableField*/ {.type = &v1_String4294967295nonnullableTable, .ordinal = 1u},

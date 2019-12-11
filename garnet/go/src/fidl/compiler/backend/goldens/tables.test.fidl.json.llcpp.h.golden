@@ -370,7 +370,7 @@ struct EmptyTable final : private ::fidl::VectorView<fidl_envelope_t> {
 
 class EmptyTable::Builder {
  public:
-  EmptyTable view() { return EmptyTable(max_ordinal_, envelopes_.data_); }
+  EmptyTable view() { return EmptyTable(0, nullptr); }
   ~Builder() = default;
   Builder(Builder&& other) noexcept = default;
   Builder& operator=(Builder&& other) noexcept = default;
@@ -378,9 +378,6 @@ class EmptyTable::Builder {
  private:
   Builder() = default;
   friend Builder EmptyTable::Build();
-
-  uint64_t max_ordinal_ = 0;
-  ::fidl::Array<fidl_envelope_t, 0> envelopes_ = {};
 };
 
 }  // namespace name
