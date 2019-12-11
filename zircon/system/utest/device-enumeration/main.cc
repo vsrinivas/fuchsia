@@ -378,6 +378,7 @@ TEST_F(DeviceEnumerationTest, As370Test) {
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  EXPECT_EQ(zx_system_get_num_cpus(), 4);
 }
 
 TEST_F(DeviceEnumerationTest, VisaliaTest) {
@@ -414,6 +415,7 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+  EXPECT_EQ(zx_system_get_num_cpus(), 4);
 }
 
 TEST_F(DeviceEnumerationTest, Hikey960Test) {
