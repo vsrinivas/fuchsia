@@ -25,7 +25,6 @@ struct I2cBusLayout {
     uint32 sda_in;
 };
 
-[Layout = "Simple"]
 protocol Device {
     /// Create an I2c bus on the FTDI device with a given `layout` and
     /// with `device` attached to it.

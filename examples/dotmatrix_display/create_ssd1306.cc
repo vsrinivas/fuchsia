@@ -4,7 +4,7 @@
 
 #include <ddk/platform-defs.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/ftdi/c/fidl.h>
+#include <fuchsia/hardware/ftdi/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -53,8 +53,8 @@ int main(int argc, char** argv) {
   }
 
   // This wires the 0 pin as SCL and pins 1 & 2 as SDA.
-  fuchsia_hardware_ftdi_I2cBusLayout layout = {0, 1, 2};
-  fuchsia_hardware_ftdi_I2cDevice i2c_dev = {
+  ::llcpp::fuchsia::hardware::ftdi::I2cBusLayout layout = {0, 1, 2};
+  ::llcpp::fuchsia::hardware::ftdi::I2cDevice i2c_dev = {
       // This is the I2C address for the SSD1306.
       0x3c,
       // These are the SSD1306 driver binding rules.
@@ -62,7 +62,8 @@ int main(int argc, char** argv) {
       PDEV_PID_GENERIC,
       PDEV_DID_SSD1306};
 
-  status = fuchsia_hardware_ftdi_DeviceCreateI2C(handle, &layout, &i2c_dev);
+  auto resp = ::llcpp::fuchsia::hardware::ftdi::Device::Call::CreateI2C(zx::unowned_channel(handle), layout, i2c_dev);
+  status = resp.status();
   if (status != ZX_OK) {
     printf("Create I2C device failed with %d\n", status);
     return 1;

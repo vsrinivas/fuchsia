@@ -4,6 +4,7 @@
 
 #include "ftdi-i2c.h"
 
+#include <fuchsia/hardware/ftdi/llcpp/fidl.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,7 +16,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
-#include <fuchsia/hardware/ftdi/c/fidl.h>
 
 #include "ftdi.h"
 
@@ -376,8 +376,9 @@ zx_status_t FtdiI2c::I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_li
   return ZX_OK;
 }
 
-zx_status_t FtdiI2c::Create(zx_device_t* device, const fuchsia_hardware_ftdi_I2cBusLayout* layout,
-                            const fuchsia_hardware_ftdi_I2cDevice* i2c_dev) {
+zx_status_t FtdiI2c::Create(zx_device_t* device,
+                            const ::llcpp::fuchsia::hardware::ftdi::I2cBusLayout* layout,
+                            const ::llcpp::fuchsia::hardware::ftdi::I2cDevice* i2c_dev) {
   // TODO(dgilhooley: Support i2c on different sets of pins and then remove this check.
   if (layout->scl != 0 && layout->sda_out != 1 && layout->sda_in != 2) {
     return ZX_ERR_OUT_OF_RANGE;

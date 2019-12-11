@@ -20,6 +20,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/serialimpl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -341,31 +342,28 @@ void FtdiDevice::DdkRelease() {
   delete this;
 }
 
-zx_status_t FtdiDevice::FidlCreateI2c(void* ctx, const fuchsia_hardware_ftdi_I2cBusLayout* layout,
-                                      const fuchsia_hardware_ftdi_I2cDevice* device) {
-  FtdiDevice* ftdi = static_cast<FtdiDevice*>(ctx);
-
+void FtdiDevice::CreateI2C(::llcpp::fuchsia::hardware::ftdi::I2cBusLayout layout,
+                           ::llcpp::fuchsia::hardware::ftdi::I2cDevice device,
+                           CreateI2CCompleter::Sync completer) {
   // Set the chip to run in MPSSE mode.
-  zx_status_t status = ftdi->SetBitMode(0, 0);
+  zx_status_t status = this->SetBitMode(0, 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FTDI: setting bitmode 0 failed\n");
-    return status;
+    return;
   }
-  status = ftdi->SetBitMode(0, 2);
+  status = this->SetBitMode(0, 2);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FTDI: setting bitmode 2 failed\n");
-    return status;
+    return;
   }
 
-  status = ftdi_mpsse::FtdiI2c::Create(ftdi->zxdev(), layout, device);
-  return status;
+  ftdi_mpsse::FtdiI2c::Create(this->zxdev(), &layout, &device);
 }
 
 zx_status_t FtdiDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  static const fuchsia_hardware_ftdi_Device_ops_t ftdi_fidl_ops = {
-      .CreateI2C = FidlCreateI2c,
-  };
-  return fuchsia_hardware_ftdi_Device_dispatch(this, txn, msg, &ftdi_fidl_ops);
+  DdkTransaction transaction(txn);
+  ::llcpp::fuchsia::hardware::ftdi::Device::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
 zx_status_t ftdi_bind_fail(zx_status_t status) {

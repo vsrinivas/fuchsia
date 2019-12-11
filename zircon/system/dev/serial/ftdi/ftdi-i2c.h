@@ -5,12 +5,13 @@
 #ifndef ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_I2C_H_
 #define ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_I2C_H_
 
-#include <ddktl/device.h>
-#include <ddktl/protocol/i2cimpl.h>
-#include <fuchsia/hardware/ftdi/c/fidl.h>
+#include <fuchsia/hardware/ftdi/llcpp/fidl.h>
 #include <threads.h>
 
 #include <vector>
+
+#include <ddktl/device.h>
+#include <ddktl/protocol/i2cimpl.h>
 
 #include "ftdi-mpsse.h"
 
@@ -41,8 +42,10 @@ class FtdiI2c : public DeviceType, public ddk::I2cImplProtocol<FtdiI2c, ddk::bas
         mpsse_(parent),
         i2c_devices_(std::move(i2c_devices)) {}
 
-  static zx_status_t Create(zx_device_t* device, const fuchsia_hardware_ftdi_I2cBusLayout* layout,
-                            const fuchsia_hardware_ftdi_I2cDevice* i2c_dev);
+  static zx_status_t Create(zx_device_t* device,
+                            const ::llcpp::fuchsia::hardware::ftdi::I2cBusLayout* layout,
+                            const ::llcpp::fuchsia::hardware::ftdi::I2cDevice* i2c_dev);
+
   zx_status_t Bind();
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }

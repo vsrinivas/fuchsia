@@ -16,6 +16,7 @@ executable("bin") {
   deps = [
     "//zircon/system/fidl/fuchsia-hardware-dotmatrixdisplay:fuchsia-hardware-dotmatrixdisplay_c",
     "//zircon/system/fidl/fuchsia-hardware-ftdi:fuchsia-hardware-ftdi_c",
+    "//zircon/system/fidl/fuchsia-hardware-ftdi:fuchsia-hardware-ftdi_llcpp",
     "//zircon/public/lib/fdio",
   ]
 }
@@ -29,6 +30,7 @@ executable("bin2") {
 
   deps = [
     "//zircon/system/fidl/fuchsia-hardware-ftdi:fuchsia-hardware-ftdi_c",
+    "//zircon/system/fidl/fuchsia-hardware-ftdi:fuchsia-hardware-ftdi_llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fdio",
   ]

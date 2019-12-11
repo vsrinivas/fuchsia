@@ -5,17 +5,18 @@
 #ifndef ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_H_
 #define ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_H_
 
+#include <fuchsia/hardware/ftdi/llcpp/fidl.h>
+
+#include <thread>
+
 #include <ddk/device.h>
 #include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/serialimpl.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/ftdi/c/fidl.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
-
-#include <thread>
 
 namespace ftdi_serial {
 
@@ -74,9 +75,10 @@ constexpr uint8_t kFtdiSioWriteEepromRequest = 0x91;
 constexpr uint8_t kFtdiSioEraseEepromRequest = 0x92;
 
 class FtdiDevice;
-using DeviceType = ddk::Device<FtdiDevice, ddk::UnbindableNew, ddk::Messageable,
-                               ddk::Writable, ddk::Readable>;
+using DeviceType =
+    ddk::Device<FtdiDevice, ddk::UnbindableNew, ddk::Messageable, ddk::Writable, ddk::Readable>;
 class FtdiDevice : public DeviceType,
+                   public ::llcpp::fuchsia::hardware::ftdi::Device::Interface,
                    public ddk::SerialImplProtocol<FtdiDevice, ddk::base_protocol> {
  public:
   explicit FtdiDevice(zx_device_t* parent) : DeviceType(parent), usb_client_(parent) {}
@@ -113,8 +115,13 @@ class FtdiDevice : public DeviceType,
   zx_status_t SerialImplSetNotifyCallback(const serial_notify_t* cb);
 
  private:
-  static zx_status_t FidlCreateI2c(void* ctx, const fuchsia_hardware_ftdi_I2cBusLayout* layout,
-                                   const fuchsia_hardware_ftdi_I2cDevice* device);
+  void CreateI2C(::llcpp::fuchsia::hardware::ftdi::I2cBusLayout layout,
+                 ::llcpp::fuchsia::hardware::ftdi::I2cDevice device,
+                 CreateI2CCompleter::Sync _completer) override;
+
+  static zx_status_t FidlCreateI2c(void* ctx,
+                                   const ::llcpp::fuchsia::hardware::ftdi::I2cBusLayout* layout,
+                                   const ::llcpp::fuchsia::hardware::ftdi::I2cDevice* device);
   zx_status_t Reset();
   zx_status_t SetBaudrate(uint32_t baudrate);
   zx_status_t CalcDividers(uint32_t* baudrate, uint32_t clock, uint32_t divisor,
