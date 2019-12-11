@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_AAC_DECODER_H_
-#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_AAC_DECODER_H_
+#ifndef SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_USE_AAC_DECODER_H_
+#define SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_USE_AAC_DECODER_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <openssl/sha.h>
 #include <stdint.h>
+
+#include <openssl/sha.h>
 
 // use_aac_decoder()
 //
@@ -37,4 +38,4 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
                      const std::string& input_adts_file, const std::string& output_wav_file,
                      uint8_t out_md[SHA256_DIGEST_LENGTH]);
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_USE_AAC_DECODER_H_
+#endif  // SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_USE_AAC_DECODER_H_

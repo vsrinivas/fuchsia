@@ -12,7 +12,7 @@
 // of that coverage will be making test failures of this test easier to narrow
 // down.
 
-#include "garnet/examples/media/use_media_decoder/use_aac_decoder.h"
+#include "src/media/codec/examples/use_media_decoder/use_aac_decoder.h"
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>

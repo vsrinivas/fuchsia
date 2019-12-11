@@ -17,9 +17,9 @@ group("tests") {
   testonly = true
   deps = [
     "test",
-    "//garnet/examples/media:use_h264_decoder_secure_input_output_test",
-    "//garnet/examples/media:use_h264_decoder_secure_output_test",
-    "//garnet/examples/media:use_h264_decoder_test",
+    "//src/media/codec/examples:use_h264_decoder_secure_input_output_test",
+    "//src/media/codec/examples:use_h264_decoder_secure_output_test",
+    "//src/media/codec/examples:use_h264_decoder_test",
   ]
 }
 

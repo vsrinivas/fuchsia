@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_UTIL_H_
-#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_UTIL_H_
+#ifndef SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_UTIL_H_
+#define SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_UTIL_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -85,4 +85,4 @@ void SHA256_Update_VideoParameters(SHA256_CTX* sha256_ctx,
 void SHA256_Update_VideoPlane(SHA256_CTX* sha256_ctx, uint8_t* start, uint32_t width,
                               uint32_t stride, uint32_t height);
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_UTIL_H_
+#endif  // SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_UTIL_H_

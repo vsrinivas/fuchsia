@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_FILE_H_
-#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_FILE_H_
+#ifndef SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_FILE_H_
+#define SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_FILE_H_
 
 #include <fstream>
 
@@ -24,4 +24,4 @@ class InStreamFile : public InStream {
   std::ifstream file_;
 };
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_FILE_H_
+#endif  // SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_FILE_H_

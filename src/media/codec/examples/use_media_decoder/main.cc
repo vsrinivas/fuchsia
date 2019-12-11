@@ -13,12 +13,12 @@
 
 #include <thread>
 
-#include "garnet/examples/media/use_media_decoder/in_stream_file.h"
-#include "garnet/examples/media/use_media_decoder/util.h"
 #include "in_stream_peeker.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
+#include "src/media/codec/examples/use_media_decoder/in_stream_file.h"
+#include "src/media/codec/examples/use_media_decoder/util.h"
 #include "use_aac_decoder.h"
 #include "use_video_decoder.h"
 

@@ -17,11 +17,11 @@ package("use_media_decoder") {
   testonly = true
 
   deps = [
-    "use_media_decoder",
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_aac",
     "//src/media/codec:codec_runner_sw_ffmpeg",
     "//src/media/codec:codec_runner_sw_sbc",
+    "//src/media/codec/examples/use_media_decoder",
   ]
 
   binaries = [
@@ -43,9 +43,9 @@ package("use_h264_decoder_test") {
   testonly = true
 
   deps = [
-    "//garnet/examples/media/use_media_decoder:use_h264_decoder_test",
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_ffmpeg",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_test",
   ]
 
   meta = [
@@ -72,7 +72,7 @@ package("use_h264_decoder_test") {
   resources = [
     {
       path = rebase_path(
-              "../../test_data/media/third_party/chromium_media_test_data/bear.h264")
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
       dest = "bear.h264"
     },
   ]
@@ -82,8 +82,8 @@ package("use_h264_decoder_secure_output_test") {
   testonly = true
 
   deps = [
-    "//garnet/examples/media/use_media_decoder:use_h264_decoder_secure_output_test",
     "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_output_test",
   ]
 
   meta = [
@@ -109,7 +109,7 @@ package("use_h264_decoder_secure_output_test") {
   resources = [
     {
       path = rebase_path(
-              "../../test_data/media/third_party/chromium_media_test_data/bear.h264")
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
       dest = "bear.h264"
     },
   ]
@@ -119,8 +119,8 @@ package("use_h264_decoder_secure_input_output_test") {
   testonly = true
 
   deps = [
-    "//garnet/examples/media/use_media_decoder:use_h264_decoder_secure_input_output_test",
     "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_h264_decoder_secure_input_output_test",
   ]
 
   meta = [
@@ -143,7 +143,7 @@ package("use_h264_decoder_secure_input_output_test") {
   resources = [
     {
       path = rebase_path(
-              "../../test_data/media/third_party/chromium_media_test_data/bear.h264")
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
       dest = "bear.h264"
     },
   ]
@@ -157,9 +157,9 @@ package("use_aac_decoder_test") {
   testonly = true
 
   deps = [
-    "//garnet/examples/media/use_media_decoder:use_aac_decoder_test",
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_aac",
+    "//src/media/codec/examples/use_media_decoder:use_aac_decoder_test",
   ]
 
   tests = [
@@ -188,8 +188,8 @@ package("use_vp9_decoder_test") {
   testonly = true
 
   deps = [
-    "//garnet/examples/media/use_media_decoder:use_vp9_decoder_test",
     "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_test",
   ]
 
   meta = [
@@ -221,7 +221,7 @@ package("use_vp9_decoder_test") {
   resources = [
     {
       path = rebase_path(
-              "../../test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
       dest = "bear-vp9.ivf"
     },
   ]
@@ -231,13 +231,14 @@ package("use_vp9_decoder_24_output_frames_test") {
   testonly = true
 
   deps = [
-    "//garnet/examples/media/use_media_decoder:use_vp9_decoder_24_output_frames_test",
     "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_24_output_frames_test",
   ]
 
   meta = [
     {
-      path = rebase_path("use_media_decoder/meta/use_vp9_decoder_24_output_frames_test.cmx")
+      path = rebase_path(
+              "use_media_decoder/meta/use_vp9_decoder_24_output_frames_test.cmx")
       dest = "use_vp9_decoder_24_output_frames_test.cmx"
     },
   ]
@@ -261,7 +262,7 @@ package("use_vp9_decoder_24_output_frames_test") {
   resources = [
     {
       path = rebase_path(
-              "../../test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
       dest = "bear-vp9.ivf"
     },
   ]
@@ -271,8 +272,8 @@ package("use_vp9_decoder_secure_output_test") {
   testonly = true
 
   deps = [
-    "//garnet/examples/media/use_media_decoder:use_vp9_decoder_secure_output_test",
     "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_secure_output_test",
   ]
 
   meta = [
@@ -297,7 +298,7 @@ package("use_vp9_decoder_secure_output_test") {
   resources = [
     {
       path = rebase_path(
-              "../../test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
       dest = "bear-vp9.ivf"
     },
   ]
@@ -308,8 +309,8 @@ template("vp9_file_decoder_conformance_test") {
     testonly = true
 
     deps = [
-      "//garnet/examples/media/use_media_decoder:vp9_decoder_conformance_test",
       "//src/media/codec:codec_factory",
+      "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
     ]
 
     meta = [
@@ -354,8 +355,8 @@ package("vp9_decoder_conformance_http") {
   testonly = true
 
   deps = [
-    "//garnet/examples/media/use_media_decoder:vp9_decoder_conformance_test",
     "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
   ]
 
   meta = [
@@ -380,8 +381,8 @@ package("vp9_decoder_conformance_http") {
 # with the above __http package last in this file, the build complains about
 # duplicate packages, at least when fx set with these:
 # --args=build_all_vp9_file_decoder_conformance_tests=true \
-# --with //garnet/examples/media:vp9_decoder_conformance_tests \
-# --with //garnet/examples/media:vp9_decoder_conformance_test__http
+# --with //src/media/codec/examples:vp9_decoder_conformance_tests \
+# --with //src/media/codec/examples:vp9_decoder_conformance_test__http
 
 _vp9_file_conformance_tests_group_deps = []
 
@@ -389,8 +390,7 @@ _vp9_file_conformance_tests_group_deps = []
 # can verify an md5 hash of decompressed frames.
 package_name = "vp9_decoder_conformance_test__bear-vp9"
 vp9_file_decoder_conformance_test(package_name) {
-  ivf_file =
-      "../../test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf"
+  ivf_file = "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf"
   md5_file = "use_media_decoder/test/bear-vp9.i420.md5"
 }
 _vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
@@ -413,7 +413,7 @@ _vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
 # success/failure in the e2e test script, not on the target.
 if (build_all_vp9_file_decoder_conformance_tests) {
   testcases = read_file(
-          "../../test_data/media/third_party/webm_vp9_conformance_streams/test_cases_all.list",
+          "//garnet/test_data/media/third_party/webm_vp9_conformance_streams/test_cases_all.list",
           "trim list lines")
   foreach(testcase, testcases) {
     # remove prefix
@@ -434,8 +434,8 @@ if (build_all_vp9_file_decoder_conformance_tests) {
     testcase = string_replace(testcase, "X", "x")
     package_name = "vp9_decoder_conformance_test__file__" + testcase
     vp9_file_decoder_conformance_test(package_name) {
-      ivf_file = "../../test_data/media/third_party/webm_vp9_conformance_streams/processed/" + testcase_partial_path + ".webm.ivf"
-      md5_file = "../../test_data/media/third_party/webm_vp9_conformance_streams/decompressed_md5/" + testcase_partial_path + ".md5"
+      ivf_file = "//garnet/test_data/media/third_party/webm_vp9_conformance_streams/processed/" + testcase_partial_path + ".webm.ivf"
+      md5_file = "//garnet/test_data/media/third_party/webm_vp9_conformance_streams/decompressed_md5/" + testcase_partial_path + ".md5"
     }
     _vp9_file_conformance_tests_group_deps += [ ":" + package_name ]
   }

@@ -39,7 +39,7 @@ group("end_to_end_deps") {
     "//garnet/packages/prod:iquery",
 
     # Needed for VP9 decode conformance testing.
-    "//garnet/examples/media:vp9_decoder_conformance_http",
+    "//src/media/codec/examples:vp9_decoder_conformance_http",
 
     # Used by perf_test.dart for running performance tests.
     "//garnet/bin/zircon_benchmarks:zircon_benchmarks_perftestmode",

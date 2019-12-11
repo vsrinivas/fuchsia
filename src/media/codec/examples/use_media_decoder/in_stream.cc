@@ -6,7 +6,7 @@
 
 #include <fbl/auto_lock.h>
 
-#include "garnet/examples/media/use_media_decoder/util.h"
+#include "src/media/codec/examples/use_media_decoder/util.h"
 #include "util.h"
 
 InStream::InStream(async::Loop* fidl_loop, thrd_t fidl_thread,

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_HTTP_H_
-#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_HTTP_H_
+#ifndef SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_HTTP_H_
+#define SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_HTTP_H_
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 
@@ -26,4 +26,4 @@ class InStreamHttp : public InStream {
   zx::socket socket_;
 };
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_HTTP_H_
+#endif  // SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_HTTP_H_

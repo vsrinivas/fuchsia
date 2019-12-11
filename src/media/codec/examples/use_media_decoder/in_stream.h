@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_H_
-#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_H_
+#ifndef SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_H_
+#define SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -115,4 +115,4 @@ class InStream {
   uint64_t eos_position_ = 0;
 };
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_IN_STREAM_H_
+#endif  // SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_H_
