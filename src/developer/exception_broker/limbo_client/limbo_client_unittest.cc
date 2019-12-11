@@ -252,6 +252,44 @@ TEST(LimboClient, Disable) {
   EXPECT_FALSE(context.process_limbo.active_call());
 }
 
+TEST(LimboClient, ListOption) {
+  TestContext context;
+
+  LimboClient client(context.services.service_directory());
+  ASSERT_ZX_EQ(client.Init(), ZX_OK);
+
+  constexpr zx_koid_t kProcessKoid1 = 1000;
+  constexpr zx_koid_t kThreadKoid1 = 1001;
+  constexpr zx_koid_t kProcessKoid2 = 2000;
+  constexpr zx_koid_t kThreadKoid2 = 2001;
+
+  constexpr zx_excp_type_t kException1 = ZX_EXCP_UNALIGNED_ACCESS;
+  constexpr zx_excp_type_t kException2 = ZX_EXCP_SW_BREAKPOINT;
+
+  context.process_limbo.AppendException(kProcessKoid1, kThreadKoid1, kException1);
+  context.process_limbo.AppendException(kProcessKoid2, kThreadKoid2, kException2);
+
+  {
+    std::stringstream ss;
+    const char* kArgs[] = {"limbo.cmx", "list"};
+
+    OptionFunction function = ParseArgs(2, kArgs, ss);
+    ASSERT_TRUE(function);
+
+    ASSERT_ZX_EQ(function(&client, ss), ZX_OK);
+
+    // The koids should be there.
+    std::string msg = ss.str();
+    EXPECT_NE(msg.find("1000"), std::string::npos);                      // kProcessKoid1
+    EXPECT_NE(msg.find("1001"), std::string::npos);                      // kThreadKoid1
+    EXPECT_NE(msg.find("ZX_EXCP_UNALIGNED_ACCESS"), std::string::npos);  // kException1.
+
+    EXPECT_NE(msg.find("2000"), std::string::npos);                   // kProcessKoid2
+    EXPECT_NE(msg.find("2001"), std::string::npos);                   // kThreadKoid2
+    EXPECT_NE(msg.find("ZX_EXCP_SW_BREAKPOINT"), std::string::npos);  // kException1.
+  }
+}
+
 }  // namespace
 }  // namespace exception
 }  // namespace fuchsia

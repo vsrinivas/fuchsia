@@ -4,9 +4,11 @@
 
 #include "src/developer/exception_broker/limbo_client/options.h"
 
+#include <zircon/exception.h>
 #include <zircon/status.h>
 
 #include "src/developer/exception_broker/limbo_client/limbo_client.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace fuchsia {
 namespace exception {
@@ -15,6 +17,7 @@ namespace {
 
 zx_status_t EnableLimbo(LimboClient*, std::ostream&);
 zx_status_t DisableLimbo(LimboClient*, std::ostream&);
+zx_status_t ListLimbo(LimboClient*, std::ostream&);
 
 struct Option {
   std::string name;
@@ -27,6 +30,8 @@ const Option kOptions[] = {
      EnableLimbo},
     {"disable", "Disable the process limbo. Will free any pending processes waiting in it.",
      DisableLimbo},
+    {"list", "Lists the processes currently waiting on limbo. The limbo must be active.",
+     ListLimbo},
 };
 
 void PrintUsage(std::ostream& os) {
@@ -74,6 +79,35 @@ zx_status_t DisableLimbo(LimboClient* limbo, std::ostream& os) {
   }
 
   os << "Deactivated the process limbo. All contained processes have been freed." << std::endl;
+  return ZX_OK;
+}
+
+zx_status_t ListLimbo(LimboClient* client, std::ostream& os) {
+  if (!client->active()) {
+    os << "Process limbo is not active." << std::endl;
+    return ZX_OK;
+  }
+
+  std::vector<LimboClient::ProcessDescription> processes;
+  if (zx_status_t status = client->ListProcesses(&processes); status != ZX_OK) {
+    os << "Could not list the process limbo: " << zx_status_get_string(status) << std::endl;
+    return status;
+  }
+
+  if (processes.empty()) {
+    os << "No processes currently on limbo." << std::endl;
+    return ZX_OK;
+  }
+
+  os << "Processes currently on limbo: " << std::endl;
+  for (const auto& process : processes) {
+    auto msg = fxl::StringPrintf("%s (pid: %lu), thread %s (tid: %lu) on exception: %s",
+                                 process.process_name.c_str(), process.process_koid,
+                                 process.thread_name.c_str(), process.thread_koid,
+                                 zx_exception_get_string(process.exception));
+    os << "- " << msg << std::endl;
+  }
+
   return ZX_OK;
 }
 

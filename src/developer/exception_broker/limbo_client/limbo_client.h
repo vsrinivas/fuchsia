@@ -31,8 +31,8 @@ class LimboClient {
 
     zx_excp_type_t exception;
   };
-  zx_status_t ListProcesses(std::vector<ProcessDescription>* processes);
 
+  zx_status_t ListProcesses(std::vector<ProcessDescription>* processes);
   zx_status_t GetFilters(std::vector<std::string>* filters);
   zx_status_t AppendFilters(const std::vector<std::string>& filters);
 
