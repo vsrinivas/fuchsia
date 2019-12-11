@@ -84,6 +84,10 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
        },
        kRequiresSurface});
 
+  // Only enable Vulkan validation layers when in debug mode.
+#if !defined(NDEBUG)
+  instance_params.layer_names.insert("VK_LAYER_KHRONOS_validation");
+#endif
   auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
   auto callback_handle = vulkan_instance->RegisterDebugReportCallback(HandleDebugReport);
 
