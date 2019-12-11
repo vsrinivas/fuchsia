@@ -16,7 +16,6 @@
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 

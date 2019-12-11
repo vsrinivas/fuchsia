@@ -12,7 +12,6 @@
 
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/fxl/functional/apply.h"
-#include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/utility/utility.h"
 
 namespace ledger {

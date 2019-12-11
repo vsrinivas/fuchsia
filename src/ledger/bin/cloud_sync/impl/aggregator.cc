@@ -8,7 +8,6 @@
 
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace cloud_sync {
 class Aggregator::Listener : public SyncStateWatcher {

@@ -8,7 +8,6 @@
 #include <string.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace context {

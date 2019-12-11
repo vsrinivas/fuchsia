@@ -7,7 +7,6 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/logging.h"
 
 namespace sync_coordinator {
 

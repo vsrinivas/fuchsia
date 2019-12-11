@@ -7,7 +7,6 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {

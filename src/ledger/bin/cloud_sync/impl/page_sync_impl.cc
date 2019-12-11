@@ -15,7 +15,6 @@
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace cloud_sync {
 

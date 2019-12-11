@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 

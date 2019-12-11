@@ -14,7 +14,6 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 namespace {

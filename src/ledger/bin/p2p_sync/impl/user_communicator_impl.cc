@@ -10,7 +10,6 @@
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/p2p_sync/impl/message_holder.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace p2p_sync {
 

@@ -10,7 +10,6 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/logging.h"
 
 namespace p2p_provider {
 namespace {

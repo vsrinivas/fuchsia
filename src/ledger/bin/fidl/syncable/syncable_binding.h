@@ -17,7 +17,6 @@
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/sync_helper/sync_helper.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 

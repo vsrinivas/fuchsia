@@ -55,7 +55,6 @@
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/arraysize.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"

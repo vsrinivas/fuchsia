@@ -5,7 +5,6 @@
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace clocks {
 

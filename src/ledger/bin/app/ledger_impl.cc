@@ -19,7 +19,6 @@
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 

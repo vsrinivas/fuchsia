@@ -35,7 +35,6 @@
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/logging.h"
 
 namespace cloud_sync {
 namespace {

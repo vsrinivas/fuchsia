@@ -5,7 +5,6 @@
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {

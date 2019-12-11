@@ -13,7 +13,6 @@
 
 #include "src/ledger/bin/tests/cloud_provider/launcher/validation_tests_launcher.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace {

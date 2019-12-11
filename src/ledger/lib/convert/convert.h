@@ -13,7 +13,6 @@
 #include <flatbuffers/flatbuffers.h>
 #include <leveldb/db.h>
 
-#include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace convert {

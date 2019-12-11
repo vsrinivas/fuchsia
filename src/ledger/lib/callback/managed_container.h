@@ -12,7 +12,6 @@
 #include <utility>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {

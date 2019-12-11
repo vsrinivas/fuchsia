@@ -7,7 +7,6 @@
 
 #include <lib/async/default.h>
 
-#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 

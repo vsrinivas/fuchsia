@@ -7,7 +7,6 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {

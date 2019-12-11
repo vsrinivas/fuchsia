@@ -17,7 +17,6 @@
 #include "src/ledger/lib/coroutine/context/context.h"
 #include "src/ledger/lib/coroutine/context/stack.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace coroutine {
 

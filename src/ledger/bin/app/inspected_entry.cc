@@ -11,7 +11,6 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {

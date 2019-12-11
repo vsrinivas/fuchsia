@@ -8,7 +8,6 @@
 #include <lib/zx/socket.h>
 
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/logging.h"
 
 namespace socket {
 

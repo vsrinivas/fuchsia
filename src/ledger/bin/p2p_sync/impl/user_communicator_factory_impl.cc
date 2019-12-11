@@ -9,7 +9,6 @@
 
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
-#include "src/lib/fxl/logging.h"
 
 namespace p2p_sync {
 UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(ledger::Environment* environment)

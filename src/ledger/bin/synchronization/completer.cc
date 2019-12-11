@@ -7,7 +7,6 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 
