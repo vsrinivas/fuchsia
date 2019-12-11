@@ -6,7 +6,7 @@
         "features": [
             "hub",
             "shell-commands",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.process.Launcher",
