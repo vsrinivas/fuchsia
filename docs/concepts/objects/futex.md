@@ -112,6 +112,14 @@ the futex should be, or **ZX_HANDLE_INVALID** if there should be no owner.
 + Passing a valid handle to a thread to indicate the futex owner is the
   responsibility of the userspace code.  Passing an invalid handle, or a handle
   to a non-thread object will result in the wait/requeue operation failing.
++ Threads which have not been started yet may not own a futex.  Any attempt to
+  assign ownership of a futex to a thread which has not yet been started will
+  result in the wait/requeue operation failing.
++ Threads which have exited may not be the owner of a futex.  If a thread exits
+  while it owns a futex, the futex will reset to being owned by no one.  If a
+  user attempts assign ownership of a futex to a thread which has exited, the
+  wait/requeue operation will behave as if ZX_HANDLE_INVALID had been passed as
+  the new futex owner.
 + If the wait/requeue operation succeeds, the owner of the target futex will
   _always_ be set to either the thread specified, or nothing if
   **ZX_HANDLE_INVALID** is passed.

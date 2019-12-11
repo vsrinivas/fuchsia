@@ -113,9 +113,11 @@ inline zx_status_t ValidateFutexPointer(user_in_ptr<const zx_futex_t> value_ptr)
   return ZX_OK;
 }
 
-// Get a reference to the thread that the user is asserting is the new owner of the futex.
-// The thread must belong to the same process as the caller as futexes may not be owned
-// by threads from another process.
+// Get a reference to the thread that the user is asserting is the new owner of
+// the futex.  The thread must belong to the same process as the caller as
+// futexes may not be owned by threads from another process.  In addition, the
+// new potential owner thread must have been started.  Threads which have not
+// started yet may not be the owner of a futex.
 inline zx_status_t ValidateNewFutexOwner(zx_handle_t new_owner_handle,
                                          fbl::RefPtr<ThreadDispatcher>* new_owner_thread_out) {
   DEBUG_ASSERT(new_owner_thread_out != nullptr);
@@ -131,9 +133,18 @@ inline zx_status_t ValidateNewFutexOwner(zx_handle_t new_owner_handle,
     return status;
   }
 
-  if ((*new_owner_thread_out)->process() != up) {
+  // Make sure that the proposed owner of the futex is running in our process,
+  // and that it has been started.
+  const auto& new_owner = **new_owner_thread_out;
+  if ((new_owner.process() != up) || !new_owner.HasStarted()) {
     new_owner_thread_out->reset();
     return ZX_ERR_INVALID_ARGS;
+  }
+
+  // If the thread is already DEAD or DYING, don't bother attempting to assign
+  // it as a new owner for the futex.
+  if (new_owner.IsDyingOrDead()) {
+    new_owner_thread_out->reset();
   }
 
   return ZX_OK;

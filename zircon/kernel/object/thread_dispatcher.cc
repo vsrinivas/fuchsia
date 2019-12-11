@@ -327,8 +327,20 @@ bool ThreadDispatcher::IsDyingOrDead() const {
 }
 
 bool ThreadDispatcher::IsDyingOrDeadLocked() const {
-  return state_.lifecycle() == ThreadState::Lifecycle::DYING ||
-         state_.lifecycle() == ThreadState::Lifecycle::DEAD;
+  auto lifecycle = state_.lifecycle();
+  return lifecycle == ThreadState::Lifecycle::DYING ||
+         lifecycle == ThreadState::Lifecycle::DEAD;
+}
+
+bool ThreadDispatcher::HasStarted() const {
+  Guard<fbl::Mutex> guard{get_lock()};
+  return HasStartedLocked();
+}
+
+bool ThreadDispatcher::HasStartedLocked() const {
+  auto lifecycle = state_.lifecycle();
+  return lifecycle != ThreadState::Lifecycle::INITIAL &&
+         lifecycle != ThreadState::Lifecycle::INITIALIZED;
 }
 
 static void ThreadCleanupDpc(dpc_t* d) {

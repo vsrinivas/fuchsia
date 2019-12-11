@@ -602,7 +602,10 @@ bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
   // then it cannot become the owner of the requeue wait queue.
   if (requeue_owner != nullptr) {
     // It should not be possible for a thread which is not yet running to be
-    // declared as the owner of an OwnedWaitQueue.
+    // declared as the owner of an OwnedWaitQueue.  Any attempts to assign
+    // ownership to a thread which is not yet started should have been rejected
+    // by layers of code above us, and a proper status code returned to the
+    // user.
     DEBUG_ASSERT(requeue_owner->state != THREAD_INITIAL);
     if (requeue_owner->state == THREAD_DEATH) {
       requeue_owner = nullptr;

@@ -111,7 +111,12 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   // Returns true if the thread is dying or dead. Threads never return to a previous state
   // from dying/dead so once this is true it will never flip back to false.
-  bool IsDyingOrDead() const;
+  bool IsDyingOrDead() const TA_EXCL(get_lock());
+
+  // Returns true if the thread was ever started (even if it is dead now).
+  // Threads never return to an INITIAL state after starting, so once this is
+  // true it will never flip back to false.
+  bool HasStarted() const TA_EXCL(get_lock());
 
   zx_status_t set_name(const char* name, size_t len) final __NONNULL((2));
   void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2));
@@ -219,6 +224,8 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   void SetStateLocked(ThreadState::Lifecycle lifecycle) TA_REQ(get_lock());
 
   bool IsDyingOrDeadLocked() const TA_REQ(get_lock());
+
+  bool HasStartedLocked() const TA_REQ(get_lock());
 
   template <typename T, typename F>
   zx_status_t ReadStateGeneric(F get_state_func, thread_t* thread, user_out_ptr<void> buffer,

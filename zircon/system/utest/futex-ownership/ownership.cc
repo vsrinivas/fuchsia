@@ -5,6 +5,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/futex.h>
 #include <lib/zx/event.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <limits>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -974,7 +976,7 @@ TEST(FutexOwnershipTestCase, OwnerExit) {
   //    released when the kernel portion of the thread achieves kernel
   //    thread state of THREAD_DEATH.  This is a different state from the
   //    observable user-mode thread state, which becomes
-  //    ZX_THREAD_STATE_DEATH at the very last instant before the thread
+  //    ZX_THREAD_STATE_DEAD at the very last instant before the thread
   //    enters the thread lock and transitions the kernel state to
   //    THREAD_DEATH (releasing ownership in the process).
   //
@@ -1013,6 +1015,133 @@ TEST(FutexOwnershipTestCase, OwnerExit) {
   ASSERT_OK(waiter_res.load());
 
   cleanup.cancel();
+}
+
+TEST(FutexOwnershipTestCase, OwnerStarted) {
+  // It is illegal to assign ownership to a thread which exists, but has not
+  // been started yet.  Attempts to do this using either requeue, or wait
+  // operation should result in an INVALID_ARGS status code.
+  zx_futex_t futex1{0};
+  zx_futex_t futex2{0};
+
+  // Create a thread, but don't start it.  Note that we have to go directly to
+  // the zircon syscalls here; creating a thread but not starting it is not
+  // allowed by the C11 thrd APIs.
+  zx::thread not_started;
+  char name[] = "not started thread";
+  ASSERT_OK(zx::thread::create(*zx::process::self(), name, sizeof(name) - 1, 0, &not_started));
+  ASSERT_TRUE(not_started.is_valid());
+
+  // Attempt to wait on one of our futexes with a short timeout, declaring the
+  // not_started thread to be the owner.  This should fail with ZX_ERR_INVALID_ARGS.
+  zx_status_t res = zx_futex_wait(&futex1, 0, not_started.get(), zx_deadline_after(ZX_MSEC(1)));
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, res);
+
+  // Try again, but this time use requeue instead of wait in our attempt to assign ownership.
+  res = zx_futex_requeue(&futex1, 0, 0, &futex2, 1, not_started.get());
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, res);
+}
+
+TEST(FutexOwnershipTestCase, DeadThreadsCantOwnFutexes) {
+  // As the test name implies, dead threads cannot own futexes.  If someone
+  // attempts to assign futex ownership to a thread which has exited, the result
+  // should be that the thread is owned by no one.  Testing this involves a
+  // number of ingredients.  We need:
+  //
+  // 1) Two futexes.  Testing ownership assignment via requeue requires 2.
+  // 2) A thread to wait in the owned futex for the duration of the test.  Futex state
+  //    cannot exist without at least one waiter.
+  // 3) A thread which has run to completion, but whose final handle has not
+  //    been closed.  This thread will serve as the dead thread that we attempt
+  //    to assign ownership to.
+  // 4) A living thread which can serve as the owner which gets erase during our
+  //    attempt to assign ownership to a dead thread.
+  fbl::futex_t futex1(0);
+  fbl::futex_t futex2(0);
+  Thread the_waiter;
+  Thread live_owner;
+  zx::thread dead_owner;
+  zx_status_t res;
+
+  // Success or fail, make sure we clean everything up in the proper order at
+  // the end of the test.
+  auto cleanup = fbl::MakeAutoCall([&]() {
+    zx_futex_wake(&futex1, std::numeric_limits<uint32_t>::max());
+    zx_futex_wake(&futex2, std::numeric_limits<uint32_t>::max());
+    the_waiter.Stop();
+    live_owner.Stop();
+  });
+
+  // Start the waiter and park it in futex1.
+  ASSERT_NO_FATAL_FAILURES(the_waiter.Start(
+      "DeadThread waiter",
+      [&futex1]() -> int {
+        return zx_futex_wait(&futex1, 0, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
+      }));
+
+  // Create a thread, duplicate it's handle, and then stop the thread.  This
+  // will serve as our "dead" owner.
+  {
+    Thread tmp;
+    ASSERT_NO_FATAL_FAILURES(tmp.Start("DeadThread dead owner", []() -> int { return 0; }));
+    res = tmp.handle().duplicate(ZX_RIGHT_SAME_RIGHTS, &dead_owner);
+    ASSERT_OK(tmp.Stop());
+    ASSERT_OK(res);
+  }
+
+  // Wait until we are certain that our thread has achieved the DEAD state from the kernel's
+  // user-mode thread perspective.
+  ASSERT_TRUE(WaitFor(ZX_SEC(10), [&dead_owner, &res]() -> bool {
+    zx_info_thread_t info;
+    res = dead_owner.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+    // stop waiting if there was an error, or we have achieved the dead state.
+    return (res != ZX_OK) || (info.state == ZX_THREAD_STATE_DEAD);
+  }));
+  ASSERT_OK(res);
+
+  // Start the live owner, but do not stop it.  Note that even though our thread
+  // body does nothing, our utility thread helper class does not actually allow
+  // the thread to exit until it has been explicitly Stopped.
+  ASSERT_NO_FATAL_FAILURES(live_owner.Start("DeadThread live owner", []() -> int { return 0; }));
+
+  // OK, at this point in time, futex1 should be owned by no one.  Verify this.
+  zx_koid_t koid;
+  koid = the_waiter.koid();
+  ASSERT_OK(zx_futex_get_owner(&futex1, &koid));
+  ASSERT_EQ(ZX_KOID_INVALID, koid);
+
+  // Now assign ownership to live_owner using a requeue operation which is
+  // actually neither going to wake or requeue any threads.
+  ASSERT_OK(zx_futex_requeue(&futex2, 0, 0, &futex1, 1, live_owner.handle().get()));
+  koid = the_waiter.koid();
+  ASSERT_OK(zx_futex_get_owner(&futex1, &koid));
+  ASSERT_EQ(live_owner.koid(), koid);
+
+  // Attempt to assign ownership to the dead thread via a wait operation.  The
+  // operation should not fail because the thread is dead, instead it should
+  // simply time out.  That said, the futex should have no owner after the
+  // assignment attempt.
+  ASSERT_EQ(ZX_ERR_TIMED_OUT,
+            zx_futex_wait(&futex1, 0, dead_owner.get(), zx_deadline_after(ZX_MSEC(1))));
+  koid = the_waiter.koid();
+  ASSERT_OK(zx_futex_get_owner(&futex1, &koid));
+  ASSERT_EQ(ZX_KOID_INVALID, koid);
+
+  // Switch ownership back to the living thread.
+  ASSERT_OK(zx_futex_requeue(&futex2, 0, 0, &futex1, 1, live_owner.handle().get()));
+  koid = the_waiter.koid();
+  ASSERT_OK(zx_futex_get_owner(&futex1, &koid));
+  ASSERT_EQ(live_owner.koid(), koid);
+
+  // Attempt to assign ownership to the dead thread via a requeue operation.
+  // This should succeed, but no one should own the futex at the end of the
+  // operation.
+  ASSERT_OK(zx_futex_requeue(&futex2, 0, 0, &futex1, 1, dead_owner.get()));
+  koid = the_waiter.koid();
+  ASSERT_OK(zx_futex_get_owner(&futex1, &koid));
+  ASSERT_EQ(ZX_KOID_INVALID, koid);
+
+  // Success, let our cleanup lambda to the cleanup work for us.
 }
 
 int main(int argc, char** argv) {
