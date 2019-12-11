@@ -51,7 +51,9 @@ class FakeDisplay : public DeviceType,
   // Required functions needed to implement Display Controller Protocol
   void DisplayControllerImplSetDisplayControllerInterface(
       const display_controller_interface_protocol_t* intf);
-  zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
+  zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
                                                uint32_t index);
   void DisplayControllerImplReleaseImage(image_t* image);
@@ -87,6 +89,9 @@ class FakeDisplay : public DeviceType,
 
   const display_controller_impl_protocol_t* dcimpl_proto() const { return &dcimpl_proto_; }
   void SendVsync();
+
+  // Just for display core unittests.
+  zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
 
  private:
   enum {

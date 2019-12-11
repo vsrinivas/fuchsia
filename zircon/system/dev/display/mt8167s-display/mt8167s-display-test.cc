@@ -33,16 +33,36 @@ constexpr uint32_t kMutexRegNum = 48;
 
 class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
+  MockNoCpuBufferCollection() { EXPECT_EQ(ZX_OK, fake_bti_create(bti_.reset_and_get_address())); }
   void SetConstraints(bool has_constraints, sysmem::BufferCollectionConstraints constraints,
                       SetConstraintsCompleter::Sync _completer) override {
     EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
+    image_constraints_ = constraints.image_format_constraints[0];
     set_constraints_called_ = true;
+  }
+
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync completer) override {
+    sysmem::BufferCollectionInfo_2 info;
+    zx::vmo vmo;
+    constexpr uint32_t kWidth = 800;
+    constexpr uint32_t kHeight = 600;
+    ASSERT_OK(zx::vmo::create_contiguous(bti_, kWidth * kHeight * 4, 0u, &vmo));
+    info.buffers[0].vmo = std::move(vmo);
+    info.buffer_count = 1;
+    info.settings.has_image_format_constraints = true;
+    info.settings.image_format_constraints = image_constraints_;
+    info.settings.image_format_constraints.max_coded_width = kWidth;
+    info.settings.image_format_constraints.max_coded_height = kHeight;
+    info.settings.image_format_constraints.max_bytes_per_row = kWidth * 4;
+    completer.Reply(ZX_OK, std::move(info));
   }
 
   bool set_constraints_called() const { return set_constraints_called_; }
 
  private:
   bool set_constraints_called_ = false;
+  sysmem::ImageFormatConstraints image_constraints_;
+  zx::bti bti_;
 };
 
 }  // namespace
@@ -234,41 +254,31 @@ TEST(DsiHostTest, DsiHostPowerOn) {
   EXPECT_OK(dsi_host.PowerOn(syscfg));
 }
 
-TEST(DisplayTest, ImportRGBX) {
+TEST(DisplayTest, SetConstraints) {
   zx::bti bti;
   ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
 
-  image_t image = {};
-  image.width = 800;
-  image.height = 600;
-  image.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
-
-  zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create_contiguous(bti, image.width * image.height * 4, 0u, &vmo));
-
   mt8167s_display::Mt8167sDisplay display(nullptr);
   display.SetBtiForTesting(std::move(bti));
-
-  EXPECT_OK(display.DisplayControllerImplImportVmoImage(&image, std::move(vmo), 0));
-}
-
-TEST(DisplayTest, SetConstraints) {
-  mt8167s_display::Mt8167sDisplay display(nullptr);
 
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
   MockNoCpuBufferCollection collection;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  loop.StartThread();
 
   image_t image = {};
+  image.width = 800;
+  image.height = 600;
+  image.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &collection));
 
   EXPECT_OK(
       display.DisplayControllerImplSetBufferCollectionConstraints(&image, client_channel.get()));
-  // Ensure loop processes all FIDL messages
-  loop.RunUntilIdle();
 
+  EXPECT_OK(display.DisplayControllerImplImportImage(&image, client_channel.get(), 0));
+  // Sync calls should ensure set_constraints will be called at the right point.
   EXPECT_TRUE(collection.set_constraints_called());
 }
 

@@ -44,7 +44,9 @@ class Display : public DisplayType,
   // Display controller protocol implementation.
   void DisplayControllerImplSetDisplayControllerInterface(
       const display_controller_interface_protocol_t* interface);
-  zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
+  zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
                                                uint32_t index);
   void DisplayControllerImplReleaseImage(image_t* image);
@@ -121,6 +123,7 @@ class Display : public DisplayType,
       TA_REQ(lock_);
   zx_status_t SetDisplayPoseLocked(uint32_t display_id, int32_t x, int32_t y, uint32_t w,
                                    uint32_t h, uint32_t* result) TA_REQ(lock_);
+  zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
 
   int FlushHandler(uint64_t id);
 

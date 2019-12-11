@@ -90,10 +90,6 @@ void Mt8167sDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
   args->cursor_info_count = 0;
 }
 
-static uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
-  return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
-}
-
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 void Mt8167sDisplay::DisplayControllerImplSetDisplayControllerInterface(
     const display_controller_interface_protocol_t* intf) {
@@ -107,34 +103,7 @@ void Mt8167sDisplay::DisplayControllerImplSetDisplayControllerInterface(
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
                                                                 size_t offset) {
-  auto import_info = std::make_unique<ImageInfo>();
-  if (import_info == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  fbl::AutoLock lock(&image_lock_);
-  if (image->type != IMAGE_TYPE_SIMPLE || !Ovl::IsSupportedFormat(image->pixel_format)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  uint32_t stride = ComputeLinearStride(image->width, image->pixel_format);
-  unsigned pixel_size = ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
-  size_t size =
-      ROUNDUP((stride * image->height * pixel_size) + (offset & (PAGE_SIZE - 1)), PAGE_SIZE);
-  zx_paddr_t paddr;
-  zx_status_t status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS, vmo,
-                                offset & ~(PAGE_SIZE - 1), size, &paddr, 1, &import_info->pmt);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not pin bit\n");
-    return status;
-  }
-  // Make sure paddr is allocated in the lower 4GB. (ZX-1073)
-  ZX_ASSERT((paddr + size) <= UINT32_MAX);
-  import_info->paddr = paddr;
-  import_info->pitch = stride * pixel_size;
-  image->handle = reinterpret_cast<uint64_t>(import_info.get());
-  imported_images_.push_back(std::move(import_info));
-  return status;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops

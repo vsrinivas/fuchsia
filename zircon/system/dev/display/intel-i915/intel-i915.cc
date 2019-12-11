@@ -803,57 +803,7 @@ void Controller::DisplayControllerImplSetDisplayControllerInterface(
 
 zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
                                                             size_t offset) {
-  if (!(image->type == IMAGE_TYPE_SIMPLE || image->type == IMAGE_TYPE_X_TILED ||
-        image->type == IMAGE_TYPE_Y_LEGACY_TILED || image->type == IMAGE_TYPE_YF_TILED)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (offset % PAGE_SIZE != 0) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  fbl::AutoLock lock(&gtt_lock_);
-  fbl::AllocChecker ac;
-  imported_images_.reserve(imported_images_.size() + 1, &ac);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  uint32_t length = width_in_tiles(image->type, image->width, image->pixel_format) *
-                    height_in_tiles(image->type, image->height, image->pixel_format) *
-                    get_tile_byte_size(image->type);
-
-  uint32_t align;
-  if (image->type == IMAGE_TYPE_SIMPLE) {
-    align = registers::PlaneSurface::kLinearAlignment;
-  } else if (image->type == IMAGE_TYPE_X_TILED) {
-    align = registers::PlaneSurface::kXTilingAlignment;
-  } else {
-    align = registers::PlaneSurface::kYTilingAlignment;
-  }
-  std::unique_ptr<GttRegion> gtt_region;
-  zx_status_t status = gtt_.AllocRegion(length, align, &gtt_region);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // The vsync logic requires that images not have base == 0
-  if (gtt_region->base() == 0) {
-    std::unique_ptr<GttRegion> alt_gtt_region;
-    zx_status_t status = gtt_.AllocRegion(length, align, &alt_gtt_region);
-    if (status != ZX_OK) {
-      return status;
-    }
-    gtt_region = std::move(alt_gtt_region);
-  }
-
-  status = gtt_region->PopulateRegion(vmo.get(), offset / PAGE_SIZE, length);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  image->handle = gtt_region->base();
-  imported_images_.push_back(std::move(gtt_region));
-  return ZX_OK;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 static bool ConvertPixelFormatToType(fuchsia_sysmem_PixelFormat format, uint32_t* type_out) {

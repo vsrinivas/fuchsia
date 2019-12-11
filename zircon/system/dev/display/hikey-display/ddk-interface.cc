@@ -35,17 +35,7 @@ void HiDisplay::DisplayControllerImplSetDisplayControllerInterface(
 
 zx_status_t HiDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
                                                            size_t offset) {
-  zx_status_t status = ZX_OK;
-
-  if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
-    status = ZX_ERR_INVALID_ARGS;
-    return status;
-  }
-
-  void* new_handle = malloc(1);
-  image->handle = reinterpret_cast<uint64_t>(new_handle);
-
-  return status;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops

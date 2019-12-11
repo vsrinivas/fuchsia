@@ -74,10 +74,7 @@ void GpuDevice::virtio_gpu_set_display_controller_interface(
 zx_status_t GpuDevice::virtio_gpu_import_vmo_image(void* ctx, image_t* image, zx_handle_t vmo_in,
                                                    size_t offset) {
   zx::vmo vmo(vmo_in);
-
-  GpuDevice* gd = static_cast<GpuDevice*>(ctx);
-  unsigned pixel_size = ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
-  return gd->Import(std::move(vmo), image, offset, pixel_size, image->width * pixel_size);
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handle, uint32_t index,

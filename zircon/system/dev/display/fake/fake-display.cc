@@ -71,9 +71,7 @@ void FakeDisplay::DisplayControllerImplSetDisplayControllerInterface(
   dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
 }
 
-// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t FakeDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
-                                                             size_t offset) {
+zx_status_t FakeDisplay::ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset) {
   zx_status_t status = ZX_OK;
 
   auto import_info = std::make_unique<ImageInfo>();
@@ -81,10 +79,6 @@ zx_status_t FakeDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx:
     return ZX_ERR_NO_MEMORY;
   }
   fbl::AutoLock lock(&image_lock_);
-  if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
-    status = ZX_ERR_INVALID_ARGS;
-    return status;
-  }
 
   import_info->vmo = std::move(vmo);
   image->handle = reinterpret_cast<uint64_t>(import_info.get());

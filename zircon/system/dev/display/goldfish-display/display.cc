@@ -374,8 +374,7 @@ void Display::DisplayControllerImplSetDisplayControllerInterface(
   }
 }
 
-zx_status_t Display::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
-                                                         size_t offset) {
+zx_status_t Display::ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset) {
   auto color_buffer = std::make_unique<ColorBuffer>();
 
   // Linear images must be pinned.
@@ -436,7 +435,7 @@ zx_status_t Display::DisplayControllerImplImportImage(image_t* image, zx_unowned
 
   if (collection_info.settings.buffer_settings.heap !=
       fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL) {
-    return DisplayControllerImplImportVmoImage(image, std::move(vmo), offset);
+    return ImportVmoImage(image, std::move(vmo), offset);
   }
 
   if (!collection_info.settings.has_image_format_constraints || offset) {

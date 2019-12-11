@@ -12,6 +12,7 @@
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
+#include "../../fake/fake-display.h"
 #include "../controller.h"
 #include "../fence.h"
 #include "base.h"
@@ -27,7 +28,7 @@ class ImageTest : public TestBase, public FenceCallback {
     zx::vmo dup_vmo;
     EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo));
     // TODO: Factor this out of display::Client or make images easier to test without a client.
-    if (controller()->dc()->ImportVmoImage(&dc_image, std::move(vmo), /*offset=*/0) != ZX_OK) {
+    if (display()->ImportVmoImage(&dc_image, std::move(vmo), /*offset=*/0) != ZX_OK) {
       return nullptr;
     }
     auto image = fbl::AdoptRef(new Image(controller(), dc_image, std::move(dup_vmo), /*stride=*/0));

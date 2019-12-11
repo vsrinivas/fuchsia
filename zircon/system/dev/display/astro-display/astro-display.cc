@@ -270,45 +270,7 @@ void AstroDisplay::DisplayControllerImplSetDisplayControllerInterface(
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
                                                               size_t offset) {
-  zx_status_t status = ZX_OK;
-  auto import_info = std::make_unique<ImageInfo>();
-  if (import_info == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  fbl::AutoLock lock(&image_lock_);
-
-  if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != format_) {
-    status = ZX_ERR_INVALID_ARGS;
-    return status;
-  }
-
-  uint32_t stride = ComputeLinearStride(image->width, image->pixel_format);
-
-  canvas_info_t canvas_info;
-  canvas_info.height = image->height;
-  canvas_info.stride_bytes = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
-  canvas_info.wrap = 0;
-  canvas_info.blkmode = 0;
-  canvas_info.endianness = 0;
-  canvas_info.flags = CANVAS_FLAGS_READ;
-
-  uint8_t local_canvas_idx;
-  status = amlogic_canvas_config(&canvas_, vmo.release(), offset, &canvas_info, &local_canvas_idx);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not configure canvas: %d\n", status);
-    status = ZX_ERR_NO_RESOURCES;
-    return status;
-  }
-
-  import_info->canvas = canvas_;
-  import_info->canvas_idx = local_canvas_idx;
-  import_info->image_height = image->height;
-  import_info->image_width = image->width;
-  import_info->image_stride = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
-  image->handle = reinterpret_cast<uint64_t>(import_info.get());
-  imported_images_.push_back(std::move(import_info));
-  return status;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
