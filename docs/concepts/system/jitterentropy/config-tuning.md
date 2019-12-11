@@ -74,7 +74,7 @@ block count = 64) aren't big enough to overflow L1.
 
 The basic idea is simple: on a particular target device, try different values for the parameters.
 Collect a large amount of data for each parameter set (ideally around 1MB), then
-[run the NIST test suite to analyze the data](/docs/development/testing/entropy_quality_tests.md#running-the-nist-test-suite).
+[run the NIST test suite to analyze the data](/docs/concepts/testing/entropy_quality_tests.md#running-the-nist-test-suite).
 Determine which parameters give the best entropy per unit time. The time taken to draw the entropy
 samples is logged on the system under test.
 
@@ -104,7 +104,7 @@ disallowed in kernel code, and fixed-point arithmetic is confusing).
 
 The value should be determined by using the NIST test suite to analyze random data samples, as
 described in
-[the entropy quality tests document](/docs/development/testing/entropy_quality_tests.md#running-the-nist-test-suite).
+[the entropy quality tests document](/docs/concepts/testing/entropy_quality_tests.md#running-the-nist-test-suite).
 The test suite produces an estimate of the min-entropy; repeated tests of the same RNG have (in my
 experience) varied by a few tenths of a bit (which is pretty significant when entropy values can be
 around 0.5 bits per byte of data!). After getting good, consistent results from the test suites,

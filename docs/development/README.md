@@ -69,9 +69,9 @@ This section covers Fuchsia development hardware targets.
  - [Fuzz testing with LibFuzzer](/docs/development/testing/fuzzing/libfuzzer.md)
  - [Test components](testing/test_component.md)
  - [Test environments](testing/environments.md)
- - [Testability rubrics](testing/testability_rubric.md)
+ - [Testability rubrics](/docs/concepts/testing/testability_rubric.md)
  - [Test flake policy](testing/test_flake_policy.md)
- - [Testing Isolated Cache Storage](testing/testing_isolated_cache_storage.md)
+ - [Testing Isolated Cache Storage](/docs/concepts/testing/testing_isolated_cache_storage.md)
 
 ## Conventions
 

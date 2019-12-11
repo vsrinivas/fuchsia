@@ -4,8 +4,6 @@
 toc:
 - title: "Block device testing"
   path: /docs/development/testing/block_device_testing.md
-- title: "Entropy quality tests"
-  path:  /docs/development/testing/entropy_quality_tests.md
 - title: "Fuchsia flaky test policy"
   path: /docs/development/testing/test_flake_policy.md
 - title: "Fuzzing"
@@ -19,13 +17,9 @@ toc:
   path: /docs/development/testing/test_component.md
 - title: "Test environments"
   path: /docs/development/testing/environments.md
-- title: "Testability rubrics"
-  path: /docs/development/testing/testability_rubric.md
-- title: "Testing isolated cache storage"
-  path: /docs/development/testing/testing_isolated_cache_storage.md
-- title: "Testing: questions and answers"
+- title: "Testing Scenic and Escher"
+  path: /docs/development/testing/scenic_testing.md
+- title: "Testing: Questions and answers"
   path: /docs/development/testing/faq.md
 - title: "Zircon testing overview"
   path: /docs/development/testing/testing.md
-- title: "Testing Scenic and Escher"
-  path: /docs/development/testing/scenic_testing.md

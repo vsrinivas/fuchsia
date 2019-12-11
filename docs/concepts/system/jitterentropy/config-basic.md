@@ -58,7 +58,7 @@ parameter.  The inner loop advances an LFSR by 64 steps, each time XOR-ing in
 one bit from the most recent time sample. Passing the time sample through the
 LFSR this way serves as a processing step, generally tending to whiten the
 random timesteps. As described in the
-[entropy quality testing doc](/docs/development/testing/entropy_quality_tests.md), it's important to
+[entropy quality testing doc](/docs/concepts/testing/entropy_quality_tests.md), it's important to
 skip this processing when testing the entropic content of the CPU time
 variations.  It's also the case that enabling the processing increases the
 entropy estimates by a suspicious amount in some cases (see
@@ -146,7 +146,7 @@ below.
 ## Testing process
 
 The procedure for running entropy source quality tests is documented in
-[the entropy quality tests document](/docs/development/testing/entropy_quality_tests.md).
+[the entropy quality tests document](/docs/concepts/testing/entropy_quality_tests.md).
 
 These preliminary results were gathered on a Zircon debug build on Raspberry Pi
 3, built from commit 18358de5e90a012cb1e042efae83f5ea264d1502 in the now-obsolete project: https://fuchsia.googlesource.com/zircon/+/a1a80a6a7d

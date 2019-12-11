@@ -45,19 +45,6 @@ A flake fetching tool is currently in use to identify the vast majority of flake
 The tool looks for test failures in CQ where the same test succeeded when retried on the same
 patch set.
 
-(Googlers-Only) To see the source code for this tool, visit
-[http://go/fuchsia-flake-tool](http://go/fuchsia-flake-tool).
-
-#### Track
-
-(Googlers-Only) After flakes are identified, tooling should automatically file an issue for the
-flake under the Flake component with label FlakeFetcher. These issues are currently being
-manually triaged and assigned. If you experience a test flake, please update existing issues
-rather than opening new ones.
-
-To see a list of the currently outstanding flakes, visit
-[http://go/flakes-fuchsia](http://go/flakes-fuchsia).
-
 #### Remove
 
 One should prioritize, above all else, removing the test from the commit
@@ -91,8 +78,8 @@ Ongoing efforts to improve tooling surrounding flakes are actively underway.
 These include:
 
 -   Automatically assigning issues for resolving flakes, based on information present in OWNERs
-    files. Tracked by 10435.
+    files.
 -   "Deflaking" infrastructure, to re-run tests in high volume before they are
-    committed. Tracked by 10011.
+    committed.
 
 As improvements are made, this document will be updated with the latest policy.

@@ -4,7 +4,7 @@
 
 Information about testability:
 
-* All changes within Fuchsia need to adhere to the [Testability rubric](/docs/development/testing/testability_rubric.md).
+* All changes within Fuchsia need to adhere to the [Testability rubric](/docs/concepts/testing/testability_rubric.md).
 * See also: [general Fuchsia testing documentation](/docs/development/testing/environments.md)
 
 ## Scenic test packages

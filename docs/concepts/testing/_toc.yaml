@@ -1,0 +1,10 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Testability rubrics"
+  path: /docs/concepts/testing/testability_rubric.md
+- title: "Entropy quality tests"
+  path:  /docs/concepts/testing/entropy_quality_tests.md
+- title: "Testing isolated cache storage"
+  path: /docs/concepts/testing/testing_isolated_cache_storage.md

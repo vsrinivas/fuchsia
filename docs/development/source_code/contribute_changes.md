@@ -129,7 +129,7 @@ Developers are responsible for high-quality automated testing of their code.
 Reviewers are responsible for pushing back on changes that do not include
 sufficient tests.
 
-Note: See [Fuchsia testability rubrics](/docs/development/testing/testability_rubric.md)
+Note: See [Fuchsia testability rubrics](/docs/concepts/testing/testability_rubric.md)
 for more information on how to introduce testable and tested code in the Fuchsia project.
 
 ## Resolve merge conflicts {#resolve-merge-conflicts}

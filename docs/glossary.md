@@ -95,7 +95,7 @@ cache directory may be cleared by the system at any time, such as when the
 device is under storage pressure. Canonically mapped to /cache in the component
 instance’s [namespace](#namespace).
 
--   [Testing isolated cache storage](development/testing/testing_isolated_cache_storage.md).
+-   [Testing isolated cache storage](/docs/concepts/testing/testing_isolated_cache_storage.md).
 
 #### **Capability** {#capability}
 
