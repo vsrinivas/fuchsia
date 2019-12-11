@@ -2,7 +2,7 @@
 ## **CONSTANTS**
 
 <table>
-    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr>
+    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="kLabelMaxLength">
             <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.gfx/commands.fidl#719">kLabelMaxLength</a></td>
             <td>
                     <code>32</code>
@@ -11,7 +11,7 @@
             <td><p>Maximum length for a resource label.</p>
 </td>
         </tr>
-    <tr>
+    <tr id="kMetricsEventMask">
             <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.gfx/events.fidl#9">kMetricsEventMask</a></td>
             <td>
                     <code>1</code>
@@ -21,7 +21,7 @@
 This event type is only reported for node resources.</p>
 </td>
         </tr>
-    <tr>
+    <tr id="kSizeChangeHintEventMask">
             <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.gfx/events.fidl#10">kSizeChangeHintEventMask</a></td>
             <td>
                     <code>2</code>

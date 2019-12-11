@@ -4,7 +4,7 @@
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
     {{~ #each type_alias_declarations ~}}
-        <tr>
+        <tr id="{{rpn name}}">
             <td><a href="{{sl @root location}}">{{rpn name}}</a></td>
             <td>
                 <code>{{~ partial_type_ctor.name ~}}</code>

@@ -1,3 +1,6 @@
+{{#if experimental_maybe_from_type_alias ~}}
+    {{~ pl experimental_maybe_from_type_alias.name @root.name ~}}
+{{~ else ~}}
 {{#if (eq type.kind "vector") ~}}
     {{> vector }}
 {{~ else ~}}
@@ -27,3 +30,4 @@
     [{{~ type.maybe_element_count ~}}]
 {{~ /if ~}}
 {{~ #if type.nullable ~}}?{{~ /if}}
+{{~ /if ~}}

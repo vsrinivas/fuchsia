@@ -4,7 +4,7 @@
 <table>
     <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr>
     {{~ #each const_declarations ~}}
-        <tr>
+        <tr id="{{rpn name}}">
             <td><a href="{{sl @root location}}">{{rpn name}}</a></td>
             {{#if (eq type.kind "primitive") ~}}
                 <td>

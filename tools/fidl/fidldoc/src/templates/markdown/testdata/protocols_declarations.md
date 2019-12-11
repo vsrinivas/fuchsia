@@ -85,7 +85,7 @@ list of available exceptions.</p>
     <tr>
             <td><code>process_koid</code></td>
             <td>
-                <code>uint64</code>
+                <code><a class='link' href='../zx/'>zx</a>/<a class='link' href='../zx/#koid'>koid</a></code>
             </td>
         </tr></table>
 
