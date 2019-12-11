@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "usb/request-cpp.h"
-
-#include <lib/fake-bti/bti.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/vmo.h>
-
 #include <ddktl/protocol/usb/function.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <lib/fake-bti/bti.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/vmo.h>
 #include <zxtest/zxtest.h>
+
+#include "usb/request-cpp.h"
 
 namespace {
 
@@ -675,24 +674,28 @@ TEST(UsbRequestTest, CacheInvalidateFlush) {
 }
 
 TEST(UsbRequestTest, PhysMap) {
-  zx::bti bti;
-  ASSERT_EQ(fake_bti_create(bti.reset_and_get_address()), ZX_OK, "");
+  zx_handle_t bti_handle;
+  ASSERT_EQ(fake_bti_create(&bti_handle), ZX_OK, "");
+  fbl::AutoCall cleanup([&]() { fake_bti_destroy(bti_handle); });
+  zx::unowned_bti bti(bti_handle);
 
   std::optional<Request> request;
   ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kParentReqSize), ZX_OK);
 
-  ASSERT_EQ(request->PhysMap(bti), ZX_OK);
+  ASSERT_EQ(request->PhysMap(*bti), ZX_OK);
   ASSERT_EQ(request->request()->phys_count, 4u);
 }
 
 TEST(UsbRequestTest, PhysIter) {
-  zx::bti bti;
-  ASSERT_EQ(fake_bti_create(bti.reset_and_get_address()), ZX_OK, "");
+  zx_handle_t bti_handle;
+  ASSERT_EQ(fake_bti_create(&bti_handle), ZX_OK, "");
+  fbl::AutoCall cleanup([&]() { fake_bti_destroy(bti_handle); });
+  zx::unowned_bti bti(bti_handle);
 
   std::optional<Request> request;
   ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kParentReqSize), ZX_OK);
 
-  ASSERT_EQ(request->PhysMap(bti), ZX_OK);
+  ASSERT_EQ(request->PhysMap(*bti), ZX_OK);
   auto* req = request->take();
   for (size_t i = 0; i < req->phys_count; i++) {
     req->phys_list[i] = ZX_PAGE_SIZE * i;
@@ -743,13 +746,15 @@ TEST(UsbRequestTest, InvalidScatterGatherList) {
 }
 
 TEST(UsbRequestTest, ScatterGatherPhysIter) {
-  zx::bti bti;
-  ASSERT_EQ(fake_bti_create(bti.reset_and_get_address()), ZX_OK, "");
+  zx_handle_t bti_handle;
+  ASSERT_EQ(fake_bti_create(&bti_handle), ZX_OK, "");
+  fbl::AutoCall cleanup([&]() { fake_bti_destroy(bti_handle); });
+  zx::unowned_bti bti(bti_handle);
 
   std::optional<Request> request;
   ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kParentReqSize), ZX_OK);
 
-  ASSERT_EQ(request->PhysMap(bti), ZX_OK);
+  ASSERT_EQ(request->PhysMap(*bti), ZX_OK);
 
   constexpr phys_iter_sg_entry_t kUnordered[] = {{.length = 100, .offset = 2 * PAGE_SIZE},
                                                  {.length = 50, .offset = 500},

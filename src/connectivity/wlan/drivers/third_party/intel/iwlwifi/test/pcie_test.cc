@@ -19,7 +19,6 @@
 #include <lib/fake-bti/bti.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/bti.h>
 #include <stdio.h>
 #include <zircon/listnode.h>
 
@@ -63,8 +62,8 @@ class PcieTest : public zxtest::Test {
     fake_bti_create(&trans_pcie_->bti);
   }
 
-  ~PcieTest() override {
-    zx_handle_close(trans_pcie_->bti);
+  ~PcieTest() {
+    fake_bti_destroy(trans_pcie_->bti);
     iwl_trans_free(trans_);
   }
 
@@ -419,9 +418,9 @@ static void FakeEchoWrite32(struct iwl_trans* trans, uint32_t ofs, uint32_t val)
   }
 
   io_buffer_t io_buf;
-  zx::bti fake_bti;
-  fake_bti_create(fake_bti.reset_and_get_address());
-  io_buffer_init(&io_buf, fake_bti.get(), 128, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  zx_handle_t fake_bti;
+  fake_bti_create(&fake_bti);
+  io_buffer_init(&io_buf, fake_bti, 128, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   struct iwl_rx_cmd_buffer rxcb = {
       ._io_buf = io_buf,
       ._offset = 0,
