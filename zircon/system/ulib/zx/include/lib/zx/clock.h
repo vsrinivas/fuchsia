@@ -76,13 +76,13 @@ class clock final : public object<clock> {
     return zx_clock_create(options, args, result->reset_and_get_address());
   }
 
-  zx_status_t read(zx_time_t* now_out) { return zx_clock_read(value_, now_out); }
+  zx_status_t read(zx_time_t* now_out) const { return zx_clock_read(value_, now_out); }
 
-  zx_status_t get_details(zx_clock_details_v1_t* details_out) {
+  zx_status_t get_details(zx_clock_details_v1_t* details_out) const {
     return zx_clock_get_details(value_, ZX_CLOCK_ARGS_VERSION(1), details_out);
   }
 
-  zx_status_t update(const update_args& args) {
+  zx_status_t update(const update_args& args) const {
     uint64_t options = args.options_ | ZX_CLOCK_ARGS_VERSION(1);
     return zx_clock_update(value_, options, &args.args_);
   }
