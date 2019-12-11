@@ -24,7 +24,7 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_vfs_pseudo_fs_mt::{
         self as fvfs, directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
-        execution_scope::ExecutionScope, file::pcb::asynchronous::read_only_static,
+        execution_scope::ExecutionScope, file::pcb::asynchronous::read_only_const,
         tree_builder::TreeBuilder,
     },
     fuchsia_zircon as zx,
@@ -246,9 +246,21 @@ impl RoutingTest {
             panic!("bad status returned for fdio_ns_bind: {}", zx::Status::from_raw(status));
         }
         let mut out_dir = OutDir::new();
-        out_dir.add_echo_service();
+        Self::install_default_out_files(&mut out_dir);
         out_dir.add_directory_proxy(&self.test_dir_proxy);
         out_dir.host_fn()(ServerEnd::new(server_chan));
+    }
+
+    /// Set up the given OutDir, installing a set of files assumed to exist by
+    /// many tests:
+    ///   - A file `/svc/foo` implementing `fidl.examples.echo.Echo`.
+    ///   - A static file `/svc/file`, containing the string "hippos" encoded as UTF-8.
+    fn install_default_out_files(dir: &mut OutDir) {
+        // Add "/svc/foo", providing an echo server.
+        dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
+
+        // Add "/svc/file", providing a read-only file.
+        dir.add_static_file(CapabilityPath::try_from("/svc/file").unwrap(), "hippos");
     }
 
     /// Creates a dynamic child `child_decl` in `moniker`'s `collection`.
@@ -490,7 +502,7 @@ impl RoutingTest {
             match expose {
                 ExposeDecl::Service(_) => panic!("service capability unsupported"),
                 ExposeDecl::ServiceProtocol(s) if s.source == ExposeSource::Self_ => {
-                    out_dir.add_echo_service()
+                    Self::install_default_out_files(&mut out_dir);
                 }
                 ExposeDecl::Directory(d) if d.source == ExposeSource::Self_ => {
                     out_dir.add_directory_proxy(test_dir_proxy)
@@ -502,7 +514,7 @@ impl RoutingTest {
             match offer {
                 OfferDecl::Service(_) => panic!("service capability unsupported"),
                 OfferDecl::ServiceProtocol(s) if s.source == OfferServiceSource::Self_ => {
-                    out_dir.add_echo_service()
+                    Self::install_default_out_files(&mut out_dir);
                 }
                 OfferDecl::Directory(d) if d.source == OfferDirectorySource::Self_ => {
                     out_dir.add_directory_proxy(test_dir_proxy)
@@ -969,20 +981,14 @@ impl OutDir {
         self.paths.insert(path, entry);
     }
 
-    /// Adds a file `/svc/foo` to the out directory (implementing `fidl.examples.echo.Echo`) and
-    /// a static file `/svc/file`.
-    pub fn add_echo_service(&mut self) {
-        // Add "/svc/foo", providing an echo server.
-        self.add_entry(
-            CapabilityPath::try_from("/svc/foo").unwrap(),
-            DirectoryBroker::new(Box::new(Self::echo_server_fn)),
-        );
+    /// Adds a file providing the echo service at the given path.
+    pub fn add_echo_service(&mut self, path: CapabilityPath) {
+        self.add_entry(path, DirectoryBroker::new(Box::new(Self::echo_server_fn)));
+    }
 
-        // Add "/svc/file", providing a read-only file.
-        self.add_entry(
-            CapabilityPath::try_from("/svc/file").unwrap(),
-            read_only_static("hippos"),
-        );
+    /// Adds a static file at the given path.
+    pub fn add_static_file(&mut self, path: CapabilityPath, contents: &str) {
+        self.add_entry(path, read_only_const(contents.to_string().into_bytes()));
     }
 
     /// Adds the given directory proxy at location "/data".
@@ -1027,7 +1033,7 @@ impl OutDir {
         })
     }
 
-    /// Hosts a new service on server_end that implements fidl.examples.echo.Echo
+    /// Hosts a new service on `server_end` that implements `fidl.examples.echo.Echo`.
     fn echo_server_fn(
         _flags: u32,
         _mode: u32,

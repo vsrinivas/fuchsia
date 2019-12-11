@@ -806,7 +806,7 @@ mod tests {
         mock_resolver.add_component("eager", ComponentDecl { ..default_component_decl() });
         let mock_runner = Arc::new(MockRunner::new());
         let mut out_dir = OutDir::new();
-        out_dir.add_echo_service();
+        out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
         mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
         let hook = TestHook::new();
         let test = RealmCapabilityTest::new(
@@ -872,7 +872,7 @@ mod tests {
         );
         let mock_runner = Arc::new(MockRunner::new());
         let mut out_dir = OutDir::new();
-        out_dir.add_echo_service();
+        out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
         mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
         let hook = TestHook::new();
         let test = RealmCapabilityTest::new(
