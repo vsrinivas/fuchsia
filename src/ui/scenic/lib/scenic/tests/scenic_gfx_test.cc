@@ -18,14 +18,13 @@ void ScenicGfxTest::InitializeScenic(Scenic* scenic) {
   command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
   auto signaller =
       std::make_unique<gfx::test::ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
-  display_ = std::make_shared<display::Display>(
-      /*id*/ 0, /* width */ 0, /* height */ 0);
 
   // TODO(SCN-421)): This frame scheduler is only needed for a single test in scenic_unittests.cc.
   // When this bug is fixed, that test will no longer depend on a GfxSystem, at which point, this
   // frame scheduler can be removed.
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
-      display_, std::make_unique<scheduling::ConstantFramePredictor>(zx::msec(5)),
+      std::make_shared<scheduling::VsyncTiming>(),
+      std::make_unique<scheduling::ConstantFramePredictor>(zx::msec(5)),
       scenic_->inspect_node()->CreateChild("FrameScheduler"));
 
   auto context = sys::ComponentContext::Create();
@@ -43,7 +42,6 @@ void ScenicGfxTest::TearDown() {
   ScenicTest::TearDown();
   engine_.reset();
   frame_scheduler_.reset();
-  display_.reset();
   command_buffer_sequencer_.reset();
 }
 

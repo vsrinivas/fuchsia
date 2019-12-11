@@ -137,7 +137,8 @@ void InputSystemTest::InitializeScenic(Scenic* scenic) {
   display_ = std::make_unique<Display>(
       /*id*/ 0, test_display_width_px(), test_display_height_px());
   auto frame_scheduler = std::make_shared<DefaultFrameScheduler>(
-      display_, std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
+      display_->vsync_timing(),
+      std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   engine_ = std::make_unique<Engine>(context_provider_.context(), frame_scheduler,
                                      std::move(signaller), escher::EscherWeakPtr());

@@ -65,7 +65,7 @@ TEST_F(FrameSchedulerTest, PresentTimeZero_ShouldBeScheduledBeforeNextVsync) {
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, /* presentation */ zx::time(0));
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
 
   // Should have been scheduled and handled.
@@ -87,7 +87,7 @@ TEST_F(FrameSchedulerTest, Present2WithTimeZero_ShouldBeScheduledBeforeNextVsync
                          /* presentation */ zx::time(0));
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
 
   // Should have been scheduled and handled.
@@ -100,28 +100,28 @@ TEST_F(FrameSchedulerTest, PresentBiggerThanNextVsync_ShouldBeScheduledAfterNext
 
   constexpr SessionId kSessionId = 1;
 
-  EXPECT_EQ(Now(), fake_vsync_timing_->GetLastVsyncTime());
+  EXPECT_EQ(Now(), vsync_timing_->last_vsync_time());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Schedule an update for in between the next two vsyncs.
-  const auto vsync_interval = fake_vsync_timing_->GetVsyncInterval();
+  const auto vsync_interval = vsync_timing_->vsync_interval();
   zx::time time_after_vsync =
-      fake_vsync_timing_->GetLastVsyncTime() + (vsync_interval + vsync_interval / 2);
+      vsync_timing_->last_vsync_time() + (vsync_interval + vsync_interval / 2);
 
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId,
                             /* presentation time*/ time_after_vsync);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Nothing should have been scheduled yet.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Wait for one more vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
 
@@ -136,28 +136,28 @@ TEST_F(FrameSchedulerTest, Present2BiggerThanNextVsync_ShouldBeScheduledAfterNex
   constexpr SessionId kSessionId = 1;
   scheduler->SetOnFramePresentedCallbackForSession(kSessionId, [](auto) {});
 
-  EXPECT_EQ(Now(), fake_vsync_timing_->GetLastVsyncTime());
+  EXPECT_EQ(Now(), vsync_timing_->last_vsync_time());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Schedule an update for in between the next two vsyncs.
-  const auto vsync_interval = fake_vsync_timing_->GetVsyncInterval();
+  const auto vsync_interval = vsync_timing_->vsync_interval();
   zx::time time_after_vsync =
-      fake_vsync_timing_->GetLastVsyncTime() + (vsync_interval + vsync_interval / 2);
+      vsync_timing_->last_vsync_time() + (vsync_interval + vsync_interval / 2);
 
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId,
                          /* presentation time*/ time_after_vsync);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Nothing should have been scheduled yet.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Wait for one more vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
 
@@ -182,7 +182,7 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -227,7 +227,7 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCall) {
   EXPECT_EQ(present_count, 0u);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -260,11 +260,11 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
   // We want to test our ability to schedule a frame "next time" given an arbitrary start,
   // vs in a certain duration from Now() = 0, so this makes that distinction clear.
   zx::time future_vsync_time =
-      zx::time(fake_vsync_timing_->GetLastVsyncTime() + fake_vsync_timing_->GetVsyncInterval() * 6);
+      zx::time(vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval() * 6);
 
-  fake_vsync_timing_->SetLastVsyncTime(future_vsync_time);
+  vsync_timing_->set_last_vsync_time(future_vsync_time);
 
-  EXPECT_GT(fake_vsync_timing_->GetLastVsyncTime(), Now());
+  EXPECT_GT(vsync_timing_->last_vsync_time(), Now());
 
   // Start the test.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -273,13 +273,13 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId,
-                            future_vsync_time + fake_vsync_timing_->GetVsyncInterval());
+                            future_vsync_time + vsync_timing_->vsync_interval());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Wait for one vsync period.
-  RunLoopUntil(zx::time(future_vsync_time + fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopUntil(zx::time(future_vsync_time + vsync_timing_->vsync_interval()));
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -317,11 +317,11 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCallExactlyOnTime
   // We want to test our ability to schedule a frame "next time" given an arbitrary start,
   // vs in a certain duration from Now() = 0, so this makes that distinction clear.
   zx::time future_vsync_time =
-      zx::time(fake_vsync_timing_->GetLastVsyncTime() + fake_vsync_timing_->GetVsyncInterval() * 6);
+      zx::time(vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval() * 6);
 
-  fake_vsync_timing_->SetLastVsyncTime(future_vsync_time);
+  vsync_timing_->set_last_vsync_time(future_vsync_time);
 
-  EXPECT_GT(fake_vsync_timing_->GetLastVsyncTime(), Now());
+  EXPECT_GT(vsync_timing_->last_vsync_time(), Now());
 
   // Start the test.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -330,13 +330,13 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCallExactlyOnTime
   EXPECT_EQ(present_count, 0u);
 
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId,
-                         future_vsync_time + fake_vsync_timing_->GetVsyncInterval());
+                         future_vsync_time + vsync_timing_->vsync_interval());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Wait for one vsync period.
-  RunLoopUntil(zx::time(future_vsync_time + fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopUntil(zx::time(future_vsync_time + vsync_timing_->vsync_interval()));
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -377,7 +377,7 @@ TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Both Presents should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -416,7 +416,7 @@ TEST_F(FrameSchedulerTest, Present2sForTheSameFrame_ShouldGetSingleRenderCall) {
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Both Presents should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -440,7 +440,7 @@ TEST_F(FrameSchedulerTest, PresentsForDifferentFrames_ShouldGetSeparateRenderCal
 
   constexpr SessionId kSessionId = 1;
 
-  EXPECT_EQ(Now(), fake_vsync_timing_->GetLastVsyncTime());
+  EXPECT_EQ(Now(), vsync_timing_->last_vsync_time());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -450,16 +450,16 @@ TEST_F(FrameSchedulerTest, PresentsForDifferentFrames_ShouldGetSeparateRenderCal
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
 
   // Schedule an update for in between the next two vsyncs.
-  const auto vsync_interval = fake_vsync_timing_->GetVsyncInterval();
+  const auto vsync_interval = vsync_timing_->vsync_interval();
   zx::time time_after_vsync =
-      fake_vsync_timing_->GetLastVsyncTime() + vsync_interval + vsync_interval / 2;
+      vsync_timing_->last_vsync_time() + vsync_interval + vsync_interval / 2;
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, time_after_vsync);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // First Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -469,7 +469,7 @@ TEST_F(FrameSchedulerTest, PresentsForDifferentFrames_ShouldGetSeparateRenderCal
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
 
   // Wait for one more vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Second Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
@@ -482,7 +482,7 @@ TEST_F(FrameSchedulerTest, Present2sForDifferentFrames_ShouldGetSeparateRenderCa
   constexpr SessionId kSessionId = 1;
   scheduler->SetOnFramePresentedCallbackForSession(kSessionId, [](auto) {});
 
-  EXPECT_EQ(Now(), fake_vsync_timing_->GetLastVsyncTime());
+  EXPECT_EQ(Now(), vsync_timing_->last_vsync_time());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -492,16 +492,16 @@ TEST_F(FrameSchedulerTest, Present2sForDifferentFrames_ShouldGetSeparateRenderCa
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
 
   // Schedule an update for in between the next two vsyncs.
-  const auto vsync_interval = fake_vsync_timing_->GetVsyncInterval();
+  const auto vsync_interval = vsync_timing_->vsync_interval();
   zx::time time_after_vsync =
-      fake_vsync_timing_->GetLastVsyncTime() + vsync_interval + vsync_interval / 2;
+      vsync_timing_->last_vsync_time() + vsync_interval + vsync_interval / 2;
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId, time_after_vsync);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // First Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -511,7 +511,7 @@ TEST_F(FrameSchedulerTest, Present2sForDifferentFrames_ShouldGetSeparateRenderCa
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
 
   // Wait for one more vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Second Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
@@ -533,7 +533,7 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
@@ -544,7 +544,7 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
 
   // Schedule another update for now.
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Updates should be applied, but not rendered.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
@@ -556,7 +556,7 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
 
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Second render should have occurred.
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 2u);
@@ -585,7 +585,7 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
@@ -596,7 +596,7 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
 
   // Schedule another update for now.
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Updates should be applied, but not rendered.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
@@ -608,7 +608,7 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
   EXPECT_EQ(present_count, 1u);
 
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Second render should have occurred.
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 2u);
@@ -631,7 +631,7 @@ TEST_F(FrameSchedulerTest, RenderCalls_ShouldNotExceed_MaxOutstandingFrames) {
   for (size_t i = 0; i < maximum_allowed_render_calls + 1; ++i) {
     ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
     // Wait for a long time
-    zx::duration schedule_frame_wait(5 * fake_vsync_timing_->GetVsyncInterval().get());
+    zx::duration schedule_frame_wait(5 * vsync_timing_->vsync_interval().get());
     RunLoopFor(schedule_frame_wait);
 
     if (mock_renderer_->render_frame_call_count() <= i) {
@@ -660,7 +660,7 @@ TEST_F(FrameSchedulerTest, Present2RenderCalls_ShouldNotExceed_MaxOutstandingFra
   for (size_t i = 0; i < maximum_allowed_render_calls + 1; ++i) {
     SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
     // Wait for a long time
-    zx::duration schedule_frame_wait(5 * fake_vsync_timing_->GetVsyncInterval().get());
+    zx::duration schedule_frame_wait(5 * vsync_timing_->vsync_interval().get());
     RunLoopFor(schedule_frame_wait);
 
     if (mock_renderer_->render_frame_call_count() <= i) {
@@ -690,19 +690,19 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   // Schedule another update.
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   // Next render doesn't trigger until the previous render is finished.
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
 
   // Drop frame #0. This should not trigger a frame presented signal.
   mock_renderer_->SignalFrameDropped(/* frame number */ 0);
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
 
@@ -712,7 +712,7 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
 
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   // Presenting frame #1 should trigger frame presented signal.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
   mock_renderer_->SignalFrameCpuRendered(/* frame number */ 1, Now());
@@ -744,19 +744,19 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresent2CallbackOnlyWhenFramePresente
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   // Schedule another update.
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   // Next render doesn't trigger until the previous render is finished.
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
 
   // Drop frame #0. This should not trigger a frame presented signal.
   mock_renderer_->SignalFrameDropped(/* frame number */ 0);
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(present_count, 0u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
 
@@ -766,7 +766,7 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresent2CallbackOnlyWhenFramePresente
   EXPECT_EQ(present_count, 0u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
 
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   // Presenting frame #1 should trigger frame presented signal.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
   mock_renderer_->SignalFrameCpuRendered(/* frame number */ 1, Now());
@@ -789,7 +789,7 @@ TEST_F(FrameSchedulerTest, FailedUpdate_ShouldNotTriggerRenderCall) {
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, Now());
 
   mock_updater_->SuppressNeedsRendering(true);
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 }
@@ -805,7 +805,7 @@ TEST_F(FrameSchedulerTest, FailedPresent2Update_ShouldNotTriggerRenderCall) {
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId, Now());
 
   mock_updater_->SuppressNeedsRendering(true);
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 }
@@ -819,18 +819,18 @@ TEST_F(FrameSchedulerTest, NoOpUpdateWithSecondPendingUpdate_ShouldBeRescheduled
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId,
-                            Now() + fake_vsync_timing_->GetVsyncInterval());
+                            Now() + vsync_timing_->vsync_interval());
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId,
-                            Now() + (fake_vsync_timing_->GetVsyncInterval() + zx::duration(1)));
+                            Now() + (vsync_timing_->vsync_interval() + zx::duration(1)));
 
   mock_updater_->SuppressNeedsRendering(true);
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   mock_updater_->SuppressNeedsRendering(false);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 }
@@ -845,18 +845,18 @@ TEST_F(FrameSchedulerTest, NoOpPresent2UpdateWithSecondPendingUpdate_ShouldBeRes
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId,
-                         Now() + fake_vsync_timing_->GetVsyncInterval());
+                         Now() + vsync_timing_->vsync_interval());
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId,
-                         Now() + (fake_vsync_timing_->GetVsyncInterval() + zx::duration(1)));
+                         Now() + (vsync_timing_->vsync_interval() + zx::duration(1)));
 
   mock_updater_->SuppressNeedsRendering(true);
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   mock_updater_->SuppressNeedsRendering(false);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 }
@@ -868,7 +868,7 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
 
   // Guarantee the vsync interval here is what we expect.
   zx::duration interval = zx::msec(100);
-  fake_vsync_timing_->SetVsyncInterval(interval);
+  vsync_timing_->set_vsync_interval(interval);
   EXPECT_EQ(0, Now().get());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -887,9 +887,8 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   auto gpu_render_time_finish = Now();
 
   // Go to vsync.
-  RunLoopUntil(
-      zx::time(fake_vsync_timing_->GetLastVsyncTime() + fake_vsync_timing_->GetVsyncInterval()));
-  fake_vsync_timing_->SetLastVsyncTime(Now());
+  RunLoopUntil(zx::time(vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval()));
+  vsync_timing_->set_last_vsync_time(Now());
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -916,16 +915,15 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, zx::time(0));
 
   // Go to vsync.
-  RunLoopUntil(
-      zx::time(fake_vsync_timing_->GetLastVsyncTime() + fake_vsync_timing_->GetVsyncInterval()));
-  fake_vsync_timing_->SetLastVsyncTime(Now());
+  RunLoopUntil(zx::time(vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval()));
+  vsync_timing_->set_last_vsync_time(Now());
 
   // Nothing should have been scheduled yet.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   // Wait for one more vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
   mock_renderer_->EndFrame(/* frame number */ 1, Now());
 
@@ -946,7 +944,7 @@ TEST_F(FrameSchedulerTest, LowPresent2GpuRenderTime_ShouldNotMatter) {
 
   // Guarantee the vsync interval here is what we expect.
   zx::duration interval = zx::msec(100);
-  fake_vsync_timing_->SetVsyncInterval(interval);
+  vsync_timing_->set_vsync_interval(interval);
   EXPECT_EQ(0, Now().get());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -965,9 +963,8 @@ TEST_F(FrameSchedulerTest, LowPresent2GpuRenderTime_ShouldNotMatter) {
   auto gpu_render_time_finish = Now();
 
   // Go to vsync.
-  RunLoopUntil(
-      zx::time(fake_vsync_timing_->GetLastVsyncTime() + fake_vsync_timing_->GetVsyncInterval()));
-  fake_vsync_timing_->SetLastVsyncTime(Now());
+  RunLoopUntil(zx::time(vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval()));
+  vsync_timing_->set_last_vsync_time(Now());
 
   // Present should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -994,16 +991,15 @@ TEST_F(FrameSchedulerTest, LowPresent2GpuRenderTime_ShouldNotMatter) {
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId, zx::time(0));
 
   // Go to vsync.
-  RunLoopUntil(
-      zx::time(fake_vsync_timing_->GetLastVsyncTime() + fake_vsync_timing_->GetVsyncInterval()));
-  fake_vsync_timing_->SetLastVsyncTime(Now());
+  RunLoopUntil(zx::time(vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval()));
+  vsync_timing_->set_last_vsync_time(Now());
 
   // Nothing should have been scheduled yet.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   // Wait for one more vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
   mock_renderer_->EndFrame(/* frame number */ 1, Now());
 
@@ -1034,7 +1030,7 @@ TEST_F(FrameSchedulerTest, PresentAndPresent2Clients_CanCoexist) {
   SchedulePresent2Update(scheduler, mock_updater_, kSessionId2, zx::time(0));
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
 
   // Both Present and Present2 should have been scheduled and handled.
@@ -1099,7 +1095,7 @@ TEST_F(FrameSchedulerTest, MultiplePresent2Clients) {
   }
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
 
   // All Present2s should have been scheduled and handled in one go.
@@ -1132,7 +1128,7 @@ TEST_F(FrameSchedulerTest, CoalescedPresent2s_CauseASingleOnFramePresentedEvent)
     SchedulePresent2Update(scheduler, mock_updater_, kSessionId2, zx::time(0));
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
 
   // All Present2s should have been scheduled and handled in one go.
@@ -1183,7 +1179,7 @@ TEST_F(FrameSchedulerTest, OnFramePresentedEvent_HasPresent2sInOrder) {
   }
 
   // Wait for one vsync period.
-  RunLoopFor(zx::duration(fake_vsync_timing_->GetVsyncInterval()));
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   mock_renderer_->EndFrame(/* frame number */ 0, Now());
 
   // All Present2s should have been scheduled and handled in one go.
@@ -1197,8 +1193,7 @@ TEST_F(FrameSchedulerTest, SinglePredictedPresentation_ShouldBeReasonable) {
 
   constexpr SessionId kSessionId = 1;
 
-  zx::time next_vsync =
-      fake_vsync_timing_->GetLastVsyncTime() + fake_vsync_timing_->GetVsyncInterval();
+  zx::time next_vsync = vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval();
 
   // Ask for a prediction for one frame into the future.
   auto predicted_presents = scheduler->GetFuturePresentationInfos(zx::duration(0));
@@ -1223,11 +1218,11 @@ TEST_F(FrameSchedulerTest, ArbitraryPredictedPresentation_ShouldBeReasonable) {
   constexpr SessionId kSessionId = 1;
 
   // Advance the clock to vsync1.
-  zx::time vsync0 = fake_vsync_timing_->GetLastVsyncTime();
-  zx::time vsync1 = vsync0 + fake_vsync_timing_->GetVsyncInterval();
-  zx::time vsync2 = vsync1 + fake_vsync_timing_->GetVsyncInterval();
+  zx::time vsync0 = vsync_timing_->last_vsync_time();
+  zx::time vsync1 = vsync0 + vsync_timing_->vsync_interval();
+  zx::time vsync2 = vsync1 + vsync_timing_->vsync_interval();
 
-  EXPECT_GT(fake_vsync_timing_->GetVsyncInterval(), zx::duration(0));
+  EXPECT_GT(vsync_timing_->vsync_interval(), zx::duration(0));
   EXPECT_EQ(vsync0, Now());
 
   RunLoopUntil(vsync1);
@@ -1250,14 +1245,14 @@ TEST_F(FrameSchedulerTest, MultiplePredictedPresentations_ShouldBeReasonable) {
 
   constexpr SessionId kSessionId = 1;
 
-  zx::time vsync0 = fake_vsync_timing_->GetLastVsyncTime();
-  zx::time vsync1 = vsync0 + fake_vsync_timing_->GetVsyncInterval();
-  zx::time vsync2 = vsync1 + fake_vsync_timing_->GetVsyncInterval();
-  zx::time vsync3 = vsync2 + fake_vsync_timing_->GetVsyncInterval();
-  zx::time vsync4 = vsync3 + fake_vsync_timing_->GetVsyncInterval();
+  zx::time vsync0 = vsync_timing_->last_vsync_time();
+  zx::time vsync1 = vsync0 + vsync_timing_->vsync_interval();
+  zx::time vsync2 = vsync1 + vsync_timing_->vsync_interval();
+  zx::time vsync3 = vsync2 + vsync_timing_->vsync_interval();
+  zx::time vsync4 = vsync3 + vsync_timing_->vsync_interval();
 
   // What we really want is a positive difference between each vsync.
-  EXPECT_GT(fake_vsync_timing_->GetVsyncInterval(), zx::duration(0));
+  EXPECT_GT(vsync_timing_->vsync_interval(), zx::duration(0));
 
   // Ask for a prediction a few frames into the future.
   auto predicted_presents =
@@ -1285,8 +1280,7 @@ TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
 
   constexpr SessionId kSessionId = 1;
 
-  zx::time next_vsync =
-      fake_vsync_timing_->GetLastVsyncTime() + fake_vsync_timing_->GetVsyncInterval();
+  zx::time next_vsync = vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval();
 
   // Ask for an extremely large prediction duration.
   auto predicted_presents = scheduler->GetFuturePresentationInfos(zx::duration(INTMAX_MAX));

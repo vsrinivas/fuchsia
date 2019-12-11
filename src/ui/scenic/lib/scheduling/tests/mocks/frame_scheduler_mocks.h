@@ -45,28 +45,6 @@ class MockFrameScheduler : public FrameScheduler {
   uint32_t frame_rendered_call_count_ = 0;
 };
 
-class FakeVsyncTiming : public VsyncTiming {
- public:
-  FakeVsyncTiming() = default;
-
-  // |VsyncTiming|
-  // Obtain the time of the last Vsync, in nanoseconds.
-  zx::time GetLastVsyncTime() const override { return last_vsync_time_; };
-
-  // |VsyncTiming|
-  // Obtain the interval between Vsyncs, in nanoseconds.
-  zx::duration GetVsyncInterval() const override { return vsync_interval_; };
-
-  // Manually sets the values returned by
-  // GetVsyncInterval() and GetLastVsyncTime().
-  void SetVsyncInterval(zx::duration new_interval) { vsync_interval_ = new_interval; }
-  void SetLastVsyncTime(zx::time new_last_vsync) { last_vsync_time_ = new_last_vsync; }
-
- private:
-  zx::duration vsync_interval_;
-  zx::time last_vsync_time_;
-};
-
 class MockSessionUpdater : public SessionUpdater {
  public:
   MockSessionUpdater() : weak_factory_(this) {}
