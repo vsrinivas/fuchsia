@@ -10,10 +10,22 @@
 #include <lib/fidl/cpp/binding_set.h>
 
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/fxl/logging.h"
+#include "src/ui/scenic/lib/display/display_controller_listener.h"
 
 namespace scenic_impl {
 namespace display {
 namespace test {
+
+class MockDisplayController;
+
+struct DisplayControllerObjects {
+  std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> interface_ptr;
+  std::unique_ptr<MockDisplayController> mock;
+  std::unique_ptr<DisplayControllerListener> listener;
+};
+
+DisplayControllerObjects CreateMockDisplayController();
 
 class MockDisplayController : public fuchsia::hardware::display::testing::Controller_TestBase {
  public:

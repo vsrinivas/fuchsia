@@ -15,6 +15,7 @@ executable("unittests") {
   testonly = true
   sources = [
     "display_controller_listener_unittest.cc",
+    "display_controller_unittest.cc",
     "display_manager2_unittest.cc",
   ]
   deps = [
@@ -28,10 +29,12 @@ executable("unittests") {
 source_set("mocks") {
   testonly = true
   sources = [
+    "mock_display_controller.cc",
     "mock_display_controller.h",
   ]
   public_deps = [
     "//src/lib/fsl",
+    "//src/ui/scenic/lib/display",
     "//zircon/system/fidl/fuchsia-hardware-display",
   ]
 }

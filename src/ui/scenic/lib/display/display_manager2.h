@@ -9,26 +9,41 @@
 #include <fuchsia/ui/display/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/zx/channel.h>
+#include <zircon/pixelformat.h>
 
 #include <vector>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/scenic/lib/display/display_controller.h"
 #include "src/ui/scenic/lib/display/display_controller_listener.h"
 
 namespace scenic_impl {
 namespace display {
 
+// Implements the |fuchsia::ui::display::DisplayManager| protocol. Notifies protocol clients
+// of new or removed displays and allows changing of display configuration. Every display is
+// associated with a DisplayRef which can also be used as a parameter to other apis (e.g. Scenic).
+// Additionally, allows an internal (within Scenic) client to claim the display and 
 class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
  public:
   DisplayManager2();
 
+  // |fuchsia::ui::display::DisplayManager|
+  void AddDisplayListener(fidl::InterfaceHandle<fuchsia::ui::display::DisplayListener>
+                              display_listener_interface_handle) override;
+
+  // Remaining methods are not part of the FIDL protocol.
+
+  // Called by initializing code whenever a new DisplayzController is discovered, or by tests.
   void AddDisplayController(
       std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller,
       std::unique_ptr<DisplayControllerListener> controller_listener);
 
-  // |fuchsia::ui::display::DisplayManager|
-  void AddDisplayListener(fidl::InterfaceHandle<fuchsia::ui::display::DisplayListener>
-                              display_listener_interface_handle) override;
+  DisplayControllerUniquePtr ClaimDisplay(zx_koid_t display_ref_koid);
+  DisplayControllerUniquePtr ClaimFirstDisplayDeprecated();
+
+  const fxl::WeakPtr<DisplayManager2> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // For testing purposes only.
   const std::string& last_error() { return last_error_; }
@@ -43,6 +58,10 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
     // |id| assigned by the DisplayController.
     uint64_t id = 0;
 
+    zx_koid_t display_ref_koid = 0;
+
+    std::vector<zx_pixel_format_t> pixel_formats;
+
     // Interface for the DisplayController that this display is connected to.
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller;
 
@@ -51,6 +70,11 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
   };
 
   struct DisplayControllerPrivate {
+    // If a a client has called ClaimDisplay(), this will be non-null and point
+    // to the DisplayController passed to the client. This pointer is nulled
+    // out by the custom deleter for the DisplayController.
+    DisplayController* claimed_dc = nullptr;
+
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller;
     std::unique_ptr<DisplayControllerListener> listener;
     std::vector<DisplayInfoPrivate> displays;
@@ -67,6 +91,10 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
                          std::vector<fuchsia::hardware::display::Info> displays_added,
                          std::vector<uint64_t> displays_removed);
   void OnDisplayOwnershipChanged(DisplayControllerPrivate* dc, bool has_ownership);
+
+  std::tuple<DisplayControllerPrivate*, DisplayInfoPrivate*> FindDisplay(
+      zx_koid_t display_ref_koid);
+  DisplayControllerPrivate* FindDisplayControllerPrivate(DisplayController* dc);
 
   static DisplayInfoPrivate NewDisplayInfoPrivate(
       fuchsia::hardware::display::Info hardware_display_info,
@@ -88,6 +116,8 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
   std::vector<DisplayControllerPrivateUniquePtr> display_controllers_private_;
   fidl::InterfacePtrSet<fuchsia::ui::display::DisplayListener> display_listeners_;
   std::string last_error_;
+
+  fxl::WeakPtrFactory<DisplayManager2> weak_factory_;  // must be last
 };
 
 }  // namespace display

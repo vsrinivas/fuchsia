@@ -21,40 +21,6 @@ namespace scenic_impl {
 namespace display {
 namespace test {
 
-namespace {
-
-struct DisplayControllerObjects {
-  std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> interface_ptr;
-  std::unique_ptr<MockDisplayController> mock;
-  std::unique_ptr<DisplayControllerListener> listener;
-};
-
-DisplayControllerObjects CreateMockDisplayController() {
-  DisplayControllerObjects controller_objs;
-
-  zx::channel device_channel_server;
-  zx::channel device_channel_client;
-  FXL_CHECK(ZX_OK == zx::channel::create(0, &device_channel_server, &device_channel_client));
-  zx::channel controller_channel_server;
-  zx::channel controller_channel_client;
-  FXL_CHECK(ZX_OK ==
-            zx::channel::create(0, &controller_channel_server, &controller_channel_client));
-
-  controller_objs.mock = std::make_unique<MockDisplayController>();
-  controller_objs.mock->Bind(std::move(device_channel_server),
-                             std::move(controller_channel_server));
-
-  zx_handle_t controller_handle = controller_channel_client.get();
-  controller_objs.interface_ptr = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
-  controller_objs.interface_ptr->Bind(std::move(controller_channel_client));
-  controller_objs.listener = std::make_unique<DisplayControllerListener>(
-      std::move(device_channel_client), controller_objs.interface_ptr, controller_handle);
-
-  return controller_objs;
-}
-
-}  // namespace
-
 using DisplayManagerTest = gtest::TestLoopFixture;
 
 using OnDisplayAddedCallback = std::function<void(fuchsia::ui::display::Info)>;
@@ -111,19 +77,15 @@ class MockDisplayListener : public fuchsia::ui::display::testing::DisplayListene
 };
 
 static fuchsia::hardware::display::Info CreateFakeDisplayInfo(uint64_t display_id) {
-  fuchsia::hardware::display::Mode mode;
-  mode.horizontal_resolution = 1024;
-  mode.vertical_resolution = 800;
-  mode.refresh_rate_e2 = 60;
-  mode.flags = 0;
-  fuchsia::hardware::display::Info display;
-  display.id = display_id;
-  display.modes = {mode};
-  display.pixel_format = {ZX_PIXEL_FORMAT_ARGB_8888};
-  display.cursor_configs = {};
-  display.manufacturer_name = "fake_manufacturer_name";
-  display.monitor_name = "fake_monitor_name";
-  display.monitor_serial = "fake_monitor_serial";
+  fuchsia::hardware::display::Mode mode = {
+      .horizontal_resolution = 1024, .vertical_resolution = 800, .refresh_rate_e2 = 60, .flags = 0};
+  fuchsia::hardware::display::Info display = {.id = display_id,
+                                              .modes = {mode},
+                                              .pixel_format = {ZX_PIXEL_FORMAT_ARGB_8888},
+                                              .cursor_configs = {},
+                                              .manufacturer_name = "fake_manufacturer_name",
+                                              .monitor_name = "fake_monitor_name",
+                                              .monitor_serial = "fake_monitor_serial"};
   return display;
 }
 
@@ -341,6 +303,98 @@ TEST_F(DisplayManagerTest, DisplayOwnershipChanged) {
             fsl::GetKoid(displays_ownership_changed[0].reference.get()));
   EXPECT_EQ(fsl::GetKoid(displays_added[1].display_ref().reference.get()),
             fsl::GetKoid(displays_ownership_changed[1].reference.get()));
+}
+
+TEST_F(DisplayManagerTest, ClaimDisplay) {
+  DisplayManager2 display_manager;
+  DisplayControllerObjects display_controller_objs = CreateMockDisplayController();
+  display_manager.AddDisplayController(display_controller_objs.interface_ptr,
+                                       std::move(display_controller_objs.listener));
+
+  const uint64_t kTestDisplayId1 = 1u;
+  const uint64_t kTestDisplayId2 = 2u;
+  const uint64_t kTestDisplayId3 = 3u;
+  const uint64_t kTestImageId = 2u;
+  const uint64_t kTestTimestamp = 111111u;
+
+  display_controller_objs.mock->events().DisplaysChanged(
+      /* added */ {CreateFakeDisplayInfo(kTestDisplayId1)},
+      /* removed */ {});
+
+  std::vector<fuchsia::ui::display::Info> displays_added;
+  MockDisplayListener displays_changed_listener;
+  display_manager.AddDisplayListener(displays_changed_listener.Bind());
+  displays_changed_listener.set_on_display_added_callback(
+      [&displays_added](auto display_info) { displays_added.push_back(std::move(display_info)); });
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, displays_added.size());
+
+  {
+    DisplayControllerUniquePtr display_controller =
+        display_manager.ClaimDisplay(fsl::GetKoid(displays_added[0].display_ref().reference.get()));
+    EXPECT_TRUE(display_controller);
+    EXPECT_EQ(1u, display_controller->displays()->size());
+    EXPECT_EQ(kTestDisplayId1, display_controller->displays()->at(0).display_id());
+
+    // Try claiming the display a second time.
+    DisplayControllerUniquePtr display_controller2 =
+        display_manager.ClaimDisplay(fsl::GetKoid(displays_added[0].display_ref().reference.get()));
+    EXPECT_FALSE(display_controller2);
+
+    // Test display added/removed events.
+    bool display_added_received = false;
+    bool display_removed_received = false;
+    display_controller->set_on_display_added_callback([&](Display2* display) {
+      display_added_received = true;
+      EXPECT_EQ(kTestDisplayId2, display->display_id());
+    });
+    display_controller->set_on_display_removed_callback([&](uint64_t display_id) {
+      display_removed_received = true;
+      EXPECT_EQ(kTestDisplayId1, display_id);
+    });
+
+    display_controller_objs.mock->events().DisplaysChanged(
+        /* added */ {CreateFakeDisplayInfo(kTestDisplayId2)},
+        /* removed */ {kTestDisplayId1});
+    RunLoopUntilIdle();
+    EXPECT_TRUE(display_added_received);
+    EXPECT_TRUE(display_removed_received);
+    EXPECT_EQ(1u, display_controller->displays()->size());
+    EXPECT_EQ(kTestDisplayId2, display_controller->displays()->at(0).display_id());
+
+    // Test vsync delivery.
+    bool vsync_received = false;
+    display_controller->displays()->at(0).set_vsync_callback(
+        [&](zx::time timestamp, const std::vector<uint64_t>& images) {
+          vsync_received = true;
+          EXPECT_EQ(zx::time(kTestTimestamp), timestamp);
+          EXPECT_EQ(1u, images.size());
+          EXPECT_EQ(kTestImageId, images[0]);
+        });
+
+    display_controller_objs.mock->events().Vsync(kTestDisplayId2, kTestTimestamp, {kTestImageId});
+    RunLoopUntilIdle();
+    EXPECT_TRUE(vsync_received);
+  }
+
+  // The display is now unclaimed.
+
+  // Trigger a few events to check that we don't need a claimed display.
+  display_controller_objs.mock->events().DisplaysChanged(
+      /* added */ {CreateFakeDisplayInfo(kTestDisplayId3)},
+      /* removed */ {kTestDisplayId2});
+  display_controller_objs.mock->events().Vsync(kTestDisplayId3, kTestTimestamp, {kTestImageId});
+  RunLoopUntilIdle();
+
+  // Claim the display again.
+  const size_t kDisplaysAddedSize = 3;
+  ASSERT_EQ(kDisplaysAddedSize, displays_added.size());
+  DisplayControllerUniquePtr display_controller = display_manager.ClaimDisplay(
+      fsl::GetKoid(displays_added[kDisplaysAddedSize - 1].display_ref().reference.get()));
+  EXPECT_TRUE(display_controller);
+  EXPECT_EQ(1u, display_controller->displays()->size());
+  EXPECT_EQ(kTestDisplayId3, display_controller->displays()->at(0).display_id());
 }
 
 }  // namespace test

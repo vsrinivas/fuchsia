@@ -6,6 +6,8 @@ source_set("display") {
   sources = [
     "display.cc",
     "display.h",
+    "display_controller.cc",
+    "display_controller.h",
     "display_controller_listener.cc",
     "display_controller_listener.h",
     "display_controller_watcher.cc",
