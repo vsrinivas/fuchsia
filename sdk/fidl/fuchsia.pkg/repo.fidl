@@ -82,7 +82,8 @@ table RepositoryConfig {
     /// Example: fuchsia-pkg://example.com/
     1: string repo_url;
 
-    /// A vector of public keys. Required.
+    /// A vector of public keys that have signed the initial trusted root
+    /// metadata. Required.
     ///
     /// These keys must match one of the trusted keys known to the system.
     2: vector<RepositoryKeyConfig> root_keys;
@@ -94,6 +95,19 @@ table RepositoryConfig {
     ///
     /// Only used for the fuchsia-pkg://fuchsia.com/ repo.
     4: string update_package_url;
+
+    /// The initial trusted root metadata version. Optional, defaulting to 1.
+    ///
+    /// This value describes the initial root metadata version the resolver will
+    /// fetch to initialize trust, once it's signatures has been verified by the
+    /// `root_keys`. It will then walk the chain of N+1, N+2, and etc to the
+    /// latest version before the resolver fetches any targets.
+    ///
+    /// It is recommended that this `root_version` number and `root_keys ` are
+    /// kept reasonably in sync with the most recent published version of the
+    /// root metadata, as that avoids the risk of an old and unused root key
+    /// being used to compromise resolvers during the trust initialization.
+    5: uint32 root_version;
 };
 
 /// Describes the keys used by the repository to authenticate it's packages.

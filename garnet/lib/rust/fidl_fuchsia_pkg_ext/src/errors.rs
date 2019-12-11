@@ -43,4 +43,7 @@ pub enum RepositoryParseError {
 
     #[fail(display = "invalid update package url: {}", _0)]
     InvalidUpdatePackageUrl(#[cause] fuchsia_url::pkg_url::ParseError),
+
+    #[fail(display = "invalid root version: {}", _0)]
+    InvalidRootVersion(u32),
 }

@@ -102,7 +102,7 @@ impl Inner {
                 Config::default(),
                 local,
                 remote,
-                1,
+                config.root_version(),
             )
             .await
             .map_err(|e| format_err!("Unable to create rust tuf client, received error {:?}", e))?,
