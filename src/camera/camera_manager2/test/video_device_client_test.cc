@@ -20,33 +20,21 @@ namespace {
 class VideoDeviceClientTest : public ::testing::Test {
  public:
   VideoDeviceClientTest()
-      : fake_camera_(FakeController::StandardConfigs(), vdc_loop_.dispatcher()),
-        fake_sysmem_(vdc_loop_.dispatcher()) {}
-
-  void SetUp() override { vdc_loop_.StartThread(); }
-
-  void TearDown() override {
-    // The loop must be shut down prior to destruction of any fidl bindings.
-    // TODO(fxb/38435): loop + fidl binding should be more robust
-    vdc_loop_.Shutdown();
-    vdc_ = nullptr;
-    stream_ = nullptr;
-    stream2_ = nullptr;
-    stream3_ = nullptr;
-    stream4_ = nullptr;
+      : fake_camera_(FakeController::StandardConfigs(), fake_camera_loop_.dispatcher()),
+        fake_sysmem_(fake_sysmem_loop_.dispatcher()) {
+    fake_camera_loop_.StartThread("fake_camera_loop");
+    fake_sysmem_loop_.StartThread("fake_sysmem_loop");
+  }
+  ~VideoDeviceClientTest() override {
+    fake_camera_loop_.Shutdown();
+    fake_sysmem_loop_.Shutdown();
   }
 
-  async::Loop vdc_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
+  async::Loop fake_camera_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  async::Loop fake_sysmem_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   FakeController fake_camera_;
   FakeLogicalBufferCollection fake_sysmem_;
-
-  // The members below should be test locals. However, in order to guarantee they are cleaned up in
-  // the correct order relative to the detached vdc_loop_, TearDown must have access to them.
-  std::unique_ptr<camera::VideoDeviceClient> vdc_;
-  fuchsia::camera2::StreamPtr stream_;
-  fuchsia::camera2::StreamPtr stream2_;
-  fuchsia::camera2::StreamPtr stream3_;
-  fuchsia::camera2::StreamPtr stream4_;
 };
 
 // Create VDC with interfacehandle
@@ -56,8 +44,8 @@ class VideoDeviceClientTest : public ::testing::Test {
 //   give bad configs
 TEST_F(VideoDeviceClientTest, CreateVDC) {
   // First: a successful create call:
-  vdc_ = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
-  ASSERT_NE(vdc_, nullptr);
+  auto vdc = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
+  ASSERT_NE(vdc, nullptr);
 }
 
 TEST_F(VideoDeviceClientTest, FailToCreateVDC) {
@@ -102,29 +90,29 @@ TEST_F(VideoDeviceClientTest, CreateVdcBadConfigInvalid) {
 
 // MatchConstraints
 TEST_F(VideoDeviceClientTest, FailToMatchConstraints) {
-  vdc_ = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
-  ASSERT_NE(vdc_, nullptr);
+  auto vdc = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
+  ASSERT_NE(vdc, nullptr);
 
   uint32_t config_index, stream_type;
   fuchsia::camera2::StreamConstraints constraints;
   // Constraints are empty, should fail:
-  EXPECT_NE(ZX_OK, vdc_->MatchConstraints(constraints, &config_index, &stream_type));
+  EXPECT_NE(ZX_OK, vdc->MatchConstraints(constraints, &config_index, &stream_type));
 
   // Add properties, but no stream type:
   fuchsia::camera2::StreamProperties empty_properties;
   constraints.set_properties(std::move(empty_properties));
-  EXPECT_NE(ZX_OK, vdc_->MatchConstraints(constraints, &config_index, &stream_type));
+  EXPECT_NE(ZX_OK, vdc->MatchConstraints(constraints, &config_index, &stream_type));
 
   // Set an unsupported type:
   fuchsia::camera2::StreamProperties properties4;
   properties4.set_stream_type(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION);
   constraints.set_properties(std::move(properties4));
-  EXPECT_NE(ZX_OK, vdc_->MatchConstraints(constraints, &config_index, &stream_type));
+  EXPECT_NE(ZX_OK, vdc->MatchConstraints(constraints, &config_index, &stream_type));
 }
 
 TEST_F(VideoDeviceClientTest, MatchConstraints) {
-  vdc_ = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
-  ASSERT_NE(vdc_, nullptr);
+  auto vdc = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
+  ASSERT_NE(vdc, nullptr);
   // Match the stream types set up in StandardConfig().
   // These tests are each called individually (instead of being part of a loop)
   // for debugging ease, should any of them fail.
@@ -133,7 +121,7 @@ TEST_F(VideoDeviceClientTest, MatchConstraints) {
   fuchsia::camera2::StreamProperties properties;
   properties.set_stream_type(fuchsia::camera2::CameraStreamType::MONITORING);
   constraints.set_properties(std::move(properties));
-  EXPECT_EQ(ZX_OK, vdc_->MatchConstraints(constraints, &config_index, &stream_type));
+  EXPECT_EQ(ZX_OK, vdc->MatchConstraints(constraints, &config_index, &stream_type));
   // With standard config:
   // Config  | stream index | stream type
   //   0           0           MACHINE_LEARNING + MONITORING
@@ -147,7 +135,7 @@ TEST_F(VideoDeviceClientTest, MatchConstraints) {
   properties1.set_stream_type(fuchsia::camera2::CameraStreamType::MONITORING |
                               fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
   constraints.set_properties(std::move(properties1));
-  EXPECT_EQ(ZX_OK, vdc_->MatchConstraints(constraints, &config_index, &stream_type));
+  EXPECT_EQ(ZX_OK, vdc->MatchConstraints(constraints, &config_index, &stream_type));
   EXPECT_EQ(config_index, 0u);
   EXPECT_EQ(stream_type, 0u);
 
@@ -155,49 +143,49 @@ TEST_F(VideoDeviceClientTest, MatchConstraints) {
   properties2.set_stream_type(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
                               fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
   constraints.set_properties(std::move(properties2));
-  EXPECT_EQ(ZX_OK, vdc_->MatchConstraints(constraints, &config_index, &stream_type));
+  EXPECT_EQ(ZX_OK, vdc->MatchConstraints(constraints, &config_index, &stream_type));
   EXPECT_EQ(config_index, 1u);
   EXPECT_EQ(stream_type, 0u);
 
   fuchsia::camera2::StreamProperties properties3;
   properties3.set_stream_type(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
   constraints.set_properties(std::move(properties3));
-  EXPECT_EQ(ZX_OK, vdc_->MatchConstraints(constraints, &config_index, &stream_type));
+  EXPECT_EQ(ZX_OK, vdc->MatchConstraints(constraints, &config_index, &stream_type));
   EXPECT_EQ(config_index, 1u);
   EXPECT_EQ(stream_type, 1u);
 }
 
 TEST_F(VideoDeviceClientTest, CreateStream) {
-  vdc_ = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
-  vdc_loop_.RunUntilIdle();
-  ASSERT_NE(vdc_, nullptr);
+  auto vdc = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
+  loop_.RunUntilIdle();
+  ASSERT_NE(vdc, nullptr);
 
   uint32_t config_index = 0, stream_type = 0, image_format_index = 0;
   auto buffer_collection = fake_sysmem_.GetBufferCollection();
-  EXPECT_EQ(ZX_OK, vdc_->CreateStream(config_index, stream_type, image_format_index,
-                                      std::move(buffer_collection),
-                                      stream_.NewRequest(vdc_loop_.dispatcher())));
+  fuchsia::camera2::StreamPtr stream;
+  EXPECT_EQ(ZX_OK, vdc->CreateStream(config_index, stream_type, image_format_index,
+                                     std::move(buffer_collection), stream.NewRequest()));
   while (fake_camera_.GetConnections() < 1) {
-    vdc_loop_.RunUntilIdle();
+    loop_.RunUntilIdle();
   }
-  EXPECT_TRUE(fake_camera_.HasMatchingChannel(stream_.channel()));
+  EXPECT_TRUE(fake_camera_.HasMatchingChannel(stream.channel()));
 }
 
 TEST_F(VideoDeviceClientTest, CreateStreamBadSysmem) {
-  vdc_ = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
-  ASSERT_NE(vdc_, nullptr);
+  auto vdc = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
+  ASSERT_NE(vdc, nullptr);
 
   uint32_t config_index = 0, stream_type = 0, image_format_index = 0;
   fake_sysmem_.SetBufferError(true);
   auto buffer_collection = fake_sysmem_.GetBufferCollection();
-  EXPECT_NE(ZX_OK, vdc_->CreateStream(config_index, stream_type, image_format_index,
-                                      std::move(buffer_collection),
-                                      stream_.NewRequest(vdc_loop_.dispatcher())));
+  fuchsia::camera2::StreamPtr stream;
+  EXPECT_NE(ZX_OK, vdc->CreateStream(config_index, stream_type, image_format_index,
+                                     std::move(buffer_collection), stream.NewRequest()));
 }
 
 TEST_F(VideoDeviceClientTest, CreateStreamWithBadIndex) {
-  vdc_ = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
-  ASSERT_NE(vdc_, nullptr);
+  auto vdc = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
+  ASSERT_NE(vdc, nullptr);
 
   // Standard config only has up to 2 image formats per stream
   // Attempt to create a stream with an invalid image_format_index.
@@ -205,68 +193,74 @@ TEST_F(VideoDeviceClientTest, CreateStreamWithBadIndex) {
   uint32_t config_index = 0, stream_type = 0;
   uint32_t image_format_index = fuchsia::camera2::MAX_IMAGE_FORMATS;
   auto buffer_collection = fake_sysmem_.GetBufferCollection();
-  EXPECT_NE(ZX_OK, vdc_->CreateStream(config_index, stream_type, image_format_index,
-                                      std::move(buffer_collection),
-                                      stream_.NewRequest(vdc_loop_.dispatcher())));
+  fuchsia::camera2::StreamPtr stream;
+  EXPECT_NE(ZX_OK, vdc->CreateStream(config_index, stream_type, image_format_index,
+                                     std::move(buffer_collection), stream.NewRequest()));
 
   // Attempt to create a stream with an invalid stream_index.
   // The CreateStream call should fail.
-  FakeLogicalBufferCollection fake_sysmem2(vdc_loop_.dispatcher());
+  FakeLogicalBufferCollection fake_sysmem2(loop_.dispatcher());
   config_index = 0, stream_type = fuchsia::camera2::hal::MAX_STREAMS, image_format_index = 0;
   auto buffer_collection2 = fake_sysmem2.GetBufferCollection();
-  EXPECT_NE(ZX_OK, vdc_->CreateStream(config_index, stream_type, image_format_index,
-                                      std::move(buffer_collection2),
-                                      stream2_.NewRequest(vdc_loop_.dispatcher())));
+  fuchsia::camera2::StreamPtr stream2;
+  EXPECT_NE(ZX_OK, vdc->CreateStream(config_index, stream_type, image_format_index,
+                                     std::move(buffer_collection2), stream2.NewRequest()));
 
   // Attempt to create a stream with an invalid config_index.
   // The CreateStream call should fail.
-  FakeLogicalBufferCollection fake_sysmem3(vdc_loop_.dispatcher());
+  FakeLogicalBufferCollection fake_sysmem3(loop_.dispatcher());
   config_index = fuchsia::camera2::hal::MAX_CONFIGURATIONS, stream_type = 0, image_format_index = 0;
   auto buffer_collection3 = fake_sysmem3.GetBufferCollection();
-  EXPECT_NE(ZX_OK, vdc_->CreateStream(config_index, stream_type, image_format_index,
-                                      std::move(buffer_collection3),
-                                      stream3_.NewRequest(vdc_loop_.dispatcher())));
+  fuchsia::camera2::StreamPtr stream3;
+  EXPECT_NE(ZX_OK, vdc->CreateStream(config_index, stream_type, image_format_index,
+                                     std::move(buffer_collection3), stream3.NewRequest()));
 }
 
 // Make sure the old connections are dropped when new connections start.
 TEST_F(VideoDeviceClientTest, CreateStreamRemoveOldCollections) {
-  vdc_ = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
-  ASSERT_NE(vdc_, nullptr);
+  auto vdc = VideoDeviceClient::Create(fake_camera_.GetCameraConnection());
+  ASSERT_NE(vdc, nullptr);
+
+  // Extra instances of fake_sysmem must run on an alternate loop from the main fake_sysmem_loop_
+  // in order to correctly destroy the local fidl bindings.
+  async::Loop fake_sysmem_secondary_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  ASSERT_EQ(fake_sysmem_secondary_loop.StartThread("fake_sysmem_secondary_loop"), ZX_OK);
 
   uint32_t config_index = 0, stream_type = 0, image_format_index = 0;
   auto buffer_collection = fake_sysmem_.GetBufferCollection();
-  EXPECT_EQ(ZX_OK, vdc_->CreateStream(config_index, stream_type, image_format_index,
-                                      std::move(buffer_collection),
-                                      stream_.NewRequest(vdc_loop_.dispatcher())));
+  fuchsia::camera2::StreamPtr stream;
+  EXPECT_EQ(ZX_OK, vdc->CreateStream(config_index, stream_type, image_format_index,
+                                     std::move(buffer_collection), stream.NewRequest()));
 
-  vdc_loop_.RunUntilIdle();
+  loop_.RunUntilIdle();
 
   // Now open another stream of the same config.
-  FakeLogicalBufferCollection fake_sysmem2(vdc_loop_.dispatcher());
+  FakeLogicalBufferCollection fake_sysmem2(fake_sysmem_secondary_loop.dispatcher());
   config_index = 0, stream_type = 1, image_format_index = 0;
   auto buffer_collection2 = fake_sysmem2.GetBufferCollection();
-  EXPECT_EQ(ZX_OK, vdc_->CreateStream(config_index, stream_type, image_format_index,
-                                      std::move(buffer_collection2),
-                                      stream2_.NewRequest(vdc_loop_.dispatcher())));
+  fuchsia::camera2::StreamPtr stream2;
+  EXPECT_EQ(ZX_OK, vdc->CreateStream(config_index, stream_type, image_format_index,
+                                     std::move(buffer_collection2), stream2.NewRequest()));
 
   while (fake_camera_.GetConnections() < 2) {
-    vdc_loop_.RunUntilIdle();
+    loop_.RunUntilIdle();
   }
+
   // Expect both streams to be running now.
-  EXPECT_TRUE(fake_camera_.HasMatchingChannel(stream_.channel()));
-  EXPECT_TRUE(fake_camera_.HasMatchingChannel(stream2_.channel()));
+  EXPECT_TRUE(fake_camera_.HasMatchingChannel(stream.channel()));
+  EXPECT_TRUE(fake_camera_.HasMatchingChannel(stream2.channel()));
 
   // Now attempt to create a stream from a different config.
   // The VDC should close the previous logical buffer collection.
-  FakeLogicalBufferCollection fake_sysmem3(vdc_loop_.dispatcher());
+  FakeLogicalBufferCollection fake_sysmem3(fake_sysmem_secondary_loop.dispatcher());
   config_index = 1, stream_type = 0, image_format_index = 0;
   auto buffer_collection3 = fake_sysmem3.GetBufferCollection();
-  EXPECT_EQ(ZX_OK, vdc_->CreateStream(config_index, stream_type, image_format_index,
-                                      std::move(buffer_collection3),
-                                      stream3_.NewRequest(vdc_loop_.dispatcher())));
+  fuchsia::camera2::StreamPtr stream3;
+  EXPECT_EQ(ZX_OK, vdc->CreateStream(config_index, stream_type, image_format_index,
+                                     std::move(buffer_collection3), stream3.NewRequest()));
 
   while (!fake_sysmem_.closed() || !fake_sysmem2.closed()) {
-    vdc_loop_.RunUntilIdle();
+    loop_.RunUntilIdle();
   }
   // Both other streams should now have closed.
   EXPECT_TRUE(fake_sysmem_.closed());
@@ -274,18 +268,21 @@ TEST_F(VideoDeviceClientTest, CreateStreamRemoveOldCollections) {
 
   // Now connect to the same config and stream type.
   // The VDC should close the previous logical buffer collection.
-  FakeLogicalBufferCollection fake_sysmem4(vdc_loop_.dispatcher());
+  FakeLogicalBufferCollection fake_sysmem4(fake_sysmem_secondary_loop.dispatcher());
   config_index = 1, stream_type = 0, image_format_index = 0;
   auto buffer_collection4 = fake_sysmem4.GetBufferCollection();
-  EXPECT_EQ(ZX_OK, vdc_->CreateStream(config_index, stream_type, image_format_index,
-                                      std::move(buffer_collection4),
-                                      stream4_.NewRequest(vdc_loop_.dispatcher())));
+  fuchsia::camera2::StreamPtr stream4;
+  EXPECT_EQ(ZX_OK, vdc->CreateStream(config_index, stream_type, image_format_index,
+                                     std::move(buffer_collection4), stream4.NewRequest()));
 
   while (!fake_sysmem3.closed()) {
-    vdc_loop_.RunUntilIdle();
+    loop_.RunUntilIdle();
   }
   // That should have closed the third stream, since it was the same type.
   EXPECT_TRUE(fake_sysmem3.closed());
+
+  // Terminate secondary loop prior to destroying local fake_sysmem instances.
+  fake_sysmem_secondary_loop.Shutdown();
 }
 
 }  // namespace

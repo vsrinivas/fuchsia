@@ -9,8 +9,12 @@
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <zircon/compiler.h>
 
 #include <vector>
+
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 
 namespace camera {
 
@@ -24,7 +28,10 @@ class FakeController : public fuchsia::camera2::hal::Controller {
   FakeController(std::vector<fuchsia::camera2::hal::Config> configs,
                  async_dispatcher_t* dispatcher);
 
-  ~FakeController() { connections_.clear(); }
+  ~FakeController() {
+    fbl::AutoLock lock(&connections_lock_);
+    connections_.clear();
+  }
 
   // Produce the client side of a connection to this server. This can only be called once.
   fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> GetCameraConnection();
@@ -34,11 +41,14 @@ class FakeController : public fuchsia::camera2::hal::Controller {
 
   // Verifies if the server side of the channel |client_side|
   // has been received by this controller.
-  bool HasMatchingChannel(const zx::channel& client_side) const;
+  bool HasMatchingChannel(const zx::channel& client_side);
 
   // Get the number of streams that have been connected to this driver
   // by using the CreateStream function.
-  uint32_t GetConnections() const { return connections_.size(); }
+  uint32_t GetConnections() {
+    fbl::AutoLock lock(&connections_lock_);
+    return connections_.size();
+  }
 
   // Fidl Functions:
   // Get a list of all available configurations which the camera driver supports.
@@ -72,7 +82,8 @@ class FakeController : public fuchsia::camera2::hal::Controller {
 
   std::vector<fuchsia::camera2::hal::Config> configs_;
   async_dispatcher_t* dispatcher_;
-  std::vector<CameraConnection> connections_;
+  fbl::Mutex connections_lock_;
+  std::vector<CameraConnection> connections_ __TA_GUARDED(connections_lock_);
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_{this};
   GetConfigsFailureMode configs_failure_ = GetConfigsFailureMode::VALID_CONFIGS;
 };

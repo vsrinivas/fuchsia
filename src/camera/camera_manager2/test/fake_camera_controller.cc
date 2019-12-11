@@ -103,6 +103,7 @@ void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,
                            .image_format_index = image_format_index,
                            .buffer_collection = std::move(buffer_collection),
                            .stream = std::move(stream)};
+  fbl::AutoLock lock(&connections_lock_);
   connections_.push_back(std::move(conn));
 }
 
@@ -116,7 +117,8 @@ void FakeController::GetDeviceInfo(GetDeviceInfoCallback callback) {
   callback(std::move(camera_device_info));
 }
 
-bool FakeController::HasMatchingChannel(const zx::channel& client_side) const {
+bool FakeController::HasMatchingChannel(const zx::channel& client_side) {
+  fbl::AutoLock lock(&connections_lock_);
   for (auto& connection : connections_) {
     if (CheckMatchingChannel(connection.stream.channel(), client_side)) {
       return true;
