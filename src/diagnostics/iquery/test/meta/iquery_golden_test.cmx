@@ -8,7 +8,7 @@
     "sandbox": {
         "features": [
             "hub",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.process.Launcher",
