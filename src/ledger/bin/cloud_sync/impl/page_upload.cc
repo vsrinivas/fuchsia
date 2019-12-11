@@ -22,7 +22,7 @@ PageUpload::PageUpload(coroutine::CoroutineService* coroutine_service,
                        callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
                        encryption::EncryptionService* encryption_service,
                        cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
-                       std::unique_ptr<backoff::Backoff> backoff)
+                       std::unique_ptr<ledger::Backoff> backoff)
     : coroutine_service_(coroutine_service),
       task_runner_(task_runner),
       storage_(storage),

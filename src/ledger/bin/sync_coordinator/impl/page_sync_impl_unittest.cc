@@ -14,7 +14,7 @@
 #include "src/ledger/bin/sync_coordinator/impl/page_sync_impl.h"
 #include "src/ledger/bin/sync_coordinator/public/sync_state_watcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/backoff/testing/test_backoff.h"
+#include "src/ledger/lib/backoff/testing/test_backoff.h"
 
 namespace sync_coordinator {
 
@@ -38,8 +38,8 @@ TEST_F(PageSyncImplTest2, PageCloudError) {
   sync_coordinator::PageSyncImpl page_sync(&storage, &storage);
   page_sync.CreateCloudSyncClient();
   encryption::FakeEncryptionService encryption_service(dispatcher());
-  auto download_backoff = std::make_unique<backoff::TestBackoff>(zx::msec(50));
-  auto upload_backoff = std::make_unique<backoff::TestBackoff>(zx::msec(50));
+  auto download_backoff = std::make_unique<ledger::TestBackoff>(zx::msec(50));
+  auto upload_backoff = std::make_unique<ledger::TestBackoff>(zx::msec(50));
 
   EXPECT_TRUE(storage.watcher_ == nullptr);
   auto cloud_sync = std::make_unique<cloud_sync::PageSyncImpl>(

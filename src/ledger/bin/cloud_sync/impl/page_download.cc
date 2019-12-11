@@ -103,7 +103,7 @@ bool NormalizeDiff(std::vector<storage::EntryChange>* changes) {
 PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
-                           std::unique_ptr<backoff::Backoff> backoff)
+                           std::unique_ptr<ledger::Backoff> backoff)
     : task_runner_(task_runner),
       storage_(storage),
       encryption_service_(encryption_service),

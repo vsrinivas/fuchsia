@@ -17,7 +17,7 @@
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/lib/backoff/testing/test_backoff.h"
+#include "src/ledger/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 
@@ -40,7 +40,7 @@ class ConflictResolverClientTest : public TestWithPageStorage {
     page_storage_ = page_storage.get();
 
     std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
-        [] {}, &environment_, page_storage_, std::make_unique<backoff::TestBackoff>());
+        [] {}, &environment_, page_storage_, std::make_unique<TestBackoff>());
     resolver->SetMergeStrategy(nullptr);
     resolver->SetOnDiscardable(QuitLoopClosure());
     merge_resolver_ = resolver.get();

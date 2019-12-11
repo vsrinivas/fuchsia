@@ -11,7 +11,7 @@
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/backoff/exponential_backoff.h"
+#include "src/ledger/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 
@@ -26,8 +26,8 @@ TEST_F(PageDelegateTest, OnDiscardableInInit) {
   auto storage_ptr = storage.get();
   auto merger = std::make_unique<MergeResolver>(
       [] {}, &environment_, storage_ptr,
-      std::make_unique<backoff::ExponentialBackoff>(
-          zx::sec(0), 1u, zx::sec(0), environment_.random()->NewBitGenerator<uint64_t>()));
+      std::make_unique<ExponentialBackoff>(zx::sec(0), 1u, zx::sec(0),
+                                           environment_.random()->NewBitGenerator<uint64_t>()));
   auto merger_ptr = merger.get();
 
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,

@@ -20,8 +20,8 @@ source_set("environment") {
     "//src/ledger/bin/platform:implementation",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/public",
+    "//src/ledger/lib/backoff",
     "//src/ledger/lib/coroutine",
-    "//src/lib/backoff",
     "//src/lib/fxl",
     "//src/lib/timekeeper:system",
   ]

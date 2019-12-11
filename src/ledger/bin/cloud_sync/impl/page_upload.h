@@ -18,8 +18,8 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -56,7 +56,7 @@ class PageUpload : public storage::CommitWatcher {
              callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
              encryption::EncryptionService* encryption_service,
              cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
-             std::unique_ptr<backoff::Backoff> backoff);
+             std::unique_ptr<ledger::Backoff> backoff);
   PageUpload(const PageUpload&) = delete;
   PageUpload& operator=(const PageUpload&) = delete;
 
@@ -114,7 +114,7 @@ class PageUpload : public storage::CommitWatcher {
   Delegate* const delegate_;
   const std::string log_prefix_;
 
-  std::unique_ptr<backoff::Backoff> backoff_;
+  std::unique_ptr<ledger::Backoff> backoff_;
 
   // Work queue:
   // Current batch of local commits being uploaded.

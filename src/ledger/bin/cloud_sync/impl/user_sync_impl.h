@@ -17,8 +17,8 @@
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
 #include "src/ledger/bin/cloud_sync/public/user_sync.h"
 #include "src/ledger/bin/environment/environment.h"
+#include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -29,7 +29,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   //   |on_version_mismatch| is called when the local state is detected to be
   //     incompatible with the state in the cloud and has to be erased.
   UserSyncImpl(ledger::Environment* environment, UserConfig user_config,
-               std::unique_ptr<backoff::Backoff> backoff, fit::closure on_version_mismatch,
+               std::unique_ptr<ledger::Backoff> backoff, fit::closure on_version_mismatch,
                clocks::DeviceFingerprintManager* fingerprint_manager);
   ~UserSyncImpl() override;
 
@@ -61,7 +61,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
 
   ledger::Environment* environment_;
   const UserConfig user_config_;
-  std::unique_ptr<backoff::Backoff> backoff_;
+  std::unique_ptr<ledger::Backoff> backoff_;
   fit::closure on_version_mismatch_;
 
   // UserSyncImpl must be started before it can be used.

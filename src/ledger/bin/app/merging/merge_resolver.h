@@ -12,8 +12,8 @@
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -26,7 +26,7 @@ class MergeStrategy;
 class MergeResolver : public storage::CommitWatcher {
  public:
   MergeResolver(fit::closure on_destroyed, Environment* environment, storage::PageStorage* storage,
-                std::unique_ptr<backoff::Backoff> backoff);
+                std::unique_ptr<Backoff> backoff);
   MergeResolver(const MergeResolver&) = delete;
   MergeResolver& operator=(const MergeResolver&) = delete;
   ~MergeResolver() override;
@@ -124,7 +124,7 @@ class MergeResolver : public storage::CommitWatcher {
 
   coroutine::CoroutineService* coroutine_service_;
   storage::PageStorage* const storage_;
-  std::unique_ptr<backoff::Backoff> backoff_;
+  std::unique_ptr<Backoff> backoff_;
   ActivePageManager* active_page_manager_ = nullptr;
   std::unique_ptr<MergeStrategy> strategy_;
   std::unique_ptr<MergeStrategy> next_strategy_;

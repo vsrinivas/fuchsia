@@ -28,11 +28,11 @@
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/backoff/exponential_backoff.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
@@ -71,8 +71,8 @@ class PageImplTest : public TestWithEnvironment {
     fake_storage_ = fake_storage.get();
     auto resolver = std::make_unique<MergeResolver>(
         [] {}, &environment_, fake_storage_,
-        std::make_unique<backoff::ExponentialBackoff>(
-            zx::sec(0), 1u, zx::sec(0), environment_.random()->NewBitGenerator<uint64_t>()));
+        std::make_unique<ExponentialBackoff>(zx::sec(0), 1u, zx::sec(0),
+                                             environment_.random()->NewBitGenerator<uint64_t>()));
     resolver_ = resolver.get();
 
     manager_ = std::make_unique<ActivePageManager>(&environment_, std::move(fake_storage), nullptr,

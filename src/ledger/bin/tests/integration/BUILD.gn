@@ -65,6 +65,7 @@ source_set("integration_sharded") {
     "//src/ledger/bin/testing/overnet",
     "//src/ledger/bin/tests/integration/sync",
     "//src/ledger/cloud_provider_in_memory/lib",
+    "//src/ledger/lib/backoff",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/socket",

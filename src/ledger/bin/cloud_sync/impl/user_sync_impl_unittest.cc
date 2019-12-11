@@ -16,8 +16,7 @@
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/backoff/backoff.h"
-#include "src/lib/backoff/testing/test_backoff.h"
+#include "src/ledger/lib/backoff/testing/test_backoff.h"
 
 namespace cloud_sync {
 
@@ -64,7 +63,7 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
     user_config.user_directory = tmp_location_->path();
     user_config.cloud_provider = std::move(cloud_provider_ptr_);
 
-    auto backoff = std::make_unique<backoff::TestBackoff>();
+    auto backoff = std::make_unique<ledger::TestBackoff>();
     backoff->SetOnGetNext([this] {
       // Make RunLoopUntilIdle() return once a backoff is requested, to avoid an
       // infinite loop.

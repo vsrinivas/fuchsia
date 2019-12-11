@@ -21,7 +21,7 @@
 namespace cloud_sync {
 
 UserSyncImpl::UserSyncImpl(ledger::Environment* environment, UserConfig user_config,
-                           std::unique_ptr<backoff::Backoff> backoff,
+                           std::unique_ptr<ledger::Backoff> backoff,
                            fit::closure on_version_mismatch,
                            clocks::DeviceFingerprintManager* fingerprint_manager)
     : environment_(environment),

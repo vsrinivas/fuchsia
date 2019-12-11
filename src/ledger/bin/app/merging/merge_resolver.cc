@@ -117,8 +117,7 @@ void MergeResolver::MergeCandidates::PrepareNext() {
 }
 
 MergeResolver::MergeResolver(fit::closure on_destroyed, Environment* environment,
-                             storage::PageStorage* storage,
-                             std::unique_ptr<backoff::Backoff> backoff)
+                             storage::PageStorage* storage, std::unique_ptr<Backoff> backoff)
     : coroutine_service_(environment->coroutine_service()),
       storage_(storage),
       backoff_(std::move(backoff)),

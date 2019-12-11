@@ -24,8 +24,8 @@
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/backoff/testing/test_backoff.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 
@@ -67,9 +67,9 @@ class PageSyncImplTest : public ledger::TestWithEnvironment {
     std::unique_ptr<TestSyncStateWatcher> watcher = std::make_unique<TestSyncStateWatcher>();
     state_watcher_ = watcher.get();
 
-    auto download_backoff = std::make_unique<backoff::TestBackoff>(zx::msec(50));
+    auto download_backoff = std::make_unique<ledger::TestBackoff>(zx::msec(50));
     download_backoff_ptr_ = download_backoff.get();
-    auto upload_backoff = std::make_unique<backoff::TestBackoff>(zx::msec(50));
+    auto upload_backoff = std::make_unique<ledger::TestBackoff>(zx::msec(50));
     upload_backoff_ptr_ = upload_backoff.get();
 
     page_sync_ = std::make_unique<PageSyncImpl>(
@@ -104,8 +104,8 @@ class PageSyncImplTest : public ledger::TestWithEnvironment {
   encryption::FakeEncryptionService encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_ptr_;
   TestPageCloud page_cloud_;
-  backoff::TestBackoff* download_backoff_ptr_;
-  backoff::TestBackoff* upload_backoff_ptr_;
+  ledger::TestBackoff* download_backoff_ptr_;
+  ledger::TestBackoff* upload_backoff_ptr_;
   TestSyncStateWatcher* state_watcher_;
   std::unique_ptr<PageSyncImpl> page_sync_;
 };

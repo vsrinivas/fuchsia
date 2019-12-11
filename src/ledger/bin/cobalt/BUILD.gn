@@ -30,7 +30,6 @@ source_set("cobalt") {
   deps = [
     ":ledger_metrics_registry_cc",
     "//src/ledger/lib/logging",
-    "//src/lib/backoff",
     "//src/lib/callback",
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//zircon/system/fidl/fuchsia-cobalt",

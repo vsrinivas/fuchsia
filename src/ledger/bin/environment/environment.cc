@@ -9,9 +9,9 @@
 #include "peridot/lib/rng/system_random.h"
 #include "src/ledger/bin/environment/thread_notification.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/backoff/exponential_backoff.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
 
@@ -53,7 +53,7 @@ Environment& Environment::operator=(Environment&& other) noexcept = default;
 
 Environment::~Environment() = default;
 
-std::unique_ptr<backoff::Backoff> Environment::MakeBackoff() { return backoff_factory_(); }
+std::unique_ptr<Backoff> Environment::MakeBackoff() { return backoff_factory_(); }
 
 std::unique_ptr<Notification> Environment::MakeNotification() { return notification_factory_(); }
 
@@ -141,7 +141,7 @@ Environment EnvironmentBuilder::Build() {
   }
   if (!backoff_factory_) {
     backoff_factory_ = [random = random_.get()] {
-      return std::make_unique<backoff::ExponentialBackoff>(random->NewBitGenerator<uint64_t>());
+      return std::make_unique<ExponentialBackoff>(random->NewBitGenerator<uint64_t>());
     };
   }
   if (!notification_factory_) {

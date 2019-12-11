@@ -14,8 +14,8 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
+#include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/callback/managed_container.h"
-#include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -34,7 +34,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher {
   PageDownload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
-               std::unique_ptr<backoff::Backoff> backoff);
+               std::unique_ptr<ledger::Backoff> backoff);
   PageDownload(const PageDownload&) = delete;
   PageDownload& operator=(const PageDownload&) = delete;
 
@@ -128,7 +128,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher {
   cloud_provider::PageCloudPtr* const page_cloud_;
   Delegate* const delegate_;
 
-  std::unique_ptr<backoff::Backoff> backoff_;
+  std::unique_ptr<ledger::Backoff> backoff_;
 
   const std::string log_prefix_;
 

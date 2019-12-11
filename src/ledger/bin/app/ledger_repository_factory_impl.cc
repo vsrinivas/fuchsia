@@ -37,7 +37,6 @@
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fsl/io/fd.h"

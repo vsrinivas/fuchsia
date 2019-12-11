@@ -29,10 +29,10 @@
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/backoff/testing/test_backoff.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 
@@ -64,8 +64,8 @@ storage::ObjectIdentifier MakeObjectIdentifier() {
 // Dummy implementation of a backoff policy, which always returns constant backoff
 // time.
 constexpr zx::duration kTestBackoffInterval = zx::msec(50);
-std::unique_ptr<backoff::TestBackoff> NewTestBackoff() {
-  auto result = std::make_unique<backoff::TestBackoff>(kTestBackoffInterval);
+std::unique_ptr<ledger::TestBackoff> NewTestBackoff() {
+  auto result = std::make_unique<ledger::TestBackoff>(kTestBackoffInterval);
   return result;
 }
 

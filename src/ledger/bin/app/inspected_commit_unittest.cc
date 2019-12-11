@@ -25,10 +25,10 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/backoff/exponential_backoff.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/vector.h"
-#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -62,8 +62,8 @@ std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
                                                 storage::PageStorage* storage) {
   return std::make_unique<MergeResolver>(
       [] {}, environment, storage,
-      std::make_unique<backoff::ExponentialBackoff>(
-          zx::sec(0), 1u, zx::sec(0), environment->random()->NewBitGenerator<uint64_t>()));
+      std::make_unique<ExponentialBackoff>(zx::sec(0), 1u, zx::sec(0),
+                                           environment->random()->NewBitGenerator<uint64_t>()));
 }
 
 // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=36298): Deduplicate and canonicalize

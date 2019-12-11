@@ -21,9 +21,9 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/destruction_sentinel.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -64,8 +64,8 @@ class PageSyncImpl : public PageSync,
                storage::PageStorage* storage, storage::PageSyncClient* sync_client,
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr page_cloud,
-               std::unique_ptr<backoff::Backoff> download_backoff,
-               std::unique_ptr<backoff::Backoff> upload_backoff,
+               std::unique_ptr<ledger::Backoff> download_backoff,
+               std::unique_ptr<ledger::Backoff> upload_backoff,
                std::unique_ptr<SyncStateWatcher> ledger_watcher = nullptr);
   ~PageSyncImpl() override;
 

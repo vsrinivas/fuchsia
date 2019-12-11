@@ -26,10 +26,9 @@
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/backoff/testing/test_backoff.h"
 #include "src/ledger/lib/encoding/encoding.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/backoff/backoff.h"
-#include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 
@@ -57,7 +56,7 @@ class PageUploadTest : public ledger::TestWithEnvironment, public PageUpload::De
         encryption_service_(dispatcher()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(dispatcher()) {
-    auto test_backoff = std::make_unique<backoff::TestBackoff>(kBackoffInterval);
+    auto test_backoff = std::make_unique<ledger::TestBackoff>(kBackoffInterval);
     backoff_ = test_backoff.get();
     page_upload_ = std::make_unique<PageUpload>(environment_.coroutine_service(), &task_runner_,
                                                 &storage_, &encryption_service_, &page_cloud_ptr_,
@@ -85,7 +84,7 @@ class PageUploadTest : public ledger::TestWithEnvironment, public PageUpload::De
   TestPageCloud page_cloud_;
   std::vector<UploadSyncState> states_;
   std::unique_ptr<PageUpload> page_upload_;
-  backoff::TestBackoff* backoff_;
+  ledger::TestBackoff* backoff_;
   bool is_download_idle_ = true;
 
  private:

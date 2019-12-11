@@ -16,8 +16,8 @@
 #include "src/ledger/bin/environment/notification.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/backoff/backoff.h"
 
 namespace ledger {
 
@@ -25,7 +25,7 @@ namespace ledger {
 // |io_dispatcher|.
 class Environment {
  public:
-  using BackoffFactory = fit::function<std::unique_ptr<backoff::Backoff>()>;
+  using BackoffFactory = fit::function<std::unique_ptr<Backoff>()>;
   using NotificationFactory = fit::function<std::unique_ptr<Notification>()>;
   Environment(std::unique_ptr<Platform> platform, bool disable_statistics,
               async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
@@ -51,7 +51,7 @@ class Environment {
 
   coroutine::CoroutineService* coroutine_service() const { return coroutine_service_.get(); }
 
-  std::unique_ptr<backoff::Backoff> MakeBackoff();
+  std::unique_ptr<Backoff> MakeBackoff();
 
   std::unique_ptr<Notification> MakeNotification();
 

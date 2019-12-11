@@ -32,11 +32,11 @@
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
+#include "src/ledger/lib/backoff/exponential_backoff.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -84,8 +84,8 @@ Environment BuildEnvironment(async::TestLoop* loop, async_dispatcher_t* dispatch
       .SetNotificationFactory(ledger::TestLoopNotification::NewFactory(loop))
       .SetStartupContext(component_context)
       .SetBackoffFactory([random] {
-        return std::make_unique<backoff::ExponentialBackoff>(kBackoffDuration, 1u, kBackoffDuration,
-                                                             random->NewBitGenerator<uint64_t>());
+        return std::make_unique<ledger::ExponentialBackoff>(kBackoffDuration, 1u, kBackoffDuration,
+                                                            random->NewBitGenerator<uint64_t>());
       })
       .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(loop))
       .SetRandom(std::make_unique<DelegatedRandom>(random))

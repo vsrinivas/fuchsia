@@ -18,7 +18,6 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/backoff/backoff.h"
 
 namespace ledger {
 

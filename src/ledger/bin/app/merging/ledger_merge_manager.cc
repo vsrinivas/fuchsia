@@ -15,7 +15,7 @@
 #include "src/ledger/bin/app/merging/custom_merge_strategy.h"
 #include "src/ledger/bin/app/merging/last_one_wins_merge_strategy.h"
 #include "src/ledger/bin/app/merging/merge_resolver.h"
-#include "src/lib/backoff/exponential_backoff.h"
+#include "src/ledger/lib/backoff/exponential_backoff.h"
 
 namespace ledger {
 
@@ -95,8 +95,8 @@ std::unique_ptr<MergeResolver> LedgerMergeManager::GetMergeResolver(storage::Pag
   storage::PageId page_id = storage->GetId();
   std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
       [this, page_id]() { RemoveResolver(page_id); }, environment_, storage,
-      std::make_unique<backoff::ExponentialBackoff>(
-          zx::msec(10), 2u, zx::sec(60 * 60), environment_->random()->NewBitGenerator<uint64_t>()));
+      std::make_unique<ExponentialBackoff>(zx::msec(10), 2u, zx::sec(60 * 60),
+                                           environment_->random()->NewBitGenerator<uint64_t>()));
   resolvers_[page_id] = resolver.get();
   GetResolverStrategyForPage(page_id,
                              [this, page_id](std::unique_ptr<MergeStrategy> strategy) mutable {

@@ -18,6 +18,7 @@ executable("ledger_lib_unittests") {
   testonly = true
 
   deps = [
+    "//src/ledger/lib/backoff:unittests",
     "//src/ledger/lib/callback:unittests",
     "//src/ledger/lib/convert:unittests",
     "//src/ledger/lib/coroutine:unittests",
