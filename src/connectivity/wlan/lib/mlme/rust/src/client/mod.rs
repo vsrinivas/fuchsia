@@ -453,6 +453,18 @@ impl Client {
             .map_err(|s| Error::Status(format!("error sending PS-Poll frame"), s))
     }
 
+    // IEEE Std 802.11-2016, 9.6.5.2 - ADDBA stands for Add BlockAck
+    pub fn send_addba_req_frame(&mut self, ctx: &mut Context) -> Result<(), Error> {
+        const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr, mac::AddbaReqHdr);
+        let mut buf = ctx.buf_provider.get_buffer(FRAME_LEN)?;
+        let mut w = BufferWriter::new(&mut buf[..]);
+        write_addba_req_frame(&mut w, self.bssid, self.iface_mac, &mut ctx.seq_mgr)?;
+        let bytes_written = w.bytes_written();
+        let out_buf = OutBuf::from(buf, bytes_written);
+        self.send_mgmt_or_ctrl_frame(ctx, out_buf)
+            .map_err(|s| Error::Status(format!("error sending add block ack frame"), s))
+    }
+
     /// Called when a previously scheduled `TimedEvent` fired.
     pub fn handle_timed_event(&mut self, ctx: &mut Context, event_id: EventId) {
         // Safe: |state| is never None and always replaced with Some(..).
@@ -1041,6 +1053,35 @@ mod tests {
             .send_power_state_frame(&mut ctx, PowerState::AWAKE)
             .expect("failed sending awake frame");
         assert!(m.fake_chan_sched.ensure_on_channel.is_none());
+    }
+
+    #[test]
+    fn addba_req_frame_success() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut client = make_client_station();
+
+        client.send_addba_req_frame(&mut ctx).expect("failed sending addba frame");
+
+        assert_eq!(
+            &m.fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header 1101 for action frame
+                0b11010000, 0b00000000, // frame control
+                0, 0, // duration
+                6, 6, 6, 6, 6, 6, // addr1
+                7, 7, 7, 7, 7, 7, // addr2
+                6, 6, 6, 6, 6, 6, // addr3
+                0x10, 0, // sequence control
+                // Action frame header (Also part of ADDBA request frame)
+                0x03, // Action Category: block ack (0x03)
+                0x00, // block ack action: ADDBA request (0x00)
+                1,    // block ack dialog token
+                0b00000011, 0b00010000, // block ack parameters (u16)
+                0, 0, // block ack timeout (u16) (0: disabled)
+                0b00010000, 0, // block ack starting sequence number: fragment 0, sequence 1
+            ][..]
+        );
     }
 
     fn send_data_frame(

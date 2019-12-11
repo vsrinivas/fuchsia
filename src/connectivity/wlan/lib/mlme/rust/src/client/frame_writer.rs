@@ -261,6 +261,60 @@ pub fn write_probe_req_frame<B: Appendable>(
     Ok(())
 }
 
+// IEEE Std 802.11-2016, 9.6.5.2 - ADDBA stands for Add BlockAck
+pub fn write_addba_req_frame<B: Appendable>(
+    buf: &mut B,
+    bssid: Bssid,
+    client_addr: MacAddr,
+    seq_mgr: &mut SequenceManager,
+) -> Result<(), Error> {
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::ACTION);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid.0) as u16);
+    mgmt_writer::write_mgmt_hdr(
+        buf,
+        mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
+        None,
+    )?;
+
+    buf.append_value(&mac::ActionHdr { action: mac::ActionCategory::BLOCK_ACK })?;
+
+    let action = mac::BlockAckAction::ADDBA_REQUEST;
+    // It appears there is no particular rule to choose the value for
+    // dialog_token. See IEEE Std 802.11-2016, 9.6.5.2.
+    let dialog_token = 1;
+    // IEEE Std 802.11-2016, 3.1(Traffic Identifier), 5.1.1.1 (Data Service -
+    // General), 9.4.2.30 (Access Policy), 9.2.4.5.2 (TID subfield) Related
+    // topics: QoS facility, TSPEC, WM, QMF, TXOP. A TID is from [0, 15], and is
+    // assigned to an MSDU in the layers above the MAC. [0, 7] identify Traffic
+    // Categories (TCs) [8, 15] identify parameterized Traffic Streams (TSs).
+
+    // TODO(29325): Implement QoS policy engine.
+    const TEMPORARY_TID: u16 = 0;
+
+    // TODO(29887): Determine better value.
+    const TEMPORARY_BUFFER_SIZE: u16 = 64;
+    const TEMPORARY_STARTING_SEQUENCE: u16 = 1;
+    // IEEE Std 802.11-2016, 9.6.5.2 - Fragment number is always 0.
+    const IEEE_FRAGMENT_NUMBER: u16 = 0;
+    let parameters = mac::BlockAckParameters(0)
+        .with_amsdu(true)
+        .with_policy(mac::BlockAckPolicy::IMMEDIATE)
+        .with_tid(TEMPORARY_TID)
+        .with_buffer_size(TEMPORARY_BUFFER_SIZE);
+    let timeout = 0; // Timeout disabled here.
+    let starting_sequence_control = mac::BlockAckStartingSequenceControl(0)
+        .with_fragment_number(IEEE_FRAGMENT_NUMBER)
+        .with_starting_sequence_number(TEMPORARY_STARTING_SEQUENCE);
+    let addba_req_hdr =
+        mac::AddbaReqHdr { action, dialog_token, parameters, timeout, starting_sequence_control };
+
+    buf.append_value(&addba_req_hdr)?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -628,5 +682,33 @@ mod tests {
             Some(wlan_common::ie::fake_vht_capabilities()),
         )
         .is_err());
+    }
+
+    #[test]
+    fn addba_req_frame_ok() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+
+        write_addba_req_frame(&mut buf, Bssid([3; 6]), [6; 6], &mut seq_mgr)
+            .expect("write addba should succeed");
+        assert_eq!(
+            &buf[..],
+            &[
+                // Mgmt header 1101 for action frame
+                0b11010000, 0b00000000, // frame control
+                0, 0, // duration
+                3, 3, 3, 3, 3, 3, // addr1
+                6, 6, 6, 6, 6, 6, // addr2
+                3, 3, 3, 3, 3, 3, // addr3
+                0x10, 0, // sequence control
+                // Action frame header (Also part of ADDBA request frame)
+                0x03, // Action Category: block ack (0x03)
+                0x00, // block ack action: ADDBA request (0x00)
+                1,    // block ack dialog token
+                0b00000011, 0b00010000, // block ack parameters (u16)
+                0, 0, // block ack timeout (u16) (0: disabled)
+                0b00010000, 0, // block ack starting sequence number: fragment 0, sequence 1
+            ][..]
+        );
     }
 }

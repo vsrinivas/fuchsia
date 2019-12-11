@@ -165,3 +165,62 @@ pub struct DisassocHdr {
 pub struct ActionHdr {
     pub action: ActionCategory,
 }
+
+// IEEE Std 802.11-2016, 9.6.5.1
+#[repr(C)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Copy, Clone, Debug, Default)]
+pub struct BlockAckAction(pub u8);
+
+impl BlockAckAction {
+    pub const ADDBA_REQUEST: Self = Self(0);
+    pub const ADDBA_RESPONSE: Self = Self(1);
+    pub const DELBA: Self = Self(2);
+}
+
+// IEEE Std 802.11-2016, 9.4.1.14
+#[repr(C)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Copy, Clone, Debug, Default)]
+pub struct BlockAckPolicy(pub u8);
+
+impl BlockAckPolicy {
+    pub const DELAYED: Self = Self(0);
+    pub const IMMEDIATE: Self = Self(1);
+}
+
+// IEEE Std 802.11-2016, 9.4.1.14
+#[bitfield(
+    0      amsdu,
+    1..=1  policy as BlockAckPolicy(u8),
+    2..=5  tid,
+    6..=15 buffer_size,
+)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy, Default)]
+#[repr(C)]
+pub struct BlockAckParameters(pub u16);
+
+// IEEE Std 802.11-2016, 9.6.5.2 & Figure 9-28
+#[bitfield(
+    0..=3  fragment_number, // Always set to 0 (IEEE Std 802.11-2016, 9.6.5.2)
+    4..=15 starting_sequence_number,
+)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy, Default)]
+#[repr(C)]
+pub struct BlockAckStartingSequenceControl(pub u16);
+
+// IEEE Std 802.11-2016, 9.6.5.2 - ADDBA stands for Add BlockAck.
+#[derive(Default, FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
+#[repr(C, packed)]
+pub struct AddbaReqHdr {
+    pub action: BlockAckAction,
+    // IEEE Std 802.11-2016, 9.4.1.12 - This is a numeric value.
+    pub dialog_token: u8,
+    pub parameters: BlockAckParameters,
+    // IEEE Std 802.11-2016, 9.4.1.15 - unit is TU, 0 disables the timeout.
+    pub timeout: u16,
+    pub starting_sequence_control: BlockAckStartingSequenceControl,
+    // TODO(29887): Evaluate the use cases and support optional fields.
+    // GCR Group Address element
+    // Multi-band
+    // TCLAS
+    // ADDBA Extension
+}
