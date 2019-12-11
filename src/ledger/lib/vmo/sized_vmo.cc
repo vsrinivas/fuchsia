@@ -4,6 +4,8 @@
 
 #include "src/ledger/lib/vmo/sized_vmo.h"
 
+#include <zircon/status.h>
+
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
@@ -29,7 +31,7 @@ bool SizedVmo::IsSizeValid(const zx::vmo& vmo, uint64_t size) {
   size_t vmo_size;
   zx_status_t zx_status = vmo.get_size(&vmo_size);
   if (zx_status != ZX_OK) {
-    FXL_PLOG(ERROR, zx_status) << "Unable to get VMO size";
+    FXL_LOG(ERROR) << "Unable to get VMO size: " << zx_status_get_string(zx_status);
     return false;
   }
   return vmo_size >= size;

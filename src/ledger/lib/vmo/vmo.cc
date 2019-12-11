@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <vector>
@@ -23,14 +24,14 @@ bool VmoFromContainer(const Container& container, SizedVmo* sized_vmo_ptr) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(num_bytes, 0u, &vmo);
   if (status < 0) {
-    FXL_PLOG(WARNING, status) << "zx::vmo::create failed";
+    FXL_LOG(WARNING) << "zx::vmo::create failed: " << zx_status_get_string(status);
     return false;
   }
 
   if (num_bytes > 0) {
     status = vmo.write(container.data(), 0, num_bytes);
     if (status < 0) {
-      FXL_PLOG(WARNING, status) << "zx::vmo::write failed";
+      FXL_LOG(WARNING) << "zx::vmo::write failed: " << zx_status_get_string(status);
       return false;
     }
   }
@@ -52,7 +53,7 @@ bool ContainerFromVmo(const zx::vmo& buffer, uint64_t num_bytes, Container* cont
 
   zx_status_t status = buffer.read(&(*container_ptr)[0], 0, num_bytes);
   if (status < 0) {
-    FXL_PLOG(WARNING, status) << "zx::vmo::read failed";
+    FXL_LOG(WARNING) << "zx::vmo::read failed: " << zx_status_get_string(status);
     return false;
   }
 

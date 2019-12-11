@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/storage/impl/object_impl.h"
 
+#include <zircon/status.h>
+
 #include <utility>
 
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
@@ -120,7 +122,7 @@ Status VmoObject::GetData(absl::string_view* data) const {
 Status VmoObject::GetVmo(ledger::SizedVmo* vmo) const {
   zx_status_t zx_status = vmo_.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, vmo);
   if (zx_status != ZX_OK) {
-    FXL_PLOG(ERROR, zx_status) << "Unable to duplicate a vmo";
+    FXL_LOG(ERROR) << "Unable to duplicate a vmo: " << zx_status_get_string(zx_status);
     return Status::INTERNAL_ERROR;
   }
   return Status::OK;
@@ -136,7 +138,7 @@ Status VmoObject::Initialize() const {
       0, ToFullPages(vmo_.size()),
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, &vmar_, &allocate_address);
   if (zx_status != ZX_OK) {
-    FXL_PLOG(ERROR, zx_status) << "Unable to allocate VMAR";
+    FXL_LOG(ERROR) << "Unable to allocate VMAR: " << zx_status_get_string(zx_status);
     return Status::INTERNAL_ERROR;
   }
 
@@ -145,7 +147,7 @@ Status VmoObject::Initialize() const {
       vmar_.map(0, vmo_.vmo(), 0, vmo_.size(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
                 reinterpret_cast<uintptr_t*>(&mapped_address));
   if (zx_status != ZX_OK) {
-    FXL_PLOG(ERROR, zx_status) << "Unable to map VMO";
+    FXL_LOG(ERROR) << "Unable to map VMO: " << zx_status_get_string(zx_status);
     vmar_.reset();
     return Status::INTERNAL_ERROR;
   }

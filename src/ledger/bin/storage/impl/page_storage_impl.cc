@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <zircon/status.h>
 
 #include <algorithm>
 #include <iterator>
@@ -1062,7 +1063,8 @@ void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t
   zx::vmo raw_vmo;
   zx_status_t zx_status = zx::vmo::create(length, 0, &raw_vmo);
   if (zx_status != ZX_OK) {
-    FXL_PLOG(WARNING, zx_status) << "Unable to create VMO of size: " << length;
+    FXL_LOG(WARNING) << "Unable to create VMO of size " << length << ": "
+                     << zx_status_get_string(zx_status);
     callback(Status::INTERNAL_ERROR, nullptr);
     return;
   }
@@ -1071,7 +1073,7 @@ void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t
   ledger::SizedVmo vmo_copy;
   zx_status = vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
   if (zx_status != ZX_OK) {
-    FXL_PLOG(ERROR, zx_status) << "Unable to duplicate vmo";
+    FXL_LOG(ERROR) << "Unable to duplicate vmo: " << zx_status_get_string(zx_status);
     callback(Status::INTERNAL_ERROR, nullptr);
     return;
   }
@@ -1122,7 +1124,7 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::Si
     absl::string_view read_substr = content.substr(read_offset, read_write_size);
     zx_status_t zx_status = vmo.vmo().write(read_substr.data(), write_offset, read_write_size);
     if (zx_status != ZX_OK) {
-      FXL_PLOG(ERROR, zx_status) << "Unable to write to vmo";
+      FXL_LOG(ERROR) << "Unable to write to vmo: " << zx_status_get_string(zx_status);
       callback(Status::INTERNAL_ERROR);
       return;
     }
@@ -1169,7 +1171,7 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::Si
     ledger::SizedVmo vmo_copy;
     zx_status_t zx_status = vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
     if (zx_status != ZX_OK) {
-      FXL_PLOG(ERROR, zx_status) << "Unable to duplicate vmo";
+      FXL_LOG(ERROR) << "Unable to duplicate vmo: " << zx_status_get_string(zx_status);
       callback(Status::INTERNAL_ERROR);
       return;
     }
