@@ -599,6 +599,7 @@ handing control to the component's entry points, and terminating the component w
 requested by the component framework.
 
 -   [ELF runner](/docs/concepts/components/elf_runner.md)
+-   [Component runner](/docs/concepts/components/runners.md)
 
 #### **Scenic** {#scenic}
 

@@ -58,13 +58,23 @@ components at runtime.
 
 ### Runtime
 
-The [`program`](#program) section of a component manifest declares how the
-component is run. For a component containing an ELF binary, this section
-consists of a path to a binary in the package and, optionally, a list of
-arguments. For a component that does not contain an executable, this section is
-omitted.
+The component framework doesn't dictate a particular format for programs, but
+instead allows components to specify which runtime they need by specifying a
+[runner](runners.md). By default, if no runner is explicitly specified for a
+component, the component is launched with the component manager's built in ELF
+runner.
 
-See also: [ELF Runner](elf_runner.md)
+The [`program`](#program) section of a component manifest declares to the runner
+how the component is run, such as the program location and any arguments.
+Components using the ELF runner should specify the binary name and arguments, as
+[documented in the ELF runner page](elf_runner.md). [Other runners](runners.md)
+may have other runner-specific details, documented by that runner.
+
+A component may also have no runtime at all by omitting the `program` section.
+In this case, the component may still route capabilities and host children, but
+no code will be executed for the component.
+
+See also: [ELF Runner](elf_runner.md), [Component Runners](runners.md).
 
 ### Capability routing {#capability-routing}
 
@@ -80,6 +90,8 @@ The following capabilities can be routed:
   FIDL protocol.
 - `directory`: A filesystem directory.
 - `storage`: A filesystem directory that is isolated to the component using it.
+- `runner`: A capability that allows a component to use a particular
+  [runner](runners.md).
 
 #### Routing terminology {#routing-terminology}
 
@@ -149,6 +161,12 @@ context:
 - A *target path* is either a path in the component's namespace (for `use`), or
   the path by which the capability is being `offered` or `exposed` to another
   component.
+
+#### Capability names {#capability-names}
+
+Runner capabilities are identified by a capability name. A capability name
+consists of a string containing the characters `a` to `z`, `A` to `Z`, `0` to
+`9`, underscore (`_`), hyphen (`-`), or the full stop character (`.`).
 
 #### Directory Rights {#directory-rights}
 
@@ -296,7 +314,7 @@ If the component uses the ELF runner, `program` is an object with the following
 properties:
 
 - `binary`: Package-relative path to the executable binary
-- `args` *(optional)*: List of arguments
+- `args` _(optional)_: List of arguments
 
 ```
 "program": {
@@ -306,6 +324,13 @@ properties:
 ```
 
 See also: [ELF Runner](elf_runner.md)
+
+#### Other runners
+
+If a component uses a custom runner, values inside the `program` stanza are
+specific to the runner. The runner receives the arguments as a dictionary of key
+and value pairs. Refer to the specific runner being used to determine what keys
+it expects to receive, and how it interprets them.
 
 ### children
 
@@ -317,8 +342,8 @@ component instances][children]
 - `name`: The name of the child component instance, which is a string of one or
   more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`.
 - `url`: The component URL for the child component instance.
-- `startup` *(optional)*: The component instance's startup mode.
-    - `lazy` *(default)*: Start the component instance only if another component
+- `startup` _(optional)_: The component instance's startup mode.
+    - `lazy` _(default)_: Start the component instance only if another component
       instance binds to it.
     - `eager`: Start the component instance as soon as its parent starts.
 
@@ -377,7 +402,9 @@ explained in [Routing terminology](#routing-terminology).
       capability.
     - `storage`: The [type](#storage-types) of a storage capability. A manifest
       can only declare one `use` for each storage type.
-- `as` *(optional)*: The explicit [target path](#capability-paths) for the
+    - `runner`: The [name](#capability-names) of a runner capability. A manifest
+      can declare at most one `runner`.
+- `as` _(optional)_: The explicit [target path](#capability-paths) for the
   capability. If omitted, defaults to the source path for service and directory
   capabilities, and one of `/data` or `/cache` for storage capabilities. This
   property cannot be used for meta storage capabilities.
@@ -397,6 +424,9 @@ Example:
         "storage": "data",
         "as": "/my_data",
     },
+    {
+        "runner": "web",
+    },
 ],
 ```
 
@@ -411,11 +441,13 @@ explained in [Routing terminology](#routing-terminology).
     - `service_protocol`: The [source path](#capability-paths) of a service capability.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
+    - `runner`: The [source name](#capability-names) of a runner capability.
 - `from`: The source of the capability, one of:
     - `self`: This component.
     - `#<child-name>`: A [reference](#references) to a child component instance.
-- `as` *(optional)*: The explicit [target path](#capability-paths) for the
-  capability. If omitted, defaults to the source path.
+- `as` _(optional)_: The explicit [target path](#capability-paths) or
+  [target name](#capability-names) for the capability. If omitted, defaults to
+  the source path or name.
 
 Example:
 
@@ -430,6 +462,11 @@ Example:
         "from": "#pkg_cache",
         "as": "/svc/fuchsia.pkg.PackageCache",
     },
+    {
+        "runner": "web-chromium",
+        "from": "#web_runner",
+        "as": "web",
+    }
 ],
 ```
 
@@ -446,22 +483,23 @@ explained in [Routing terminology](#routing-terminology).
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
     - `storage`: The [type](#storage-types) of a storage capability.
+    - `runner`: The [source name](#capability-names) of a runner capability.
 - `from`: The source of the capability, one of:
     - `realm`: The component's containing realm (parent). This source can be
       used for all capability types.
-    - `self`: This component. This source can only be used when offer in
-      service or directory capabilities.
+    - `self`: This component. This source can only be used when offering service,
+      directory, or runner capabilities.
     - `#<child-name>`: A [reference](#references) to a child component instance.
-      This source can only be used when offering service or directory
-      capabilities.
+      This source can only be used when offering service, directory,
+      or runner capabilities.
     - `#<storage-name>` A [reference](#references) to a storage declaration.
       This source can only be used when offering storage capabilities.
     - `to`: An array of capability targets, each of which is a
       [reference](#references) to the child or collection to which the
       capability is being offered, of the form `#<target-name>`.
-    - `as` *(optional)*: The explicit [target path](#capability-paths) for the
-      capability. If omitted, defaults to the source path. This path cannot be
-      used for storage capabilities.
+    - `as` _(optional)_: The explicit [target path](#capability-paths) or
+      [target name](#capability-names) for the capability. The default value is
+      the source path or name.
 
 Example:
 
@@ -488,6 +526,11 @@ Example:
         "from": "realm",
         "to": [ "#logger" ],
     },
+    {
+        "runner": "web",
+        "from": "realm",
+        "to": [ "#user-shell" ],
+    }
 ],
 ```
 
