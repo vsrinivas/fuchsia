@@ -28,6 +28,7 @@ namespace {
 // a more-generic Platform value.
 enum Platform {
   kPlatform_None,
+  kPlatform_Generic,
   kPlatform_Arm_Mali,
   kPlatform_Amlogic_Generic,
   kPlatform_Amlogic_S912,
@@ -188,7 +189,7 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = {
 
 const PlatformCostsEntry kArm_Mali_Costs = {
     .platform = kPlatform_Arm_Mali,
-    .next_platform = kPlatform_None,
+    .next_platform = kPlatform_Generic,
     .costs = kArm_Mali_Cost_Entries,
 };
 
@@ -222,6 +223,166 @@ const std::list<const UsagePixelFormatCostEntry> kAmlogic_Generic_Cost_Entries =
     },
 };
 
+// These costs are expected to be true on every platform.
+const std::list<const UsagePixelFormatCostEntry> kGeneric_Cost_Entries = {
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_BGRA32,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1000.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_BGRA32,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1000.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_BGRA32,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1000.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1000.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1000.0L,
+    },
+    {
+        // .pixel_format
+        {
+            // .type
+            fuchsia_sysmem_PixelFormatType_R8G8B8A8,
+            // .has_format_modifier
+            true,
+            // .format_modifier.value
+            {fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED},
+        },
+        // .required_buffer_usage_bits
+        {
+            // .none
+            0,
+            // .cpu
+            0,
+            // .vulkan
+            0,
+            // .display
+            0,
+            // .video
+            0,
+        },
+        // .cost
+        1000.0L,
+    },
+};
+
 const PlatformCostsEntry kAmlogic_Generic_Costs = {
     .platform = kPlatform_Amlogic_Generic,
     .next_platform = kPlatform_Arm_Mali,
@@ -252,7 +413,14 @@ const PlatformCostsEntry kAmlogic_T931_Costs = {
     .costs = std::list<const UsagePixelFormatCostEntry>(),
 };
 
+const PlatformCostsEntry kGeneric_Costs = {
+    .platform = kPlatform_Generic,
+    .next_platform = kPlatform_None,
+    .costs = kGeneric_Cost_Entries,
+};
+
 const std::map<Platform, const PlatformCostsEntry*> kPlatformCosts = {
+    {kPlatform_Generic, &kGeneric_Costs},
     {kPlatform_Arm_Mali, &kArm_Mali_Costs},
     {kPlatform_Amlogic_Generic, &kAmlogic_Generic_Costs},
     {kPlatform_Amlogic_S912, &kAmlogic_S912_Costs},
@@ -265,7 +433,7 @@ const double kDefaultCost = std::numeric_limits<double>::max();
 Platform FindPlatform(uint32_t pdev_device_info_vid, uint32_t pdev_device_info_pid) {
   auto iter = kPlatformTranslation.find(MakeVidPidKey(pdev_device_info_vid, pdev_device_info_pid));
   if (iter == kPlatformTranslation.end()) {
-    return kPlatform_None;
+    return kPlatform_Generic;
   }
   return iter->second;
 }
