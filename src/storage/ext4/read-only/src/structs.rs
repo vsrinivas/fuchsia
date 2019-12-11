@@ -643,11 +643,16 @@ impl SuperBlock {
         let data = SuperBlock::read_from_offset(reader, FIRST_BG_PADDING)?;
         let sb =
             SuperBlock::to_struct_arc(data, ParsingError::InvalidSuperBlock(FIRST_BG_PADDING))?;
-        if sb.e2fs_magic.get() == SB_MAGIC {
-            sb.feature_check()?;
-            Ok(sb)
+        sb.check_magic()?;
+        sb.feature_check()?;
+        Ok(sb)
+    }
+
+    pub fn check_magic(&self) -> Result<(), ParsingError> {
+        if self.e2fs_magic.get() == SB_MAGIC {
+            Ok(())
         } else {
-            Err(ParsingError::InvalidSuperBlockMagic(sb.e2fs_magic.get()))
+            Err(ParsingError::InvalidSuperBlockMagic(self.e2fs_magic.get()))
         }
     }
 
@@ -687,16 +692,23 @@ impl INode {
             &(self.e2di_blocks)[0..size_of::<ExtentHeader>()],
             ParsingError::InvalidExtentHeader,
         )?;
-        if eh.eh_magic.get() == EH_MAGIC {
-            Ok(eh)
-        } else {
-            Err(ParsingError::InvalidExtentHeaderMagic(eh.eh_magic.get()))
-        }
+        eh.check_magic()?;
+        Ok(eh)
     }
 
     /// Size of the file/directory/entry represented by this INode.
     pub fn size(&self) -> usize {
         (self.e2di_size_high.get() as usize) << 32 | self.e2di_size.get() as usize
+    }
+}
+
+impl ExtentHeader {
+    pub fn check_magic(&self) -> Result<(), ParsingError> {
+        if self.eh_magic.get() == EH_MAGIC {
+            Ok(())
+        } else {
+            Err(ParsingError::InvalidExtentHeaderMagic(self.eh_magic.get()))
+        }
     }
 }
 
@@ -742,8 +754,9 @@ impl ExtentIndex {
 mod test {
     use {
         super::{
-            Extent, ExtentIndex, FeatureIncompat, ParseToStruct, ParsingError, SuperBlock,
-            FIRST_BG_PADDING, LEU16, LEU32, LEU64, REQUIRED_FEATURE_INCOMPAT, SB_MAGIC,
+            Extent, ExtentHeader, ExtentIndex, FeatureIncompat, ParseToStruct, ParsingError,
+            SuperBlock, EH_MAGIC, FIRST_BG_PADDING, LEU16, LEU32, LEU64, REQUIRED_FEATURE_INCOMPAT,
+            SB_MAGIC,
         },
         crate::readers::VecReader,
         std::{fs, sync::Arc},
@@ -855,15 +868,21 @@ mod test {
 
     /// Covers these functions:
     /// - ParseToStruct::{read_from_offset, to_struct_arc, to_struct_ref, validate}
-    /// - SuperBlock::block_size
+    /// - SuperBlock::{block_size, check_magic}
     #[test]
     fn parse_superblock() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let reader = Arc::new(VecReader::new(data));
         let sb = SuperBlock::parse(reader).expect("Parsed Super Block");
-        assert_eq!(sb.e2fs_magic.get(), SB_MAGIC);
+        assert!(sb.check_magic().is_ok());
         // Block size of the 1file.img is 1KiB.
         assert_eq!(sb.block_size().unwrap(), FIRST_BG_PADDING);
+
+        let mut sb = SuperBlock::default();
+        assert!(sb.check_magic().is_err());
+
+        sb.e2fs_magic = LEU16::new(SB_MAGIC);
+        assert!(sb.check_magic().is_ok());
     }
 
     /// Covers ParseToStruct::parse_offset.
@@ -877,7 +896,7 @@ mod test {
             ParsingError::InvalidSuperBlock(FIRST_BG_PADDING),
         )
         .expect("Parsed Super Block");
-        assert_eq!(sb.e2fs_magic.get(), SB_MAGIC);
+        assert!(sb.check_magic().is_ok());
     }
 
     /// Covers SuperBlock::feature_check
@@ -954,5 +973,27 @@ mod test {
             ei_unused: LEU16::new(0),
         };
         assert_eq!(e.target_block_num(), 0x4444_6666_8888);
+    }
+
+    /// Covers ExtentHeader::check_magic.
+    #[test]
+    fn extent_header_check_magic() {
+        let e = ExtentHeader {
+            eh_magic: LEU16::new(EH_MAGIC),
+            eh_ecount: LEU16::new(0),
+            eh_max: LEU16::new(0),
+            eh_depth: LEU16::new(0),
+            eh_gen: LEU32::new(0),
+        };
+        assert!(e.check_magic().is_ok());
+
+        let e = ExtentHeader {
+            eh_magic: LEU16::new(0x1234),
+            eh_ecount: LEU16::new(0),
+            eh_max: LEU16::new(0),
+            eh_depth: LEU16::new(0),
+            eh_gen: LEU32::new(0),
+        };
+        assert!(e.check_magic().is_err());
     }
 }

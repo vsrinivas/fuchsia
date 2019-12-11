@@ -412,10 +412,7 @@ impl<T: 'static + Reader> Parser<T> {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{
-            readers::VecReader,
-            structs::{EntryType, SB_MAGIC},
-        },
+        crate::{readers::VecReader, structs::EntryType},
         crypto::{digest::Digest, sha2::Sha256},
         std::{collections::HashSet, fs, path::Path, str},
     };
@@ -424,7 +421,7 @@ mod tests {
     fn list_root_1_file() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let mut parser = super::Parser::new(VecReader::new(data));
-        assert_eq!(parser.super_block().expect("Super Block").e2fs_magic.get(), SB_MAGIC);
+        assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
         let root_inode = parser.root_inode().expect("Parse INode");
         let entries = parser.entries_from_inode(root_inode).expect("List entries");
         let mut expected_entries = vec!["file1", "lost+found", "..", "."];
@@ -439,7 +436,7 @@ mod tests {
     fn list_root() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
         let mut parser = super::Parser::new(VecReader::new(data));
-        assert_eq!(parser.super_block().expect("Super Block").e2fs_magic.get(), SB_MAGIC);
+        assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
         let root_inode = parser.root_inode().expect("Parse INode");
         let entries = parser.entries_from_inode(root_inode).expect("List entries");
         let mut expected_entries = vec!["inner", "file1", "lost+found", "..", "."];
@@ -454,7 +451,7 @@ mod tests {
     fn get_from_path() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
         let mut parser = super::Parser::new(VecReader::new(data));
-        assert_eq!(parser.super_block().expect("Super Block").e2fs_magic.get(), SB_MAGIC);
+        assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let entry = parser.entry_at_path(Path::new("/inner")).expect("Entry at path");
         assert_eq!(entry.e2d_ino.get(), 12);
@@ -469,7 +466,7 @@ mod tests {
     fn read_file() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let mut parser = super::Parser::new(VecReader::new(data));
-        assert_eq!(parser.super_block().expect("Super Block").e2fs_magic.get(), SB_MAGIC);
+        assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let entry = parser.entry_at_path(Path::new("file1")).expect("Entry at path");
         assert_eq!(entry.e2d_ino.get(), 15);
@@ -492,7 +489,7 @@ mod tests {
     fn index() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
         let mut parser = super::Parser::new(VecReader::new(data));
-        assert_eq!(parser.super_block().expect("Super Block").e2fs_magic.get(), SB_MAGIC);
+        assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let mut count = 0;
         let mut entries: HashSet<u32> = HashSet::new();
@@ -517,7 +514,7 @@ mod tests {
     fn check_data() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
         let mut parser = super::Parser::new(VecReader::new(data));
-        assert_eq!(parser.super_block().expect("Super Block").e2fs_magic.get(), SB_MAGIC);
+        assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
 
         let root_inode = parser.root_inode().expect("Root inode");
 
