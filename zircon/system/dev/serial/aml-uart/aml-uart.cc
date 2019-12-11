@@ -4,6 +4,7 @@
 
 #include "aml-uart.h"
 
+#include <lib/device-protocol/pdev.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <string.h>
@@ -18,6 +19,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -33,11 +35,33 @@ constexpr auto kMinBaudRate = 2;
 zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
-  pdev_protocol_t pdev;
-  if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev)) != ZX_OK) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available\n", __func__);
-    return status;
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
+    zxlogf(ERROR, "AmlUart::Could not get composite protocol\n");
+    return ZX_ERR_NOT_SUPPORTED;
   }
+
+  zx_device_t* components[COMPONENT_COUNT];
+  size_t component_count;
+  composite.GetComponents(components, fbl::count_of(components), &component_count);
+  // Only pdev component is required.
+  if (component_count < 1) {
+    zxlogf(ERROR, "AmlUart: Could not get components\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  ddk::PwmProtocolClient pwm;
+  if (component_count > COMPONENT_PWM_E) {
+    pwm = components[COMPONENT_PWM_E];
+  }
+
+  ddk::PDev pdev(components[COMPONENT_PDEV]);
+  if (!pdev.is_valid()) {
+    zxlogf(ERROR, "AmlUart::Create: Could not get pdev\n");
+    return ZX_ERR_NO_RESOURCES;
+  }
+  pdev_protocol_t proto;
+  pdev.GetProto(&proto);
 
   serial_port_info_t info;
   size_t actual;
@@ -53,21 +77,37 @@ zx_status_t AmlUart::Create(void* ctx, zx_device_t* parent) {
   }
 
   mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_map_mmio_buffer(&proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: pdev_map_&mmio__buffer failed %d\n", __func__, status);
     return status;
   }
 
   fbl::AllocChecker ac;
-  auto* uart = new (&ac) AmlUart(parent, pdev, info, ddk::MmioBuffer(mmio));
+  auto* uart = new (&ac) AmlUart(parent, proto, info, ddk::MmioBuffer(mmio));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  return uart->Init();
+  return uart->Init(pwm);
 }
 
-zx_status_t AmlUart::Init() {
+zx_status_t AmlUart::Init(ddk::PwmProtocolClient pwm) {
+  zx_status_t status = ZX_OK;
+  if (pwm.is_valid()) {
+    if ((status = pwm.Enable()) != ZX_OK) {
+      zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
+      return status;
+    }
+    aml_pwm::mode_config two_timer = {.mode = aml_pwm::TWO_TIMER,
+                                      .two_timer = {30052, 50.0, 0x0a, 0x0a}};
+    pwm_config_t init_cfg = {false, 30053, static_cast<float>(49.931787176), &two_timer,
+                             sizeof(two_timer)};
+    if ((status = pwm.SetConfig(&init_cfg)) != ZX_OK) {
+      zxlogf(ERROR, "%s: Could not initialize PWM\n", __func__);
+      return status;
+    }
+  }
+
   auto cleanup = fbl::MakeAutoCall([this]() { DdkRelease(); });
 
   // Default configuration for the case that serial_impl_config is not called.
@@ -78,7 +118,7 @@ zx_status_t AmlUart::Init() {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_SERIAL_IMPL_ASYNC},
       {BIND_SERIAL_CLASS, 0, serial_port_info_.serial_class},
   };
-  zx_status_t status = DdkAdd("aml-uart", 0, props, fbl::count_of(props));
+  status = DdkAdd("aml-uart", 0, props, fbl::count_of(props));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkDeviceAdd failed\n", __func__);
     return status;
@@ -406,8 +446,9 @@ fit::closure AmlUart::MakeReadCallbackLocked(zx_status_t status, void* buf, size
   if (read_callback_ == nullptr) {
     return []() {};
   }
-  auto callback = [cb = read_callback_, cookie = read_cookie_, status, buf,
-                   len]() { cb(cookie, status, buf, len); };
+  auto callback = [cb = read_callback_, cookie = read_cookie_, status, buf, len]() {
+    cb(cookie, status, buf, len);
+  };
   read_callback_ = nullptr;
   read_cookie_ = nullptr;
   return callback;
@@ -417,9 +458,7 @@ fit::closure AmlUart::MakeWriteCallbackLocked(zx_status_t status) {
   if (write_callback_ == nullptr) {
     return []() {};
   }
-  auto callback = [cb = write_callback_, cookie = write_cookie_, status]() {
-    cb(cookie, status);
-  };
+  auto callback = [cb = write_callback_, cookie = write_cookie_, status]() { cb(cookie, status); };
   write_callback_ = nullptr;
   write_cookie_ = nullptr;
   return callback;
@@ -454,7 +493,7 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER_BEGIN(aml_uart, serial::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_UART),
 ZIRCON_DRIVER_END(aml_uart)

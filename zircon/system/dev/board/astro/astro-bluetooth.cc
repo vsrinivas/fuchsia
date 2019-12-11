@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/serial/c/fidl.h>
+#include <lib/mmio/mmio.h>
+#include <unistd.h>
+
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/serial.h>
-#include <fuchsia/hardware/serial/c/fidl.h>
 #include <hw/reg.h>
-#include <lib/mmio/mmio.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
-#include <unistd.h>
 
 #include "astro.h"
 
@@ -73,6 +74,9 @@ static pbus_dev_t bt_uart_dev = []() {
   dev.boot_metadata_count = countof(bt_uart_boot_metadata);
   return dev;
 }();
+
+// Composite binding rules for bluetooth.
+constexpr device_component_t bt_uart_components[] = {};
 
 // Enables and configures PWM_E on the SOC_WIFI_LPO_32k768 line for the
 // Wifi/Bluetooth module
@@ -148,7 +152,8 @@ zx_status_t Astro::BluetoothInit() {
   usleep(100 * 1000);
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.DeviceAdd(&bt_uart_dev);
+  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, bt_uart_components, countof(bt_uart_components),
+                                    UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
     return status;

@@ -6,6 +6,7 @@
 #include <lib/mmio/mmio.h>
 #include <unistd.h>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -15,6 +16,7 @@
 #include <hw/reg.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
+#include <soc/aml-t931/t931-pwm.h>
 
 #include "sherlock.h"
 
@@ -75,6 +77,22 @@ static const pbus_dev_t bt_uart_dev = []() {
   return dev;
 }();
 
+// Composite binding rules for bluetooth.
+constexpr zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+constexpr zx_bind_inst_t pwm_e_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
+    BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_E),
+};
+constexpr device_component_part_t pwm_e_component[] = {
+    {countof(root_match), root_match},
+    {countof(pwm_e_match), pwm_e_match},
+};
+constexpr device_component_t bt_uart_components[] = {
+    {countof(pwm_e_component), pwm_e_component},
+};
+
 // Enables and configures PWM_E on the SOC_WIFI_LPO_32k768 line for the
 // Wifi/Bluetooth module
 zx_status_t Sherlock::EnableWifi32K() {
@@ -132,7 +150,8 @@ zx_status_t Sherlock::BluetoothInit() {
   usleep(100 * 1000);
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.DeviceAdd(&bt_uart_dev);
+  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, bt_uart_components, countof(bt_uart_components),
+                                    UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
     return status;

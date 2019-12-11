@@ -7,11 +7,14 @@ zx_driver("aml-uart") {
     "aml-uart.cc",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.pwm",
     "$zx/system/banjo/ddk.protocol.serial",
     "$zx/system/banjo/ddk.protocol.serialimpl.async",
     "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/ulib/ddk",
@@ -34,9 +37,13 @@ zx_test("aml-uart-test") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.composite",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.pwm",
     "$zx/system/banjo/ddk.protocol.serialimpl.async",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/fake-mmio-reg",
     "$zx/system/dev/lib/fake_ddk",

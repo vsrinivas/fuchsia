@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/serial/c/fidl.h>
+#include <unistd.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -10,11 +13,9 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/serial.h>
-#include <fuchsia/hardware/serial/c/fidl.h>
 #include <hw/reg.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
-#include <unistd.h>
 
 #include "vim.h"
 
@@ -70,6 +71,9 @@ static pbus_dev_t bt_uart_dev = [] {
   dev.metadata_count = countof(bt_uart_metadata);
   return dev;
 }();
+
+// Composite binding rules for bluetooth.
+constexpr device_component_t bt_uart_components[] = {};
 
 #if UART_TEST
 static const pbus_mmio_t header_uart_mmios[] = {
@@ -182,7 +186,8 @@ zx_status_t Vim::UartInit() {
   gpio_impl_.Write(BT_EN, 1);
 
   // Bind UART for Bluetooth HCI
-  status = pbus_.DeviceAdd(&bt_uart_dev);
+  status = pbus_.CompositeDeviceAdd(&bt_uart_dev, bt_uart_components, countof(bt_uart_components),
+                                    UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "UartInit: pbus_device_add failed: %d\n", status);
     return status;
