@@ -1,9 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
-            "system-services": [
-                "fuchsia.media.AudioCore"
-            ]
+            "injected-services": {
+                "fuchsia.media.AudioCore": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx"
+            }
         }
     },
     "program": {
