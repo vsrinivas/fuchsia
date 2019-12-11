@@ -74,8 +74,8 @@ class Frame : public Resource {
     return block_allocator_.AllocateMany<T>(count);
   }
 
-  // Allocate temporary GPU uniform buffer memory that is value until the frame
-  // is finished rendering (after EndFrame() is called).
+  // Allocate temporary GPU uniform buffer memory that is valid until the frame is finished
+  // rendering (after EndFrame() is called).
   UniformAllocation AllocateUniform(size_t size, size_t alignment) {
     return uniform_block_allocator_.Allocate(size, alignment);
   }
@@ -149,6 +149,9 @@ class Frame : public Resource {
 
   BlockAllocator block_allocator_;
 
+  // TODO(42570): investigate whether this memory is host-coherent, and whether it should be
+  // (it seems like it isn't and should be).  Document the usage guarantees/requirements in
+  // AllocateUniform(), above.
   UniformBlockAllocator uniform_block_allocator_;
 
   TimestampProfilerPtr profiler_;

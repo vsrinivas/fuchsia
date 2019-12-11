@@ -355,6 +355,8 @@ bool CommandBufferPipelineState::BindVertices(uint32_t binding, vk::Buffer buffe
 }
 
 void CommandBufferPipelineState::FlushVertexBuffers(vk::CommandBuffer cb) {
+  TRACE_DURATION("gfx", "escher::CommandBuffer::FlushVertexBuffers");
+
   uint32_t update_vbo_mask = dirty_vertex_bindings_ & active_vertex_bindings_;
   ForEachBitRange(update_vbo_mask, [&](uint32_t binding, uint32_t binding_count) {
 #ifndef NDEBUG

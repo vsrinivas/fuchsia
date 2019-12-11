@@ -27,6 +27,7 @@ constexpr uint32_t kMeshAttributeBindingLocation_BlendWeight = 4;
 namespace escher {
 
 void PaperRenderFuncs::MeshData::Bind(CommandBuffer* cb) const {
+  TRACE_DURATION("gfx", "PaperRenderFuncs::MeshData::Bind");
   index_binding.Bind(cb);
   for (uint32_t i = 0; i < vertex_binding_count; ++i) {
     vertex_bindings[i].Bind(cb);

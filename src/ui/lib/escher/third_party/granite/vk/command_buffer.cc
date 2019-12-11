@@ -354,6 +354,7 @@ void CommandBuffer::BindIndices(vk::Buffer buffer, vk::DeviceSize offset,
     // Bindings are unchanged.
     return;
   }
+  TRACE_DURATION("gfx", "escher::CommandBuffer::BindIndices");
 
   // Index buffer changes never require a new pipeline to be generated, so it is
   // OK to make this change immediately.
@@ -377,6 +378,8 @@ void CommandBuffer::DrawIndexed(uint32_t index_count, uint32_t instance_count, u
   FXL_DCHECK(index_binding_.buffer);
 
   FlushRenderState();
+
+  TRACE_DURATION("gfx", "escher::CommandBuffer::DrawIndexed[vulkan]");
   vk().drawIndexed(index_count, instance_count, first_index, vertex_offset, first_instance);
 }
 
@@ -409,6 +412,7 @@ void CommandBuffer::FlushRenderState() {
   const PipelineStaticState* static_pipeline_state = pipeline_state_.static_state();
 
   if (GetAndClearDirty(kDirtyPushConstantsBit)) {
+    TRACE_DURATION("gfx", "escher::CommandBuffer::FlushRenderState[push_constants]");
     // The push constants were invalidated (perhaps by being explicitly set, or
     // perhaps by a change in the descriptor set layout; it doesn't matter).
     uint32_t num_ranges = current_pipeline_layout_->spec().num_push_constant_ranges();
@@ -419,15 +423,19 @@ void CommandBuffer::FlushRenderState() {
     }
   }
   if (GetAndClearDirty(kDirtyViewportBit)) {
+    TRACE_DURATION("gfx", "escher::CommandBuffer::FlushRenderState[viewport]");
     vk().setViewport(0, 1, &viewport_);
   }
   if (GetAndClearDirty(kDirtyScissorBit)) {
+    TRACE_DURATION("gfx", "escher::CommandBuffer::FlushRenderState[scissor]");
     vk().setScissor(0, 1, &scissor_);
   }
   if (static_pipeline_state->depth_bias_enable && GetAndClearDirty(kDirtyDepthBiasBit)) {
+    TRACE_DURATION("gfx", "escher::CommandBuffer::FlushRenderState[depth_bias]");
     vk().setDepthBias(dynamic_state_.depth_bias_constant, 0.0f, dynamic_state_.depth_bias_slope);
   }
   if (static_pipeline_state->stencil_test && GetAndClearDirty(kDirtyStencilMasksAndReferenceBit)) {
+    TRACE_DURATION("gfx", "escher::CommandBuffer::FlushRenderState[stencil]");
     vk().setStencilCompareMask(vk::StencilFaceFlagBits::eFront, dynamic_state_.front_compare_mask);
     vk().setStencilReference(vk::StencilFaceFlagBits::eFront, dynamic_state_.front_reference);
     vk().setStencilWriteMask(vk::StencilFaceFlagBits::eFront, dynamic_state_.front_write_mask);
