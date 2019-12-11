@@ -66,6 +66,10 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
 
   // Run "local" Ledger benchmarks.  These don't need external services to
   // function properly.
+  //
+  // This list should be kept in sync with the list in
+  // src/tests/end_to_end/perf/test/ledger_perf_test.dart until this list
+  // is removed (TODO(fxb/23091)).
 
   // clang-format off
   benchmarks_runner->AddTspecBenchmark("ledger.add_new_page_after_clear", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_after_clear.tspec");
