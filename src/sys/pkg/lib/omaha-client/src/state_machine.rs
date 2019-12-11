@@ -293,7 +293,8 @@ where
     /// and cohort.
     pub async fn start_update_check(&mut self, options: CheckOptions) {
         let apps = self.app_set.to_vec().await;
-        match self.perform_update_check(options, self.context.clone(), apps).await {
+        let result = self.perform_update_check(options, self.context.clone(), apps).await;
+        match &result {
             Ok(result) => {
                 info!("Update check result: {:?}", result);
                 // Update check succeeded, update |last_update_time|.
@@ -319,7 +320,7 @@ where
                 // Update check succeeded, reset |consecutive_failed_update_checks| to 0.
                 self.context.state.consecutive_failed_update_checks = 0;
 
-                self.app_set.update_from_omaha(result.app_responses).await;
+                self.app_set.update_from_omaha(&result.app_responses).await;
 
                 self.report_attempts_to_succeed(true).await;
 
@@ -356,6 +357,7 @@ where
         if let Some(observer) = &mut self.observer {
             observer.on_schedule_change(&self.context.schedule).await;
             observer.on_protocol_state_change(&self.context.state).await;
+            observer.on_update_check_result(&result).await;
         }
 
         self.persist_data().await;
@@ -1404,6 +1406,13 @@ mod tests {
                 let mut protocol_state = protocol_state.borrow_mut();
                 *protocol_state = new_protocol_state.clone();
             }
+            future::ready(()).boxed_local()
+        }
+
+        fn on_update_check_result(
+            &mut self,
+            _result: &Result<update_check::Response, UpdateCheckError>,
+        ) -> LocalBoxFuture<'_, ()> {
             future::ready(()).boxed_local()
         }
     }

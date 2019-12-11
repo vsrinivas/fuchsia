@@ -333,14 +333,14 @@ impl AppSet {
     }
 
     /// Update the cohort and user counting for each app from Omaha app response.
-    pub async fn update_from_omaha(&mut self, app_responses: Vec<AppResponse>) {
+    pub async fn update_from_omaha(&mut self, app_responses: &Vec<AppResponse>) {
         let mut apps = self.apps.lock().await;
 
         for app_response in app_responses {
             for app in apps.iter_mut() {
                 if app.id == app_response.app_id {
-                    app.cohort.update_from_omaha(app_response.cohort);
-                    app.user_counting = app_response.user_counting;
+                    app.cohort.update_from_omaha(app_response.cohort.clone());
+                    app.user_counting = app_response.user_counting.clone();
                     break;
                 }
             }
@@ -802,7 +802,7 @@ mod tests {
             result: Action::Updated,
         }];
         block_on(async {
-            app_set.update_from_omaha(app_responses).await;
+            app_set.update_from_omaha(&app_responses).await;
             let apps = app_set.to_vec().await;
             assert_eq!(cohort, apps[0].cohort);
             assert_eq!(user_counting, apps[0].user_counting);

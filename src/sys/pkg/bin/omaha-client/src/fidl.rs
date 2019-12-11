@@ -4,7 +4,7 @@
 
 use crate::{
     channel::ChannelConfigs,
-    inspect::{AppsNode, ProtocolStateNode, ScheduleNode, StateNode},
+    inspect::{AppsNode, LastResultsNode, ProtocolStateNode, ScheduleNode, StateNode},
     observer::FuchsiaObserver,
 };
 use failure::{bail, Error, ResultExt};
@@ -126,6 +126,7 @@ where
         mut fs: ServiceFs<ServiceObjLocal<'_, IncomingServices>>,
         schedule_node: ScheduleNode,
         protocol_state_node: ProtocolStateNode,
+        last_results_node: LastResultsNode,
     ) {
         fs.dir("svc")
             .add_fidl_service(IncomingServices::Manager)
@@ -136,7 +137,7 @@ where
         let fs_fut = fs.for_each_concurrent(MAX_CONCURRENT, |stream| {
             Self::handle_client(server.clone(), stream).unwrap_or_else(|e| error!("{:?}", e))
         });
-        Self::setup_observer(server.clone(), schedule_node, protocol_state_node);
+        Self::setup_observer(server.clone(), schedule_node, protocol_state_node, last_results_node);
         fs_fut.await;
     }
 
@@ -145,6 +146,7 @@ where
         server: Rc<RefCell<Self>>,
         schedule_node: ScheduleNode,
         protocol_state_node: ProtocolStateNode,
+        last_results_node: LastResultsNode,
     ) {
         let state_machine_ref = server.borrow().state_machine_ref.clone();
         let mut state_machine = state_machine_ref.borrow_mut();
@@ -152,6 +154,7 @@ where
             server,
             schedule_node,
             protocol_state_node,
+            last_results_node,
         ));
     }
 
@@ -515,7 +518,13 @@ mod tests {
         let schedule_node = ScheduleNode::new(inspector.root().create_child("schedule"));
         let protocol_state_node =
             ProtocolStateNode::new(inspector.root().create_child("protocol_state"));
-        FidlServer::setup_observer(fidl.clone(), schedule_node, protocol_state_node);
+        let last_results_node = LastResultsNode::new(inspector.root().create_child("last_results"));
+        FidlServer::setup_observer(
+            fidl.clone(),
+            schedule_node,
+            protocol_state_node,
+            last_results_node,
+        );
         let proxy = spawn_fidl_server::<ManagerMarker>(fidl.clone(), IncomingServices::Manager);
         let (client_proxy, server_end) = create_proxy::<MonitorMarker>().unwrap();
         let options = Options { initiator: Some(Initiator::User) };

@@ -4,20 +4,22 @@
 
 use crate::{
     fidl::FidlServer,
-    inspect::{ProtocolStateNode, ScheduleNode},
+    inspect::{LastResultsNode, ProtocolStateNode, ScheduleNode},
 };
 use futures::{future::LocalBoxFuture, prelude::*};
 use omaha_client::{
+    clock,
     common::{ProtocolState, UpdateCheckSchedule},
     http_request::HttpRequest,
     installer::Installer,
     metrics::MetricsReporter,
     policy::PolicyEngine,
-    state_machine::{Observer, State, Timer},
+    state_machine::{update_check, Observer, State, Timer, UpdateCheckError},
     storage::Storage,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::SystemTime;
 
 pub struct FuchsiaObserver<PE, HR, IN, TM, MR, ST>
 where
@@ -31,6 +33,8 @@ where
     fidl_server: Rc<RefCell<FidlServer<PE, HR, IN, TM, MR, ST>>>,
     schedule_node: ScheduleNode,
     protocol_state_node: ProtocolStateNode,
+    last_results_node: LastResultsNode,
+    last_update_start_time: SystemTime,
 }
 
 impl<PE, HR, IN, TM, MR, ST> FuchsiaObserver<PE, HR, IN, TM, MR, ST>
@@ -46,8 +50,15 @@ where
         fidl_server: Rc<RefCell<FidlServer<PE, HR, IN, TM, MR, ST>>>,
         schedule_node: ScheduleNode,
         protocol_state_node: ProtocolStateNode,
+        last_results_node: LastResultsNode,
     ) -> Self {
-        FuchsiaObserver { fidl_server, schedule_node, protocol_state_node }
+        FuchsiaObserver {
+            fidl_server,
+            schedule_node,
+            protocol_state_node,
+            last_results_node,
+            last_update_start_time: SystemTime::UNIX_EPOCH,
+        }
     }
 }
 
@@ -61,6 +72,9 @@ where
     ST: Storage + 'static,
 {
     fn on_state_change(&mut self, state: State) -> LocalBoxFuture<'_, ()> {
+        if state == State::CheckingForUpdates {
+            self.last_update_start_time = clock::now();
+        }
         async move {
             let mut server = self.fidl_server.borrow_mut();
             server.on_state_change(state).await;
@@ -78,6 +92,14 @@ where
         protocol_state: &ProtocolState,
     ) -> LocalBoxFuture<'_, ()> {
         self.protocol_state_node.set(protocol_state);
+        future::ready(()).boxed_local()
+    }
+
+    fn on_update_check_result(
+        &mut self,
+        result: &Result<update_check::Response, UpdateCheckError>,
+    ) -> LocalBoxFuture<'_, ()> {
+        self.last_results_node.add_result(self.last_update_start_time, result);
         future::ready(()).boxed_local()
     }
 }

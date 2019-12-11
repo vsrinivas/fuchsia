@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use chrono::{DateTime, Utc};
 use fidl_fuchsia_update::State;
 use fuchsia_inspect::{Node, Property, StringProperty};
 use omaha_client::{
     common::{App, ProtocolState, UpdateCheckSchedule},
     configuration::{Config, Updater},
     protocol::request::OS,
+    state_machine::{update_check, UpdateCheckError},
 };
+use std::collections::VecDeque;
+use std::time::SystemTime;
 
 pub struct ConfigurationNode {
     _node: Node,
@@ -160,14 +164,40 @@ impl ProtocolStateNode {
     }
 }
 
+pub struct LastResultsNode {
+    node: Node,
+    last_results: VecDeque<StringProperty>,
+}
+
+impl LastResultsNode {
+    pub fn new(last_results_node: Node) -> Self {
+        LastResultsNode { node: last_results_node, last_results: VecDeque::new() }
+    }
+
+    pub fn add_result(
+        &mut self,
+        start_time: SystemTime,
+        result: &Result<update_check::Response, UpdateCheckError>,
+    ) {
+        // Use formatted time string as the name of the property.
+        let time_str = DateTime::<Utc>::from(start_time).to_rfc3339();
+        let result_property = self.node.create_string(&time_str, format!("{:#?}", result));
+        self.last_results.push_back(result_property);
+        // Dropping the string property will remove it from inspect.
+        if self.last_results.len() > 10 {
+            self.last_results.pop_front();
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::configuration::get_config;
     use fidl_fuchsia_update::ManagerState;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
-    use omaha_client::protocol::Cohort;
-    use std::time::SystemTime;
+    use omaha_client::{common::UserCounting, protocol::Cohort};
+    use std::time::Duration;
 
     #[test]
     fn test_configuration_node() {
@@ -270,6 +300,54 @@ mod tests {
             root: {
                 protocol_state: {
                     protocol_state: format!("{:?}", protocol_state),
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_last_results_node() {
+        let inspector = Inspector::new();
+        let mut node = LastResultsNode::new(inspector.root().create_child("last_results"));
+        let result = Ok(update_check::Response {
+            app_responses: vec![update_check::AppResponse {
+                app_id: "some_id".to_string(),
+                cohort: Cohort::default(),
+                user_counting: UserCounting::ClientRegulatedByDate(None),
+                result: update_check::Action::Updated,
+            }],
+            server_dictated_poll_interval: None,
+        });
+        node.add_result(SystemTime::UNIX_EPOCH, &result);
+        node.add_result(SystemTime::UNIX_EPOCH + Duration::from_secs(100000), &result);
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                last_results: {
+                    "1970-01-01T00:00:00+00:00": format!("{:#?}", result),
+                    "1970-01-02T03:46:40+00:00": format!("{:#?}", result),
+                }
+            }
+        );
+
+        for i in 0..10 {
+            node.add_result(SystemTime::UNIX_EPOCH + Duration::from_secs(i * 1000000), &result);
+        }
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                last_results: {
+                    "1970-01-01T00:00:00+00:00": format!("{:#?}", result),
+                    "1970-01-12T13:46:40+00:00": format!("{:#?}", result),
+                    "1970-01-24T03:33:20+00:00": format!("{:#?}", result),
+                    "1970-02-04T17:20:00+00:00": format!("{:#?}", result),
+                    "1970-02-16T07:06:40+00:00": format!("{:#?}", result),
+                    "1970-02-27T20:53:20+00:00": format!("{:#?}", result),
+                    "1970-03-11T10:40:00+00:00": format!("{:#?}", result),
+                    "1970-03-23T00:26:40+00:00": format!("{:#?}", result),
+                    "1970-04-03T14:13:20+00:00": format!("{:#?}", result),
+                    "1970-04-15T04:00:00+00:00": format!("{:#?}", result),
                 }
             }
         );
