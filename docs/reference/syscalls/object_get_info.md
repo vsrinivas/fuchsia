@@ -112,7 +112,7 @@ owner even as the last handle is transferred from one process to another.
 ```
 typedef struct zx_info_process_handle_stats {
     // The number of outstanding handles to kernel objects of each type.
-    uint32_t handle_count[ZX_OBJ_TYPE_LAST];
+    uint32_t handle_count[ZX_OBJ_TYPE_UPPER_BOUND];
 } zx_info_process_handle_stats_t;
 ```
 
@@ -635,6 +635,9 @@ typedef struct zx_info_vmo {
     // If |flags & ZX_INFO_VMO_VIA_HANDLE|, the handle rights.
     // Undefined otherwise.
     zx_rights_t handle_rights;
+
+    // VMO mapping cache policy. One of ZX_CACHE_POLICY_*
+    uint32_t cache_policy;
 } zx_info_vmo_t;
 ```
 
@@ -697,12 +700,15 @@ Returns information about a resource object via its handle.
 
 ```
 typedef struct zx_info_resource {
-    // The resource kind
+    // The resource kind; resource object kinds are described in resource.md
     uint32_t kind;
-    // Resource's low value (inclusive)
-    uint64_t low;
-    // Resource's high value (inclusive)
-    uint64_t high;
+    // Resource's creation flags
+    uint32_t flags;
+    // Resource's base value (inclusive)
+    uint64_t base;
+    // Resource's length value
+    size_t size;
+    char name[ZX_MAX_NAME_LEN];
 } zx_info_resource_t;
 ```
 
