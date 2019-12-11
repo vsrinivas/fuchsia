@@ -18,13 +18,13 @@ executable("magnifier_tests") {
 
   deps = [
     "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//src/lib/syslog/cpp",
     "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/magnifier",
     "//src/ui/a11y/lib/magnifier/tests/mocks:mock_handler",
     "//src/ui/a11y/lib/testing",
-    "//src/ui/a11y/lib/testing:main",
     "//src/ui/lib/glm_workaround",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
