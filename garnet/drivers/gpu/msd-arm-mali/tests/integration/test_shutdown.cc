@@ -59,7 +59,11 @@ static std::atomic_uint complete_count;
 static std::shared_mutex connection_create_mutex;
 
 static void looper_thread_entry() {
-  std::unique_ptr<TestConnection> test(new TestConnection());
+  std::unique_ptr<TestConnection> test;
+  {
+    std::shared_lock lock(connection_create_mutex);
+    test = std::make_unique<TestConnection>();
+  }
   while (complete_count < kMaxCount) {
     int32_t result = test->Test();
     if (result == 0) {
@@ -83,14 +87,16 @@ static void test_shutdown(uint32_t iters) {
     uint32_t count = kRestartCount;
     while (complete_count < kMaxCount) {
       if (complete_count > count) {
+        // Force looper thread connections to drain. Also prevent loopers from trying to create new
+        // connections while the device is torn down, just so it's easier to test that device
+        // creation is working.
+        std::unique_lock lock(connection_create_mutex);
+
         auto test_base = std::make_unique<magma::TestDeviceBase>(MAGMA_VENDOR_ID_MALI);
         zx::channel parent_device = test_base->GetParentDevice();
 
         test_base->ShutdownDevice();
         test_base.reset();
-
-        // Force looper thread connections to drain.
-        std::unique_lock lock(connection_create_mutex);
 
         const char* kDriverPath = "/system/driver/" MSD_ARM_NAME;
         magma::TestDeviceBase::BindDriver(parent_device, kDriverPath);
