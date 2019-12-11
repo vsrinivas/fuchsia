@@ -4,7 +4,6 @@
 
 use {
     crate::{capability::*, model::*},
-    by_addr::ByAddr,
     cm_rust::{ComponentDecl, UseDecl},
     fuchsia_trace as trace,
     futures::{future::BoxFuture, lock::Mutex},
@@ -169,11 +168,17 @@ impl Hooks {
     pub async fn install(&self, hooks: Vec<HooksRegistration>) {
         let mut inner = self.inner.lock().await;
         for hook in hooks {
-            for event in hook.events {
-                let event_hooks = &mut inner.hooks.entry(event).or_insert(vec![]);
-                // We cannot compare weak pointers, so we won't dedup pointers at
-                // install time but at dispatch time when we go to upgrade pointers.
-                event_hooks.push(hook.callback.clone());
+            'event_type: for event in hook.events {
+                let existing_hooks = &mut inner.hooks.entry(event).or_insert(vec![]);
+
+                for existing_hook in existing_hooks.iter() {
+                    // If this hook has already been installed, skip to next event type.
+                    if existing_hook.ptr_eq(&hook.callback) {
+                        break 'event_type;
+                    }
+                }
+
+                existing_hooks.push(hook.callback.clone());
             }
         }
     }
@@ -192,31 +197,24 @@ impl Hooks {
 
             let hooks = {
                 // We must upgrade our weak references to hooks to strong ones before we can
-                // call out to them. While we're upgrading references, we dedup references
-                // here as well. Ideally this would be done at installation time, not
-                // dispatch time but comparing weak references is not yet supported.
-                let mut strong_hooks: Vec<ByAddr<dyn Hook>> = vec![];
+                // call out to them. Since hooks are deduped at install time, we do not need
+                // to worry about that here.
+                let mut strong_hooks = vec![];
                 let mut inner = self.inner.lock().await;
                 if let Some(hooks) = inner.hooks.get_mut(&event.payload.type_()) {
-                    hooks.retain(|hook| match hook.upgrade() {
-                        Some(hook) => {
-                            let hook = ByAddr::new(hook);
-                            if !strong_hooks.contains(&hook) {
-                                strong_hooks.push(hook);
-                                true
-                            } else {
-                                // Don't retain a weak pointer if it is a duplicate.
-                                false
-                            }
+                    hooks.retain(|hook| {
+                        if let Some(hook) = hook.upgrade() {
+                            strong_hooks.push(hook);
+                            true
+                        } else {
+                            false
                         }
-                        // Don't retain a weak pointer if it cannot be upgraded.
-                        None => false,
                     });
                 }
                 strong_hooks
             };
             for hook in hooks.into_iter() {
-                hook.0.on(event).await?;
+                hook.on(event).await?;
             }
 
             if let Some(parent) = &self.parent {
