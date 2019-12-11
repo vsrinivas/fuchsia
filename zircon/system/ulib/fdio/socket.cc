@@ -228,13 +228,13 @@ static void zxsio_wait_begin_dgram(fdio_t* io, uint32_t events, zx_handle_t* han
   *handle = sio->pipe.socket.get();
   zx_signals_t signals = ZX_SOCKET_PEER_CLOSED;
   if (events & POLLIN) {
-    signals |= ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
+    signals |= ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED;
   }
   if (events & POLLOUT) {
     signals |= ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED;
   }
   if (events & POLLRDHUP) {
-    signals |= ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
+    signals |= ZX_SOCKET_PEER_WRITE_DISABLED;
   }
   *_signals = signals;
 }
