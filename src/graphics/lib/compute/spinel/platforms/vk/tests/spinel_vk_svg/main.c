@@ -408,14 +408,15 @@ main(int argc, char const * argv[])
   //
   struct spn_vk_target_requirements spn_tr = { 0 };
 
-  spn_vk_target_get_requirements(spn_target, &spn_tr);
+  assert(spn_vk_target_get_requirements(spn_target, &spn_tr) ==
+         SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS);
 
   //
   // probe HotSort device requirements for this target
   //
   struct hotsort_vk_target_requirements hs_tr = { 0 };
 
-  hotsort_vk_target_get_requirements(hs_target, &hs_tr);
+  assert(hotsort_vk_target_get_requirements(hs_target, &hs_tr) == false);
 
   //
   // populate accumulated device requirements
@@ -468,8 +469,7 @@ main(int argc, char const * argv[])
   hs_tr.ext_names = ext_names + spn_tr.ext_name_count;
   hs_tr.pdf       = &pdf2.features;
 
-  if (!hotsort_vk_target_get_requirements(hs_target, &hs_tr))
-    return EXIT_FAILURE;
+  assert(hotsort_vk_target_get_requirements(hs_target, &hs_tr));
 
   //
   // create VkDevice

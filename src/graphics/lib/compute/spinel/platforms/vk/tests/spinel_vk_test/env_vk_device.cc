@@ -48,14 +48,15 @@ env_vk_device::SetUp()
   //
   struct spn_vk_target_requirements spn_tr = {};
 
-  spn_vk_target_get_requirements(target->spn, &spn_tr);
+  ASSERT_TRUE(spn_vk_target_get_requirements(target->spn, &spn_tr) ==
+              SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS);
 
   //
   // probe HotSort device requirements for this target
   //
   struct hotsort_vk_target_requirements hs_tr = {};
 
-  hotsort_vk_target_get_requirements(target->hs, &hs_tr);
+  ASSERT_FALSE(hotsort_vk_target_get_requirements(target->hs, &hs_tr));
 
   //
   // populate accumulated device requirements

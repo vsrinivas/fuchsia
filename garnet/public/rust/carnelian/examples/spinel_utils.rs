@@ -1032,7 +1032,7 @@ impl SpinelContext {
         let mut hs_tr = unsafe {
             let mut output = mem::MaybeUninit::zeroed();
             let status = hotsort_vk_target_get_requirements(hs_target, output.as_mut_ptr());
-            assert_eq!(status, true);
+            assert_eq!(status, false);
             output.assume_init()
         };
         let mut qcis = unsafe {

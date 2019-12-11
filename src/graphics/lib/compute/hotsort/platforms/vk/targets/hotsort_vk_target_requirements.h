@@ -9,6 +9,7 @@
 //
 //
 
+#include <stdbool.h>
 #include <stdint.h>
 
 //
@@ -38,35 +39,20 @@ extern "C" {
 //
 //
 
-#define HOTSORT_VK_TARGET_EXTENSION_ENUM(ext_) HOTSORT_VK_TARGET_EXTENSION_##ext_
-
-typedef enum hotsort_vk_target_extensions_e
-{
-#undef HOTSORT_VK_TARGET_EXTENSION
-#define HOTSORT_VK_TARGET_EXTENSION(ext_) HOTSORT_VK_TARGET_EXTENSION_ENUM(ext_),
-
-  HOTSORT_VK_TARGET_EXTENSIONS()
-
-    HOTSORT_VK_TARGET_EXTENSION_ENUM(COUNT)
-
-} hotsort_vk_target_extensions_e;
-
-//
-//
-//
-
 union hotsort_vk_target_extensions
 {
+#undef HOTSORT_VK_TARGET_EXTENSION
+#define HOTSORT_VK_TARGET_EXTENSION(ext_) bool ext_ : 1;
+
   struct
   {
-#undef HOTSORT_VK_TARGET_EXTENSION
-#define HOTSORT_VK_TARGET_EXTENSION(ext_) uint32_t ext_ : 1;
-
     HOTSORT_VK_TARGET_EXTENSIONS()
-
   } named;
 
-  uint32_t bitmap[(HOTSORT_VK_TARGET_EXTENSION_ENUM(COUNT) + 31) / 32];
+#undef HOTSORT_VK_TARGET_EXTENSION
+#define HOTSORT_VK_TARGET_EXTENSION(ext_) +1
+
+  uint32_t bitmap[(31 HOTSORT_VK_TARGET_EXTENSIONS()) / 32];
 };
 
 ///////////////////////
@@ -84,35 +70,20 @@ union hotsort_vk_target_extensions
 //
 //
 
-#define HOTSORT_VK_TARGET_FEATURE_ENUM(feature_) HOTSORT_VK_TARGET_FEATURE_##feature_
-
-typedef enum hotsort_vk_target_features_e
-{
-#undef HOTSORT_VK_TARGET_FEATURE
-#define HOTSORT_VK_TARGET_FEATURE(feature_) HOTSORT_VK_TARGET_FEATURE_ENUM(feature_),
-
-  HOTSORT_VK_TARGET_FEATURES()
-
-    HOTSORT_VK_TARGET_FEATURE_ENUM(COUNT)
-
-} hotsort_vk_target_features_e;
-
-//
-//
-//
-
 union hotsort_vk_target_features
 {
+#undef HOTSORT_VK_TARGET_FEATURE
+#define HOTSORT_VK_TARGET_FEATURE(feature_) bool feature_ : 1;
+
   struct
   {
-#undef HOTSORT_VK_TARGET_FEATURE
-#define HOTSORT_VK_TARGET_FEATURE(feature_) uint32_t feature_ : 1;
-
     HOTSORT_VK_TARGET_FEATURES()
-
   } named;
 
-  uint32_t bitmap[(HOTSORT_VK_TARGET_FEATURE_ENUM(COUNT) + 31) / 32];
+#undef HOTSORT_VK_TARGET_FEATURE
+#define HOTSORT_VK_TARGET_FEATURE(feature_) +1
+
+  uint32_t bitmap[(31 HOTSORT_VK_TARGET_FEATURE()) / 32];
 };
 
 //

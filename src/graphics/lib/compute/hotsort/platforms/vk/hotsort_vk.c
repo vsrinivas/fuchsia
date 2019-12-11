@@ -230,30 +230,7 @@ hotsort_vk_create(VkDevice                               device,
   };
 
   //
-  // Set the subgroup size to what we expected when we built the
-  // HotSort target
-  //
-  // FIXME(allanmac): remove this as soon as we update Fuchsia's toolchain
-  //
-#ifndef VK_EXT_subgroup_size_control
-
-#define VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT 1000225001
-#define VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT_EXT 0x00000002
-
-  typedef struct VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT
-  {
-    VkStructureType sType;
-    void *          pNext;
-    uint32_t        requiredSubgroupSize;
-  } VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT;
-
-#endif
-  //
-  // REMOVEME(allanmac) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  //
-
-  //
-  // Control the pipeline's subgroup size
+  // Set the subgroup size to what we expected when we built the HotSort target
   //
   VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT rssci = {
     .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO_EXT,

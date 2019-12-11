@@ -78,9 +78,18 @@ struct hotsort_vk_target_requirements
 //
 // Yields the extensions and features required by a HotSort target.
 //
-// If .ext_names is NULL then the respective count will be initialized.
+// If target is not NULL and requirements.ext_names is NULL then the
+// respective count will be initialized.
 //
-// It is an error to provide a count that is too small.
+// Returns false if:
+//
+//   * target is NULL
+//   * requirements is NULL
+//   * requirements.ext_names is NULL
+//   * requirements.pdf is NULL
+//   * requirements.ext_name_count is too small
+//
+// Otherwise returns true.
 //
 
 bool

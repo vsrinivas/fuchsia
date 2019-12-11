@@ -16,15 +16,19 @@
 //
 // Yields the extensions and features required by a HotSort target.
 //
-// If .ext_names is NULL then the respective count will be initialized.
+// If target is not NULL and requirements.ext_names is NULL then the
+// respective count will be initialized.
 //
-// It is an error to provide a count that is too small.
+// Returns false if:
 //
-
+//   * target is NULL
+//   * requirements is NULL
+//   * requirements.ext_names is NULL
+//   * requirements.pdf is NULL
+//   * requirements.ext_name_count is too small
 //
-// FIXME(allanmac): STOP USING float64
+// Otherwise returns true.
 //
-
 bool
 hotsort_vk_target_get_requirements(struct hotsort_vk_target const * const        target,
                                    struct hotsort_vk_target_requirements * const requirements)
@@ -40,34 +44,37 @@ hotsort_vk_target_get_requirements(struct hotsort_vk_target const * const       
   //
   // REQUIRED EXTENSIONS
   //
-  {
-    //
-    // compute number of required extensions
-    //
-    uint32_t ext_count = 0;
+  bool is_success = true;
 
-    for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(target->config.extensions.bitmap); ii++)
-      {
-        ext_count += __builtin_popcount(target->config.extensions.bitmap[ii]);
-      }
+  //
+  // compute number of required extensions
+  //
+  uint32_t ext_count = 0;
 
-    if (requirements->ext_names == NULL)
-      {
-        requirements->ext_name_count = ext_count;
-      }
-    else
-      {
-        if (requirements->ext_name_count < ext_count)
-          {
-            return false;
-          }
-        else
-          {
-            //
-            // FIXME(allanmac): this can be accelerated by exploiting
-            // the extension bitmap
-            //
-            uint32_t ii = 0;
+  for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(target->config.extensions.bitmap); ii++)
+    {
+      ext_count += __builtin_popcount(target->config.extensions.bitmap[ii]);
+    }
+
+  if (requirements->ext_names == NULL)
+    {
+      requirements->ext_name_count = ext_count;
+
+      is_success = false;
+    }
+  else
+    {
+      if (requirements->ext_name_count < ext_count)
+        {
+          is_success = false;
+        }
+      else
+        {
+          //
+          // FIXME(allanmac): this can be accelerated by exploiting
+          // the extension bitmap
+          //
+          uint32_t ii = 0;
 
 #define HOTSORT_VK_TARGET_EXTENSION_STRING(ext_) "VK_" STRINGIFY_MACRO(ext_)
 
@@ -78,46 +85,47 @@ hotsort_vk_target_get_requirements(struct hotsort_vk_target const * const       
       requirements->ext_names[ii++] = HOTSORT_VK_TARGET_EXTENSION_STRING(ext_);                    \
     }
 
-            HOTSORT_VK_TARGET_EXTENSIONS()
+          HOTSORT_VK_TARGET_EXTENSIONS()
 
-            //
-            // FIXME(allanmac): remove this as soon as it's verified
-            // that the Intel driver does the right thing
-            //
-            if (target->config.extensions.named.AMD_shader_info)
-              {
-                vk_shader_info_amd_statistics_enable();
-              }
-          }
-      }
-  }
+          //
+          // FIXME(allanmac): remove this as soon as it's verified
+          // that the Intel driver does the right thing
+          //
+          if (target->config.extensions.named.AMD_shader_info)
+            {
+              vk_shader_info_amd_statistics_enable();
+            }
+        }
+    }
 
   //
   // REQUIRED FEATURES
   //
-  {
-    if (requirements->pdf != NULL)
-      {
-        //
-        // Let's always have this on during debug
-        //
+  if (requirements->pdf == NULL)
+    {
+      is_success = false;
+    }
+  else
+    {
+      //
+      // Let's always turn this on during debug
+      //
 #ifndef NDEBUG
-        requirements->pdf->robustBufferAccess = true;
+      requirements->pdf->robustBufferAccess = true;
 #endif
 
-        //
-        // Enable target features
-        //
+      //
+      // Enable target features
+      //
 #undef HOTSORT_VK_TARGET_FEATURE
 #define HOTSORT_VK_TARGET_FEATURE(feature_)                                                        \
   if (target->config.features.named.feature_)                                                      \
     requirements->pdf->feature_ = true;
 
-        HOTSORT_VK_TARGET_FEATURES()
-      }
-  }
+      HOTSORT_VK_TARGET_FEATURES()
+    }
 
-  return true;
+  return is_success;
 }
 
 //
