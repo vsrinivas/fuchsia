@@ -5,14 +5,16 @@
 #include "lib/fidl/cpp/test/fidl_types.h"
 
 #include <lib/fidl/internal.h>
-#include <stdint.h>
+
+#include <cstdint>
+#include <limits>
 
 // All sizes in fidl encoding tables are 32 bits. The fidl compiler
 // normally enforces this. Check manually in manual tests.
 template <typename T, size_t N>
-static uint32_t ArrayCount(T const (&array)[N]) {
-  static_assert(N < UINT32_MAX, "Array is too large!");
-  return N;
+constexpr uint32_t ArrayCount(T const (&array)[N]) {
+  static_assert(N <= std::numeric_limits<uint32_t>::max(), "Array is too large!");
+  return static_cast<uint32_t>(N);
 }
 
 static const fidl_type_t unbounded_nonnullable_string =
