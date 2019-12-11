@@ -12,6 +12,8 @@ source_set("testing") {
     "fake_audio_renderer.cc",
     "fake_audio_renderer.h",
     "matchers.h",
+    "packet_factory.cc",
+    "packet_factory.h",
     "stub_device_registry.h",
     "threading_model_fixture.h",
   ]

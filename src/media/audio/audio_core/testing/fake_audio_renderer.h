@@ -14,20 +14,20 @@
 
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/packet_queue.h"
+#include "src/media/audio/audio_core/testing/packet_factory.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio::testing {
 
 class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
  public:
-  static fbl::RefPtr<FakeAudioRenderer> Create(async_dispatcher_t* dispatcher) {
-    return fbl::AdoptRef(new FakeAudioRenderer(dispatcher));
+  static fbl::RefPtr<FakeAudioRenderer> Create(async_dispatcher_t* dispatcher,
+                                               fbl::RefPtr<Format> format) {
+    return fbl::AdoptRef(new FakeAudioRenderer(dispatcher, std::move(format)));
   }
   static fbl::RefPtr<FakeAudioRenderer> CreateWithDefaultFormatInfo(async_dispatcher_t* dispatcher);
 
-  FakeAudioRenderer(async_dispatcher_t* dispatcher);
-
-  void set_format(fbl::RefPtr<Format> format) { format_ = std::move(format); }
+  FakeAudioRenderer(async_dispatcher_t* dispatcher, fbl::RefPtr<Format> format);
 
   // Enqueues a packet that has all samples initialized to |sample| and lasts for |duration|.
   void EnqueueAudioPacket(float sample, zx::duration duration = zx::msec(1),
@@ -66,9 +66,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
 
   async_dispatcher_t* dispatcher_;
   fbl::RefPtr<Format> format_ = nullptr;
-  fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
-  size_t buffer_offset_ = 0;
-  FractionalFrames<int64_t> next_pts_{0};
+  PacketFactory packet_factory_;
   std::unordered_map<AudioLink*, fbl::RefPtr<PacketQueue>> packet_queues_;
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
