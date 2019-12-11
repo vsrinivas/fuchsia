@@ -38,17 +38,17 @@ specifies how each file is compiled. This database is normally stored in a file
 called `compile_commands.json`. You can build a compilation database with `fx compdb`,
 or `fx -i compdb` if you want it rebuilt automatically as you edit files.
 
-If this database is not present, then VIM can be configured to fall back to the configuration
+If this database is not present, then Vim can be configured to fall back to the configuration
 in [/scripts/youcompleteme/ycm_extra_conf.py](/scripts/youcompleteme/ycm_extra_conf.py). See
-[VIM configuration](vim.md) for how to set this up.
+[Vim configuration](vim.md) for how to set this up.
 
 ### Use it
 
 YouCompleteMe will use `compile_commands.json` to do code completion and find
 symbol definitions/declarations. See your editor's YouCompleteMe docs for
-details. The editor should pick up `compile_commands.json` file automatically. 
+details. The editor should pick up `compile_commands.json` file automatically.
 
-See [vim setup](vim.md) for instructions on configuring VIM for Fuchsia development.
+See [Vim setup](vim.md) for instructions on configuring Vim for Fuchsia development.
 
 ### Other editors (ycmd)
 

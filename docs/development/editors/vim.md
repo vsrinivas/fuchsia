@@ -21,7 +21,7 @@
    fx set core.x64
    ```
 
-1. Update your vim startup file:
+1. Update your Vim startup file:
 
    If this line exists in your `~/.vimrc file`, remove it:
 

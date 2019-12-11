@@ -1,7 +1,5 @@
 # Rust
 
-[TOC]
-
 ## Build
 
 There are two GN target templates which should be used for Rust projects:
@@ -26,7 +24,7 @@ fx set core.x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 
 Fuchsia Rust targets are not built with Cargo during a normal build, and as
 such, do not require `Cargo.toml` files. However, having a `Cargo.toml` file for
-your target is useful for integration with IDEs such as Intellij and VSCode, and
+your target is useful for integration with IDEs such as Intellij and VS Code, and
 for using the [`fargo`][fargo] tool to build and test targets without going
 through a full GN build and run cycle each time.
 

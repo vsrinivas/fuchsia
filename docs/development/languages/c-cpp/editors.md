@@ -1,7 +1,5 @@
 # C++ Editor/IDE Setup
 
-[TOC]
-
 ## CLion
 
 Follow the **Compilation Database** instructions below to create the
@@ -67,7 +65,7 @@ In settings, add:
 "clangd.path": "<absolute path to fuchsia root directory>/prebuilt/third_party/clang/<platform>/bin/clangd",
 ```
 
-Note: the path to clangd does need to be absolute.
+Note: The path to clangd does need to be absolute.
 
 Finally, follow the **Compilation Database** instructions below to
 generate the `compile_commands.json` in the fuchsia root directory. Then

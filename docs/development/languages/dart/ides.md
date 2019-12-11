@@ -83,10 +83,10 @@ issues with really large source trees.
 1.  Delete the `.packages` and `pubspec.lock` files in your project (if
     present).
 1.  Ensure that `"dart.runPubGetOnPubspecChanges": false,` is present in your
-    VSCode preferences to prevent the files from reappearing whenever a
+    VS Code preferences to prevent the files from reappearing whenever a
     `pubspec.yaml` file is edited.
-1.  Reload VSCode to restart the Dart analyzer.
-    1.  Press Ctrl+Shift+P to open the VSCode Command Palette
+1.  Reload VS Code to restart the Dart analyzer.
+    1.  Press Ctrl+Shift+P to open the VS Code Command Palette
     1.  Select "Reload Window"
 
 ### Rebuild

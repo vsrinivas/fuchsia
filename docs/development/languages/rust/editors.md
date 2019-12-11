@@ -1,7 +1,5 @@
 # Rust Editor Configuration
 
-[TOC]
-
 ## Generating Cargo.toml files for use by editors {#generating-cargo-toml}
 
 Many editors require Cargo.toml files in order to understand how your Rust
@@ -27,7 +25,7 @@ rustc_binary("some_label") {
 See instructions on [the Intellij Rust site](https://intellij-rust.github.io/).
 Finally, follow the steps above to generate a Cargo.toml file for use by Intellij.
 
-## VIM
+## Vim
 
 See instructions on [`rust-lang/rust.vim`](https://github.com/rust-lang/rust.vim).
 
@@ -37,7 +35,7 @@ for instructions on making it work better with Rust.
 ## Visual Studio Code {#visual-studio-code}
 
 The VS Code plugin uses the RLS (Rust language server) so you'll need to first
-[install rustup](https://rustup.rs/). Next, install [this VSCode plugin].
+[install rustup](https://rustup.rs/). Next, install [this VS Code plugin].
 You need to configure `rustup` to use the Fuchsia Rust toolchain.
 Run this command from your Fuchsia source code root directory.
 
@@ -47,7 +45,7 @@ rustup default fuchsia
 ```
 
 Follow [the steps above](#generating-cargo-toml) to generate a `Cargo.toml` file
-for use by VSCode.
+for use by VS Code.
 
 Open VS Code and ensure that the directory where the generated `Cargo.toml` file
 resides is added as a directory in your workspace (even though you probably have
@@ -116,7 +114,7 @@ Add the following settings:
 }
 ```
 
-[this VSCode plugin]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust
+[this VS Code plugin]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust
 
 ## emacs
 
