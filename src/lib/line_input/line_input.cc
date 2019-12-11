@@ -66,6 +66,8 @@ void LineInputEditor::SetAutocompleteCallback(AutocompleteCallback cb) {
 
 void LineInputEditor::SetChangeCallback(ChangeCallback cb) { change_callback_ = std::move(cb); }
 
+void LineInputEditor::SetCancelCallback(CancelCallback cb) { cancel_callback_ = std::move(cb); }
+
 void LineInputEditor::SetEofCallback(EofCallback cb) { eof_callback_ = std::move(cb); }
 
 void LineInputEditor::SetMaxCols(size_t max) { max_cols_ = max; }
@@ -566,9 +568,13 @@ void LineInputEditor::TransposeLastTwoCharacters() {
 }
 
 void LineInputEditor::CancelCommand() {
-  Write("^C\r\n");
-  ResetLineState();
-  LineChanged();
+  if (cancel_callback_) {
+    cancel_callback_();
+  } else {
+    Write("^C\r\n");
+    ResetLineState();
+    LineChanged();
+  }
 }
 
 void LineInputEditor::DeleteToEnd() {

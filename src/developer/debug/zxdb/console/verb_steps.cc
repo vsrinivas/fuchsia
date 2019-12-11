@@ -164,6 +164,7 @@ void RunVerbStepsWithSubstatements(Thread* thread, std::vector<SubstatementCall>
   prompt_opts.options.push_back("q");
   message.Append(Syntax::kSpecial, "  q");
   message.Append("uit\n");
+  prompt_opts.cancel_option = "q";
 
   // Single-digit entry doesn't require <Enter>.
   prompt_opts.require_enter = calls.size() >= 10;

@@ -420,6 +420,8 @@ TEST(LineInput, CancelCommand) {
   TestLineInput input("[prompt] ");
   input.Show();
 
+  // When no cancel callback is supplied, the line will be cleared.
+
   //             v
   input.SetLine("First Second Third");
   input.SetPos(0);
@@ -437,6 +439,14 @@ TEST(LineInput, CancelCommand) {
   input.SetPos(18);
   input.OnInput(SpecialCharacters::kKeyControlC);
   EXPECT_EQ(input.GetLine(), "");
+
+  // When a callback is supplied, it will be called and there will be no change.
+  bool got_cb = false;
+  input.SetCancelCallback([&got_cb]() { got_cb = true; });
+  input.SetLine("line contents");
+  input.OnInput(SpecialCharacters::kKeyControlC);
+  EXPECT_TRUE(got_cb);
+  EXPECT_EQ(input.GetLine(), "line contents");
 }
 
 TEST(LineInput, ReverseHistory_Select) {

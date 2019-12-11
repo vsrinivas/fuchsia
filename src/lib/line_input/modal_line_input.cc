@@ -35,6 +35,13 @@ class ModalOptionState {
     }
   }
 
+  void OnCancel() {
+    if (!options_.cancel_option.empty()) {
+      input_->EndModal();
+      on_complete_(options_.cancel_option);
+    }
+  }
+
  private:
   // Checks whether the current line is a valid option. On success, returns true and optionally
   // signals completion (which closes the modal prompt).
@@ -83,6 +90,11 @@ void ModalLineInput::SetChangeCallback(ChangeCallback cb) {
   // Change callbacks only go to the non-modal input. Our model interface handles changes on the
   // modal one.
   normal_input_->SetChangeCallback(std::move(cb));
+}
+
+void ModalLineInput::SetCancelCallback(CancelCallback cb) {
+  // The cancel callback goes only to the regular input. Modal prompts have special handling.
+  normal_input_->SetCancelCallback(std::move(cb));
 }
 
 void ModalLineInput::SetEofCallback(EofCallback cb) { eof_callback_ = std::move(cb); }
@@ -134,6 +146,7 @@ void ModalLineInput::ModalGetOption(const ModalPromptOptions& options, const std
   // owns the callback.
   auto do_will_show = [this, state, will_show = std::move(will_show)]() mutable {
     modal_input_->SetChangeCallback([state](const std::string& line) { state->OnChanged(line); });
+    modal_input_->SetCancelCallback([state]() { state->OnCancel(); });
     if (will_show)
       will_show();
   };

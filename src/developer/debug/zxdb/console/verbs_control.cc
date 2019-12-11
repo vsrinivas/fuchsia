@@ -335,7 +335,8 @@ Err DoQuit(ConsoleContext* context, const Command& cmd) {
   options.case_sensitive = false;
   options.options.push_back("y");
   options.options.push_back("n");
-  Console::get()->ModalGetOption(options, message, "[y/n] ", [](const std::string& answer) {
+  options.cancel_option = "n";
+  Console::get()->ModalGetOption(options, message, "y/n > ", [](const std::string& answer) {
     if (answer == "y")
       Console::get()->Quit();
   });

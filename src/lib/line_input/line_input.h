@@ -79,7 +79,8 @@ class LineInput {
   // Given some typing, returns a prioritized list of completions.
   using AutocompleteCallback = fit::function<std::vector<std::string>(const std::string&)>;
 
-  // Callback that indicates EOF (Control-D) was typed.
+  // Callback that indicates Control-C or EOF (Control-D) was typed.
+  using CancelCallback = fit::function<void()>;
   using EofCallback = fit::function<void()>;
 
   // Setup -----------------------------------------------------------------------------------------
@@ -89,6 +90,10 @@ class LineInput {
 
   // Provides the callback for when the current line changes.
   virtual void SetChangeCallback(ChangeCallback cb) = 0;
+
+  // Provides the callback for handling Control-C. If unset, "^C" will be echoed and the line
+  // will be cleared.
+  virtual void SetCancelCallback(CancelCallback cb) = 0;
 
   // Provides the callback for handling EOF. If unset EOF will be ignored.
   virtual void SetEofCallback(EofCallback cb) = 0;
@@ -145,6 +150,7 @@ class LineInputEditor : public LineInput {
   // LineInput implementation.
   void SetAutocompleteCallback(AutocompleteCallback cb) override;
   void SetChangeCallback(ChangeCallback cb) override;
+  void SetCancelCallback(CancelCallback cb) override;
   void SetEofCallback(EofCallback cb) override;
   void SetMaxCols(size_t max) override;
   const std::string& GetLine() const override;
@@ -231,6 +237,7 @@ class LineInputEditor : public LineInput {
 
   size_t max_cols_ = 0;
   AutocompleteCallback autocomplete_callback_;  // Possibly null.
+  CancelCallback cancel_callback_;              // Possibly null;.
   EofCallback eof_callback_;                    // Possibly null;.
 
   // Indicates whether the line is currently visible (as controlled by Show()/Hide()).

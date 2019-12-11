@@ -24,6 +24,12 @@ struct ModalPromptOptions {
   // Possible valid options that will cause the prompt to accept the input. If accepting case
   // insensitive input, these should be lower-case.
   std::vector<std::string> options;
+
+  // When nonempty, this string input will be sent when control-C is pressed. This provides a way
+  // for the caller to specify the behavior of Control-C without having another code path.
+  //
+  // This should be one of the |options| strings. It will be passed unvalidated to the callback.
+  std::string cancel_option;
 };
 
 // Manages multiple line input objects to manage regular input and temporary modal input for
@@ -53,6 +59,7 @@ class ModalLineInput : public LineInput {
   // LineInput implementation.
   void SetAutocompleteCallback(AutocompleteCallback cb) override;
   void SetChangeCallback(ChangeCallback cb) override;
+  void SetCancelCallback(CancelCallback cb) override;
   void SetEofCallback(EofCallback cb) override;
   void SetMaxCols(size_t max) override;
   const std::string& GetLine() const override;

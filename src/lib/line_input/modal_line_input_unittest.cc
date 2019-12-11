@@ -145,6 +145,22 @@ TEST(ModalLineInputTest, ModalGetOption) {
   ASSERT_TRUE(read_line);
   EXPECT_EQ("y", *read_line);
 
+  // Control-C will normally do nothing.
+  result.clear();
+  input.ModalGetOption(options, ">", [&result](const std::string& line) { result = line; });
+  input.OnInput('a');
+  input.OnInput(SpecialCharacters::kKeyControlC);
+  EXPECT_TRUE(result.empty());
+  input.OnInput(SpecialCharacters::kKeyBackspace);
+  input.OnInput('y');
+  EXPECT_EQ("y", result);
+
+  // Setting a cancel response will make it return that.
+  result.clear();
+  options.cancel_option = "n";
+  input.ModalGetOption(options, ">", [&result](const std::string& line) { result = line; });
+  input.OnInput(SpecialCharacters::kKeyControlC);
+  EXPECT_EQ("n", result);
 }
 
 }  // namespace line_input
