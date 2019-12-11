@@ -65,11 +65,8 @@ class Inspect {
   ///
   /// If [filter] is set, only those entries containing [filter] are returned.
   /// If there are no matches, an empty list is returned.
-  Future<List<String>> retrieveHubEntries(
-      {Pattern filter,
-      Duration cmdTimeout = const Duration(seconds: 10)}) async {
-    final stringFindResult = await _stdOutForSshCommand('iquery --find /hub',
-        cmdTimeout: cmdTimeout);
+  Future<List<String>> retrieveHubEntries({Pattern filter}) async {
+    final stringFindResult = await _stdOutForSshCommand('iquery --find /hub');
     return stringFindResult == null
         ? []
         : stringFindResult
@@ -78,19 +75,13 @@ class Inspect {
             .toList();
   }
 
-  /// Runs [command] in an ssh process, Future times out after [cmdTimeout].
+  /// Runs [command] in an ssh process to completion.
   ///
   /// Returns stdout of that process or null if the process exited with non-zero
   /// exit code.
-  Future<String> _stdOutForSshCommand(String command,
-      {Duration cmdTimeout = const Duration(seconds: 10)}) async {
-    final process = await ssh.run(command).timeout(cmdTimeout, onTimeout: () {
-      _log.warning('SSH Command $command returned after waiting for '
-          '${cmdTimeout.inSeconds} seconds without completion. '
-          'Process may still be running.');
-      return null;
-    });
-    return process?.exitCode == 0 ? process.stdout : null;
+  Future<String> _stdOutForSshCommand(String command) async {
+    final process = await ssh.run(command);
+    return process.exitCode == 0 ? process.stdout : null;
   }
 }
 

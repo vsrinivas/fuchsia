@@ -31,25 +31,6 @@ void main(List<String> args) {
     expect(result, equals(contentsRoot));
   });
 
-  test('inspectComponentRoot returns after timeout is reached', () async {
-    const componentName = 'foo';
-    const contentsRoot = {'faz': 'bear'};
-
-    final inspect = Inspect(FakeSsh(
-        findCommandStdOut: 'one\n$componentName\nthree\n',
-        inspectCommandContentsRoot: [
-          {
-            'contents': {'root': contentsRoot}
-          },
-        ],
-        expectedInspectSuffix: componentName,
-        fakeWait: Duration(seconds: 3)));
-
-    final result = await inspect.retrieveHubEntries(
-        filter: 'foo', cmdTimeout: Duration(seconds: 1));
-
-    expect(result, isEmpty);
-  });
   test('inspectComponentRoot is resiliant to old root layouts', () async {
     const componentName = 'foo';
     const contentsRoot = {'faz': 'bear'};
@@ -172,9 +153,7 @@ class FakeInspect implements Inspect {
   }
 
   @override
-  Future<List<String>> retrieveHubEntries(
-      {Pattern filter,
-      Duration cmdTimeout = const Duration(seconds: 10)}) async {
+  Future<List<String>> retrieveHubEntries({Pattern filter}) async {
     await Future.delayed(delay);
     return null;
   }
@@ -189,7 +168,6 @@ class FakeSsh implements Ssh {
   dynamic inspectCommandContentsRoot;
   List<int> findCommandExitCode;
   List<int> inspectCommandExitCode;
-  Duration fakeWait;
 
   FakeSsh({
     this.findCommandStdOut,
@@ -197,7 +175,6 @@ class FakeSsh implements Ssh {
     this.inspectCommandContentsRoot,
     this.findCommandExitCode = const <int>[0],
     this.inspectCommandExitCode = const <int>[0],
-    this.fakeWait,
   });
 
   @override
@@ -219,9 +196,6 @@ class FakeSsh implements Ssh {
     } else {
       print('got unknown command $command');
       exitCode = -1;
-    }
-    if (fakeWait != null) {
-      await Future.delayed(fakeWait);
     }
     return ProcessResult(0, exitCode, stdout, '');
   }
