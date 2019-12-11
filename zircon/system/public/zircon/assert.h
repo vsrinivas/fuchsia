@@ -51,6 +51,10 @@ __END_CDECLS
 
 // Conditionally implement ZX_DEBUG_ASSERT based on ZX_ASSERT_LEVEL.
 #ifdef ZX_ASSERT_LEVEL
+
+// ZX_DEBUG_ASSERT_IMPLEMENTED is intended to be used to conditionalize code that is logically part
+// of a debug assert. It's useful for performing complex consistency checks that are difficult to
+// work into a ZX_DEBUG_ASSERT statement.
 #define ZX_DEBUG_ASSERT_IMPLEMENTED (ZX_ASSERT_LEVEL > 1)
 #else
 #define ZX_DEBUG_ASSERT_IMPLEMENTED 0

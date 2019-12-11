@@ -26,12 +26,12 @@
 #define LOCAL_TRACE 0
 
 PcieUpstreamNode::~PcieUpstreamNode() {
-#if LK_DEBUGLEVEL > 0
-  // Sanity check to make sure that all child devices have been released as
-  // well.
-  for (size_t i = 0; i < fbl::count_of(downstream_); ++i)
-    DEBUG_ASSERT(!downstream_[i]);
-#endif
+  if constexpr (DEBUG_ASSERT_IMPLEMENTED) {
+    // Sanity check to make sure that all child devices have been released as
+    // well.
+    for (size_t i = 0; i < fbl::count_of(downstream_); ++i)
+      DEBUG_ASSERT(!downstream_[i]);
+  }
 }
 
 void PcieUpstreamNode::AllocateDownstreamBars() {

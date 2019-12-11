@@ -1055,23 +1055,23 @@ template <page_alloc_fn_t paf>
 void X86PageTableBase<paf>::Destroy(vaddr_t base, size_t size) {
   canary_.Assert();
 
-#if LK_DEBUGLEVEL > 1
-  PageTableLevel top = top_level();
-  if (virt_) {
-    pt_entry_t* table = static_cast<pt_entry_t*>(virt_);
-    uint start = vaddr_to_index(top, base);
-    uint end = vaddr_to_index(top, base + size - 1);
+  if constexpr (DEBUG_ASSERT_IMPLEMENTED) {
+    PageTableLevel top = top_level();
+    if (virt_) {
+      pt_entry_t* table = static_cast<pt_entry_t*>(virt_);
+      uint start = vaddr_to_index(top, base);
+      uint end = vaddr_to_index(top, base + size - 1);
 
-    // Check the end if it fills out the table entry.
-    if (page_aligned(top, base + size)) {
-      end += 1;
-    }
+      // Check the end if it fills out the table entry.
+      if (page_aligned(top, base + size)) {
+        end += 1;
+      }
 
-    for (uint i = start; i < end; ++i) {
-      DEBUG_ASSERT(!IS_PAGE_PRESENT(table[i]));
+      for (uint i = start; i < end; ++i) {
+        DEBUG_ASSERT(!IS_PAGE_PRESENT(table[i]));
+      }
     }
   }
-#endif
 
   if (phys_) {
     pmm_free_page(paddr_to_vm_page(phys_));

@@ -38,6 +38,10 @@
 
 // Conditionally implement DEBUG_ASSERT based on LK_DEBUGLEVEL in kernel space.
 #ifdef LK_DEBUGLEVEL
+
+// DEBUG_ASSERT_IMPLEMENTED is intended to be used to conditionalize code that is logically part of
+// a debug assert. It's useful for performing complex consistency checks that are difficult to work
+// into a DEBUG_ASSERT statement.
 #define DEBUG_ASSERT_IMPLEMENTED (LK_DEBUGLEVEL > 1)
 #else
 #define DEBUG_ASSERT_IMPLEMENTED 0
