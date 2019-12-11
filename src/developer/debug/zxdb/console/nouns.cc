@@ -41,7 +41,6 @@ namespace {
 
 constexpr int kForceTypes = 1;
 constexpr int kVerboseSwitch = 2;
-constexpr int kForceUpdate = 3;
 
 // Frames ------------------------------------------------------------------------------------------
 
@@ -63,11 +62,6 @@ const char kFrameHelp[] =
   regardless of which is the active one.
 
 Options
-
-  -f
-  --force
-      When listing frames, force updates the stack, replacing and recomputing
-      all addresses even if the debugger thinks nothing has changed.
 
   -t
   --types
@@ -108,12 +102,21 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   FormatLocationOptions loc_opts(cmd.target());
   loc_opts.show_params = cmd.HasSwitch(kForceTypes);
 
+  ConsoleFormatOptions console_opts;
+  console_opts.verbosity = cmd.HasSwitch(kForceTypes) ? ConsoleFormatOptions::Verbosity::kAllTypes
+                                                      : ConsoleFormatOptions::Verbosity::kMinimal;
+  console_opts.pointer_expand_depth = 1;
+  console_opts.max_depth = 4;
+
   if (cmd.GetNounIndex(Noun::kFrame) == Command::kNoIndex) {
     // Just "frame", this lists available frames.
-    if (cmd.HasSwitch(kForceUpdate))
-      cmd.thread()->GetStack().ClearFrames();
+    auto detail = FormatFrameDetail::kSimple;
+    if (cmd.HasSwitch(kVerboseSwitch))
+      detail = FormatFrameDetail::kVerbose;
 
-    Console::get()->Output(FormatFrameList(cmd.thread(), loc_opts, cmd.HasSwitch(kVerboseSwitch)));
+    // Always force update the stack. Various things can have changed and when the user requests
+    // a stack we want to be sure things are correct.
+    Console::get()->Output(FormatFrameList(cmd.thread(), true, detail, loc_opts, console_opts));
     return true;
   }
 
@@ -126,12 +129,8 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveThreadForTarget(cmd.thread());
   context->SetActiveTarget(cmd.target());
 
-  ConsoleFormatOptions console_opts;
-  console_opts.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
-  console_opts.pointer_expand_depth = 1;
-  console_opts.max_depth = 4;
-
-  Console::get()->Output(FormatFrameLong(cmd.frame(), loc_opts, console_opts));
+  Console::get()->Output(
+      FormatFrame(cmd.frame(), FormatFrameDetail::kParameters, loc_opts, console_opts));
   return true;
 }
 
@@ -850,7 +849,6 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
 const std::vector<SwitchRecord>& GetNounSwitches() {
   static std::vector<SwitchRecord> switches;
   if (switches.empty()) {
-    switches.emplace_back(kForceUpdate, false, "force", 'f');
     switches.emplace_back(kForceTypes, false, "types", 't');
     switches.emplace_back(kVerboseSwitch, false, "verbose", 'v');
   }

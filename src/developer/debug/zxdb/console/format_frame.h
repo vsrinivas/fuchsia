@@ -16,10 +16,21 @@ class Frame;
 class OutputBuffer;
 class Thread;
 
+enum class FormatFrameDetail {
+  kSimple,      // Show only function names and file/line information.
+  kParameters,  // Additionally show function parameters.
+  kVerbose,     // Additionally show IP/SP/BP.
+};
+
 // Generates the list of frames to the console. This will complete asynchronously. Printing of
 // function parameter types is controlled by include_params.
-fxl::RefPtr<AsyncOutputBuffer> FormatFrameList(Thread* thread, const FormatLocationOptions& opts,
-                                               bool long_format);
+//
+// This will request the full frame list from the agent if it has not been synced locally or if
+// force_update is set.
+fxl::RefPtr<AsyncOutputBuffer> FormatFrameList(Thread* thread, bool force_update,
+                                               FormatFrameDetail detail,
+                                               const FormatLocationOptions& loc_opts,
+                                               const ConsoleFormatOptions& console_opts);
 
 // Formats one frame using the short format to the output buffer. The frame ID will be printed if
 // supplied. If the ID is -1, it will be omitted.
@@ -35,10 +46,9 @@ OutputBuffer FormatFrame(const Frame* frame, const FormatLocationOptions& opts, 
 // and NOT marked complete by this function.
 //
 // This does not append a newline at the end of the output.
-fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame,
-                                               const FormatLocationOptions& loc_opts,
-                                               const ConsoleFormatOptions& console_opts,
-                                               int id = -1);
+fxl::RefPtr<AsyncOutputBuffer> FormatFrame(const Frame* frame, FormatFrameDetail detail,
+                                           const FormatLocationOptions& loc_opts,
+                                           const ConsoleFormatOptions& console_opts, int id = -1);
 
 }  // namespace zxdb
 

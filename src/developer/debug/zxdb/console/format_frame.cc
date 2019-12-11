@@ -24,18 +24,12 @@ namespace zxdb {
 
 namespace {
 
-fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread,
+fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread, FormatFrameDetail detail,
                                                    const FormatLocationOptions& loc_opts,
-                                                   bool long_format) {
+                                                   const ConsoleFormatOptions& console_opts) {
   int active_frame_id = Console::get()->context().GetActiveFrameIdForThread(thread);
 
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
-
-  // Formatting used for long format mode. These are minimal since there is often a lot of data.
-  ConsoleFormatOptions format_options;
-  format_options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
-  format_options.pointer_expand_depth = 1;
-  format_options.max_depth = 3;
 
   // This doesn't use table output since the format of the stack frames is usually so unpredictable.
   const Stack& stack = thread->GetStack();
@@ -61,11 +55,7 @@ fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread,
       out->Append(OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d ", i)));
 
       // Supply "-1" for the frame index to suppress printing (we already did it above).
-      if (long_format)
-        out->Append(FormatFrameLong(stack[i], loc_opts, format_options, -1));
-      else
-        out->Append(FormatFrame(stack[i], loc_opts, -1));
-
+      out->Append(FormatFrame(stack[i], detail, loc_opts, console_opts, -1));
       out->Append("\n");
     }
   }
@@ -76,16 +66,21 @@ fxl::RefPtr<AsyncOutputBuffer> ListCompletedFrames(Thread* thread,
 
 }  // namespace
 
-fxl::RefPtr<AsyncOutputBuffer> FormatFrameList(Thread* thread, const FormatLocationOptions& opts,
-                                               bool long_format) {
-  // Always request an up-to-date frame list from the agent. Various things could have changed and
-  // the user is manually requesting a new list, so don't rely on the cached copy even if
-  // Stack::has_all_frames() is true.
+fxl::RefPtr<AsyncOutputBuffer> FormatFrameList(Thread* thread, bool force_update,
+                                               FormatFrameDetail detail,
+                                               const FormatLocationOptions& loc_opts,
+                                               const ConsoleFormatOptions& console_opts) {
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
+  if (!force_update && thread->GetStack().has_all_frames()) {
+    out->Complete(ListCompletedFrames(thread, detail, loc_opts, console_opts));
+    return out;
+  }
+
+  // Request a stack update.
   thread->GetStack().SyncFrames(
-      [thread = thread->GetWeakPtr(), opts, long_format, out](const Err& err) {
+      [thread = thread->GetWeakPtr(), loc_opts, console_opts, detail, out](const Err& err) {
         if (!err.has_error() && thread)
-          out->Complete(ListCompletedFrames(thread.get(), opts, long_format));
+          out->Complete(ListCompletedFrames(thread.get(), detail, loc_opts, console_opts));
         else
           out->Complete("Thread exited, no frames.\n");
       });
@@ -102,9 +97,9 @@ OutputBuffer FormatFrame(const Frame* frame, const FormatLocationOptions& opts, 
   return out;
 }
 
-fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame,
-                                               const FormatLocationOptions& loc_opts,
-                                               const ConsoleFormatOptions& console_opts, int id) {
+fxl::RefPtr<AsyncOutputBuffer> FormatFrame(const Frame* frame, FormatFrameDetail detail,
+                                           const FormatLocationOptions& loc_opts,
+                                           const ConsoleFormatOptions& console_opts, int id) {
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
 
   if (id >= 0)
@@ -119,16 +114,17 @@ fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame,
   if (frame->IsInline())
     out->Append(Syntax::kComment, " (inline)");
 
-  // Long format includes the IP address and stack pointer.
-  out->Append(Syntax::kComment, fxl::StringPrintf("\n      IP = 0x%" PRIx64 ", SP = 0x%" PRIx64,
-                                                  frame->GetAddress(), frame->GetStackPointer()));
+  // IP address and stack pointers.
+  if (detail == FormatFrameDetail::kVerbose) {
+    out->Append(Syntax::kComment, fxl::StringPrintf("\n      IP = 0x%" PRIx64 ", SP = 0x%" PRIx64,
+                                                    frame->GetAddress(), frame->GetStackPointer()));
 
-  // Base pointer.
-  // TODO(brettw) make this work when the frame base is asynchronous.
-  if (auto bp = frame->GetBasePointer())
-    out->Append(Syntax::kComment, fxl::StringPrintf(", base = 0x%" PRIx64, *bp));
+    // TODO(brettw) make this work when the frame base is asynchronous.
+    if (auto bp = frame->GetBasePointer())
+      out->Append(Syntax::kComment, fxl::StringPrintf(", base = 0x%" PRIx64, *bp));
+  }
 
-  if (location.symbol()) {
+  if (detail != FormatFrameDetail::kSimple && location.symbol()) {
     const Function* func = location.symbol().Get()->AsFunction();
     if (func) {
       // Always list function parameters in the order specified.

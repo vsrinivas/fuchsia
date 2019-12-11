@@ -53,7 +53,7 @@ constexpr int kForceNumberUnsigned = 6;
 constexpr int kForceNumberHex = 7;
 constexpr int kMaxArraySize = 8;
 constexpr int kRawOutput = 9;
-constexpr int kForceUpdate = 10;
+constexpr int kVerboseBacktrace = 10;
 
 // If the system has at least one running process, returns true. If not, returns false and sets the
 // err.
@@ -167,20 +167,22 @@ const char kBacktraceShortHelp[] = "backtrace / bt: Print a backtrace.";
 const char kBacktraceHelp[] =
     R"(backtrace / bt
 
-  Prints a backtrace of the selected thread. This is an alias for "frame -v".
+  Prints a backtrace of the thread, including function parameters.
 
-  To see less information, use "frame" or just "f".
+  To see just function names and line numbers, use "frame" or just "f".
 
 Arguments
-
-  -f
-  --force
-      Force updates the stack, replacing and recomputing all addresses even if
-      the debugger thinks nothing has changed.
 
   -t
   --types
       Include all type information for function parameters.
+
+  -v
+  --verbose
+      Include extra stack frame information:
+       • Instruction pointer.
+       • Stack pointer.
+       • Stack frame base pointer.
 
 Examples
 
@@ -188,20 +190,30 @@ Examples
   thread 2 backtrace
 )";
 Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
-  if (err.has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread}); err.has_error())
     return err;
 
   if (!cmd.thread())
     return Err("There is no thread to have frames.");
 
-  if (cmd.HasSwitch(kForceUpdate))
-    cmd.thread()->GetStack().ClearFrames();
+  auto detail = FormatFrameDetail::kParameters;
+  if (cmd.HasSwitch(kVerboseBacktrace))
+    detail = FormatFrameDetail::kVerbose;
 
-  // TODO(brettw) this should share formatting options and parsing with the printing commands.
-  FormatLocationOptions opts(cmd.target());
-  opts.show_params = cmd.HasSwitch(kForceAllTypes);
-  Console::get()->Output(FormatFrameList(cmd.thread(), opts, true));
+  FormatLocationOptions loc_opts(cmd.target());
+  loc_opts.show_params = cmd.HasSwitch(kForceAllTypes);
+
+  // These are minimal since there is often a lot of data.
+  ConsoleFormatOptions format_opts;
+  format_opts.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
+  format_opts.verbosity = cmd.HasSwitch(kForceAllTypes) ? ConsoleFormatOptions::Verbosity::kAllTypes
+                                                        : ConsoleFormatOptions::Verbosity::kMinimal;
+  format_opts.pointer_expand_depth = 1;
+  format_opts.max_depth = 3;
+
+  // Always force update the stack. Various things can have changed and when the user requests
+  // a stack we want to be sure things are correct.
+  Console::get()->Output(FormatFrameList(cmd.thread(), true, detail, loc_opts, format_opts));
   return Err();
 }
 
@@ -313,8 +325,8 @@ Err DoDown(ConsoleContext* context, const Command& cmd) {
   id -= 1;
 
   context->SetActiveFrameIdForThread(cmd.thread(), id);
-  Console::get()->Output(FormatFrameLong(
-      cmd.thread()->GetStack()[id], FormatLocationOptions(cmd.target()), ConsoleFormatOptions()));
+  Console::get()->Output(FormatFrame(cmd.thread()->GetStack()[id], FormatFrameDetail::kParameters,
+                                     FormatLocationOptions(cmd.target()), ConsoleFormatOptions()));
   return Err();
 }
 
@@ -362,9 +374,9 @@ Err DoUp(ConsoleContext* context, const Command& cmd) {
       Console::get()->Output(got);
     } else {
       context->SetActiveFrameIdForThread(cmd.thread(), id);
-      Console::get()->Output(FormatFrameLong(cmd.thread()->GetStack()[id],
-                                             FormatLocationOptions(cmd.target()),
-                                             ConsoleFormatOptions()));
+      Console::get()->Output(
+          FormatFrame(cmd.thread()->GetStack()[id], FormatFrameDetail::kParameters,
+                      FormatLocationOptions(cmd.target()), ConsoleFormatOptions()));
     }
   };
 
@@ -377,7 +389,7 @@ Err DoUp(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// finish ----------------------------------------------------------------------
+// finish ------------------------------------------------------------------------------------------
 
 const char kFinishShortHelp[] = "finish / fi: Finish execution of a stack frame.";
 const char kFinishHelp[] =
@@ -1390,7 +1402,9 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   // backtrace
   VerbRecord backtrace(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp, kBacktraceHelp,
                        CommandGroup::kQuery);
-  backtrace.switches = {force_types, SwitchRecord(kForceUpdate, false, "force", 'f')};
+  backtrace.switches = {force_types, force_types,
+                        SwitchRecord(kVerboseBacktrace, false, "verbose", 'v')};
+
   (*verbs)[Verb::kBacktrace] = std::move(backtrace);
 
   (*verbs)[Verb::kContinue] =

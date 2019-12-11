@@ -21,12 +21,13 @@ namespace zxdb {
 namespace {
 
 // Synchronous wrapper around asynchronous long formatting.
-std::string SyncFormatFrameLong(const Frame* frame, const ConsoleFormatOptions& options) {
+std::string SyncFormatFrame(const Frame* frame, FormatFrameDetail detail,
+                            const ConsoleFormatOptions& options) {
   debug_ipc::PlatformMessageLoop loop;
   loop.Init();
 
-  auto out =
-      LoopUntilAsyncOutputBufferComplete(FormatFrameLong(frame, FormatLocationOptions(), options));
+  auto out = LoopUntilAsyncOutputBufferComplete(
+      FormatFrame(frame, detail, FormatLocationOptions(), options));
 
   loop.Cleanup();
   return out.AsString();
@@ -44,7 +45,7 @@ TEST(FormatFrame, Unsymbolized) {
 
   // Long version should do the same (not duplicate it).
   EXPECT_EQ("\n      IP = 0x12345678, SP = 0x567890, base = 0xdeadbeef",
-            SyncFormatFrameLong(&frame, ConsoleFormatOptions()));
+            SyncFormatFrame(&frame, FormatFrameDetail::kVerbose, ConsoleFormatOptions()));
 
   // With index.
   out = FormatFrame(&frame, FormatLocationOptions(), 3);
@@ -66,10 +67,16 @@ TEST(FormatFrame, Inline) {
       nullptr, nullptr, Location(0x12345678, FileLine("file.cc", 22), 0, symbol_context, function),
       0x567890, 0, std::vector<debug_ipc::Register>(), 0xdeadbeef, &physical_frame);
 
+  EXPECT_EQ("Function() • file.cc:22 (inline)",
+            SyncFormatFrame(&inline_frame, FormatFrameDetail::kSimple, ConsoleFormatOptions()));
+
+  EXPECT_EQ("Function() • file.cc:22 (inline)",
+            SyncFormatFrame(&inline_frame, FormatFrameDetail::kParameters, ConsoleFormatOptions()));
+
   EXPECT_EQ(
       "Function() • file.cc:22 (inline)\n"
       "      IP = 0x12345678, SP = 0x567890, base = 0xdeadbeef",
-      SyncFormatFrameLong(&inline_frame, ConsoleFormatOptions()));
+      SyncFormatFrame(&inline_frame, FormatFrameDetail::kVerbose, ConsoleFormatOptions()));
 }
 
 }  // namespace zxdb
