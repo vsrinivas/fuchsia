@@ -236,7 +236,8 @@ DECLARE_HAS_MEMBER_FN(has_ddk_get_size, DdkGetSize);
 template <typename D>
 constexpr void CheckGetSizable() {
   static_assert(has_ddk_get_size<D>::value, "GetSizable classes must implement DdkGetSize");
-  static_assert(std::is_same<decltype(&D::DdkGetSize), zx_off_t (D::*)(void)>::value,
+  static_assert(std::is_same<decltype(&D::DdkGetSize), zx_off_t (D::*)(void)>::value
+                || std::is_same<decltype(&D::DdkGetSize), zx_off_t (D::*)(void) const>::value,
                 "DdkGetSize must be a public non-static member function with signature "
                 "'zx_off_t DdkGetSize()'.");
 }
