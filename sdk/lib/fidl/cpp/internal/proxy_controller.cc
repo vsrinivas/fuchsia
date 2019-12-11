@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "lib/fidl/cpp/internal/logging.h"
-#include "lib/fidl/cpp/internal/proxy_controller_util.h"
 
 namespace fidl {
 namespace internal {
@@ -47,21 +46,12 @@ zx_status_t ProxyController::Send(const fidl_type_t* type, Message message,
     message.set_txid(txid);
   }
   const char* error_msg = nullptr;
-  auto header = message.header();
-  if (!fidl_should_decode_union_from_xunion(&header)) {
-    zx_status_t status = message.Validate(type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
-      return status;
-    }
-  } else {
-    zx_status_t status = ValidateV1Bytes(type, message, error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
-      return status;
-    }
+  zx_status_t status = message.Validate(type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
+    return status;
   }
-  zx_status_t status = message.Write(reader_.channel().get(), 0);
+  status = message.Write(reader_.channel().get(), 0);
   if (status != ZX_OK) {
     FIDL_REPORT_CHANNEL_WRITING_ERROR(message, type, status);
     return status;

@@ -163,7 +163,8 @@ zx_status_t Message::Decode(const fidl_type_t* type, const char** error_msg_out)
   return status;
 }
 
-zx_status_t Message::Validate(const fidl_type_t* type, const char** error_msg_out) const {
+zx_status_t Message::Validate(const fidl_type_t* old_type, const char** error_msg_out) const {
+  const fidl_type_t* type = should_decode_union_from_xunion() ? get_alt_type(old_type) : old_type;
   return fidl_validate(type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
 }
 
