@@ -137,7 +137,7 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
   // don't want to assume that since the compiler could emit multiple entries
   // for it.
   LineDetails line_details =
-      module_symbols->LineDetailsForAddress(symbol_context, addrs[0].address());
+      module_symbols->LineDetailsForAddress(symbol_context, addrs[0].address(), false);
   EXPECT_EQ(file_name, line_details.file_line().file());
   EXPECT_EQ(kLineToQuery, line_details.file_line().line());
   ASSERT_FALSE(line_details.entries().empty());
@@ -146,14 +146,16 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
   EXPECT_LT(begin_range, end_range);
 
   // The address before the beginning of the range should be the previous line.
-  LineDetails prev_details = module_symbols->LineDetailsForAddress(symbol_context, begin_range - 1);
+  LineDetails prev_details =
+      module_symbols->LineDetailsForAddress(symbol_context, begin_range - 1, false);
   EXPECT_EQ(kLineToQuery - 1, prev_details.file_line().line());
   EXPECT_EQ(file_name, prev_details.file_line().file());
   ASSERT_FALSE(prev_details.entries().empty());
   EXPECT_EQ(begin_range, prev_details.entries().back().range.end());
 
   // The end of the range (which is non-inclusive) should be the next line.
-  LineDetails next_details = module_symbols->LineDetailsForAddress(symbol_context, end_range);
+  LineDetails next_details =
+      module_symbols->LineDetailsForAddress(symbol_context, end_range, false);
   EXPECT_EQ(kLineToQuery + 1, next_details.file_line().line());
   EXPECT_EQ(file_name, next_details.file_line().file());
   ASSERT_FALSE(next_details.entries().empty());

@@ -98,7 +98,10 @@ class ProcessSymbols {
   // Computes the line that corresponds to the given address. Unlike ResolveInputLocation (which
   // just returns the current source line), this returns the entire set of contiguous line table
   // entries with code ranges with the same line as the given address.
-  LineDetails LineDetailsForAddress(uint64_t address) const;
+  //
+  // The |greedy| flag will also include "line 0" line table entries (see
+  // ModuleSymbols::LineDetailsForAddress() for more).
+  LineDetails LineDetailsForAddress(uint64_t address, bool greedy = false) const;
 
   // Returns true if the code location is inside a module where there are symbols loaded. If we did
   // something like index ELF exports, those wouldn't count. "Symbols loaded" here means there is

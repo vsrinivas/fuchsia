@@ -10,8 +10,10 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
+#include "src/developer/debug/zxdb/client/step_into_specific_thread_controller.h"
 #include "src/developer/debug/zxdb/client/step_into_thread_controller.h"
 #include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
+#include "src/developer/debug/zxdb/client/substatement.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/until_thread_controller.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -26,12 +28,14 @@
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
+#include "src/developer/debug/zxdb/console/verb_steps.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -1434,6 +1438,7 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
 
   (*verbs)[Verb::kStepi] = VerbRecord(&DoStepi, {"stepi", "si"}, kStepiShortHelp, kStepiHelp,
                                       CommandGroup::kAssembly, SourceAffinity::kAssembly);
+  (*verbs)[Verb::kSteps] = GetStepsVerbRecord();
   (*verbs)[Verb::kUntil] = VerbRecord(&DoUntil, &CompleteInputLocation, {"until", "u"},
                                       kUntilShortHelp, kUntilHelp, CommandGroup::kStep);
 

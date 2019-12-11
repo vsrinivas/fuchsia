@@ -84,7 +84,7 @@ std::vector<Location> MockModuleSymbols::ResolveInputLocation(const SymbolContex
 }
 
 LineDetails MockModuleSymbols::LineDetailsForAddress(const SymbolContext& symbol_context,
-                                                     uint64_t absolute_address) const {
+                                                     uint64_t absolute_address, bool greedy) const {
   // This mock assumes all addresses are absolute so the symbol context is not used.
   auto found = lines_.find(absolute_address);
   if (found == lines_.end())

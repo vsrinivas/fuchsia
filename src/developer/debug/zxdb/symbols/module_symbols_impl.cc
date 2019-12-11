@@ -70,8 +70,15 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
   }
 };
 
-bool SameFileLine(const llvm::DWARFDebugLine::Row& a, const llvm::DWARFDebugLine::Row& b) {
-  return a.File == b.File && a.Line == b.Line;
+// The order of the parameters matters because "line 0" is handled in "greedy" mode only for the
+// candidate line. If the caller is asking about an address that matches line 0, we don't want to
+// expand that past line boundaries, but we do want to expand other lines actoss line 0 in greedy
+// mode.
+bool SameFileLine(const llvm::DWARFDebugLine::Row& reference,
+                  const llvm::DWARFDebugLine::Row& candidate, bool greedy) {
+  if (greedy && candidate.Line == 0)
+    return true;
+  return reference.File == candidate.File && reference.Line == candidate.Line;
 }
 
 // Determines if the given input location references a PLT symbol. If it does, returns the name of
@@ -189,7 +196,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(const SymbolContex
 }
 
 LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol_context,
-                                                     uint64_t absolute_address) const {
+                                                     uint64_t absolute_address, bool greedy) const {
   uint64_t relative_address = symbol_context.AbsoluteToRelative(absolute_address);
 
   llvm::DWARFCompileUnit* unit = llvm::dyn_cast_or_null<llvm::DWARFCompileUnit>(
@@ -212,15 +219,16 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
   if (found_row_index == line_table->UnknownRowIndex || rows[found_row_index].EndSequence)
     return LineDetails();
 
-  // Adjust the beginning and end ranges greedily to include all matching
+  // Adjust the beginning and end ranges to include all matching
   // entries of the same line.
   uint32_t first_row_index = found_row_index;
-  while (first_row_index > 0 && SameFileLine(rows[found_row_index], rows[first_row_index - 1])) {
+  while (first_row_index > 0 &&
+         SameFileLine(rows[found_row_index], rows[first_row_index - 1], greedy)) {
     first_row_index--;
   }
   uint32_t last_row_index = found_row_index;
   while (last_row_index < rows.size() - 1 &&
-         SameFileLine(rows[found_row_index], rows[last_row_index + 1])) {
+         SameFileLine(rows[found_row_index], rows[last_row_index + 1], greedy)) {
     last_row_index++;
   }
 

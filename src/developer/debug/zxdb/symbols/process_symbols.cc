@@ -190,12 +190,12 @@ std::vector<Location> ProcessSymbols::ResolveInputLocation(const InputLocation& 
   return result;
 }
 
-LineDetails ProcessSymbols::LineDetailsForAddress(uint64_t address) const {
+LineDetails ProcessSymbols::LineDetailsForAddress(uint64_t address, bool greedy) const {
   const ModuleInfo* info = InfoForAddress(address);
   if (!info || !info->symbols->module_symbols_ref())
     return LineDetails();
   return info->symbols->module_symbols()->LineDetailsForAddress(info->symbols->symbol_context(),
-                                                                address);
+                                                                address, greedy);
 }
 
 bool ProcessSymbols::HaveSymbolsLoadedForModuleAt(uint64_t address) const {

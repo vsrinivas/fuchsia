@@ -81,6 +81,7 @@ enum class Verb {
   kStdout,
   kStep,
   kStepi,
+  kSteps,
   kSymInfo,
   kSymNear,
   kSymSearch,

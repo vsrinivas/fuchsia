@@ -75,9 +75,16 @@ class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
   // would be inside the block, but that block may not have been executed and showing the location
   // there would be misleading. Generally code blocks with a "0" line number should be skipped over.
   //
+  // The |greedy| flag, if set, will cause a nonzero line to be extended over zero lines. This is
+  // for cases where the caller wants the broadest reasonable definition of the current line.
+  // Callers will want this especially if they don't handle 0 lines themselves because you can get
+  // a sequence like: [line 45, line 0, line 45] and from a user perspective the right behavior is
+  // to consider the whole thing "line 45".
+  //
   // The SymbolContext will be used to interpret the absolute input address.
   virtual LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
-                                            uint64_t absolute_address) const = 0;
+                                            uint64_t absolute_address,
+                                            bool greedy = false) const = 0;
 
   // Returns a vector of full file names that match the input.
   //
