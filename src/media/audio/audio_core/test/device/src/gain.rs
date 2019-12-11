@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::virtual_devices::{with_connected_device, DeviceTestAssets};
 use hermetic_audio_environment::prelude::*;
+use hermetic_audio_environment::virtual_audio::{with_connected_device, DeviceTestAssets};
 
 const NULL_TOKEN: u64 = zx::sys::ZX_KOID_INVALID as u64;
 const INVALID_TOKEN: u64 = 33;
