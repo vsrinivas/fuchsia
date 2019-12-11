@@ -22,7 +22,7 @@ zx_status_t AmlCpuFrequency::Create(zx_device_t* parent) {
   }
 
   // zeroth component is pdev
-  zx_device_t* components[kClockCount + 1];
+  zx_device_t* components[std::max(kSherlockPwmCount, kAstroPwmCount) + kClockCount + 1];
   size_t actual;
   composite.GetComponents(components, fbl::count_of(components), &actual);
 
@@ -41,17 +41,19 @@ zx_status_t AmlCpuFrequency::Create(zx_device_t* parent) {
 
   pid_ = device_info.pid;
 
-  uint8_t num_clocks;
+  uint8_t num_clocks, num_pwms;
 
   if (pid_ == PDEV_PID_AMLOGIC_T931) {
     num_clocks = kClockCount;
+    num_pwms = kSherlockPwmCount;
   } else {
     num_clocks = kAstroClockCount;
+    num_pwms = kAstroPwmCount;
   }
   // Get the clock protocols
   for (unsigned i = 0; i < num_clocks; i++) {
     clock_protocol_t clock;
-    auto status = device_get_protocol(components[i + 1], ZX_PROTOCOL_CLOCK, &clock);
+    auto status = device_get_protocol(components[num_pwms + i + 1], ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-cpufreq: failed to get clk protocol\n");
       return status;

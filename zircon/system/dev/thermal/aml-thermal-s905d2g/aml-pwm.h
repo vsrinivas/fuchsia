@@ -14,6 +14,7 @@
 
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/pwm.h>
 #include <fbl/mutex.h>
 #include <hwreg/mmio.h>
 
@@ -44,7 +45,7 @@ class AmlPwm {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlPwm);
   AmlPwm() = default;
   // For testing
-  AmlPwm(ddk::MmioBuffer pwm_mmio) : pwm_mmio_(std::move(pwm_mmio)) {}
+  void MapMmio(ddk::MmioBuffer pwm_mmio) { pwm_mmio_ = std::move(pwm_mmio); }
   // pwm_type selects between PWM AB/CD, 0 chooses AB
   //                                     1 chooses CD
   // Note: This Create is slightly different from the others in that it doesn't call
@@ -56,6 +57,9 @@ class AmlPwm {
   //                                            1 chooses B/D
   zx_status_t Init(uint32_t period_ns, uint32_t hwpwm);
   zx_status_t Configure(uint32_t duty_cycle);
+  zx_status_t SetConfig(const pwm_config_t* config) {
+    return Configure(static_cast<uint32_t>(config->duty_cycle));
+  }
 
  private:
   uint32_t period_ns_;

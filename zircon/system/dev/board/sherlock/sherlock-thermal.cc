@@ -16,6 +16,7 @@
 #include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
+#include <soc/aml-t931/t931-pwm.h>
 
 #include "sherlock.h"
 
@@ -37,14 +38,6 @@ const pbus_mmio_t thermal_mmios[] = {
     {
         .base = T931_HIU_BASE,
         .length = T931_HIU_LENGTH,
-    },
-    {
-        .base = T931_AO_PWM_CD_BASE,
-        .length = T931_AO_PWM_LENGTH,
-    },
-    {
-        .base = T931_PWM_AB_BASE,
-        .length = T931_PWM_LENGTH,
     },
 };
 
@@ -220,6 +213,14 @@ constexpr pbus_dev_t thermal_dev = []() {
 const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
+const zx_bind_inst_t pwm_ao_d_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
+    BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_AO_D),
+};
+const zx_bind_inst_t pwm_a_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
+    BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_A),
+};
 const zx_bind_inst_t clk1_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_PLL_DIV16),
@@ -235,6 +236,14 @@ const zx_bind_inst_t clk3_match[] = {
 const zx_bind_inst_t clk4_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_CPUB_CLK_DIV16),
+};
+const device_component_part_t pwm_ao_d_component[] = {
+    {countof(root_match), root_match},
+    {countof(pwm_ao_d_match), pwm_ao_d_match},
+};
+const device_component_part_t pwm_a_component[] = {
+    {countof(root_match), root_match},
+    {countof(pwm_a_match), pwm_a_match},
 };
 const device_component_part_t clk1_component[] = {
     {countof(root_match), root_match},
@@ -253,10 +262,9 @@ const device_component_part_t clk4_component[] = {
     {countof(clk4_match), clk4_match},
 };
 const device_component_t components[] = {
-    {countof(clk1_component), clk1_component},
-    {countof(clk2_component), clk2_component},
-    {countof(clk3_component), clk3_component},
-    {countof(clk4_component), clk4_component},
+    {countof(pwm_ao_d_component), pwm_ao_d_component}, {countof(pwm_a_component), pwm_a_component},
+    {countof(clk1_component), clk1_component},         {countof(clk2_component), clk2_component},
+    {countof(clk3_component), clk3_component},         {countof(clk4_component), clk4_component},
 };
 
 }  // namespace
