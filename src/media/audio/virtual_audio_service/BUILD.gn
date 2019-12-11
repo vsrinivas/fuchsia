@@ -5,14 +5,6 @@
 import("//build/config.gni")
 import("//build/package.gni")
 
-group("service") {
-  testonly = true
-  deps = [
-    ":virtual_audio_config",
-    ":virtual_audio_service",
-  ]
-}
-
 package("virtual_audio_service") {
   deps = [
     ":virtual_audio_bin",

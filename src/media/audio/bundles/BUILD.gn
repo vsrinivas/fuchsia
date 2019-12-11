@@ -10,16 +10,18 @@ group("services") {
   ]
 }
 
-group("virtual_audio_service") {
+group("virtual_audio_service_with_config") {
   testonly = true
   deps = [
     "//src/media/audio/virtual_audio_service",
+    "//src/media/audio/virtual_audio_service:virtual_audio_config",
   ]
 }
 
 group("tools") {
   testonly = true
   deps = [
+    ":virtual_audio_service_with_config",
     "//src/media/audio/tools/signal_generator",
     "//src/media/audio/tools/virtual_audio_util",
     "//src/media/audio/tools/vol",
@@ -48,13 +50,6 @@ group("vim2_media_config") {
   testonly = true
   deps = [
     "//src/media/audio/vim2_media_config",
-  ]
-}
-
-group("virtual_audio_config") {
-  testonly = true
-  public_deps = [
-    "//src/media/audio/virtual_audio_service:virtual_audio_config",
   ]
 }
 

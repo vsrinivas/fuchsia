@@ -21,8 +21,7 @@ group("end_to_end_deps") {
     "//garnet/packages/prod:run",
 
     # Needed to inject and capture audio.
-    "//src/media/audio/bundles:virtual_audio_config",
-    "//src/media/audio/bundles:virtual_audio_service",
+    "//src/media/audio/bundles:virtual_audio_service_with_config",
 
     # Needed for ifconfig.
     "//garnet/packages/tools:netstack",
