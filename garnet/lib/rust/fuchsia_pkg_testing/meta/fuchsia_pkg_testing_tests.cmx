@@ -14,7 +14,7 @@
             "misc/ramctl"
         ],
         "features": [
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.net.NameLookup",
