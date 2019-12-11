@@ -13,7 +13,6 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/vfs.h>
 #include <poll.h>
-#include <stdarg.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/select.h>
@@ -29,6 +28,8 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+
+#include <cstdarg>
 
 #include <fbl/auto_lock.h>
 
@@ -868,65 +869,6 @@ int fdio_status_to_errno(zx_status_t status) {
     // No specific translation, so return a generic value.
     default:
       return EIO;
-  }
-}
-
-zx_status_t errno_to_fdio_status(int16_t out_code) {
-  switch (out_code) {
-    case EACCES:
-      return ZX_ERR_ACCESS_DENIED;
-    case EADDRINUSE:
-      return ZX_ERR_ADDRESS_IN_USE;
-    case EAGAIN:
-      return ZX_ERR_SHOULD_WAIT;
-    case EBADF:
-      return ZX_ERR_BAD_HANDLE;
-    case EBUSY:
-      return ZX_ERR_UNAVAILABLE;
-    case ECONNABORTED:
-      return ZX_ERR_CONNECTION_ABORTED;
-    case ECONNREFUSED:
-      return ZX_ERR_IO_REFUSED;
-    case ECONNRESET:
-      return ZX_ERR_CONNECTION_RESET;
-    case EEXIST:
-      return ZX_ERR_ALREADY_EXISTS;
-    case EFBIG:
-      return ZX_ERR_FILE_BIG;
-    case EINVAL:
-      return ZX_ERR_INVALID_ARGS;
-    case EIO:
-      return ZX_ERR_IO;
-    case EISDIR:
-      return ZX_ERR_NOT_FILE;
-    case ENAMETOOLONG:
-      return ZX_ERR_BAD_PATH;
-    case ENETUNREACH:
-      return ZX_ERR_ADDRESS_UNREACHABLE;
-    case ENOENT:
-      return ZX_ERR_NOT_FOUND;
-    case ENOMEM:
-      return ZX_ERR_NO_MEMORY;
-    case ENOSPC:
-      return ZX_ERR_NO_SPACE;
-    case ENOTCONN:
-      return ZX_ERR_NOT_CONNECTED;
-    case ENOTDIR:
-      return ZX_ERR_NOT_DIR;
-    case ENOTEMPTY:
-      return ZX_ERR_NOT_EMPTY;
-    case ENOTSUP:
-      return ZX_ERR_NOT_SUPPORTED;
-    case EPIPE:
-      return ZX_ERR_PEER_CLOSED;
-    case EPROTONOSUPPORT:
-      return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
-    case ETIMEDOUT:
-      return ZX_ERR_TIMED_OUT;
-
-    // No specific translation, so return a generic value.
-    default:
-      return ZX_ERR_INTERNAL;
   }
 }
 

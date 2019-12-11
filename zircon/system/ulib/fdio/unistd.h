@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_FDIO_UNISTD_H_
+#define ZIRCON_SYSTEM_ULIB_FDIO_UNISTD_H_
 
-#include <errno.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/unsafe.h>
-#include <limits.h>
-#include <stdbool.h>
 #include <sys/types.h>
 #include <threads.h>
+
+#include <cerrno>
+#include <climits>
 
 #include "private.h"
 
@@ -19,7 +20,6 @@
 __BEGIN_CDECLS
 
 int fdio_status_to_errno(zx_status_t status);
-zx_status_t errno_to_fdio_status(int16_t out_code);
 
 // set errno to the closest match for error and return -1
 static inline int ERROR(zx_status_t error) {
@@ -45,3 +45,5 @@ static inline int ERRNO(int e) {
 }
 
 __END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_ULIB_FDIO_UNISTD_H_
