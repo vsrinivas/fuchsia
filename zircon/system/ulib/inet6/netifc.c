@@ -4,22 +4,10 @@
 
 #include <assert.h>
 #include <dirent.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
-#include <inttypes.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/watcher.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <threads.h>
-#include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
@@ -63,7 +51,6 @@ static mtx_t eth_lock = MTX_INIT;
 static zx_handle_t g_netsvc = ZX_HANDLE_INVALID;
 static eth_client_t* g_eth;
 static uint8_t g_netmac[6];
-static size_t g_netmtu;
 
 static zx_handle_t iovmo;
 static void* iobuf;
@@ -227,25 +214,6 @@ fail:
 
 int eth_add_mcast_filter(const mac_addr_t* addr) { return 0; }
 
-static volatile zx_time_t net_timer = 0;
-
-void netifc_set_timer(uint32_t ms) { net_timer = zx_deadline_after(ZX_MSEC(ms)); }
-
-int netifc_timer_expired(void) {
-  if (net_timer == 0) {
-    return 0;
-  }
-  if (zx_clock_get_monotonic() > net_timer) {
-    return 1;
-  }
-  return 0;
-}
-
-void netifc_get_info(uint8_t* addr, uint16_t* mtu) {
-  memcpy(addr, g_netmac, 6);
-  *mtu = g_netmtu;
-}
-
 int netifc_open(const char* interface) {
   zx_status_t status = ZX_ERR_INTERNAL;
   mtx_lock(&eth_lock);
@@ -374,34 +342,23 @@ static void rx_complete(void* ctx, void* cookie, size_t len, uint32_t flags) {
   eth_queue_rx(g_eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
 }
 
-int netifc_poll(void) {
-  for (;;) {
-    // Handle any completed rx packets
-    zx_status_t status;
-    if ((status = eth_complete_rx(g_eth, NULL, rx_complete)) < 0) {
-      printf("netifc: eth rx failed: %d\n", status);
-      return -1;
-    }
-
-    // Timeout passed
-    if (net_timer && zx_clock_get_monotonic() > net_timer) {
-      return 0;
-    }
-
-    if (netifc_send_pending()) {
-      continue;
-    }
-
-    zx_time_t deadline;
-    if (net_timer) {
-      deadline = zx_time_add_duration(net_timer, ZX_MSEC(1));
-    } else {
-      deadline = ZX_TIME_INFINITE;
-    }
-    status = eth_wait_rx(g_eth, deadline);
-    if ((status < 0) && (status != ZX_ERR_TIMED_OUT)) {
-      printf("netifc: eth rx wait failed: %d\n", status);
-      return -1;
-    }
+int netifc_poll(zx_time_t deadline) {
+  // Handle any completed rx packets
+  zx_status_t status;
+  if ((status = eth_complete_rx(g_eth, NULL, rx_complete)) < 0) {
+    printf("netifc: eth rx failed: %d\n", status);
+    return -1;
   }
+
+  if (netifc_send_pending()) {
+    return 0;
+  }
+
+  status = eth_wait_rx(g_eth, deadline);
+  if ((status < 0) && (status != ZX_ERR_TIMED_OUT)) {
+    printf("netifc: eth rx wait failed: %d\n", status);
+    return -1;
+  }
+
+  return 0;
 }

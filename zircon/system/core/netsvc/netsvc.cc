@@ -4,20 +4,15 @@
 
 #include "netsvc.h"
 
-#include <lib/fdio/io.h>
-#include <lib/fdio/spawn.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
 #include <unistd.h>
 #include <zircon/boot/netboot.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <zircon/syscalls/log.h>
 #include <zircon/time.h>
+
+#include <algorithm>
+#include <climits>
+#include <cstdio>
+#include <cstring>
 
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
@@ -26,8 +21,6 @@
 #include "debuglog.h"
 #include "netboot.h"
 #include "tftp.h"
-
-#define FILTER_IPV6 1
 
 static bool g_netbootloader = false;
 
@@ -75,17 +68,6 @@ bool netifc_send_pending() {
   }
   tftp_send_next();
   return tftp_has_pending();
-}
-
-void update_timeouts() {
-  zx_time_t now = zx_clock_get_monotonic();
-  zx_time_t next_timeout = (debuglog_next_timeout() < tftp_next_timeout()) ? debuglog_next_timeout()
-                                                                           : tftp_next_timeout();
-  if (next_timeout != ZX_TIME_INFINITE) {
-    uint32_t ms = static_cast<uint32_t>(
-        (next_timeout < now) ? 0 : (zx_time_sub_time(next_timeout, now)) / ZX_MSEC(1));
-    netifc_set_timer(ms);
-  }
 }
 
 static const char* zedboot_banner =
@@ -155,9 +137,7 @@ int main(int argc, char** argv) {
         netboot_advertise(g_nodename);
       }
 
-      update_timeouts();
-
-      if (netifc_poll()) {
+      if (netifc_poll(std::min(debuglog_next_timeout(), tftp_next_timeout()))) {
         printf("netsvc: netifc_poll() failed - terminating\n");
         break;
       }
@@ -172,6 +152,4 @@ int main(int argc, char** argv) {
     }
     netifc_close();
   }
-
-  return 0;
 }

@@ -4,20 +4,16 @@
 
 #include "tftp.h"
 
-#include <stddef.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <inet6/inet6.h>
 #include <lib/fdio/spawn.h>
-#include <tftp/tftp.h>
-#include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
-#include <zircon/process.h>
-#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
+
+#include <cstddef>
+#include <cstdio>
+
+#include <inet6/inet6.h>
+#include <tftp/tftp.h>
 
 #include "file-api.h"
 #include "netsvc.h"
@@ -83,7 +79,6 @@ tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
   // received packets we want to ignore (duplicate ACKs).
   if (transport_info->timeout_ms != 0) {
     g_tftp_next_timeout = zx_deadline_after(ZX_MSEC(transport_info->timeout_ms));
-    update_timeouts();
   }
   return TFTP_NO_ERROR;
 }
