@@ -66,7 +66,7 @@ readonly \
 readonly \
     TRANSFORMER_TABLES_PATH="${FUCHSIA_DIR}/zircon/system/utest/fidl/generated/transformer_conformance_tables.h"
 readonly \
-    TRANSFORMER_TEST_PATH="${FUCHSIA_DIR}/zircon/system/utest/fidl/transformer_conformance_tests.cc"
+    TRANSFORMER_TEST_PATH="${FUCHSIA_DIR}/zircon/system/utest/fidl/transformer_conformance_tests.c"
 
 readonly tmpbackup="$( mktemp -d 2>/dev/null || mktemp -d -t 'tmpbackup' )"
 readonly tmpout="$( mktemp -d 2>/dev/null || mktemp -d -t 'tmpout' )"
@@ -79,7 +79,7 @@ cp ${DART_TEST_PATH} ${tmpbackup}/conformance_test.dart
 cp ${LLCPP_TEST_PATH} ${tmpbackup}/llcpp_conformance_test.cc
 cp ${RUST_TEST_PATH} ${tmpbackup}/conformance_test.rs
 cp ${TRANSFORMER_TABLES_PATH} ${tmpbackup}/transformer_conformance_tables.h
-cp ${TRANSFORMER_TEST_PATH} ${tmpbackup}/transformer_conformance_tests.cc
+cp ${TRANSFORMER_TEST_PATH} ${tmpbackup}/transformer_conformance_tests.c
 
 function cleanup {
     readonly EXIT_CODE=$?
@@ -92,7 +92,7 @@ function cleanup {
         cp ${tmpbackup}/llcpp_conformance_test.cc ${LLCPP_TEST_PATH}
         cp ${tmpbackup}/conformance_test.rs ${RUST_TEST_PATH}
         cp ${tmpbackup}/transformer_conformance_tables.h ${TRANSFORMER_TABLES_PATH}
-        cp ${tmpbackup}/transformer_conformance_tests.cc ${TRANSFORMER_TEST_PATH}
+        cp ${tmpbackup}/transformer_conformance_tests.c ${TRANSFORMER_TEST_PATH}
     fi
     rm -rf ${tmpout}
     rm -rf ${tmpbackup}

@@ -39,20 +39,20 @@ static_assert(ZX_HANDLE_INVALID == FIDL_HANDLE_ABSENT, "invalid handle equals ab
 
 constexpr uint32_t PrimitiveSize(const FidlCodedPrimitive primitive) {
   switch (primitive) {
-    case FidlCodedPrimitive::kBool:
-    case FidlCodedPrimitive::kInt8:
-    case FidlCodedPrimitive::kUint8:
+    case kFidlCodedPrimitive_Bool:
+    case kFidlCodedPrimitive_Int8:
+    case kFidlCodedPrimitive_Uint8:
       return 1;
-    case FidlCodedPrimitive::kInt16:
-    case FidlCodedPrimitive::kUint16:
+    case kFidlCodedPrimitive_Int16:
+    case kFidlCodedPrimitive_Uint16:
       return 2;
-    case FidlCodedPrimitive::kInt32:
-    case FidlCodedPrimitive::kUint32:
-    case FidlCodedPrimitive::kFloat32:
+    case kFidlCodedPrimitive_Int32:
+    case kFidlCodedPrimitive_Uint32:
+    case kFidlCodedPrimitive_Float32:
       return 4;
-    case FidlCodedPrimitive::kInt64:
-    case FidlCodedPrimitive::kUint64:
-    case FidlCodedPrimitive::kFloat64:
+    case kFidlCodedPrimitive_Int64:
+    case kFidlCodedPrimitive_Uint64:
+    case kFidlCodedPrimitive_Float64:
       return 8;
   }
   __builtin_unreachable();
@@ -60,30 +60,30 @@ constexpr uint32_t PrimitiveSize(const FidlCodedPrimitive primitive) {
 
 constexpr uint32_t TypeSize(const fidl_type_t* type) {
   switch (type->type_tag) {
-    case fidl::kFidlTypePrimitive:
+    case kFidlTypePrimitive:
       return PrimitiveSize(type->coded_primitive);
-    case fidl::kFidlTypeEnum:
+    case kFidlTypeEnum:
       return PrimitiveSize(type->coded_enum.underlying_type);
-    case fidl::kFidlTypeBits:
+    case kFidlTypeBits:
       return PrimitiveSize(type->coded_bits.underlying_type);
-    case fidl::kFidlTypeStructPointer:
-    case fidl::kFidlTypeUnionPointer:
+    case kFidlTypeStructPointer:
+    case kFidlTypeUnionPointer:
       return sizeof(uint64_t);
-    case fidl::kFidlTypeHandle:
+    case kFidlTypeHandle:
       return sizeof(zx_handle_t);
-    case fidl::kFidlTypeStruct:
+    case kFidlTypeStruct:
       return type->coded_struct.size;
-    case fidl::kFidlTypeTable:
+    case kFidlTypeTable:
       return sizeof(fidl_vector_t);
-    case fidl::kFidlTypeUnion:
+    case kFidlTypeUnion:
       return type->coded_union.size;
-    case fidl::kFidlTypeXUnion:
+    case kFidlTypeXUnion:
       return sizeof(fidl_xunion_t);
-    case fidl::kFidlTypeString:
+    case kFidlTypeString:
       return sizeof(fidl_string_t);
-    case fidl::kFidlTypeArray:
+    case kFidlTypeArray:
       return type->coded_array.array_size;
-    case fidl::kFidlTypeVector:
+    case kFidlTypeVector:
       return sizeof(fidl_vector_t);
   }
   __builtin_unreachable();
@@ -91,7 +91,7 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
 
 constexpr bool IsPrimitive(const fidl_type_t* type) {
   switch (type->type_tag) {
-    case fidl::kFidlTypePrimitive:
+    case kFidlTypePrimitive:
       return true;
     default:
       return false;
@@ -138,46 +138,46 @@ class Walker final {
   struct Frame {
     Frame(const fidl_type_t* fidl_type, Position position) : position(position) {
       switch (fidl_type->type_tag) {
-        case fidl::kFidlTypeEnum:
+        case kFidlTypeEnum:
           state = kStateEnum;
           enum_state.underlying_type = fidl_type->coded_enum.underlying_type;
           enum_state.validate = fidl_type->coded_enum.validate;
           break;
-        case fidl::kFidlTypeBits:
+        case kFidlTypeBits:
           state = kStateBits;
           bits_state.underlying_type = fidl_type->coded_bits.underlying_type;
           bits_state.mask = fidl_type->coded_bits.mask;
           break;
-        case fidl::kFidlTypeStruct:
+        case kFidlTypeStruct:
           state = kStateStruct;
           struct_state.fields = fidl_type->coded_struct.fields;
           struct_state.field_count = fidl_type->coded_struct.field_count;
           struct_state.field = 0;
           struct_state.struct_size = fidl_type->coded_struct.size;
           break;
-        case fidl::kFidlTypeStructPointer:
+        case kFidlTypeStructPointer:
           state = kStateStructPointer;
           struct_pointer_state.struct_type = fidl_type->coded_struct_pointer.struct_type;
           break;
-        case fidl::kFidlTypeTable:
+        case kFidlTypeTable:
           state = kStateTable;
           table_state.field = fidl_type->coded_table.fields;
           table_state.remaining_fields = fidl_type->coded_table.field_count;
           table_state.present_count = 0;
           table_state.ordinal = 0;
           break;
-        case fidl::kFidlTypeUnion:
+        case kFidlTypeUnion:
           state = kStateUnion;
           union_state.fields = fidl_type->coded_union.fields;
           union_state.field_count = fidl_type->coded_union.field_count;
           union_state.data_offset = fidl_type->coded_union.data_offset;
           union_state.union_size = fidl_type->coded_union.size;
           break;
-        case fidl::kFidlTypeUnionPointer:
+        case kFidlTypeUnionPointer:
           state = kStateUnionPointer;
           union_pointer_state.union_type = fidl_type->coded_union_pointer.union_type;
           break;
-        case fidl::kFidlTypeXUnion:
+        case kFidlTypeXUnion:
           state = kStateXUnion;
           xunion_state.fields = fidl_type->coded_xunion.fields;
           xunion_state.field_count = fidl_type->coded_xunion.field_count;
@@ -185,37 +185,37 @@ class Walker final {
           xunion_state.nullable = fidl_type->coded_xunion.nullable;
           xunion_state.strictness = fidl_type->coded_xunion.strictness;
           break;
-        case fidl::kFidlTypeArray:
+        case kFidlTypeArray:
           state = kStateArray;
           array_state.element = fidl_type->coded_array.element;
           array_state.array_size = fidl_type->coded_array.array_size;
           array_state.element_size = fidl_type->coded_array.element_size;
           array_state.element_offset = 0;
           break;
-        case fidl::kFidlTypeString:
+        case kFidlTypeString:
           state = kStateString;
           string_state.max_size = fidl_type->coded_string.max_size;
           string_state.nullable = fidl_type->coded_string.nullable;
           break;
-        case fidl::kFidlTypeHandle:
+        case kFidlTypeHandle:
           state = kStateHandle;
           handle_state.nullable = fidl_type->coded_handle.nullable;
           break;
-        case fidl::kFidlTypeVector:
+        case kFidlTypeVector:
           state = kStateVector;
           vector_state.element = fidl_type->coded_vector.element;
           vector_state.max_count = fidl_type->coded_vector.max_count;
           vector_state.element_size = fidl_type->coded_vector.element_size;
           vector_state.nullable = fidl_type->coded_vector.nullable;
           break;
-        case fidl::kFidlTypePrimitive:
+        case kFidlTypePrimitive:
           // Walker will never recurse into a primitive. Note: this branch must be
           // implemented should we decide to support table-driven ToString in the future.
           __builtin_unreachable();
       }
     }
 
-    Frame(const fidl::FidlCodedStruct* coded_struct, Position position) : position(position) {
+    Frame(const FidlCodedStruct* coded_struct, Position position) : position(position) {
       state = kStateStruct;
       struct_state.fields = coded_struct->fields;
       struct_state.field_count = coded_struct->field_count;
@@ -223,7 +223,7 @@ class Walker final {
       struct_state.struct_size = coded_struct->size;
     }
 
-    Frame(const fidl::FidlCodedTable* coded_table, Position position) : position(position) {
+    Frame(const FidlCodedTable* coded_table, Position position) : position(position) {
       state = kStateStruct;
       table_state.field = coded_table->fields;
       table_state.remaining_fields = coded_table->field_count;
@@ -231,7 +231,7 @@ class Walker final {
       table_state.ordinal = 0;
     }
 
-    Frame(const fidl::FidlCodedUnion* coded_union, Position position) : position(position) {
+    Frame(const FidlCodedUnion* coded_union, Position position) : position(position) {
       state = kStateUnion;
       union_state.fields = coded_union->fields;
       union_state.field_count = coded_union->field_count;
@@ -239,7 +239,7 @@ class Walker final {
       union_state.union_size = coded_union->size;
     }
 
-    Frame(const fidl::FidlCodedXUnion* coded_xunion, Position position)
+    Frame(const FidlCodedXUnion* coded_xunion, Position position)
         : state(kStateXUnion), position(position) {
       // This initialization is done in the ctor body instead of in an
       // initialization list since we need to set fields in unions, which
@@ -310,15 +310,15 @@ class Walker final {
     // example, struct sizes do not need to be present here.
     union {
       struct {
-        fidl::FidlCodedPrimitive underlying_type;
-        fidl::EnumValidationPredicate validate;
+        FidlCodedPrimitive underlying_type;
+        EnumValidationPredicate validate;
       } enum_state;
       struct {
-        fidl::FidlCodedPrimitive underlying_type;
+        FidlCodedPrimitive underlying_type;
         uint64_t mask;
       } bits_state;
       struct {
-        const fidl::FidlStructField* fields;
+        const FidlStructField* fields;
         uint32_t field_count;
         // Index of the currently processing field.
         uint32_t field;
@@ -326,12 +326,12 @@ class Walker final {
         uint32_t struct_size;
       } struct_state;
       struct {
-        const fidl::FidlCodedStruct* struct_type;
+        const FidlCodedStruct* struct_type;
       } struct_pointer_state;
       struct {
         // Sparse (but monotonically increasing) coding table array for fields;
         // advance the |field| pointer on every matched ordinal to save space
-        const fidl::FidlTableField* field;
+        const FidlTableField* field;
         // Number of unseen fields in the coding table
         uint32_t remaining_fields;
         // How many fields are stored in the message
@@ -346,7 +346,7 @@ class Walker final {
         // Array of coding table corresponding to each union variant.
         // The union tag counts upwards from 0 without breaks; hence it can be used to
         // index into the |fields| array.
-        const fidl::FidlUnionField* fields;
+        const FidlUnionField* fields;
         // Size of the |fields| array. Equal to the number of tags.
         uint32_t field_count;
         // Offset of the payload in the wire format (size of tag + padding).
@@ -355,17 +355,17 @@ class Walker final {
         uint32_t union_size;
       } union_state;
       struct {
-        const fidl::FidlCodedUnion* union_type;
+        const FidlCodedUnion* union_type;
       } union_pointer_state;
       struct {
-        const fidl::FidlXUnionField* fields;
+        const FidlXUnionField* fields;
         // Number of known ordinals declared in the coding table
         uint32_t field_count;
         // When true, the walker is currently working within an envelope, or equivalently,
         // |EnterEnvelope| was successful.
         bool inside_envelope;
-        fidl::FidlNullability nullable;
-        fidl::FidlStrictness strictness;
+        FidlNullability nullable;
+        FidlStrictness strictness;
       } xunion_state;
       struct {
         const fidl_type_t* element;
@@ -456,28 +456,28 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
       case Frame::kStateEnum: {
         uint64_t value;
         switch (frame->enum_state.underlying_type) {
-          case FidlCodedPrimitive::kUint8:
+          case kFidlCodedPrimitive_Uint8:
             value = *PtrTo<uint8_t>(frame->position);
             break;
-          case FidlCodedPrimitive::kUint16:
+          case kFidlCodedPrimitive_Uint16:
             value = *PtrTo<uint16_t>(frame->position);
             break;
-          case FidlCodedPrimitive::kUint32:
+          case kFidlCodedPrimitive_Uint32:
             value = *PtrTo<uint32_t>(frame->position);
             break;
-          case FidlCodedPrimitive::kUint64:
+          case kFidlCodedPrimitive_Uint64:
             value = *PtrTo<uint64_t>(frame->position);
             break;
-          case FidlCodedPrimitive::kInt8:
+          case kFidlCodedPrimitive_Int8:
             value = static_cast<uint64_t>(*PtrTo<int8_t>(frame->position));
             break;
-          case FidlCodedPrimitive::kInt16:
+          case kFidlCodedPrimitive_Int16:
             value = static_cast<uint64_t>(*PtrTo<int16_t>(frame->position));
             break;
-          case FidlCodedPrimitive::kInt32:
+          case kFidlCodedPrimitive_Int32:
             value = static_cast<uint64_t>(*PtrTo<int32_t>(frame->position));
             break;
-          case FidlCodedPrimitive::kInt64:
+          case kFidlCodedPrimitive_Int64:
             value = static_cast<uint64_t>(*PtrTo<int64_t>(frame->position));
             break;
           default:
@@ -494,16 +494,16 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
       case Frame::kStateBits: {
         uint64_t value;
         switch (frame->bits_state.underlying_type) {
-          case FidlCodedPrimitive::kUint8:
+          case kFidlCodedPrimitive_Uint8:
             value = *PtrTo<uint8_t>(frame->position);
             break;
-          case FidlCodedPrimitive::kUint16:
+          case kFidlCodedPrimitive_Uint16:
             value = *PtrTo<uint16_t>(frame->position);
             break;
-          case FidlCodedPrimitive::kUint32:
+          case kFidlCodedPrimitive_Uint32:
             value = *PtrTo<uint32_t>(frame->position);
             break;
-          case FidlCodedPrimitive::kUint64:
+          case kFidlCodedPrimitive_Uint64:
             value = *PtrTo<uint64_t>(frame->position);
             break;
           default:
@@ -522,7 +522,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           Pop();
           continue;
         }
-        const fidl::FidlStructField& field = frame->struct_state.fields[field_index];
+        const FidlStructField& field = frame->struct_state.fields[field_index];
         const fidl_type_t* field_type = field.type;
         Position field_position = frame->position + field.offset;
         if (field.padding > 0) {
@@ -557,7 +557,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             visitor.VisitPointer(frame->position, PtrTo<Ptr<void>>(frame->position),
                                  frame->struct_pointer_state.struct_type->size, &frame->position);
         FIDL_STATUS_GUARD(status);
-        const fidl::FidlCodedStruct* coded_struct = frame->struct_pointer_state.struct_type;
+        const FidlCodedStruct* coded_struct = frame->struct_pointer_state.struct_type;
         *frame = Frame(coded_struct, frame->position);
         continue;
       }
@@ -602,9 +602,9 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           Pop();
           continue;
         }
-        const fidl::FidlTableField* known_field = nullptr;
+        const FidlTableField* known_field = nullptr;
         if (table_frame.remaining_fields > 0) {
-          const fidl::FidlTableField* field = table_frame.field;
+          const FidlTableField* field = table_frame.field;
           if (field->ordinal == table_frame.ordinal) {
             known_field = field;
             table_frame.field++;
@@ -679,7 +679,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             visitor.VisitPointer(frame->position, PtrTo<Ptr<void>>(frame->position),
                                  frame->union_pointer_state.union_type->size, &frame->position);
         FIDL_STATUS_GUARD(status);
-        const fidl::FidlCodedUnion* coded_union = frame->union_pointer_state.union_type;
+        const FidlCodedUnion* coded_union = frame->union_pointer_state.union_type;
         *frame = Frame(coded_union, frame->position);
         continue;
       }
@@ -719,7 +719,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           }
         }
 
-        if (!known_field && frame->xunion_state.strictness == fidl::FidlStrictness::kStrict) {
+        if (!known_field && frame->xunion_state.strictness == kFidlStrictness_Strict) {
           visitor.OnError("strict xunion has unknown ordinal");
           FIDL_STATUS_GUARD(Status::kConstraintViolationError);
         }

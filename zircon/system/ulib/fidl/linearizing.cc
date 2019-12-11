@@ -83,7 +83,7 @@ class FidlLinearizer final
   Status VisitPointer(Position ptr_position, ObjectPointerPointer object_ptr_ptr,
                       uint32_t inline_size, Position* out_position) {
     uint32_t new_offset;
-    if (!fidl::AddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
+    if (!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
       SetError("out-of-line offset overflow trying to linearize");
       return Status::kMemoryError;
     }
@@ -201,7 +201,7 @@ zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer
     set_error("Cannot linearize with null destination buffer");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!fidl::IsAligned(buffer)) {
+  if (!FidlIsAligned(buffer)) {
     set_error("Destination buffer must be aligned to FIDL_ALIGNMENT");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -215,7 +215,7 @@ zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer
     set_error("Buffer is too small for first inline object");
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  uint64_t next_out_of_line = fidl::FidlAlign(static_cast<uint32_t>(primary_size));
+  uint64_t next_out_of_line = FidlAlign(static_cast<uint32_t>(primary_size));
   if (next_out_of_line > std::numeric_limits<uint32_t>::max()) {
     set_error("Out of line starting offset overflows");
     return ZX_ERR_INVALID_ARGS;

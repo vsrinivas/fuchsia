@@ -24,7 +24,7 @@ template <typename FidlType>
 bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  FIDL_ALIGNDECL char aligned_value_buf[fidl::FidlAlign(sizeof(FidlType))] = {};
+  FIDL_ALIGNDECL char aligned_value_buf[FidlAlign(sizeof(FidlType))] = {};
   FidlType* aligned_value = new (aligned_value_buf) FidlType(std::move(*value));
 
   fidl::DecodedMessage<FidlType> message;
@@ -40,8 +40,8 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
     message = std::move(linearize_result.message);
   } else {
     message = fidl::DecodedMessage<FidlType>(
-        fidl::BytePart(reinterpret_cast<uint8_t*>(aligned_value), fidl::FidlAlign(sizeof(FidlType)),
-                       fidl::FidlAlign(sizeof(FidlType))));
+        fidl::BytePart(reinterpret_cast<uint8_t*>(aligned_value), FidlAlign(sizeof(FidlType)),
+                       FidlAlign(sizeof(FidlType))));
   }
 
   auto encode_result = fidl::Encode(std::move(message));

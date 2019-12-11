@@ -141,6 +141,60 @@ bool message_part_wrap_array_test() {
   END_TEST;
 }
 
+extern "C" {
+  // Defined in generated/transformer_tables.test.h.
+  extern const fidl_type_t example_Sandwich1Table;
+  extern const fidl_type_t example_SimpleTableArrayStructTable;
+
+  // Defined in transformer_tests.c.
+  extern const uint8_t simpletablearraystruct_v1_and_old[0x50];
+  extern const uint8_t sandwich1_case1_v1[0x30];
+  extern const uint8_t sandwich1_case1_old[0x10];
+}
+
+bool transform_with_callback_noop() {
+  BEGIN_TEST;
+
+  const auto& src_bytes = simpletablearraystruct_v1_and_old;
+  uint32_t src_num_bytes = sizeof(simpletablearraystruct_v1_and_old);
+  uint32_t num_called = 0;
+  auto callback = [&](const uint8_t* dst_bytes, uint32_t dst_num_bytes) -> zx_status_t {
+    num_called++;
+    // since this struct does not contain any unions, dst_bytes should be
+    // the same as the input
+    if (dst_bytes == src_bytes) {
+      return ZX_OK;
+    }
+    // return a special value to distinguish from transformer errors
+    return 1;
+  };
+
+  ASSERT_EQ(ZX_OK, fidl::FidlTransformWithCallback(FIDL_TRANSFORMATION_OLD_TO_V1,
+                                                   &example_SimpleTableArrayStructTable, src_bytes,
+                                                   src_num_bytes, nullptr, callback));
+  ASSERT_EQ(num_called, 1);
+  END_TEST;
+}
+
+bool transform_with_callback() {
+  BEGIN_TEST;
+
+  uint32_t num_called = 0;
+  auto callback = [&](const uint8_t* dst_bytes, uint32_t dst_num_bytes) -> zx_status_t {
+    num_called++;
+    if (memcmp(dst_bytes, sandwich1_case1_v1, dst_num_bytes) == 0) {
+      return ZX_OK;
+    }
+    return 1;
+  };
+
+  ASSERT_EQ(ZX_OK, fidl::FidlTransformWithCallback(FIDL_TRANSFORMATION_OLD_TO_V1,
+                                                   &example_Sandwich1Table, sandwich1_case1_old,
+                                                   sizeof(sandwich1_case1_old), nullptr, callback));
+  ASSERT_EQ(num_called, 1);
+  END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(message_tests)
@@ -149,4 +203,6 @@ RUN_NAMED_TEST("MessageBuilder test", message_builder_test)
 RUN_NAMED_TEST("MessagePart friendly with STL test", message_part_is_stl_container_test)
 RUN_NAMED_TEST("MessagePart size test", message_part_size_test)
 RUN_NAMED_TEST("MessagePart wrap array test", message_part_wrap_array_test)
+RUN_TEST(transform_with_callback_noop)
+RUN_TEST(transform_with_callback)
 END_TEST_CASE(message_tests)

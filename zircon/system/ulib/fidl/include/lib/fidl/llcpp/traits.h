@@ -177,17 +177,17 @@ constexpr uint32_t ClampedMessageSize() {
   uint64_t primary = [] {
     switch (WireFormat) {
       case WireFormatGuide::kCurrent:
-        return ::fidl::FidlAlign(FidlType::PrimarySize);
+        return FidlAlign(FidlType::PrimarySize);
       case WireFormatGuide::kAlternate:
-        return ::fidl::FidlAlign(FidlType::AltPrimarySize);
+        return FidlAlign(FidlType::AltPrimarySize);
     }
   }();
   uint64_t out_of_line = [] {
     switch (WireFormat) {
       case WireFormatGuide::kCurrent:
-        return ::fidl::FidlAlign(FidlType::MaxOutOfLine);
+        return FidlAlign(FidlType::MaxOutOfLine);
       case WireFormatGuide::kAlternate:
-        return ::fidl::FidlAlign(FidlType::AltMaxOutOfLine);
+        return FidlAlign(FidlType::AltMaxOutOfLine);
     }
   }();
   uint64_t sum = primary + out_of_line;

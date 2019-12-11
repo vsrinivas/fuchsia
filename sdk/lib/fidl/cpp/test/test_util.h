@@ -13,14 +13,14 @@ bool cmp_payload(const uint8_t* actual, size_t actual_size, const uint8_t* expec
                  size_t expected_size);
 
 class EncoderFactoryOld {
-  public:
+ public:
   static Encoder makeEncoder() {
     return Encoder(0xfefefefe, /* should_encode_union_as_xunion */ false);
   }
 };
 
 class EncoderFactoryV1 {
-  public:
+ public:
   static Encoder makeEncoder() {
     Encoder enc(0xfefefefe, /* should_encode_union_as_xunion */ true);
     return enc;
@@ -33,26 +33,41 @@ void WithCodingTableFor(const fidl::Encoder& enc, Callback callback) {
                                   ? fidl::CodingTraits<T>::inline_size_v1_no_ee
                                   : fidl::CodingTraits<T>::inline_size_old;
   const size_t encoded_size_alt = enc.ShouldEncodeUnionAsXUnion()
-                                  ? fidl::CodingTraits<T>::inline_size_old
-                                  : fidl::CodingTraits<T>::inline_size_v1_no_ee;
+                                      ? fidl::CodingTraits<T>::inline_size_old
+                                      : fidl::CodingTraits<T>::inline_size_v1_no_ee;
   const size_t padding_size = FIDL_ALIGN(encoded_size) - encoded_size;
   const size_t padding_size_alt = FIDL_ALIGN(encoded_size) - encoded_size_alt;
 
-  uint8_t field_coding_table_alt[sizeof(::fidl::FidlStructField)];
-  ::fidl::FidlStructField field(T::FidlType, sizeof(fidl_message_header_t), padding_size,
-                                reinterpret_cast<::fidl::FidlStructField*>(field_coding_table_alt));
-  new (field_coding_table_alt)::fidl::FidlStructField(T::FidlType, sizeof(fidl_message_header_t),
-                                                      padding_size_alt, &field);
-  const ::fidl::FidlStructField fake_interface_fields[] = {field};
+  uint8_t field_coding_table_alt[sizeof(FidlStructField)];
+  FidlStructField field(T::FidlType, sizeof(fidl_message_header_t), padding_size,
+                        reinterpret_cast<FidlStructField*>(field_coding_table_alt));
+  new (field_coding_table_alt)
+      FidlStructField(T::FidlType, sizeof(fidl_message_header_t), padding_size_alt, &field);
+  const FidlStructField fake_interface_fields[] = {field};
 
-  uint8_t struct_coding_table_alt[sizeof(::fidl::FidlCodedStruct)];
-  ::fidl::FidlCodedStruct fake_interface_struct_coded(
-      fake_interface_fields, 1, sizeof(fidl_message_header_t) + encoded_size, "Input",
-      reinterpret_cast<::fidl::FidlCodedStruct*>(struct_coding_table_alt));
-  new (struct_coding_table_alt)::fidl::FidlCodedStruct(fake_interface_fields, 1,
-                                                       sizeof(fidl_message_header_t) + encoded_size,
-                                                       "InputAlt", &fake_interface_struct_coded);
-  const fidl_type_t fake_interface_struct{fake_interface_struct_coded};
+  uint8_t struct_coding_table_alt[sizeof(FidlCodedStruct)];
+  FidlCodedStruct fake_interface_struct_coded = {
+      .fields = fake_interface_fields,
+      .field_count = 1,
+      .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) + encoded_size),
+      .max_out_of_line = UINT32_MAX,
+      .contains_union = true,
+      .name = "Input",
+      .alt_type = reinterpret_cast<FidlCodedStruct*>(struct_coding_table_alt)};
+  FidlCodedStruct tmp = {
+      .fields = fake_interface_fields,
+      .field_count = 1,
+      .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) + encoded_size),
+      .max_out_of_line = UINT32_MAX,
+      .contains_union = true,
+      .name = "InputAlt",
+      .alt_type = &fake_interface_struct_coded};
+  memcpy(&struct_coding_table_alt, &tmp, sizeof(FidlCodedStruct));
+
+  const fidl_type_t fake_interface_struct = {
+      .type_tag = kFidlTypeStruct,
+      {.coded_struct = fake_interface_struct_coded},
+  };
 
   callback(encoded_size, &fake_interface_struct);
 }
@@ -82,28 +97,48 @@ Output RoundTrip(const Input& input) {
 template <class Output>
 Output DecodedBytes(std::vector<uint8_t> input) {
   // Create a fake coded type for the input object with added header.
-  fidl::FidlStructField fields_old_other[] = {
-      fidl::FidlStructField(Output::FidlType, sizeof(fidl_message_header_t), 0u, nullptr)};
+  FidlStructField fields_old_other[] = {
+      FidlStructField(Output::FidlType, sizeof(fidl_message_header_t), 0u, nullptr)};
   assert(Output::FidlType->type_tag == kFidlTypeStruct);
-  fidl_type_t obj_with_header_old_other = fidl_type_t(fidl::FidlCodedStruct(
-      fields_old_other, 1u,
-      sizeof(fidl_message_header_t) + FIDL_ALIGN(Output::FidlType->coded_struct.size), "",
-      nullptr));
-  fidl::FidlStructField fields_v1[] = {
-      fidl::FidlStructField(Output::FidlTypeV1, sizeof(fidl_message_header_t), 0u, &fields_old_other[0])};
+  fidl_type_t obj_with_header_old_other = {
+      .type_tag = kFidlTypeStruct,
+      {.coded_struct = {
+           .fields = fields_old_other,
+           .field_count = 1u,
+           .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) +
+                                         FIDL_ALIGN(Output::FidlType->coded_struct.size)),
+           .max_out_of_line = UINT32_MAX,
+           .contains_union = true,
+           .name = "",
+           .alt_type = nullptr}}};
+  FidlStructField fields_v1[] = {
+      FidlStructField(Output::FidlTypeV1, sizeof(fidl_message_header_t), 0u, &fields_old_other[0])};
   assert(Output::FidlTypeV1->type_tag == kFidlTypeStruct);
-  fidl_type_t obj_with_header_v1 = fidl_type_t(fidl::FidlCodedStruct(
-      fields_v1, 1u,
-      sizeof(fidl_message_header_t) + FIDL_ALIGN(Output::FidlTypeV1->coded_struct.size), "",
-      &obj_with_header_old_other.coded_struct));
-  fidl::FidlStructField fields_old[] = {
-      fidl::FidlStructField(Output::FidlType, sizeof(fidl_message_header_t), 0u, &fields_v1[0])};
+  fidl_type_t obj_with_header_v1 = {
+      .type_tag = kFidlTypeStruct,
+      {.coded_struct = {
+           .fields = fields_v1,
+           .field_count = 1u,
+           .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) +
+                                         FIDL_ALIGN(Output::FidlTypeV1->coded_struct.size)),
+           .max_out_of_line = UINT32_MAX,
+           .contains_union = true,
+           .name = "",
+           .alt_type = &obj_with_header_old_other.coded_struct}}};
+  FidlStructField fields_old[] = {
+      FidlStructField(Output::FidlType, sizeof(fidl_message_header_t), 0u, &fields_v1[0])};
   assert(Output::FidlType->type_tag == kFidlTypeStruct);
-  fidl_type_t obj_with_header_old = fidl_type_t(fidl::FidlCodedStruct(
-      fields_old, 1u,
-      sizeof(fidl_message_header_t) + FIDL_ALIGN(Output::FidlType->coded_struct.size), "",
-      &obj_with_header_v1.coded_struct));
-
+  fidl_type_t obj_with_header_old = {
+      .type_tag = kFidlTypeStruct,
+      {.coded_struct = {
+           .fields = fields_old,
+           .field_count = 1u,
+           .size = static_cast<uint32_t>(sizeof(fidl_message_header_t) +
+                                         FIDL_ALIGN(Output::FidlType->coded_struct.size)),
+           .max_out_of_line = UINT32_MAX,
+           .contains_union = true,
+           .name = "",
+           .alt_type = &obj_with_header_v1.coded_struct}}};
 
   Message message(BytePart(input.data(), input.capacity(), input.size()), HandlePart());
 

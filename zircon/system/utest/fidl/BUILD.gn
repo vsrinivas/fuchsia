@@ -22,9 +22,9 @@ if (is_fuchsia) {
       # Generated coding table for generated/extra_messages.fidl Cannot yet use
       # the FIDL_LIBS directive, since FIDL Tables are not supported in the C
       # generator.  See ./fidl/README.md for details.
-      "generated/extra_messages.cc",
+      "generated/extra_messages.c",
       "generated/fidl_llcpp_llcpp.test.cc",
-      "generated/fidl_llcpp_tables_llcpp.test.cc",
+      "generated/fidl_llcpp_tables_llcpp.test.c",
     ]
     include_dirs = [ "generated" ]
     public_deps = [
@@ -58,9 +58,9 @@ if (is_fuchsia) {
       "formatting_tests.cc",
       "message_tests.cc",
       "run_with_handle_policy_tests.cc",
-      "transformer_conformance_tests.cc",
+      "transformer_conformance_tests.c",
       "transformer_conformance_utils.cc",
-      "transformer_tests.cc",
+      "transformer_tests.c",
       "validating_tests.cc",
     ]
     deps = [
@@ -75,9 +75,9 @@ if (is_fuchsia) {
       "abi_tests.cc",
       "cpp_types_tests.cc",
       "fidl_align_tests.cc",
-      "transformer_conformance_tests.cc",
+      "transformer_conformance_tests.c",
       "transformer_conformance_utils.cc",
-      "transformer_tests.cc",
+      "transformer_tests.c",
     ]
     include_dirs = [ "generated" ]
     deps = [

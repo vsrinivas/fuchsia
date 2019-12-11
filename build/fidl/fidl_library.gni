@@ -47,7 +47,7 @@ template("fidl_library") {
   c_client = "$target_gen_dir/$c_stem.client.c"
   c_header = "$target_gen_dir/$c_stem.h"
   c_server = "$target_gen_dir/$c_stem.server.c"
-  coding_tables = "$fidl_stem.tables.cc"
+  coding_tables = "$fidl_stem.tables.c"
   lint_stamp_file = "$target_gen_dir/$target_name.linted"
 
   main_target_name = target_name

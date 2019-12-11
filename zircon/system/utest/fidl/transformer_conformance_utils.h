@@ -9,6 +9,8 @@
 
 #include "zircon/types.h"
 
+__BEGIN_CDECLS
+
 // Runs `fidl_transform` but does not check anything. This is used in failure
 // tests to make sure the transformer does not crash on invalid inputs.
 void run_fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
@@ -18,5 +20,7 @@ void run_fidl_transform(fidl_transformation_t transformation, const fidl_type_t*
 bool check_fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
                           const uint8_t* src_bytes, uint32_t src_num_bytes,
                           const uint8_t* expected_bytes, uint32_t expected_num_bytes);
+
+__END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_UTEST_FIDL_TRANSFORMER_CONFORMANCE_UTILS_H_

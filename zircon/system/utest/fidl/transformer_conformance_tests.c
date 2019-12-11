@@ -9,27 +9,25 @@
 #include "generated/transformer_conformance_tables.h"
 #include "transformer_conformance_utils.h"
 
-namespace {
-
-uint8_t bytes_3_byte_object_alignment_in_struct_old_and_v1[] = {
+static uint8_t bytes_3_byte_object_alignment_in_struct_old_and_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
     0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_5_byte_object_alignment_in_struct_old_and_v1[] = {
+static uint8_t bytes_5_byte_object_alignment_in_struct_old_and_v1[] = {
     0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00,  //
     0x09, 0x08, 0x07, 0x06, 0x0a, 0x00, 0x00, 0x00,  //
     0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_3_byte_object_alignment_in_vector_old_and_v1[] = {
+static uint8_t bytes_3_byte_object_alignment_in_vector_old_and_v1[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
     0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_5_byte_object_alignment_in_vector_old_and_v1[] = {
+static uint8_t bytes_5_byte_object_alignment_in_vector_old_and_v1[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00,  //
@@ -37,22 +35,22 @@ uint8_t bytes_5_byte_object_alignment_in_vector_old_and_v1[] = {
     0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_3_byte_object_alignment_in_array_old_and_v1[] = {
+static uint8_t bytes_3_byte_object_alignment_in_array_old_and_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
     0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_5_byte_object_alignment_in_array_old_and_v1[] = {
+static uint8_t bytes_5_byte_object_alignment_in_array_old_and_v1[] = {
     0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00,  //
     0x09, 0x08, 0x07, 0x06, 0x0a, 0x00, 0x00, 0x00,  //
     0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_empty_struct_old_and_v1[] = {
+static uint8_t bytes_empty_struct_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_empty_struct_sandwich_old_and_v1[] = {
+static uint8_t bytes_empty_struct_sandwich_old_and_v1[] = {
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -62,22 +60,22 @@ uint8_t bytes_empty_struct_sandwich_old_and_v1[] = {
     0x61, 0x66, 0x74, 0x65, 0x72, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_uint8_uint16_uint32_uint64_old_and_v1[] = {
+static uint8_t bytes_uint8_uint16_uint32_uint64_old_and_v1[] = {
     0x01, 0x00, 0x03, 0x02, 0x07, 0x06, 0x05, 0x04,  //
     0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,  //
 };
 
-uint8_t bytes_uint64_uint32_uint16_uint8_old_and_v1[] = {
+static uint8_t bytes_uint64_uint32_uint16_uint8_old_and_v1[] = {
     0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,  //
     0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00,  //
 };
 
-uint8_t bytes_simple_table_empty_old_and_v1[] = {
+static uint8_t bytes_simple_table_empty_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
 };
 
-uint8_t bytes_simple_table_x_and_y_old_and_v1[] = {
+static uint8_t bytes_simple_table_x_and_y_old_and_v1[] = {
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -94,7 +92,7 @@ uint8_t bytes_simple_table_x_and_y_old_and_v1[] = {
     0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_simple_table_just_y_old_and_v1[] = {
+static uint8_t bytes_simple_table_just_y_old_and_v1[] = {
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -110,7 +108,7 @@ uint8_t bytes_simple_table_just_y_old_and_v1[] = {
     0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_table_with_string_and_vector_no_vector_content_old_and_v1[] = {
+static uint8_t bytes_table_with_string_and_vector_no_vector_content_old_and_v1[] = {
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -123,7 +121,7 @@ uint8_t bytes_table_with_string_and_vector_no_vector_content_old_and_v1[] = {
     0x1b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_simple_table_then_uint64_old_and_v1[] = {
+static uint8_t bytes_simple_table_then_uint64_old_and_v1[] = {
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0xef, 0xbe, 0xad, 0xde, 0xef, 0xbe, 0xad, 0xde,  //
@@ -141,7 +139,7 @@ uint8_t bytes_simple_table_then_uint64_old_and_v1[] = {
     0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_reverse_ordinal_table_old_and_v1[] = {
+static uint8_t bytes_reverse_ordinal_table_old_and_v1[] = {
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -157,7 +155,7 @@ uint8_t bytes_reverse_ordinal_table_old_and_v1[] = {
     0xaa, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_inline_x_union_in_struct_old_and_v1[] = {
+static uint8_t bytes_inline_x_union_in_struct_old_and_v1[] = {
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0xb2, 0x56, 0x9c, 0x38, 0x00, 0x00, 0x00, 0x00,  //
@@ -170,7 +168,7 @@ uint8_t bytes_inline_x_union_in_struct_old_and_v1[] = {
     0x61, 0x66, 0x74, 0x65, 0x72, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_optional_x_union_in_struct_absent_old_and_v1[] = {
+static uint8_t bytes_optional_x_union_in_struct_absent_old_and_v1[] = {
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -182,7 +180,7 @@ uint8_t bytes_optional_x_union_in_struct_absent_old_and_v1[] = {
     0x61, 0x66, 0x74, 0x65, 0x72, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_optional_x_union_in_struct_present_old_and_v1[] = {
+static uint8_t bytes_optional_x_union_in_struct_present_old_and_v1[] = {
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0xb2, 0x56, 0x9c, 0x38, 0x00, 0x00, 0x00, 0x00,  //
@@ -195,7 +193,7 @@ uint8_t bytes_optional_x_union_in_struct_present_old_and_v1[] = {
     0x61, 0x66, 0x74, 0x65, 0x72, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_x_union_in_table_x_union_absent_old_and_v1[] = {
+static uint8_t bytes_x_union_in_table_x_union_absent_old_and_v1[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -212,7 +210,7 @@ uint8_t bytes_x_union_in_table_x_union_absent_old_and_v1[] = {
     0x61, 0x66, 0x74, 0x65, 0x72, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_x_union_in_table_x_union_present_old_and_v1[] = {
+static uint8_t bytes_x_union_in_table_x_union_present_old_and_v1[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -233,14 +231,14 @@ uint8_t bytes_x_union_in_table_x_union_present_old_and_v1[] = {
     0x61, 0x66, 0x74, 0x65, 0x72, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_strict_x_union_old_and_v1[] = {
+static uint8_t bytes_strict_x_union_old_and_v1[] = {
     0x72, 0xea, 0xe2, 0x08, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_add_ethernet_device_request_old[] = {
+static uint8_t bytes_add_ethernet_device_request_old[] = {
     0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -258,7 +256,7 @@ uint8_t bytes_add_ethernet_device_request_old[] = {
     0x65, 0x74, 0x68, 0x70, 0x30, 0x30, 0x30, 0x33,  //
 };
 
-uint8_t bytes_add_ethernet_device_request_v1[] = {
+static uint8_t bytes_add_ethernet_device_request_v1[] = {
     0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -276,7 +274,7 @@ uint8_t bytes_add_ethernet_device_request_v1[] = {
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_file_get_attr_response_old_and_v1[] = {
+static uint8_t bytes_file_get_attr_response_old_and_v1[] = {
     0xaf, 0xbe, 0xad, 0x7e, 0x00, 0x00, 0x00, 0x00,  //
     0xa4, 0x81, 0x23, 0x96, 0x00, 0x00, 0x00, 0x00,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -287,7 +285,7 @@ uint8_t bytes_file_get_attr_response_old_and_v1[] = {
     0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00,  //
 };
 
-uint8_t bytes_optionals_old[] = {
+static uint8_t bytes_optionals_old[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -311,7 +309,7 @@ uint8_t bytes_optionals_old[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_optionals_v1[] = {
+static uint8_t bytes_optionals_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -338,7 +336,7 @@ uint8_t bytes_optionals_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_arrays_old_and_v1[] = {
+static uint8_t bytes_arrays_old_and_v1[] = {
     0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
@@ -360,7 +358,7 @@ uint8_t bytes_arrays_old_and_v1[] = {
     0x04, 0x03, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_vectors_old_and_v1[] = {
+static uint8_t bytes_vectors_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -402,140 +400,140 @@ uint8_t bytes_vectors_old_and_v1[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_bool_true_old_and_v1[] = {
+static uint8_t bytes_bool_true_old_and_v1[] = {
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_bool_false_old_and_v1[] = {
+static uint8_t bytes_bool_false_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_byte_zero_old_and_v1[] = {
+static uint8_t bytes_byte_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_byte255_old_and_v1[] = {
+static uint8_t bytes_byte255_old_and_v1[] = {
     0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int8_min_old_and_v1[] = {
+static uint8_t bytes_int8_min_old_and_v1[] = {
     0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int8_zero_old_and_v1[] = {
+static uint8_t bytes_int8_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int8_max_old_and_v1[] = {
+static uint8_t bytes_int8_max_old_and_v1[] = {
     0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int16_min_old_and_v1[] = {
+static uint8_t bytes_int16_min_old_and_v1[] = {
     0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int16_zero_old_and_v1[] = {
+static uint8_t bytes_int16_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int16_max_old_and_v1[] = {
+static uint8_t bytes_int16_max_old_and_v1[] = {
     0xff, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int32_min_old_and_v1[] = {
+static uint8_t bytes_int32_min_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int32_zero_old_and_v1[] = {
+static uint8_t bytes_int32_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int32_max_old_and_v1[] = {
+static uint8_t bytes_int32_max_old_and_v1[] = {
     0xff, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int64_min_old_and_v1[] = {
+static uint8_t bytes_int64_min_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80,  //
 };
 
-uint8_t bytes_int64_zero_old_and_v1[] = {
+static uint8_t bytes_int64_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_int64_max_old_and_v1[] = {
+static uint8_t bytes_int64_max_old_and_v1[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f,  //
 };
 
-uint8_t bytes_uint8_zero_old_and_v1[] = {
+static uint8_t bytes_uint8_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_uint8_max_old_and_v1[] = {
+static uint8_t bytes_uint8_max_old_and_v1[] = {
     0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_uint16_zero_old_and_v1[] = {
+static uint8_t bytes_uint16_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_uint16_max_old_and_v1[] = {
+static uint8_t bytes_uint16_max_old_and_v1[] = {
     0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_uint32_zero_old_and_v1[] = {
+static uint8_t bytes_uint32_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_uint32_max_old_and_v1[] = {
+static uint8_t bytes_uint32_max_old_and_v1[] = {
     0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_uint64_zero_old_and_v1[] = {
+static uint8_t bytes_uint64_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_uint64_max_old_and_v1[] = {
+static uint8_t bytes_uint64_max_old_and_v1[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
 };
 
-uint8_t bytes_float32_zero_old_and_v1[] = {
+static uint8_t bytes_float32_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_float32_one_old_and_v1[] = {
+static uint8_t bytes_float32_one_old_and_v1[] = {
     0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_float32_minus_one_old_and_v1[] = {
+static uint8_t bytes_float32_minus_one_old_and_v1[] = {
     0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_float32_max_old_and_v1[] = {
+static uint8_t bytes_float32_max_old_and_v1[] = {
     0xff, 0xff, 0x7f, 0x7f, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_float64_zero_old_and_v1[] = {
+static uint8_t bytes_float64_zero_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_float64_one_old_and_v1[] = {
+static uint8_t bytes_float64_one_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,  //
 };
 
-uint8_t bytes_float64_minus_one_old_and_v1[] = {
+static uint8_t bytes_float64_minus_one_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0xbf,  //
 };
 
-uint8_t bytes_float64_max_old_and_v1[] = {
+static uint8_t bytes_float64_max_old_and_v1[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x7f,  //
 };
 
-uint8_t bytes_sandwich1_case1_old[] = {
+static uint8_t bytes_sandwich1_case1_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x02, 0x00, 0x00, 0x00,  //
     0x09, 0x0a, 0x0b, 0x0c, 0x05, 0x06, 0x07, 0x08,  //
 };
 
-uint8_t bytes_sandwich1_case1_v1[] = {
+static uint8_t bytes_sandwich1_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -544,14 +542,14 @@ uint8_t bytes_sandwich1_case1_v1[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich1_with_opt_union_present_old[] = {
+static uint8_t bytes_sandwich1_with_opt_union_present_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
     0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c,  //
 };
 
-uint8_t bytes_sandwich1_with_opt_union_present_v1[] = {
+static uint8_t bytes_sandwich1_with_opt_union_present_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -560,13 +558,13 @@ uint8_t bytes_sandwich1_with_opt_union_present_v1[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich1_with_opt_union_absent_old[] = {
+static uint8_t bytes_sandwich1_with_opt_union_absent_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich1_with_opt_union_absent_v1[] = {
+static uint8_t bytes_sandwich1_with_opt_union_absent_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -574,13 +572,13 @@ uint8_t bytes_sandwich1_with_opt_union_absent_v1[] = {
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich2_case1_old[] = {
+static uint8_t bytes_sandwich2_case1_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00,  //
     0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0x00, 0x00,  //
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich2_case1_v1[] = {
+static uint8_t bytes_sandwich2_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -589,7 +587,7 @@ uint8_t bytes_sandwich2_case1_v1[] = {
     0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich3_case1_old[] = {
+static uint8_t bytes_sandwich3_case1_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7,  //
@@ -597,7 +595,7 @@ uint8_t bytes_sandwich3_case1_old[] = {
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich3_case1_v1[] = {
+static uint8_t bytes_sandwich3_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -607,7 +605,7 @@ uint8_t bytes_sandwich3_case1_v1[] = {
     0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,  //
 };
 
-uint8_t bytes_sandwich4_case1_old[] = {
+static uint8_t bytes_sandwich4_case1_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00,  //
     0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7,  //
     0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,  //
@@ -616,7 +614,7 @@ uint8_t bytes_sandwich4_case1_old[] = {
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich4_case1_v1[] = {
+static uint8_t bytes_sandwich4_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -628,7 +626,7 @@ uint8_t bytes_sandwich4_case1_v1[] = {
     0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,  //
 };
 
-uint8_t bytes_sandwich5_case1_old[] = {
+static uint8_t bytes_sandwich5_case1_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c,  //
@@ -637,7 +635,7 @@ uint8_t bytes_sandwich5_case1_old[] = {
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich5_case1_v1[] = {
+static uint8_t bytes_sandwich5_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -649,7 +647,7 @@ uint8_t bytes_sandwich5_case1_v1[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich5_case2_old[] = {
+static uint8_t bytes_sandwich5_case2_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -658,7 +656,7 @@ uint8_t bytes_sandwich5_case2_old[] = {
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich5_case2_v1[] = {
+static uint8_t bytes_sandwich5_case2_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -671,7 +669,7 @@ uint8_t bytes_sandwich5_case2_v1[] = {
     0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,  //
 };
 
-uint8_t bytes_sandwich6_case1_old[] = {
+static uint8_t bytes_sandwich6_case1_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -680,7 +678,7 @@ uint8_t bytes_sandwich6_case1_old[] = {
     0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case1_v1[] = {
+static uint8_t bytes_sandwich6_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -691,7 +689,7 @@ uint8_t bytes_sandwich6_case1_v1[] = {
     0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case1_absent_vector_old[] = {
+static uint8_t bytes_sandwich6_case1_absent_vector_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -699,7 +697,7 @@ uint8_t bytes_sandwich6_case1_absent_vector_old[] = {
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case1_absent_vector_v1[] = {
+static uint8_t bytes_sandwich6_case1_absent_vector_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -709,7 +707,7 @@ uint8_t bytes_sandwich6_case1_absent_vector_v1[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
 };
 
-uint8_t bytes_sandwich6_case2_old[] = {
+static uint8_t bytes_sandwich6_case2_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -720,7 +718,7 @@ uint8_t bytes_sandwich6_case2_old[] = {
     0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case2_v1[] = {
+static uint8_t bytes_sandwich6_case2_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -733,7 +731,7 @@ uint8_t bytes_sandwich6_case2_v1[] = {
     0x72, 0x6f, 0x63, 0x6b, 0x21, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case3_old[] = {
+static uint8_t bytes_sandwich6_case3_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -743,7 +741,7 @@ uint8_t bytes_sandwich6_case3_old[] = {
     0x74, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case3_v1[] = {
+static uint8_t bytes_sandwich6_case3_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -755,7 +753,7 @@ uint8_t bytes_sandwich6_case3_v1[] = {
     0x74, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case4_old[] = {
+static uint8_t bytes_sandwich6_case4_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -765,7 +763,7 @@ uint8_t bytes_sandwich6_case4_old[] = {
     0x72, 0x61, 0x74, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case4_v1[] = {
+static uint8_t bytes_sandwich6_case4_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -777,7 +775,7 @@ uint8_t bytes_sandwich6_case4_v1[] = {
     0x72, 0x61, 0x74, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case5_old[] = {
+static uint8_t bytes_sandwich6_case5_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -787,7 +785,7 @@ uint8_t bytes_sandwich6_case5_old[] = {
     0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case5_v1[] = {
+static uint8_t bytes_sandwich6_case5_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -799,7 +797,7 @@ uint8_t bytes_sandwich6_case5_v1[] = {
     0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case6_old[] = {
+static uint8_t bytes_sandwich6_case6_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0x00, 0x00,  //
@@ -807,7 +805,7 @@ uint8_t bytes_sandwich6_case6_old[] = {
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case6_v1[] = {
+static uint8_t bytes_sandwich6_case6_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -816,7 +814,7 @@ uint8_t bytes_sandwich6_case6_v1[] = {
     0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case7_old[] = {
+static uint8_t bytes_sandwich6_case7_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xa1, 0xa2, 0xa3, 0x00, 0xa4, 0xa5, 0xa6, 0x00,  //
@@ -824,7 +822,7 @@ uint8_t bytes_sandwich6_case7_old[] = {
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case7_v1[] = {
+static uint8_t bytes_sandwich6_case7_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -833,7 +831,7 @@ uint8_t bytes_sandwich6_case7_v1[] = {
     0xa1, 0xa2, 0xa3, 0x00, 0xa4, 0xa5, 0xa6, 0x00,  //
 };
 
-uint8_t bytes_sandwich6_case8_old[] = {
+static uint8_t bytes_sandwich6_case8_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -842,7 +840,7 @@ uint8_t bytes_sandwich6_case8_old[] = {
     0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c,  //
 };
 
-uint8_t bytes_sandwich6_case8_v1[] = {
+static uint8_t bytes_sandwich6_case8_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -856,7 +854,7 @@ uint8_t bytes_sandwich6_case8_v1[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich7_case1_old[] = {
+static uint8_t bytes_sandwich7_case1_old[] = {
     0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,  //
@@ -864,7 +862,7 @@ uint8_t bytes_sandwich7_case1_old[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x05, 0x06, 0x07, 0x08,  //
 };
 
-uint8_t bytes_sandwich7_case1_v1[] = {
+static uint8_t bytes_sandwich7_case1_v1[] = {
     0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,  //
@@ -876,33 +874,33 @@ uint8_t bytes_sandwich7_case1_v1[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich7_case2_old[] = {
+static uint8_t bytes_sandwich7_case2_old[] = {
     0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich7_case2_v1[] = {
+static uint8_t bytes_sandwich7_case2_v1[] = {
     0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x21, 0x22, 0x23, 0x24, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_regression1_old[] = {
+static uint8_t bytes_regression1_old[] = {
     0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_regression1_v1[] = {
+static uint8_t bytes_regression1_v1[] = {
     0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_regression2_old[] = {
+static uint8_t bytes_regression2_old[] = {
     0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -910,7 +908,7 @@ uint8_t bytes_regression2_old[] = {
     0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_regression2_v1[] = {
+static uint8_t bytes_regression2_v1[] = {
     0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -918,15 +916,15 @@ uint8_t bytes_regression2_v1[] = {
     0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_regression3_absent_old[] = {
+static uint8_t bytes_regression3_absent_old[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_regression3_absent_v1[] = {
+static uint8_t bytes_regression3_absent_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_regression3_present_old[] = {
+static uint8_t bytes_regression3_present_old[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -935,7 +933,7 @@ uint8_t bytes_regression3_present_old[] = {
     0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_regression3_present_v1[] = {
+static uint8_t bytes_regression3_present_v1[] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -944,57 +942,57 @@ uint8_t bytes_regression3_present_v1[] = {
     0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_size5_alignment1_array_old[] = {
+static uint8_t bytes_size5_alignment1_array_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
     0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00,  //
 };
 
-uint8_t bytes_size5_alignment1_array_v1[] = {
+static uint8_t bytes_size5_alignment1_array_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
     0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00,  //
 };
 
-uint8_t bytes_size5_alignment4_array_old[] = {
+static uint8_t bytes_size5_alignment4_array_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00,  //
     0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,  //
     0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_size5_alignment4_array_v1[] = {
+static uint8_t bytes_size5_alignment4_array_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00,  //
     0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,  //
     0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_size5_alignment1_vector_old[] = {
+static uint8_t bytes_size5_alignment1_vector_old[] = {
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
     0x09, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_size5_alignment1_vector_v1[] = {
+static uint8_t bytes_size5_alignment1_vector_v1[] = {
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,  //
     0x09, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_size5_alignment4_vector_old[] = {
+static uint8_t bytes_size5_alignment4_vector_old[] = {
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00,  //
     0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_size5_alignment4_vector_v1[] = {
+static uint8_t bytes_size5_alignment4_vector_v1[] = {
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00,  //
     0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_table_struct_with_reserved_sandwich_old[] = {
+static uint8_t bytes_table_struct_with_reserved_sandwich_old[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1007,7 +1005,7 @@ uint8_t bytes_table_struct_with_reserved_sandwich_old[] = {
     0x19, 0x1a, 0x1b, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_table_struct_with_reserved_sandwich_v1[] = {
+static uint8_t bytes_table_struct_with_reserved_sandwich_v1[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1020,7 +1018,7 @@ uint8_t bytes_table_struct_with_reserved_sandwich_v1[] = {
     0x19, 0x1a, 0x1b, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_table_struct_with_uint32_sandwich_old[] = {
+static uint8_t bytes_table_struct_with_uint32_sandwich_old[] = {
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1037,7 +1035,7 @@ uint8_t bytes_table_struct_with_uint32_sandwich_old[] = {
     0x0a, 0x0b, 0x0c, 0x0d, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_table_struct_with_uint32_sandwich_v1[] = {
+static uint8_t bytes_table_struct_with_uint32_sandwich_v1[] = {
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1054,7 +1052,7 @@ uint8_t bytes_table_struct_with_uint32_sandwich_v1[] = {
     0x0a, 0x0b, 0x0c, 0x0d, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_table_union_with_vector_reserved_sandwich_old[] = {
+static uint8_t bytes_table_union_with_vector_reserved_sandwich_old[] = {
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1067,7 +1065,7 @@ uint8_t bytes_table_union_with_vector_reserved_sandwich_old[] = {
     0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_table_union_with_vector_reserved_sandwich_v1[] = {
+static uint8_t bytes_table_union_with_vector_reserved_sandwich_v1[] = {
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1082,7 +1080,7 @@ uint8_t bytes_table_union_with_vector_reserved_sandwich_v1[] = {
     0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_table_union_with_vector_struct_sandwich_old[] = {
+static uint8_t bytes_table_union_with_vector_struct_sandwich_old[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1099,7 +1097,7 @@ uint8_t bytes_table_union_with_vector_struct_sandwich_old[] = {
     0x04, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_table_union_with_vector_struct_sandwich_v1[] = {
+static uint8_t bytes_table_union_with_vector_struct_sandwich_v1[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1118,21 +1116,21 @@ uint8_t bytes_table_union_with_vector_struct_sandwich_v1[] = {
     0x04, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_x_union_with_struct_old[] = {
+static uint8_t bytes_x_union_with_struct_old[] = {
     0x14, 0x5c, 0x3e, 0x19, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_x_union_with_struct_v1[] = {
+static uint8_t bytes_x_union_with_struct_v1[] = {
     0x14, 0x5c, 0x3e, 0x19, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_array_struct_old[] = {
+static uint8_t bytes_array_struct_old[] = {
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
@@ -1162,7 +1160,7 @@ uint8_t bytes_array_struct_old[] = {
     0x73, 0x69, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_array_struct_v1[] = {
+static uint8_t bytes_array_struct_v1[] = {
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
@@ -1201,26 +1199,26 @@ uint8_t bytes_array_struct_v1[] = {
     0x73, 0x69, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_transformer_empty_struct_old[] = {
+static uint8_t bytes_transformer_empty_struct_old[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_transformer_empty_struct_v1[] = {
+static uint8_t bytes_transformer_empty_struct_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_empty_struct_union_old[] = {
+static uint8_t bytes_empty_struct_union_old[] = {
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_empty_struct_union_v1[] = {
+static uint8_t bytes_empty_struct_union_v1[] = {
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_no_coding_tables_stressor_old[] = {
+static uint8_t bytes_no_coding_tables_stressor_old[] = {
     0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,  //
     0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,  //
     0x03, 0x00, 0x00, 0x00, 0x33, 0x33, 0x33, 0x33,  //
@@ -1251,7 +1249,7 @@ uint8_t bytes_no_coding_tables_stressor_old[] = {
     0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,  //
 };
 
-uint8_t bytes_no_coding_tables_stressor_v1[] = {
+static uint8_t bytes_no_coding_tables_stressor_v1[] = {
     0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,  //
     0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,  //
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1288,7 +1286,7 @@ uint8_t bytes_no_coding_tables_stressor_v1[] = {
     0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,  //
 };
 
-uint8_t bytes_out_of_line_sandwich1_case1_old[] = {
+static uint8_t bytes_out_of_line_sandwich1_case1_old[] = {
     0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1305,7 +1303,7 @@ uint8_t bytes_out_of_line_sandwich1_case1_old[] = {
     0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,  //
 };
 
-uint8_t bytes_out_of_line_sandwich1_case1_v1[] = {
+static uint8_t bytes_out_of_line_sandwich1_case1_v1[] = {
     0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1326,7 +1324,7 @@ uint8_t bytes_out_of_line_sandwich1_case1_v1[] = {
     0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,  //
 };
 
-uint8_t bytes_out_of_line_sandwich1_with_opt_union_present_old[] = {
+static uint8_t bytes_out_of_line_sandwich1_with_opt_union_present_old[] = {
     0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1345,7 +1343,7 @@ uint8_t bytes_out_of_line_sandwich1_with_opt_union_present_old[] = {
     0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,  //
 };
 
-uint8_t bytes_out_of_line_sandwich1_with_opt_union_present_v1[] = {
+static uint8_t bytes_out_of_line_sandwich1_with_opt_union_present_v1[] = {
     0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1366,7 +1364,7 @@ uint8_t bytes_out_of_line_sandwich1_with_opt_union_present_v1[] = {
     0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,  //
 };
 
-uint8_t bytes_out_of_line_sandwich1_with_opt_union_absent_old[] = {
+static uint8_t bytes_out_of_line_sandwich1_with_opt_union_absent_old[] = {
     0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1384,7 +1382,7 @@ uint8_t bytes_out_of_line_sandwich1_with_opt_union_absent_old[] = {
     0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,  //
 };
 
-uint8_t bytes_out_of_line_sandwich1_with_opt_union_absent_v1[] = {
+static uint8_t bytes_out_of_line_sandwich1_with_opt_union_absent_v1[] = {
     0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1404,21 +1402,21 @@ uint8_t bytes_out_of_line_sandwich1_with_opt_union_absent_v1[] = {
     0x20, 0x73, 0x75, 0x63, 0x6b, 0x21, 0x00, 0x00,  //
 };
 
-uint8_t bytes_regression4_old[] = {
+static uint8_t bytes_regression4_old[] = {
     0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
     0x09, 0x0a, 0x0b, 0x03, 0x04, 0x00, 0x00, 0x00,  //
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_regression4_v1[] = {
+static uint8_t bytes_regression4_v1[] = {
     0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,  //
     0x09, 0x0a, 0x0b, 0x03, 0x04, 0x00, 0x00, 0x00,  //
     0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich4_align8_old[] = {
+static uint8_t bytes_sandwich4_align8_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00,  //
     0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7,  //
     0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,  //
@@ -1428,7 +1426,7 @@ uint8_t bytes_sandwich4_align8_old[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,  //
 };
 
-uint8_t bytes_sandwich4_align8_v1[] = {
+static uint8_t bytes_sandwich4_align8_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1441,7 +1439,7 @@ uint8_t bytes_sandwich4_align8_v1[] = {
     0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,  //
 };
 
-uint8_t bytes_sandwich4_align8_with_pointer_old[] = {
+static uint8_t bytes_sandwich4_align8_with_pointer_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00,  //
     0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7,  //
     0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,  //
@@ -1452,7 +1450,7 @@ uint8_t bytes_sandwich4_align8_with_pointer_old[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,  //
 };
 
-uint8_t bytes_sandwich4_align8_with_pointer_v1[] = {
+static uint8_t bytes_sandwich4_align8_with_pointer_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1466,7 +1464,7 @@ uint8_t bytes_sandwich4_align8_with_pointer_v1[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,  //
 };
 
-uint8_t bytes_sandwich8_case1_old[] = {
+static uint8_t bytes_sandwich8_case1_old[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c,  //
@@ -1475,7 +1473,7 @@ uint8_t bytes_sandwich8_case1_old[] = {
     0x05, 0x06, 0x07, 0x08, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich8_case1_v1[] = {
+static uint8_t bytes_sandwich8_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,  //
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1487,7 +1485,7 @@ uint8_t bytes_sandwich8_case1_v1[] = {
     0x09, 0x0a, 0x0b, 0x0c, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich9_case1_old[] = {
+static uint8_t bytes_sandwich9_case1_old[] = {
     0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1501,7 +1499,7 @@ uint8_t bytes_sandwich9_case1_old[] = {
     0x13, 0x14, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_sandwich9_case1_v1[] = {
+static uint8_t bytes_sandwich9_case1_v1[] = {
     0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1517,7 +1515,7 @@ uint8_t bytes_sandwich9_case1_v1[] = {
     0x13, 0x14, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_simple_table_array_struct_old[] = {
+static uint8_t bytes_simple_table_array_struct_old[] = {
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1530,7 +1528,7 @@ uint8_t bytes_simple_table_array_struct_old[] = {
     0xb0, 0xb1, 0xb2, 0xb3, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_simple_table_array_struct_v1[] = {
+static uint8_t bytes_simple_table_array_struct_v1[] = {
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1543,7 +1541,7 @@ uint8_t bytes_simple_table_array_struct_v1[] = {
     0xb0, 0xb1, 0xb2, 0xb3, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_string_union_vector_old[] = {
+static uint8_t bytes_string_union_vector_old[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
@@ -1561,7 +1559,7 @@ uint8_t bytes_string_union_vector_old[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_string_union_vector_v1[] = {
+static uint8_t bytes_string_union_vector_v1[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1580,7 +1578,7 @@ uint8_t bytes_string_union_vector_v1[] = {
     0xbb, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_create_component_request_old[] = {
+static uint8_t bytes_create_component_request_old[] = {
     0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1610,7 +1608,7 @@ uint8_t bytes_create_component_request_old[] = {
     0x2e, 0x63, 0x6d, 0x78, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_create_component_request_v1[] = {
+static uint8_t bytes_create_component_request_v1[] = {
     0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -1640,14 +1638,14 @@ uint8_t bytes_create_component_request_v1[] = {
     0x2e, 0x63, 0x6d, 0x78, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_union_with_bound_string_old[] = {
+static uint8_t bytes_union_with_bound_string_old[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_union_with_bound_string_v1[] = {
+static uint8_t bytes_union_with_bound_string_v1[] = {
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
@@ -1656,1097 +1654,1234 @@ uint8_t bytes_union_with_bound_string_v1[] = {
     0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_union_migration_single_variant_old[] = {
+static uint8_t bytes_union_migration_single_variant_old[] = {
     0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_union_migration_single_variant_v1[] = {
+static uint8_t bytes_union_migration_single_variant_v1[] = {
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_reverse_ordinal_union_old[] = {
+static uint8_t bytes_reverse_ordinal_union_old[] = {
     0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_reverse_ordinal_union_v1[] = {
+static uint8_t bytes_reverse_ordinal_union_v1[] = {
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
     0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t bytes_non_empty_string_with_null_ptr_body_old_and_v1[] = {
+static uint8_t bytes_non_empty_string_with_null_ptr_body_old_and_v1[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-bool test_3_byte_object_alignment_in_struct_old_to_v1() {
+static bool test_3_byte_object_alignment_in_struct_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                   &conformance_ThreeByteInStructTable,
-                                   bytes_3_byte_object_alignment_in_struct_old_and_v1,
-                                   sizeof bytes_3_byte_object_alignment_in_struct_old_and_v1,
-                                   bytes_3_byte_object_alignment_in_struct_old_and_v1,
-                                   sizeof bytes_3_byte_object_alignment_in_struct_old_and_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_ThreeByteInStructTable,
+                           bytes_3_byte_object_alignment_in_struct_old_and_v1,
+                           sizeof bytes_3_byte_object_alignment_in_struct_old_and_v1,
+                           bytes_3_byte_object_alignment_in_struct_old_and_v1,
+                           sizeof bytes_3_byte_object_alignment_in_struct_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_5_byte_object_alignment_in_struct_old_to_v1() {
+static bool test_5_byte_object_alignment_in_struct_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                   &conformance_FiveByteInStructTable,
-                                   bytes_5_byte_object_alignment_in_struct_old_and_v1,
-                                   sizeof bytes_5_byte_object_alignment_in_struct_old_and_v1,
-                                   bytes_5_byte_object_alignment_in_struct_old_and_v1,
-                                   sizeof bytes_5_byte_object_alignment_in_struct_old_and_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_FiveByteInStructTable,
+                           bytes_5_byte_object_alignment_in_struct_old_and_v1,
+                           sizeof bytes_5_byte_object_alignment_in_struct_old_and_v1,
+                           bytes_5_byte_object_alignment_in_struct_old_and_v1,
+                           sizeof bytes_5_byte_object_alignment_in_struct_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_3_byte_object_alignment_in_vector_old_to_v1() {
+static bool test_3_byte_object_alignment_in_vector_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                   &conformance_ThreeByteInVectorTable,
-                                   bytes_3_byte_object_alignment_in_vector_old_and_v1,
-                                   sizeof bytes_3_byte_object_alignment_in_vector_old_and_v1,
-                                   bytes_3_byte_object_alignment_in_vector_old_and_v1,
-                                   sizeof bytes_3_byte_object_alignment_in_vector_old_and_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_ThreeByteInVectorTable,
+                           bytes_3_byte_object_alignment_in_vector_old_and_v1,
+                           sizeof bytes_3_byte_object_alignment_in_vector_old_and_v1,
+                           bytes_3_byte_object_alignment_in_vector_old_and_v1,
+                           sizeof bytes_3_byte_object_alignment_in_vector_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_5_byte_object_alignment_in_vector_old_to_v1() {
+static bool test_5_byte_object_alignment_in_vector_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                   &conformance_FiveByteInVectorTable,
-                                   bytes_5_byte_object_alignment_in_vector_old_and_v1,
-                                   sizeof bytes_5_byte_object_alignment_in_vector_old_and_v1,
-                                   bytes_5_byte_object_alignment_in_vector_old_and_v1,
-                                   sizeof bytes_5_byte_object_alignment_in_vector_old_and_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_FiveByteInVectorTable,
+                           bytes_5_byte_object_alignment_in_vector_old_and_v1,
+                           sizeof bytes_5_byte_object_alignment_in_vector_old_and_v1,
+                           bytes_5_byte_object_alignment_in_vector_old_and_v1,
+                           sizeof bytes_5_byte_object_alignment_in_vector_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_3_byte_object_alignment_in_array_old_to_v1() {
+static bool test_3_byte_object_alignment_in_array_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                   &conformance_ThreeByteInArrayTable,
-                                   bytes_3_byte_object_alignment_in_array_old_and_v1,
-                                   sizeof bytes_3_byte_object_alignment_in_array_old_and_v1,
-                                   bytes_3_byte_object_alignment_in_array_old_and_v1,
-                                   sizeof bytes_3_byte_object_alignment_in_array_old_and_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_ThreeByteInArrayTable,
+                           bytes_3_byte_object_alignment_in_array_old_and_v1,
+                           sizeof bytes_3_byte_object_alignment_in_array_old_and_v1,
+                           bytes_3_byte_object_alignment_in_array_old_and_v1,
+                           sizeof bytes_3_byte_object_alignment_in_array_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_5_byte_object_alignment_in_array_old_to_v1() {
+static bool test_5_byte_object_alignment_in_array_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_FiveByteInArrayTable,
                                    bytes_5_byte_object_alignment_in_array_old_and_v1,
                                    sizeof bytes_5_byte_object_alignment_in_array_old_and_v1,
                                    bytes_5_byte_object_alignment_in_array_old_and_v1,
-                                   sizeof bytes_5_byte_object_alignment_in_array_old_and_v1));
+                                   sizeof bytes_5_byte_object_alignment_in_array_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_empty_struct_old_to_v1() {
+static bool test_empty_struct_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_EmptyStructTable,
                            bytes_empty_struct_old_and_v1, sizeof bytes_empty_struct_old_and_v1,
-                           bytes_empty_struct_old_and_v1, sizeof bytes_empty_struct_old_and_v1));
+                           bytes_empty_struct_old_and_v1, sizeof bytes_empty_struct_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_empty_struct_sandwich_old_to_v1() {
+static bool test_empty_struct_sandwich_old_to_v1(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_EmptyStructSandwichTable,
+          bytes_empty_struct_sandwich_old_and_v1, sizeof bytes_empty_struct_sandwich_old_and_v1,
+          bytes_empty_struct_sandwich_old_and_v1, sizeof bytes_empty_struct_sandwich_old_and_v1),
+      "");
+  END_TEST;
+}
+
+static bool test_uint8_uint16_uint32_uint64_old_to_v1(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Uint8Uint16Uint32Uint64Table,
+                           bytes_uint8_uint16_uint32_uint64_old_and_v1,
+                           sizeof bytes_uint8_uint16_uint32_uint64_old_and_v1,
+                           bytes_uint8_uint16_uint32_uint64_old_and_v1,
+                           sizeof bytes_uint8_uint16_uint32_uint64_old_and_v1),
+      "");
+  END_TEST;
+}
+
+static bool test_uint64_uint32_uint16_uint8_old_to_v1(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Uint64Uint32Uint16Uint8Table,
+                           bytes_uint64_uint32_uint16_uint8_old_and_v1,
+                           sizeof bytes_uint64_uint32_uint16_uint8_old_and_v1,
+                           bytes_uint64_uint32_uint16_uint8_old_and_v1,
+                           sizeof bytes_uint64_uint32_uint16_uint8_old_and_v1),
+      "");
+  END_TEST;
+}
+
+static bool test_simple_table_empty_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_EmptyStructSandwichTable,
-      bytes_empty_struct_sandwich_old_and_v1, sizeof bytes_empty_struct_sandwich_old_and_v1,
-      bytes_empty_struct_sandwich_old_and_v1, sizeof bytes_empty_struct_sandwich_old_and_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructOfSimpleTableTable,
+                  bytes_simple_table_empty_old_and_v1, sizeof bytes_simple_table_empty_old_and_v1,
+                  bytes_simple_table_empty_old_and_v1, sizeof bytes_simple_table_empty_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_uint8_uint16_uint32_uint64_old_to_v1() {
+static bool test_simple_table_x_and_y_old_to_v1(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructOfSimpleTableTable,
+          bytes_simple_table_x_and_y_old_and_v1, sizeof bytes_simple_table_x_and_y_old_and_v1,
+          bytes_simple_table_x_and_y_old_and_v1, sizeof bytes_simple_table_x_and_y_old_and_v1),
+      "");
+  END_TEST;
+}
+
+static bool test_simple_table_just_y_old_to_v1(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructOfSimpleTableTable,
+          bytes_simple_table_just_y_old_and_v1, sizeof bytes_simple_table_just_y_old_and_v1,
+          bytes_simple_table_just_y_old_and_v1, sizeof bytes_simple_table_just_y_old_and_v1),
+      "");
+  END_TEST;
+}
+
+static bool test_table_with_string_and_vector_no_vector_content_old_to_v1(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructOfTableWithStringAndVectorTable,
+                  bytes_table_with_string_and_vector_no_vector_content_old_and_v1,
+                  sizeof bytes_table_with_string_and_vector_no_vector_content_old_and_v1,
+                  bytes_table_with_string_and_vector_no_vector_content_old_and_v1,
+                  sizeof bytes_table_with_string_and_vector_no_vector_content_old_and_v1),
+              "");
+  END_TEST;
+}
+
+static bool test_simple_table_then_uint64_old_to_v1(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_SimpleTableThenUint64Table,
+                           bytes_simple_table_then_uint64_old_and_v1,
+                           sizeof bytes_simple_table_then_uint64_old_and_v1,
+                           bytes_simple_table_then_uint64_old_and_v1,
+                           sizeof bytes_simple_table_then_uint64_old_and_v1),
+      "");
+  END_TEST;
+}
+
+static bool test_reverse_ordinal_table_old_to_v1(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructOfReverseOrdinalTableTable,
+          bytes_reverse_ordinal_table_old_and_v1, sizeof bytes_reverse_ordinal_table_old_and_v1,
+          bytes_reverse_ordinal_table_old_and_v1, sizeof bytes_reverse_ordinal_table_old_and_v1),
+      "");
+  END_TEST;
+}
+
+static bool test_inline_x_union_in_struct_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                   &conformance_Uint8Uint16Uint32Uint64Table,
-                                   bytes_uint8_uint16_uint32_uint64_old_and_v1,
-                                   sizeof bytes_uint8_uint16_uint32_uint64_old_and_v1,
-                                   bytes_uint8_uint16_uint32_uint64_old_and_v1,
-                                   sizeof bytes_uint8_uint16_uint32_uint64_old_and_v1));
+                                   &conformance_TestInlineXUnionInStructTable,
+                                   bytes_inline_x_union_in_struct_old_and_v1,
+                                   sizeof bytes_inline_x_union_in_struct_old_and_v1,
+                                   bytes_inline_x_union_in_struct_old_and_v1,
+                                   sizeof bytes_inline_x_union_in_struct_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_uint64_uint32_uint16_uint8_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                   &conformance_Uint64Uint32Uint16Uint8Table,
-                                   bytes_uint64_uint32_uint16_uint8_old_and_v1,
-                                   sizeof bytes_uint64_uint32_uint16_uint8_old_and_v1,
-                                   bytes_uint64_uint32_uint16_uint8_old_and_v1,
-                                   sizeof bytes_uint64_uint32_uint16_uint8_old_and_v1));
-  END_TEST;
-}
-
-bool test_simple_table_empty_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructOfSimpleTableTable,
-      bytes_simple_table_empty_old_and_v1, sizeof bytes_simple_table_empty_old_and_v1,
-      bytes_simple_table_empty_old_and_v1, sizeof bytes_simple_table_empty_old_and_v1));
-  END_TEST;
-}
-
-bool test_simple_table_x_and_y_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructOfSimpleTableTable,
-      bytes_simple_table_x_and_y_old_and_v1, sizeof bytes_simple_table_x_and_y_old_and_v1,
-      bytes_simple_table_x_and_y_old_and_v1, sizeof bytes_simple_table_x_and_y_old_and_v1));
-  END_TEST;
-}
-
-bool test_simple_table_just_y_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructOfSimpleTableTable,
-      bytes_simple_table_just_y_old_and_v1, sizeof bytes_simple_table_just_y_old_and_v1,
-      bytes_simple_table_just_y_old_and_v1, sizeof bytes_simple_table_just_y_old_and_v1));
-  END_TEST;
-}
-
-bool test_table_with_string_and_vector_no_vector_content_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructOfTableWithStringAndVectorTable,
-      bytes_table_with_string_and_vector_no_vector_content_old_and_v1,
-      sizeof bytes_table_with_string_and_vector_no_vector_content_old_and_v1,
-      bytes_table_with_string_and_vector_no_vector_content_old_and_v1,
-      sizeof bytes_table_with_string_and_vector_no_vector_content_old_and_v1));
-  END_TEST;
-}
-
-bool test_simple_table_then_uint64_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_SimpleTableThenUint64Table,
-      bytes_simple_table_then_uint64_old_and_v1, sizeof bytes_simple_table_then_uint64_old_and_v1,
-      bytes_simple_table_then_uint64_old_and_v1, sizeof bytes_simple_table_then_uint64_old_and_v1));
-  END_TEST;
-}
-
-bool test_reverse_ordinal_table_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructOfReverseOrdinalTableTable,
-      bytes_reverse_ordinal_table_old_and_v1, sizeof bytes_reverse_ordinal_table_old_and_v1,
-      bytes_reverse_ordinal_table_old_and_v1, sizeof bytes_reverse_ordinal_table_old_and_v1));
-  END_TEST;
-}
-
-bool test_inline_x_union_in_struct_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_TestInlineXUnionInStructTable,
-      bytes_inline_x_union_in_struct_old_and_v1, sizeof bytes_inline_x_union_in_struct_old_and_v1,
-      bytes_inline_x_union_in_struct_old_and_v1, sizeof bytes_inline_x_union_in_struct_old_and_v1));
-  END_TEST;
-}
-
-bool test_optional_x_union_in_struct_absent_old_to_v1() {
+static bool test_optional_x_union_in_struct_absent_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                    &conformance_TestOptionalXUnionInStructTable,
                                    bytes_optional_x_union_in_struct_absent_old_and_v1,
                                    sizeof bytes_optional_x_union_in_struct_absent_old_and_v1,
                                    bytes_optional_x_union_in_struct_absent_old_and_v1,
-                                   sizeof bytes_optional_x_union_in_struct_absent_old_and_v1));
+                                   sizeof bytes_optional_x_union_in_struct_absent_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_optional_x_union_in_struct_present_old_to_v1() {
+static bool test_optional_x_union_in_struct_present_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                    &conformance_TestOptionalXUnionInStructTable,
                                    bytes_optional_x_union_in_struct_present_old_and_v1,
                                    sizeof bytes_optional_x_union_in_struct_present_old_and_v1,
                                    bytes_optional_x_union_in_struct_present_old_and_v1,
-                                   sizeof bytes_optional_x_union_in_struct_present_old_and_v1));
+                                   sizeof bytes_optional_x_union_in_struct_present_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_x_union_in_table_x_union_absent_old_to_v1() {
+static bool test_x_union_in_table_x_union_absent_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                   &conformance_TestXUnionInTableTable,
-                                   bytes_x_union_in_table_x_union_absent_old_and_v1,
-                                   sizeof bytes_x_union_in_table_x_union_absent_old_and_v1,
-                                   bytes_x_union_in_table_x_union_absent_old_and_v1,
-                                   sizeof bytes_x_union_in_table_x_union_absent_old_and_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_TestXUnionInTableTable,
+                           bytes_x_union_in_table_x_union_absent_old_and_v1,
+                           sizeof bytes_x_union_in_table_x_union_absent_old_and_v1,
+                           bytes_x_union_in_table_x_union_absent_old_and_v1,
+                           sizeof bytes_x_union_in_table_x_union_absent_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_x_union_in_table_x_union_present_old_to_v1() {
+static bool test_x_union_in_table_x_union_present_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                   &conformance_TestXUnionInTableTable,
-                                   bytes_x_union_in_table_x_union_present_old_and_v1,
-                                   sizeof bytes_x_union_in_table_x_union_present_old_and_v1,
-                                   bytes_x_union_in_table_x_union_present_old_and_v1,
-                                   sizeof bytes_x_union_in_table_x_union_present_old_and_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_TestXUnionInTableTable,
+                           bytes_x_union_in_table_x_union_present_old_and_v1,
+                           sizeof bytes_x_union_in_table_x_union_present_old_and_v1,
+                           bytes_x_union_in_table_x_union_present_old_and_v1,
+                           sizeof bytes_x_union_in_table_x_union_present_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_strict_x_union_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_TestStrictXUnionInStructTable,
-      bytes_strict_x_union_old_and_v1, sizeof bytes_strict_x_union_old_and_v1,
-      bytes_strict_x_union_old_and_v1, sizeof bytes_strict_x_union_old_and_v1));
-  END_TEST;
-}
-
-bool test_add_ethernet_device_request_old_to_v1() {
+static bool test_strict_x_union_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_TestAddEthernetDeviceRequestTable,
-      bytes_add_ethernet_device_request_old, sizeof bytes_add_ethernet_device_request_old,
-      bytes_add_ethernet_device_request_v1, sizeof bytes_add_ethernet_device_request_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_TestStrictXUnionInStructTable,
+                  bytes_strict_x_union_old_and_v1, sizeof bytes_strict_x_union_old_and_v1,
+                  bytes_strict_x_union_old_and_v1, sizeof bytes_strict_x_union_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_add_ethernet_device_request_v1_to_old() {
+static bool test_add_ethernet_device_request_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_TestAddEthernetDeviceRequestTable,
-      bytes_add_ethernet_device_request_v1, sizeof bytes_add_ethernet_device_request_v1,
-      bytes_add_ethernet_device_request_old, sizeof bytes_add_ethernet_device_request_old));
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_TestAddEthernetDeviceRequestTable,
+          bytes_add_ethernet_device_request_old, sizeof bytes_add_ethernet_device_request_old,
+          bytes_add_ethernet_device_request_v1, sizeof bytes_add_ethernet_device_request_v1),
+      "");
   END_TEST;
 }
 
-bool test_file_get_attr_response_old_to_v1() {
+static bool test_add_ethernet_device_request_v1_to_old(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_FileGetAttrResponseTable,
-      bytes_file_get_attr_response_old_and_v1, sizeof bytes_file_get_attr_response_old_and_v1,
-      bytes_file_get_attr_response_old_and_v1, sizeof bytes_file_get_attr_response_old_and_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_TestAddEthernetDeviceRequestTable,
+          bytes_add_ethernet_device_request_v1, sizeof bytes_add_ethernet_device_request_v1,
+          bytes_add_ethernet_device_request_old, sizeof bytes_add_ethernet_device_request_old),
+      "");
   END_TEST;
 }
 
-bool test_optionals_old_to_v1() {
+static bool test_file_get_attr_response_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructWithOptionalsTable, bytes_optionals_old,
-      sizeof bytes_optionals_old, bytes_optionals_v1, sizeof bytes_optionals_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_FileGetAttrResponseTable,
+          bytes_file_get_attr_response_old_and_v1, sizeof bytes_file_get_attr_response_old_and_v1,
+          bytes_file_get_attr_response_old_and_v1, sizeof bytes_file_get_attr_response_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_optionals_v1_to_old() {
+static bool test_optionals_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_StructWithOptionalsTable, bytes_optionals_v1,
-      sizeof bytes_optionals_v1, bytes_optionals_old, sizeof bytes_optionals_old));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructWithOptionalsTable,
+                           bytes_optionals_old, sizeof bytes_optionals_old, bytes_optionals_v1,
+                           sizeof bytes_optionals_v1),
+      "");
   END_TEST;
 }
 
-bool test_arrays_old_to_v1() {
+static bool test_optionals_v1_to_old(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructWithArraysTable, bytes_arrays_old_and_v1,
-      sizeof bytes_arrays_old_and_v1, bytes_arrays_old_and_v1, sizeof bytes_arrays_old_and_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_StructWithOptionalsTable,
+                           bytes_optionals_v1, sizeof bytes_optionals_v1, bytes_optionals_old,
+                           sizeof bytes_optionals_old),
+      "");
   END_TEST;
 }
 
-bool test_vectors_old_to_v1() {
+static bool test_arrays_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructWithVectorsTable, bytes_vectors_old_and_v1,
-      sizeof bytes_vectors_old_and_v1, bytes_vectors_old_and_v1, sizeof bytes_vectors_old_and_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructWithArraysTable,
+                           bytes_arrays_old_and_v1, sizeof bytes_arrays_old_and_v1,
+                           bytes_arrays_old_and_v1, sizeof bytes_arrays_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_bool_true_old_to_v1() {
+static bool test_vectors_old_to_v1(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StructWithVectorsTable,
+                           bytes_vectors_old_and_v1, sizeof bytes_vectors_old_and_v1,
+                           bytes_vectors_old_and_v1, sizeof bytes_vectors_old_and_v1),
+      "");
+  END_TEST;
+}
+
+static bool test_bool_true_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyBoolTable,
                                    bytes_bool_true_old_and_v1, sizeof bytes_bool_true_old_and_v1,
-                                   bytes_bool_true_old_and_v1, sizeof bytes_bool_true_old_and_v1));
+                                   bytes_bool_true_old_and_v1, sizeof bytes_bool_true_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_bool_false_old_to_v1() {
+static bool test_bool_false_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyBoolTable,
                                    bytes_bool_false_old_and_v1, sizeof bytes_bool_false_old_and_v1,
-                                   bytes_bool_false_old_and_v1,
-                                   sizeof bytes_bool_false_old_and_v1));
+                                   bytes_bool_false_old_and_v1, sizeof bytes_bool_false_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_byte_zero_old_to_v1() {
+static bool test_byte_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyByteTable,
                                    bytes_byte_zero_old_and_v1, sizeof bytes_byte_zero_old_and_v1,
-                                   bytes_byte_zero_old_and_v1, sizeof bytes_byte_zero_old_and_v1));
+                                   bytes_byte_zero_old_and_v1, sizeof bytes_byte_zero_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_byte255_old_to_v1() {
+static bool test_byte255_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyByteTable,
                                    bytes_byte255_old_and_v1, sizeof bytes_byte255_old_and_v1,
-                                   bytes_byte255_old_and_v1, sizeof bytes_byte255_old_and_v1));
+                                   bytes_byte255_old_and_v1, sizeof bytes_byte255_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int8_min_old_to_v1() {
+static bool test_int8_min_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt8Table,
                                    bytes_int8_min_old_and_v1, sizeof bytes_int8_min_old_and_v1,
-                                   bytes_int8_min_old_and_v1, sizeof bytes_int8_min_old_and_v1));
+                                   bytes_int8_min_old_and_v1, sizeof bytes_int8_min_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int8_zero_old_to_v1() {
+static bool test_int8_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt8Table,
                                    bytes_int8_zero_old_and_v1, sizeof bytes_int8_zero_old_and_v1,
-                                   bytes_int8_zero_old_and_v1, sizeof bytes_int8_zero_old_and_v1));
+                                   bytes_int8_zero_old_and_v1, sizeof bytes_int8_zero_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int8_max_old_to_v1() {
+static bool test_int8_max_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt8Table,
                                    bytes_int8_max_old_and_v1, sizeof bytes_int8_max_old_and_v1,
-                                   bytes_int8_max_old_and_v1, sizeof bytes_int8_max_old_and_v1));
+                                   bytes_int8_max_old_and_v1, sizeof bytes_int8_max_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int16_min_old_to_v1() {
+static bool test_int16_min_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt16Table,
                                    bytes_int16_min_old_and_v1, sizeof bytes_int16_min_old_and_v1,
-                                   bytes_int16_min_old_and_v1, sizeof bytes_int16_min_old_and_v1));
+                                   bytes_int16_min_old_and_v1, sizeof bytes_int16_min_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int16_zero_old_to_v1() {
+static bool test_int16_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt16Table,
                                    bytes_int16_zero_old_and_v1, sizeof bytes_int16_zero_old_and_v1,
-                                   bytes_int16_zero_old_and_v1,
-                                   sizeof bytes_int16_zero_old_and_v1));
+                                   bytes_int16_zero_old_and_v1, sizeof bytes_int16_zero_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int16_max_old_to_v1() {
+static bool test_int16_max_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt16Table,
                                    bytes_int16_max_old_and_v1, sizeof bytes_int16_max_old_and_v1,
-                                   bytes_int16_max_old_and_v1, sizeof bytes_int16_max_old_and_v1));
+                                   bytes_int16_max_old_and_v1, sizeof bytes_int16_max_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int32_min_old_to_v1() {
+static bool test_int32_min_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt32Table,
                                    bytes_int32_min_old_and_v1, sizeof bytes_int32_min_old_and_v1,
-                                   bytes_int32_min_old_and_v1, sizeof bytes_int32_min_old_and_v1));
+                                   bytes_int32_min_old_and_v1, sizeof bytes_int32_min_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int32_zero_old_to_v1() {
+static bool test_int32_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt32Table,
                                    bytes_int32_zero_old_and_v1, sizeof bytes_int32_zero_old_and_v1,
-                                   bytes_int32_zero_old_and_v1,
-                                   sizeof bytes_int32_zero_old_and_v1));
+                                   bytes_int32_zero_old_and_v1, sizeof bytes_int32_zero_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int32_max_old_to_v1() {
+static bool test_int32_max_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt32Table,
                                    bytes_int32_max_old_and_v1, sizeof bytes_int32_max_old_and_v1,
-                                   bytes_int32_max_old_and_v1, sizeof bytes_int32_max_old_and_v1));
+                                   bytes_int32_max_old_and_v1, sizeof bytes_int32_max_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int64_min_old_to_v1() {
+static bool test_int64_min_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt64Table,
                                    bytes_int64_min_old_and_v1, sizeof bytes_int64_min_old_and_v1,
-                                   bytes_int64_min_old_and_v1, sizeof bytes_int64_min_old_and_v1));
+                                   bytes_int64_min_old_and_v1, sizeof bytes_int64_min_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int64_zero_old_to_v1() {
+static bool test_int64_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt64Table,
                                    bytes_int64_zero_old_and_v1, sizeof bytes_int64_zero_old_and_v1,
-                                   bytes_int64_zero_old_and_v1,
-                                   sizeof bytes_int64_zero_old_and_v1));
+                                   bytes_int64_zero_old_and_v1, sizeof bytes_int64_zero_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_int64_max_old_to_v1() {
+static bool test_int64_max_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyInt64Table,
                                    bytes_int64_max_old_and_v1, sizeof bytes_int64_max_old_and_v1,
-                                   bytes_int64_max_old_and_v1, sizeof bytes_int64_max_old_and_v1));
+                                   bytes_int64_max_old_and_v1, sizeof bytes_int64_max_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_uint8_zero_old_to_v1() {
+static bool test_uint8_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyUint8Table,
                                    bytes_uint8_zero_old_and_v1, sizeof bytes_uint8_zero_old_and_v1,
-                                   bytes_uint8_zero_old_and_v1,
-                                   sizeof bytes_uint8_zero_old_and_v1));
+                                   bytes_uint8_zero_old_and_v1, sizeof bytes_uint8_zero_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_uint8_max_old_to_v1() {
+static bool test_uint8_max_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyUint8Table,
                                    bytes_uint8_max_old_and_v1, sizeof bytes_uint8_max_old_and_v1,
-                                   bytes_uint8_max_old_and_v1, sizeof bytes_uint8_max_old_and_v1));
+                                   bytes_uint8_max_old_and_v1, sizeof bytes_uint8_max_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_uint16_zero_old_to_v1() {
+static bool test_uint16_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyUint16Table,
                            bytes_uint16_zero_old_and_v1, sizeof bytes_uint16_zero_old_and_v1,
-                           bytes_uint16_zero_old_and_v1, sizeof bytes_uint16_zero_old_and_v1));
+                           bytes_uint16_zero_old_and_v1, sizeof bytes_uint16_zero_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_uint16_max_old_to_v1() {
+static bool test_uint16_max_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyUint16Table,
                                    bytes_uint16_max_old_and_v1, sizeof bytes_uint16_max_old_and_v1,
-                                   bytes_uint16_max_old_and_v1,
-                                   sizeof bytes_uint16_max_old_and_v1));
+                                   bytes_uint16_max_old_and_v1, sizeof bytes_uint16_max_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_uint32_zero_old_to_v1() {
+static bool test_uint32_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyUint32Table,
                            bytes_uint32_zero_old_and_v1, sizeof bytes_uint32_zero_old_and_v1,
-                           bytes_uint32_zero_old_and_v1, sizeof bytes_uint32_zero_old_and_v1));
+                           bytes_uint32_zero_old_and_v1, sizeof bytes_uint32_zero_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_uint32_max_old_to_v1() {
+static bool test_uint32_max_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyUint32Table,
                                    bytes_uint32_max_old_and_v1, sizeof bytes_uint32_max_old_and_v1,
-                                   bytes_uint32_max_old_and_v1,
-                                   sizeof bytes_uint32_max_old_and_v1));
+                                   bytes_uint32_max_old_and_v1, sizeof bytes_uint32_max_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_uint64_zero_old_to_v1() {
+static bool test_uint64_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyUint64Table,
                            bytes_uint64_zero_old_and_v1, sizeof bytes_uint64_zero_old_and_v1,
-                           bytes_uint64_zero_old_and_v1, sizeof bytes_uint64_zero_old_and_v1));
+                           bytes_uint64_zero_old_and_v1, sizeof bytes_uint64_zero_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_uint64_max_old_to_v1() {
+static bool test_uint64_max_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyUint64Table,
                                    bytes_uint64_max_old_and_v1, sizeof bytes_uint64_max_old_and_v1,
-                                   bytes_uint64_max_old_and_v1,
-                                   sizeof bytes_uint64_max_old_and_v1));
+                                   bytes_uint64_max_old_and_v1, sizeof bytes_uint64_max_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_float32_zero_old_to_v1() {
+static bool test_float32_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyFloat32Table,
                            bytes_float32_zero_old_and_v1, sizeof bytes_float32_zero_old_and_v1,
-                           bytes_float32_zero_old_and_v1, sizeof bytes_float32_zero_old_and_v1));
+                           bytes_float32_zero_old_and_v1, sizeof bytes_float32_zero_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_float32_one_old_to_v1() {
+static bool test_float32_one_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyFloat32Table,
                            bytes_float32_one_old_and_v1, sizeof bytes_float32_one_old_and_v1,
-                           bytes_float32_one_old_and_v1, sizeof bytes_float32_one_old_and_v1));
+                           bytes_float32_one_old_and_v1, sizeof bytes_float32_one_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_float32_minus_one_old_to_v1() {
+static bool test_float32_minus_one_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyFloat32Table,
-      bytes_float32_minus_one_old_and_v1, sizeof bytes_float32_minus_one_old_and_v1,
-      bytes_float32_minus_one_old_and_v1, sizeof bytes_float32_minus_one_old_and_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyFloat32Table,
+                  bytes_float32_minus_one_old_and_v1, sizeof bytes_float32_minus_one_old_and_v1,
+                  bytes_float32_minus_one_old_and_v1, sizeof bytes_float32_minus_one_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_float32_max_old_to_v1() {
+static bool test_float32_max_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyFloat32Table,
                            bytes_float32_max_old_and_v1, sizeof bytes_float32_max_old_and_v1,
-                           bytes_float32_max_old_and_v1, sizeof bytes_float32_max_old_and_v1));
+                           bytes_float32_max_old_and_v1, sizeof bytes_float32_max_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_float64_zero_old_to_v1() {
+static bool test_float64_zero_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyFloat64Table,
                            bytes_float64_zero_old_and_v1, sizeof bytes_float64_zero_old_and_v1,
-                           bytes_float64_zero_old_and_v1, sizeof bytes_float64_zero_old_and_v1));
+                           bytes_float64_zero_old_and_v1, sizeof bytes_float64_zero_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_float64_one_old_to_v1() {
+static bool test_float64_one_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyFloat64Table,
                            bytes_float64_one_old_and_v1, sizeof bytes_float64_one_old_and_v1,
-                           bytes_float64_one_old_and_v1, sizeof bytes_float64_one_old_and_v1));
+                           bytes_float64_one_old_and_v1, sizeof bytes_float64_one_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_float64_minus_one_old_to_v1() {
+static bool test_float64_minus_one_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyFloat64Table,
-      bytes_float64_minus_one_old_and_v1, sizeof bytes_float64_minus_one_old_and_v1,
-      bytes_float64_minus_one_old_and_v1, sizeof bytes_float64_minus_one_old_and_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyFloat64Table,
+                  bytes_float64_minus_one_old_and_v1, sizeof bytes_float64_minus_one_old_and_v1,
+                  bytes_float64_minus_one_old_and_v1, sizeof bytes_float64_minus_one_old_and_v1),
+              "");
   END_TEST;
 }
 
-bool test_float64_max_old_to_v1() {
+static bool test_float64_max_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_MyFloat64Table,
                            bytes_float64_max_old_and_v1, sizeof bytes_float64_max_old_and_v1,
-                           bytes_float64_max_old_and_v1, sizeof bytes_float64_max_old_and_v1));
+                           bytes_float64_max_old_and_v1, sizeof bytes_float64_max_old_and_v1),
+      "");
   END_TEST;
 }
 
-bool test_sandwich1_case1_old_to_v1() {
+static bool test_sandwich1_case1_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich1Table,
                                    bytes_sandwich1_case1_old, sizeof bytes_sandwich1_case1_old,
-                                   bytes_sandwich1_case1_v1, sizeof bytes_sandwich1_case1_v1));
+                                   bytes_sandwich1_case1_v1, sizeof bytes_sandwich1_case1_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich1_case1_v1_to_old() {
+static bool test_sandwich1_case1_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich1Table,
                                    bytes_sandwich1_case1_v1, sizeof bytes_sandwich1_case1_v1,
-                                   bytes_sandwich1_case1_old, sizeof bytes_sandwich1_case1_old));
+                                   bytes_sandwich1_case1_old, sizeof bytes_sandwich1_case1_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich1_with_opt_union_present_old_to_v1() {
+static bool test_sandwich1_with_opt_union_present_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich1WithOptUnionTable,
-      bytes_sandwich1_with_opt_union_present_old, sizeof bytes_sandwich1_with_opt_union_present_old,
-      bytes_sandwich1_with_opt_union_present_v1, sizeof bytes_sandwich1_with_opt_union_present_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich1WithOptUnionTable,
+                           bytes_sandwich1_with_opt_union_present_old,
+                           sizeof bytes_sandwich1_with_opt_union_present_old,
+                           bytes_sandwich1_with_opt_union_present_v1,
+                           sizeof bytes_sandwich1_with_opt_union_present_v1),
+      "");
   END_TEST;
 }
 
-bool test_sandwich1_with_opt_union_present_v1_to_old() {
+static bool test_sandwich1_with_opt_union_present_v1_to_old(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich1WithOptUnionTable,
-      bytes_sandwich1_with_opt_union_present_v1, sizeof bytes_sandwich1_with_opt_union_present_v1,
-      bytes_sandwich1_with_opt_union_present_old,
-      sizeof bytes_sandwich1_with_opt_union_present_old));
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                   &v1_conformance_Sandwich1WithOptUnionTable,
+                                   bytes_sandwich1_with_opt_union_present_v1,
+                                   sizeof bytes_sandwich1_with_opt_union_present_v1,
+                                   bytes_sandwich1_with_opt_union_present_old,
+                                   sizeof bytes_sandwich1_with_opt_union_present_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich1_with_opt_union_absent_old_to_v1() {
+static bool test_sandwich1_with_opt_union_absent_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich1WithOptUnionTable,
-      bytes_sandwich1_with_opt_union_absent_old, sizeof bytes_sandwich1_with_opt_union_absent_old,
-      bytes_sandwich1_with_opt_union_absent_v1, sizeof bytes_sandwich1_with_opt_union_absent_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich1WithOptUnionTable,
+                           bytes_sandwich1_with_opt_union_absent_old,
+                           sizeof bytes_sandwich1_with_opt_union_absent_old,
+                           bytes_sandwich1_with_opt_union_absent_v1,
+                           sizeof bytes_sandwich1_with_opt_union_absent_v1),
+      "");
   END_TEST;
 }
 
-bool test_sandwich1_with_opt_union_absent_v1_to_old() {
+static bool test_sandwich1_with_opt_union_absent_v1_to_old(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich1WithOptUnionTable,
-      bytes_sandwich1_with_opt_union_absent_v1, sizeof bytes_sandwich1_with_opt_union_absent_v1,
-      bytes_sandwich1_with_opt_union_absent_old, sizeof bytes_sandwich1_with_opt_union_absent_old));
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                   &v1_conformance_Sandwich1WithOptUnionTable,
+                                   bytes_sandwich1_with_opt_union_absent_v1,
+                                   sizeof bytes_sandwich1_with_opt_union_absent_v1,
+                                   bytes_sandwich1_with_opt_union_absent_old,
+                                   sizeof bytes_sandwich1_with_opt_union_absent_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich2_case1_old_to_v1() {
+static bool test_sandwich2_case1_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich2Table,
                                    bytes_sandwich2_case1_old, sizeof bytes_sandwich2_case1_old,
-                                   bytes_sandwich2_case1_v1, sizeof bytes_sandwich2_case1_v1));
+                                   bytes_sandwich2_case1_v1, sizeof bytes_sandwich2_case1_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich2_case1_v1_to_old() {
+static bool test_sandwich2_case1_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich2Table,
                                    bytes_sandwich2_case1_v1, sizeof bytes_sandwich2_case1_v1,
-                                   bytes_sandwich2_case1_old, sizeof bytes_sandwich2_case1_old));
+                                   bytes_sandwich2_case1_old, sizeof bytes_sandwich2_case1_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich3_case1_old_to_v1() {
+static bool test_sandwich3_case1_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich3Table,
                                    bytes_sandwich3_case1_old, sizeof bytes_sandwich3_case1_old,
-                                   bytes_sandwich3_case1_v1, sizeof bytes_sandwich3_case1_v1));
+                                   bytes_sandwich3_case1_v1, sizeof bytes_sandwich3_case1_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich3_case1_v1_to_old() {
+static bool test_sandwich3_case1_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich3Table,
                                    bytes_sandwich3_case1_v1, sizeof bytes_sandwich3_case1_v1,
-                                   bytes_sandwich3_case1_old, sizeof bytes_sandwich3_case1_old));
+                                   bytes_sandwich3_case1_old, sizeof bytes_sandwich3_case1_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich4_case1_old_to_v1() {
+static bool test_sandwich4_case1_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich4Table,
                                    bytes_sandwich4_case1_old, sizeof bytes_sandwich4_case1_old,
-                                   bytes_sandwich4_case1_v1, sizeof bytes_sandwich4_case1_v1));
+                                   bytes_sandwich4_case1_v1, sizeof bytes_sandwich4_case1_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich4_case1_v1_to_old() {
+static bool test_sandwich4_case1_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich4Table,
                                    bytes_sandwich4_case1_v1, sizeof bytes_sandwich4_case1_v1,
-                                   bytes_sandwich4_case1_old, sizeof bytes_sandwich4_case1_old));
+                                   bytes_sandwich4_case1_old, sizeof bytes_sandwich4_case1_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich5_case1_old_to_v1() {
+static bool test_sandwich5_case1_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich5Table,
                                    bytes_sandwich5_case1_old, sizeof bytes_sandwich5_case1_old,
-                                   bytes_sandwich5_case1_v1, sizeof bytes_sandwich5_case1_v1));
+                                   bytes_sandwich5_case1_v1, sizeof bytes_sandwich5_case1_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich5_case1_v1_to_old() {
+static bool test_sandwich5_case1_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich5Table,
                                    bytes_sandwich5_case1_v1, sizeof bytes_sandwich5_case1_v1,
-                                   bytes_sandwich5_case1_old, sizeof bytes_sandwich5_case1_old));
+                                   bytes_sandwich5_case1_old, sizeof bytes_sandwich5_case1_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich5_case2_old_to_v1() {
+static bool test_sandwich5_case2_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich5Table,
                                    bytes_sandwich5_case2_old, sizeof bytes_sandwich5_case2_old,
-                                   bytes_sandwich5_case2_v1, sizeof bytes_sandwich5_case2_v1));
+                                   bytes_sandwich5_case2_v1, sizeof bytes_sandwich5_case2_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich5_case2_v1_to_old() {
+static bool test_sandwich5_case2_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich5Table,
                                    bytes_sandwich5_case2_v1, sizeof bytes_sandwich5_case2_v1,
-                                   bytes_sandwich5_case2_old, sizeof bytes_sandwich5_case2_old));
+                                   bytes_sandwich5_case2_old, sizeof bytes_sandwich5_case2_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case1_old_to_v1() {
+static bool test_sandwich6_case1_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich6Table,
                                    bytes_sandwich6_case1_old, sizeof bytes_sandwich6_case1_old,
-                                   bytes_sandwich6_case1_v1, sizeof bytes_sandwich6_case1_v1));
+                                   bytes_sandwich6_case1_v1, sizeof bytes_sandwich6_case1_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case1_v1_to_old() {
+static bool test_sandwich6_case1_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich6Table,
                                    bytes_sandwich6_case1_v1, sizeof bytes_sandwich6_case1_v1,
-                                   bytes_sandwich6_case1_old, sizeof bytes_sandwich6_case1_old));
+                                   bytes_sandwich6_case1_old, sizeof bytes_sandwich6_case1_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case1_absent_vector_old_to_v1() {
+static bool test_sandwich6_case1_absent_vector_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich6Table,
-      bytes_sandwich6_case1_absent_vector_old, sizeof bytes_sandwich6_case1_absent_vector_old,
-      bytes_sandwich6_case1_absent_vector_v1, sizeof bytes_sandwich6_case1_absent_vector_v1));
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich6Table,
+                                   bytes_sandwich6_case1_absent_vector_old,
+                                   sizeof bytes_sandwich6_case1_absent_vector_old,
+                                   bytes_sandwich6_case1_absent_vector_v1,
+                                   sizeof bytes_sandwich6_case1_absent_vector_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case1_absent_vector_v1_to_old() {
+static bool test_sandwich6_case1_absent_vector_v1_to_old(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich6Table,
-      bytes_sandwich6_case1_absent_vector_v1, sizeof bytes_sandwich6_case1_absent_vector_v1,
-      bytes_sandwich6_case1_absent_vector_old, sizeof bytes_sandwich6_case1_absent_vector_old));
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich6Table,
+                                   bytes_sandwich6_case1_absent_vector_v1,
+                                   sizeof bytes_sandwich6_case1_absent_vector_v1,
+                                   bytes_sandwich6_case1_absent_vector_old,
+                                   sizeof bytes_sandwich6_case1_absent_vector_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case2_old_to_v1() {
+static bool test_sandwich6_case2_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich6Table,
                                    bytes_sandwich6_case2_old, sizeof bytes_sandwich6_case2_old,
-                                   bytes_sandwich6_case2_v1, sizeof bytes_sandwich6_case2_v1));
+                                   bytes_sandwich6_case2_v1, sizeof bytes_sandwich6_case2_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case2_v1_to_old() {
+static bool test_sandwich6_case2_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich6Table,
                                    bytes_sandwich6_case2_v1, sizeof bytes_sandwich6_case2_v1,
-                                   bytes_sandwich6_case2_old, sizeof bytes_sandwich6_case2_old));
+                                   bytes_sandwich6_case2_old, sizeof bytes_sandwich6_case2_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case3_old_to_v1() {
+static bool test_sandwich6_case3_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich6Table,
                                    bytes_sandwich6_case3_old, sizeof bytes_sandwich6_case3_old,
-                                   bytes_sandwich6_case3_v1, sizeof bytes_sandwich6_case3_v1));
+                                   bytes_sandwich6_case3_v1, sizeof bytes_sandwich6_case3_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case3_v1_to_old() {
+static bool test_sandwich6_case3_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich6Table,
                                    bytes_sandwich6_case3_v1, sizeof bytes_sandwich6_case3_v1,
-                                   bytes_sandwich6_case3_old, sizeof bytes_sandwich6_case3_old));
+                                   bytes_sandwich6_case3_old, sizeof bytes_sandwich6_case3_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case4_old_to_v1() {
+static bool test_sandwich6_case4_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich6Table,
                                    bytes_sandwich6_case4_old, sizeof bytes_sandwich6_case4_old,
-                                   bytes_sandwich6_case4_v1, sizeof bytes_sandwich6_case4_v1));
+                                   bytes_sandwich6_case4_v1, sizeof bytes_sandwich6_case4_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case4_v1_to_old() {
+static bool test_sandwich6_case4_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich6Table,
                                    bytes_sandwich6_case4_v1, sizeof bytes_sandwich6_case4_v1,
-                                   bytes_sandwich6_case4_old, sizeof bytes_sandwich6_case4_old));
+                                   bytes_sandwich6_case4_old, sizeof bytes_sandwich6_case4_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case5_old_to_v1() {
+static bool test_sandwich6_case5_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich6Table,
                                    bytes_sandwich6_case5_old, sizeof bytes_sandwich6_case5_old,
-                                   bytes_sandwich6_case5_v1, sizeof bytes_sandwich6_case5_v1));
+                                   bytes_sandwich6_case5_v1, sizeof bytes_sandwich6_case5_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case5_v1_to_old() {
+static bool test_sandwich6_case5_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich6Table,
                                    bytes_sandwich6_case5_v1, sizeof bytes_sandwich6_case5_v1,
-                                   bytes_sandwich6_case5_old, sizeof bytes_sandwich6_case5_old));
+                                   bytes_sandwich6_case5_old, sizeof bytes_sandwich6_case5_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case6_old_to_v1() {
+static bool test_sandwich6_case6_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich6Table,
                                    bytes_sandwich6_case6_old, sizeof bytes_sandwich6_case6_old,
-                                   bytes_sandwich6_case6_v1, sizeof bytes_sandwich6_case6_v1));
+                                   bytes_sandwich6_case6_v1, sizeof bytes_sandwich6_case6_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case6_v1_to_old() {
+static bool test_sandwich6_case6_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich6Table,
                                    bytes_sandwich6_case6_v1, sizeof bytes_sandwich6_case6_v1,
-                                   bytes_sandwich6_case6_old, sizeof bytes_sandwich6_case6_old));
+                                   bytes_sandwich6_case6_old, sizeof bytes_sandwich6_case6_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case7_old_to_v1() {
+static bool test_sandwich6_case7_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich6Table,
                                    bytes_sandwich6_case7_old, sizeof bytes_sandwich6_case7_old,
-                                   bytes_sandwich6_case7_v1, sizeof bytes_sandwich6_case7_v1));
+                                   bytes_sandwich6_case7_v1, sizeof bytes_sandwich6_case7_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case7_v1_to_old() {
+static bool test_sandwich6_case7_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich6Table,
                                    bytes_sandwich6_case7_v1, sizeof bytes_sandwich6_case7_v1,
-                                   bytes_sandwich6_case7_old, sizeof bytes_sandwich6_case7_old));
+                                   bytes_sandwich6_case7_old, sizeof bytes_sandwich6_case7_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case8_old_to_v1() {
+static bool test_sandwich6_case8_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich6Table,
                                    bytes_sandwich6_case8_old, sizeof bytes_sandwich6_case8_old,
-                                   bytes_sandwich6_case8_v1, sizeof bytes_sandwich6_case8_v1));
+                                   bytes_sandwich6_case8_v1, sizeof bytes_sandwich6_case8_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich6_case8_v1_to_old() {
+static bool test_sandwich6_case8_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich6Table,
                                    bytes_sandwich6_case8_v1, sizeof bytes_sandwich6_case8_v1,
-                                   bytes_sandwich6_case8_old, sizeof bytes_sandwich6_case8_old));
+                                   bytes_sandwich6_case8_old, sizeof bytes_sandwich6_case8_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich7_case1_old_to_v1() {
+static bool test_sandwich7_case1_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich7Table,
                                    bytes_sandwich7_case1_old, sizeof bytes_sandwich7_case1_old,
-                                   bytes_sandwich7_case1_v1, sizeof bytes_sandwich7_case1_v1));
+                                   bytes_sandwich7_case1_v1, sizeof bytes_sandwich7_case1_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich7_case1_v1_to_old() {
+static bool test_sandwich7_case1_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich7Table,
                                    bytes_sandwich7_case1_v1, sizeof bytes_sandwich7_case1_v1,
-                                   bytes_sandwich7_case1_old, sizeof bytes_sandwich7_case1_old));
+                                   bytes_sandwich7_case1_old, sizeof bytes_sandwich7_case1_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich7_case2_old_to_v1() {
+static bool test_sandwich7_case2_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich7Table,
                                    bytes_sandwich7_case2_old, sizeof bytes_sandwich7_case2_old,
-                                   bytes_sandwich7_case2_v1, sizeof bytes_sandwich7_case2_v1));
+                                   bytes_sandwich7_case2_v1, sizeof bytes_sandwich7_case2_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich7_case2_v1_to_old() {
+static bool test_sandwich7_case2_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich7Table,
                                    bytes_sandwich7_case2_v1, sizeof bytes_sandwich7_case2_v1,
-                                   bytes_sandwich7_case2_old, sizeof bytes_sandwich7_case2_old));
+                                   bytes_sandwich7_case2_old, sizeof bytes_sandwich7_case2_old),
+              "");
   END_TEST;
 }
 
-bool test_regression1_old_to_v1() {
+static bool test_regression1_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression1Table,
                                    bytes_regression1_old, sizeof bytes_regression1_old,
-                                   bytes_regression1_v1, sizeof bytes_regression1_v1));
+                                   bytes_regression1_v1, sizeof bytes_regression1_v1),
+              "");
   END_TEST;
 }
 
-bool test_regression1_v1_to_old() {
+static bool test_regression1_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression1Table,
                                    bytes_regression1_v1, sizeof bytes_regression1_v1,
-                                   bytes_regression1_old, sizeof bytes_regression1_old));
+                                   bytes_regression1_old, sizeof bytes_regression1_old),
+              "");
   END_TEST;
 }
 
-bool test_regression2_old_to_v1() {
+static bool test_regression2_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression2Table,
                                    bytes_regression2_old, sizeof bytes_regression2_old,
-                                   bytes_regression2_v1, sizeof bytes_regression2_v1));
+                                   bytes_regression2_v1, sizeof bytes_regression2_v1),
+              "");
   END_TEST;
 }
 
-bool test_regression2_v1_to_old() {
+static bool test_regression2_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression2Table,
                                    bytes_regression2_v1, sizeof bytes_regression2_v1,
-                                   bytes_regression2_old, sizeof bytes_regression2_old));
+                                   bytes_regression2_old, sizeof bytes_regression2_old),
+              "");
   END_TEST;
 }
 
-bool test_regression3_absent_old_to_v1() {
+static bool test_regression3_absent_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression3Table,
-                                   bytes_regression3_absent_old,
-                                   sizeof bytes_regression3_absent_old, bytes_regression3_absent_v1,
-                                   sizeof bytes_regression3_absent_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression3Table,
+                           bytes_regression3_absent_old, sizeof bytes_regression3_absent_old,
+                           bytes_regression3_absent_v1, sizeof bytes_regression3_absent_v1),
+      "");
   END_TEST;
 }
 
-bool test_regression3_absent_v1_to_old() {
+static bool test_regression3_absent_v1_to_old(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression3Table,
-                                   bytes_regression3_absent_v1, sizeof bytes_regression3_absent_v1,
-                                   bytes_regression3_absent_old,
-                                   sizeof bytes_regression3_absent_old));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression3Table,
+                           bytes_regression3_absent_v1, sizeof bytes_regression3_absent_v1,
+                           bytes_regression3_absent_old, sizeof bytes_regression3_absent_old),
+      "");
   END_TEST;
 }
 
-bool test_regression3_present_old_to_v1() {
+static bool test_regression3_present_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression3Table,
                            bytes_regression3_present_old, sizeof bytes_regression3_present_old,
-                           bytes_regression3_present_v1, sizeof bytes_regression3_present_v1));
+                           bytes_regression3_present_v1, sizeof bytes_regression3_present_v1),
+      "");
   END_TEST;
 }
 
-bool test_regression3_present_v1_to_old() {
+static bool test_regression3_present_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression3Table,
                            bytes_regression3_present_v1, sizeof bytes_regression3_present_v1,
-                           bytes_regression3_present_old, sizeof bytes_regression3_present_old));
+                           bytes_regression3_present_old, sizeof bytes_regression3_present_old),
+      "");
   END_TEST;
 }
 
-bool test_size5_alignment1_array_old_to_v1() {
+static bool test_size5_alignment1_array_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment1ArrayTable,
-      bytes_size5_alignment1_array_old, sizeof bytes_size5_alignment1_array_old,
-      bytes_size5_alignment1_array_v1, sizeof bytes_size5_alignment1_array_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment1ArrayTable,
+                  bytes_size5_alignment1_array_old, sizeof bytes_size5_alignment1_array_old,
+                  bytes_size5_alignment1_array_v1, sizeof bytes_size5_alignment1_array_v1),
+              "");
   END_TEST;
 }
 
-bool test_size5_alignment1_array_v1_to_old() {
+static bool test_size5_alignment1_array_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment1ArrayTable,
-      bytes_size5_alignment1_array_v1, sizeof bytes_size5_alignment1_array_v1,
-      bytes_size5_alignment1_array_old, sizeof bytes_size5_alignment1_array_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment1ArrayTable,
+                  bytes_size5_alignment1_array_v1, sizeof bytes_size5_alignment1_array_v1,
+                  bytes_size5_alignment1_array_old, sizeof bytes_size5_alignment1_array_old),
+              "");
   END_TEST;
 }
 
-bool test_size5_alignment4_array_old_to_v1() {
+static bool test_size5_alignment4_array_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment4ArrayTable,
-      bytes_size5_alignment4_array_old, sizeof bytes_size5_alignment4_array_old,
-      bytes_size5_alignment4_array_v1, sizeof bytes_size5_alignment4_array_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment4ArrayTable,
+                  bytes_size5_alignment4_array_old, sizeof bytes_size5_alignment4_array_old,
+                  bytes_size5_alignment4_array_v1, sizeof bytes_size5_alignment4_array_v1),
+              "");
   END_TEST;
 }
 
-bool test_size5_alignment4_array_v1_to_old() {
+static bool test_size5_alignment4_array_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment4ArrayTable,
-      bytes_size5_alignment4_array_v1, sizeof bytes_size5_alignment4_array_v1,
-      bytes_size5_alignment4_array_old, sizeof bytes_size5_alignment4_array_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment4ArrayTable,
+                  bytes_size5_alignment4_array_v1, sizeof bytes_size5_alignment4_array_v1,
+                  bytes_size5_alignment4_array_old, sizeof bytes_size5_alignment4_array_old),
+              "");
   END_TEST;
 }
 
-bool test_size5_alignment1_vector_old_to_v1() {
+static bool test_size5_alignment1_vector_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment1VectorTable,
-      bytes_size5_alignment1_vector_old, sizeof bytes_size5_alignment1_vector_old,
-      bytes_size5_alignment1_vector_v1, sizeof bytes_size5_alignment1_vector_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment1VectorTable,
+                  bytes_size5_alignment1_vector_old, sizeof bytes_size5_alignment1_vector_old,
+                  bytes_size5_alignment1_vector_v1, sizeof bytes_size5_alignment1_vector_v1),
+              "");
   END_TEST;
 }
 
-bool test_size5_alignment1_vector_v1_to_old() {
+static bool test_size5_alignment1_vector_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment1VectorTable,
-      bytes_size5_alignment1_vector_v1, sizeof bytes_size5_alignment1_vector_v1,
-      bytes_size5_alignment1_vector_old, sizeof bytes_size5_alignment1_vector_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment1VectorTable,
+                  bytes_size5_alignment1_vector_v1, sizeof bytes_size5_alignment1_vector_v1,
+                  bytes_size5_alignment1_vector_old, sizeof bytes_size5_alignment1_vector_old),
+              "");
   END_TEST;
 }
 
-bool test_size5_alignment4_vector_old_to_v1() {
+static bool test_size5_alignment4_vector_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment4VectorTable,
-      bytes_size5_alignment4_vector_old, sizeof bytes_size5_alignment4_vector_old,
-      bytes_size5_alignment4_vector_v1, sizeof bytes_size5_alignment4_vector_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Size5Alignment4VectorTable,
+                  bytes_size5_alignment4_vector_old, sizeof bytes_size5_alignment4_vector_old,
+                  bytes_size5_alignment4_vector_v1, sizeof bytes_size5_alignment4_vector_v1),
+              "");
   END_TEST;
 }
 
-bool test_size5_alignment4_vector_v1_to_old() {
+static bool test_size5_alignment4_vector_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment4VectorTable,
-      bytes_size5_alignment4_vector_v1, sizeof bytes_size5_alignment4_vector_v1,
-      bytes_size5_alignment4_vector_old, sizeof bytes_size5_alignment4_vector_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Size5Alignment4VectorTable,
+                  bytes_size5_alignment4_vector_v1, sizeof bytes_size5_alignment4_vector_v1,
+                  bytes_size5_alignment4_vector_old, sizeof bytes_size5_alignment4_vector_old),
+              "");
   END_TEST;
 }
 
-bool test_table_struct_with_reserved_sandwich_old_to_v1() {
+static bool test_table_struct_with_reserved_sandwich_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                    &conformance_Table_StructWithReservedSandwichStructTable,
                                    bytes_table_struct_with_reserved_sandwich_old,
                                    sizeof bytes_table_struct_with_reserved_sandwich_old,
                                    bytes_table_struct_with_reserved_sandwich_v1,
-                                   sizeof bytes_table_struct_with_reserved_sandwich_v1));
+                                   sizeof bytes_table_struct_with_reserved_sandwich_v1),
+              "");
   END_TEST;
 }
 
-bool test_table_struct_with_reserved_sandwich_v1_to_old() {
+static bool test_table_struct_with_reserved_sandwich_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
                                    &v1_conformance_Table_StructWithReservedSandwichStructTable,
                                    bytes_table_struct_with_reserved_sandwich_v1,
                                    sizeof bytes_table_struct_with_reserved_sandwich_v1,
                                    bytes_table_struct_with_reserved_sandwich_old,
-                                   sizeof bytes_table_struct_with_reserved_sandwich_old));
+                                   sizeof bytes_table_struct_with_reserved_sandwich_old),
+              "");
   END_TEST;
 }
 
-bool test_table_struct_with_uint32_sandwich_old_to_v1() {
+static bool test_table_struct_with_uint32_sandwich_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                    &conformance_Table_StructWithUint32SandwichStructTable,
                                    bytes_table_struct_with_uint32_sandwich_old,
                                    sizeof bytes_table_struct_with_uint32_sandwich_old,
                                    bytes_table_struct_with_uint32_sandwich_v1,
-                                   sizeof bytes_table_struct_with_uint32_sandwich_v1));
+                                   sizeof bytes_table_struct_with_uint32_sandwich_v1),
+              "");
   END_TEST;
 }
 
-bool test_table_struct_with_uint32_sandwich_v1_to_old() {
+static bool test_table_struct_with_uint32_sandwich_v1_to_old(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Table_StructWithUint32SandwichStructTable,
-      bytes_table_struct_with_uint32_sandwich_v1, sizeof bytes_table_struct_with_uint32_sandwich_v1,
-      bytes_table_struct_with_uint32_sandwich_old,
-      sizeof bytes_table_struct_with_uint32_sandwich_old));
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                   &v1_conformance_Table_StructWithUint32SandwichStructTable,
+                                   bytes_table_struct_with_uint32_sandwich_v1,
+                                   sizeof bytes_table_struct_with_uint32_sandwich_v1,
+                                   bytes_table_struct_with_uint32_sandwich_old,
+                                   sizeof bytes_table_struct_with_uint32_sandwich_old),
+              "");
   END_TEST;
 }
 
-bool test_table_union_with_vector_reserved_sandwich_old_to_v1() {
+static bool test_table_union_with_vector_reserved_sandwich_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                    &conformance_Table_UnionWithVector_ReservedSandwichStructTable,
                                    bytes_table_union_with_vector_reserved_sandwich_old,
                                    sizeof bytes_table_union_with_vector_reserved_sandwich_old,
                                    bytes_table_union_with_vector_reserved_sandwich_v1,
-                                   sizeof bytes_table_union_with_vector_reserved_sandwich_v1));
+                                   sizeof bytes_table_union_with_vector_reserved_sandwich_v1),
+              "");
   END_TEST;
 }
 
-bool test_table_union_with_vector_reserved_sandwich_v1_to_old() {
+static bool test_table_union_with_vector_reserved_sandwich_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
@@ -2754,382 +2889,428 @@ bool test_table_union_with_vector_reserved_sandwich_v1_to_old() {
                            bytes_table_union_with_vector_reserved_sandwich_v1,
                            sizeof bytes_table_union_with_vector_reserved_sandwich_v1,
                            bytes_table_union_with_vector_reserved_sandwich_old,
-                           sizeof bytes_table_union_with_vector_reserved_sandwich_old));
+                           sizeof bytes_table_union_with_vector_reserved_sandwich_old),
+      "");
   END_TEST;
 }
 
-bool test_table_union_with_vector_struct_sandwich_old_to_v1() {
+static bool test_table_union_with_vector_struct_sandwich_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                    &conformance_Table_UnionWithVector_StructSandwichStructTable,
                                    bytes_table_union_with_vector_struct_sandwich_old,
                                    sizeof bytes_table_union_with_vector_struct_sandwich_old,
                                    bytes_table_union_with_vector_struct_sandwich_v1,
-                                   sizeof bytes_table_union_with_vector_struct_sandwich_v1));
+                                   sizeof bytes_table_union_with_vector_struct_sandwich_v1),
+              "");
   END_TEST;
 }
 
-bool test_table_union_with_vector_struct_sandwich_v1_to_old() {
+static bool test_table_union_with_vector_struct_sandwich_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
                                    &v1_conformance_Table_UnionWithVector_StructSandwichStructTable,
                                    bytes_table_union_with_vector_struct_sandwich_v1,
                                    sizeof bytes_table_union_with_vector_struct_sandwich_v1,
                                    bytes_table_union_with_vector_struct_sandwich_old,
-                                   sizeof bytes_table_union_with_vector_struct_sandwich_old));
+                                   sizeof bytes_table_union_with_vector_struct_sandwich_old),
+              "");
   END_TEST;
 }
 
-bool test_x_union_with_struct_old_to_v1() {
+static bool test_x_union_with_struct_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_XUnionWithStructStructTable,
                            bytes_x_union_with_struct_old, sizeof bytes_x_union_with_struct_old,
-                           bytes_x_union_with_struct_v1, sizeof bytes_x_union_with_struct_v1));
+                           bytes_x_union_with_struct_v1, sizeof bytes_x_union_with_struct_v1),
+      "");
   END_TEST;
 }
 
-bool test_x_union_with_struct_v1_to_old() {
+static bool test_x_union_with_struct_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_XUnionWithStructStructTable,
-      bytes_x_union_with_struct_v1, sizeof bytes_x_union_with_struct_v1,
-      bytes_x_union_with_struct_old, sizeof bytes_x_union_with_struct_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_XUnionWithStructStructTable,
+                  bytes_x_union_with_struct_v1, sizeof bytes_x_union_with_struct_v1,
+                  bytes_x_union_with_struct_old, sizeof bytes_x_union_with_struct_old),
+              "");
   END_TEST;
 }
 
-bool test_array_struct_old_to_v1() {
+static bool test_array_struct_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_ArrayStructTable,
                                    bytes_array_struct_old, sizeof bytes_array_struct_old,
-                                   bytes_array_struct_v1, sizeof bytes_array_struct_v1));
+                                   bytes_array_struct_v1, sizeof bytes_array_struct_v1),
+              "");
   END_TEST;
 }
 
-bool test_array_struct_v1_to_old() {
+static bool test_array_struct_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_ArrayStructTable,
                                    bytes_array_struct_v1, sizeof bytes_array_struct_v1,
-                                   bytes_array_struct_old, sizeof bytes_array_struct_old));
+                                   bytes_array_struct_old, sizeof bytes_array_struct_old),
+              "");
   END_TEST;
 }
 
-bool test_transformer_empty_struct_old_to_v1() {
+static bool test_transformer_empty_struct_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_TransformerEmptyStructTable,
-      bytes_transformer_empty_struct_old, sizeof bytes_transformer_empty_struct_old,
-      bytes_transformer_empty_struct_v1, sizeof bytes_transformer_empty_struct_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_TransformerEmptyStructTable,
+                  bytes_transformer_empty_struct_old, sizeof bytes_transformer_empty_struct_old,
+                  bytes_transformer_empty_struct_v1, sizeof bytes_transformer_empty_struct_v1),
+              "");
   END_TEST;
 }
 
-bool test_transformer_empty_struct_v1_to_old() {
+static bool test_transformer_empty_struct_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_TransformerEmptyStructTable,
-      bytes_transformer_empty_struct_v1, sizeof bytes_transformer_empty_struct_v1,
-      bytes_transformer_empty_struct_old, sizeof bytes_transformer_empty_struct_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_TransformerEmptyStructTable,
+                  bytes_transformer_empty_struct_v1, sizeof bytes_transformer_empty_struct_v1,
+                  bytes_transformer_empty_struct_old, sizeof bytes_transformer_empty_struct_old),
+              "");
   END_TEST;
 }
 
-bool test_empty_struct_union_old_to_v1() {
+static bool test_empty_struct_union_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_EmptyStructUnionStructTable,
                            bytes_empty_struct_union_old, sizeof bytes_empty_struct_union_old,
-                           bytes_empty_struct_union_v1, sizeof bytes_empty_struct_union_v1));
+                           bytes_empty_struct_union_v1, sizeof bytes_empty_struct_union_v1),
+      "");
   END_TEST;
 }
 
-bool test_empty_struct_union_v1_to_old() {
+static bool test_empty_struct_union_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_EmptyStructUnionStructTable,
-      bytes_empty_struct_union_v1, sizeof bytes_empty_struct_union_v1, bytes_empty_struct_union_old,
-      sizeof bytes_empty_struct_union_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_EmptyStructUnionStructTable,
+                  bytes_empty_struct_union_v1, sizeof bytes_empty_struct_union_v1,
+                  bytes_empty_struct_union_old, sizeof bytes_empty_struct_union_old),
+              "");
   END_TEST;
 }
 
-bool test_no_coding_tables_stressor_old_to_v1() {
+static bool test_no_coding_tables_stressor_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_NoCodingTablesStressorTable,
-      bytes_no_coding_tables_stressor_old, sizeof bytes_no_coding_tables_stressor_old,
-      bytes_no_coding_tables_stressor_v1, sizeof bytes_no_coding_tables_stressor_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_NoCodingTablesStressorTable,
+                  bytes_no_coding_tables_stressor_old, sizeof bytes_no_coding_tables_stressor_old,
+                  bytes_no_coding_tables_stressor_v1, sizeof bytes_no_coding_tables_stressor_v1),
+              "");
   END_TEST;
 }
 
-bool test_no_coding_tables_stressor_v1_to_old() {
+static bool test_no_coding_tables_stressor_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_NoCodingTablesStressorTable,
-      bytes_no_coding_tables_stressor_v1, sizeof bytes_no_coding_tables_stressor_v1,
-      bytes_no_coding_tables_stressor_old, sizeof bytes_no_coding_tables_stressor_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_NoCodingTablesStressorTable,
+                  bytes_no_coding_tables_stressor_v1, sizeof bytes_no_coding_tables_stressor_v1,
+                  bytes_no_coding_tables_stressor_old, sizeof bytes_no_coding_tables_stressor_old),
+              "");
   END_TEST;
 }
 
-bool test_out_of_line_sandwich1_case1_old_to_v1() {
+static bool test_out_of_line_sandwich1_case1_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_OutOfLineSandwich1Table,
-      bytes_out_of_line_sandwich1_case1_old, sizeof bytes_out_of_line_sandwich1_case1_old,
-      bytes_out_of_line_sandwich1_case1_v1, sizeof bytes_out_of_line_sandwich1_case1_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_OutOfLineSandwich1Table,
+          bytes_out_of_line_sandwich1_case1_old, sizeof bytes_out_of_line_sandwich1_case1_old,
+          bytes_out_of_line_sandwich1_case1_v1, sizeof bytes_out_of_line_sandwich1_case1_v1),
+      "");
   END_TEST;
 }
 
-bool test_out_of_line_sandwich1_case1_v1_to_old() {
+static bool test_out_of_line_sandwich1_case1_v1_to_old(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_OutOfLineSandwich1Table,
-      bytes_out_of_line_sandwich1_case1_v1, sizeof bytes_out_of_line_sandwich1_case1_v1,
-      bytes_out_of_line_sandwich1_case1_old, sizeof bytes_out_of_line_sandwich1_case1_old));
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_OutOfLineSandwich1Table,
+          bytes_out_of_line_sandwich1_case1_v1, sizeof bytes_out_of_line_sandwich1_case1_v1,
+          bytes_out_of_line_sandwich1_case1_old, sizeof bytes_out_of_line_sandwich1_case1_old),
+      "");
   END_TEST;
 }
 
-bool test_out_of_line_sandwich1_with_opt_union_present_old_to_v1() {
+static bool test_out_of_line_sandwich1_with_opt_union_present_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                    &conformance_OutOfLineSandwich1WithOptUnionTable,
                                    bytes_out_of_line_sandwich1_with_opt_union_present_old,
                                    sizeof bytes_out_of_line_sandwich1_with_opt_union_present_old,
                                    bytes_out_of_line_sandwich1_with_opt_union_present_v1,
-                                   sizeof bytes_out_of_line_sandwich1_with_opt_union_present_v1));
+                                   sizeof bytes_out_of_line_sandwich1_with_opt_union_present_v1),
+              "");
   END_TEST;
 }
 
-bool test_out_of_line_sandwich1_with_opt_union_present_v1_to_old() {
+static bool test_out_of_line_sandwich1_with_opt_union_present_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
                                    &v1_conformance_OutOfLineSandwich1WithOptUnionTable,
                                    bytes_out_of_line_sandwich1_with_opt_union_present_v1,
                                    sizeof bytes_out_of_line_sandwich1_with_opt_union_present_v1,
                                    bytes_out_of_line_sandwich1_with_opt_union_present_old,
-                                   sizeof bytes_out_of_line_sandwich1_with_opt_union_present_old));
+                                   sizeof bytes_out_of_line_sandwich1_with_opt_union_present_old),
+              "");
   END_TEST;
 }
 
-bool test_out_of_line_sandwich1_with_opt_union_absent_old_to_v1() {
+static bool test_out_of_line_sandwich1_with_opt_union_absent_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                    &conformance_OutOfLineSandwich1WithOptUnionTable,
                                    bytes_out_of_line_sandwich1_with_opt_union_absent_old,
                                    sizeof bytes_out_of_line_sandwich1_with_opt_union_absent_old,
                                    bytes_out_of_line_sandwich1_with_opt_union_absent_v1,
-                                   sizeof bytes_out_of_line_sandwich1_with_opt_union_absent_v1));
+                                   sizeof bytes_out_of_line_sandwich1_with_opt_union_absent_v1),
+              "");
   END_TEST;
 }
 
-bool test_out_of_line_sandwich1_with_opt_union_absent_v1_to_old() {
+static bool test_out_of_line_sandwich1_with_opt_union_absent_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
                                    &v1_conformance_OutOfLineSandwich1WithOptUnionTable,
                                    bytes_out_of_line_sandwich1_with_opt_union_absent_v1,
                                    sizeof bytes_out_of_line_sandwich1_with_opt_union_absent_v1,
                                    bytes_out_of_line_sandwich1_with_opt_union_absent_old,
-                                   sizeof bytes_out_of_line_sandwich1_with_opt_union_absent_old));
+                                   sizeof bytes_out_of_line_sandwich1_with_opt_union_absent_old),
+              "");
   END_TEST;
 }
 
-bool test_regression4_old_to_v1() {
+static bool test_regression4_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Regression4Table,
                                    bytes_regression4_old, sizeof bytes_regression4_old,
-                                   bytes_regression4_v1, sizeof bytes_regression4_v1));
+                                   bytes_regression4_v1, sizeof bytes_regression4_v1),
+              "");
   END_TEST;
 }
 
-bool test_regression4_v1_to_old() {
+static bool test_regression4_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Regression4Table,
                                    bytes_regression4_v1, sizeof bytes_regression4_v1,
-                                   bytes_regression4_old, sizeof bytes_regression4_old));
+                                   bytes_regression4_old, sizeof bytes_regression4_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich4_align8_old_to_v1() {
+static bool test_sandwich4_align8_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich4Align8Table,
                                    bytes_sandwich4_align8_old, sizeof bytes_sandwich4_align8_old,
-                                   bytes_sandwich4_align8_v1, sizeof bytes_sandwich4_align8_v1));
+                                   bytes_sandwich4_align8_v1, sizeof bytes_sandwich4_align8_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich4_align8_v1_to_old() {
+static bool test_sandwich4_align8_v1_to_old(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
-                                   &v1_conformance_Sandwich4Align8Table, bytes_sandwich4_align8_v1,
-                                   sizeof bytes_sandwich4_align8_v1, bytes_sandwich4_align8_old,
-                                   sizeof bytes_sandwich4_align8_old));
+  ASSERT_TRUE(
+      check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich4Align8Table,
+                           bytes_sandwich4_align8_v1, sizeof bytes_sandwich4_align8_v1,
+                           bytes_sandwich4_align8_old, sizeof bytes_sandwich4_align8_old),
+      "");
   END_TEST;
 }
 
-bool test_sandwich4_align8_with_pointer_old_to_v1() {
+static bool test_sandwich4_align8_with_pointer_old_to_v1(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich4Align8WithPointerTable,
-      bytes_sandwich4_align8_with_pointer_old, sizeof bytes_sandwich4_align8_with_pointer_old,
-      bytes_sandwich4_align8_with_pointer_v1, sizeof bytes_sandwich4_align8_with_pointer_v1));
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich4Align8WithPointerTable,
+          bytes_sandwich4_align8_with_pointer_old, sizeof bytes_sandwich4_align8_with_pointer_old,
+          bytes_sandwich4_align8_with_pointer_v1, sizeof bytes_sandwich4_align8_with_pointer_v1),
+      "");
   END_TEST;
 }
 
-bool test_sandwich4_align8_with_pointer_v1_to_old() {
+static bool test_sandwich4_align8_with_pointer_v1_to_old(void) {
   BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich4Align8WithPointerTable,
-      bytes_sandwich4_align8_with_pointer_v1, sizeof bytes_sandwich4_align8_with_pointer_v1,
-      bytes_sandwich4_align8_with_pointer_old, sizeof bytes_sandwich4_align8_with_pointer_old));
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich4Align8WithPointerTable,
+          bytes_sandwich4_align8_with_pointer_v1, sizeof bytes_sandwich4_align8_with_pointer_v1,
+          bytes_sandwich4_align8_with_pointer_old, sizeof bytes_sandwich4_align8_with_pointer_old),
+      "");
   END_TEST;
 }
 
-bool test_sandwich8_case1_old_to_v1() {
+static bool test_sandwich8_case1_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich8Table,
                                    bytes_sandwich8_case1_old, sizeof bytes_sandwich8_case1_old,
-                                   bytes_sandwich8_case1_v1, sizeof bytes_sandwich8_case1_v1));
+                                   bytes_sandwich8_case1_v1, sizeof bytes_sandwich8_case1_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich8_case1_v1_to_old() {
+static bool test_sandwich8_case1_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich8Table,
                                    bytes_sandwich8_case1_v1, sizeof bytes_sandwich8_case1_v1,
-                                   bytes_sandwich8_case1_old, sizeof bytes_sandwich8_case1_old));
+                                   bytes_sandwich8_case1_old, sizeof bytes_sandwich8_case1_old),
+              "");
   END_TEST;
 }
 
-bool test_sandwich9_case1_old_to_v1() {
+static bool test_sandwich9_case1_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_Sandwich9Table,
                                    bytes_sandwich9_case1_old, sizeof bytes_sandwich9_case1_old,
-                                   bytes_sandwich9_case1_v1, sizeof bytes_sandwich9_case1_v1));
+                                   bytes_sandwich9_case1_v1, sizeof bytes_sandwich9_case1_v1),
+              "");
   END_TEST;
 }
 
-bool test_sandwich9_case1_v1_to_old() {
+static bool test_sandwich9_case1_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_Sandwich9Table,
                                    bytes_sandwich9_case1_v1, sizeof bytes_sandwich9_case1_v1,
-                                   bytes_sandwich9_case1_old, sizeof bytes_sandwich9_case1_old));
+                                   bytes_sandwich9_case1_old, sizeof bytes_sandwich9_case1_old),
+              "");
   END_TEST;
 }
 
-bool test_simple_table_array_struct_old_to_v1() {
+static bool test_simple_table_array_struct_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_SimpleTableArrayStructTable,
-      bytes_simple_table_array_struct_old, sizeof bytes_simple_table_array_struct_old,
-      bytes_simple_table_array_struct_v1, sizeof bytes_simple_table_array_struct_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_SimpleTableArrayStructTable,
+                  bytes_simple_table_array_struct_old, sizeof bytes_simple_table_array_struct_old,
+                  bytes_simple_table_array_struct_v1, sizeof bytes_simple_table_array_struct_v1),
+              "");
   END_TEST;
 }
 
-bool test_simple_table_array_struct_v1_to_old() {
+static bool test_simple_table_array_struct_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_SimpleTableArrayStructTable,
-      bytes_simple_table_array_struct_v1, sizeof bytes_simple_table_array_struct_v1,
-      bytes_simple_table_array_struct_old, sizeof bytes_simple_table_array_struct_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_SimpleTableArrayStructTable,
+                  bytes_simple_table_array_struct_v1, sizeof bytes_simple_table_array_struct_v1,
+                  bytes_simple_table_array_struct_old, sizeof bytes_simple_table_array_struct_old),
+              "");
   END_TEST;
 }
 
-bool test_string_union_vector_old_to_v1() {
+static bool test_string_union_vector_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StringUnionVectorTable,
                            bytes_string_union_vector_old, sizeof bytes_string_union_vector_old,
-                           bytes_string_union_vector_v1, sizeof bytes_string_union_vector_v1));
+                           bytes_string_union_vector_v1, sizeof bytes_string_union_vector_v1),
+      "");
   END_TEST;
 }
 
-bool test_string_union_vector_v1_to_old() {
+static bool test_string_union_vector_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(
       check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_StringUnionVectorTable,
                            bytes_string_union_vector_v1, sizeof bytes_string_union_vector_v1,
-                           bytes_string_union_vector_old, sizeof bytes_string_union_vector_old));
+                           bytes_string_union_vector_old, sizeof bytes_string_union_vector_old),
+      "");
   END_TEST;
 }
 
-bool test_create_component_request_old_to_v1() {
+static bool test_create_component_request_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_CreateComponentRequestTable,
-      bytes_create_component_request_old, sizeof bytes_create_component_request_old,
-      bytes_create_component_request_v1, sizeof bytes_create_component_request_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_CreateComponentRequestTable,
+                  bytes_create_component_request_old, sizeof bytes_create_component_request_old,
+                  bytes_create_component_request_v1, sizeof bytes_create_component_request_v1),
+              "");
   END_TEST;
 }
 
-bool test_create_component_request_v1_to_old() {
+static bool test_create_component_request_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_CreateComponentRequestTable,
-      bytes_create_component_request_v1, sizeof bytes_create_component_request_v1,
-      bytes_create_component_request_old, sizeof bytes_create_component_request_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_CreateComponentRequestTable,
+                  bytes_create_component_request_v1, sizeof bytes_create_component_request_v1,
+                  bytes_create_component_request_old, sizeof bytes_create_component_request_old),
+              "");
   END_TEST;
 }
 
-bool test_union_with_bound_string_old_to_v1() {
+static bool test_union_with_bound_string_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_UnionWithBoundStringStructTable,
-      bytes_union_with_bound_string_old, sizeof bytes_union_with_bound_string_old,
-      bytes_union_with_bound_string_v1, sizeof bytes_union_with_bound_string_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_UnionWithBoundStringStructTable,
+                  bytes_union_with_bound_string_old, sizeof bytes_union_with_bound_string_old,
+                  bytes_union_with_bound_string_v1, sizeof bytes_union_with_bound_string_v1),
+              "");
   END_TEST;
 }
 
-bool test_union_with_bound_string_v1_to_old() {
+static bool test_union_with_bound_string_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_UnionWithBoundStringStructTable,
-      bytes_union_with_bound_string_v1, sizeof bytes_union_with_bound_string_v1,
-      bytes_union_with_bound_string_old, sizeof bytes_union_with_bound_string_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_UnionWithBoundStringStructTable,
+                  bytes_union_with_bound_string_v1, sizeof bytes_union_with_bound_string_v1,
+                  bytes_union_with_bound_string_old, sizeof bytes_union_with_bound_string_old),
+              "");
   END_TEST;
 }
 
-bool test_union_migration_single_variant_old_to_v1() {
+static bool test_union_migration_single_variant_old_to_v1(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(
+      check_fidl_transform(
+          FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_SingleVariantUnionStructTable,
+          bytes_union_migration_single_variant_old, sizeof bytes_union_migration_single_variant_old,
+          bytes_union_migration_single_variant_v1, sizeof bytes_union_migration_single_variant_v1),
+      "");
+  END_TEST;
+}
+
+static bool test_union_migration_single_variant_v1_to_old(void) {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+                                   &v1_conformance_SingleVariantUnionStructTable,
+                                   bytes_union_migration_single_variant_v1,
+                                   sizeof bytes_union_migration_single_variant_v1,
+                                   bytes_union_migration_single_variant_old,
+                                   sizeof bytes_union_migration_single_variant_old),
+              "");
+  END_TEST;
+}
+
+static bool test_reverse_ordinal_union_old_to_v1(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_SingleVariantUnionStructTable,
-      bytes_union_migration_single_variant_old, sizeof bytes_union_migration_single_variant_old,
-      bytes_union_migration_single_variant_v1, sizeof bytes_union_migration_single_variant_v1));
+                  FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_ReverseOrdinalUnionStructTable,
+                  bytes_reverse_ordinal_union_old, sizeof bytes_reverse_ordinal_union_old,
+                  bytes_reverse_ordinal_union_v1, sizeof bytes_reverse_ordinal_union_v1),
+              "");
   END_TEST;
 }
 
-bool test_union_migration_single_variant_v1_to_old() {
+static bool test_reverse_ordinal_union_v1_to_old(void) {
   BEGIN_TEST;
   ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_SingleVariantUnionStructTable,
-      bytes_union_migration_single_variant_v1, sizeof bytes_union_migration_single_variant_v1,
-      bytes_union_migration_single_variant_old, sizeof bytes_union_migration_single_variant_old));
+                  FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_ReverseOrdinalUnionStructTable,
+                  bytes_reverse_ordinal_union_v1, sizeof bytes_reverse_ordinal_union_v1,
+                  bytes_reverse_ordinal_union_old, sizeof bytes_reverse_ordinal_union_old),
+              "");
   END_TEST;
 }
 
-bool test_reverse_ordinal_union_old_to_v1() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_ReverseOrdinalUnionStructTable,
-      bytes_reverse_ordinal_union_old, sizeof bytes_reverse_ordinal_union_old,
-      bytes_reverse_ordinal_union_v1, sizeof bytes_reverse_ordinal_union_v1));
-  END_TEST;
-}
-
-bool test_reverse_ordinal_union_v1_to_old() {
-  BEGIN_TEST;
-  ASSERT_TRUE(check_fidl_transform(
-      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_ReverseOrdinalUnionStructTable,
-      bytes_reverse_ordinal_union_v1, sizeof bytes_reverse_ordinal_union_v1,
-      bytes_reverse_ordinal_union_old, sizeof bytes_reverse_ordinal_union_old));
-  END_TEST;
-}
-
-bool test_non_empty_string_with_null_ptr_body_old_to_v1_failure() {
+static bool test_non_empty_string_with_null_ptr_body_old_to_v1_failure(void) {
   BEGIN_TEST;
   run_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StringWrapperTable,
                      bytes_non_empty_string_with_null_ptr_body_old_and_v1,
                      sizeof bytes_non_empty_string_with_null_ptr_body_old_and_v1);
   END_TEST;
 }
-
-}  // namespace
 
 BEGIN_TEST_CASE(transformer_conformance)
 

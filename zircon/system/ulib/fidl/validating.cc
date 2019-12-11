@@ -70,7 +70,7 @@ class FidlValidator final
       return Status::kConstraintViolationError;
     }
     uint32_t new_offset;
-    if (!fidl::AddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
+    if (!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
       SetError("overflow updating out-of-line offset");
       return Status::kMemoryError;
     }

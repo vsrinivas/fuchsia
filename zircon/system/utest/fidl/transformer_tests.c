@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/cpp/message.h>
 #include <lib/fidl/transformer.h>
-
-#include <cstring>
-#include <iostream>
+#include <stdio.h>
+#include <string.h>
 
 #include <unittest/unittest.h>
+
+#define ASSERT_TRUE_NOMSG(x) ASSERT_TRUE(x, "")
 
 #include "generated/transformer_tables.test.h"
 #include "zircon/errors.h"
 #include "zircon/types.h"
-
-namespace {
 
 bool cmp_payload(const uint8_t* actual, size_t actual_size, const uint8_t* expected,
                  size_t expected_size) {
@@ -22,21 +20,18 @@ bool cmp_payload(const uint8_t* actual, size_t actual_size, const uint8_t* expec
   for (size_t i = 0; i < actual_size && i < expected_size; i++) {
     if (actual[i] != expected[i]) {
       pass = false;
-      std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << +actual[i]
-                << " "
-                << "expected=0x" << +expected[i] << "\n";
+      printf("element[%zu]: actual=0x%x expected=0x%x\n", i, actual[i], expected[i]);
     }
   }
   if (actual_size != expected_size) {
     pass = false;
-    std::cout << std::dec << "element[...]: "
-              << "actual.size=" << +actual_size << " "
-              << "expected.size=" << +expected_size << "\n";
+    printf("element[...]: actual.size=%zu expected.size=%zu\n", actual_size, expected_size);
   }
   return pass;
 }
 
-uint8_t sandwich1_case1_v1[] = {
+// This is a non-static global variable since it's also used by message_tests.cc.
+const uint8_t sandwich1_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich1.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich1.before (padding)
 
@@ -54,7 +49,8 @@ uint8_t sandwich1_case1_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
 };
 
-uint8_t sandwich1_case1_old[] = {
+// This is a non-static global variable since it's also used by message_tests.cc.
+const uint8_t sandwich1_case1_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich1.before
 
     0x02, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.tag, i.e. Sandwich1.the_union
@@ -63,7 +59,7 @@ uint8_t sandwich1_case1_old[] = {
     0x05, 0x06, 0x07, 0x08,  // Sandwich1.after
 };
 
-uint8_t sandwich1_case1_with_hdr_v1[] = {
+static const uint8_t sandwich1_case1_with_hdr_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -86,7 +82,7 @@ uint8_t sandwich1_case1_with_hdr_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
 };
 
-uint8_t sandwich1_case1_with_hdr_old[] = {
+static const uint8_t sandwich1_case1_with_hdr_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -100,7 +96,7 @@ uint8_t sandwich1_case1_with_hdr_old[] = {
     0x05, 0x06, 0x07, 0x08,  // Sandwich1.after
 };
 
-uint8_t sandwich1_with_opt_union_present_v1[] = {
+static const uint8_t sandwich1_with_opt_union_present_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich1WithOptUnion.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.before (padding)
 
@@ -118,7 +114,7 @@ uint8_t sandwich1_with_opt_union_present_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
 };
 
-uint8_t sandwich1_with_opt_union_present_old[] = {
+static const uint8_t sandwich1_with_opt_union_present_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich1WithOptUnion.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.before (padding)
 
@@ -132,7 +128,7 @@ uint8_t sandwich1_with_opt_union_present_old[] = {
     0x09, 0x0a, 0x0b, 0x0c,  // UnionSize8Aligned4.data
 };
 
-uint8_t sandwich1_with_opt_union_absent_v1[] = {
+static const uint8_t sandwich1_with_opt_union_absent_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich1WithOptUnion.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.before (padding)
 
@@ -147,7 +143,7 @@ uint8_t sandwich1_with_opt_union_absent_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.after (padding)
 };
 
-uint8_t sandwich1_with_opt_union_absent_old[] = {
+static const uint8_t sandwich1_with_opt_union_absent_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich1WithOptUnion.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.before (padding)
 
@@ -158,7 +154,7 @@ uint8_t sandwich1_with_opt_union_absent_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich1WithOptUnion.after (padding)
 };
 
-uint8_t sandwich2_case1_v1[] = {
+static const uint8_t sandwich2_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich2.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich2.before (padding)
 
@@ -176,7 +172,7 @@ uint8_t sandwich2_case1_v1[] = {
     0xa4, 0xa5, 0x00, 0x00,  // UnionSize12Aligned4.data [cont.] and padding
 };
 
-uint8_t sandwich2_case1_old[] = {
+static const uint8_t sandwich2_case1_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich2.before
 
     0x03, 0x00, 0x00, 0x00,  // UnionSize12Aligned4.tag, i.e. Sandwich2.the_union
@@ -188,7 +184,7 @@ uint8_t sandwich2_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // padding for top-level struct
 };
 
-uint8_t sandwich3_case1_v1[] = {
+static const uint8_t sandwich3_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich3.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich3.before (padding)
 
@@ -208,7 +204,7 @@ uint8_t sandwich3_case1_v1[] = {
     0xac, 0xad, 0xae, 0xaf,  // UnionSize24Alignment8.data [cont.]
 };
 
-uint8_t sandwich3_case1_old[] = {
+static const uint8_t sandwich3_case1_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich3.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich3.before (padding)
 
@@ -223,7 +219,7 @@ uint8_t sandwich3_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich3.after (padding)
 };
 
-uint8_t sandwich4_case1_v1[] = {
+static const uint8_t sandwich4_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich4.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich4.before (padding)
 
@@ -247,7 +243,7 @@ uint8_t sandwich4_case1_v1[] = {
     0xbc, 0xbd, 0xbe, 0xbf,  // UnionSize36Alignment4.data [cont.]
 };
 
-uint8_t sandwich4_case1_old[] = {
+static const uint8_t sandwich4_case1_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich4.before
 
     0x03, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.tag, i.e. Sandwich4.the_union
@@ -265,7 +261,7 @@ uint8_t sandwich4_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // padding for top-level struct
 };
 
-uint8_t sandwich4align8_case1_v1[] = {
+static const uint8_t sandwich4align8_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich4.before  0x00
     0x00, 0x00, 0x00, 0x00,  // Sandwich4.before (padding)
 
@@ -292,7 +288,7 @@ uint8_t sandwich4align8_case1_v1[] = {
     0xbc, 0xbd, 0xbe, 0xbf,  // UnionSize36Alignment4.data [cont.]
 };
 
-uint8_t sandwich4align8_case1_old[] = {
+static const uint8_t sandwich4align8_case1_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich4.before  0x00
     0x03, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.tag, i.e. Sandwich4.the_union
     0xa0, 0xa1, 0xa2, 0xa3,  // UnionSize36Alignment4.data
@@ -309,7 +305,7 @@ uint8_t sandwich4align8_case1_old[] = {
     0x0d, 0x0e, 0x0f, 0x10,  // alignment8_enforcement
 };
 
-uint8_t sandwich4align8withpointer_case1_v1[] = {
+static const uint8_t sandwich4align8withpointer_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich4.before  0x00
     0x00, 0x00, 0x00, 0x00,  // Sandwich4.before (padding)
 
@@ -339,7 +335,7 @@ uint8_t sandwich4align8withpointer_case1_v1[] = {
     0x0d, 0x0e, 0x0f, 0x10,  // alignment8_enforcement
 };
 
-uint8_t sandwich4align8withpointer_case1_old[] = {
+static const uint8_t sandwich4align8withpointer_case1_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich4.before  0x00
     0x03, 0x00, 0x00, 0x00,  // UnionSize36Alignment4.tag, i.e. Sandwich4.the_union
     0xa0, 0xa1, 0xa2, 0xa3,  // UnionSize36Alignment4.data
@@ -358,7 +354,7 @@ uint8_t sandwich4align8withpointer_case1_old[] = {
     0x0d, 0x0e, 0x0f, 0x10,  // alignment8_enforcement
 };
 
-uint8_t sandwich4_with_hdr_case1_v1[] = {
+static const uint8_t sandwich4_with_hdr_case1_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // Fake transaction header  0x00
     0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00,  //
@@ -387,7 +383,7 @@ uint8_t sandwich4_with_hdr_case1_v1[] = {
     0xbc, 0xbd, 0xbe, 0xbf,  // UnionSize36Alignment4.data [cont.]
 };
 
-uint8_t sandwich4_with_hdr_case1_old[] = {
+static const uint8_t sandwich4_with_hdr_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Fake transaction header  0x00
     0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00,  //
@@ -410,7 +406,7 @@ uint8_t sandwich4_with_hdr_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // padding for top-level struct
 };
 
-uint8_t sandwich5_case1_v1[] = {
+static const uint8_t sandwich5_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich5.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.before (padding)
 
@@ -435,7 +431,7 @@ uint8_t sandwich5_case1_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionOfUnion.UnionSize8Aligned4.data (padding)
 };
 
-uint8_t sandwich5_case1_old[] = {
+static const uint8_t sandwich5_case1_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich5.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.before (padding)
 
@@ -453,7 +449,7 @@ uint8_t sandwich5_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.after (padding)
 };
 
-uint8_t sandwich5_case1_with_hdr_v1[] = {
+static const uint8_t sandwich5_case1_with_hdr_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -483,7 +479,7 @@ uint8_t sandwich5_case1_with_hdr_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionOfUnion.UnionSize8Aligned4.data (padding)
 };
 
-uint8_t sandwich5_case1_with_hdr_old[] = {
+static const uint8_t sandwich5_case1_with_hdr_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -506,7 +502,7 @@ uint8_t sandwich5_case1_with_hdr_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.after (padding)
 };
 
-uint8_t sandwich5_case2_v1[] = {
+static const uint8_t sandwich5_case2_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich5.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.before (padding)
 
@@ -533,7 +529,7 @@ uint8_t sandwich5_case2_v1[] = {
     0xac, 0xad, 0xae, 0xaf,  // UnionOfUnion.UnionSize24Alignment8.data [cont.]
 };
 
-uint8_t sandwich5_case2_old[] = {
+static const uint8_t sandwich5_case2_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich5.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.before (padding)
 
@@ -551,7 +547,7 @@ uint8_t sandwich5_case2_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.after (padding)
 };
 
-uint8_t sandwich5_case2_with_hdr_v1[] = {
+static const uint8_t sandwich5_case2_with_hdr_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -583,7 +579,7 @@ uint8_t sandwich5_case2_with_hdr_v1[] = {
     0xac, 0xad, 0xae, 0xaf,  // UnionOfUnion.UnionSize24Alignment8.data [cont.]
 };
 
-uint8_t sandwich5_case2_with_hdr_old[] = {
+static const uint8_t sandwich5_case2_with_hdr_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -606,7 +602,7 @@ uint8_t sandwich5_case2_with_hdr_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich5.after (padding)
 };
 
-uint8_t sandwich6_case1_v1[] = {
+static const uint8_t sandwich6_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -629,7 +625,7 @@ uint8_t sandwich6_case1_v1[] = {
     0xa4, 0xa5, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-uint8_t sandwich6_case1_old[] = {
+static const uint8_t sandwich6_case1_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -647,7 +643,7 @@ uint8_t sandwich6_case1_old[] = {
     0xa4, 0xa5, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-uint8_t sandwich6_case1_absent_vector_v1[] = {
+static const uint8_t sandwich6_case1_absent_vector_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -667,7 +663,7 @@ uint8_t sandwich6_case1_absent_vector_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // vector<uint8>.absence [cont.]
 };
 
-uint8_t sandwich6_case1_absent_vector_old[] = {
+static const uint8_t sandwich6_case1_absent_vector_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -682,7 +678,7 @@ uint8_t sandwich6_case1_absent_vector_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.after (padding)
 };
 
-uint8_t sandwich6_case2_v1[] = {
+static const uint8_t sandwich6_case2_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -709,7 +705,7 @@ uint8_t sandwich6_case2_v1[] = {
     0x21, 0x00, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-uint8_t sandwich6_case2_old[] = {
+static const uint8_t sandwich6_case2_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -731,7 +727,7 @@ uint8_t sandwich6_case2_old[] = {
     0x21, 0x00, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-uint8_t sandwich6_case3_v1[] = {
+static const uint8_t sandwich6_case3_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -756,7 +752,7 @@ uint8_t sandwich6_case3_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // (padding)
 };
 
-uint8_t sandwich6_case3_old[] = {
+static const uint8_t sandwich6_case3_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -776,7 +772,7 @@ uint8_t sandwich6_case3_old[] = {
     0x00, 0x00, 0x00, 0x00,  // (padding)
 };
 
-uint8_t sandwich6_case4_v1[] = {
+static const uint8_t sandwich6_case4_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -801,7 +797,7 @@ uint8_t sandwich6_case4_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // (padding)
 };
 
-uint8_t sandwich6_case4_old[] = {
+static const uint8_t sandwich6_case4_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -821,7 +817,7 @@ uint8_t sandwich6_case4_old[] = {
     0x00, 0x00, 0x00, 0x00,  // (padding)
 };
 
-uint8_t sandwich6_case5_v1[] = {
+static const uint8_t sandwich6_case5_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -846,7 +842,7 @@ uint8_t sandwich6_case5_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // vector<handle>.data (padding)
 };
 
-uint8_t sandwich6_case5_old[] = {
+static const uint8_t sandwich6_case5_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -866,7 +862,7 @@ uint8_t sandwich6_case5_old[] = {
     0x00, 0x00, 0x00, 0x00,  // vector<handle>.data (padding)
 };
 
-uint8_t sandwich6_case6_v1[] = {
+static const uint8_t sandwich6_case6_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -884,7 +880,7 @@ uint8_t sandwich6_case6_v1[] = {
     0xa5, 0xa6, 0x00, 0x00,  // array<StructSize3Alignment1>:2
 };
 
-uint8_t sandwich6_case6_old[] = {
+static const uint8_t sandwich6_case6_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -899,7 +895,7 @@ uint8_t sandwich6_case6_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.after (padding)
 };
 
-uint8_t sandwich6_case7_v1[] = {
+static const uint8_t sandwich6_case7_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -917,7 +913,7 @@ uint8_t sandwich6_case7_v1[] = {
     0xa4, 0xa5, 0xa6, 0x00,  // array<StructSize3Alignment2>:2
 };
 
-uint8_t sandwich6_case7_old[] = {
+static const uint8_t sandwich6_case7_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -932,7 +928,7 @@ uint8_t sandwich6_case7_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.after (padding)
 };
 
-uint8_t sandwich6_case8_v1[] = {
+static const uint8_t sandwich6_case8_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -962,7 +958,7 @@ uint8_t sandwich6_case8_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
 };
 
-uint8_t sandwich6_case8_old[] = {
+static const uint8_t sandwich6_case8_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich6.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich6.before (padding)
 
@@ -980,7 +976,7 @@ uint8_t sandwich6_case8_old[] = {
     0x09, 0x0a, 0x0b, 0x0c,  // UnionSize8Aligned4.data
 };
 
-uint8_t sandwich7_case1_v1[] = {
+static const uint8_t sandwich7_case1_v1[] = {
     0x11, 0x12, 0x13, 0x14,  // Sandwich7.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.before (padding)
     0xff, 0xff, 0xff, 0xff,  // Sandwich7.opt_sandwich1.presence
@@ -1003,7 +999,7 @@ uint8_t sandwich7_case1_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
 };
 
-uint8_t sandwich7_case1_old[] = {
+static const uint8_t sandwich7_case1_old[] = {
     0x11, 0x12, 0x13, 0x14,  // Sandwich7.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.before (padding)
     0xff, 0xff, 0xff, 0xff,  // Sandwich7.opt_sandwich1.presence
@@ -1017,7 +1013,7 @@ uint8_t sandwich7_case1_old[] = {
     0x05, 0x06, 0x07, 0x08,  // Sandwich1.after
 };
 
-uint8_t sandwich7_case1_with_hdr_v1[] = {
+static const uint8_t sandwich7_case1_with_hdr_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -1045,7 +1041,7 @@ uint8_t sandwich7_case1_with_hdr_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
 };
 
-uint8_t sandwich7_case1_with_hdr_old[] = {
+static const uint8_t sandwich7_case1_with_hdr_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -1064,7 +1060,7 @@ uint8_t sandwich7_case1_with_hdr_old[] = {
     0x05, 0x06, 0x07, 0x08,  // Sandwich1.after
 };
 
-uint8_t sandwich7_case2_v1[] = {
+static const uint8_t sandwich7_case2_v1[] = {
     0x11, 0x12, 0x13, 0x14,  // Sandwich7.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.before (padding)
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.opt_sandwich1.preabsentsence
@@ -1073,7 +1069,7 @@ uint8_t sandwich7_case2_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.after (padding)
 };
 
-uint8_t sandwich7_case2_old[] = {
+static const uint8_t sandwich7_case2_old[] = {
     0x11, 0x12, 0x13, 0x14,  // Sandwich7.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.before (padding)
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.opt_sandwich1.absence
@@ -1082,7 +1078,7 @@ uint8_t sandwich7_case2_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.after (padding)
 };
 
-uint8_t sandwich7_case2_with_hdr_v1[] = {
+static const uint8_t sandwich7_case2_with_hdr_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -1096,7 +1092,7 @@ uint8_t sandwich7_case2_with_hdr_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich7.after (padding)
 };
 
-uint8_t sandwich7_case2_with_hdr_old[] = {
+static const uint8_t sandwich7_case2_with_hdr_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -1112,7 +1108,7 @@ uint8_t sandwich7_case2_with_hdr_old[] = {
 
 // This is the same bytes as sandwich5_case_v1, but will have a different coding table due to
 // different field types.
-uint8_t sandwich8_case1_v1[] = {
+static const uint8_t sandwich8_case1_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich8.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich8.before (padding)
 
@@ -1139,7 +1135,7 @@ uint8_t sandwich8_case1_v1[] = {
 
 // This is the same bytes as sandwich5_case_old, but will have a different coding table due to
 // different field types.
-uint8_t sandwich8_case1_old[] = {
+static const uint8_t sandwich8_case1_old[] = {
     0x01, 0x02, 0x03, 0x04,  // Sandwich8.before
     0x00, 0x00, 0x00, 0x00,  // Sandwich8.before (padding)
 
@@ -1157,7 +1153,7 @@ uint8_t sandwich8_case1_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Sandwich8.after (padding)
 };
 
-uint8_t sandwich9_v1[] = {
+static const uint8_t sandwich9_v1[] = {
     0x01, 0x02, 0x00, 0x00,  // before
     0x00, 0x00, 0x00, 0x00,  //
     0x01, 0x00, 0x00, 0x00,  // xunion tag
@@ -1186,7 +1182,7 @@ uint8_t sandwich9_v1[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t sandwich9_old[] = {
+static const uint8_t sandwich9_old[] = {
     0x01, 0x02, 0x00, 0x00,  // before
     0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00,  // union tag
@@ -1211,7 +1207,7 @@ uint8_t sandwich9_old[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t out_of_line_sandwich1_case1_v1[] = {
+static const uint8_t out_of_line_sandwich1_case1_v1[] = {
     0x15, 0x00, 0x00, 0x00,  // vector<uint8>.size (start of OutOfLineSandwich1.before)
     0x00, 0x00, 0x00, 0x00,  // vector<uint8>.size [cont.]
     0xff, 0xff, 0xff, 0xff,  // vector<uint8>.presence
@@ -1256,7 +1252,7 @@ uint8_t out_of_line_sandwich1_case1_v1[] = {
     0x6b, 0x21, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-uint8_t out_of_line_sandwich1_case1_old[] = {
+static const uint8_t out_of_line_sandwich1_case1_old[] = {
     0x15, 0x00, 0x00, 0x00,  // vector<uint8>.size (start of OutOfLineSandwich1.before)
     0x00, 0x00, 0x00, 0x00,  // vector<uint8>.size [cont.]
     0xff, 0xff, 0xff, 0xff,  // vector<uint8>.presence
@@ -1293,7 +1289,7 @@ uint8_t out_of_line_sandwich1_case1_old[] = {
     0x6b, 0x21, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-uint8_t out_of_line_sandwich1_with_opt_union_present_v1[] = {
+static const uint8_t out_of_line_sandwich1_with_opt_union_present_v1[] = {
     0x15, 0x00, 0x00, 0x00,  // vector<uint8>.size (start of OutOfLineSandwich1.before)
     0x00, 0x00, 0x00, 0x00,  // vector<uint8>.size [cont.]
     0xff, 0xff, 0xff, 0xff,  // vector<uint8>.presence
@@ -1339,7 +1335,7 @@ uint8_t out_of_line_sandwich1_with_opt_union_present_v1[] = {
     0x6b, 0x21, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-uint8_t out_of_line_sandwich1_with_opt_union_present_old[] = {
+static const uint8_t out_of_line_sandwich1_with_opt_union_present_old[] = {
     0x15, 0x00, 0x00, 0x00,  // vector<uint8>.size (start of OutOfLineSandwich1.before)
     0x00, 0x00, 0x00, 0x00,  // vector<uint8>.size [cont.]
     0xff, 0xff, 0xff, 0xff,  // vector<uint8>.presence
@@ -1381,7 +1377,7 @@ uint8_t out_of_line_sandwich1_with_opt_union_present_old[] = {
     0x6b, 0x21, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-uint8_t out_of_line_sandwich1_with_opt_union_absent_v1[] = {
+static const uint8_t out_of_line_sandwich1_with_opt_union_absent_v1[] = {
     0x15, 0x00, 0x00, 0x00,  // vector<uint8>.size (start of OutOfLineSandwich1.before)
     0x00, 0x00, 0x00, 0x00,  // vector<uint8>.size [cont.]
     0xff, 0xff, 0xff, 0xff,  // vector<uint8>.presence
@@ -1424,7 +1420,7 @@ uint8_t out_of_line_sandwich1_with_opt_union_absent_v1[] = {
     0x6b, 0x21, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-uint8_t out_of_line_sandwich1_with_opt_union_absent_old[] = {
+static const uint8_t out_of_line_sandwich1_with_opt_union_absent_old[] = {
     0x15, 0x00, 0x00, 0x00,  // vector<uint8>.size (start of OutOfLineSandwich1.before)
     0x00, 0x00, 0x00, 0x00,  // vector<uint8>.size [cont.]
     0xff, 0xff, 0xff, 0xff,  // vector<uint8>.presence
@@ -1463,7 +1459,7 @@ uint8_t out_of_line_sandwich1_with_opt_union_absent_old[] = {
     0x6b, 0x21, 0x00, 0x00,  // vector<uint8>.data [cont.] + padding
 };
 
-uint8_t regression1_old_and_v1[] = {
+static const uint8_t regression1_old_and_v1[] = {
     0x01, 0x00, 0x00, 0x00,  // f1 and padding
     0x02, 0x00, 0x00, 0x00,  // f2 and padding
     0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
@@ -1474,7 +1470,7 @@ uint8_t regression1_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // f6 padding
 };
 
-uint8_t regression2_old_and_v1[] = {
+static const uint8_t regression2_old_and_v1[] = {
     0x01, 0x00, 0x00, 0x00,  // f1 and padding
     0x02, 0x00, 0x00, 0x00,  // f2 and padding
     0x03, 0x00, 0x04, 0x00,  // f3, f3 padding and f4
@@ -1487,12 +1483,12 @@ uint8_t regression2_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // f7 padding
 };
 
-uint8_t regression3_absent_old_and_v1[] = {
+static const uint8_t regression3_absent_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // opt_value.absence
     0x00, 0x00, 0x00, 0x00,  // opt_value.absence [cont.]
 };
 
-uint8_t regression3_present_old_and_v1[] = {
+static const uint8_t regression3_present_old_and_v1[] = {
     0xFF, 0xFF, 0xFF, 0xFF,  // opt_value.presence
     0xFF, 0xFF, 0xFF, 0xFF,  // opt_value.presence [cont.]
     0x01, 0x00, 0x00, 0x00,  // f1 and padding
@@ -1507,7 +1503,7 @@ uint8_t regression3_present_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // f7 padding
 };
 
-uint8_t regression4_old_and_v1[] = {
+static const uint8_t regression4_old_and_v1[] = {
     0x01, 0x00, 0x00, 0x00,  // f1 (uint8) and padding
     0x02, 0x00, 0x00, 0x00,  // f2 (uint32)
     0x09, 0x0A, 0x0B, 0x03,  // StructSize3Alignment1 data (3 bytes) + f3 (uint8)
@@ -1518,7 +1514,7 @@ uint8_t regression4_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // f6 padding
 };
 
-uint8_t regression5_old_and_v1[] = {
+static const uint8_t regression5_old_and_v1[] = {
     0x01, 0x00, 0x00, 0x00,  // f1 (uint8) + padding
     0x2F, 0x30, 0x31, 0x32,  // f2 (uint32 enum)
     0x08, 0x00, 0x15, 0x16,  // f3 (uint8 enum) + padding + f4 (uint16)
@@ -1529,7 +1525,7 @@ uint8_t regression5_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // padding
 };
 
-uint8_t regression6_old_and_v1[] = {
+static const uint8_t regression6_old_and_v1[] = {
     0x01, 0x00, 0x00, 0x00,  // f1 (uint8) + padding
     0x30, 0x00, 0x00, 0x03,  // f2 (uint32 enum)
     0x08, 0x00, 0x15, 0x16,  // f3 (uint8 enum) + padding + f4 (uint16)
@@ -1540,14 +1536,14 @@ uint8_t regression6_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // padding
 };
 
-uint8_t size5alignment1array_old_and_v1[] = {
+static const uint8_t size5alignment1array_old_and_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // a.data[0]
     0x05, 0x06, 0x07, 0x08,  // a.data[0] & a.data[1]
     0x09, 0x0a, 0x0b, 0x0c,  // a.data[1] & a.data[2]
     0x0d, 0x0e, 0x0f, 0x00,  // a.data[2] & padding
 };
 
-uint8_t size5alignment4array_old_and_v1[] = {
+static const uint8_t size5alignment4array_old_and_v1[] = {
     0x01, 0x02, 0x03, 0x04,  // a[0].four
     0x05, 0x00, 0x00, 0x00,  // a[0].one + padding
     0x06, 0x07, 0x08, 0x09,  // a[1].four
@@ -1556,7 +1552,7 @@ uint8_t size5alignment4array_old_and_v1[] = {
     0x0f, 0x00, 0x00, 0x00,  // a[2].one + padding
 };
 
-uint8_t size5alignment1vector_old_and_v1[] = {
+static const uint8_t size5alignment1vector_old_and_v1[] = {
     0x02, 0x00, 0x00, 0x00,  // v.size
     0x00, 0x00, 0x00, 0x00,  // v.size [cont.]
     0xFF, 0xFF, 0xFF, 0xFF,  // v.presence
@@ -1567,7 +1563,7 @@ uint8_t size5alignment1vector_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // padding for top-level struct
 };
 
-uint8_t size5alignment4vector_old_and_v1[] = {
+static const uint8_t size5alignment4vector_old_and_v1[] = {
     0x02, 0x00, 0x00, 0x00,  // v.size
     0x00, 0x00, 0x00, 0x00,  // v.size [cont.]
     0xFF, 0xFF, 0xFF, 0xFF,  // v.presence
@@ -1578,21 +1574,21 @@ uint8_t size5alignment4vector_old_and_v1[] = {
     0x0a, 0x00, 0x00, 0x00,  // a[1].one + padding
 };
 
-uint8_t table_nofields_v1_and_old[] = {
+static const uint8_t table_nofields_v1_and_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Table_NoFields.vector<envelope>.size
     0x00, 0x00, 0x00, 0x00,  // [cont.]
     0xFF, 0xFF, 0xFF, 0xFF,  // Table_NoFields.vector<envelope>.presence
     0xFF, 0xFF, 0xFF, 0xFF,  // [cont.]
 };
 
-uint8_t table_tworeservedfields_v1_and_old[] = {
+static const uint8_t table_tworeservedfields_v1_and_old[] = {
     0x00, 0x00, 0x00, 0x00,  // Table_TwoReservedFields.vector<envelope>.size
     0x00, 0x00, 0x00, 0x00,  // [cont.]
     0xFF, 0xFF, 0xFF, 0xFF,  // Table_TwoReservedFields.vector<envelope>.presence
     0xFF, 0xFF, 0xFF, 0xFF,  // [cont.]
 };
 
-uint8_t table_structwithreservedsandwich_v1_and_old[] = {
+static const uint8_t table_structwithreservedsandwich_v1_and_old[] = {
     0x03, 0x00, 0x00, 0x00,  // Table_StructWithReservedSandwich.vector<envelope>.size
     0x00, 0x00, 0x00, 0x00,  // [cont.]
     0xFF, 0xFF, 0xFF, 0xFF,  // Table_StructWithReservedSandwich.vector<envelope>.presence
@@ -1615,7 +1611,7 @@ uint8_t table_structwithreservedsandwich_v1_and_old[] = {
     0x00, 0x00, 0x00, 0x00,  // StructSize3Alignment1 padding [cont.]
 };
 
-uint8_t table_structwithuint32sandwich_v1_and_old[] = {
+static const uint8_t table_structwithuint32sandwich_v1_and_old[] = {
     0x04, 0x00, 0x00, 0x00,  // Table_StructWithUint32Sandwich.vector<envelope>.size
     0x00, 0x00, 0x00, 0x00,  // [cont.]
     0xFF, 0xFF, 0xFF, 0xFF,  // Table_StructWithUint32Sandwich.vector<envelope>.presence
@@ -1646,7 +1642,7 @@ uint8_t table_structwithuint32sandwich_v1_and_old[] = {
     0x00, 0x00, 0x00, 0x00,  // i2 padding
 };
 
-uint8_t table_unionwithvector_reservedsandwich_v1[] = {
+static const uint8_t table_unionwithvector_reservedsandwich_v1[] = {
     0x02, 0x00, 0x00, 0x00,  // Table_UnionWithVector_ReservedSandwich.vector<envelope>.size
     0x00, 0x00, 0x00, 0x00,  // [cont.]
     0xFF, 0xFF, 0xFF, 0xFF,  // Table_UnionWithVector_ReservedSandwich.vector<envelope>.presence
@@ -1673,7 +1669,7 @@ uint8_t table_unionwithvector_reservedsandwich_v1[] = {
     0x6f, 0x00, 0x00, 0x00,  // "hello" [cont.] and padding
 };
 
-uint8_t table_unionwithvector_reservedsandwich_old[] = {
+static const uint8_t table_unionwithvector_reservedsandwich_old[] = {
     0x02, 0x00, 0x00, 0x00,  // Table_UnionWithVector_ReservedSandwich.vector<envelope>.size
     0x00, 0x00, 0x00, 0x00,  // [cont.]
     0xFF, 0xFF, 0xFF, 0xFF,  // Table_UnionWithVector_ReservedSandwich.vector<envelope>.presence
@@ -1696,7 +1692,7 @@ uint8_t table_unionwithvector_reservedsandwich_old[] = {
     0x6f, 0x00, 0x00, 0x00,  // "hello" [cont.] and padding
 };
 
-uint8_t table_unionwithvector_structsandwich_v1[] = {
+static const uint8_t table_unionwithvector_structsandwich_v1[] = {
     0x03, 0x00, 0x00, 0x00,  // Table_UnionWithVector_StructSandwich.vector<envelope>.size
     0x00, 0x00, 0x00, 0x00,  // [cont.]
     0xFF, 0xFF, 0xFF, 0xFF,  // Table_UnionWithVector_StructSandwich.vector<envelope>.presence
@@ -1731,7 +1727,7 @@ uint8_t table_unionwithvector_structsandwich_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // s2 padding
 };
 
-uint8_t table_unionwithvector_structsandwich_old[] = {
+static const uint8_t table_unionwithvector_structsandwich_old[] = {
     0x03, 0x00, 0x00, 0x00,  // Table_UnionWithVector_StructSandwich.vector<envelope>.size
     0x00, 0x00, 0x00, 0x00,  // [cont.]
     0xFF, 0xFF, 0xFF, 0xFF,  // Table_UnionWithVector_StructSandwich.vector<envelope>.presence
@@ -1762,7 +1758,7 @@ uint8_t table_unionwithvector_structsandwich_old[] = {
     0x00, 0x00, 0x00, 0x00,  // s2 padding
 };
 
-uint8_t xunionwithstruct_old_and_v1[] = {
+static const uint8_t xunionwithstruct_old_and_v1[] = {
     0x0B, 0xC4, 0xB0, 0x04,  // XUnionWithStruct.xunion.ordinal
     0x00, 0x00, 0x00, 0x00,  // XUnionWithStruct.xunion.ordinal padding
     0x08, 0x00, 0x00, 0x00,  // XUnionWithStruct.xunion.envelope.num_bytes
@@ -1773,7 +1769,7 @@ uint8_t xunionwithstruct_old_and_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // padding [cont.]
 };
 
-uint8_t xunionwithunknownordinal_old_and_v1[] = {
+static const uint8_t xunionwithunknownordinal_old_and_v1[] = {
     0xBA, 0x5E, 0xBA, 0x11,  // XUnionWithStruct.xunion.ordinal
     0x00, 0x00, 0x00, 0x00,  // XUnionWithStruct.xunion.ordinal padding
     0x10, 0x00, 0x00, 0x00,  // XUnionWithStruct.xunion.envelope.num_bytes
@@ -1786,7 +1782,7 @@ uint8_t xunionwithunknownordinal_old_and_v1[] = {
     0x0D, 0x0E, 0x0F, 0x10,  // random data [cont.]
 };
 
-uint8_t arraystruct_v1[] = {
+static const uint8_t arraystruct_v1[] = {
     0x01, 0x00, 0x00, 0x00,  // unions[0].tag  0x00
     0x00, 0x00, 0x00, 0x00,  // unions[0].tag (padding)
     0x18, 0x00, 0x00, 0x00,  // unions[0].envelope.num_bytes
@@ -1867,7 +1863,7 @@ uint8_t arraystruct_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // optional_unions[2].s data padding
 };
 
-uint8_t arraystruct_old[] = {
+static const uint8_t arraystruct_old[] = {
     0x00, 0x00, 0x00, 0x00,  // unions[0].tag  0x00
     0x00, 0x00, 0x00, 0x00,  // unions[0].tag (padding)
     0x03, 0x00, 0x00, 0x00,  // unions[0].s.length
@@ -1933,7 +1929,7 @@ uint8_t arraystruct_old[] = {
     0x00, 0x00, 0x00, 0x00,  // optional_unions[2].s data padding
 };
 
-uint8_t mixed_fields_v1[] = {
+static const uint8_t mixed_fields_v1[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -1972,7 +1968,7 @@ uint8_t mixed_fields_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // UnionSize8Aligned4.data (padding)
 };
 
-uint8_t mixed_fields_old[] = {
+static const uint8_t mixed_fields_old[] = {
     0xf0, 0xf1, 0xf2, 0xf3,  // Fake transaction header
     0xf4, 0xf5, 0xf6, 0xf7,  // [cont.]
     0xf8, 0xf9, 0xfa, 0xfb,  // [cont.]
@@ -1995,7 +1991,7 @@ uint8_t mixed_fields_old[] = {
     0x00, 0x00, 0x00, 0x00,  // after (padding)
 };
 
-const uint8_t nocodingtablesstressor_v1[] = {
+static const uint8_t nocodingtablesstressor_v1[] = {
     0x11, 0x11, 0x11, 0x11,  // 0x00
     0x11, 0x11, 0x11, 0x11,  //
     0x22, 0x22, 0x22, 0x22,  //
@@ -2069,7 +2065,7 @@ const uint8_t nocodingtablesstressor_v1[] = {
     0xee, 0xee, 0xee, 0xee,  //
 };
 
-uint8_t nocodingtablesstressor_old[] = {
+static const uint8_t nocodingtablesstressor_old[] = {
     0x11, 0x11, 0x11, 0x11,  // 0x00
     0x11, 0x11, 0x11, 0x11,  //
 
@@ -2145,6 +2141,7 @@ uint8_t nocodingtablesstressor_old[] = {
     0xee, 0xee, 0xee, 0xee,  //
 };
 
+// This is a non-static global variable since it's also used by message_tests.cc.
 const uint8_t simpletablearraystruct_v1_and_old[] = {
     0x01, 0x00, 0x00, 0x00,  // 0x00
     0x00, 0x00, 0x00, 0x00,  //
@@ -2168,11 +2165,11 @@ const uint8_t simpletablearraystruct_v1_and_old[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t emptystruct_v1_and_old[] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+static const uint8_t emptystruct_v1_and_old[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t emptystruct_union_v1[] = {
+static const uint8_t emptystruct_union_v1[] = {
     0x02, 0x00, 0x00, 0x00,  // 0x00
     0x00, 0x00, 0x00, 0x00,  //
     0x08, 0x00, 0x00, 0x00,  //
@@ -2183,11 +2180,11 @@ const uint8_t emptystruct_union_v1[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t emptystruct_union_old[] = {
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+static const uint8_t emptystruct_union_old[] = {
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t stringunionvector_v1[] = {
+static const uint8_t stringunionvector_v1[] = {
     0x03, 0x00, 0x00, 0x00,  // 0x00
     0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff,  //
@@ -2222,7 +2219,7 @@ const uint8_t stringunionvector_v1[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t stringunionvector_old[] = {
+static const uint8_t stringunionvector_old[] = {
     0x03, 0x00, 0x00, 0x00,  // 0x00
     0x00, 0x00, 0x00, 0x00,  //
     0xff, 0xff, 0xff, 0xff,  //
@@ -2255,7 +2252,7 @@ const uint8_t stringunionvector_old[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t stringunionstructwrapperresponse_v1[] = {
+static const uint8_t stringunionstructwrapperresponse_v1[] = {
     0x00, 0x00, 0x00, 0x00,  // 0x00
     0x01, 0x00, 0x00, 0x01,  //
     0x00, 0x00, 0x00, 0x00,  //
@@ -2282,7 +2279,7 @@ const uint8_t stringunionstructwrapperresponse_v1[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t stringunionstructwrapperresponse_old[] = {
+static const uint8_t stringunionstructwrapperresponse_old[] = {
     0x00, 0x00, 0x00, 0x00,  // 0x00
     0x01, 0x00, 0x00, 0x01,  //
     0x00, 0x00, 0x00, 0x00,  //
@@ -2305,7 +2302,7 @@ const uint8_t stringunionstructwrapperresponse_old[] = {
     0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t launcher_create_component_request_v1[] = {
+static const uint8_t launcher_create_component_request_v1[] = {
     0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01,  // 0x00 tx header
     0x00, 0x00, 0x00, 0x00, 0x65, 0x29, 0x3F, 0x0D,  //
     0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 0x10 string url
@@ -2337,7 +2334,7 @@ const uint8_t launcher_create_component_request_v1[] = {
     0x2E, 0x63, 0x6D, 0x78, 0x00, 0x00, 0x00, 0x00,  // 0xe0
 };
 
-const uint8_t launcher_create_component_request_old[] = {
+static const uint8_t launcher_create_component_request_old[] = {
     0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01,  // 0x00
     0x00, 0x00, 0x00, 0x00, 0x65, 0x29, 0x3F, 0x0D,  //
     0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 0x10
@@ -2369,1038 +2366,1038 @@ const uint8_t launcher_create_component_request_old[] = {
     0x2E, 0x63, 0x6D, 0x78, 0x00, 0x00, 0x00, 0x00,  // 0xe0
 };
 
-const uint8_t compat_table_v1[] = {
+static const uint8_t compat_table_v1[] = {
     // 0: table header (in AllTypeTable)
-    0x04, 0x00, 0x00, 0x00, // vector num elements
-    0x00, 0x00, 0x00, 0x00, // (cont.)
-    0xff, 0xff, 0xff, 0xff, // vector presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x04, 0x00, 0x00, 0x00,  // vector num elements
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
+    0xff, 0xff, 0xff, 0xff,  // vector presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 16: empty string (in AllTypeTable)
-    0x00, 0x00, 0x00, 0x00, // vector num elemetns
-    0x00, 0x00, 0x00, 0x00, // (cont.)
-    0xff, 0xff, 0xff, 0xff, // vector presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x00, 0x00, 0x00, 0x00,  // vector num elemetns
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
+    0xff, 0xff, 0xff, 0xff,  // vector presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 32: env1 header
-    0x20, 0x00, 0x00, 0x00, // envelope num bytes
-    0x00, 0x00, 0x00, 0x00, // envelope num handles
-    0xff, 0xff, 0xff, 0xff, // envelope presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x20, 0x00, 0x00, 0x00,  // envelope num bytes
+    0x00, 0x00, 0x00, 0x00,  // envelope num handles
+    0xff, 0xff, 0xff, 0xff,  // envelope presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 48: env2 header
-    0x10, 0x00, 0x00, 0x00, // envelope num bytes
-    0x00, 0x00, 0x00, 0x00, // envelope num handles
-    0xff, 0xff, 0xff, 0xff, // envelope presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x10, 0x00, 0x00, 0x00,  // envelope num bytes
+    0x00, 0x00, 0x00, 0x00,  // envelope num handles
+    0xff, 0xff, 0xff, 0xff,  // envelope presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 64: env3 header
-    0x38, 0x00, 0x00, 0x00, // envelope num bytes
-    0x00, 0x00, 0x00, 0x00, // envelope num handles
-    0xff, 0xff, 0xff, 0xff, // envelope presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x38, 0x00, 0x00, 0x00,  // envelope num bytes
+    0x00, 0x00, 0x00, 0x00,  // envelope num handles
+    0xff, 0xff, 0xff, 0xff,  // envelope presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 80: env4 header
-    0x30, 0x00, 0x00, 0x00, // envelope num bytes
-    0x00, 0x00, 0x00, 0x00, // envelope num handles
-    0xff, 0xff, 0xff, 0xff, // envelope presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x30, 0x00, 0x00, 0x00,  // envelope num bytes
+    0x00, 0x00, 0x00, 0x00,  // envelope num handles
+    0xff, 0xff, 0xff, 0xff,  // envelope presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 96: env1.data, union-as-xunion header
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0x08, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x08, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 120: union-as-xunion data
-    0x01, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0x01, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 128: env2.data, array[3] of uint32
-    0x9d, 0x67, 0x29, 0x51, //
-    0x8e, 0xb4, 0x91, 0x94, //
-    0x51, 0x1b, 0xd2, 0x93, //
-    0x00, 0x00, 0x00, 0x00, //
+    0x9d, 0x67, 0x29, 0x51,  //
+    0x8e, 0xb4, 0x91, 0x94,  //
+    0x51, 0x1b, 0xd2, 0x93,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 144: env3.data, table header
-    0x01, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x01, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 160: env3.data.table env1
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 176: string header in table of env3.data
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 192: string data in table of env3.data (2 chars)
-    0xd5, 0x93, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0xd5, 0x93, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 200: env4.data, xunion
-    0xBD, 0xBE, 0xC5, 0x3B, // hashed ordinal
-    0x00, 0x00, 0x00, 0x00, //
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0xBD, 0xBE, 0xC5, 0x3B,  // hashed ordinal
+    0x00, 0x00, 0x00, 0x00,  //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 224: string header (xunion.data)
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 240: string.data (xunion.data cont.)
-    0xcd, 0x94, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0xcd, 0x94, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t compat_table_old[] = {
+static const uint8_t compat_table_old[] = {
     // 0: table header (in AllTypeTable)
-    0x04, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x04, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 16: empty string (in AllTypeTable)
-    0x00, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 32: env1 header
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 48: env2 header
-    0x10, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x10, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 64: env3 header
-    0x38, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x38, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 80: env4 header
-    0x30, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x30, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 96: env1.data, union
-    0x01, 0x00, 0x00, 0x00, // tag
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x01, 0x00, 0x00, 0x00, // data (16 bytes due to string header)
-    0x00, 0x00, 0x00, 0x00, // (cont.)
-    0x00, 0x00, 0x00, 0x00, // (cont.)
-    0x00, 0x00, 0x00, 0x00, // (cont.)
+    0x01, 0x00, 0x00, 0x00,  // tag
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x01, 0x00, 0x00, 0x00,  // data (16 bytes due to string header)
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
 
     // 120: env2.data, array[3] of uint32
-    0x9d, 0x67, 0x29, 0x51, //
-    0x8e, 0xb4, 0x91, 0x94, //
-    0x51, 0x1b, 0xd2, 0x93, //
-    0x00, 0x00, 0x00, 0x00, //
+    0x9d, 0x67, 0x29, 0x51,  //
+    0x8e, 0xb4, 0x91, 0x94,  //
+    0x51, 0x1b, 0xd2, 0x93,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 136: env3.data, table header
-    0x01, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x01, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 152: env3.data.table env1
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 168: string header in table of env3.data
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 184: string data in table of env3.data (2 chars)
-    0xd5, 0x93, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0xd5, 0x93, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 192: env4.data, xunion
-    0xBD, 0xBE, 0xC5, 0x3B, // hashed ordinal
-    0x00, 0x00, 0x00, 0x00, //
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0xBD, 0xBE, 0xC5, 0x3B,  // hashed ordinal
+    0x00, 0x00, 0x00, 0x00,  //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 216: string header (xunion.data)
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 232: string.data (xunion.data cont.)
-    0xcd, 0x94, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0xcd, 0x94, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t compat_table_wrong_xunion_ordinal_v1[] = {
+static const uint8_t compat_table_wrong_xunion_ordinal_v1[] = {
     // 0: table header (in AllTypeTable)
-    0x04, 0x00, 0x00, 0x00, // vector num elements
-    0x00, 0x00, 0x00, 0x00, // (cont.)
-    0xff, 0xff, 0xff, 0xff, // vector presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x04, 0x00, 0x00, 0x00,  // vector num elements
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
+    0xff, 0xff, 0xff, 0xff,  // vector presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 16: empty string (in AllTypeTable)
-    0x00, 0x00, 0x00, 0x00, // vector num elemetns
-    0x00, 0x00, 0x00, 0x00, // (cont.)
-    0xff, 0xff, 0xff, 0xff, // vector presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x00, 0x00, 0x00, 0x00,  // vector num elemetns
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
+    0xff, 0xff, 0xff, 0xff,  // vector presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 32: env1 header
-    0x20, 0x00, 0x00, 0x00, // envelope num bytes
-    0x00, 0x00, 0x00, 0x00, // envelope num handles
-    0xff, 0xff, 0xff, 0xff, // envelope presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x20, 0x00, 0x00, 0x00,  // envelope num bytes
+    0x00, 0x00, 0x00, 0x00,  // envelope num handles
+    0xff, 0xff, 0xff, 0xff,  // envelope presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 48: env2 header
-    0x10, 0x00, 0x00, 0x00, // envelope num bytes
-    0x00, 0x00, 0x00, 0x00, // envelope num handles
-    0xff, 0xff, 0xff, 0xff, // envelope presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x10, 0x00, 0x00, 0x00,  // envelope num bytes
+    0x00, 0x00, 0x00, 0x00,  // envelope num handles
+    0xff, 0xff, 0xff, 0xff,  // envelope presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 64: env3 header
-    0x38, 0x00, 0x00, 0x00, // envelope num bytes
-    0x00, 0x00, 0x00, 0x00, // envelope num handles
-    0xff, 0xff, 0xff, 0xff, // envelope presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x38, 0x00, 0x00, 0x00,  // envelope num bytes
+    0x00, 0x00, 0x00, 0x00,  // envelope num handles
+    0xff, 0xff, 0xff, 0xff,  // envelope presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 80: env4 header
-    0x30, 0x00, 0x00, 0x00, // envelope num bytes
-    0x00, 0x00, 0x00, 0x00, // envelope num handles
-    0xff, 0xff, 0xff, 0xff, // envelope presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x30, 0x00, 0x00, 0x00,  // envelope num bytes
+    0x00, 0x00, 0x00, 0x00,  // envelope num handles
+    0xff, 0xff, 0xff, 0xff,  // envelope presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 96: env1.data, union-as-xunion header
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0x08, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x08, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 120: union-as-xunion data
-    0x01, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0x01, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 128: env2.data, array[3] of uint32
-    0x9d, 0x67, 0x29, 0x51, //
-    0x8e, 0xb4, 0x91, 0x94, //
-    0x51, 0x1b, 0xd2, 0x93, //
-    0x00, 0x00, 0x00, 0x00, //
+    0x9d, 0x67, 0x29, 0x51,  //
+    0x8e, 0xb4, 0x91, 0x94,  //
+    0x51, 0x1b, 0xd2, 0x93,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 144: env3.data, table header
-    0x01, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x01, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 160: env3.data.table env1
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 176: string header in table of env3.data
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 192: string data in table of env3.data (2 chars)
-    0xd5, 0x93, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0xd5, 0x93, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 200: env4.data, xunion
-    0x12, 0x34, 0x45, 0x67, // wrong hashed ordinal, i.e. unknown
-    0x00, 0x00, 0x00, 0x00, //
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x12, 0x34, 0x45, 0x67,  // wrong hashed ordinal, i.e. unknown
+    0x00, 0x00, 0x00, 0x00,  //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 224: string header (xunion.data)
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 240: string.data (xunion.data cont.)
-    0xcd, 0x94, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0xcd, 0x94, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t compat_table_wrong_xunion_ordinal_old[] = {
+static const uint8_t compat_table_wrong_xunion_ordinal_old[] = {
     // 0: table header (in AllTypeTable)
-    0x04, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x04, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 16: empty string (in AllTypeTable)
-    0x00, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 32: env1 header
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 48: env2 header
-    0x10, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x10, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 64: env3 header
-    0x38, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x38, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 80: env4 header
-    0x30, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x30, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 96: env1.data, union
-    0x01, 0x00, 0x00, 0x00, // tag
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x01, 0x00, 0x00, 0x00, // data (16 bytes due to string header)
-    0x00, 0x00, 0x00, 0x00, // (cont.)
-    0x00, 0x00, 0x00, 0x00, // (cont.)
-    0x00, 0x00, 0x00, 0x00, // (cont.)
+    0x01, 0x00, 0x00, 0x00,  // tag
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x01, 0x00, 0x00, 0x00,  // data (16 bytes due to string header)
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
 
     // 120: env2.data, array[3] of uint32
-    0x9d, 0x67, 0x29, 0x51, //
-    0x8e, 0xb4, 0x91, 0x94, //
-    0x51, 0x1b, 0xd2, 0x93, //
-    0x00, 0x00, 0x00, 0x00, //
+    0x9d, 0x67, 0x29, 0x51,  //
+    0x8e, 0xb4, 0x91, 0x94,  //
+    0x51, 0x1b, 0xd2, 0x93,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 136: env3.data, table header
-    0x01, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x01, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 152: env3.data.table env1
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 168: string header in table of env3.data
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 184: string data in table of env3.data (2 chars)
-    0xd5, 0x93, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0xd5, 0x93, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 192: env4.data, xunion
-    0x12, 0x34, 0x45, 0x67, // wrong hashed ordinal, i.e. unknown
-    0x00, 0x00, 0x00, 0x00, //
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x12, 0x34, 0x45, 0x67,  // wrong hashed ordinal, i.e. unknown
+    0x00, 0x00, 0x00, 0x00,  //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 216: string header (xunion.data)
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 232: string.data (xunion.data cont.)
-    0xcd, 0x94, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0xcd, 0x94, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t table_with_xunion_old_and_v1[] = {
+static const uint8_t table_with_xunion_old_and_v1[] = {
     // 0: table header
-    0x01, 0x00, 0x00, 0x00, // vector num elements
-    0x00, 0x00, 0x00, 0x00, // (cont.)
-    0xff, 0xff, 0xff, 0xff, // vector presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x01, 0x00, 0x00, 0x00,  // vector num elements
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
+    0xff, 0xff, 0xff, 0xff,  // vector presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 16: env1
-    0x30, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x30, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 32: env1.data, xunion header
-    0xBD, 0xBE, 0xC5, 0x3B, // hashed ordinal
-    0x00, 0x00, 0x00, 0x00, //
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0xBD, 0xBE, 0xC5, 0x3B,  // hashed ordinal
+    0x00, 0x00, 0x00, 0x00,  //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 56: xunion data
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xcd, 0x94, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xcd, 0x94, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t table_with_xunion_wrong_xunion_ordinal_old_and_v1[] = {
+static const uint8_t table_with_xunion_wrong_xunion_ordinal_old_and_v1[] = {
     // 0: table header
-    0x01, 0x00, 0x00, 0x00, // vector num elements
-    0x00, 0x00, 0x00, 0x00, // (cont.)
-    0xff, 0xff, 0xff, 0xff, // vector presence
-    0xff, 0xff, 0xff, 0xff, // (cont.)
+    0x01, 0x00, 0x00, 0x00,  // vector num elements
+    0x00, 0x00, 0x00, 0x00,  // (cont.)
+    0xff, 0xff, 0xff, 0xff,  // vector presence
+    0xff, 0xff, 0xff, 0xff,  // (cont.)
 
     // 16: env1
-    0x30, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x30, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 32: env1.data, xunion header
-    0x12, 0x34, 0x45, 0x67, // wrong hashed ordinal, i.e. unknown
-    0x00, 0x00, 0x00, 0x00, //
-    0x18, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
+    0x12, 0x34, 0x45, 0x67,  // wrong hashed ordinal, i.e. unknown
+    0x00, 0x00, 0x00, 0x00,  //
+    0x18, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 56: xunion data
-    0x02, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xff, 0xff, 0xff, 0xff, //
-    0xcd, 0x94, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xcd, 0x94, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t regression7_table_union_xunion_v1[] = {
+static const uint8_t regression7_table_union_xunion_v1[] = {
     // 0: TableOfUnionThenXUnionThenTableThenXUnionThenUnion header
-    0x03, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x03, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 16: TableOfUnionThenXUnionThenTableThenXUnionThenUnion env1
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 32: TableOfUnionThenXUnionThenTableThenXUnionThenUnion env2
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 48: TableOfUnionThenXUnionThenTableThenXUnionThenUnion env3
-    0x98, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x98, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 64: UnionOfXUnionThenTableThenXUnionThenUnion-as-xunion header
-    0x03, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x80, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x03, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x80, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 88: XUnionOfTableThenXUnionThenUnion header
-    0x4E, 0x93, 0x15, 0x5B,
-    0x00, 0x00, 0x00, 0x00,
-    0x68, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x4E, 0x93, 0x15, 0x5B,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x68, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 112: TableOfXUnionThenUnion header
-    0x02, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 128: TableOfXUnionThenUnion env1
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 146: TableOfXUnionThenUnion env2
-    0x38, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x38, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 172: XUnionOfUnion header
-    0x5B, 0x10, 0x67, 0x5F,
-    0x00, 0x00, 0x00, 0x00,
-    0x20, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x5B, 0x10, 0x67, 0x5F,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x20, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 196: UnionAtTheBottom-as-xunion header
-    0x03, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x08, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x03, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x08, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 220: UnionAtTheBottom-as-xunion data (tiny)
-    0x08, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x08, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t regression7_table_union_xunion_old[] = {
+static const uint8_t regression7_table_union_xunion_old[] = {
     // 0: TableOfUnionThenXUnionThenTableThenXUnionThenUnion header
-    0x03, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x03, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 16: TableOfUnionThenXUnionThenTableThenXUnionThenUnion env1
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 32: TableOfUnionThenXUnionThenTableThenXUnionThenUnion env2
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 48: TableOfUnionThenXUnionThenTableThenXUnionThenUnion env3
-    0x70, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x70, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 64: UnionOfXUnionThenTableThenXUnionThenUnion
-    0x01, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x4E, 0x93, 0x15, 0x5B, // XUnionOfTableThenXUnionThenUnion header
-    0x00, 0x00, 0x00, 0x00,
-    0x50, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x01, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x4E, 0x93, 0x15, 0x5B,  // XUnionOfTableThenXUnionThenUnion header
+    0x00, 0x00, 0x00, 0x00,  //
+    0x50, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 96: TableOfXUnionThenUnion header
-    0x02, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x02, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 112: TableOfXUnionThenUnion env1
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 128: TableOfXUnionThenUnion env2
-    0x20, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x20, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 146: XUnionOfUnion header
-    0x5B, 0x10, 0x67, 0x5F,
-    0x00, 0x00, 0x00, 0x00,
-    0x08, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x5B, 0x10, 0x67, 0x5F,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x08, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 170: UnionAtTheBottom header
-    0x02, 0x00, 0x00, 0x00,
-    0x08, 0x00, 0x00, 0x00, // tiny
+    0x02, 0x00, 0x00, 0x00,  //
+    0x08, 0x00, 0x00, 0x00,  // tiny
 };
 
-const uint8_t regression8_opt_union_size12_aligned4_v1[] = {
+static const uint8_t regression8_opt_union_size12_aligned4_v1[] = {
     // 0: opt_union1, UnionSize12Aligned4-as-xunion present
-    0x04, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x08, 0x00, 0x00, 0x00, // num_bytes
-    0x00, 0x00, 0x00, 0x00, // num_handles
-    0xff, 0xff, 0xff, 0xff, // present
-    0xff, 0xff, 0xff, 0xff, // present (cont.)
+    0x04, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x08, 0x00, 0x00, 0x00,  // num_bytes
+    0x00, 0x00, 0x00, 0x00,  // num_handles
+    0xff, 0xff, 0xff, 0xff,  // present
+    0xff, 0xff, 0xff, 0xff,  // present (cont.)
 
     // 24: opt_union2, UnionSize12Aligned4-as-xunion absent
-    0x00, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x00, 0x00, 0x00, 0x00, // num_bytes
-    0x00, 0x00, 0x00, 0x00, // num_handles
-    0x00, 0x00, 0x00, 0x00, // absent
-    0x00, 0x00, 0x00, 0x00, // absent (cont.)
+    0x00, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x00, 0x00, 0x00, 0x00,  // num_bytes
+    0x00, 0x00, 0x00, 0x00,  // num_handles
+    0x00, 0x00, 0x00, 0x00,  // absent
+    0x00, 0x00, 0x00, 0x00,  // absent (cont.)
 
     // 48: opt_union3, UnionSize12Aligned4-as-xunion present
-    0x04, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x08, 0x00, 0x00, 0x00, // num_bytes
-    0x00, 0x00, 0x00, 0x00, // num_handles
-    0xff, 0xff, 0xff, 0xff, // present
-    0xff, 0xff, 0xff, 0xff, // present (cont.)
+    0x04, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x08, 0x00, 0x00, 0x00,  // num_bytes
+    0x00, 0x00, 0x00, 0x00,  // num_handles
+    0xff, 0xff, 0xff, 0xff,  // present
+    0xff, 0xff, 0xff, 0xff,  // present (cont.)
 
     // 72: opt_union1.data
-    0xa1, 0xa2, 0xa3, 0xa4, // array<uint8>:6
-    0xa5, 0xa6, 0x00, 0x00, // array<uint8>:6 (cont.) + padding
+    0xa1, 0xa2, 0xa3, 0xa4,  // array<uint8>:6
+    0xa5, 0xa6, 0x00, 0x00,  // array<uint8>:6 (cont.) + padding
 
     // 80: opt_union2.data
-    0xb1, 0xb2, 0xb3, 0xb4, // array<uint8>:6
-    0xb5, 0xb6, 0x00, 0x00, // array<uint8>:6 (cont.) + padding
+    0xb1, 0xb2, 0xb3, 0xb4,  // array<uint8>:6
+    0xb5, 0xb6, 0x00, 0x00,  // array<uint8>:6 (cont.) + padding
 };
 
-const uint8_t regression8_opt_union_size12_aligned4_old[] = {
+static const uint8_t regression8_opt_union_size12_aligned4_old[] = {
     // 0: presence
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 8: absence
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 16: presence
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 24: UnionSize12Aligned4-as-xunion
-    0x03, 0x00, 0x00, 0x00, // tag
-    0xa1, 0xa2, 0xa3, 0xa4, // array<uint8>:6
-    0xa5, 0xa6, 0x00, 0x00, // array<uint8>:6 (cont.) + padding
-    0x00, 0x00, 0x00, 0x00, // padding
+    0x03, 0x00, 0x00, 0x00,  // tag
+    0xa1, 0xa2, 0xa3, 0xa4,  // array<uint8>:6
+    0xa5, 0xa6, 0x00, 0x00,  // array<uint8>:6 (cont.) + padding
+    0x00, 0x00, 0x00, 0x00,  // padding
 
     // 40: UnionSize12Aligned4-as-xunion
-    0x03, 0x00, 0x00, 0x00, // tag
-    0xb1, 0xb2, 0xb3, 0xb4, // array<uint8>:6
-    0xb5, 0xb6, 0x00, 0x00, // array<uint8>:6 (cont.) + padding
-    0x00, 0x00, 0x00, 0x00, // padding
+    0x03, 0x00, 0x00, 0x00,  // tag
+    0xb1, 0xb2, 0xb3, 0xb4,  // array<uint8>:6
+    0xb5, 0xb6, 0x00, 0x00,  // array<uint8>:6 (cont.) + padding
+    0x00, 0x00, 0x00, 0x00,  // padding
 };
 
-const uint8_t regression8_vector_of_opt_union_size12_aligned4_v1[] = {
+static const uint8_t regression8_vector_of_opt_union_size12_aligned4_v1[] = {
     // 0: vector header
-    0x05, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x05, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 16: vector[0] UnionSize12Aligned4-as-xunion absent
-    0x00, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x00, 0x00, 0x00, 0x00, // num_bytes
-    0x00, 0x00, 0x00, 0x00, // num_handles
-    0x00, 0x00, 0x00, 0x00, // absent
-    0x00, 0x00, 0x00, 0x00, // absent (cont.)
+    0x00, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x00, 0x00, 0x00, 0x00,  // num_bytes
+    0x00, 0x00, 0x00, 0x00,  // num_handles
+    0x00, 0x00, 0x00, 0x00,  // absent
+    0x00, 0x00, 0x00, 0x00,  // absent (cont.)
 
     // 40: vector[1] UnionSize12Aligned4-as-xunion present
-    0x04, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x08, 0x00, 0x00, 0x00, // num_bytes
-    0x00, 0x00, 0x00, 0x00, // num_handles
-    0xff, 0xff, 0xff, 0xff, // present
-    0xff, 0xff, 0xff, 0xff, // present (cont.)
+    0x04, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x08, 0x00, 0x00, 0x00,  // num_bytes
+    0x00, 0x00, 0x00, 0x00,  // num_handles
+    0xff, 0xff, 0xff, 0xff,  // present
+    0xff, 0xff, 0xff, 0xff,  // present (cont.)
 
     // 64: vector[2] UnionSize12Aligned4-as-xunion absent
-    0x00, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x00, 0x00, 0x00, 0x00, // num_bytes
-    0x00, 0x00, 0x00, 0x00, // num_handles
-    0x00, 0x00, 0x00, 0x00, // absent
-    0x00, 0x00, 0x00, 0x00, // absent (cont.)
+    0x00, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x00, 0x00, 0x00, 0x00,  // num_bytes
+    0x00, 0x00, 0x00, 0x00,  // num_handles
+    0x00, 0x00, 0x00, 0x00,  // absent
+    0x00, 0x00, 0x00, 0x00,  // absent (cont.)
 
     // 88: vector[3] UnionSize12Aligned4-as-xunion present
-    0x04, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x08, 0x00, 0x00, 0x00, // num_bytes
-    0x00, 0x00, 0x00, 0x00, // num_handles
-    0xff, 0xff, 0xff, 0xff, // present
-    0xff, 0xff, 0xff, 0xff, // present (cont.)
+    0x04, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x08, 0x00, 0x00, 0x00,  // num_bytes
+    0x00, 0x00, 0x00, 0x00,  // num_handles
+    0xff, 0xff, 0xff, 0xff,  // present
+    0xff, 0xff, 0xff, 0xff,  // present (cont.)
 
     // 112: vector[4] UnionSize12Aligned4-as-xunion absent
-    0x00, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x00, 0x00, 0x00, 0x00, // num_bytes
-    0x00, 0x00, 0x00, 0x00, // num_handles
-    0x00, 0x00, 0x00, 0x00, // absent
-    0x00, 0x00, 0x00, 0x00, // absent (cont.)
+    0x00, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x00, 0x00, 0x00, 0x00,  // num_bytes
+    0x00, 0x00, 0x00, 0x00,  // num_handles
+    0x00, 0x00, 0x00, 0x00,  // absent
+    0x00, 0x00, 0x00, 0x00,  // absent (cont.)
 
     // 136: vector[1].data
-    0xa1, 0xa2, 0xa3, 0xa4, // array<uint8>:6
-    0xa5, 0xa6, 0x00, 0x00, // array<uint8>:6 (cont.) + padding
+    0xa1, 0xa2, 0xa3, 0xa4,  // array<uint8>:6
+    0xa5, 0xa6, 0x00, 0x00,  // array<uint8>:6 (cont.) + padding
 
     // 144: vector[2].data
-    0xb1, 0xb2, 0xb3, 0xb4, // array<uint8>:6
-    0xb5, 0xb6, 0x00, 0x00, // array<uint8>:6 (cont.) + padding
+    0xb1, 0xb2, 0xb3, 0xb4,  // array<uint8>:6
+    0xb5, 0xb6, 0x00, 0x00,  // array<uint8>:6 (cont.) + padding
 };
 
-const uint8_t regression8_vector_of_opt_union_size12_aligned4_old[] = {
+static const uint8_t regression8_vector_of_opt_union_size12_aligned4_old[] = {
     // 0: vector header
-    0x05, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x05, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 16: vector[0] (absent)
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 24: vector[1] (present)
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 32: vector[2] (absent)
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 40: vector[3] (present)
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 48: vector[4] (absent)
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 56: vector[1].data, UnionSize12Aligned4-as-xunion
-    0x03, 0x00, 0x00, 0x00, // tag
-    0xa1, 0xa2, 0xa3, 0xa4, // array<uint8>:6
-    0xa5, 0xa6, 0x00, 0x00, // array<uint8>:6 (cont.) + padding
-    0x00, 0x00, 0x00, 0x00, // padding
+    0x03, 0x00, 0x00, 0x00,  // tag
+    0xa1, 0xa2, 0xa3, 0xa4,  // array<uint8>:6
+    0xa5, 0xa6, 0x00, 0x00,  // array<uint8>:6 (cont.) + padding
+    0x00, 0x00, 0x00, 0x00,  // padding
 
     // 72: vector[3].data, UnionSize12Aligned4-as-xunion
-    0x03, 0x00, 0x00, 0x00, // tag
-    0xb1, 0xb2, 0xb3, 0xb4, // array<uint8>:6
-    0xb5, 0xb6, 0x00, 0x00, // array<uint8>:6 (cont.) + padding
-    0x00, 0x00, 0x00, 0x00, // padding
+    0x03, 0x00, 0x00, 0x00,  // tag
+    0xb1, 0xb2, 0xb3, 0xb4,  // array<uint8>:6
+    0xb5, 0xb6, 0x00, 0x00,  // array<uint8>:6 (cont.) + padding
+    0x00, 0x00, 0x00, 0x00,  // padding
 };
 
-const uint8_t regression8_table_with_union_size12_aligned4_v1[] = {
+static const uint8_t regression8_table_with_union_size12_aligned4_v1[] = {
     // 0: TableWithUnionSize12Aligned4 header
-    0x05, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x05, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 16: TableWithUnionSize12Aligned4 env1
-    0x08, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x08, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 32: TableWithUnionSize12Aligned4 env2
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 48: TableWithUnionSize12Aligned4 env3
-    0x20, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x20, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 64: TableWithUnionSize12Aligned4 env4
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 80: TableWithUnionSize12Aligned4 env5
-    0x08, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x08, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 96: env1.data, uint8 before
-    0xaa, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0xaa, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 104: env3.data, UnionSize12Aligned4-as-xunion
-    0x04, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x08, 0x00, 0x00, 0x00, // num_bytes
-    0x00, 0x00, 0x00, 0x00, // num_handles
-    0xff, 0xff, 0xff, 0xff, // presence
-    0xff, 0xff, 0xff, 0xff, // presence (cont.)
+    0x04, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x08, 0x00, 0x00, 0x00,  // num_bytes
+    0x00, 0x00, 0x00, 0x00,  // num_handles
+    0xff, 0xff, 0xff, 0xff,  // presence
+    0xff, 0xff, 0xff, 0xff,  // presence (cont.)
 
     // UnionSize12Aligned4-as-xunion.data
-    0xb1, 0xb2, 0xb3, 0xb4, // array<uint8>:6
-    0xb5, 0xb6, 0x00, 0x00, // array<uint8>:6 (cont.) + padding
+    0xb1, 0xb2, 0xb3, 0xb4,  // array<uint8>:6
+    0xb5, 0xb6, 0x00, 0x00,  // array<uint8>:6 (cont.) + padding
 
     // 120: env5.data, uint8 after
-    0xbb, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0xbb, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t regression8_table_with_union_size12_aligned4_old[] = {
+static const uint8_t regression8_table_with_union_size12_aligned4_old[] = {
     // 0: TableWithUnionSize12Aligned4 header
-    0x05, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x05, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 16: TableWithUnionSize12Aligned4 env1
-    0x08, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x08, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 32: TableWithUnionSize12Aligned4 env2
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 48: TableWithUnionSize12Aligned4 env3
-    0x10, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x10, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 64: TableWithUnionSize12Aligned4 env4
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 80: TableWithUnionSize12Aligned4 env5
-    0x08, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff,
+    0x08, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  //
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 96: env1.data, uint8 before
-    0xaa, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0xaa, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 104: env3.data, UnionSize12Aligned4
-    0x03, 0x00, 0x00, 0x00, // tag
-    0xb1, 0xb2, 0xb3, 0xb4, // array<uint8>:6
-    0xb5, 0xb6, 0x00, 0x00, // array<uint8>:6 (cont.) + padding
-    0x00, 0x00, 0x00, 0x00, // padding
+    0x03, 0x00, 0x00, 0x00,  // tag
+    0xb1, 0xb2, 0xb3, 0xb4,  // array<uint8>:6
+    0xb5, 0xb6, 0x00, 0x00,  // array<uint8>:6 (cont.) + padding
+    0x00, 0x00, 0x00, 0x00,  // padding
 
     // 120: env5.data, uint8 after
-    0xbb, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
+    0xbb, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 };
 
-const uint8_t regression9_response_v1[] = {
-    0x01, 0x00, 0x00, 0x00, // txn header
-    0x01, 0x00, 0x00, 0x01, //
-    0x00, 0x00, 0x00, 0x00, //
-    0x69, 0xc9, 0xcb, 0x56, //
+static const uint8_t regression9_response_v1[] = {
+    0x01, 0x00, 0x00, 0x00,  // txn header
+    0x01, 0x00, 0x00, 0x01,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x69, 0xc9, 0xcb, 0x56,  //
 
     // 16: result union xunion header
-    0x01, 0x00, 0x00, 0x00, // ordinal (success)
-    0x00, 0x00, 0x00, 0x00, //
-    0x68, 0x00, 0x00, 0x00, // num bytes
-    0x00, 0x00, 0x00, 0x00, // num handles
-    0xff, 0xff, 0xff, 0xff, // presence
-    0xff, 0xff, 0xff, 0xff, //
+    0x01, 0x00, 0x00, 0x00,  // ordinal (success)
+    0x00, 0x00, 0x00, 0x00,  //
+    0x68, 0x00, 0x00, 0x00,  // num bytes
+    0x00, 0x00, 0x00, 0x00,  // num handles
+    0xff, 0xff, 0xff, 0xff,  // presence
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 40: Unions.u xunion header
-    0x01, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, //
-    0x30, 0x00, 0x00, 0x00, // num bytes
-    0x00, 0x00, 0x00, 0x00, // num handles
-    0xff, 0xff, 0xff, 0xff, // presence
-    0xff, 0xff, 0xff, 0xff, //
+    0x01, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  //
+    0x30, 0x00, 0x00, 0x00,  // num bytes
+    0x00, 0x00, 0x00, 0x00,  // num handles
+    0xff, 0xff, 0xff, 0xff,  // presence
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 64: Unions.nullable_u xunion header
-    0x02, 0x00, 0x00, 0x00, // ordinal
-    0x00, 0x00, 0x00, 0x00, //
-    0x08, 0x00, 0x00, 0x00, // num bytes
-    0x00, 0x00, 0x00, 0x00, // num handles
-    0xff, 0xff, 0xff, 0xff, // presence
-    0xff, 0xff, 0xff, 0xff, //
+    0x02, 0x00, 0x00, 0x00,  // ordinal
+    0x00, 0x00, 0x00, 0x00,  //
+    0x08, 0x00, 0x00, 0x00,  // num bytes
+    0x00, 0x00, 0x00, 0x00,  // num handles
+    0xff, 0xff, 0xff, 0xff,  // presence
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 88: Unions.u.s vector header
-    0x20, 0x00, 0x00, 0x00, // num bytes
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, // presence
-    0xff, 0xff, 0xff, 0xff, //
+    0x20, 0x00, 0x00, 0x00,  // num bytes
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  // presence
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 104: Unions.u.s.data
-    0xf2, 0x87, 0xa3, 0xb4, //
-    0x4c, 0xf1, 0x9f, 0x9b, //
-    0x83, 0xf3, 0x86, 0xa9, //
-    0xa0, 0xf2, 0x93, 0xa4, //
-    0xab, 0xf0, 0xb4, 0x81, //
-    0xb9, 0xf0, 0xbb, 0x95, //
-    0xb7, 0xf1, 0xa7, 0x93, //
-    0xac, 0xe9, 0x95, 0x85, //
+    0xf2, 0x87, 0xa3, 0xb4,  //
+    0x4c, 0xf1, 0x9f, 0x9b,  //
+    0x83, 0xf3, 0x86, 0xa9,  //
+    0xa0, 0xf2, 0x93, 0xa4,  //
+    0xab, 0xf0, 0xb4, 0x81,  //
+    0xb9, 0xf0, 0xbb, 0x95,  //
+    0xb7, 0xf1, 0xa7, 0x93,  //
+    0xac, 0xe9, 0x95, 0x85,  //
 
     // 136: Unions.nullable_u.data
-    0x00, 0x00, 0x00, 0x00, // false
-    0x00, 0x00, 0x00, 0x00, // padding
+    0x00, 0x00, 0x00, 0x00,  // false
+    0x00, 0x00, 0x00, 0x00,  // padding
 };
 
-const uint8_t regression9_response_old[] = {
-    0x01, 0x00, 0x00, 0x00, // header
-    0x01, 0x00, 0x00, 0x01, //
-    0x00, 0x00, 0x00, 0x00, //
-    0x69, 0xc9, 0xcb, 0x56, //
+static const uint8_t regression9_response_old[] = {
+    0x01, 0x00, 0x00, 0x00,  // header
+    0x01, 0x00, 0x00, 0x01,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x69, 0xc9, 0xcb, 0x56,  //
 
     // 16: result union xunion header
-    0x00, 0x00, 0x00, 0x00, // tag (success)
-    0x00, 0x00, 0x00, 0x00, //
+    0x00, 0x00, 0x00, 0x00,  // tag (success)
+    0x00, 0x00, 0x00, 0x00,  //
 
     // 32: Unions.u
-    0x00, 0x00, 0x00, 0x00, // tag (0)
-    0x00, 0x00, 0x00, 0x00, //
-    0x20, 0x00, 0x00, 0x00, // data num bytes
-    0x00, 0x00, 0x00, 0x00, //
-    0xff, 0xff, 0xff, 0xff, // data presence
-    0xff, 0xff, 0xff, 0xff, //
+    0x00, 0x00, 0x00, 0x00,  // tag (0)
+    0x00, 0x00, 0x00, 0x00,  //
+    0x20, 0x00, 0x00, 0x00,  // data num bytes
+    0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff,  // data presence
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 56: Unions.nullable_u
-    0xff, 0xff, 0xff, 0xff, // presence
-    0xff, 0xff, 0xff, 0xff, //
+    0xff, 0xff, 0xff, 0xff,  // presence
+    0xff, 0xff, 0xff, 0xff,  //
 
     // 64: Unions.u data
-    0xf2, 0x87, 0xa3, 0xb4, //
-    0x4c, 0xf1, 0x9f, 0x9b, //
-    0x83, 0xf3, 0x86, 0xa9, //
-    0xa0, 0xf2, 0x93, 0xa4, //
-    0xab, 0xf0, 0xb4, 0x81, //
-    0xb9, 0xf0, 0xbb, 0x95, //
-    0xb7, 0xf1, 0xa7, 0x93, //
-    0xac, 0xe9, 0x95, 0x85, //
+    0xf2, 0x87, 0xa3, 0xb4,  //
+    0x4c, 0xf1, 0x9f, 0x9b,  //
+    0x83, 0xf3, 0x86, 0xa9,  //
+    0xa0, 0xf2, 0x93, 0xa4,  //
+    0xab, 0xf0, 0xb4, 0x81,  //
+    0xb9, 0xf0, 0xbb, 0x95,  //
+    0xb7, 0xf1, 0xa7, 0x93,  //
+    0xac, 0xe9, 0x95, 0x85,  //
 
     // 70 Unions.nullable u data
-    0x01, 0x00, 0x00, 0x00, // tag
-    0x00, 0x00, 0x00, 0x00, // data (false)
-    0x00, 0x00, 0x00, 0x00, // padding
-    0x00, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
-    0x00, 0x00, 0x00, 0x00, //
+    0x01, 0x00, 0x00, 0x00,  // tag
+    0x00, 0x00, 0x00, 0x00,  // data (false)
+    0x00, 0x00, 0x00, 0x00,  // padding
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00,  //
 };
 
-uint8_t regression10_old_and_v1[] = {
+static const uint8_t regression10_old_and_v1[] = {
     // 0: table header
-    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
 
     // 16: env1, member x
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 
     // 32: env2
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 
     // 48: env3
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 
     // 64: env4
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 
     // 80: env5, member y
-    0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
 
     // 96: env5.data, , member x's data
-    0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0,
+    0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0,  //
 };
 
-uint8_t regression11_unknown_content_v1[] = {
+static const uint8_t regression11_unknown_content_v1[] = {
     // 0: union-as-xunion
-    0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x60, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x60, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
 
     // 24: table header
-    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
 
     // 40: table env1
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 
     // 56: table env2 (0x30 bytes, 0x05 handles)
-    0x30, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0x30, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
 
     // 72: table env2.data, some unknown content reported as 48 bytes (0x30),
     // including 5 handles. We do not need to have any 'handle present'
     // indicators, since the transformer should not care about this. It should
     // only copy this data block wholesale, and properly increment the various
     // traversal counters.
-    0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8,
-    0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8,
-    0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8,
-    0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8,
-    0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8,
-    0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,
+    0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8,  //
+    0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8,  //
+    0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8,  //
+    0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8,  //
+    0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8,  //
+    0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,  //
 };
 
-uint8_t regression11_unknown_content_old[] = {
+static const uint8_t regression11_unknown_content_old[] = {
     // 0: union tag + padding
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 
     // 8: union data, i.e. table header
-    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
 
     // 24: table env1
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 
     // 40: table env2 (0x30 bytes, 0x05 handles)
-    0x30, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0x30, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
 
     // 56: table env2.data, some unknown content reported as 48 bytes (0x30),
     // including 5 handles. We do not need to have any 'handle present'
     // indicators, since the transformer should not care about this. It should
     // only copy this data block wholesale, and properly increment the various
     // traversal counters.
-    0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8,
-    0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8,
-    0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8,
-    0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8,
-    0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8,
-    0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,
+    0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8,  //
+    0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8,  //
+    0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8,  //
+    0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8,  //
+    0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8,  //
+    0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8,  //
 };
 
-bool run_fidl_transform(const fidl_type_t* v1_type, const fidl_type_t* old_type,
-                        const uint8_t* v1_bytes, uint32_t v1_num_bytes, const uint8_t* old_bytes,
-                        uint32_t old_num_bytes) {
+static bool run_fidl_transform(const fidl_type_t* v1_type, const fidl_type_t* old_type,
+                               const uint8_t* v1_bytes, uint32_t v1_num_bytes,
+                               const uint8_t* old_bytes, uint32_t old_num_bytes) {
   BEGIN_HELPER;
 
   // TODO(apang): Refactor this function out so that we have individual test
@@ -3411,7 +3408,7 @@ bool run_fidl_transform(const fidl_type_t* v1_type, const fidl_type_t* old_type,
     uint32_t actual_old_num_bytes;
     memset(actual_old_bytes, 0xcc /* poison */, ZX_CHANNEL_MAX_MSG_BYTES);
 
-    const char* error = nullptr;
+    const char* error = NULL;
     zx_status_t status =
         fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, v1_type, v1_bytes, v1_num_bytes,
                        actual_old_bytes, old_num_bytes, &actual_old_num_bytes, &error);
@@ -3419,8 +3416,9 @@ bool run_fidl_transform(const fidl_type_t* v1_type, const fidl_type_t* old_type,
       printf("ERROR: %s\n", error);
     }
 
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_TRUE(cmp_payload(actual_old_bytes, actual_old_num_bytes, old_bytes, old_num_bytes));
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_TRUE_NOMSG(
+        cmp_payload(actual_old_bytes, actual_old_num_bytes, old_bytes, old_num_bytes));
   }
 
   {
@@ -3428,7 +3426,7 @@ bool run_fidl_transform(const fidl_type_t* v1_type, const fidl_type_t* old_type,
     uint32_t actual_v1_num_bytes;
     memset(actual_v1_bytes, 0xcc /* poison */, ZX_CHANNEL_MAX_MSG_BYTES);
 
-    const char* error = nullptr;
+    const char* error = NULL;
     zx_status_t status =
         fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, old_type, old_bytes, old_num_bytes,
                        actual_v1_bytes, v1_num_bytes, &actual_v1_num_bytes, &error);
@@ -3436,39 +3434,39 @@ bool run_fidl_transform(const fidl_type_t* v1_type, const fidl_type_t* old_type,
       printf("ERROR: %s\n", error);
     }
 
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_TRUE(cmp_payload(actual_v1_bytes, actual_v1_num_bytes, v1_bytes, v1_num_bytes));
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_TRUE_NOMSG(cmp_payload(actual_v1_bytes, actual_v1_num_bytes, v1_bytes, v1_num_bytes));
   }
 
   END_HELPER;
 }
 
-bool sandwich1() {
+static bool sandwich1(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich1Table, &example_Sandwich1Table,
-                                 sandwich1_case1_v1, sizeof(sandwich1_case1_v1),
-                                 sandwich1_case1_old, sizeof(sandwich1_case1_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich1Table, &example_Sandwich1Table,
+                                       sandwich1_case1_v1, sizeof(sandwich1_case1_v1),
+                                       sandwich1_case1_old, sizeof(sandwich1_case1_old)));
 
   END_TEST;
 }
 
-bool sandwich1_with_hdr() {
+static bool sandwich1_with_hdr(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_FakeProtocolSendSandwich1RequestTable,
-                                 &example_FakeProtocolSendSandwich1RequestTable,
-                                 sandwich1_case1_with_hdr_v1, sizeof(sandwich1_case1_with_hdr_v1),
-                                 sandwich1_case1_with_hdr_old,
-                                 sizeof(sandwich1_case1_with_hdr_old)));
+  ASSERT_TRUE_NOMSG(
+      run_fidl_transform(&v1_example_FakeProtocolSendSandwich1RequestTable,
+                         &example_FakeProtocolSendSandwich1RequestTable,
+                         sandwich1_case1_with_hdr_v1, sizeof(sandwich1_case1_with_hdr_v1),
+                         sandwich1_case1_with_hdr_old, sizeof(sandwich1_case1_with_hdr_old)));
 
   END_TEST;
 }
 
-bool sandwich1_with_opt_union_present() {
+static bool sandwich1_with_opt_union_present(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_Sandwich1WithOptUnionTable, &example_Sandwich1WithOptUnionTable,
       sandwich1_with_opt_union_present_v1, sizeof(sandwich1_with_opt_union_present_v1),
       sandwich1_with_opt_union_present_old, sizeof(sandwich1_with_opt_union_present_old)));
@@ -3476,10 +3474,10 @@ bool sandwich1_with_opt_union_present() {
   END_TEST;
 }
 
-bool sandwich1_with_opt_union_absent() {
+static bool sandwich1_with_opt_union_absent(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_Sandwich1WithOptUnionTable, &example_Sandwich1WithOptUnionTable,
       sandwich1_with_opt_union_absent_v1, sizeof(sandwich1_with_opt_union_absent_v1),
       sandwich1_with_opt_union_absent_old, sizeof(sandwich1_with_opt_union_absent_old)));
@@ -3487,50 +3485,51 @@ bool sandwich1_with_opt_union_absent() {
   END_TEST;
 }
 
-bool sandwich2() {
+static bool sandwich2(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich2Table, &example_Sandwich2Table,
-                                 sandwich2_case1_v1, sizeof(sandwich2_case1_v1),
-                                 sandwich2_case1_old, sizeof(sandwich2_case1_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich2Table, &example_Sandwich2Table,
+                                       sandwich2_case1_v1, sizeof(sandwich2_case1_v1),
+                                       sandwich2_case1_old, sizeof(sandwich2_case1_old)));
 
   END_TEST;
 }
 
-bool sandwich3() {
+static bool sandwich3(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich3Table, &example_Sandwich3Table,
-                                 sandwich3_case1_v1, sizeof(sandwich3_case1_v1),
-                                 sandwich3_case1_old, sizeof(sandwich3_case1_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich3Table, &example_Sandwich3Table,
+                                       sandwich3_case1_v1, sizeof(sandwich3_case1_v1),
+                                       sandwich3_case1_old, sizeof(sandwich3_case1_old)));
 
   END_TEST;
 }
 
-bool sandwich4() {
+static bool sandwich4(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich4Table, &example_Sandwich4Table,
-                                 sandwich4_case1_v1, sizeof(sandwich4_case1_v1),
-                                 sandwich4_case1_old, sizeof(sandwich4_case1_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich4Table, &example_Sandwich4Table,
+                                       sandwich4_case1_v1, sizeof(sandwich4_case1_v1),
+                                       sandwich4_case1_old, sizeof(sandwich4_case1_old)));
 
   END_TEST;
 }
 
-bool sandwich4align8() {
+static bool sandwich4align8(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich4Align8Table, &example_Sandwich4Align8Table,
-                                 sandwich4align8_case1_v1, sizeof(sandwich4align8_case1_v1),
-                                 sandwich4align8_case1_old, sizeof(sandwich4align8_case1_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich4Align8Table,
+                                       &example_Sandwich4Align8Table, sandwich4align8_case1_v1,
+                                       sizeof(sandwich4align8_case1_v1), sandwich4align8_case1_old,
+                                       sizeof(sandwich4align8_case1_old)));
 
   END_TEST;
 }
 
-bool sandwich4align8withpointer() {
+static bool sandwich4align8withpointer(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_Sandwich4Align8WithPointerTable, &example_Sandwich4Align8WithPointerTable,
       sandwich4align8withpointer_case1_v1, sizeof(sandwich4align8withpointer_case1_v1),
       sandwich4align8withpointer_case1_old, sizeof(sandwich4align8withpointer_case1_old)));
@@ -3538,76 +3537,76 @@ bool sandwich4align8withpointer() {
   END_TEST;
 }
 
-bool sandwich4_with_hdr() {
+static bool sandwich4_with_hdr(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_FakeProtocolWrapSandwich4RequestTable,
-                                 &example_FakeProtocolWrapSandwich4RequestTable,
-                                 sandwich4_with_hdr_case1_v1, sizeof(sandwich4_with_hdr_case1_v1),
-                                 sandwich4_with_hdr_case1_old,
-                                 sizeof(sandwich4_with_hdr_case1_old)));
+  ASSERT_TRUE_NOMSG(
+      run_fidl_transform(&v1_example_FakeProtocolWrapSandwich4RequestTable,
+                         &example_FakeProtocolWrapSandwich4RequestTable,
+                         sandwich4_with_hdr_case1_v1, sizeof(sandwich4_with_hdr_case1_v1),
+                         sandwich4_with_hdr_case1_old, sizeof(sandwich4_with_hdr_case1_old)));
 
   END_TEST;
 }
 
-bool sandwich5_case1() {
+static bool sandwich5_case1(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich5Table, &example_Sandwich5Table,
-                                 sandwich5_case1_v1, sizeof(sandwich5_case1_v1),
-                                 sandwich5_case1_old, sizeof(sandwich5_case1_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich5Table, &example_Sandwich5Table,
+                                       sandwich5_case1_v1, sizeof(sandwich5_case1_v1),
+                                       sandwich5_case1_old, sizeof(sandwich5_case1_old)));
 
   END_TEST;
 }
 
-bool sandwich5_case1_with_hdr() {
+static bool sandwich5_case1_with_hdr(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_FakeProtocolSendSandwich5RequestTable,
-                                 &example_FakeProtocolSendSandwich5RequestTable,
-                                 sandwich5_case1_with_hdr_v1, sizeof(sandwich5_case1_with_hdr_v1),
-                                 sandwich5_case1_with_hdr_old,
-                                 sizeof(sandwich5_case1_with_hdr_old)));
+  ASSERT_TRUE_NOMSG(
+      run_fidl_transform(&v1_example_FakeProtocolSendSandwich5RequestTable,
+                         &example_FakeProtocolSendSandwich5RequestTable,
+                         sandwich5_case1_with_hdr_v1, sizeof(sandwich5_case1_with_hdr_v1),
+                         sandwich5_case1_with_hdr_old, sizeof(sandwich5_case1_with_hdr_old)));
 
   END_TEST;
 }
 
-bool sandwich5_case2() {
+static bool sandwich5_case2(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich5Table, &example_Sandwich5Table,
-                                 sandwich5_case2_v1, sizeof(sandwich5_case2_v1),
-                                 sandwich5_case2_old, sizeof(sandwich5_case2_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich5Table, &example_Sandwich5Table,
+                                       sandwich5_case2_v1, sizeof(sandwich5_case2_v1),
+                                       sandwich5_case2_old, sizeof(sandwich5_case2_old)));
 
   END_TEST;
 }
 
-bool sandwich5_case2_with_hdr() {
+static bool sandwich5_case2_with_hdr(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_FakeProtocolSendSandwich5RequestTable,
-                                 &example_FakeProtocolSendSandwich5RequestTable,
-                                 sandwich5_case2_with_hdr_v1, sizeof(sandwich5_case2_with_hdr_v1),
-                                 sandwich5_case2_with_hdr_old,
-                                 sizeof(sandwich5_case2_with_hdr_old)));
+  ASSERT_TRUE_NOMSG(
+      run_fidl_transform(&v1_example_FakeProtocolSendSandwich5RequestTable,
+                         &example_FakeProtocolSendSandwich5RequestTable,
+                         sandwich5_case2_with_hdr_v1, sizeof(sandwich5_case2_with_hdr_v1),
+                         sandwich5_case2_with_hdr_old, sizeof(sandwich5_case2_with_hdr_old)));
 
   END_TEST;
 }
 
-bool sandwich6_case1() {
+static bool sandwich6_case1(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
-                                 sandwich6_case1_v1, sizeof(sandwich6_case1_v1),
-                                 sandwich6_case1_old, sizeof(sandwich6_case1_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
+                                       sandwich6_case1_v1, sizeof(sandwich6_case1_v1),
+                                       sandwich6_case1_old, sizeof(sandwich6_case1_old)));
 
   END_TEST;
 }
 
-bool sandwich6_case1_absent_vector() {
+static bool sandwich6_case1_absent_vector(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_Sandwich6Table, &example_Sandwich6Table, sandwich6_case1_absent_vector_v1,
       sizeof(sandwich6_case1_absent_vector_v1), sandwich6_case1_absent_vector_old,
       sizeof(sandwich6_case1_absent_vector_old)));
@@ -3615,143 +3614,144 @@ bool sandwich6_case1_absent_vector() {
   END_TEST;
 }
 
-bool sandwich6_case2() {
+static bool sandwich6_case2(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
-                                 sandwich6_case2_v1, sizeof(sandwich6_case2_v1),
-                                 sandwich6_case2_old, sizeof(sandwich6_case2_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
+                                       sandwich6_case2_v1, sizeof(sandwich6_case2_v1),
+                                       sandwich6_case2_old, sizeof(sandwich6_case2_old)));
 
   END_TEST;
 }
 
-bool sandwich6_case3() {
+static bool sandwich6_case3(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
-                                 sandwich6_case3_v1, sizeof(sandwich6_case3_v1),
-                                 sandwich6_case3_old, sizeof(sandwich6_case3_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
+                                       sandwich6_case3_v1, sizeof(sandwich6_case3_v1),
+                                       sandwich6_case3_old, sizeof(sandwich6_case3_old)));
 
   END_TEST;
 }
 
-bool sandwich6_case4() {
+static bool sandwich6_case4(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
-                                 sandwich6_case4_v1, sizeof(sandwich6_case4_v1),
-                                 sandwich6_case4_old, sizeof(sandwich6_case4_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
+                                       sandwich6_case4_v1, sizeof(sandwich6_case4_v1),
+                                       sandwich6_case4_old, sizeof(sandwich6_case4_old)));
 
   END_TEST;
 }
 
-bool sandwich6_case5() {
+static bool sandwich6_case5(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
-                                 sandwich6_case5_v1, sizeof(sandwich6_case5_v1),
-                                 sandwich6_case5_old, sizeof(sandwich6_case5_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
+                                       sandwich6_case5_v1, sizeof(sandwich6_case5_v1),
+                                       sandwich6_case5_old, sizeof(sandwich6_case5_old)));
 
   END_TEST;
 }
 
-bool sandwich6_case6() {
+static bool sandwich6_case6(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
-                                 sandwich6_case6_v1, sizeof(sandwich6_case6_v1),
-                                 sandwich6_case6_old, sizeof(sandwich6_case6_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
+                                       sandwich6_case6_v1, sizeof(sandwich6_case6_v1),
+                                       sandwich6_case6_old, sizeof(sandwich6_case6_old)));
 
   END_TEST;
 }
 
-bool sandwich6_case7() {
+static bool sandwich6_case7(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
-                                 sandwich6_case7_v1, sizeof(sandwich6_case7_v1),
-                                 sandwich6_case7_old, sizeof(sandwich6_case7_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
+                                       sandwich6_case7_v1, sizeof(sandwich6_case7_v1),
+                                       sandwich6_case7_old, sizeof(sandwich6_case7_old)));
 
   END_TEST;
 }
 
-bool sandwich6_case8() {
+static bool sandwich6_case8(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
-                                 sandwich6_case8_v1, sizeof(sandwich6_case8_v1),
-                                 sandwich6_case8_old, sizeof(sandwich6_case8_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich6Table, &example_Sandwich6Table,
+                                       sandwich6_case8_v1, sizeof(sandwich6_case8_v1),
+                                       sandwich6_case8_old, sizeof(sandwich6_case8_old)));
 
   END_TEST;
 }
 
-bool sandwich7_case1() {
+static bool sandwich7_case1(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich7Table, &example_Sandwich7Table,
-                                 sandwich7_case1_v1, sizeof(sandwich7_case1_v1),
-                                 sandwich7_case1_old, sizeof(sandwich7_case1_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich7Table, &example_Sandwich7Table,
+                                       sandwich7_case1_v1, sizeof(sandwich7_case1_v1),
+                                       sandwich7_case1_old, sizeof(sandwich7_case1_old)));
 
   END_TEST;
 }
 
-bool sandwich7_case1_with_hdr() {
+static bool sandwich7_case1_with_hdr(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_FakeProtocolSendSandwich7RequestTable,
-                                 &example_FakeProtocolSendSandwich7RequestTable,
-                                 sandwich7_case1_with_hdr_v1, sizeof(sandwich7_case1_with_hdr_v1),
-                                 sandwich7_case1_with_hdr_old,
-                                 sizeof(sandwich7_case1_with_hdr_old)));
+  ASSERT_TRUE_NOMSG(
+      run_fidl_transform(&v1_example_FakeProtocolSendSandwich7RequestTable,
+                         &example_FakeProtocolSendSandwich7RequestTable,
+                         sandwich7_case1_with_hdr_v1, sizeof(sandwich7_case1_with_hdr_v1),
+                         sandwich7_case1_with_hdr_old, sizeof(sandwich7_case1_with_hdr_old)));
 
   END_TEST;
 }
 
-bool sandwich7_case2() {
+static bool sandwich7_case2(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich7Table, &example_Sandwich7Table,
-                                 sandwich7_case2_v1, sizeof(sandwich7_case2_v1),
-                                 sandwich7_case2_old, sizeof(sandwich7_case2_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich7Table, &example_Sandwich7Table,
+                                       sandwich7_case2_v1, sizeof(sandwich7_case2_v1),
+                                       sandwich7_case2_old, sizeof(sandwich7_case2_old)));
 
   END_TEST;
 }
 
-bool sandwich7_case2_with_hdr() {
+static bool sandwich7_case2_with_hdr(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_FakeProtocolSendSandwich7RequestTable,
-                                 &example_FakeProtocolSendSandwich7RequestTable,
-                                 sandwich7_case2_with_hdr_v1, sizeof(sandwich7_case2_with_hdr_v1),
-                                 sandwich7_case2_with_hdr_old,
-                                 sizeof(sandwich7_case2_with_hdr_old)));
+  ASSERT_TRUE_NOMSG(
+      run_fidl_transform(&v1_example_FakeProtocolSendSandwich7RequestTable,
+                         &example_FakeProtocolSendSandwich7RequestTable,
+                         sandwich7_case2_with_hdr_v1, sizeof(sandwich7_case2_with_hdr_v1),
+                         sandwich7_case2_with_hdr_old, sizeof(sandwich7_case2_with_hdr_old)));
 
   END_TEST;
 }
 
-bool sandwich8() {
+static bool sandwich8(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich8Table, &example_Sandwich8Table,
-                                 sandwich8_case1_v1, sizeof(sandwich8_case1_v1),
-                                 sandwich8_case1_old, sizeof(sandwich8_case1_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich8Table, &example_Sandwich8Table,
+                                       sandwich8_case1_v1, sizeof(sandwich8_case1_v1),
+                                       sandwich8_case1_old, sizeof(sandwich8_case1_old)));
 
   END_TEST;
 }
 
-bool sandwich9() {
+static bool sandwich9(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Sandwich9Table, &example_Sandwich9Table, sandwich9_v1,
-                                 sizeof(sandwich9_v1), sandwich9_old, sizeof(sandwich9_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Sandwich9Table, &example_Sandwich9Table,
+                                       sandwich9_v1, sizeof(sandwich9_v1), sandwich9_old,
+                                       sizeof(sandwich9_old)));
 
   END_TEST;
 }
 
-bool out_of_line_sandwich1_case1() {
+static bool out_of_line_sandwich1_case1(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(
+  ASSERT_TRUE_NOMSG(
       run_fidl_transform(&v1_example_OutOfLineSandwich1Table, &example_OutOfLineSandwich1Table,
                          out_of_line_sandwich1_case1_v1, sizeof(out_of_line_sandwich1_case1_v1),
                          out_of_line_sandwich1_case1_old, sizeof(out_of_line_sandwich1_case1_old)));
@@ -3759,56 +3759,56 @@ bool out_of_line_sandwich1_case1() {
   END_TEST;
 }
 
-bool out_of_line_sandwich1_with_opt_union_present() {
+static bool out_of_line_sandwich1_with_opt_union_present(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_OutOfLineSandwich1WithOptUnionTable,
-                                 &example_OutOfLineSandwich1WithOptUnionTable,
-                                 out_of_line_sandwich1_with_opt_union_present_v1,
-                                 sizeof(out_of_line_sandwich1_with_opt_union_present_v1),
-                                 out_of_line_sandwich1_with_opt_union_present_old,
-                                 sizeof(out_of_line_sandwich1_with_opt_union_present_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_OutOfLineSandwich1WithOptUnionTable,
+                                       &example_OutOfLineSandwich1WithOptUnionTable,
+                                       out_of_line_sandwich1_with_opt_union_present_v1,
+                                       sizeof(out_of_line_sandwich1_with_opt_union_present_v1),
+                                       out_of_line_sandwich1_with_opt_union_present_old,
+                                       sizeof(out_of_line_sandwich1_with_opt_union_present_old)));
 
   END_TEST;
 }
 
-bool out_of_line_sandwich1_with_opt_union_absent() {
+static bool out_of_line_sandwich1_with_opt_union_absent(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_OutOfLineSandwich1WithOptUnionTable,
-                                 &example_OutOfLineSandwich1WithOptUnionTable,
-                                 out_of_line_sandwich1_with_opt_union_absent_v1,
-                                 sizeof(out_of_line_sandwich1_with_opt_union_absent_v1),
-                                 out_of_line_sandwich1_with_opt_union_absent_old,
-                                 sizeof(out_of_line_sandwich1_with_opt_union_absent_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_OutOfLineSandwich1WithOptUnionTable,
+                                       &example_OutOfLineSandwich1WithOptUnionTable,
+                                       out_of_line_sandwich1_with_opt_union_absent_v1,
+                                       sizeof(out_of_line_sandwich1_with_opt_union_absent_v1),
+                                       out_of_line_sandwich1_with_opt_union_absent_old,
+                                       sizeof(out_of_line_sandwich1_with_opt_union_absent_old)));
 
   END_TEST;
 }
 
-bool regression1() {
+static bool regression1(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Regression1Table, &example_Regression1Table,
-                                 regression1_old_and_v1, sizeof(regression1_old_and_v1),
-                                 regression1_old_and_v1, sizeof(regression1_old_and_v1)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Regression1Table, &example_Regression1Table,
+                                       regression1_old_and_v1, sizeof(regression1_old_and_v1),
+                                       regression1_old_and_v1, sizeof(regression1_old_and_v1)));
 
   END_TEST;
 }
 
-bool regression2() {
+static bool regression2(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Regression2Table, &example_Regression2Table,
-                                 regression2_old_and_v1, sizeof(regression2_old_and_v1),
-                                 regression2_old_and_v1, sizeof(regression2_old_and_v1)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Regression2Table, &example_Regression2Table,
+                                       regression2_old_and_v1, sizeof(regression2_old_and_v1),
+                                       regression2_old_and_v1, sizeof(regression2_old_and_v1)));
 
   END_TEST;
 }
 
-bool regression3_absent() {
+static bool regression3_absent(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(
+  ASSERT_TRUE_NOMSG(
       run_fidl_transform(&v1_example_Regression3Table, &example_Regression3Table,
                          regression3_absent_old_and_v1, sizeof(regression3_absent_old_and_v1),
                          regression3_absent_old_and_v1, sizeof(regression3_absent_old_and_v1)));
@@ -3816,10 +3816,10 @@ bool regression3_absent() {
   END_TEST;
 }
 
-bool regression3_present() {
+static bool regression3_present(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(
+  ASSERT_TRUE_NOMSG(
       run_fidl_transform(&v1_example_Regression3Table, &example_Regression3Table,
                          regression3_present_old_and_v1, sizeof(regression3_present_old_and_v1),
                          regression3_present_old_and_v1, sizeof(regression3_present_old_and_v1)));
@@ -3827,40 +3827,40 @@ bool regression3_present() {
   END_TEST;
 }
 
-bool regression4() {
+static bool regression4(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Regression4Table, &example_Regression4Table,
-                                 regression4_old_and_v1, sizeof(regression4_old_and_v1),
-                                 regression4_old_and_v1, sizeof(regression4_old_and_v1)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Regression4Table, &example_Regression4Table,
+                                       regression4_old_and_v1, sizeof(regression4_old_and_v1),
+                                       regression4_old_and_v1, sizeof(regression4_old_and_v1)));
 
   END_TEST;
 }
 
-bool regression5_enums() {
+static bool regression5_enums(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Regression5Table, &example_Regression5Table,
-                                 regression5_old_and_v1, sizeof(regression5_old_and_v1),
-                                 regression5_old_and_v1, sizeof(regression5_old_and_v1)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Regression5Table, &example_Regression5Table,
+                                       regression5_old_and_v1, sizeof(regression5_old_and_v1),
+                                       regression5_old_and_v1, sizeof(regression5_old_and_v1)));
 
   END_TEST;
 }
 
-bool regression6_bits() {
+static bool regression6_bits(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_Regression6Table, &example_Regression6Table,
-                                 regression6_old_and_v1, sizeof(regression6_old_and_v1),
-                                 regression6_old_and_v1, sizeof(regression6_old_and_v1)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Regression6Table, &example_Regression6Table,
+                                       regression6_old_and_v1, sizeof(regression6_old_and_v1),
+                                       regression6_old_and_v1, sizeof(regression6_old_and_v1)));
 
   END_TEST;
 }
 
-bool size5alignment1array() {
+static bool size5alignment1array(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(
+  ASSERT_TRUE_NOMSG(
       run_fidl_transform(&v1_example_Size5Alignment1ArrayTable, &example_Size5Alignment1ArrayTable,
                          size5alignment1array_old_and_v1, sizeof(size5alignment1array_old_and_v1),
                          size5alignment1array_old_and_v1, sizeof(size5alignment1array_old_and_v1)));
@@ -3868,10 +3868,10 @@ bool size5alignment1array() {
   END_TEST;
 }
 
-bool size5alignment4array() {
+static bool size5alignment4array(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(
+  ASSERT_TRUE_NOMSG(
       run_fidl_transform(&v1_example_Size5Alignment4ArrayTable, &example_Size5Alignment4ArrayTable,
                          size5alignment4array_old_and_v1, sizeof(size5alignment4array_old_and_v1),
                          size5alignment4array_old_and_v1, sizeof(size5alignment4array_old_and_v1)));
@@ -3879,10 +3879,10 @@ bool size5alignment4array() {
   END_TEST;
 }
 
-bool size5alignment1vector() {
+static bool size5alignment1vector(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_Size5Alignment1VectorTable, &example_Size5Alignment1VectorTable,
       size5alignment1vector_old_and_v1, sizeof(size5alignment1vector_old_and_v1),
       size5alignment1vector_old_and_v1, sizeof(size5alignment1vector_old_and_v1)));
@@ -3890,10 +3890,10 @@ bool size5alignment1vector() {
   END_TEST;
 }
 
-bool size5alignment4vector() {
+static bool size5alignment4vector(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_Size5Alignment4VectorTable, &example_Size5Alignment4VectorTable,
       size5alignment4vector_old_and_v1, sizeof(size5alignment4vector_old_and_v1),
       size5alignment4vector_old_and_v1, sizeof(size5alignment4vector_old_and_v1)));
@@ -3902,63 +3902,73 @@ bool size5alignment4vector() {
 }
 
 // TODO(apang): Tidy up these macros.
-#define DO_TEST(old_coding_table, v1_coding_table, old_bytes, v1_bytes)                           \
-  BEGIN_TEST;                                                                                     \
-  ASSERT_TRUE(run_fidl_transform(&v1_coding_table, &old_coding_table, v1_bytes, sizeof(v1_bytes), \
-                                 old_bytes, sizeof(old_bytes)));                                  \
+#define DO_TEST(old_coding_table, v1_coding_table, old_bytes, v1_bytes)                  \
+  BEGIN_TEST;                                                                            \
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_coding_table, &old_coding_table, v1_bytes,    \
+                                       sizeof(v1_bytes), old_bytes, sizeof(old_bytes))); \
   END_TEST;
 
-#define DO_X_TEST(coding_table, size, old_bytes, v1_bytes)                             \
-  {                                                                                    \
-    fidl::FidlStructField field(&coding_table, 0u, 0u, &field);                        \
-    fidl::FidlCodedStruct coded_struct(&field, 1, size, coding_table.coded_table.name, \
-                                       &coded_struct);                                 \
-    fidl_type coded_struct_type(coded_struct);                                         \
-                                                                                       \
-    DO_TEST(coded_struct_type, coded_struct_type, old_bytes, v1_bytes);                \
-  }
+#define DECLARE_X_FOR_TEST(coding_table, size_)                                               \
+  struct FidlStructField coding_table##field = {                                              \
+      .type = &coding_table, .offset = 0u, .padding = 0u, .alt_field = &coding_table##field}; \
+  struct fidl_type coding_table##coded_struct_type;                                           \
+  struct fidl_type coding_table##coded_struct_type = {                                        \
+      .type_tag = kFidlTypeStruct,                                                            \
+      .coded_struct = {.fields = &coding_table##field,                                        \
+                       .field_count = 1,                                                      \
+                       .size = size_,                                                         \
+                       .max_out_of_line = UINT32_MAX,                                         \
+                       .contains_union = true,                                                \
+                       .name = "",                                                            \
+                       .alt_type = &coding_table##coded_struct_type.coded_struct}}
 
-#define DO_TABLE_TEST(coding_table, old_bytes, v1_bytes) \
-  DO_X_TEST(coding_table, 16, old_bytes, v1_bytes)
-#define DO_XUNION_TEST(coding_table, old_bytes, v1_bytes) \
-  DO_X_TEST(coding_table, 24, old_bytes, v1_bytes)
+#define DO_X_TEST(coding_table, old_bytes, v1_bytes) \
+  DO_TEST(coding_table##coded_struct_type, coding_table##coded_struct_type, old_bytes, v1_bytes);
 
-bool table_nofields() {
-  DO_TABLE_TEST(example_Table_NoFieldsTable, table_nofields_v1_and_old, table_nofields_v1_and_old);
+#define DECLARE_TABLE_FOR_TEST(coding_table) DECLARE_X_FOR_TEST(coding_table, 16)
+#define DECLARE_XUNION_FOR_TEST(coding_table) DECLARE_X_FOR_TEST(coding_table, 24)
+
+DECLARE_TABLE_FOR_TEST(example_Table_NoFieldsTable);
+DECLARE_TABLE_FOR_TEST(example_Table_TwoReservedFieldsTable);
+DECLARE_TABLE_FOR_TEST(example_Table_StructWithReservedSandwichTable);
+DECLARE_TABLE_FOR_TEST(example_Table_StructWithUint32SandwichTable);
+DECLARE_TABLE_FOR_TEST(example_Table_UnionWithVector_ReservedSandwichTable);
+DECLARE_TABLE_FOR_TEST(example_Table_UnionWithVector_StructSandwichTable);
+
+static bool table_nofields(void) {
+  DO_X_TEST(example_Table_NoFieldsTable, table_nofields_v1_and_old, table_nofields_v1_and_old);
 }
 
-bool table_tworeservedfields() {
-  DO_TABLE_TEST(example_Table_TwoReservedFieldsTable, table_tworeservedfields_v1_and_old,
-                table_tworeservedfields_v1_and_old);
+static bool table_tworeservedfields(void) {
+  DO_X_TEST(example_Table_TwoReservedFieldsTable, table_tworeservedfields_v1_and_old,
+            table_tworeservedfields_v1_and_old);
 }
 
-bool table_structwithreservedsandwich() {
-  DO_TABLE_TEST(example_Table_StructWithReservedSandwichTable,
-                table_structwithreservedsandwich_v1_and_old,
-                table_structwithreservedsandwich_v1_and_old);
+static bool table_structwithreservedsandwich(void) {
+  DO_X_TEST(example_Table_StructWithReservedSandwichTable,
+            table_structwithreservedsandwich_v1_and_old,
+            table_structwithreservedsandwich_v1_and_old);
 }
 
-bool table_structwithuint32sandwich() {
-  DO_TABLE_TEST(example_Table_StructWithUint32SandwichTable,
-                table_structwithuint32sandwich_v1_and_old,
-                table_structwithuint32sandwich_v1_and_old);
+static bool table_structwithuint32sandwich(void) {
+  DO_X_TEST(example_Table_StructWithUint32SandwichTable, table_structwithuint32sandwich_v1_and_old,
+            table_structwithuint32sandwich_v1_and_old);
 }
 
-bool table_unionwithvector_reservedsandwich() {
-  DO_TABLE_TEST(example_Table_UnionWithVector_ReservedSandwichTable,
-                table_unionwithvector_reservedsandwich_old,
-                table_unionwithvector_reservedsandwich_v1);
+static bool table_unionwithvector_reservedsandwich(void) {
+  DO_X_TEST(example_Table_UnionWithVector_ReservedSandwichTable,
+            table_unionwithvector_reservedsandwich_old, table_unionwithvector_reservedsandwich_v1);
 }
 
-bool table_unionwithvector_structsandwich() {
-  DO_TABLE_TEST(example_Table_UnionWithVector_StructSandwichTable,
-                table_unionwithvector_structsandwich_old, table_unionwithvector_structsandwich_v1);
+static bool table_unionwithvector_structsandwich(void) {
+  DO_X_TEST(example_Table_UnionWithVector_StructSandwichTable,
+            table_unionwithvector_structsandwich_old, table_unionwithvector_structsandwich_v1);
 }
 
-bool simpletablearraystruct() {
+static bool simpletablearraystruct(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_SimpleTableArrayStructTable, &example_SimpleTableArrayStructTable,
       simpletablearraystruct_v1_and_old, sizeof(simpletablearraystruct_v1_and_old),
       simpletablearraystruct_v1_and_old, sizeof(simpletablearraystruct_v1_and_old)));
@@ -3966,83 +3976,85 @@ bool simpletablearraystruct() {
   END_TEST;
 }
 
-bool xunionwithstruct() {
-  DO_XUNION_TEST(example_XUnionWithStructTable, xunionwithstruct_old_and_v1,
-                 xunionwithstruct_old_and_v1);
+DECLARE_XUNION_FOR_TEST(example_XUnionWithStructTable);
+
+static bool xunionwithstruct(void) {
+  DO_X_TEST(example_XUnionWithStructTable, xunionwithstruct_old_and_v1,
+            xunionwithstruct_old_and_v1);
 }
 
-bool xunionwithunknownordinal() {
-  DO_XUNION_TEST(example_XUnionWithStructTable, xunionwithunknownordinal_old_and_v1,
-                 xunionwithunknownordinal_old_and_v1);
+static bool xunionwithunknownordinal(void) {
+  DO_X_TEST(example_XUnionWithStructTable, xunionwithunknownordinal_old_and_v1,
+            xunionwithunknownordinal_old_and_v1);
 }
 
-bool arraystruct() {
+static bool arraystruct(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_ArrayStructTable, &example_ArrayStructTable,
-                                 arraystruct_v1, sizeof(arraystruct_v1), arraystruct_old,
-                                 sizeof(arraystruct_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_ArrayStructTable, &example_ArrayStructTable,
+                                       arraystruct_v1, sizeof(arraystruct_v1), arraystruct_old,
+                                       sizeof(arraystruct_old)));
 
   END_TEST;
 }
 
-bool mixed_fields() {
+static bool mixed_fields(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_FakeProtocolSendMixedFieldsRequestTable,
-                                 &example_FakeProtocolSendMixedFieldsRequestTable, mixed_fields_v1,
-                                 sizeof(mixed_fields_v1), mixed_fields_old,
-                                 sizeof(mixed_fields_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_FakeProtocolSendMixedFieldsRequestTable,
+                                       &example_FakeProtocolSendMixedFieldsRequestTable,
+                                       mixed_fields_v1, sizeof(mixed_fields_v1), mixed_fields_old,
+                                       sizeof(mixed_fields_old)));
 
   END_TEST;
 }
 
-bool nocodingtablesstressor() {
+static bool nocodingtablesstressor(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_NoCodingTablesStresssorTable,
-                                 &example_NoCodingTablesStresssorTable, nocodingtablesstressor_v1,
-                                 sizeof(nocodingtablesstressor_v1), nocodingtablesstressor_old,
-                                 sizeof(nocodingtablesstressor_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
+      &v1_example_NoCodingTablesStresssorTable, &example_NoCodingTablesStresssorTable,
+      nocodingtablesstressor_v1, sizeof(nocodingtablesstressor_v1), nocodingtablesstressor_old,
+      sizeof(nocodingtablesstressor_old)));
 
   END_TEST;
 }
 
-bool emptystruct() {
+static bool emptystruct(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_EmptyStructTable, &example_EmptyStructTable,
-                                 emptystruct_v1_and_old, sizeof(emptystruct_v1_and_old),
-                                 emptystruct_v1_and_old, sizeof(emptystruct_v1_and_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_EmptyStructTable, &example_EmptyStructTable,
+                                       emptystruct_v1_and_old, sizeof(emptystruct_v1_and_old),
+                                       emptystruct_v1_and_old, sizeof(emptystruct_v1_and_old)));
 
   END_TEST;
 }
 
-bool emptystructunion() {
+static bool emptystructunion(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(&v1_example_EmptyStructUnionStructTable,
-                                 &example_EmptyStructUnionStructTable, emptystruct_union_v1,
-                                 sizeof(emptystruct_union_v1), emptystruct_union_old,
-                                 sizeof(emptystruct_union_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_EmptyStructUnionStructTable,
+                                       &example_EmptyStructUnionStructTable, emptystruct_union_v1,
+                                       sizeof(emptystruct_union_v1), emptystruct_union_old,
+                                       sizeof(emptystruct_union_old)));
 
   END_TEST;
 }
 
-bool stringunionvector() {
+static bool stringunionvector(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_StringUnionVectorTable, &example_StringUnionVectorTable, stringunionvector_v1,
       sizeof(stringunionvector_v1), stringunionvector_old, sizeof(stringunionvector_old)));
 
   END_TEST;
 }
 
-bool stringunionstructwrapperresponse() {
+static bool stringunionstructwrapperresponse(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_StringUnionStructWrapperProtocolTheMethodResponseTable,
       &example_StringUnionStructWrapperProtocolTheMethodResponseTable,
       stringunionstructwrapperresponse_v1, sizeof(stringunionstructwrapperresponse_v1),
@@ -4051,10 +4063,10 @@ bool stringunionstructwrapperresponse() {
   END_TEST;
 }
 
-bool regression_no_union_launcher_create_component_request() {
+static bool regression_no_union_launcher_create_component_request(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_FakeProtocolSendFakeLauncherCreateComponentRequestRequestTable,
       &example_FakeProtocolSendFakeLauncherCreateComponentRequestRequestTable,
       launcher_create_component_request_v1, sizeof(launcher_create_component_request_v1),
@@ -4063,200 +4075,174 @@ bool regression_no_union_launcher_create_component_request() {
   END_TEST;
 }
 
-bool compat_table() {
+static bool compat_table(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-      &v1_example_CompatTableTable,
-      &example_CompatTableTable,
-      compat_table_v1, sizeof(compat_table_v1),
-      compat_table_old, sizeof(compat_table_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_CompatTableTable, &example_CompatTableTable,
+                                       compat_table_v1, sizeof(compat_table_v1), compat_table_old,
+                                       sizeof(compat_table_old)));
 
   END_TEST;
 }
 
-bool compat_table_wrong_xunion_ordinal() {
+static bool compat_table_wrong_xunion_ordinal(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-      &v1_example_CompatTableTable,
-      &example_CompatTableTable,
-      compat_table_wrong_xunion_ordinal_v1, sizeof(compat_table_wrong_xunion_ordinal_v1),
-      compat_table_wrong_xunion_ordinal_old, sizeof(compat_table_wrong_xunion_ordinal_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
+      &v1_example_CompatTableTable, &example_CompatTableTable, compat_table_wrong_xunion_ordinal_v1,
+      sizeof(compat_table_wrong_xunion_ordinal_v1), compat_table_wrong_xunion_ordinal_old,
+      sizeof(compat_table_wrong_xunion_ordinal_old)));
 
   END_TEST;
 }
 
-bool table_with_xunion() {
+static bool table_with_xunion(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-      &v1_example_StructOfTableWithXUnionTable,
-      &example_StructOfTableWithXUnionTable,
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
+      &v1_example_StructOfTableWithXUnionTable, &example_StructOfTableWithXUnionTable,
       table_with_xunion_old_and_v1, sizeof(table_with_xunion_old_and_v1),
       table_with_xunion_old_and_v1, sizeof(table_with_xunion_old_and_v1)));
 
   END_TEST;
 }
 
-bool table_with_xunion_wrong_xunion_ordinal() {
+static bool table_with_xunion_wrong_xunion_ordinal(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-      &v1_example_StructOfTableWithXUnionTable,
-      &example_StructOfTableWithXUnionTable,
-      table_with_xunion_wrong_xunion_ordinal_old_and_v1,
-      sizeof(table_with_xunion_wrong_xunion_ordinal_old_and_v1),
-      table_with_xunion_wrong_xunion_ordinal_old_and_v1,
-      sizeof(table_with_xunion_wrong_xunion_ordinal_old_and_v1)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_StructOfTableWithXUnionTable,
+                                       &example_StructOfTableWithXUnionTable,
+                                       table_with_xunion_wrong_xunion_ordinal_old_and_v1,
+                                       sizeof(table_with_xunion_wrong_xunion_ordinal_old_and_v1),
+                                       table_with_xunion_wrong_xunion_ordinal_old_and_v1,
+                                       sizeof(table_with_xunion_wrong_xunion_ordinal_old_and_v1)));
 
   END_TEST;
 }
 
-bool regression7_table_union_xunion() {
+static bool regression7_table_union_xunion(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-      &v1_example_Regression7TableUnionXUnionTable,
-      &example_Regression7TableUnionXUnionTable,
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
+      &v1_example_Regression7TableUnionXUnionTable, &example_Regression7TableUnionXUnionTable,
       regression7_table_union_xunion_v1, sizeof(regression7_table_union_xunion_v1),
       regression7_table_union_xunion_old, sizeof(regression7_table_union_xunion_old)));
 
   END_TEST;
 }
 
-bool regression8_opt_union_size12_aligned4() {
+static bool regression8_opt_union_size12_aligned4(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
       &v1_example_Regression8OptUnionSize12Aligned4Table,
-      &example_Regression8OptUnionSize12Aligned4Table,
-      regression8_opt_union_size12_aligned4_v1,
-      sizeof(regression8_opt_union_size12_aligned4_v1),
-      regression8_opt_union_size12_aligned4_old,
+      &example_Regression8OptUnionSize12Aligned4Table, regression8_opt_union_size12_aligned4_v1,
+      sizeof(regression8_opt_union_size12_aligned4_v1), regression8_opt_union_size12_aligned4_old,
       sizeof(regression8_opt_union_size12_aligned4_old)));
 
   END_TEST;
 }
 
-bool regression8_vector_of_opt_union_size12_aligned4() {
+static bool regression8_vector_of_opt_union_size12_aligned4(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-      &v1_example_Regression8VectorOfOptUnionSize12Aligned4Table,
-      &example_Regression8VectorOfOptUnionSize12Aligned4Table,
-      regression8_vector_of_opt_union_size12_aligned4_v1,
-      sizeof(regression8_vector_of_opt_union_size12_aligned4_v1),
-      regression8_vector_of_opt_union_size12_aligned4_old,
-      sizeof(regression8_vector_of_opt_union_size12_aligned4_old)));
+  ASSERT_TRUE_NOMSG(
+      run_fidl_transform(&v1_example_Regression8VectorOfOptUnionSize12Aligned4Table,
+                         &example_Regression8VectorOfOptUnionSize12Aligned4Table,
+                         regression8_vector_of_opt_union_size12_aligned4_v1,
+                         sizeof(regression8_vector_of_opt_union_size12_aligned4_v1),
+                         regression8_vector_of_opt_union_size12_aligned4_old,
+                         sizeof(regression8_vector_of_opt_union_size12_aligned4_old)));
 
   END_TEST;
 }
 
-bool regression8_table_with_union_size12_aligned4() {
+static bool regression8_table_with_union_size12_aligned4(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-      &v1_example_Regression8TableWithUnionSize12Aligned4Table,
-      &example_Regression8TableWithUnionSize12Aligned4Table,
-      regression8_table_with_union_size12_aligned4_v1,
-      sizeof(regression8_table_with_union_size12_aligned4_v1),
-      regression8_table_with_union_size12_aligned4_old,
-      sizeof(regression8_table_with_union_size12_aligned4_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_Regression8TableWithUnionSize12Aligned4Table,
+                                       &example_Regression8TableWithUnionSize12Aligned4Table,
+                                       regression8_table_with_union_size12_aligned4_v1,
+                                       sizeof(regression8_table_with_union_size12_aligned4_v1),
+                                       regression8_table_with_union_size12_aligned4_old,
+                                       sizeof(regression8_table_with_union_size12_aligned4_old)));
 
   END_TEST;
 }
 
-bool regression9_response() {
+static bool regression9_response(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-    &v1_example_FakeProtocolRegression9ResponseTable,
-    &example_FakeProtocolRegression9ResponseTable,
-    regression9_response_v1, sizeof(regression9_response_v1),
-    regression9_response_old, sizeof(regression9_response_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(&v1_example_FakeProtocolRegression9ResponseTable,
+                                       &example_FakeProtocolRegression9ResponseTable,
+                                       regression9_response_v1, sizeof(regression9_response_v1),
+                                       regression9_response_old, sizeof(regression9_response_old)));
 
   END_TEST;
 }
 
-bool regression10_v1() {
+static bool regression10_v1(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-    &v1_example_Regression10V1Table,
-    &example_Regression10V1Table,
-    regression10_old_and_v1,
-    sizeof(regression10_old_and_v1),
-    regression10_old_and_v1,
-    sizeof(regression10_old_and_v1)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
+      &v1_example_Regression10V1Table, &example_Regression10V1Table, regression10_old_and_v1,
+      sizeof(regression10_old_and_v1), regression10_old_and_v1, sizeof(regression10_old_and_v1)));
 
   END_TEST;
 }
 
-bool regression10_v2() {
+static bool regression10_v2(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-    &v1_example_Regression10V2Table,
-    &example_Regression10V2Table,
-    regression10_old_and_v1,
-    sizeof(regression10_old_and_v1),
-    regression10_old_and_v1,
-    sizeof(regression10_old_and_v1)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
+      &v1_example_Regression10V2Table, &example_Regression10V2Table, regression10_old_and_v1,
+      sizeof(regression10_old_and_v1), regression10_old_and_v1, sizeof(regression10_old_and_v1)));
 
   END_TEST;
 }
 
-bool regression10_v3() {
+static bool regression10_v3(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-    &v1_example_Regression10V3Table,
-    &example_Regression10V3Table,
-    regression10_old_and_v1,
-    sizeof(regression10_old_and_v1),
-    regression10_old_and_v1,
-    sizeof(regression10_old_and_v1)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
+      &v1_example_Regression10V3Table, &example_Regression10V3Table, regression10_old_and_v1,
+      sizeof(regression10_old_and_v1), regression10_old_and_v1, sizeof(regression10_old_and_v1)));
 
   END_TEST;
 }
 
-bool regression11_unknown_content() {
+static bool regression11_unknown_content(void) {
   BEGIN_TEST;
 
-  ASSERT_TRUE(run_fidl_transform(
-    &v1_example_Regression11Table,
-    &example_Regression11Table,
-    regression11_unknown_content_v1,
-    sizeof(regression11_unknown_content_v1),
-    regression11_unknown_content_old,
-    sizeof(regression11_unknown_content_old)));
+  ASSERT_TRUE_NOMSG(run_fidl_transform(
+      &v1_example_Regression11Table, &example_Regression11Table, regression11_unknown_content_v1,
+      sizeof(regression11_unknown_content_v1), regression11_unknown_content_old,
+      sizeof(regression11_unknown_content_old)));
 
   END_TEST;
 }
 
-bool fails_on_bad_transformation() {
+static bool fails_on_bad_transformation(void) {
   BEGIN_TEST;
 
   uint8_t dst_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   uint32_t out_dst_num_bytes;
-  const char* error = nullptr;
-  const auto status = fidl_transform(
-      fidl_transformation_t(0x123456789), &example_Sandwich1Table,
-      sandwich1_case1_old, static_cast<uint32_t>(sizeof(sandwich1_case1_old)),
-      dst_bytes, ZX_CHANNEL_MAX_MSG_BYTES, &out_dst_num_bytes,
-      &error);
-  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-  ASSERT_NONNULL(error);
-  ASSERT_STR_STR(error, "unsupported transformation");
+  const char* error = NULL;
+  fidl_transformation_t transform = 0x12345678;
+  const zx_status_t status = fidl_transform(transform, &example_Sandwich1Table, sandwich1_case1_old,
+                                            (uint32_t)(sizeof(sandwich1_case1_old)), dst_bytes,
+                                            ZX_CHANNEL_MAX_MSG_BYTES, &out_dst_num_bytes, &error);
+  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
+  ASSERT_NONNULL(error, "");
+  ASSERT_STR_STR(error, "unsupported transformation", "");
 
   END_TEST;
 }
 
-bool fails_if_does_not_read_src_num_bytes() {
+static bool fails_if_does_not_read_src_num_bytes(void) {
   BEGIN_TEST;
 
-  const auto actual_src_bytes_size = static_cast<uint32_t>(sizeof(sandwich1_case1_old));
+  const uint32_t actual_src_bytes_size = (uint32_t)(sizeof(sandwich1_case1_old));
   uint8_t src_bytes[sizeof(sandwich1_case1_old) + 1];
   memcpy(src_bytes, sandwich1_case1_old, actual_src_bytes_size);
   src_bytes[actual_src_bytes_size] = 0;
@@ -4264,73 +4250,24 @@ bool fails_if_does_not_read_src_num_bytes() {
   for (uint32_t adjust = 0; adjust <= 1; adjust++) {
     uint8_t dst_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     uint32_t out_dst_num_bytes;
-    const auto status = fidl_transform(
-        FIDL_TRANSFORMATION_OLD_TO_V1, &example_Sandwich1Table,
-        src_bytes, actual_src_bytes_size + adjust,
-        dst_bytes, ZX_CHANNEL_MAX_MSG_BYTES, &out_dst_num_bytes,
-        nullptr);
+    const zx_status_t status =
+        fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &example_Sandwich1Table, src_bytes,
+                       actual_src_bytes_size + adjust, dst_bytes, ZX_CHANNEL_MAX_MSG_BYTES,
+                       &out_dst_num_bytes, NULL);
     if (adjust == 1) {
-      ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+      ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
     } else {
-      ASSERT_EQ(status, ZX_OK);
+      ASSERT_EQ(status, ZX_OK, "");
     }
   }
 
   END_TEST;
 }
 
-bool transform_with_callback_noop() {
-  BEGIN_TEST;
-
-  const auto& src_bytes = simpletablearraystruct_v1_and_old;
-  uint32_t src_num_bytes = sizeof(simpletablearraystruct_v1_and_old);
-  uint32_t num_called = 0;
-  auto callback = [&](const uint8_t* dst_bytes, uint32_t dst_num_bytes) -> zx_status_t {
-    num_called++;
-    // since this struct does not contain any unions, dst_bytes should be
-    // the same as the input
-    if (dst_bytes == src_bytes) {
-      return ZX_OK;
-    }
-    // return a special value to distinguish from transformer errors
-    return 1;
-  };
-
-  ASSERT_EQ(ZX_OK, fidl::FidlTransformWithCallback(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                                   &example_SimpleTableArrayStructTable, src_bytes,
-                                                   src_num_bytes, nullptr, callback));
-  ASSERT_EQ(num_called, 1);
-  END_TEST;
-}
-
-bool transform_with_callback() {
-  BEGIN_TEST;
-
-  uint32_t num_called = 0;
-  auto callback = [&](const uint8_t* dst_bytes, uint32_t dst_num_bytes) -> zx_status_t {
-    num_called++;
-    if (cmp_payload(dst_bytes, dst_num_bytes, sandwich1_case1_v1, sizeof(sandwich1_case1_v1))) {
-      return ZX_OK;
-    }
-    return 1;
-  };
-
-  ASSERT_EQ(ZX_OK, fidl::FidlTransformWithCallback(FIDL_TRANSFORMATION_OLD_TO_V1,
-                                                   &example_Sandwich1Table, sandwich1_case1_old,
-                                                   sizeof(sandwich1_case1_old), nullptr, callback));
-  ASSERT_EQ(num_called, 1);
-  END_TEST;
-}
-
-}  // namespace
-
-// The commented-out tests below currently don't pass.
 BEGIN_TEST_CASE(transformer)
-
 RUN_TEST(fails_on_bad_transformation)
 RUN_TEST(fails_if_does_not_read_src_num_bytes)
-
-// TODO(mkember): Overtime, we will move all the tests below into the GIDL
+// TODO(mkember): Over time, we will move all the tests below into the GIDL
 // conformance suite.
 RUN_TEST(simpletablearraystruct)
 RUN_TEST(sandwich1)
@@ -4405,6 +4342,4 @@ RUN_TEST(regression10_v1)
 RUN_TEST(regression10_v2)
 RUN_TEST(regression10_v3)
 RUN_TEST(regression11_unknown_content)
-RUN_TEST(transform_with_callback_noop)
-RUN_TEST(transform_with_callback)
 END_TEST_CASE(transformer)

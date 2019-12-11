@@ -10,7 +10,7 @@
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fidl/internal.h>
 
-// "extern" definitions copied from extra_messages.cpp
+// "extern" definitions copied from extra_messages.c
 
 #if defined(__cplusplus)
 extern "C" {

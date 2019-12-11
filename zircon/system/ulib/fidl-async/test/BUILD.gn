@@ -7,7 +7,7 @@ import("$zx/public/gn/fuzzer.gni")
 zx_test("fidl-async-test") {
   sources = [
     "generated/fidl_llcpp_simple.test.cc",
-    "generated/fidl_llcpp_tables_simple.test.cc",
+    "generated/fidl_llcpp_tables_simple.test.c",
     "llcpp_async_bind_test.cc",
     "llcpp_bind_test.cc",
     "llcpp_channel_transaction_test.cc",

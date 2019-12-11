@@ -21,27 +21,25 @@ var tmpl = template.Must(template.New("tmpls").Parse(`
 #include "generated/transformer_conformance_tables.h"
 #include "transformer_conformance_utils.h"
 
-namespace {
-
 {{ range .TestArrays }}
-uint8_t {{ .Name }}[] = { {{ .Bytes }} };
+static uint8_t {{ .Name }}[] = { {{ .Bytes }} };
 {{ end }}
 
 {{ range .SuccessCases }}
-bool test_{{ .Name }}() {
+static bool test_{{ .Name }}(void) {
 	BEGIN_TEST;
 	ASSERT_TRUE(check_fidl_transform(
 		{{ .Transformation }},
 		&{{ .FidlType }},
 		{{ .SrcBytesVar }}, sizeof {{ .SrcBytesVar }},
 		{{ .ExpectedBytesVar }}, sizeof {{ .ExpectedBytesVar }}
-	));
+	), "");
 	END_TEST;
 }
 {{ end }}
 
 {{ range .FailureCases }}
-bool test_{{ .Name }}_failure() {
+static bool test_{{ .Name }}_failure(void) {
 	BEGIN_TEST;
 	run_fidl_transform(
 		{{ .Transformation }},
@@ -51,8 +49,6 @@ bool test_{{ .Name }}_failure() {
 	END_TEST;
 }
 {{ end }}
-
-} // namespace
 
 BEGIN_TEST_CASE(transformer_conformance)
 {{ range .SuccessCases }}

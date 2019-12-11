@@ -69,22 +69,22 @@ struct TraversalResult {
   }
 };
 
-constexpr uint32_t PrimitiveSize(const fidl::FidlCodedPrimitive primitive) {
+constexpr uint32_t PrimitiveSize(const FidlCodedPrimitive primitive) {
   switch (primitive) {
-    case fidl::FidlCodedPrimitive::kBool:
-    case fidl::FidlCodedPrimitive::kInt8:
-    case fidl::FidlCodedPrimitive::kUint8:
+    case kFidlCodedPrimitive_Bool:
+    case kFidlCodedPrimitive_Int8:
+    case kFidlCodedPrimitive_Uint8:
       return 1;
-    case fidl::FidlCodedPrimitive::kInt16:
-    case fidl::FidlCodedPrimitive::kUint16:
+    case kFidlCodedPrimitive_Int16:
+    case kFidlCodedPrimitive_Uint16:
       return 2;
-    case fidl::FidlCodedPrimitive::kInt32:
-    case fidl::FidlCodedPrimitive::kUint32:
-    case fidl::FidlCodedPrimitive::kFloat32:
+    case kFidlCodedPrimitive_Int32:
+    case kFidlCodedPrimitive_Uint32:
+    case kFidlCodedPrimitive_Float32:
       return 4;
-    case fidl::FidlCodedPrimitive::kInt64:
-    case fidl::FidlCodedPrimitive::kUint64:
-    case fidl::FidlCodedPrimitive::kFloat64:
+    case kFidlCodedPrimitive_Int64:
+    case kFidlCodedPrimitive_Uint64:
+    case kFidlCodedPrimitive_Float64:
       return 8;
   }
   __builtin_unreachable();
@@ -97,46 +97,46 @@ uint32_t UnsafeInlineSize(const fidl_type_t* type, WireFormat wire_format) {
   assert(type);
 
   switch (type->type_tag) {
-    case fidl::kFidlTypePrimitive:
+    case kFidlTypePrimitive:
       return PrimitiveSize(type->coded_primitive);
-    case fidl::kFidlTypeEnum:
+    case kFidlTypeEnum:
       return PrimitiveSize(type->coded_enum.underlying_type);
-    case fidl::kFidlTypeBits:
+    case kFidlTypeBits:
       return PrimitiveSize(type->coded_bits.underlying_type);
-    case fidl::kFidlTypeStructPointer:
+    case kFidlTypeStructPointer:
       return 8;
-    case fidl::kFidlTypeUnionPointer:
+    case kFidlTypeUnionPointer:
       switch (wire_format) {
         case WireFormat::kOld:
           return 8;
         case WireFormat::kV1:
           return 24;  // xunion
       }
-    case fidl::kFidlTypeVector:
-    case fidl::kFidlTypeString:
+    case kFidlTypeVector:
+    case kFidlTypeString:
       return 16;
-    case fidl::kFidlTypeStruct:
+    case kFidlTypeStruct:
       return type->coded_struct.size;
-    case fidl::kFidlTypeUnion:
+    case kFidlTypeUnion:
       switch (wire_format) {
         case WireFormat::kOld:
           return type->coded_union.size;
         case WireFormat::kV1:
           return 24;  // xunion
       }
-    case fidl::kFidlTypeArray:
+    case kFidlTypeArray:
       return type->coded_array.array_size;
-    case fidl::kFidlTypeXUnion:
+    case kFidlTypeXUnion:
       return 24;
-    case fidl::kFidlTypeHandle:
+    case kFidlTypeHandle:
       return 4;
-    case fidl::kFidlTypeTable:
+    case kFidlTypeTable:
       return 16;
   }
 
   // This is needed to suppress a GCC warning "control reaches end of non-void function", since GCC
   // treats switch() on enums as non-exhaustive without a default case.
-  assert(false && "unexpected non-exhaustive switch on fidl::FidlTypeTag");
+  assert(false && "unexpected non-exhaustive switch on FidlTypeTag");
   return 0;
 }
 
@@ -302,11 +302,13 @@ class SrcDst final {
 // transform. On destruction, this object writes any collected error message
 // if an |out_error_msg| is provided.
 class DebugInfo final {
-public:
+ public:
   DebugInfo(fidl_transformation_t transformation, const fidl_type_t* type, const SrcDst& src_dst,
             const char** out_error_msg)
-    : transformation_(transformation), type_(type), src_dst_(src_dst),
-      out_error_msg_(out_error_msg) {}
+      : transformation_(transformation),
+        type_(type),
+        src_dst_(src_dst),
+        out_error_msg_(out_error_msg) {}
   DebugInfo(const DebugInfo&) = delete;
 
   ~DebugInfo() {
@@ -337,7 +339,7 @@ public:
     dup.has_failed_ = false;
   }
 
-private:
+ private:
   void Print(const std::string& failure_type) const {
     printf("=== TRANSFORMER %s ===\n", failure_type.c_str());
 
@@ -372,8 +374,9 @@ private:
     printf("}\n");
 
     printf("uint8_t dst_bytes[0x%02x] = {  // capacity = 0x%02x\n",
-          src_dst_.dst_max_offset_written(), src_dst_.dst_num_bytes_capacity());
-    print_bytes(src_dst_.dst_bytes(), src_dst_.dst_max_offset_written(), position_.dst_out_of_line_offset);
+           src_dst_.dst_max_offset_written(), src_dst_.dst_num_bytes_capacity());
+    print_bytes(src_dst_.dst_bytes(), src_dst_.dst_max_offset_written(),
+                position_.dst_out_of_line_offset);
     printf("}\n");
 
     printf("=== END TRANSFORMER %s ===\n", failure_type.c_str());
@@ -407,7 +410,6 @@ private:
   Position position_{0, 0, 0, 0};
 };
 
-
 class TransformerBase {
  public:
   TransformerBase(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* debug_info)
@@ -424,32 +426,35 @@ class TransformerBase {
     TRANSFORMER_ASSERT(type, position);
 
     switch (type->type_tag) {
-      case fidl::kFidlTypeStruct: {
-        const fidl_type_t ft(*type->coded_struct.alt_type);
+      case kFidlTypeStruct: {
+        const fidl_type_t ft{.type_tag = kFidlTypeStruct,
+                             .coded_struct = *type->coded_struct.alt_type};
         return InlineSize(&ft, To(), position);
       }
-      case fidl::kFidlTypeUnion: {
-        const fidl_type_t ft(*type->coded_union.alt_type);
+      case kFidlTypeUnion: {
+        const fidl_type_t ft{.type_tag = kFidlTypeUnion,
+                             .coded_union = *type->coded_union.alt_type};
         return InlineSize(&ft, To(), position);
       }
-      case fidl::kFidlTypeArray: {
-        const fidl_type_t ft(*type->coded_array.alt_type);
+      case kFidlTypeArray: {
+        const fidl_type_t ft{.type_tag = kFidlTypeArray,
+                             .coded_array = *type->coded_array.alt_type};
         return InlineSize(&ft, To(), position);
       }
-      case fidl::kFidlTypePrimitive:
-      case fidl::kFidlTypeEnum:
-      case fidl::kFidlTypeBits:
-      case fidl::kFidlTypeStructPointer:
-      case fidl::kFidlTypeUnionPointer:
-      case fidl::kFidlTypeVector:
-      case fidl::kFidlTypeString:
-      case fidl::kFidlTypeXUnion:
-      case fidl::kFidlTypeHandle:
-      case fidl::kFidlTypeTable:
+      case kFidlTypePrimitive:
+      case kFidlTypeEnum:
+      case kFidlTypeBits:
+      case kFidlTypeStructPointer:
+      case kFidlTypeUnionPointer:
+      case kFidlTypeVector:
+      case kFidlTypeString:
+      case kFidlTypeXUnion:
+      case kFidlTypeHandle:
+      case kFidlTypeTable:
         return InlineSize(type, To(), position);
     }
 
-    TRANSFORMER_ASSERT(false && "unexpected non-exhaustive switch on fidl::FidlTypeTag", position);
+    TRANSFORMER_ASSERT(false && "unexpected non-exhaustive switch on FidlTypeTag", position);
     return 0;
   }
 
@@ -477,7 +482,7 @@ class TransformerBase {
   }
 
   zx_status_t TransformTopLevelStruct() {
-    if (top_level_type_->type_tag != fidl::kFidlTypeStruct) {
+    if (top_level_type_->type_tag != kFidlTypeStruct) {
       return TRANSFORMER_FAIL(ZX_ERR_INVALID_ARGS, (Position{0, 0, 0, 0}),
                               "only top-level structs supported");
     }
@@ -504,58 +509,61 @@ class TransformerBase {
       return src_dst->Copy(position, dst_size);
     }
     switch (type->type_tag) {
-      case fidl::kFidlTypeHandle:
+      case kFidlTypeHandle:
         return TransformHandle(position, dst_size, out_traversal_result);
-      case fidl::kFidlTypePrimitive:
-      case fidl::kFidlTypeEnum:
-      case fidl::kFidlTypeBits:
+      case kFidlTypePrimitive:
+      case kFidlTypeEnum:
+      case kFidlTypeBits:
         return src_dst->Copy(position, dst_size);
-      case fidl::kFidlTypeStructPointer: {
+      case kFidlTypeStructPointer: {
         const auto& src_coded_struct = *type->coded_struct_pointer.struct_type;
         const auto& dst_coded_struct = *src_coded_struct.alt_type;
         return TransformStructPointer(src_coded_struct, dst_coded_struct, position,
                                       out_traversal_result);
       }
-      case fidl::kFidlTypeUnionPointer: {
+      case kFidlTypeUnionPointer: {
         const auto& src_coded_union = *type->coded_union_pointer.union_type;
         const auto& dst_coded_union = *src_coded_union.alt_type;
         return TransformUnionPointer(src_coded_union, dst_coded_union, position,
                                      out_traversal_result);
       }
-      case fidl::kFidlTypeStruct: {
+      case kFidlTypeStruct: {
         const auto& src_coded_struct = type->coded_struct;
         const auto& dst_coded_struct = *src_coded_struct.alt_type;
         return TransformStruct(src_coded_struct, dst_coded_struct, position, dst_size,
                                out_traversal_result);
       }
-      case fidl::kFidlTypeUnion: {
+      case kFidlTypeUnion: {
         const auto& src_coded_union = type->coded_union;
         const auto& dst_coded_union = *src_coded_union.alt_type;
         return TransformUnion(src_coded_union, dst_coded_union, position, dst_size,
                               out_traversal_result);
       }
-      case fidl::kFidlTypeArray: {
-        const auto convert = [](const fidl::FidlCodedArray& coded_array) {
-          return fidl::FidlCodedArrayNew(
-              coded_array.element, coded_array.array_size / coded_array.element_size,
-              coded_array.element_size, 0,
-              nullptr /* alt_type unused, we provide both src and dst */);
+      case kFidlTypeArray: {
+        const auto convert = [](const FidlCodedArray& coded_array) {
+          FidlCodedArrayNew result = {
+              .element = coded_array.element,
+              .element_count = coded_array.array_size / coded_array.element_size,
+              .element_size = coded_array.element_size,
+              .element_padding = 0,
+              .alt_type = nullptr /* alt_type unused, we provide both src and dst */};
+          return result;
         };
         auto src_coded_array = convert(type->coded_array);
         auto dst_coded_array = convert(*type->coded_array.alt_type);
         return TransformArray(src_coded_array, dst_coded_array, position, dst_size,
                               out_traversal_result);
       }
-      case fidl::kFidlTypeString:
+      case kFidlTypeString:
         return TransformString(position, out_traversal_result);
-      case fidl::kFidlTypeVector: {
+      case kFidlTypeVector: {
         const auto& src_coded_vector = type->coded_vector;
         const auto& dst_coded_vector = *src_coded_vector.alt_type;
         return TransformVector(src_coded_vector, dst_coded_vector, position, out_traversal_result);
       }
-      case fidl::kFidlTypeTable:
+      case kFidlTypeTable:
         return TransformTable(type->coded_table, position, out_traversal_result);
-      case fidl::kFidlTypeXUnion:
+      case kFidlTypeXUnion:
         return TransformXUnion(type->coded_xunion, position, out_traversal_result);
     }
 
@@ -584,8 +592,8 @@ class TransformerBase {
     return src_dst->Copy(position, dst_size);
   }
 
-  zx_status_t TransformStructPointer(const fidl::FidlCodedStruct& src_coded_struct,
-                                     const fidl::FidlCodedStruct& dst_coded_struct,
+  zx_status_t TransformStructPointer(const FidlCodedStruct& src_coded_struct,
+                                     const FidlCodedStruct& dst_coded_struct,
                                      const Position& position,
                                      TraversalResult* out_traversal_result) {
     auto presence = src_dst->Read<uint64_t>(position);
@@ -625,10 +633,9 @@ class TransformerBase {
                            out_traversal_result);
   }
 
-  zx_status_t TransformStruct(const fidl::FidlCodedStruct& src_coded_struct,
-                              const fidl::FidlCodedStruct& dst_coded_struct,
-                              const Position& position, uint32_t dst_size,
-                              TraversalResult* out_traversal_result) {
+  zx_status_t TransformStruct(const FidlCodedStruct& src_coded_struct,
+                              const FidlCodedStruct& dst_coded_struct, const Position& position,
+                              uint32_t dst_size, TraversalResult* out_traversal_result) {
     TRANSFORMER_ASSERT(src_coded_struct.field_count == dst_coded_struct.field_count, position);
     // Note: we cannot use dst_coded_struct.size, and must instead rely on
     // the provided dst_size since this struct could be placed in an alignment
@@ -718,9 +725,9 @@ class TransformerBase {
     return ZX_OK;
   }
 
-  zx_status_t TransformVector(const fidl::FidlCodedVector& src_coded_vector,
-                              const fidl::FidlCodedVector& dst_coded_vector,
-                              const Position& position, TraversalResult* out_traversal_result) {
+  zx_status_t TransformVector(const FidlCodedVector& src_coded_vector,
+                              const FidlCodedVector& dst_coded_vector, const Position& position,
+                              TraversalResult* out_traversal_result) {
     const auto src_vector = src_dst->Read<fidl_vector_t>(position);
     if (!src_vector) {
       return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "vector missing");
@@ -744,10 +751,14 @@ class TransformerBase {
         return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "vector presence invalid");
     }
 
-    const auto convert = [&](const fidl::FidlCodedVector& coded_vector) {
-      return fidl::FidlCodedArrayNew(coded_vector.element, static_cast<uint32_t>(src_vector->count),
-                                     coded_vector.element_size, 0,
-                                     nullptr /* alt_type unused, we provide both src and dst */);
+    const auto convert = [&](const FidlCodedVector& coded_vector) {
+      FidlCodedArrayNew result = {
+          .element = coded_vector.element,
+          .element_count = static_cast<uint32_t>(src_vector->count),
+          .element_size = coded_vector.element_size,
+          .element_padding = 0,
+          .alt_type = nullptr /* alt_type unused, we provide both src and dst */};
+      return result;
     };
     const auto src_vector_data_as_coded_array = convert(src_coded_vector);
     const auto dst_vector_data_as_coded_array = convert(dst_coded_vector);
@@ -777,10 +788,12 @@ class TransformerBase {
   }
 
   zx_status_t TransformString(const Position& position, TraversalResult* out_traversal_result) {
-    static const auto string_as_coded_vector = fidl::FidlCodedVector(
-        nullptr /* element */, 0 /*max count, unused */, 1 /* element_size */,
-        fidl::FidlNullability::kNullable /* constraints are not checked, i.e. unused */,
-        nullptr /* alt_type unused, we provide both src and dst */);
+    FidlCodedVector string_as_coded_vector = {
+        .element = nullptr,
+        .max_count = 0 /*unused*/,
+        .element_size = 1,
+        .nullable = kFidlNullability_Nullable, /* constraints are not checked, i.e. unused */
+        nullptr /* alt_type unused, we provide both src and dst */};
     return TransformVector(string_as_coded_vector, string_as_coded_vector, position,
                            out_traversal_result);
   }
@@ -885,7 +898,7 @@ class TransformerBase {
     return ZX_OK;
   }
 
-  zx_status_t TransformXUnion(const fidl::FidlCodedXUnion& coded_xunion, const Position& position,
+  zx_status_t TransformXUnion(const FidlCodedXUnion& coded_xunion, const Position& position,
                               TraversalResult* out_traversal_result) {
     auto xunion = src_dst->Read<const fidl_xunion_t>(position);
     if (!xunion) {
@@ -897,9 +910,9 @@ class TransformerBase {
       return status_copy_xunion_hdr;
     }
 
-    const fidl::FidlXUnionField* field = nullptr;
+    const FidlXUnionField* field = nullptr;
     for (uint32_t i = 0; i < coded_xunion.field_count; i++) {
-      const fidl::FidlXUnionField* candidate_field = coded_xunion.fields + i;
+      const FidlXUnionField* candidate_field = coded_xunion.fields + i;
       if (candidate_field->ordinal == xunion->tag) {
         field = candidate_field;
         break;
@@ -917,7 +930,7 @@ class TransformerBase {
                              out_traversal_result);
   }
 
-  zx_status_t TransformTable(const fidl::FidlCodedTable& coded_table, const Position& position,
+  zx_status_t TransformTable(const FidlCodedTable& coded_table, const Position& position,
                              TraversalResult* out_traversal_result) {
     auto table = src_dst->Read<const fidl_table_t>(position);
     if (!table) {
@@ -942,7 +955,7 @@ class TransformerBase {
     };
     const auto max_field_index = coded_table.field_count - 1;
     for (uint32_t ordinal = 1, field_index = 0; ordinal <= table->envelopes.count; ordinal++) {
-      const fidl::FidlTableField& field = coded_table.fields[field_index];
+      const FidlTableField& field = coded_table.fields[field_index];
 
       const bool known_field = (ordinal == field.ordinal);
       if (known_field) {
@@ -952,8 +965,7 @@ class TransformerBase {
 
       TraversalResult envelope_traversal_result;
       zx_status_t status = TransformEnvelope(known_field, known_field ? field.type : nullptr,
-                                             current_envelope_position,
-                                             &envelope_traversal_result);
+                                             current_envelope_position, &envelope_traversal_result);
       if (status != ZX_OK) {
         return status;
       }
@@ -971,10 +983,9 @@ class TransformerBase {
     return ZX_OK;
   }
 
-  zx_status_t TransformArray(const fidl::FidlCodedArrayNew& src_coded_array,
-                             const fidl::FidlCodedArrayNew& dst_coded_array,
-                             const Position& position, uint32_t dst_array_size,
-                             TraversalResult* out_traversal_result) {
+  zx_status_t TransformArray(const FidlCodedArrayNew& src_coded_array,
+                             const FidlCodedArrayNew& dst_coded_array, const Position& position,
+                             uint32_t dst_array_size, TraversalResult* out_traversal_result) {
     TRANSFORMER_ASSERT(src_coded_array.element_count == dst_coded_array.element_count, position);
 
     // Fast path for elements without coding tables (e.g. strings).
@@ -1025,13 +1036,13 @@ class TransformerBase {
   virtual WireFormat From() const = 0;
   virtual WireFormat To() const = 0;
 
-  virtual zx_status_t TransformUnionPointer(const fidl::FidlCodedUnion& src_coded_union,
-                                            const fidl::FidlCodedUnion& dst_coded_union,
+  virtual zx_status_t TransformUnionPointer(const FidlCodedUnion& src_coded_union,
+                                            const FidlCodedUnion& dst_coded_union,
                                             const Position& position,
                                             TraversalResult* out_traversal_result) = 0;
 
-  virtual zx_status_t TransformUnion(const fidl::FidlCodedUnion& src_coded_union,
-                                     const fidl::FidlCodedUnion& dst_coded_union,
+  virtual zx_status_t TransformUnion(const FidlCodedUnion& src_coded_union,
+                                     const FidlCodedUnion& dst_coded_union,
                                      const Position& position, uint32_t dst_size,
                                      TraversalResult* out_traversal_result) = 0;
   inline zx_status_t Fail(zx_status_t status, const Position& position, const int line_number,
@@ -1057,9 +1068,8 @@ class V1ToOld final : public TransformerBase {
   WireFormat From() const { return WireFormat::kV1; }
   WireFormat To() const { return WireFormat::kOld; }
 
-  zx_status_t TransformUnionPointer(const fidl::FidlCodedUnion& src_coded_union,
-                                    const fidl::FidlCodedUnion& dst_coded_union,
-                                    const Position& position,
+  zx_status_t TransformUnionPointer(const FidlCodedUnion& src_coded_union,
+                                    const FidlCodedUnion& dst_coded_union, const Position& position,
                                     TraversalResult* out_traversal_result) {
     auto src_xunion = src_dst->Read<const fidl_xunion_t>(position);
     if (!src_xunion) {
@@ -1097,10 +1107,9 @@ class V1ToOld final : public TransformerBase {
                           FIDL_ALIGN(dst_coded_union.size), out_traversal_result);
   }
 
-  zx_status_t TransformUnion(const fidl::FidlCodedUnion& src_coded_union,
-                             const fidl::FidlCodedUnion& dst_coded_union,
-                             const Position& position, uint32_t dst_size,
-                             TraversalResult* out_traversal_result) {
+  zx_status_t TransformUnion(const FidlCodedUnion& src_coded_union,
+                             const FidlCodedUnion& dst_coded_union, const Position& position,
+                             uint32_t dst_size, TraversalResult* out_traversal_result) {
     TRANSFORMER_ASSERT(src_coded_union.field_count == dst_coded_union.field_count, position);
 
     // Read: extensible-union ordinal.
@@ -1124,10 +1133,10 @@ class V1ToOld final : public TransformerBase {
     // Retrieve: flexible-union field (or variant).
     bool src_field_found = false;
     uint32_t src_field_index = 0;
-    const fidl::FidlUnionField* src_field = nullptr;
+    const FidlUnionField* src_field = nullptr;
     for (/* src_field_index needed after the loop */; src_field_index < src_coded_union.field_count;
          src_field_index++) {
-      const fidl::FidlUnionField* candidate_src_field = &src_coded_union.fields[src_field_index];
+      const FidlUnionField* candidate_src_field = &src_coded_union.fields[src_field_index];
       if (candidate_src_field->xunion_ordinal == src_xunion->tag) {
         src_field_found = true;
         src_field = candidate_src_field;
@@ -1138,7 +1147,7 @@ class V1ToOld final : public TransformerBase {
       return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "ordinal has no corresponding variant");
     }
 
-    const fidl::FidlUnionField& dst_field = dst_coded_union.fields[src_field_index];
+    const FidlUnionField& dst_field = dst_coded_union.fields[src_field_index];
 
     // Write: static-union tag, and pad (if needed).
     switch (dst_coded_union.data_offset) {
@@ -1217,9 +1226,8 @@ class OldToV1 final : public TransformerBase {
   WireFormat From() const { return WireFormat::kOld; }
   WireFormat To() const { return WireFormat::kV1; }
 
-  zx_status_t TransformUnionPointer(const fidl::FidlCodedUnion& src_coded_union,
-                                    const fidl::FidlCodedUnion& dst_coded_union,
-                                    const Position& position,
+  zx_status_t TransformUnionPointer(const FidlCodedUnion& src_coded_union,
+                                    const FidlCodedUnion& dst_coded_union, const Position& position,
                                     TraversalResult* out_traversal_result) {
     auto presence = src_dst->Read<uint64_t>(position);
     if (!presence) {
@@ -1252,18 +1260,18 @@ class OldToV1 final : public TransformerBase {
 
     out_traversal_result->src_out_of_line_size += src_aligned_size;
     return TransformUnion(src_coded_union, dst_coded_union, union_position,
-                          0 /* unused: xunions are FIDL_ALIGNed */,
-                          out_traversal_result);
+                          0 /* unused: xunions are FIDL_ALIGNed */, out_traversal_result);
   }
 
-  zx_status_t TransformUnion(const fidl::FidlCodedUnion& src_coded_union,
-                             const fidl::FidlCodedUnion& dst_coded_union,
-                             const Position& position, uint32_t /* unused: dst_size */,
+  zx_status_t TransformUnion(const FidlCodedUnion& src_coded_union,
+                             const FidlCodedUnion& dst_coded_union, const Position& position,
+                             uint32_t /* unused: dst_size */,
                              TraversalResult* out_traversal_result) {
     TRANSFORMER_ASSERT(src_coded_union.field_count == dst_coded_union.field_count, position);
 
     // Read: union tag.
-    const auto union_tag_ptr = src_dst->Read<const fidl_union_tag_t>(position, src_coded_union.size);
+    const auto union_tag_ptr =
+        src_dst->Read<const fidl_union_tag_t>(position, src_coded_union.size);
     if (!union_tag_ptr) {
       return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union tag missing");
     }
@@ -1274,8 +1282,8 @@ class OldToV1 final : public TransformerBase {
       return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "invalid union tag");
     }
 
-    const fidl::FidlUnionField& src_field = src_coded_union.fields[union_tag];
-    const fidl::FidlUnionField& dst_field = dst_coded_union.fields[union_tag];
+    const FidlUnionField& src_field = src_coded_union.fields[union_tag];
+    const FidlUnionField& dst_field = dst_coded_union.fields[union_tag];
 
     // Write: xunion tag & envelope.
     const uint32_t dst_inline_field_size = [&] {
@@ -1337,8 +1345,8 @@ zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type
                            const uint8_t* src_bytes, uint32_t src_num_bytes, uint8_t* dst_bytes,
                            uint32_t dst_num_bytes_capacity, uint32_t* out_dst_num_bytes,
                            const char** out_error_msg) {
-  if (!type || !src_bytes || !dst_bytes || !out_dst_num_bytes || !fidl::IsAligned(src_bytes) ||
-      !fidl::IsAligned(dst_bytes)) {
+  if (!type || !src_bytes || !dst_bytes || !out_dst_num_bytes || !FidlIsAligned(src_bytes) ||
+      !FidlIsAligned(dst_bytes)) {
     return ZX_ERR_INVALID_ARGS;
   }
 

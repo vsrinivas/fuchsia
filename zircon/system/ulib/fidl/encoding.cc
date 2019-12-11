@@ -174,7 +174,7 @@ class FidlEncoder final
       return false;
     }
     uint32_t new_offset;
-    if (!fidl::AddOutOfLine(next_out_of_line_, size, &new_offset)) {
+    if (!FidlAddOutOfLine(next_out_of_line_, size, &new_offset)) {
       SetError("overflow updating out-of-line offset");
       return false;
     }
@@ -216,7 +216,7 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
     set_error("Cannot encode null bytes");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!fidl::IsAligned(reinterpret_cast<uint8_t*>(bytes))) {
+  if (!FidlIsAligned(reinterpret_cast<uint8_t*>(bytes))) {
     set_error("Bytes must be aligned to FIDL_ALIGNMENT");
     return ZX_ERR_INVALID_ARGS;
   }

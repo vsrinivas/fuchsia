@@ -27,7 +27,7 @@ fi
 cd ${FUCHSIA_DIR}
 
 ${FIDLC} \
-  --tables ${TEST_DIR}/generated/extra_messages.cc \
+  --tables ${TEST_DIR}/generated/extra_messages.c \
   --files ${TEST_DIR}/extra_messages.test.fidl
 
 ${FIDLC} \
@@ -41,7 +41,7 @@ for src_path in llcpp.test.fidl; do
   # generate the json IR
   cd ${TEST_DIR}
   ${FIDLC} --json /tmp/${json_name} \
-           --tables generated/fidl_llcpp_tables_${src_name}.cc \
+           --tables generated/fidl_llcpp_tables_${src_name}.c \
            --files ${src_path}
 
   # generate llcpp bindings
@@ -52,7 +52,7 @@ for src_path in llcpp.test.fidl; do
 
   # generate tables in c
   ${FIDLC} \
-    --tables ${TEST_DIR}/generated/extra_messages.cc \
+    --tables ${TEST_DIR}/generated/extra_messages.c \
     --files ${TEST_DIR}/extra_messages.test.fidl
 
   mv fidl_llcpp_${src_name}.h generated/fidl_llcpp_${src_name}.h

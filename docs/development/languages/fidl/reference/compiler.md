@@ -375,7 +375,7 @@ const fidl_type_t MyStruct = fidl_type_t(::fidl::FidlCodedStruct(
     my_struct_fields, 1u, 32u, "mylibrary/MyStruct"));
 ```
 
-An example of generated coding tables can be found in [extra_messages.cc][extra_messages]. The
+An example of generated coding tables can be found in [extra_messages.c][extra_messages]. The
 [README][coding-readme] gives additional context. The `fidl_type_t` definitions (such as for
 `FidlCodedStruct`) can be found in [internal.h][internal].
 
@@ -496,7 +496,7 @@ content that does not appear directly in any of the input `SourceFile`s, like fo
 anonymous [`Name`](#name)s.
 
 <!-- xrefs -->
-[extra_messages]: /zircon/system/utest/fidl/generated/extra_messages.cc
+[extra_messages]: /zircon/system/utest/fidl/generated/extra_messages.c
 [internal]: /zircon/system/ulib/fidl/include/lib/fidl/internal.h
 [layout-attr]: /docs/development/languages/fidl/reference/attributes.md#layout_layout
 [fidlgen]: /garnet/go/src/fidl/compiler/backend

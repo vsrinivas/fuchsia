@@ -627,7 +627,7 @@ bool linearize_xunion_primitive_field() {
                                // The out-of-line address of the payload would follow.
   };
   constexpr uint32_t kEnvelopeDataPointerSize = sizeof(uintptr_t);
-  constexpr uint32_t kEnvelopePayloadSize = fidl::FidlAlign(sizeof(int32_t));
+  constexpr uint32_t kEnvelopePayloadSize = FidlAlign(sizeof(int32_t));
   ASSERT_EQ(actual_num_bytes,
             sizeof(golden_linearized_prefix) + kEnvelopeDataPointerSize + kEnvelopePayloadSize);
   ASSERT_BYTES_EQ(buffer, golden_linearized_prefix, sizeof(golden_linearized_prefix),

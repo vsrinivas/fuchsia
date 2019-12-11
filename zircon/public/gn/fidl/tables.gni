@@ -22,7 +22,7 @@ fidl_support_fidlc = [
     files = [
       {
         switch = "--tables"
-        path = "tables.cpp"
+        path = "tables.c"
       },
     ]
   },

@@ -249,19 +249,29 @@ struct unbounded_too_large_nullable_vector_of_handles_message_layout {
   alignas(FIDL_ALIGNMENT) unbounded_too_large_nullable_vector_of_handles_inline_data inline_struct;
   alignas(FIDL_ALIGNMENT) zx_handle_t handles[kTooBigNumHandles];
 };
-const fidl_type_t unbounded_too_large_nullable_vector_of_handles = fidl_type_t(
-    fidl::FidlCodedVector(&nullable_handle, FIDL_MAX_SIZE, sizeof(zx_handle_t), fidl::kNullable));
-static const ::fidl::FidlStructField unbounded_too_large_nullable_vector_of_handles_fields[] = {
-    ::fidl::FidlStructField(&unbounded_too_large_nullable_vector_of_handles,
-                            offsetof(unbounded_too_large_nullable_vector_of_handles_message_layout,
-                                     inline_struct.vector),
-                            0),
+const fidl_type_t unbounded_too_large_nullable_vector_of_handles = {
+    .type_tag = kFidlTypeVector,
+    {.coded_vector = {.element = &nullable_handle,
+                      .max_count = FIDL_MAX_SIZE,
+                      .element_size = sizeof(zx_handle_t),
+                      .nullable = kFidlNullability_Nullable,
+                      .alt_type = nullptr}}};
+static const FidlStructField unbounded_too_large_nullable_vector_of_handles_fields[] = {
+    FidlStructField(&unbounded_too_large_nullable_vector_of_handles,
+                    offsetof(unbounded_too_large_nullable_vector_of_handles_message_layout,
+                             inline_struct.vector),
+                    0),
 };
-const fidl_type_t unbounded_too_large_nullable_vector_of_handles_message_type = fidl_type_t(
-    ::fidl::FidlCodedStruct(unbounded_too_large_nullable_vector_of_handles_fields,
-                            ArrayCount(unbounded_too_large_nullable_vector_of_handles_fields),
-                            sizeof(unbounded_too_large_nullable_vector_of_handles_inline_data),
-                            "unbounded_too_large_nullable_vector_of_handles_message"));
+const fidl_type_t unbounded_too_large_nullable_vector_of_handles_message_type = {
+    .type_tag = kFidlTypeStruct,
+    {.coded_struct = {
+         .fields = unbounded_too_large_nullable_vector_of_handles_fields,
+         .field_count = ArrayCount(unbounded_too_large_nullable_vector_of_handles_fields),
+         .size = sizeof(unbounded_too_large_nullable_vector_of_handles_inline_data),
+         .max_out_of_line = UINT32_MAX,
+         .contains_union = true,
+         .name = "unbounded_too_large_nullable_vector_of_handles_message",
+         .alt_type = nullptr}}};
 
 bool close_present_too_large_nullable_vector_of_handles() {
   BEGIN_TEST;

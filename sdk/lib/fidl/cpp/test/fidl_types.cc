@@ -17,8 +17,9 @@ constexpr uint32_t ArrayCount(T const (&array)[N]) {
   return static_cast<uint32_t>(N);
 }
 
-static const fidl_type_t unbounded_nonnullable_string =
-    fidl_type_t(fidl::FidlCodedString(FIDL_MAX_SIZE, fidl::kNonnullable));
+static const fidl_type_t unbounded_nonnullable_string = {
+    .type_tag = kFidlTypeString,
+    {.coded_string = {.max_size = FIDL_MAX_SIZE, .nullable = kFidlNullability_Nonnullable}}};
 
 struct unbounded_nonnullable_string_inline_data {
   fidl_message_header_t header;
@@ -30,17 +31,19 @@ struct unbounded_nonnullable_string_message_layout {
   alignas(FIDL_ALIGNMENT) char data[6];
 };
 
-static const fidl::FidlStructField unbounded_nonnullable_string_fields[] = {
-    fidl::FidlStructField(
-        &unbounded_nonnullable_string,
-        offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string), 0),
-
+static const FidlStructField unbounded_nonnullable_string_fields[] = {
+    FidlStructField(&unbounded_nonnullable_string,
+                    offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string), 0),
 };
 
-const fidl::FidlCodedStruct unbounded_nonnullable_string_message = fidl::FidlCodedStruct(
-    unbounded_nonnullable_string_fields, ArrayCount(unbounded_nonnullable_string_fields),
-    sizeof(unbounded_nonnullable_string_inline_data), 0xFFFFFFFF, false,
-    "unbounded_nonnullable_string_message", &unbounded_nonnullable_string_message);
+const FidlCodedStruct unbounded_nonnullable_string_message{
+    .fields = unbounded_nonnullable_string_fields,
+    .field_count = ArrayCount(unbounded_nonnullable_string_fields),
+    .size = sizeof(unbounded_nonnullable_string_inline_data),
+    .max_out_of_line = 0xFFFFFFFF,
+    .contains_union = false,
+    .name = "unbounded_nonnullable_string_message",
+    .alt_type = &unbounded_nonnullable_string_message};
 
-const fidl_type_t unbounded_nonnullable_string_message_type =
-    fidl_type_t(unbounded_nonnullable_string_message);
+const fidl_type_t unbounded_nonnullable_string_message_type = {
+    .type_tag = kFidlTypeStruct, {.coded_struct = unbounded_nonnullable_string_message}};

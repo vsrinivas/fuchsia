@@ -19,10 +19,10 @@ zx_status_t PrimaryObjectSize(const fidl_type_t* type, size_t* out_size, const c
     return ZX_ERR_INVALID_ARGS;
   }
   switch (type->type_tag) {
-    case fidl::kFidlTypeStruct:
+    case kFidlTypeStruct:
       *out_size = type->coded_struct.size;
       return ZX_OK;
-    case fidl::kFidlTypeTable:
+    case kFidlTypeTable:
       *out_size = sizeof(fidl_vector_t);
       return ZX_OK;
     default:
@@ -46,7 +46,7 @@ zx_status_t StartingOutOfLineOffset(const fidl_type_t* type, uint32_t buffer_siz
     set_error("Buffer is too small for first inline object");
     return ZX_ERR_INVALID_ARGS;
   }
-  uint64_t first_out_of_line = fidl::FidlAlign(static_cast<uint32_t>(primary_size));
+  uint64_t first_out_of_line = FidlAlign(static_cast<uint32_t>(primary_size));
   if (first_out_of_line > std::numeric_limits<uint32_t>::max()) {
     set_error("Out of line starting offset overflows");
     return ZX_ERR_INVALID_ARGS;

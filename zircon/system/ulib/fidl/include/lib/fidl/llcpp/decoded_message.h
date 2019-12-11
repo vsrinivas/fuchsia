@@ -47,7 +47,7 @@ class DecodedMessage final {
   // This does not take ownership of that buffer region.
   // But it does take ownership of the handles within the buffer.
   explicit DecodedMessage(BytePart bytes) : bytes_(std::move(bytes)) {
-    ZX_DEBUG_ASSERT(IsAligned(bytes_.data()));
+    ZX_DEBUG_ASSERT(FidlIsAligned(bytes_.data()));
     ZX_DEBUG_ASSERT(bytes_.actual() >= FidlAlign(FidlType::PrimarySize));
     ZX_DEBUG_ASSERT(bytes_.actual() % FIDL_ALIGNMENT == 0);
   }

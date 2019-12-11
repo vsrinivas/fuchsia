@@ -33,7 +33,7 @@ for src_path in `find "${LLCPP_TEST_DIR}" -name '*.fidl'`; do
   # generate the json IR
   cd ${LLCPP_TEST_DIR}
   ${FIDLC} --json /tmp/${json_name} \
-           --tables generated/fidl_llcpp_tables_${src_name}.cc \
+           --tables generated/fidl_llcpp_tables_${src_name}.c \
            --files ${src_path}
 
   # generate llcpp bindings

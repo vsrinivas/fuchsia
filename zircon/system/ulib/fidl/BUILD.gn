@@ -32,7 +32,7 @@ zx_library("fidl_base") {
     "decoding.cc",
     "encoding.cc",
     "formatting.cc",
-    "internal.cc",
+    "internal.c",
     "linearizing.cc",
     "message.cc",
     "message_buffer.cc",

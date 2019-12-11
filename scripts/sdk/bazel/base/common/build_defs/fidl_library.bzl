@@ -109,6 +109,6 @@ fidl_library = rule(
         # generators.
         "ir": "%{name}_ir.json",
         # The C coding tables.
-        "coding_tables": "%{name}_tables.cc",
+        "coding_tables": "%{name}_tables.c",
     },
 )

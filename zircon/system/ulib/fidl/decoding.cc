@@ -77,7 +77,7 @@ class FidlDecoder final
       return Status::kConstraintViolationError;
     }
     uint32_t new_offset;
-    if (!fidl::AddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
+    if (!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
       SetError("overflow updating out-of-line offset");
       return Status::kMemoryError;
     }
@@ -250,7 +250,7 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
     drop_all_handles();
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!fidl::IsAligned(reinterpret_cast<uint8_t*>(bytes))) {
+  if (!FidlIsAligned(reinterpret_cast<uint8_t*>(bytes))) {
     set_error("Bytes must be aligned to FIDL_ALIGNMENT");
     drop_all_handles();
     return ZX_ERR_INVALID_ARGS;

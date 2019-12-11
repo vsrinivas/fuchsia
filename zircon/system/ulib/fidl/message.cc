@@ -55,13 +55,13 @@ const fidl_type_t get_alt_type(const fidl_type_t* type) {
     case kFidlTypeHandle:
       return *type;
     case kFidlTypeStruct:
-      return fidl_type_t(*type->coded_struct.alt_type);
+      return fidl_type_t{.type_tag = kFidlTypeStruct, .coded_struct = *type->coded_struct.alt_type};
     case kFidlTypeUnion:
-      return fidl_type_t(*type->coded_union.alt_type);
+      return fidl_type_t{.type_tag = kFidlTypeUnion, .coded_union = *type->coded_union.alt_type};
     case kFidlTypeArray:
-      return fidl_type_t(*type->coded_array.alt_type);
+      return fidl_type_t{.type_tag = kFidlTypeArray, .coded_array = *type->coded_array.alt_type};
     case kFidlTypeVector:
-      return fidl_type_t(*type->coded_vector.alt_type);
+      return fidl_type_t{.type_tag = kFidlTypeVector, .coded_vector = *type->coded_vector.alt_type};
     default:
       assert(false && "cannot get alt type of a type that lacks an alt type");
       return *type;
@@ -72,7 +72,7 @@ zx_status_t FidlTransformWithCallback(
     fidl_transformation_t transformation, const fidl_type_t* type, const uint8_t* src_bytes,
     uint32_t src_num_bytes, const char** out_error_msg,
     const std::function<zx_status_t(const uint8_t* dst_bytes, uint32_t dst_num_bytes)>& callback) {
-  if (type->type_tag != fidl::kFidlTypeStruct) {
+  if (type->type_tag != kFidlTypeStruct) {
     return ZX_ERR_INVALID_ARGS;
   }
   auto struct_type = type->coded_struct;

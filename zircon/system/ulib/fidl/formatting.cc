@@ -56,13 +56,13 @@ class StringBuilder {
   size_t length_ = 0u;
 };
 
-void FormatNullability(StringBuilder* str, fidl::FidlNullability nullable) {
-  if (nullable == fidl::kNullable) {
+void FormatNullability(StringBuilder* str, FidlNullability nullable) {
+  if (nullable == kFidlNullability_Nullable) {
     str->Append("?");
   }
 }
 
-void FormatEnumName(StringBuilder* str, const fidl::FidlCodedEnum* coded_enum) {
+void FormatEnumName(StringBuilder* str, const FidlCodedEnum* coded_enum) {
   if (coded_enum->name) {
     str->Append(coded_enum->name);
   } else {
@@ -70,7 +70,7 @@ void FormatEnumName(StringBuilder* str, const fidl::FidlCodedEnum* coded_enum) {
   }
 }
 
-void FormatBitsName(StringBuilder* str, const fidl::FidlCodedBits* coded_bits) {
+void FormatBitsName(StringBuilder* str, const FidlCodedBits* coded_bits) {
   if (coded_bits->name) {
     str->Append(coded_bits->name);
   } else {
@@ -78,7 +78,7 @@ void FormatBitsName(StringBuilder* str, const fidl::FidlCodedBits* coded_bits) {
   }
 }
 
-void FormatStructName(StringBuilder* str, const fidl::FidlCodedStruct* coded_struct) {
+void FormatStructName(StringBuilder* str, const FidlCodedStruct* coded_struct) {
   if (coded_struct->name) {
     str->Append(coded_struct->name);
   } else {
@@ -86,7 +86,7 @@ void FormatStructName(StringBuilder* str, const fidl::FidlCodedStruct* coded_str
   }
 }
 
-void FormatUnionName(StringBuilder* str, const fidl::FidlCodedUnion* coded_union) {
+void FormatUnionName(StringBuilder* str, const FidlCodedUnion* coded_union) {
   if (coded_union->name) {
     str->Append(coded_union->name);
   } else {
@@ -94,7 +94,7 @@ void FormatUnionName(StringBuilder* str, const fidl::FidlCodedUnion* coded_union
   }
 }
 
-void FormatTableName(StringBuilder* str, const fidl::FidlCodedTable* coded_table) {
+void FormatTableName(StringBuilder* str, const FidlCodedTable* coded_table) {
   if (coded_table->name) {
     str->Append(coded_table->name);
   } else {
@@ -102,7 +102,7 @@ void FormatTableName(StringBuilder* str, const fidl::FidlCodedTable* coded_table
   }
 }
 
-void FormatXUnionName(StringBuilder* str, const fidl::FidlCodedXUnion* coded_xunion) {
+void FormatXUnionName(StringBuilder* str, const FidlCodedXUnion* coded_xunion) {
   if (coded_xunion->name) {
     str->Append(coded_xunion->name);
   } else {
@@ -123,120 +123,120 @@ void FormatElementName(StringBuilder* str, const fidl_type_t* type) {
 
 void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
   switch (type->type_tag) {
-    case fidl::kFidlTypeEnum:
+    case kFidlTypeEnum:
       FormatEnumName(str, &type->coded_enum);
       break;
-    case fidl::kFidlTypeBits:
+    case kFidlTypeBits:
       FormatBitsName(str, &type->coded_bits);
       break;
-    case fidl::kFidlTypeStruct:
+    case kFidlTypeStruct:
       FormatStructName(str, &type->coded_struct);
       break;
-    case fidl::kFidlTypeStructPointer:
+    case kFidlTypeStructPointer:
       FormatStructName(str, type->coded_struct_pointer.struct_type);
       str->Append("?");
       break;
-    case fidl::kFidlTypeUnion:
+    case kFidlTypeUnion:
       FormatUnionName(str, &type->coded_union);
       break;
-    case fidl::kFidlTypeUnionPointer:
+    case kFidlTypeUnionPointer:
       FormatUnionName(str, type->coded_union_pointer.union_type);
       str->Append("?");
       break;
-    case fidl::kFidlTypeArray:
+    case kFidlTypeArray:
       str->Append("array<");
       FormatElementName(str, type->coded_array.element);
       str->Append(">");
       str->AppendPrintf(":%" PRIu32, type->coded_array.array_size / type->coded_array.element_size);
       break;
-    case fidl::kFidlTypeString:
+    case kFidlTypeString:
       str->Append("string");
       if (type->coded_string.max_size != FIDL_MAX_SIZE) {
         str->AppendPrintf(":%" PRIu32, type->coded_string.max_size);
       }
       FormatNullability(str, type->coded_string.nullable);
       break;
-    case fidl::kFidlTypeHandle:
+    case kFidlTypeHandle:
       str->Append("handle");
       if (type->coded_handle.handle_subtype) {
         str->Append("<");
         switch (type->coded_handle.handle_subtype) {
-          case fidl::kFidlHandleSubtypeHandle:
+          case ZX_OBJ_TYPE_NONE:
             str->Append("handle");
             break;
-          case fidl::kFidlHandleSubtypeBti:
+          case ZX_OBJ_TYPE_BTI:
             str->Append("bti");
             break;
-          case fidl::kFidlHandleSubtypeChannel:
+          case ZX_OBJ_TYPE_CHANNEL:
             str->Append("channel");
             break;
-          case fidl::kFidlHandleSubtypeEvent:
+          case ZX_OBJ_TYPE_EVENT:
             str->Append("event");
             break;
-          case fidl::kFidlHandleSubtypeEventpair:
+          case ZX_OBJ_TYPE_EVENTPAIR:
             str->Append("eventpair");
             break;
-          case fidl::kFidlHandleSubtypeException:
+          case ZX_OBJ_TYPE_EXCEPTION:
             str->Append("exception");
             break;
-          case fidl::kFidlHandleSubtypeFifo:
+          case ZX_OBJ_TYPE_FIFO:
             str->Append("fifo");
             break;
-          case fidl::kFidlHandleSubtypeGuest:
+          case ZX_OBJ_TYPE_GUEST:
             str->Append("guest");
             break;
-          case fidl::kFidlHandleSubtypeInterrupt:
+          case ZX_OBJ_TYPE_INTERRUPT:
             str->Append("interrupt");
             break;
-          case fidl::kFidlHandleSubtypeIommu:
+          case ZX_OBJ_TYPE_IOMMU:
             str->Append("iommu");
             break;
-          case fidl::kFidlHandleSubtypeJob:
+          case ZX_OBJ_TYPE_JOB:
             str->Append("job");
             break;
-          case fidl::kFidlHandleSubtypeLog:
+          case ZX_OBJ_TYPE_LOG:
             str->Append("log");
             break;
-          case fidl::kFidlHandleSubtypePager:
+          case ZX_OBJ_TYPE_PAGER:
             str->Append("pager");
             break;
-          case fidl::kFidlHandleSubtypePciDevice:
+          case ZX_OBJ_TYPE_PCI_DEVICE:
             str->Append("pcidevice");
             break;
-          case fidl::kFidlHandleSubtypePmt:
+          case ZX_OBJ_TYPE_PMT:
             str->Append("pmt");
             break;
-          case fidl::kFidlHandleSubtypePort:
+          case ZX_OBJ_TYPE_PORT:
             str->Append("port");
             break;
-          case fidl::kFidlHandleSubtypeProcess:
+          case ZX_OBJ_TYPE_PROCESS:
             str->Append("process");
             break;
-          case fidl::kFidlHandleSubtypeProfile:
+          case ZX_OBJ_TYPE_PROFILE:
             str->Append("profile");
             break;
-          case fidl::kFidlHandleSubtypeResource:
+          case ZX_OBJ_TYPE_RESOURCE:
             str->Append("resource");
             break;
-          case fidl::kFidlHandleSubtypeSocket:
+          case ZX_OBJ_TYPE_SOCKET:
             str->Append("socket");
             break;
-          case fidl::kFidlHandleSubtypeSuspendToken:
+          case ZX_OBJ_TYPE_SUSPEND_TOKEN:
             str->Append("suspendtoken");
             break;
-          case fidl::kFidlHandleSubtypeThread:
+          case ZX_OBJ_TYPE_THREAD:
             str->Append("thread");
             break;
-          case fidl::kFidlHandleSubtypeTimer:
+          case ZX_OBJ_TYPE_TIMER:
             str->Append("timer");
             break;
-          case fidl::kFidlHandleSubtypeVcpu:
+          case ZX_OBJ_TYPE_VCPU:
             str->Append("vcpu");
             break;
-          case fidl::kFidlHandleSubtypeVmar:
+          case ZX_OBJ_TYPE_VMAR:
             str->Append("vmar");
             break;
-          case fidl::kFidlHandleSubtypeVmo:
+          case ZX_OBJ_TYPE_VMO:
             str->Append("vmo");
             break;
           default:
@@ -247,7 +247,7 @@ void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
       }
       FormatNullability(str, type->coded_handle.nullable);
       break;
-    case fidl::kFidlTypeVector:
+    case kFidlTypeVector:
       str->Append("vector<");
       FormatElementName(str, type->coded_vector.element);
       str->Append(">");
@@ -256,13 +256,13 @@ void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
       }
       FormatNullability(str, type->coded_vector.nullable);
       break;
-    case fidl::kFidlTypeTable:
+    case kFidlTypeTable:
       FormatTableName(str, &type->coded_table);
       break;
-    case fidl::kFidlTypeXUnion:
+    case kFidlTypeXUnion:
       FormatXUnionName(str, &type->coded_xunion);
       break;
-    case fidl::kFidlTypePrimitive:
+    case kFidlTypePrimitive:
       ZX_PANIC("unrecognized tag");
       break;
   }

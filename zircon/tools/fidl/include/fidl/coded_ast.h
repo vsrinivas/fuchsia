@@ -354,69 +354,6 @@ struct VectorType : public Type {
   const types::Nullability nullability;
 };
 
-struct TypeTraits {
-  // The qualified C++ identifier for this type.
-  const std::string_view pointer_name;
-
-  // The C++ identifier to access this type inside a fidl_type's anonymous union.
-  const std::string_view fidl_type_accessor;
-};
-
-constexpr TypeTraits GetTypeTraits(const UnionType&) {
-  return TypeTraits{
-      .pointer_name = "::fidl::FidlCodedUnion*",
-      .fidl_type_accessor = "coded_union",
-  };
-}
-
-constexpr TypeTraits GetTypeTraits(const ArrayType&) {
-  return TypeTraits{
-      .pointer_name = "::fidl::FidlCodedArray*",
-      .fidl_type_accessor = "coded_array",
-  };
-}
-
-constexpr TypeTraits GetTypeTraits(const StructType&) {
-  return TypeTraits{
-      .pointer_name = "::fidl::FidlCodedStruct*",
-      .fidl_type_accessor = "coded_struct",
-  };
-}
-
-constexpr TypeTraits GetTypeTraits(const MessageType&) {
-  return TypeTraits{
-      .pointer_name = "::fidl::FidlCodedStruct*",
-      .fidl_type_accessor = "coded_struct",
-  };
-}
-
-constexpr TypeTraits GetTypeTraits(const VectorType&) {
-  return TypeTraits{
-      .pointer_name = "::fidl::FidlCodedVector*",
-      .fidl_type_accessor = "coded_vector",
-  };
-}
-
-inline TypeTraits GetTypeTraits(const Type& type) {
-  switch (type.kind) {
-    using Kind = Type::Kind;
-
-    case Kind::kUnion:
-      return GetTypeTraits(static_cast<const UnionType&>(type));
-    case Kind::kStruct:
-      return GetTypeTraits(static_cast<const StructType&>(type));
-    case Kind::kMessage:
-      return GetTypeTraits(static_cast<const MessageType&>(type));
-    case Kind::kArray:
-      return GetTypeTraits(static_cast<const ArrayType&>(type));
-    case Kind::kVector:
-      return GetTypeTraits(static_cast<const VectorType&>(type));
-    default:
-      assert(false && "Invalid type passed to GetTypeTraits()");
-      return TypeTraits{};
-  }
-}
-
 }  // namespace coded
 }  // namespace fidl
 

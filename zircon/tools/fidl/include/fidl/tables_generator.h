@@ -29,6 +29,12 @@ namespace fidl {
 // the Generate methods, and should not call the "Emit" functions
 // directly.
 
+// Note that this file is specifically emitted as a C file rather than a C++
+// file in order to ensure that the definitions of the tables will be in .rodata
+// or .data, not runtime initialized. This is necessary because there are
+// consumers of the data that run before main(), and the order of initialization
+// by ctor is not guaranteed (see fxb/39978).
+
 class TablesGenerator {
  public:
   explicit TablesGenerator(const flat::Library* library) : library_(library) {}
@@ -38,10 +44,6 @@ class TablesGenerator {
   std::ostringstream Produce();
 
  private:
-  void GenerateInclude(std::string_view filename);
-  void GenerateFilePreamble();
-  void GenerateFilePostamble();
-
   template <typename Collection>
   void GenerateArray(const Collection& collection);
 
@@ -74,14 +76,21 @@ class TablesGenerator {
   void GenerateForward(const coded::UnionType& union_type);
   void GenerateForward(const coded::XUnionType& xunion_type);
 
-  void Produce(CodedTypesGenerator* coded_types_generator, const WireFormat wire_format);
-  template <typename T>
-  void ProduceStructFieldLinking(const T& old, const T& v1);
+  void Produce(CodedTypesGenerator* coded_types_generator);
+
+  template <class T> std::string AltTableReference(const T& type) const;
+  const coded::Type* AltType(const coded::Type* type) const;
 
   const flat::Library* library_;
 
-  // |tables_file_| will be empty after calling Produce(), since Produce() std::moves this.
+  // Mappings from old <-> V1 types, in both directions. i.e. both old and V1
+  // types appear on both the LHS and RHS.
+  std::map<const coded::Type*, const coded::Type*> alt_type_mapping_;
+
+  // These will be empty after calling Produce(), since Produce() std::moves
+  // them into the result.
   std::ostringstream tables_file_;
+  std::ostringstream forward_decls_;
 
   size_t indent_level_ = 0u;
 };
