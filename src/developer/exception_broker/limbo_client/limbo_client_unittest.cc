@@ -26,6 +26,8 @@ class StubProcessLimbo : public ProcessLimbo {
   void set_active(bool active) { active_ = active; }
   bool active_call() const { return active_call_; }
 
+  bool has_active_call() const { return has_active_call_; }
+
   void AppendException(zx_koid_t process_koid, zx_koid_t thread_koid, zx_excp_type_t exception) {
     exceptions_.push_back({process_koid, thread_koid, exception});
   }
@@ -33,6 +35,7 @@ class StubProcessLimbo : public ProcessLimbo {
   // ProcessLimbo implementation.
 
   void SetActive(bool active, SetActiveCallback cb) override {
+    has_active_call_ = true;
     active_call_ = active;
     cb();
   }
@@ -94,6 +97,7 @@ class StubProcessLimbo : public ProcessLimbo {
  private:
   bool active_ = false;
   bool active_call_ = false;
+  bool has_active_call_ = false;
 
   std::vector<std::string> filters_;
   std::vector<std::tuple<zx_koid_t, zx_koid_t, zx_excp_type_t>> exceptions_;
@@ -226,7 +230,26 @@ TEST(LimboClient, Enable) {
   ASSERT_TRUE(function);
 
   ASSERT_ZX_EQ(function(&client, ss), ZX_OK);
-  ASSERT_TRUE(context.process_limbo.active_call());
+  ASSERT_TRUE(context.process_limbo.has_active_call());
+  EXPECT_TRUE(context.process_limbo.active_call());
+}
+
+TEST(LimboClient, Disable) {
+  TestContext context;
+  context.process_limbo.set_active(true);
+
+  LimboClient client(context.services.service_directory());
+  ASSERT_ZX_EQ(client.Init(), ZX_OK);
+
+  std::stringstream ss;
+
+  const char* kArgs[] = {"limbo.cmx", "disable"};
+  OptionFunction function = ParseArgs(2, kArgs, ss);
+  ASSERT_TRUE(function);
+
+  ASSERT_ZX_EQ(function(&client, ss), ZX_OK);
+  ASSERT_TRUE(context.process_limbo.has_active_call());
+  EXPECT_FALSE(context.process_limbo.active_call());
 }
 
 }  // namespace

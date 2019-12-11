@@ -14,6 +14,7 @@ namespace exception {
 namespace {
 
 zx_status_t EnableLimbo(LimboClient*, std::ostream&);
+zx_status_t DisableLimbo(LimboClient*, std::ostream&);
 
 struct Option {
   std::string name;
@@ -24,8 +25,8 @@ struct Option {
 const Option kOptions[] = {
     {"enable", "Enable the process limbo. It will now begin to capture crashing processes.",
      EnableLimbo},
-    /* {"disable", "Disable the process limbo. Will free any pending processes waiting in it.", */
-    /*  DisableLimbo}, */
+    {"disable", "Disable the process limbo. Will free any pending processes waiting in it.",
+     DisableLimbo},
 };
 
 void PrintUsage(std::ostream& os) {
@@ -58,6 +59,21 @@ zx_status_t EnableLimbo(LimboClient* limbo, std::ostream& os) {
   }
 
   os << "Activated the process limbo." << std::endl;
+  return ZX_OK;
+}
+
+zx_status_t DisableLimbo(LimboClient* limbo, std::ostream& os) {
+  if (!limbo->active()) {
+    os << "Limbo is already deactivated." << std::endl;
+    return ZX_OK;
+  }
+
+  if (zx_status_t status = limbo->SetActive(false); status != ZX_OK) {
+    os << "Could not deactivate limbo: " << zx_status_get_string(status) << std::endl;
+    return status;
+  }
+
+  os << "Deactivated the process limbo. All contained processes have been freed." << std::endl;
   return ZX_OK;
 }
 

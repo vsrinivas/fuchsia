@@ -40,9 +40,6 @@ int main(int argc, const char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  if (client.active())
-    printf("Limbo is ENABLED\n");
-
   // Call the parsed function.
   return func(&client, std::cout) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
