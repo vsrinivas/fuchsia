@@ -15,6 +15,7 @@ zx_driver("astro-display") {
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
     "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.display.capture",
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.dsiimpl",
     "$zx/system/banjo/ddk.protocol.gpio",
@@ -28,6 +29,7 @@ zx_driver("astro-display") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/image-format",
     "$zx/system/ulib/image-format:image-format-llcpp",
@@ -53,6 +55,7 @@ zx_test("astro-display-test") {
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",
     "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.display.capture",
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.dsiimpl",
     "$zx/system/banjo/ddk.protocol.gpio",
@@ -72,6 +75,7 @@ zx_test("astro-display-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/image-format",
     "$zx/system/ulib/image-format:image-format-llcpp",

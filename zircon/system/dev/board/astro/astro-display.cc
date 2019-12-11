@@ -5,15 +5,15 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/bus.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/bus.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
-#include "astro.h"
 #include "astro-gpios.h"
+#include "astro.h"
 
 namespace astro {
 
@@ -59,6 +59,11 @@ static const pbus_irq_t display_irqs[] = {
         .irq = S905D2_RDMA_DONE,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
+    {
+        .irq = S905D2_VID1_WR,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+
 };
 
 constexpr display_driver_t display_driver_info[] = {

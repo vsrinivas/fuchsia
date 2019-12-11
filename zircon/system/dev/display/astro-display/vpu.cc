@@ -7,9 +7,11 @@
 #include <ddk/debug.h>
 #include <ddktl/device.h>
 
+#include "common.h"
 #include "hhi-regs.h"
 #include "vpp-regs.h"
 #include "vpu-regs.h"
+#include "zircon/errors.h"
 
 namespace astro_display {
 
@@ -26,6 +28,18 @@ constexpr int16_t YUV709l_to_RGB709_coeff12[24] = {
     -256, -2048, -2048, 4788, 0, 7372, 4788, -876, -2190, 4788, 8686, 0,
     0,    0,     0,     0,    0, 0,    0,    0,    0,     0,    0,    0,
 };
+
+// Below co-efficients are used to convert 709L to RGB. The table is provided
+// by Amlogic
+//    ycbcr limit range, 709 to RGB
+//    -16      1.164  0      1.793  0
+//    -128     1.164 -0.213 -0.534  0
+//    -128     1.164  2.115  0      0
+constexpr uint32_t capture_yuv2rgb_coeff[3][3] = {
+    {0x04a8, 0x0000, 0x072c}, {0x04a8, 0x1f26, 0x1ddd}, {0x04a8, 0x0876, 0x0000}};
+constexpr uint32_t capture_yuv2rgb_preoffset[3] = {0xfc0, 0xe00, 0xe00};
+constexpr uint32_t capture_yuv2rgb_offset[3] = {0, 0, 0};
+
 }  // namespace
 
 // AOBUS Register
@@ -94,6 +108,8 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
 
   // VPU object is ready to be used
   initialized_ = true;
+  fbl::AutoLock lock(&capture_lock_);
+  capture_state_ = CAPTURE_RESET;
   return ZX_OK;
 }
 
@@ -303,4 +319,235 @@ void Vpu::PowerOff() {
   SET_BIT32(HHI, HHI_VAPBCLK_CNTL, 0, 8, 1);
   SET_BIT32(HHI, HHI_VPU_CLK_CNTL, 0, 8, 1);
 }
+
+zx_status_t Vpu::CaptureInit(uint8_t canvas_idx, uint32_t height, uint32_t stride) {
+  ZX_DEBUG_ASSERT(initialized_);
+  fbl::AutoLock lock(&capture_lock_);
+  if (capture_state_ == CAPTURE_ACTIVE) {
+    DISP_ERROR("Capture in progress\n");
+    return ZX_ERR_UNAVAILABLE;
+  }
+
+  // setup VPU path
+  VdInIfMuxCtrlReg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_vpu_path_1(8)
+      .set_vpu_path_0(8)
+      .WriteTo(&(*vpu_mmio_));
+  WrBackMiscCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_chan0_hsync_enable(1).WriteTo(&(*vpu_mmio_));
+  WrBackCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_chan0_sel(5).WriteTo(&(*vpu_mmio_));
+
+  // setup hold lines and vdin selection to internal loopback
+  VdInComCtrl0Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_hold_lines(0)
+      .set_vdin_selection(7)
+      .WriteTo(&(*vpu_mmio_));
+  VdinLFifoCtrlReg::Get().FromValue(0).set_fifo_buf_size(0x780).WriteTo(&(*vpu_mmio_));
+
+  // Setup Async Fifo
+  VdInAFifoCtrl3Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_data_valid_en(1)
+      .set_go_field_en(1)
+      .set_go_line_en(1)
+      .set_vsync_pol_set(0)
+      .set_hsync_pol_set(0)
+      .set_vsync_sync_reset_en(1)
+      .set_fifo_overflow_clr(0)
+      .set_soft_reset_en(0)
+      .WriteTo(&(*vpu_mmio_));
+
+  VdInMatrixCtrlReg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_select(1)
+      .set_enable(1)
+      .WriteTo(&(*vpu_mmio_));
+
+  VdinCoef00_01Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_coef00(capture_yuv2rgb_coeff[0][0])
+      .set_coef01(capture_yuv2rgb_coeff[0][1])
+      .WriteTo(&(*vpu_mmio_));
+
+  VdinCoef02_10Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_coef02(capture_yuv2rgb_coeff[0][2])
+      .set_coef10(capture_yuv2rgb_coeff[1][0])
+      .WriteTo(&(*vpu_mmio_));
+
+  VdinCoef11_12Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_coef11(capture_yuv2rgb_coeff[1][1])
+      .set_coef12(capture_yuv2rgb_coeff[1][2])
+      .WriteTo(&(*vpu_mmio_));
+
+  VdinCoef20_21Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_coef20(capture_yuv2rgb_coeff[2][0])
+      .set_coef21(capture_yuv2rgb_coeff[2][1])
+      .WriteTo(&(*vpu_mmio_));
+
+  VdinCoef22Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_coef22(capture_yuv2rgb_coeff[2][2])
+      .WriteTo(&(*vpu_mmio_));
+
+  VdinOffset0_1Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_offset0(capture_yuv2rgb_offset[0])
+      .set_offset1(capture_yuv2rgb_offset[1])
+      .WriteTo(&(*vpu_mmio_));
+
+  VdinOffset2Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_offset2(capture_yuv2rgb_offset[2])
+      .WriteTo(&(*vpu_mmio_));
+
+  VdinPreOffset0_1Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_preoffset0(capture_yuv2rgb_preoffset[0])
+      .set_preoffset1(capture_yuv2rgb_preoffset[1])
+      .WriteTo(&(*vpu_mmio_));
+
+  VdinPreOffset2Reg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_preoffset2(capture_yuv2rgb_preoffset[2])
+      .WriteTo(&(*vpu_mmio_));
+
+  // setup vdin input dimensions
+  VdinIntfWidthM1Reg::Get().FromValue(stride - 1).WriteTo(&(*vpu_mmio_));
+
+  // Configure memory size
+  VdInWrHStartEndReg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_start(0)
+      .set_end(stride - 1)
+      .WriteTo(&(*vpu_mmio_));
+  VdInWrVStartEndReg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_start(0)
+      .set_end(height - 1)
+      .WriteTo(&(*vpu_mmio_));
+
+  // Write output canvas index, 128 bit endian, eol with width, enable 4:4:4 RGB888 mode
+  VdInWrCtrlReg::Get()
+      .ReadFrom(&(*vpu_mmio_))
+      .set_eol_sel(1)
+      .set_word_swap(1)
+      .set_memory_format(1)
+      .set_canvas_idx(canvas_idx)
+      .WriteTo(&(*vpu_mmio_));
+
+  // enable vdin memory power
+  SET_BIT32(HHI, HHI_VPU_MEM_PD_REG0, 0, 18, 2);
+
+  // Capture state is now in IDLE mode
+  capture_state_ = CAPTURE_IDLE;
+  return ZX_OK;
+}
+
+zx_status_t Vpu::CaptureStart() {
+  ZX_DEBUG_ASSERT(initialized_);
+  fbl::AutoLock lock(&capture_lock_);
+  if (capture_state_ != CAPTURE_IDLE) {
+    DISP_ERROR("Capture state is not idle! (%d)\n", capture_state_);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Now that loopback mode is configured, start capture
+  // pause write output
+  VdInWrCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_write_ctrl(0).WriteTo(&(*vpu_mmio_));
+
+  // disable vdin path
+  VdInComCtrl0Reg::Get().ReadFrom(&(*vpu_mmio_)).set_enable_vdin(0).WriteTo(&(*vpu_mmio_));
+
+  // reset mif
+  VdInMiscCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_mif_reset(1).WriteTo(&(*vpu_mmio_));
+  zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+  VdInMiscCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_mif_reset(0).WriteTo(&(*vpu_mmio_));
+
+  // resume write output
+  VdInWrCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_write_ctrl(1).WriteTo(&(*vpu_mmio_));
+
+  // wait until resets finishes
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(20)));
+
+  // Clear status bit
+  VdInWrCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_done_status_clear_bit(1).WriteTo(&(*vpu_mmio_));
+
+  // Set as urgent
+  VdInWrCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_write_req_urgent(1).WriteTo(&(*vpu_mmio_));
+
+  // Enable loopback
+  VdInWrCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_write_mem_enable(1).WriteTo(&(*vpu_mmio_));
+
+  // enable vdin path
+  VdInComCtrl0Reg::Get().ReadFrom(&(*vpu_mmio_)).set_enable_vdin(1).WriteTo(&(*vpu_mmio_));
+
+  capture_state_ = CAPTURE_ACTIVE;
+  return ZX_OK;
+}
+
+zx_status_t Vpu::CaptureDone() {
+  fbl::AutoLock lock(&capture_lock_);
+  capture_state_ = CAPTURE_IDLE;
+  // pause write output
+  VdInWrCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_write_ctrl(0).WriteTo(&(*vpu_mmio_));
+
+  // disable vdin path
+  VdInComCtrl0Reg::Get().ReadFrom(&(*vpu_mmio_)).set_enable_vdin(0).WriteTo(&(*vpu_mmio_));
+
+  // reset mif
+  VdInMiscCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_mif_reset(1).WriteTo(&(*vpu_mmio_));
+  zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+  VdInMiscCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).set_mif_reset(0).WriteTo(&(*vpu_mmio_));
+
+  return ZX_OK;
+}
+
+void Vpu::CapturePrintRegisters() {
+  DISP_INFO("** Display Loopback Register Dump **\n\n");
+  DISP_INFO("VdInComCtrl0Reg = 0x%x\n", VdInComCtrl0Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdInComStatus0Reg = 0x%x\n",
+            VdInComStatus0Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdInMatrixCtrlReg = 0x%x\n",
+            VdInMatrixCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinCoef00_01Reg = 0x%x\n",
+            VdinCoef00_01Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinCoef02_10Reg = 0x%x\n",
+            VdinCoef02_10Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinCoef11_12Reg = 0x%x\n",
+            VdinCoef11_12Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinCoef20_21Reg = 0x%x\n",
+            VdinCoef20_21Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinCoef22Reg = 0x%x\n", VdinCoef22Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinOffset0_1Reg = 0x%x\n",
+            VdinOffset0_1Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinOffset2Reg = 0x%x\n", VdinOffset2Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinPreOffset0_1Reg = 0x%x\n",
+            VdinPreOffset0_1Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinPreOffset2Reg = 0x%x\n",
+            VdinPreOffset2Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinLFifoCtrlReg = 0x%x\n",
+            VdinLFifoCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdinIntfWidthM1Reg = 0x%x\n",
+            VdinIntfWidthM1Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdInWrCtrlReg = 0x%x\n", VdInWrCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdInWrHStartEndReg = 0x%x\n",
+            VdInWrHStartEndReg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdInWrVStartEndReg = 0x%x\n",
+            VdInWrVStartEndReg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdInAFifoCtrl3Reg = 0x%x\n",
+            VdInAFifoCtrl3Reg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdInMiscCtrlReg = 0x%x\n", VdInMiscCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+  DISP_INFO("VdInIfMuxCtrlReg = 0x%x\n",
+            VdInIfMuxCtrlReg::Get().ReadFrom(&(*vpu_mmio_)).reg_value());
+
+  DISP_INFO("Dumping from 0x1300 to 0x1373\n");
+  for (int i = 0x1300; i <= 0x1373; i++) {
+    DISP_INFO("reg[0x%x] = 0x%x\n", i, READ32_VPU_REG(i << 2));
+  }
+}
+
 }  // namespace astro_display

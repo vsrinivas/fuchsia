@@ -32,6 +32,11 @@ protocol DisplayCaptureImpl {
 
     /// Starts capture into the resource mapped by capture_handle (non-blocking)
     /// Only one active capture is allowed at a time.
+    /// A valid image must be displayed during capture. Otherwise unexpected hardware
+    /// behavior might occur.
+    /// Drivers should not leave display hardware in this unexpected state.
+    /// Drivers are expected to stop and/or abort capture if no valid
+    /// image is being displayed.
     StartCapture(uint64 capture_handle) -> (zx.status s);
 
     /// Releases resources allocated by capture_handle.

@@ -5,12 +5,16 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_VPU_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_VPU_H_
 
-#include <ddk/protocol/platform/device.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/compiler.h>
 
 #include <optional>
+
+#include <ddk/protocol/platform/device.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 
 #include "common.h"
 #include "vpu-regs.h"
@@ -31,6 +35,16 @@ class Vpu {
   // registers and/or initialization sequences
   void VppInit();
 
+  zx_status_t CaptureInit(uint8_t canvas_idx, uint32_t height, uint32_t stride);
+  zx_status_t CaptureStart();
+  zx_status_t CaptureDone();
+  void CapturePrintRegisters();
+
+  CaptureState GetCaptureState() {
+    fbl::AutoLock lock(&capture_lock_);
+    return capture_state_;
+  }
+
  private:
   // This function configures the VPU-related clocks. It contains undocumented registers
   // and/or clock initialization sequences
@@ -43,6 +57,9 @@ class Vpu {
   pdev_protocol_t pdev_ = {};
 
   bool initialized_ = false;
+
+  fbl::Mutex capture_lock_;
+  CaptureState capture_state_ TA_GUARDED(capture_lock_);
 };
 }  // namespace astro_display
 

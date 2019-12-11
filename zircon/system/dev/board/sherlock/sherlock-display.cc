@@ -58,6 +58,10 @@ static const pbus_irq_t display_irqs[] = {
         .irq = T931_RDMA_DONE,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
+    {
+        .irq = T931_VID1_WR,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
 };
 
 constexpr display_driver_t display_driver_info[] = {

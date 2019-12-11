@@ -4,11 +4,10 @@
 
 #include "virtual-layer.h"
 
+#include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <math.h>
 #include <stdio.h>
-
-//#include <ddk/protocol/display/controller.h>
-#include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <zircon/pixelformat.h>
 
 #include <fbl/algorithm.h>
 
@@ -115,12 +114,13 @@ bool PrimaryLayer::Init(fhd::Controller::SyncClient* dc) {
   if (layer_flipping_) {
     images_[1] = Image::Create(dc, image_width_, image_height_, image_format_, fg_color, bg_color,
                                intel_y_tiling_);
-  } else {
-    images_[0]->Render(-1, -1);
   }
-
   if (!images_[0] || (layer_flipping_ && !images_[1])) {
     return false;
+  }
+
+  if (!layer_flipping_) {
+    images_[0]->Render(-1, -1);
   }
 
   for (unsigned i = 0; i < displays_.size(); i++) {
@@ -169,7 +169,10 @@ bool PrimaryLayer::Init(fhd::Controller::SyncClient* dc) {
 }
 
 void* PrimaryLayer::GetCurrentImageBuf() { return images_[alt_image_]->buffer(); }
-
+size_t PrimaryLayer::GetCurrentImageSize() {
+  return images_[alt_image_]->height() * images_[alt_image_]->stride() *
+         ZX_PIXEL_FORMAT_BYTES(images_[alt_image_]->format());
+}
 void PrimaryLayer::StepLayout(int32_t frame_num) {
   if (layer_flipping_) {
     alt_image_ = frame_num % 2;

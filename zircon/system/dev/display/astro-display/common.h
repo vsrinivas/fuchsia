@@ -54,6 +54,14 @@ enum {
 enum {
   IRQ_VSYNC,
   IRQ_RDMA,
+  IRQ_VD1_WR,
+};
+
+enum CaptureState {
+  CAPTURE_RESET = 0,
+  CAPTURE_IDLE = 1,
+  CAPTURE_ACTIVE = 2,
+  CAPTURE_ERROR = 3,
 };
 
 constexpr uint8_t PANEL_DISPLAY_ID = 1;

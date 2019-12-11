@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
@@ -18,12 +19,17 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+#include <array>
+#include <cstring>
 #include <memory>
 
 #include <fbl/algorithm.h>
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
+#include "ddk/driver.h"
 #include "display.h"
 #include "fuchsia/hardware/display/llcpp/fidl.h"
 #include "lib/fdio/directory.h"
@@ -64,6 +70,10 @@ enum Platforms {
 };
 
 Platforms platform = UNKNOWN_PLATFORM;
+char board_name[sysinfo::SYSINFO_BOARD_NAME_LEN + 1];
+
+Platforms GetPlatform();
+void Usage();
 
 static bool wait_for_driver_event(zx_time_t deadline) {
   zx_handle_t observed;
@@ -371,10 +381,15 @@ zx_status_t capture_setup() {
   sysmem::BufferCollectionConstraints constraints = {};
   constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = 1;
-  constraints.has_buffer_memory_constraints = false;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
   constraints.image_format_constraints_count = 1;
   sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  if (platform == AMLOGIC_PLATFORM) {
+    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGR24;
+  } else {
+    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  }
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0] = sysmem::ColorSpace{
       .type = sysmem::ColorSpaceType::SRGB,
@@ -418,7 +433,6 @@ zx_status_t capture_setup() {
     return importcap_resp.status();
   }
   capture_id = importcap_resp.value().result.response().image_id;
-
   return ZX_OK;
 }
 
@@ -442,11 +456,75 @@ zx_status_t capture_start() {
   return ZX_OK;
 }
 
-bool capture_compare(void* image_buf) {
-  if (image_buf == nullptr) {
+bool amlogic_capture_compare(void* capture_buf, void* actual_buf, size_t size, uint32_t height,
+                             uint32_t width) {
+  auto image_buf = std::make_unique<uint8_t[]>(size);
+  std::memcpy(image_buf.get(), actual_buf, size);
+
+  auto* imageptr = static_cast<uint8_t*>(image_buf.get());
+  auto* captureptr = static_cast<uint8_t*>(capture_buf);
+
+  // first fix endianess
+  auto* tmpptr = reinterpret_cast<uint32_t*>(image_buf.get());
+  for (size_t i = 0; i < size / 4; i++) {
+    tmpptr[i] = be32toh(tmpptr[i]);
+  }
+
+  uint32_t capture_stride = ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888), 64);
+  uint32_t buffer_stride = ALIGN(width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_x888), 64);
+  uint32_t buffer_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_x888);
+  uint32_t capture_width_bytes = width * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888);
+  size_t buf_idx = 0;
+  if (strstr(board_name, "astro")) {
+    // For Astro only:
+    // Ignore last column. Has junk (hardware bug)
+    // Ignoring last column, means there is a shift by one pixel.
+    // Therefore, image_buffer should start from pixel 1 (i.e. 4th byte since x888) and
+    // capture_buffer should end at width - 3 (i.e. 888)
+    capture_width_bytes -= ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888);
+    buf_idx = ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_x888);
+  }
+  size_t cap_idx = 0;
+  // Ignore first line. It <sometimes> contains junk (hardware bug).
+  bool success = true;
+  for (size_t h = 1; h < height; h++) {
+    for (; cap_idx < capture_width_bytes && buf_idx < buffer_width_bytes;) {
+      // skip the alpha channel
+      if (((buf_idx) % 4) == 0) {
+        buf_idx++;
+        continue;
+      }
+      if (imageptr[h * buffer_stride + buf_idx] == captureptr[h * capture_stride + cap_idx]) {
+        buf_idx++;
+        cap_idx++;
+        continue;
+      }
+      if (imageptr[h * buffer_stride + buf_idx] != 0 &&
+          (imageptr[h * buffer_stride + buf_idx] == captureptr[h * capture_stride + cap_idx] + 1 ||
+           imageptr[h * buffer_stride + buf_idx] == captureptr[h * capture_stride + cap_idx] - 1)) {
+        buf_idx++;
+        cap_idx++;
+        continue;
+      }
+      success = false;
+      printf("h:%zu, buf[%zu] = 0x%x, cap[%zu] = 0x%x\n", h, h * buffer_stride + buf_idx,
+             imageptr[h * buffer_stride + buf_idx], h * capture_stride + cap_idx,
+             captureptr[h * capture_stride + cap_idx]);
+      break;
+    }
+    if (!success) {
+      break;
+    }
+  }
+  return success;
+}
+
+bool capture_compare(void* input_image_buf, uint32_t height, uint32_t width) {
+  if (input_image_buf == nullptr) {
     printf("%s: null buf\n", __func__);
     return false;
   }
+
   fzl::VmoMapper mapped_capture_vmo;
   size_t capture_vmo_size;
   auto status = capture_vmo.get_size(&capture_vmo_size);
@@ -460,7 +538,15 @@ bool capture_compare(void* image_buf) {
     printf("Could not map capture vmo %d\n", status);
     return status;
   }
-  return (!memcmp(image_buf, mapped_capture_vmo.start(), capture_vmo_size));
+  auto* ptr = reinterpret_cast<uint8_t*>(mapped_capture_vmo.start());
+  zx_cache_flush(ptr, capture_vmo_size, ZX_CACHE_FLUSH_INVALIDATE);
+
+  if (platform == AMLOGIC_PLATFORM) {
+    return amlogic_capture_compare(mapped_capture_vmo.start(), input_image_buf, capture_vmo_size,
+                                   height, width);
+  }
+
+  return !memcmp(input_image_buf, mapped_capture_vmo.start(), capture_vmo_size);
 }
 
 void capture_release() {
@@ -513,24 +599,25 @@ Platforms GetPlatform() {
   }
 
   printf("Found board %s\n", result.value().name.data());
+  strncpy(board_name, result.value().name.data(), sysinfo::SYSINFO_BOARD_NAME_LEN);
+  board_name[sysinfo::SYSINFO_BOARD_NAME_LEN] = '\0';
 
-  if (!strcmp(result.value().name.data(), "pc") ||
-      !strcmp(result.value().name.data(), "chromebook-x64") ||
-      !strcmp(result.value().name.data(), "Eve") ||
-      strstr(result.value().name.data(), "Nocturne")) {
+  if (strstr(result.value().name.data(), "pc") ||
+      strstr(result.value().name.data(), "chromebook-x64") ||
+      strstr(result.value().name.data(), "Eve") || strstr(result.value().name.data(), "Nocturne")) {
     return INTEL_PLATFORM;
   }
-  if (!strcmp(result.value().name.data(), "astro") ||
-      !strcmp(result.value().name.data(), "sherlock") ||
-      !strcmp(result.value().name.data(), "vim2")) {
+  if (strstr(result.value().name.data(), "astro") ||
+      strstr(result.value().name.data(), "sherlock") ||
+      strstr(result.value().name.data(), "vim2")) {
     return AMLOGIC_PLATFORM;
   }
-  if (!strcmp(result.value().name.data(), "cleo") ||
-      !strcmp(result.value().name.data(), "mt8167s_ref")) {
+  if (strstr(result.value().name.data(), "cleo") ||
+      strstr(result.value().name.data(), "mt8167s_ref")) {
     return MEDIATEK_PLATFORM;
   }
-  if (!strcmp(result.value().name.data(), "qemu") ||
-      !strcmp(result.value().name.data(), "Standard PC (Q35 + ICH9, 2009)")) {
+  if (strstr(result.value().name.data(), "qemu") ||
+      strstr(result.value().name.data(), "Standard PC (Q35 + ICH9, 2009)")) {
     return QEMU_PLATFORM;
   }
   return UNKNOWN_PLATFORM;
@@ -853,8 +940,11 @@ int main(int argc, const char* argv[]) {
         capture = false;
         break;
       }
-      if (verify_capture && !capture_compare(layers[0]->GetCurrentImageBuf())) {
+      if (verify_capture &&
+          !capture_compare(layers[0]->GetCurrentImageBuf(), displays[0].mode().vertical_resolution,
+                           displays[0].mode().horizontal_resolution)) {
         capture_result = false;
+        break;
       }
     }
   }

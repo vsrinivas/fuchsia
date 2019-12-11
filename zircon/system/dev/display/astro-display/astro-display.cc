@@ -4,14 +4,28 @@
 #include "astro-display.h"
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
+#include <threads.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/composite.h>
+#include <ddk/protocol/display/controller.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/display/capture.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 #include <fbl/vector.h>
+
+#include "common.h"
+#include "lib/zx/channel.h"
+#include "zircon/pixelformat.h"
 
 namespace sysmem = llcpp::fuchsia::sysmem;
 
@@ -91,6 +105,8 @@ constexpr display_setting_t kDisplaySettingTV101WXM_FT = {
     .vsync_pol = 0,
 };
 
+constexpr uint32_t kCanvasLittleEndian64Bit = 7;
+constexpr uint32_t kBufferAlignment = 64;
 }  // namespace
 
 // This function copies the display settings into our internal structure
@@ -285,7 +301,11 @@ zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx
     return status;
   }
 
+  import_info->canvas = canvas_;
   import_info->canvas_idx = local_canvas_idx;
+  import_info->image_height = image->height;
+  import_info->image_width = image->width;
+  import_info->image_stride = stride * ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
   image->handle = reinterpret_cast<uint64_t>(import_info.get());
   imported_images_.push_back(std::move(import_info));
   return status;
@@ -355,7 +375,11 @@ zx_status_t AstroDisplay::DisplayControllerImplImportImage(image_t* image,
     return status;
   }
   fbl::AutoLock lock(&image_lock_);
+  import_info->canvas = canvas_;
   import_info->canvas_idx = local_canvas_idx;
+  import_info->image_height = image->height;
+  import_info->image_width = image->width;
+  import_info->image_stride = minimum_row_bytes;
   image->handle = reinterpret_cast<uint64_t>(import_info.get());
   imported_images_.push_back(std::move(import_info));
   return status;
@@ -365,10 +389,7 @@ zx_status_t AstroDisplay::DisplayControllerImplImportImage(image_t* image,
 void AstroDisplay::DisplayControllerImplReleaseImage(image_t* image) {
   fbl::AutoLock lock(&image_lock_);
   auto info = reinterpret_cast<ImageInfo*>(image->handle);
-  auto local_canvas_idx = info->canvas_idx;
-  if (imported_images_.erase(*info) != nullptr) {
-    amlogic_canvas_free(&canvas_, local_canvas_idx);
-  }
+  imported_images_.erase(*info);
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
@@ -457,6 +478,14 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration(const display_config_
   } else {
     current_image_valid_ = false;
     if (full_init_done_) {
+      {
+        fbl::AutoLock lock2(&capture_lock_);
+        if (capture_active_id_ != INVALID_ID) {
+          // there's an active capture. stop it before disabling osd
+          vpu_->CaptureDone();
+          capture_active_id_ = INVALID_ID;
+        }
+      }
       osd_->Disable();
     }
   }
@@ -479,8 +508,25 @@ void AstroDisplay::DdkRelease() {
     osd_->Release();
   }
   vsync_irq_.destroy();
-  thrd_join(vsync_thread_, NULL);
+  thrd_join(vsync_thread_, nullptr);
+  vd1_wr_irq_.destroy();
+  thrd_join(capture_thread_, nullptr);
   delete this;
+}
+
+zx_status_t AstroDisplay::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
+  auto* proto = static_cast<ddk::AnyProtocol*>(out_protocol);
+  proto->ctx = this;
+  switch (proto_id) {
+    case ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL:
+      proto->ops = &display_controller_impl_protocol_ops_;
+      return ZX_OK;
+    case ZX_PROTOCOL_DISPLAY_CAPTURE_IMPL:
+      proto->ops = &display_capture_impl_protocol_ops_;
+      return ZX_OK;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
 }
 
 // This function detect the panel type based.
@@ -549,7 +595,11 @@ zx_status_t AstroDisplay::DisplayControllerImplGetSysmemConnection(zx::channel c
 zx_status_t AstroDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
   sysmem::BufferCollectionConstraints constraints = {};
-  constraints.usage.display = sysmem::displayUsageLayer;
+  if (config->type == IMAGE_TYPE_CAPTURE) {
+    constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
+  } else {
+    constraints.usage.display = sysmem::displayUsageLayer;
+  }
   constraints.has_buffer_memory_constraints = true;
   sysmem::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
   buffer_constraints.physically_contiguous_required = true;
@@ -562,13 +612,26 @@ zx_status_t AstroDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.heap_permitted[1] = sysmem::HeapType::AMLOGIC_SECURE;
   constraints.image_format_constraints_count = 1;
   sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+
   image_constraints.pixel_format.has_format_modifier = true;
   image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
-  image_constraints.bytes_per_row_divisor = 64;
-  image_constraints.start_offset_divisor = 64;
+  if (config->type == IMAGE_TYPE_CAPTURE) {
+    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGR24;
+    image_constraints.min_coded_width = disp_setting_.h_active;
+    image_constraints.max_coded_width = disp_setting_.h_active;
+    image_constraints.min_coded_height = disp_setting_.v_active;
+    image_constraints.max_coded_height = disp_setting_.v_active;
+    image_constraints.min_bytes_per_row = ALIGN(
+        disp_setting_.h_active * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888), kBufferAlignment);
+    image_constraints.max_coded_width_times_coded_height =
+        disp_setting_.h_active * disp_setting_.v_active;
+  } else {
+    image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  }
+  image_constraints.bytes_per_row_divisor = kBufferAlignment;
+  image_constraints.start_offset_divisor = kBufferAlignment;
 
   auto res = sysmem::BufferCollection::Call::SetConstraints(zx::unowned_channel(collection), true,
                                                             constraints);
@@ -581,9 +644,164 @@ zx_status_t AstroDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   return ZX_OK;
 }
 
+void AstroDisplay::DisplayCaptureImplSetDisplayCaptureInterface(
+    const display_capture_interface_protocol_t* intf) {
+  fbl::AutoLock lock(&capture_lock_);
+  capture_intf_ = ddk::DisplayCaptureInterfaceProtocolClient(intf);
+  capture_active_id_ = INVALID_ID;
+}
+
+zx_status_t AstroDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_handle_t collection,
+                                                                  uint32_t index,
+                                                                  uint64_t* out_capture_handle) {
+  auto import_capture = std::make_unique<ImageInfo>();
+  if (import_capture == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  fbl::AutoLock lock(&capture_lock_);
+  zx_status_t status, status2;
+  fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection, &status2,
+                                                                  &collection_info);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (status2 != ZX_OK) {
+    return status2;
+  }
+
+  fbl::Vector<zx::vmo> vmos;
+  for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
+    vmos.push_back(zx::vmo(collection_info.buffers[i].vmo));
+  }
+
+  if (!collection_info.settings.has_image_format_constraints || index >= vmos.size()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  // Ensure the proper format
+  ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
+                  fuchsia_sysmem_PixelFormatType_BGR24);
+
+  // Allocate a canvas for the capture image
+  canvas_info_t canvas_info = {};
+  canvas_info.height = collection_info.settings.image_format_constraints.min_coded_height;
+  canvas_info.stride_bytes = collection_info.settings.image_format_constraints.min_bytes_per_row;
+  canvas_info.wrap = 0;
+  canvas_info.blkmode = 0;
+  canvas_info.endianness = kCanvasLittleEndian64Bit;
+  canvas_info.flags = CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE;
+  uint8_t canvas_idx;
+  status = amlogic_canvas_config(&canvas_, vmos[index].release(),
+                                 collection_info.buffers[index].vmo_usable_start, &canvas_info,
+                                 &canvas_idx);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not configure canvas %d\n", status);
+    return status;
+  }
+
+  // At this point, we have setup a canvas with the BufferCollection-based VMO. Store the
+  // capture information
+  import_capture->canvas_idx = canvas_idx;
+  import_capture->image_height = collection_info.settings.image_format_constraints.min_coded_height;
+  import_capture->image_width = collection_info.settings.image_format_constraints.min_coded_width;
+  import_capture->image_stride =
+      collection_info.settings.image_format_constraints.min_bytes_per_row;
+  *out_capture_handle = reinterpret_cast<uint64_t>(import_capture.get());
+  imported_captures_.push_back(std::move(import_capture));
+  return ZX_OK;
+}
+
+zx_status_t AstroDisplay::DisplayCaptureImplStartCapture(uint64_t capture_handle) {
+  fbl::AutoLock lock(&capture_lock_);
+  if (capture_active_id_ != INVALID_ID) {
+    DISP_ERROR("Cannot start capture while another capture is in progress\n");
+    return ZX_ERR_SHOULD_WAIT;
+  }
+
+  // Confirm a valid image is being displayed
+  // Check whether a valid image is being displayed at the time of start capture.
+  // There is a chance that a client might release the image being displayed during
+  // capture, but that behavior is not within specified spec
+  {
+    fbl::AutoLock lock2(&display_lock_);
+    if (!current_image_valid_) {
+      DISP_ERROR("No Valid Image is being displayed\n");
+      return ZX_ERR_UNAVAILABLE;
+    }
+  }
+
+  // Confirm that the handle was previously imported (hence valid)
+  auto info = reinterpret_cast<ImageInfo*>(capture_handle);
+  if (imported_captures_.find_if([info](auto& i) { return i.canvas_idx == info->canvas_idx; }) ==
+      imported_captures_.end()) {
+    // invalid handle
+    DISP_ERROR("Invalid capture_handle\n");
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  ZX_DEBUG_ASSERT(info->canvas_idx > 0);
+  ZX_DEBUG_ASSERT(info->image_height > 0);
+  ZX_DEBUG_ASSERT(info->image_width > 0);
+
+  auto status = vpu_->CaptureInit(info->canvas_idx, info->image_height, info->image_width);
+  if (status != ZX_OK) {
+    DISP_ERROR("Failed to init capture %d\n", status);
+    return status;
+  }
+
+  status = vpu_->CaptureStart();
+  if (status != ZX_OK) {
+    DISP_ERROR("Failed to start capture %d\n", status);
+    return status;
+  }
+  capture_active_id_ = capture_handle;
+  return ZX_OK;
+}
+
+zx_status_t AstroDisplay::DisplayCaptureImplReleaseCapture(uint64_t capture_handle) {
+  fbl::AutoLock lock(&capture_lock_);
+  if (capture_handle == capture_active_id_) {
+    return ZX_ERR_SHOULD_WAIT;
+  }
+
+  // Find and erase previously imported capture
+  auto info = reinterpret_cast<ImageInfo*>(capture_handle);
+  if (imported_captures_.erase_if([info](auto& i) { return i.canvas_idx == info->canvas_idx; }) ==
+      nullptr) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  return ZX_OK;
+}
+
+bool AstroDisplay::DisplayCaptureImplIsCaptureCompleted() {
+  fbl::AutoLock lock(&capture_lock_);
+  return (capture_active_id_ == INVALID_ID);
+}
+
+int AstroDisplay::CaptureThread() {
+  zx_status_t status;
+  while (true) {
+    zx::time timestamp;
+    status = vd1_wr_irq_.wait(&timestamp);
+    if (status != ZX_OK) {
+      DISP_ERROR("Vd1 Wr interrupt wait failed %d\n", status);
+      break;
+    }
+    fbl::AutoLock lock(&capture_lock_);
+    vpu_->CaptureDone();
+    if (capture_intf_.is_valid()) {
+      capture_intf_.OnCaptureComplete();
+    }
+    capture_active_id_ = INVALID_ID;
+  }
+  return status;
+}
+
 int AstroDisplay::VSyncThread() {
   zx_status_t status;
-  while (1) {
+  while (true) {
     zx::time timestamp;
     status = vsync_irq_.wait(&timestamp);
     if (status != ZX_OK) {
@@ -688,10 +906,24 @@ zx_status_t AstroDisplay::Bind() {
     return status;
   }
 
+  // Map VD1_WR Interrupt (used for capture)
+  status = pdev_get_interrupt(&pdev_, IRQ_VD1_WR, 0, vd1_wr_irq_.reset_and_get_address());
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not map vd1 wr interrupt\n");
+    return status;
+  }
+
   auto start_thread = [](void* arg) { return static_cast<AstroDisplay*>(arg)->VSyncThread(); };
   status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");
   if (status != ZX_OK) {
     DISP_ERROR("Could not create vsync_thread\n");
+    return status;
+  }
+
+  auto vd_thread = [](void* arg) { return static_cast<AstroDisplay*>(arg)->CaptureThread(); };
+  status = thrd_create_with_name(&capture_thread_, vd_thread, this, "capture_thread");
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not create capture_thread\n");
     return status;
   }
 

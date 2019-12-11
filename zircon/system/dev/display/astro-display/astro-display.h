@@ -22,6 +22,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/display/capture.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/dsiimpl.h>
 #include <fbl/auto_lock.h>
@@ -38,16 +39,26 @@
 namespace astro_display {
 
 struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> {
+  ~ImageInfo() {
+    if (canvas.ctx && canvas_idx > 0) {
+      amlogic_canvas_free(&canvas, canvas_idx);
+    }
+  }
+  amlogic_canvas_protocol_t canvas;
   uint8_t canvas_idx;
+  uint32_t image_height;
+  uint32_t image_width;
+  uint32_t image_stride;
 };
 
 class AstroDisplay;
 
 // AstroDisplay will implement only a few subset of Device.
-using DeviceType = ddk::Device<AstroDisplay, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<AstroDisplay, ddk::GetProtocolable, ddk::UnbindableNew>;
 
 class AstroDisplay : public DeviceType,
-                     public ddk::DisplayControllerImplProtocol<AstroDisplay, ddk::base_protocol> {
+                     public ddk::DisplayControllerImplProtocol<AstroDisplay, ddk::base_protocol>,
+                     public ddk::DisplayCaptureImplProtocol<AstroDisplay> {
  public:
   AstroDisplay(zx_device_t* parent) : DeviceType(parent) {}
 
@@ -75,9 +86,19 @@ class AstroDisplay : public DeviceType,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  void DisplayCaptureImplSetDisplayCaptureInterface(
+      const display_capture_interface_protocol_t* intf);
+
+  zx_status_t DisplayCaptureImplImportImageForCapture(zx_unowned_handle_t collection,
+                                                      uint32_t index, uint64_t* out_capture_handle);
+  zx_status_t DisplayCaptureImplStartCapture(uint64_t capture_handle);
+  zx_status_t DisplayCaptureImplReleaseCapture(uint64_t capture_handle);
+  bool DisplayCaptureImplIsCaptureCompleted() __TA_EXCLUDES(capture_lock_);
+
   // Required functions for DeviceType
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
+  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
 
   void Dump();
 
@@ -95,6 +116,7 @@ class AstroDisplay : public DeviceType,
 
   zx_status_t SetupDisplayInterface();
   int VSyncThread();
+  int CaptureThread();
   void CopyDisplaySettings();
   void PopulateAddedDisplayArgs(added_display_args_t* args);
   void PopulatePanelType() TA_REQ(display_lock_);
@@ -109,6 +131,7 @@ class AstroDisplay : public DeviceType,
 
   // Thread handles
   thrd_t vsync_thread_;
+  thrd_t capture_thread_;
 
   // Protocol handles used in by this driver
   pdev_protocol_t pdev_ = {};
@@ -121,10 +144,12 @@ class AstroDisplay : public DeviceType,
 
   // Interrupts
   zx::interrupt vsync_irq_;
+  zx::interrupt vd1_wr_irq_;
 
   // Locks used by the display driver
   fbl::Mutex display_lock_;  // general display state (i.e. display_id)
   fbl::Mutex image_lock_;    // used for accessing imported_images_
+  fbl::Mutex capture_lock_;  // general capture state
 
   // TODO(stevensd): This can race if this is changed right after
   // vsync but before the interrupt is handled.
@@ -155,8 +180,15 @@ class AstroDisplay : public DeviceType,
   // Display controller related data
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);
 
+  // Display Capture interface protocol
+  ddk::DisplayCaptureInterfaceProtocolClient capture_intf_ TA_GUARDED(capture_lock_);
+
+  // The ID for currently active capture
+  uint64_t capture_active_id_ TA_GUARDED(capture_lock_);
+
   // Imported Images
   fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_images_ TA_GUARDED(image_lock_);
+  fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_captures_ TA_GUARDED(capture_lock_);
 
   // DSIIMPL Protocol
   ddk::DsiImplProtocolClient dsiimpl_ = {};
