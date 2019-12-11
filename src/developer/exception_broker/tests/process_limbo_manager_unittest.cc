@@ -326,7 +326,6 @@ TEST(ProcessLimboManager, FromExceptionBroker) {
 
 TEST(ProcessLimboManager, WatchActiveCalls) {
   ProcessLimboManager limbo_manager;
-
   auto handler = CreateHandler(&limbo_manager);
 
   // As no hanging get has been made there should be no change.
@@ -586,6 +585,40 @@ TEST(ProcessLimboManager, FiltersGetSet) {
     ASSERT_EQ(filters.size(), 2u);
     EXPECT_EQ(filters[0], "filter-2");
     EXPECT_EQ(filters[1], "filter-4");
+  }
+}
+
+TEST(ProcessLimboManager, DisablingFrees) {
+  ProcessLimboManager limbo_manager;
+  auto handler = CreateHandler(&limbo_manager);
+
+  limbo_manager.SetActive(true);
+
+  // We create multiple exceptions.
+  ExceptionContext excps[3];
+  ASSERT_TRUE(RetrieveExceptionContext(excps + 0));
+  ASSERT_TRUE(RetrieveExceptionContext(excps + 1));
+  ASSERT_TRUE(RetrieveExceptionContext(excps + 2));
+
+  // Get the fidl representation of the exception.
+  ExceptionInfo infos[3];
+  infos[0] = ExceptionContextToExceptionInfo(excps[0]);
+  infos[1] = ExceptionContextToExceptionInfo(excps[1]);
+  infos[2] = ExceptionContextToExceptionInfo(excps[2]);
+
+  AddExceptionToLimbo(&limbo_manager, std::move(excps[0].exception), infos[0]);
+  AddExceptionToLimbo(&limbo_manager, std::move(excps[1].exception), infos[1]);
+  AddExceptionToLimbo(&limbo_manager, std::move(excps[2].exception), infos[2]);
+
+  // The exceptions should be there.
+  ASSERT_EQ(limbo_manager.limbo().size(), 3u);
+
+  {
+    bool called = false;
+    handler->SetActive(false, [&called]() { called = true; });
+
+    ASSERT_TRUE(called);
+    ASSERT_EQ(limbo_manager.limbo().size(), 0u);
   }
 }
 

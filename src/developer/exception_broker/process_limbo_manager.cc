@@ -140,6 +140,10 @@ bool ProcessLimboManager::SetActive(bool active) {
     return false;
   active_ = active;
 
+  // If the limbo was disabled, free all the exceptions.
+  if (!active_)
+    limbo_.clear();
+
   // Notify the handlers of the new activa state.
   PruneStaleHandlers(&handlers_);
   for (auto& handler : handlers_) {
