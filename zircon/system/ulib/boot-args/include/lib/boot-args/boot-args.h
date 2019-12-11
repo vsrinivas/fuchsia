@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_BOOT_ARGS_H_
-#define SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_BOOT_ARGS_H_
+#ifndef LIB_BOOT_ARGS_BOOT_ARGS_H_
+#define LIB_BOOT_ARGS_BOOT_ARGS_H_
 
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include <map>
 #include <string_view>
@@ -19,6 +23,10 @@ class BootArgs {
  public:
   // Create BootArgs from a |vmo| with a given |size|.
   static zx_status_t Create(zx::vmo vmo, size_t size, BootArgs* out);
+
+  // Create BootArgs from the fuchsia.boot.Arguments service, accessed through
+  // the namespace
+  static zx_status_t CreateFromArgumentsService(BootArgs* out);
 
   BootArgs() = default;
   ~BootArgs();
@@ -46,4 +54,4 @@ class BootArgs {
 
 }  // namespace devmgr
 
-#endif  // SRC_DRIVER_FRAMEWORK_DEVCOORDINATOR_BOOT_ARGS_H_
+#endif  // LIB_BOOT_ARGS_BOOT_ARGS_H_

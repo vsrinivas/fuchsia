@@ -33,6 +33,7 @@
 #include <fs/vfs_types.h>
 
 #include "cobalt-client/cpp/collector.h"
+#include "fshost-boot-args.h"
 #include "lib/async/cpp/task.h"
 #include "metrics.h"
 
@@ -51,7 +52,8 @@ FsManager::FsManager(zx::event fshost_event, FsHostMetrics metrics)
       global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
       outgoing_vfs_(fs::ManagedVfs(global_loop_->dispatcher())),
       registry_(global_loop_.get()),
-      metrics_(std::move(metrics)) {
+      metrics_(std::move(metrics)),
+      boot_args_() {
   ZX_ASSERT(global_root_ == nullptr);
 }
 

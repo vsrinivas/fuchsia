@@ -21,6 +21,7 @@ source_set("fshost-registry") {
     "../shared",
   ]
   deps = [
+    "$zx/system/ulib/boot-args",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
@@ -70,10 +71,13 @@ source_set("block-watcher") {
   ]
   deps = [
     ":fshost-registry",
+    "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-zxcrypt:c",
+    "$zx/system/ulib/boot-args",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",
@@ -85,6 +89,7 @@ source_set("block-watcher") {
     "$zx/system/ulib/trace",
     "$zx/system/ulib/trace-engine",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcrypt:zxcrypt-fdio",
   ]
@@ -98,7 +103,13 @@ zx_executable("fshost") {
     ":block-watcher",
     ":fshost-registry",
     ":metrics",
+    "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-fshost:c",
+    "$zx/system/fidl/fuchsia-fshost:llcpp",
+    "$zx/system/fidl/fuchsia-ldsvc:c",
+    "$zx/system/ulib/boot-args",
     "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/hermetic-decompressor",
     "$zx/system/ulib/loader-service",
@@ -109,6 +120,7 @@ zx_executable("fshost") {
 zx_test("fshost-test") {
   test_group = "ddk"
   sources = [
+    "fshost-boot-args-test.cc",
     "fshost-test.cc",
   ]
   deps = [
@@ -116,6 +128,7 @@ zx_test("fshost-test") {
     ":fshost-registry",
     ":metrics",
     "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/boot-args",
     "$zx/system/ulib/cobalt-client",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fidl-async",
@@ -132,6 +145,7 @@ zx_test("fshost-metrics-test") {
   deps = [
     ":metrics",
     "$zx/system/ulib/async-testing",
+    "$zx/system/ulib/boot-args",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs/metrics:metrics-cobalt",
@@ -148,6 +162,7 @@ zx_test("block-watcher-test") {
   ]
   deps = [
     ":block-watcher",
+    "$zx/system/ulib/boot-args",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fs-management",

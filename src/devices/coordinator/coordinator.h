@@ -6,6 +6,7 @@
 #define SRC_DEVICES_COORDINATOR_COORDINATOR_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/boot-args/boot-args.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -23,7 +24,6 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 
-#include "boot-args.h"
 #include "composite-device.h"
 #include "devhost.h"
 #include "device.h"

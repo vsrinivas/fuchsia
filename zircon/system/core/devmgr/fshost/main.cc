@@ -4,6 +4,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/fshost/llcpp/fidl.h>
+#include <fuchsia/ldsvc/c/fidl.h>
 #include <getopt.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
@@ -28,7 +31,6 @@
 #include <loader-service/loader-service.h>
 #include <ramdevice-client/ramdisk.h>
 
-#include "../shared/env.h"
 #include "block-watcher.h"
 #include "fs-manager.h"
 #include "metrics.h"
@@ -38,6 +40,24 @@ namespace {
 
 FsHostMetrics MakeMetrics() {
   return FsHostMetrics(std::make_unique<cobalt_client::Collector>(FsManager::CollectorOptions()));
+}
+
+constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
+
+// Get ramdisk from the boot items service.
+zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdio_service_connect(kItemsPath, remote.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  uint32_t length;
+  return fuchsia_boot_ItemsGet(local.get(), ZBI_TYPE_STORAGE_RAMDISK, 0,
+                               ramdisk_vmo->reset_and_get_address(), &length);
 }
 
 zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) {
@@ -164,24 +184,18 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
 }  // namespace devmgr
 
 int main(int argc, char** argv) {
-  bool netboot = false;
   bool disable_block_watcher = false;
 
   enum {
-    kNetboot,
     kDisableBlockWatcher,
   };
   option options[] = {
-      {"netboot", no_argument, nullptr, kNetboot},
       {"disable-block-watcher", no_argument, nullptr, kDisableBlockWatcher},
   };
 
   int opt;
   while ((opt = getopt_long(argc, argv, "", options, nullptr)) != -1) {
     switch (opt) {
-      case kNetboot:
-        netboot = true;
-        break;
       case kDisableBlockWatcher:
         disable_block_watcher = true;
         break;
@@ -203,7 +217,7 @@ int main(int argc, char** argv) {
       devmgr::FsManager::Create(std::move(fshost_event), loader_svc, std::move(dir_request),
                                 devmgr::MakeMetrics(), &fs_manager);
   if (status != ZX_OK) {
-    printf("fshost: Cannot create FsManager\n");
+    printf("fshost: Cannot create FsManager: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -228,8 +242,11 @@ int main(int argc, char** argv) {
   fs_manager->WatchExit();
 
   // If there is a ramdisk, setup the ramctl filesystems.
-  zx::vmo ramdisk_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, 0)));
-  if (ramdisk_vmo.is_valid()) {
+  zx::vmo ramdisk_vmo;
+  status = devmgr::get_ramdisk(&ramdisk_vmo);
+  if (status != ZX_OK) {
+    printf("fshost: failed to get ramdisk: %s\n", zx_status_get_string(status));
+  } else if (ramdisk_vmo.is_valid()) {
     thrd_t t;
     int err = thrd_create_with_name(&t, &devmgr::RamctlWatcher, &ramdisk_vmo, "ramctl-filesystems");
     if (err != thrd_success) {
@@ -239,10 +256,16 @@ int main(int argc, char** argv) {
   }
 
   if (!disable_block_watcher) {
+    // Check relevant boot arguments
     devmgr::BlockWatcherOptions options = {};
-    options.netboot = netboot;
-    options.check_filesystems = devmgr::getenv_bool("zircon.system.filesystem-check", false);
-    options.wait_for_data = devmgr::getenv_bool("zircon.system.wait-for-data", true);
+    options.netboot = fs_manager->boot_args()->netboot();
+    options.check_filesystems = fs_manager->boot_args()->check_filesystems();
+    options.wait_for_data = fs_manager->boot_args()->wait_for_data();
+
+    if (options.netboot) {
+      printf("fshost: disabling automount\n");
+    }
+
     BlockDeviceWatcher(std::move(fs_manager), options);
   } else {
     // Keep the process alive so that the loader service continues to be supplied

@@ -33,6 +33,7 @@ group("ulib") {
     "blktest",
     "blobfs",
     "block-client",
+    "boot-args",
     "bootfs",
     "c",
     "c:crt1",

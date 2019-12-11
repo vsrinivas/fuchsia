@@ -72,22 +72,6 @@ zx_status_t wait_for_file(const char* path, zx::time deadline) {
   return status;
 }
 
-// Get ramdisk from the boot items service.
-zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = fdio_service_connect(kItemsPath, remote.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  uint32_t length;
-  return fuchsia_boot_ItemsGet(local.get(), ZBI_TYPE_STORAGE_RAMDISK, 0,
-                               ramdisk_vmo->reset_and_get_address(), &length);
-}
-
 SystemInstance::SystemInstance() : SystemInstance(nullptr) {}
 
 SystemInstance::SystemInstance(fdio_ns_t* default_ns) : default_ns_(default_ns), launcher_(this) {
@@ -1007,31 +991,14 @@ zx::channel SystemInstance::fshost_start(devmgr::Coordinator* coordinator,
     }
   }
 
-  // pass ramdisk to fshost
-  zx::vmo ramdisk_vmo;
-  zx_status_t status = get_ramdisk(&ramdisk_vmo);
-  if (status == ZX_OK && ramdisk_vmo.is_valid()) {
-    handles[n] = ramdisk_vmo.release();
-    types[n++] = PA_HND(PA_VMO_BOOTDATA, 0);
-  }
-
   // pass command line to the fshost
   fbl::Vector<const char*> args{"/boot/bin/fshost"};
-  if (coordinator->boot_args().GetBool("netsvc.netboot", false) ||
-      coordinator->boot_args().GetBool("zircon.system.disable-automount", false)) {
-    args.push_back("--netboot");
-  }
   if (devmgr_args.disable_block_watcher) {
     args.push_back("--disable-block-watcher");
   }
   args.push_back(nullptr);
 
-  // pass zircon.system.* options to the fshost as environment variables
-  fbl::Vector<const char*> env;
-  coordinator->boot_args().Collect("zircon.system", &env);
-  env.push_back(nullptr);
-
-  launcher_.Launch(svc_job_, "fshost", args.data(), env.data(), -1, coordinator->root_resource(),
+  launcher_.Launch(svc_job_, "fshost", args.data(), nullptr, -1, coordinator->root_resource(),
                    handles, types, n, nullptr, FS_BOOT | FS_DEV | FS_SVC);
   return dir_request_local;
 }

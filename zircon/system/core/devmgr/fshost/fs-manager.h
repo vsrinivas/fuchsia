@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/boot-args/boot-args.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -21,6 +22,7 @@
 
 // Used for fshost signals.
 #include "../shared/fdio.h"
+#include "fshost-boot-args.h"
 #include "metrics.h"
 #include "registry.h"
 
@@ -64,6 +66,8 @@ class FsManager {
   // Flushes FsHostMetrics to cobalt.
   void FlushMetrics();
 
+  devmgr::FshostBootArgs* boot_args() { return &boot_args_; }
+
  private:
   FsManager(zx::event fshost_event, FsHostMetrics metrics);
   zx_status_t SetupOutgoingDirectory(zx::channel dir_request, loader_service_t* loader_svc);
@@ -95,6 +99,9 @@ class FsManager {
 
   // Keeps a collection of metrics being track at the FsHost level.
   FsHostMetrics metrics_;
+
+  // Used to lookup configuration options stored in fuchsia.boot.Arguments
+  devmgr::FshostBootArgs boot_args_;
 };
 
 }  // namespace devmgr

@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/boot-args/boot-args.h>
 #include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
@@ -30,7 +31,6 @@
 #include <cstring>
 #include <memory>
 
-#include "boot-args.h"
 #include "coordinator.h"
 #include "devfs.h"
 #include "devhost-loader-service.h"
@@ -40,23 +40,8 @@
 
 namespace {
 
-constexpr char kArgumentsPath[] = "/svc/" fuchsia_boot_Arguments_Name;
 constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
 constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
-
-// Get kernel arguments from the arguments service.
-zx_status_t get_arguments(zx::vmo* args_vmo, size_t* args_size) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = fdio_service_connect(kArgumentsPath, remote.release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  return fuchsia_boot_ArgumentsGet(local.get(), args_vmo->reset_and_get_address(), args_size);
-}
 
 // Get the root job from the root job service.
 zx_status_t get_root_job(zx::job* root_job) {
@@ -182,17 +167,8 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
 
 int main(int argc, char** argv) {
   devmgr::BootArgs boot_args;
-  zx::vmo args_vmo;
-  size_t args_size;
-  zx_status_t status = get_arguments(&args_vmo, &args_size);
-  if (status == ZX_OK) {
-    status = devmgr::BootArgs::Create(std::move(args_vmo), args_size, &boot_args);
-    if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: failed to create boot arguments (size %lu): %d\n", args_size,
-              status);
-      return 1;
-    }
-  } else {
+  zx_status_t status = devmgr::BootArgs::CreateFromArgumentsService(&boot_args);
+  if (status != ZX_OK) {
     fprintf(stderr,
             "devcoordinator: failed to get boot arguments, assuming test "
             "environment and continuing\n");

@@ -8,19 +8,11 @@ source_set("shared") {
     "fdio.cc",
   ]
   deps = [
-    ":env",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
-  ]
-}
-
-source_set("env") {
-  visibility = [ "$zx/system/core/devmgr/*" ]
-  sources = [
-    "env.cc",
   ]
 }

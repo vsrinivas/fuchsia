@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "boot-args.h"
+#include "lib/boot-args/boot-args.h"
 
+#include <fuchsia/boot/c/fidl.h>
 #include <lib/zx/vmar.h>
 
 namespace devmgr {
+
+constexpr char kArgumentsPath[] = "/svc/" fuchsia_boot_Arguments_Name;
 
 zx_status_t BootArgs::Create(zx::vmo vmo, size_t size, BootArgs* out) {
   // If we have no valid data in the VMO, return early success.
@@ -44,6 +47,26 @@ zx_status_t BootArgs::Create(zx::vmo vmo, size_t size, BootArgs* out) {
   out->size_ = size;
   out->args_ = std::move(args);
   return ZX_OK;
+}
+
+// Get kernel arguments from the arguments service.
+zx_status_t BootArgs::CreateFromArgumentsService(BootArgs* out) {
+  zx::vmo args_vmo;
+  size_t args_size;
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdio_service_connect(kArgumentsPath, remote.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fuchsia_boot_ArgumentsGet(local.get(), args_vmo.reset_and_get_address(), &args_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return Create(std::move(args_vmo), args_size, out);
 }
 
 BootArgs::~BootArgs() {

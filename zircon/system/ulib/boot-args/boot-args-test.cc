@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "boot-args.h"
+#include "lib/boot-args/boot-args.h"
 
 #include <zxtest/zxtest.h>
 
-namespace {
 void CreateBootArgs(const char* config, size_t size, devmgr::BootArgs* boot_args) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0, &vmo);
@@ -58,4 +57,3 @@ TEST(BootArgsTestCase, Collect) {
   ASSERT_STR_EQ("key2=value2", out[1]);
   ASSERT_STR_EQ("key3=value3", out[2]);
 }
-}  // namespace

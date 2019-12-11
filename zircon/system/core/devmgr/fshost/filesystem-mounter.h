@@ -15,6 +15,7 @@
 
 #include "block-watcher.h"
 #include "fs-manager.h"
+#include "fshost-boot-args.h"
 #include "metrics.h"
 
 namespace devmgr {
@@ -57,6 +58,8 @@ class FilesystemMounter {
 
   // Returns a pointer to the |FsHostMetrics| instance.
   FsHostMetrics* mutable_metrics() { return fshost_->mutable_metrics(); }
+
+  devmgr::FshostBootArgs* boot_args() { return fshost_->boot_args(); }
 
   void FlushMetrics() { fshost_->FlushMetrics(); }
 

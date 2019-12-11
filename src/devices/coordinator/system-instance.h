@@ -7,17 +7,16 @@
 
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/ldsvc/llcpp/fidl.h>
+#include <lib/boot-args/boot-args.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/vmo.h>
 
-#include "boot-args.h"
 #include "coordinator.h"
 #include "fdio.h"
 
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 
 zx_status_t wait_for_file(const char* path, zx::time deadline);
-zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo);
 
 class SystemInstance : public devmgr::FsProvider {
  public:

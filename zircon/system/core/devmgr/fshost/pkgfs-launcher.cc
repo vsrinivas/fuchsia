@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/boot-args/boot-args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -26,12 +27,18 @@
 #include <loader-service/loader-service.h>
 
 #include "../shared/fdio.h"
+#include "fshost-boot-args.h"
 #include "fshost-fs-provider.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 
 namespace devmgr {
 namespace {
+
+typedef struct {
+  fbl::unique_fd blobfs_root_fd;
+  FshostBootArgs* boot_args;
+} ldsvc_ctx_t;
 
 void pkgfs_finish(FilesystemMounter* filesystems, zx::process proc, zx::channel pkgfs_root) {
   auto deadline = zx::deadline_after(zx::sec(5));
@@ -83,24 +90,20 @@ void pkgfs_finish(FilesystemMounter* filesystems, zx::process proc, zx::channel 
 
 // Launching pkgfs uses its own loader service and command lookup to run out of
 // the blobfs without any real filesystem.  Files are found by
-// getenv("zircon.system.pkgfs.file.PATH") returning a blob content ID.
+// boot_args->Get("zircon.system.pkgfs.file.PATH") returning a blob content ID.
 // That is, a manifest of name->blob is embedded in /boot/config/devmgr.
 zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix, const char* name,
                                   zx_handle_t* vmo) {
-  const int fs_blob_fd = static_cast<int>(reinterpret_cast<intptr_t>(ctx));
-  char key[256];
-  if (snprintf(key, sizeof(key), "zircon.system.pkgfs.file.%s%s", prefix, name) >=
-      (int)sizeof(key)) {
-    return ZX_ERR_BAD_PATH;
-  }
-  const char* blob = getenv(key);
+  const ldsvc_ctx_t* ldsvc_ctx = static_cast<ldsvc_ctx_t*>(ctx);
+  const char* blob = ldsvc_ctx->boot_args->pkgfs_file_with_prefix_and_name(prefix, name);
   if (blob == nullptr) {
+    printf("fshost: failed to find pkgfs file ID in boot arguments \"%s%s\"\n", prefix, name);
     return ZX_ERR_NOT_FOUND;
   }
 
   int fd;
-  zx_status_t status = fdio_open_fd_at(
-      fs_blob_fd, blob, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
+  zx_status_t status = fdio_open_fd_at(ldsvc_ctx->blobfs_root_fd.get(), blob,
+                                       fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
   if (status != ZX_OK) {
     return status;
   }
@@ -110,6 +113,12 @@ zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix, const char* nam
   close(fd);
   if (status != ZX_OK) {
     return status;
+  }
+
+  char key[256];
+  if (snprintf(key, sizeof(key), "%s%s", prefix, name) >= (int)sizeof(key)) {
+    printf("fshost: failed to format pkgfs file boot argument key\n");
+    return ZX_ERR_INVALID_ARGS;
   }
   status = zx_object_set_property(exec_vmo.get(), ZX_PROP_NAME, key, strlen(key));
   if (status != ZX_OK) {
@@ -143,18 +152,19 @@ const loader_service_ops_t pkgfs_ldsvc_ops = {
 };
 
 // Create a local loader service with a fixed mapping of names to blobs.
-zx_status_t pkgfs_ldsvc_start(fbl::unique_fd fs_blob_fd, zx::channel* ldsvc) {
+zx_status_t pkgfs_ldsvc_start(std::unique_ptr<ldsvc_ctx_t> ldsvc_ctx, zx::channel* ldsvc) {
   loader_service_t* service;
+  // The loader service takes (figurative) ownership of ldsvc_ctx, which is why
+  // it is intentionally leaked here. If the loader service is ever modified to
+  // have a shorter lifespan this should be updated to free the ldsvc_ctx when
+  // the loader service is terminated or this will cause a memory leak.
   zx_status_t status = loader_service_create(
-      nullptr, &pkgfs_ldsvc_ops, reinterpret_cast<void*>(static_cast<intptr_t>(fs_blob_fd.get())),
-      &service);
+      nullptr, &pkgfs_ldsvc_ops, reinterpret_cast<void*>(ldsvc_ctx.release()), &service);
   if (status != ZX_OK) {
     printf("fshost: cannot create pkgfs loader service: %d (%s)\n", status,
            zx_status_get_string(status));
     return status;
   }
-  // The loader service now owns this FD
-  __UNUSED auto fd = fs_blob_fd.release();
 
   status = loader_service_connect(service, ldsvc->reset_and_get_address());
   loader_service_release(service);
@@ -166,8 +176,10 @@ zx_status_t pkgfs_ldsvc_start(fbl::unique_fd fs_blob_fd, zx::channel* ldsvc) {
 }
 
 bool pkgfs_launch(FilesystemMounter* filesystems) {
-  const char* cmd = getenv("zircon.system.pkgfs.cmd");
+  // Get the pkgfs.cmd boot argument
+  const char* cmd = filesystems->boot_args()->pkgfs_cmd();
   if (cmd == nullptr) {
+    printf("fshost: unable to launch pkgfs, missing \"zircon.system.pkgfs.cmd\" boot argument\n");
     return false;
   }
 
@@ -193,16 +205,22 @@ bool pkgfs_launch(FilesystemMounter* filesystems) {
   while (file[0] == '/') {
     ++file;
   }
+  // The ldsvc_ctx stores a pointer to filesystems->boot_args(), which will be
+  // unsafe if this is ever modified such that the loader service will outlive
+  // the FsManager.
+  auto ldsvc_ctx = std::make_unique<ldsvc_ctx_t>();
+  ldsvc_ctx->blobfs_root_fd = std::move(fs_blob_fd);
+  ldsvc_ctx->boot_args = filesystems->boot_args();
   zx::vmo executable;
-  status = pkgfs_ldsvc_load_blob(reinterpret_cast<void*>(static_cast<intptr_t>(fs_blob_fd.get())),
-                                 "", argv[0], executable.reset_and_get_address());
+  status = pkgfs_ldsvc_load_blob(reinterpret_cast<void*>(ldsvc_ctx.get()), "", argv[0],
+                                 executable.reset_and_get_address());
   if (status != ZX_OK) {
     printf("fshost: cannot load pkgfs executable: %d (%s)\n", status, zx_status_get_string(status));
     return false;
   }
 
   zx::channel loader;
-  status = pkgfs_ldsvc_start(std::move(fs_blob_fd), &loader);
+  status = pkgfs_ldsvc_start(std::move(ldsvc_ctx), &loader);
   if (status != ZX_OK) {
     printf("fshost: cannot pkgfs loader: %d (%s)\n", status, zx_status_get_string(status));
     return false;
