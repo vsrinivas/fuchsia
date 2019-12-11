@@ -12,6 +12,7 @@ group("tests") {
 
   deps = [
     ":magma_abi_conformance_tests",
+    ":magma_info_test",
     ":magma_nonhardware_tests",
     "codegen",
   ]
@@ -38,6 +39,21 @@ test_package("magma_abi_conformance_tests") {
   tests = [
     {
       name = "magma_abi_conformance_tests"
+      environments = magma_hardware_envs
+    },
+  ]
+}
+
+# Run magma_info as a test to make sure it doesn't crash.
+test_package("magma_info_test") {
+  deps = [
+    "//garnet/lib/magma/src/tools:magma_info",
+  ]
+
+  tests = [
+    {
+      name = "magma_info"
+      dest = "magma_info_test"
       environments = magma_hardware_envs
     },
   ]
