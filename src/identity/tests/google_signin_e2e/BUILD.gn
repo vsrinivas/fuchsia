@@ -60,8 +60,12 @@ copy("runtime_deps") {
 group("test") {
   testonly = true
 
-  deps = [
-    ":google_signin_e2e_test",
-    ":google_signin_e2e_tester",
-  ]
+  deps = []
+
+  if (is_linux) {
+    deps += [
+      ":google_signin_e2e_test",
+      ":google_signin_e2e_tester",
+    ]
+  }
 }
