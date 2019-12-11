@@ -163,6 +163,11 @@ pub(crate) trait SockAddr:
     /// accepts.
     const FAMILY: u16;
 
+    /// Creates a new `SockAddr`.
+    ///
+    /// Implementations must set their family field to `Self::FAMILY`.
+    fn new(addr: Self::AddrType, port: u16) -> Self;
+
     /// Gets this `SockAddr`'s address.
     fn addr(&self) -> Self::AddrType;
 
@@ -220,6 +225,17 @@ impl SockAddr for SockAddr6 {
     type AddrType = Ipv6Addr;
     const FAMILY: u16 = libc::AF_INET6 as u16;
 
+    /// Creates a new `SockAddr6`.
+    fn new(addr: Self::AddrType, port: u16) -> Self {
+        SockAddr6 {
+            family: U16::new(Self::FAMILY),
+            port: U16::new(port),
+            flow_info: U32::ZERO,
+            addr: addr.ipv6_bytes(),
+            scope_id: U32::ZERO,
+        }
+    }
+
     fn addr(&self) -> Ipv6Addr {
         Ipv6Addr::new(self.addr)
     }
@@ -259,6 +275,15 @@ pub(crate) struct SockAddr4 {
 impl SockAddr for SockAddr4 {
     type AddrType = Ipv4Addr;
     const FAMILY: u16 = libc::AF_INET as u16;
+
+    /// Creates a new `SockAddr4`.
+    fn new(addr: Self::AddrType, port: u16) -> Self {
+        SockAddr4 {
+            family: U16::new(Self::FAMILY),
+            port: U16::new(port),
+            addr: addr.ipv4_bytes(),
+        }
+    }
 
     fn addr(&self) -> Ipv4Addr {
         Ipv4Addr::new(self.addr)

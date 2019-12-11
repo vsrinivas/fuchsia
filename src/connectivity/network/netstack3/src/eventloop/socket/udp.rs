@@ -10,28 +10,29 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 
-use failure::{format_err, Error};
+use failure::{Error, format_err};
 use fidl_fuchsia_posix_socket as psocket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased};
 use futures::{channel::mpsc, channel::oneshot, future::Either, TryFutureExt, TryStreamExt};
 use log::{debug, error, trace};
-use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv6};
+use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6, IpVersion};
 use netstack3_core::{
-    connect_udp, get_udp_conn_info, listen_udp, remove_udp_conn, remove_udp_listener, send_udp,
+    connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn, remove_udp_listener, send_udp,
     send_udp_conn, send_udp_listener, IdMapCollection, LocalAddressError, RemoteAddressError,
     SocketError, UdpConnId, UdpEventDispatcher, UdpListenerId,
 };
-use packet::{serialize::Buf, BufferView};
+use packet::{BufferView, serialize::Buf};
 use zerocopy::{AsBytes, LayoutVerified};
 
-use super::{
-    get_domain_ip_version, FdioSocketMsg, IpSockAddrExt, SockAddr, SocketEventInner,
-    SocketWorkerProperties,
-};
 use crate::{
     eventloop::{Event, EventLoopInner},
     EventLoop,
+};
+
+use super::{
+    FdioSocketMsg, get_domain_ip_version, IpSockAddrExt, SockAddr, SocketEventInner,
+    SocketWorkerProperties,
 };
 
 #[derive(Default)]
@@ -512,6 +513,53 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
         Ok(())
     }
 
+    /// Handles a [POSIX socket get_sock_name request].
+    ///
+    /// [POSIX socket get_sock_name request]: psocket::ControlRequest::GetSockName
+    fn get_sock_name(
+        &mut self,
+        event_loop: &mut EventLoop,
+    ) -> Result<I::SocketAddress, libc::c_int> {
+        match self.info.state {
+            SocketState::Unbound { .. } => {
+                return Err(libc::ENOTSOCK);
+            }
+            SocketState::BoundConnect { conn_id } => {
+                let info = get_udp_conn_info(&event_loop.ctx, conn_id);
+                Ok(I::SocketAddress::new(*info.local_addr, info.local_port.get()))
+            }
+            SocketState::BoundListen { listener_id } => {
+                let info = get_udp_listener_info(&event_loop.ctx, listener_id);
+                let local_addr = match info.local_addr {
+                    Some(addr) => *addr,
+                    None => I::UNSPECIFIED_ADDRESS,
+                };
+                Ok(I::SocketAddress::new(local_addr, info.local_port.get()))
+            }
+        }
+    }
+
+    /// Handles a [POSIX socket get_peer_name request].
+    ///
+    /// [POSIX socket get_peer_name request]: psocket::ControlRequest::GetPeerName
+    fn get_peer_name(
+        &mut self,
+        event_loop: &mut EventLoop,
+    ) -> Result<I::SocketAddress, libc::c_int> {
+        match self.info.state {
+            SocketState::Unbound { .. } => {
+                return Err(libc::ENOTSOCK);
+            }
+            SocketState::BoundListen { .. } => {
+                return Err(libc::ENOTCONN);
+            }
+            SocketState::BoundConnect { conn_id } => {
+                let info = get_udp_conn_info(&event_loop.ctx, conn_id);
+                Ok(I::SocketAddress::new(*info.remote_addr, info.remote_port.get()))
+            }
+        }
+    }
+
     /// Handles a [POSIX socket request].
     ///
     /// [POSIX socket request]: psocket::ControlRequest
@@ -551,8 +599,42 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
             ),
             psocket::ControlRequest::Listen { .. } => {}
             psocket::ControlRequest::Accept { .. } => {}
-            psocket::ControlRequest::GetSockName { .. } => {}
-            psocket::ControlRequest::GetPeerName { .. } => {}
+            psocket::ControlRequest::GetSockName { responder } => {
+                match self.get_sock_name(event_loop) {
+                    Ok(sock_name) => {
+                        responder_send!(
+                            responder,
+                            0i16,
+                            &mut sock_name.as_bytes().iter().copied()
+                        );
+                    }
+                    Err(err) => {
+                        responder_send!(
+                            responder,
+                            err as i16,
+                            &mut None.into_iter()
+                        );
+                    }
+                }
+            },
+            psocket::ControlRequest::GetPeerName { responder } => {
+                match self.get_peer_name(event_loop) {
+                    Ok(sock_name) => {
+                        responder_send!(
+                            responder,
+                            0i16,
+                            &mut sock_name.as_bytes().iter().copied()
+                        );
+                    }
+                    Err(err) => {
+                        responder_send!(
+                            responder,
+                            err as i16,
+                            &mut None.into_iter()
+                        );
+                    }
+                }
+            },
             psocket::ControlRequest::SetSockOpt { .. } => {}
             psocket::ControlRequest::GetSockOpt { .. } => {}
             _ => {}
@@ -944,17 +1026,39 @@ mod tests {
             .build()
             .await
             .unwrap();
-        // Setup Alice as a server, bound to LOCAL_ADDR:200
-        println!("Configuring alice...");
         let alice = t.get(0);
         let (alice_ctl, alice_sock) = get_socket_data_plane::<A>(alice).await;
+
+        // Verify that Alice has no local or peer addresses bound
+        assert_eq!(
+            alice.run_future(alice_ctl.get_sock_name()).await.unwrap(),
+            (libc::ENOTSOCK as i16, None.into_iter().collect::<Vec<u8>>())
+        );
+        assert_eq!(
+            alice.run_future(alice_ctl.get_peer_name()).await.unwrap(),
+            (libc::ENOTSOCK as i16, None.into_iter().collect::<Vec<u8>>())
+        );
+
+        // Setup Alice as a server, bound to LOCAL_ADDR:200
+        println!("Configuring alice...");
         let sockaddr = A::create(A::LOCAL_ADDR, 200);
         assert_eq!(
             alice.run_future(alice_ctl.bind(&mut sockaddr.into_iter())).await.unwrap() as i32,
             0
         );
-        // Setup Bob as a client, bound to REMOTE_ADDR:300 and connected to
-        // LOCAL_ADDR:200.
+
+        // Verify that Alice is listening on the local socket, but still has no peer socket
+        let want_addr  = A::new(A::LOCAL_ADDR, 200);
+        assert_eq!(
+            alice.run_future(alice_ctl.get_sock_name()).await.unwrap(),
+            (0, want_addr.as_bytes().to_vec())
+        );
+        assert_eq!(
+            alice.run_future(alice_ctl.get_peer_name()).await.unwrap(),
+            (libc::ENOTCONN as i16, None.into_iter().collect::<Vec<u8>>())
+        );
+
+        // Setup Bob as a client, bound to REMOTE_ADDR:300
         println!("Configuring bob...");
         let bob = t.get(1);
         let (bob_ctl, bob_sock) = get_socket_data_plane::<A>(bob).await;
@@ -963,11 +1067,33 @@ mod tests {
             bob.run_future(bob_ctl.bind(&mut sockaddr.into_iter())).await.unwrap() as i32,
             0
         );
+
+        // Verify that Bob is listening on the local socket, but has no peer socket
+        let want_addr = A::new(A::REMOTE_ADDR, 300);
+        assert_eq!(
+            bob.run_future(bob_ctl.get_sock_name()).await.unwrap(),
+            (0, want_addr.as_bytes().to_vec())
+        );
+        assert_eq!(
+            bob.run_future(bob_ctl.get_peer_name()).await.unwrap(),
+            (libc::ENOTCONN as i16, None.into_iter().collect::<Vec<u8>>())
+        );
+
+        // Connect Bob to Alice on LOCAL_ADDR:200
+        println!("Connecting bob to alice...");
         let sockaddr = A::create(A::LOCAL_ADDR, 200);
         assert_eq!(
             bob.run_future(bob_ctl.connect(&mut sockaddr.into_iter())).await.unwrap() as i32,
             0
         );
+
+        // Verify that Bob has the peer socket set correctly
+        let want_addr  = A::new(A::LOCAL_ADDR, 200);
+        assert_eq!(
+            bob.run_future(bob_ctl.get_peer_name()).await.unwrap(),
+            (0, want_addr.as_bytes().to_vec())
+        );
+
         // Send datagram from Bob's socket.
         println!("Writing datagram to bob");
         let body = "Hello".as_ref();
