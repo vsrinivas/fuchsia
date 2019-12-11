@@ -133,15 +133,20 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
     if (ret != ZX_OK) {
       return ret;
     }
-    // TODO(cphoenix): Add error handling for thrd_create_with_name and
-    // thrd_detach. Note that the thrd_ functions don't return zx_status_t; check for
-    // thrd_success and maybe thrd_nomem. See zircon/third_party/ulib/musl/include/threads.h
     pdata->oob_irq_supported = true;
-    // TODO(WLAN-744): Get interrupts working.
-    BRCMF_DBG(TEMP, "* * * NOT starting oob_irqhandler! Depending on watchdog.* * *");
-    // thrd_create_with_name(&sdiodev->isr_thread, brcmf_sdiod_oob_irqhandler, sdiodev,
-    //                      "brcmf-sdio-isr");
-    // thrd_detach(sdiodev->isr_thread);
+    int status = thrd_create_with_name(&sdiodev->isr_thread,
+                                       &brcmf_sdio_oob_irqhandler,
+                                       sdiodev,
+                                       "brcmf-sdio-isr");
+    if (status != thrd_success) {
+      BRCMF_ERR("thrd_create_with_name failed: %d\n", status);
+      return ZX_ERR_INTERNAL;
+    }
+    status = thrd_detach(sdiodev->isr_thread);
+    if (status != thrd_success) {
+      BRCMF_ERR("thrd_detach failed: %d\n", status);
+      return ZX_ERR_INTERNAL;
+    }
     sdiodev->oob_irq_requested = true;
     ret = enable_irq_wake(sdiodev->irq_handle);
     if (ret != ZX_OK) {

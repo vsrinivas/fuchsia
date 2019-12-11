@@ -3040,21 +3040,6 @@ void brcmf_sdio_event_handler(struct brcmf_sdio* bus);
 
 static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
   BRCMF_DBG(TIMER, "Enter\n");
-  uint32_t intstatus;
-
-  intstatus = bus->intstatus.load();
-  if (intstatus == 0) {
-    sdio_claim_host(bus->sdiodev->func1);
-    if (brcmf_sdio_intr_rstatus(bus)) {
-      BRCMF_ERR("failed backplane access\n");
-    }
-    sdio_release_host(bus->sdiodev->func1);
-  }
-  intstatus = bus->intstatus.load();
-  if (intstatus != 0) {
-    bus->dpc_triggered.store(true);
-    brcmf_sdio_event_handler(bus);
-  }
 
   /* Poll period: check device if appropriate. */
   if (!bus->sr_enabled && bus->poll && (++bus->polltick >= bus->pollrate)) {
@@ -3136,12 +3121,6 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
 }
 
 void brcmf_sdio_event_handler(struct brcmf_sdio* bus) {
-  // We need a mutex since this function can be called from both ISR and workqueue.
-  // in the Linux driver, this was called brcmf_sdio_dataworker() and was only
-  // called from workqueue.
-  static mtx_t lock = {};  // MTX_INIT;
-
-  mtx_lock(&lock);
   bus->dpc_running = true;
   std::atomic_thread_fence(std::memory_order_seq_cst);
   while (bus->dpc_triggered.load()) {
@@ -3150,12 +3129,18 @@ void brcmf_sdio_event_handler(struct brcmf_sdio* bus) {
     bus->idlecount = 0;
   }
   bus->dpc_running = false;
-  mtx_unlock(&lock);
 }
 
 static void brcmf_sdio_dataworker(WorkItem* work) {
   struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
+  // Lock here so that everything inside brcmf_sdio_event_handlers is protected.
+  // This is to ensure that the event handler is only called from either the
+  // workqueue or the interrupt thread. This is a little heavy-handed so there
+  // is probably room for improvement here. Running without this lock will
+  // eventually result in the driver failing though.
+  sdio_claim_host(bus->sdiodev->func1);
   brcmf_sdio_event_handler(bus);
+  sdio_release_host(bus->sdiodev->func1);
 }
 
 int brcmf_sdio_oob_irqhandler(void* cookie) {
@@ -3544,10 +3529,8 @@ static int brcmf_sdio_watchdog_thread(void* data) {
     if (bus->watchdog_should_stop.load()) {
       break;
     }
-    // Currently we're depending on watchdog for all interrupt handling, so poll quickly
-    // instead of waiting for watchdog signal.
-    // sync_completion_wait(&bus->watchdog_wait, ZX_TIME_INFINITE);
-    zx_nanosleep(zx_deadline_after(ZX_USEC(500)));
+    // Wait for watchdog signal
+    sync_completion_wait(&bus->watchdog_wait, ZX_TIME_INFINITE);
 
     if (bus->wd_active.load()) {
       brcmf_sdio_bus_watchdog(bus);
@@ -3564,12 +3547,7 @@ static void brcmf_sdio_watchdog(void* data) {
   bus->sdiodev->drvr->irq_callback_lock.lock();
 
   if (bus->watchdog_tsk) {
-    // Currently signaling watchdog_wait does nothing; brcmf_sdio_watchdog_thread() will
-    // wake up every N msec regardless, and do its thing if bus->wd_active is true. This
-    // is because we're currently depending on watchdog for interrupt handling, and the
-    // watchdog was being activated too frequently - because, ironically, each time it
-    // was turned on, it reset the timer for 10 msec in the future. So, for now, the watchdog
-    // doesn't wait on this completion signal - but it will once NET-1495 is resolved.
+    // Signal watchdog
     sync_completion_signal(&bus->watchdog_wait);
     /* Reschedule the watchdog */
     if (bus->wd_active.load()) {
