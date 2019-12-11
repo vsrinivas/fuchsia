@@ -1,0 +1,48 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("lib") {
+  sources = [
+    "simple_camera_server_app.cc",
+    "simple_camera_server_app.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.simplecamera",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/camera/simple_camera/simple_camera_lib",
+  ]
+}
+
+executable("bin") {
+  output_name = "simple_camera_server_cpp"
+
+  sources = [
+    "simple_camera_server.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+package("simple_camera_server_cpp") {
+  deps = [
+    ":bin",
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/simple_camera_server_cpp.cmx")
+      dest = "simple_camera_server_cpp.cmx"
+    },
+  ]
+
+  binary = "simple_camera_server_cpp"
+}

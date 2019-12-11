@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/camera"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.camera.Manager",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

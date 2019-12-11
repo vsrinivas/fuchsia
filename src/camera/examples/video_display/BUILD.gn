@@ -1,0 +1,53 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+# this has to match the binary name in examples/ui/Build.gn
+
+import("//build/package.gni")
+
+executable("video_display_bin") {
+  output_name = "video_display"
+
+  sources = [
+    "main.cc",
+    "simple_camera_view.cc",
+    "simple_camera_view.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.simplecamera",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/media/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/ui/base_view",
+    "//src/ui/lib/glm_workaround",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/trace-provider-with-fdio",
+  ]
+
+  include_dirs = [ "//lib" ]
+}
+
+package("video_display") {
+  deps = [
+    ":video_display_bin",
+  ]
+
+  binary = "video_display"
+
+  meta = [
+    {
+      path = rebase_path("meta/ui_example.cmx")
+      dest = "video_display.cmx"
+    },
+  ]
+}

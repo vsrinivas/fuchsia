@@ -43,6 +43,7 @@ group("scenic") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:scenic",
+    "//src/camera/examples/video_display",
     "//src/ui/examples:bouncing_ball",
     "//src/ui/examples:direct_input",
     "//src/ui/examples:direct_input_child",

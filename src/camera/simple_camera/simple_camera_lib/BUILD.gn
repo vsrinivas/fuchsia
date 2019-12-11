@@ -1,0 +1,75 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+# this has to match the binary name in examples/ui/Build.gn
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+source_set("simple_camera_lib") {
+  output_name = "simple_camera_lib"
+
+  sources = [
+    "buffer_fence.cc",
+    "buffer_fence.h",
+    "frame_scheduler.cc",
+    "frame_scheduler.h",
+    "video_display.cc",
+    "video_display.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.camera:fuchsia.camera",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fsl",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
+  ]
+
+  include_dirs = [
+    "//third_party/glm",
+    "//lib",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":simple_camera_unittests",
+  ]
+}
+
+executable("simple_camera_unittests") {
+  testonly = true
+
+  sources = [
+    "tests/buffer_fence_unittest.cc",
+  ]
+  deps = [
+    ":simple_camera_lib",
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
+  ]
+}
+
+test_package("simple_camera_lib_tests") {
+  deps = [
+    "//src/camera/simple_camera/simple_camera_lib:tests",
+  ]
+  tests = [
+    {
+      name = "simple_camera_unittests"
+      environments = basic_envs
+    },
+  ]
+}

@@ -35,6 +35,7 @@ group("tests") {
     ":camera_tests",
     "camera_manager2:tests",
     "examples/camera_display",
+    "simple_camera/simple_camera_lib:simple_camera_lib_tests",
   ]
 }
 
