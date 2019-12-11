@@ -193,9 +193,9 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
                                                                    {"is_empty", "length == 0"}}));
   rust_.emplace_back(
       InternalGlob("alloc::string::String"),
-      std::make_unique<PrettyHeapString>("(char*)vec.buf.ptr.pointer", "vec.len",
-                                         GetterList{{"as_ptr", "(char*)vec.buf.ptr.pointer"},
-                                                    {"as_mut_ptr", "(char*)vec.buf.ptr.pointer"},
+      std::make_unique<PrettyHeapString>("vec.buf.ptr.pointer as *u8", "vec.len",
+                                         GetterList{{"as_ptr", "vec.buf.ptr.pointer as *u8"},
+                                                    {"as_mut_ptr", "vec.buf.ptr.pointer as *u8"},
                                                     {"len", "vec.len"},
                                                     {"capacity", "vec.buf.cap"},
                                                     {"is_empty", "vec.len == 0"}}));

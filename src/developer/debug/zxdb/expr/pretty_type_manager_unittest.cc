@@ -161,7 +161,7 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
   ASSERT_EQ(0u, bool_node.children().size());
 }
 
-TEST_F(PrettyTypeManagerTest, RustStrings) {
+TEST_F(PrettyTypeManagerTest, RustStringSlice) {
   constexpr uint64_t kStringAddress = 0x99887766;
   constexpr uint64_t kStringLen = 69;  // Not including null.
 
@@ -191,16 +191,68 @@ TEST_F(PrettyTypeManagerTest, RustStrings) {
 
   bool completed = false;
   pretty->Format(&node, FormatOptions(), context,
-                 fit::defer_callback([&completed, loop = &loop()]() {
-                   completed = true;
-                   loop->QuitNow();
-                 }));
+                 fit::defer_callback([&completed, loop = &loop()]() { completed = true; }));
   EXPECT_FALSE(completed);  // Should be async.
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(completed);
 
   EXPECT_EQ("\"Now is the time for all good men to come to the aid of their country.\"",
             node.description());
+}
+
+TEST_F(PrettyTypeManagerTest, RustStringObject) {
+  constexpr uint64_t kStringAddress = 0x99887766;
+  constexpr uint64_t kStringLen = 69;  // Not including null.
+
+  const char kStringData[] =
+      "Now is the time for all good men to come to the aid of their country.";
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
+  context->data_provider()->AddMemory(
+      kStringAddress, std::vector<uint8_t>(std::begin(kStringData), std::end(kStringData)));
+  context->set_language(ExprLanguage::kRust);
+
+  // The String object representation is a Vec object containing bytes.
+  uint8_t kRustObject[24] = {
+      0x66,       0x77, 0x88, 0x99, 0x00, 0x00, 0x00, 0x00,  // Address = kStringAddress.
+      kStringLen, 0,    0,    0,    0,    0,    0,    0,     // Length = kStringLen.
+      kStringLen, 0,    0,    0,    0,    0,    0,    0      // Capacity = kStringLen.
+  };
+
+  auto alloc_namespace = fxl::MakeRefCounted<Namespace>("alloc");
+  auto string_namespace = fxl::MakeRefCounted<Namespace>("string");
+  auto vec_namespace = fxl::MakeRefCounted<Namespace>("vec");
+  SymbolTestParentSetter string_ns_parent(string_namespace, alloc_namespace);
+  SymbolTestParentSetter vec_ns_parent(vec_namespace, alloc_namespace);
+  SymbolTestParentSetter alloc_ns_parent(alloc_namespace, MakeRustUnit());
+  auto vec_type = MakeCollectionType(
+      DwarfTag::kStructureType, "Vec<*>",
+      {{"buf", MakeCollectionType(
+                   DwarfTag::kStructureType, "Buffer",
+                   {{"ptr", MakeCollectionType(DwarfTag::kStructureType, "Pointer",
+                                               {{"pointer", MakeRustCharPointerType()}})}})},
+       {"len", MakeUint64Type()},
+       {"cap", MakeUint64Type()}});
+  SymbolTestParentSetter vec_type_parent(vec_type, vec_namespace);
+  auto str_type = MakeCollectionType(DwarfTag::kStructureType, "String", {{"vec", vec_type}});
+  SymbolTestParentSetter str_type_parent(str_type, string_namespace);
+
+  ExprValue value(str_type, std::vector<uint8_t>(std::begin(kRustObject), std::end(kRustObject)));
+  FormatNode node("value", value);
+
+  PrettyTypeManager manager;
+  PrettyType* pretty = manager.GetForType(str_type.get());
+  ASSERT_TRUE(pretty);
+
+  bool completed = false;
+  pretty->Format(&node, FormatOptions(), context,
+                 fit::defer_callback([&completed, loop = &loop()]() { completed = true; }));
+  EXPECT_FALSE(completed);  // Should be async.
+  loop().RunUntilNoTasks();
+  EXPECT_TRUE(completed);
+
+  EXPECT_EQ("\"Now is the time for all good men to come to the aid of their country.\"",
+            node.description())
+      << node.err().msg();
 }
 
 TEST_F(PrettyTypeManagerTest, ZxStatusT) {
