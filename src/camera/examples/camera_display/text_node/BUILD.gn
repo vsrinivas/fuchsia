@@ -39,5 +39,5 @@ source_set("text_node_lib") {
 config("text_node_config") {
   visibility = [ ":*" ]
 
-  include_dirs = [ "//src/camera/examples/demo/text_node/include" ]
+  include_dirs = [ "//src/camera/examples/camera_display/text_node/include" ]
 }

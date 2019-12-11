@@ -11,7 +11,7 @@
 #include "demo_view.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"camera_demo"});
+  syslog::InitLogger({"camera_display"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

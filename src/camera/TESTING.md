@@ -19,7 +19,7 @@ will be skipped.
 
 1. Follow steps 1 throuh 4 for on-device test setup
 2. Run `fx shell tiles_ctl start`
-3. Run `fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_demo#meta/camera_demo.cmx`
+3. Run `fx shell tiles_ctl add fuchsia-pkg://fuchsia.com/camera_display#meta/camera_display.cmx`
 
 
 ## To run single tests:

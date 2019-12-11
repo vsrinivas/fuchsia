@@ -4,10 +4,10 @@
 
 import("//build/package.gni")
 
-demo_name = "camera_demo"
+name = "camera_display"
 
-executable("demo_bin") {
-  output_name = demo_name
+executable("bin") {
+  output_name = name
 
   sources = [
     "demo_view.cc",
@@ -33,23 +33,17 @@ executable("demo_bin") {
   ]
 }
 
-package("${demo_name}") {
+package("${name}") {
   deps = [
-    ":demo_bin",
+    ":bin",
   ]
 
-  binary = demo_name
+  binary = name
 
   meta = [
     {
-      path = rebase_path("meta/demo.cmx")
-      dest = "${demo_name}.cmx"
+      path = rebase_path("meta/${name}.cmx")
+      dest = "${name}.cmx"
     },
-  ]
-}
-
-group("demo") {
-  public_deps = [
-    ":${demo_name}",
   ]
 }

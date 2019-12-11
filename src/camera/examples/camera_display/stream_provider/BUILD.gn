@@ -44,5 +44,6 @@ source_set("stream_provider_lib") {
 config("stream_provider_config") {
   visibility = [ ":*" ]
 
-  include_dirs = [ "//src/camera/examples/demo/stream_provider/include" ]
+  include_dirs =
+      [ "//src/camera/examples/camera_display/stream_provider/include" ]
 }

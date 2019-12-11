@@ -28,7 +28,7 @@ group("tests") {
   deps = [
     ":camera_tests",
     "camera_manager2:tests",
-    "examples/demo",
+    "examples/camera_display",
   ]
 }
 
@@ -54,7 +54,7 @@ test_package("camera_tests") {
     "//src/camera/drivers/test_utils/test:button_checker_test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
     "//src/camera/drivers/virtual_camera/test:virtual_camera_test",
-    "//src/camera/examples/demo/stream_provider/test",
+    "//src/camera/examples/camera_display/stream_provider/test",
     "//src/camera/lib/fake_stream/test",
     "//src/camera/lib/image_writer/test:hsv_generator_test",
     "//src/camera/lib/image_writer/test:image_format_test",
@@ -174,7 +174,7 @@ test_package("camera_tests") {
     },
     {
       name = "stream_provider_test"
-      manifest = "examples/demo/stream_provider/test/test.cmx"
+      manifest = "examples/camera_display/stream_provider/test/test.cmx"
       environments = [ sherlock_env ]
     },
     {
