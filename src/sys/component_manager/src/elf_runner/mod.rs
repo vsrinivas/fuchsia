@@ -18,26 +18,18 @@ use {
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_async::EHandle,
     fuchsia_component::client,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
     fuchsia_vfs_pseudo_fs_mt::{
-        directory::immutable::simple as pfs,
-        directory::entry::DirectoryEntry,
-        directory::entry_container::DirectlyMutable,
-        file::pcb::asynchronous::read_only_static,
-        execution_scope::ExecutionScope,
-        pseudo_directory,
-        path::Path as fvfsPath,
+        directory::entry::DirectoryEntry, directory::entry_container::DirectlyMutable,
+        directory::immutable::simple as pfs, execution_scope::ExecutionScope,
+        file::pcb::asynchronous::read_only_static, path::Path as fvfsPath, pseudo_directory,
         tree_builder::TreeBuilder,
     },
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Task},
-    futures::{
-        future::BoxFuture,
-        TryStreamExt,
-    },
+    futures::{future::BoxFuture, TryStreamExt},
     library_loader,
     log::warn,
     std::{path::Path, sync::Arc},
@@ -104,13 +96,22 @@ fn get_resolved_url(start_info: &fsys::ComponentStartInfo) -> Result<String, Err
 
 fn get_program_binary(start_info: &fsys::ComponentStartInfo) -> Result<String, Error> {
     if let Some(program) = &start_info.program {
-        if let Some(binary) = program.find("binary") {
-            if let fdata::Value::Str(bin) = binary {
-                return Ok(bin.to_string());
+        if let Some(val) = program.find("binary") {
+            if let fdata::Value::Str(bin) = val {
+                if !Path::new(bin).is_absolute() {
+                    Ok(bin.to_string())
+                } else {
+                    Err(err_msg("the value of \"program.binary\" must be a relative path"))
+                }
+            } else {
+                Err(err_msg("the value of \"program.binary\" must be a string"))
             }
+        } else {
+            Err(err_msg("\"program.binary\" must be specified"))
         }
+    } else {
+        Err(err_msg("\"program\" must be specified"))
     }
-    Err(err_msg("\"binary\" must be specified"))
 }
 
 fn get_program_args(start_info: &fsys::ComponentStartInfo) -> Result<Vec<String>, Error> {
@@ -168,7 +169,9 @@ impl ElfRunner {
         let mut count: u32 = 0;
         for arg in args.iter() {
             let arg_copy = arg.clone();
-            runtime_tree_builder.add_entry(["args", &count.to_string()], read_only_static(arg_copy.clone())).expect("Failed to add arg to runtime directory");
+            runtime_tree_builder
+                .add_entry(["args", &count.to_string()], read_only_static(arg_copy.clone()))
+                .expect("Failed to add arg to runtime directory");
             count += 1;
         }
 
@@ -194,7 +197,9 @@ impl ElfRunner {
             "process_id" => read_only_static(process_id.to_string()),
             "job_id" => read_only_static(job_id.to_string()),
         );
-        runtime_dir.clone().add_entry("elf", elf_dir)
+        runtime_dir
+            .clone()
+            .add_entry("elf", elf_dir)
             .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
         Ok(())
     }
@@ -648,6 +653,38 @@ mod tests {
             Ok(_) => Err(format_err!("hello_world_fail_test succeeded unexpectedly")),
             Err(_) => Ok(()),
         }
+    }
+
+    #[test]
+    fn get_program_binary_test() {
+        let new_start_info = |binary_name: Option<&str>| fsys::ComponentStartInfo {
+            program: Some(fdata::Dictionary {
+                entries: vec![fdata::Entry {
+                    key: "binary".to_string(),
+                    value: binary_name
+                        .and_then(|s| Some(Box::new(fdata::Value::Str(s.to_string())))),
+                }],
+            }),
+            ns: None,
+            outgoing_dir: None,
+            runtime_dir: None,
+            resolved_url: None,
+        };
+        assert_eq!(
+            "bin/myexecutable".to_string(),
+            get_program_binary(&new_start_info(Some("bin/myexecutable"))).unwrap(),
+        );
+        assert_eq!(
+            format!("{:?}", err_msg("the value of \"program.binary\" must be a relative path")),
+            format!(
+                "{:?}",
+                get_program_binary(&new_start_info(Some("/bin/myexecutable"))).unwrap_err()
+            ),
+        );
+        assert_eq!(
+            format!("{:?}", err_msg("\"program.binary\" must be specified")),
+            format!("{:?}", get_program_binary(&new_start_info(None)).unwrap_err()),
+        );
     }
 
     fn new_args_set(args: Vec<Option<Box<fdata::Value>>>) -> fsys::ComponentStartInfo {
