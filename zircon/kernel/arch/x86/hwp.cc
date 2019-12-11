@@ -73,10 +73,10 @@ void x86_intel_hwp_init(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   // Reference: Intel SDM vol 3B section 14.4.10: Recommendations for OS use of HWP controls
   uint64_t hwp_caps = msr->read_msr(X86_MSR_IA32_HWP_CAPABILITIES);
   uint8_t max_performance = hwp_caps & 0xff;
-  uint8_t min_performance = (hwp_caps >> 24) & 0xff;
+  uint8_t most_efficient_performance = (hwp_caps >> 16) & 0xff;
   uint8_t energy_perf_preference = has_epb ? x86_intel_epb_to_epp(epb) : kBalancedEPP;
   uint64_t hwp_req = static_cast<uint32_t>(energy_perf_preference << 24u) |
-                     (max_performance << 8) | (min_performance);
+                     (max_performance << 8) | (most_efficient_performance);
   msr->write_msr(X86_MSR_IA32_HWP_REQUEST, hwp_req);
 }
 

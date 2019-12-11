@@ -661,16 +661,17 @@ static bool test_hwp_init() {
   // Skylake-U has HWP_PREF and EPB
   fake_msrs.msrs_[0] = {X86_MSR_IA32_ENERGY_PERF_BIAS, 0x6};
   fake_msrs.msrs_[1] = {X86_MSR_IA32_PM_ENABLE, 0x0};
-  fake_msrs.msrs_[2] = {X86_MSR_IA32_HWP_CAPABILITIES, 0x110000FEull};  // min = 0x11, max=0xfe
+  // min = 0x11, max=0xfe, efficient=0x22
+  fake_msrs.msrs_[2] = {X86_MSR_IA32_HWP_CAPABILITIES, 0x112200FEull};
   fake_msrs.msrs_[3] = {X86_MSR_IA32_HWP_REQUEST, 0x0ull};
   x86_intel_hwp_init(&cpu_id::kCpuIdCorei5_6260U, &fake_msrs);
   EXPECT_EQ(fake_msrs.read_msr(X86_MSR_IA32_PM_ENABLE), 1u);  // HWP enabled.
   uint64_t fake_hwp_request = fake_msrs.read_msr(X86_MSR_IA32_HWP_REQUEST);
-  // Expect IA32_ENERGY_PERF_BIAS = 0x6 mapped to 0x80 EPP, min/max perf just copied from caps.
+  // Expect IA32_ENERGY_PERF_BIAS = 0x6 mapped to 0x80 EPP, efficient/max perf just copied from cap
   EXPECT_EQ((fake_hwp_request & 0xFF000000ull) >> 24, 0x80u);
   EXPECT_EQ((fake_hwp_request & 0x00FF0000ull) >> 16, 0x00u);
   EXPECT_EQ((fake_hwp_request & 0x0000FF00ull) >> 8, 0xFEu);
-  EXPECT_EQ((fake_hwp_request & 0x000000FFull), 0x11u);
+  EXPECT_EQ((fake_hwp_request & 0x000000FFull), 0x22u);
 
   END_TEST;
 }
