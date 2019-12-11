@@ -190,6 +190,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_bin") {
+      pool = "//build/rust:pool($default_toolchain)"
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
@@ -223,6 +224,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_rlib") {
+      pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
       command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
@@ -234,6 +236,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_staticlib") {
+      pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
       command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
@@ -246,6 +249,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_dylib") {
+      pool = "//build/rust:pool($default_toolchain)"
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
@@ -284,6 +288,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_macro") {
+      pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
       command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
