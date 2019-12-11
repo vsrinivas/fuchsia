@@ -2,23 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <errno.h>
-#include <fcntl.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/namespace.h>
+#include <lib/zx/channel.h>
+#include <zircon/types.h>
+
+#include <cerrno>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <lib/fdio/namespace.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/zx/channel.h>
-#include <zircon/types.h>
-#include <zircon/processargs.h>
-#include <zircon/device/vfs.h>
 
 #include "local-connection.h"
 #include "local-filesystem.h"
 #include "local-vnode.h"
+
+fdio_t* fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
 
 __BEGIN_CDECLS
 
@@ -66,8 +65,6 @@ zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) {
 
   return fdio_ns_bind(ns, path, handle);
 }
-
-fdio_t* fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
 
 __EXPORT
 int fdio_ns_opendir(fdio_ns_t* ns) {

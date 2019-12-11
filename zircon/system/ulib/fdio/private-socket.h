@@ -6,7 +6,6 @@
 #define ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_
 
 #include <lib/zxio/inception.h>
-#include <zircon/compiler.h>
 
 #include "private.h"
 
@@ -14,8 +13,6 @@
 #define ZXSIO_SIGNAL_INCOMING ZX_USER_SIGNAL_0
 #define ZXSIO_SIGNAL_OUTGOING ZX_USER_SIGNAL_1
 #define ZXSIO_SIGNAL_CONNECTED ZX_USER_SIGNAL_3
-
-__BEGIN_CDECLS
 
 bool fdio_is_socket(fdio_t* io);
 
@@ -27,7 +24,5 @@ bool fdio_is_socket(fdio_t* io);
 //
 // Returns |NULL| if no |zxio_socket_t| was found.
 fdio_t* fd_to_socket(int fd, zxio_socket_t** out_socket);
-
-__END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_SOCKET_H_

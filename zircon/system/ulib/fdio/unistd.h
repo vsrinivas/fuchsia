@@ -11,13 +11,10 @@
 #include <threads.h>
 
 #include <cerrno>
-#include <climits>
 
 #include "private.h"
 
 #define fd_to_io(n) fdio_unsafe_fd_to_io(n)
-
-__BEGIN_CDECLS
 
 int fdio_status_to_errno(zx_status_t status);
 
@@ -43,7 +40,5 @@ static inline int ERRNO(int e) {
   errno = e;
   return -1;
 }
-
-__END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_ULIB_FDIO_UNISTD_H_

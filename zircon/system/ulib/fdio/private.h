@@ -73,8 +73,6 @@ typedef struct fdio_ops {
 
 typedef struct fdio fdio_t;
 
-__BEGIN_CDECLS
-
 // Acquire a reference to a globally shared "fdio_t" object
 // acts as a sentinel value for reservation.
 //
@@ -328,7 +326,5 @@ int fdio_release_reserved(int fd);
 
 // Connect to a service named |name| in /svc.
 zx_status_t fdio_service_connect_by_name(const char name[], zx::channel* out);
-
-__END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_ULIB_FDIO_PRIVATE_H_

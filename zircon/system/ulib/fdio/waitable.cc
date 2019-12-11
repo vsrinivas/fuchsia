@@ -4,11 +4,8 @@
 
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
-#include <string.h>
-#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
 typedef struct fdio_waitable {
@@ -85,8 +82,6 @@ static void fdio_waitable_init(zxio_storage_t* storage, zx_handle_t handle, zx_s
   waitable->shared_handle = shared_handle;
 }
 
-__BEGIN_CDECLS
-
 fdio_t* fdio_waitable_create(zx_handle_t handle, zx_signals_t readable, zx_signals_t writable,
                              bool shared_handle) {
   zxio_storage_t* storage = nullptr;
@@ -100,5 +95,3 @@ fdio_t* fdio_waitable_create(zx_handle_t handle, zx_signals_t readable, zx_signa
   fdio_waitable_init(storage, handle, readable, writable, shared_handle);
   return io;
 }
-
-__END_CDECLS
