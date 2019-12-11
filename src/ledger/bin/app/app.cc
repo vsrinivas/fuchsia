@@ -31,9 +31,6 @@
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
@@ -42,7 +39,6 @@
 ABSL_FLAG(bool, disable_reporting, false, "disable sending statistics to Cobalt");
 ABSL_FLAG(bool, disable_p2p_sync, false, "disable peer-to-peer syncing");
 ABSL_FLAG(int, verbose, 0, "level of verbosity");
-ABSL_FLAG(int, v, 0, "alias for verbose");
 
 namespace ledger {
 namespace {
@@ -161,11 +157,9 @@ class App : public ledger_internal::LedgerController {
 };
 
 int Main(int argc, char** argv) {
-  // TODO(qsr): Remove when moving logging outside of fxl.
-  const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  fxl::SetLogSettingsFromCommandLine(command_line);
-
   absl::ParseCommandLine(argc, argv);
+
+  SetLogVerbosity(absl::GetFlag(FLAGS_verbose));
 
   AppParams app_params;
   app_params.disable_statistics = absl::GetFlag(FLAGS_disable_reporting);
