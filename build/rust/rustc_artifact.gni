@@ -2,127 +2,72 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/build_id.gni")
-import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/rust/config.gni")  # for rust_config
 import("//build/rust/toolchain.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/test_spec.gni")
 
-# Copies a binary or shared object file, linking to it in the .build-id
-# directory if it is an ELF file. Strips fuchsia binaries and shared objects.
+# BEGIN constants {{{
+# file locations
+first_party_crate_root = "${root_out_dir}/rust_crates"
+third_party_build = "//third_party/rust_crates:build-third-party"
+third_party_search_path_config = "//third_party/rust_crates:search_path_config"
+third_party_deps_data =
+    "${root_out_dir}/rust_third_party_crates/deps_data.json"
+third_party_crate_root = "${root_out_dir}/rust_third_party_crates"
+if (host_os == "mac") {
+  proc_macro_ext = ".dylib"
+} else {
+  proc_macro_ext = ".so"
+}
+# }}} END constants
+
+# Create a target that resembles a rustc_artifact invocation and
+# can be depended on in the `deps` of other rustc_artifact invocations,
+# but is in fact backed by a Cargo-built third-party crate.
 #
 # Parameters
 #
-#   sources
-#     Required: A single source file to copy. This is only a list for
-#     consistency with other target types. This file should NOT have been
-#     copied prior to this target, or we may waste space.
-#
-#   outputs
-#     Required: A single destination to copy the file to. This is only a list
-#     for consistency with other target types.
-#
-#   override_os:
-#     Optional: Override the OS that the file is assumed to be built for. By
-#     default, we use the current_os.
-template("copy_with_build_id") {
-  forward_variables_from(invoker,
-                         [
-                           "visibility",
-                           "override_os",
-                         ])
-
-  srcs = invoker.sources
-  outs = invoker.outputs
-  assert(srcs == [ srcs[0] ], "Must specify exactly one source")
-  assert(outs == [ outs[0] ], "Must specify exactly one output")
-
-  os = current_os
-  if (defined(override_os)) {
-    os = override_os
-  }
-  group_deps = []
-
-  copy_target_name = "${target_name}_copy"
-  group_deps += [ ":${copy_target_name}" ]
-
-  # TODO(TC-481): Right now we only strip and add to .build-id for
-  # Fuchsia. There are no direct blockers to this but extra decisions and
-  # care has to be taken to make sure that everything functions properly.
-  if (os == "fuchsia") {
-    action(copy_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
-
-      # clang_prefix is a root_build_dir-relative path and `script =` expects a
-      # GN path. To avoid a path like "garnet/public/buildtools/..." we have to
-      # rebase the path like this.
-      script = rebase_path("${clang_prefix}/llvm-objcopy", "", root_build_dir)
-      sources = srcs
-      outputs = outs
-      args = [
-        # TODO(tmandry): If we start producing .so's,
-        # we need to use --strip-all here for them.
-        "--strip-sections",
-        rebase_path(srcs[0]),
-        rebase_path(outs[0]),
-      ]
-    }
-
-    build_id_target_name = "${target_name}_build_id"
-    group_deps += [ ":${build_id_target_name}" ]
-    build_id_entry(build_id_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
-      deps += [ ":${copy_target_name}" ]
-      debug = srcs[0]
-      stripped = outs[0]
-    }
-  } else {
-    copy(copy_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
-      sources = srcs
-      outputs = outs
-    }
-  }
-  group(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-    public_deps = group_deps
-  }
-}
-
+#   crate_name
+#   crate_type
+#   package_name
+#   visibility
+#   testonly
 template("rustc_third_party_artifact") {
-  forward_variables_from(invoker, [ "visibility" ])
+  forward_variables_from(invoker, [
+    "visibility",
+    "crate_name",
+    "crate_type",
+    "package_name",
+    "testonly",
+  ])
 
-  # Dummy build target to match the one in rustc_artifact
+  if (crate_type == "lib") {
+    ext = ".rlib"
+  } else if (crate_type == "proc-macro") {
+    ext = proc_macro_ext
+  } else {
+    assert(false, "unsupported third-party crate type: " + crate_type)
+  }
+
+  # Build target to match the one in rustc_artifact.
+  # Rather than being a rust_library target, however, this is actually a
+  # `config` which adds `--extern` flags to `rustflags` in order to
+  # make the given third-party dependency available to the target that
+  # is depending on this rule.
   build_target_name = "${target_name}_build"
-  group(build_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+  config(build_target_name) {
+    rebased_3p_root = rebase_path(third_party_crate_root, root_build_dir)
+    rustflags = [
+      "--extern",
+      "$crate_name=${rebased_3p_root}/lib${crate_name}-${package_name}${ext}"
+    ]
   }
 
   # Dummy target to write target info
   info_target_name = "${target_name}_info"
   generated_file(info_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "crate_name",
-                             "crate_type",
-                             "package_name",
-                             "testonly",
-                           ])
-
     outputs = [
       "${target_out_dir}/${info_target_name}.json",
     ]
@@ -139,8 +84,16 @@ template("rustc_third_party_artifact") {
     forward_variables_from(invoker, [ "testonly" ])
 
     public_deps = [
-      ":${build_target_name}",
+      third_party_build,
       ":${info_target_name}",
+    ]
+    public_configs = [
+      ":${build_target_name}",
+    ]
+    # Everything that depends on a third-party library, even transitively,
+    # needs to include the third-party -Ldependency search paths.
+    all_dependent_configs = [
+      third_party_search_path_config,
     ]
   }
 }
@@ -153,9 +106,34 @@ template("rustc_third_party_artifact") {
 # of `type`, which must be one of bin/lib/staticlib/proc-macro. This is used to determine
 # the kind of artifact that is produced by rustc.
 #
+# Parameters
+#
+#   name
+#   type
+#   version
+#   visibility
+#   edition
+#   force_opt
+#   with_lto
+#   output_filename_suffix
+#   only_unit_tests
+#   with_unit_tests
+#   target_name
+#   deps
+#   non_rust_deps
+#   test_environments
+#   source_root
+#   __unstable_recovery_netstack_only_specialization_bypass
+#   features
+#   testonly
+#   test_deps
+#   sdk_category
+#   sdk_deps
+#   test
 template("rustc_artifact") {
   forward_variables_from(invoker, [ "visibility" ])
 
+  # BEGIN invoker.type -> type {{{
   assert(defined(invoker.type),
          "Must specify an artifact type (bin/lib/staticlib/proc-macro)")
   type = invoker.type
@@ -174,7 +152,9 @@ template("rustc_artifact") {
     # than being automatically changed as a result of a toolchain upgrade.
     type = "rlib"
   }
+  # }}} END invoker.type -> type
 
+  # BEGIN invoker.name -> package_name, crate_name {{{
   if (defined(invoker.name)) {
     package_name = invoker.name
   } else {
@@ -182,18 +162,21 @@ template("rustc_artifact") {
   }
 
   crate_name = string_replace(package_name, "-", "_")
+  # }}} END invoker.name -> package_name, crate_name
 
+  # BEGIN invoker.version -> version {{{
   if (defined(invoker.version)) {
     version = invoker.version
   } else {
     version = "0.1.0"
   }
+  # }}} END invoker.version -> version
 
+  # BEGIN invoker.edition -> edition {{{
   assert(defined(invoker.edition), "Must specify an edition. Preferably 2018")
-  edition = invoker.edition
+  # }}} END invoker.edition -> edition
 
-  group_deps = []
-
+  # BEGIN calculate rust_opt_level {{{
   if (rust_override_opt != "") {
     rust_opt_level = rust_override_opt
     if (defined(invoker.force_opt)) {
@@ -208,7 +191,10 @@ template("rustc_artifact") {
       rust_opt_level = "z"
     }
   }
+  rust_opt_level_arg = "-Copt-level=$rust_opt_level"
+  # }}} END calculate rust_opt_level
 
+  # BEGIN calculate with_lto, rust_lto_args {{{
   if (type == "bin" || type == "staticlib") {
     if (rust_override_lto != "") {
       with_lto = rust_override_lto
@@ -231,72 +217,95 @@ template("rustc_artifact") {
   assert(with_lto == "none" || with_lto == "thin" || with_lto == "fat",
          "with_lto was neither none, thin, or fat")
 
+  rust_lto_args = []
+  if (with_lto != "none") {
+    rust_lto_args += ["-Clto=$with_lto"]
+  }
+
+  # }}} END calculate with_lto, rust_lto_args
+
+  # BEGIN calculate output_file, root_file {{{
   # Determine the prefix and extension for the output file based on the crate type
   if (type == "bin") {
     prefix = ""
     extension = ""
-    root_file = "src/main.rs"
+    root_file_default = "src/main.rs"
   } else if (type == "rlib") {
     prefix = "lib"
     extension = ".rlib"
-    root_file = "src/lib.rs"
+    root_file_default = "src/lib.rs"
   } else if (type == "staticlib") {
-    prefix = "staticlib"
+    prefix = "lib"
     extension = ".a"
-    root_file = "src/lib.rs"
+    root_file_default = "src/lib.rs"
   } else if (type == "proc-macro") {
     prefix = "lib"
-    root_file = "src/lib.rs"
+    extension = proc_macro_ext
+    root_file_default = "src/lib.rs"
   }
 
   only_unit_tests = defined(invoker.only_unit_tests) && invoker.only_unit_tests
 
-  third_party_build = "//third_party/rust_crates:build-third-party"
-  third_party_deps_data =
-      "${root_out_dir}/rust_third_party_crates/deps_data.json"
-  first_party_crate_root = "${root_out_dir}/rust_crates"
-  third_party_crate_root = "${root_out_dir}/rust_third_party_crates"
-  unstripped_output_dir = "${root_out_dir}/exe.unstripped"
-  not_needed([ "unstripped_output_dir" ])
-  if (defined(invoker.output_file_override)) {
-    output_filename = invoker.output_file_override
+  if (defined(invoker.output_filename_suffix)) {
+    output_filename = "${crate_name}${invoker.output_filename_suffix}"
   } else {
-    output_filename = "${prefix}${crate_name}${extension}"
+    output_filename = crate_name
   }
-  if (type == "bin") {
-    output_dir = unstripped_output_dir
-  } else if (type == "staticlib") {
-    output_dir = root_out_dir
-  } else {
-    output_dir = first_party_crate_root
-  }
-  output_file = "${output_dir}/$output_filename"
-  if (!only_unit_tests) {
-    if (type == "bin" && !only_unit_tests) {
-      output_path = "${root_out_dir}/${output_filename}"
-    }
-    output_depfile = "${output_dir}/${prefix}${crate_name}.d"
 
+  if (type == "bin") {
+    output_file_dir = root_out_dir
+  } else if (type == "staticlib") {
+    output_file_dir = root_out_dir
+  } else {
+    output_file_dir = first_party_crate_root
+  }
+  output_file = "${output_file_dir}/${prefix}${output_filename}${extension}"
+
+  if (defined(invoker.source_root)) {
+    not_needed(["root_file_default"])
+    root_file = rebase_path(invoker.source_root)
+  } else {
+    root_file = rebase_path(root_file_default)
+  }
+  # }}} END calculate output_file, root_file
+
+  if (defined(invoker.non_rust_deps)) {
+    non_rust_deps = invoker.non_rust_deps
+  } else {
+    non_rust_deps = []
+  }
+
+  group_deps = []
+
+  if (only_unit_tests) {
+    not_needed([
+                 "output_filename",
+                 "output_file",
+               ])
+  } else {
     build_target_name = "${target_name}_build"
     group_deps += [ ":${build_target_name}" ]
   }
 
   with_unit_tests = only_unit_tests || (defined(invoker.with_unit_tests) &&
                                         invoker.with_unit_tests)
+
+  # BEGIN calculate test_output_file, build_test_target_name {{{
   if (with_unit_tests) {
     if (only_unit_tests) {
       test_filename = crate_name
     } else {
       test_filename = "${crate_name}_${invoker.type}_test"
     }
-    test_output_file = "${unstripped_output_dir}/${test_filename}"
-    test_output_path = "${root_out_dir}/${test_filename}"
-    test_depfile = "${test_output_file}.d"
+    test_output_file = "${root_out_dir}/${test_filename}"
+    not_needed(["test_output_file"])
 
     build_test_target_name = "${target_name}_test_build"
     test_group_deps = [ ":${build_test_target_name}" ]
   }
+  # }}} END calculate test_output_file, build_test_target_name
 
+  # BEGIN test_spec {{{
   # Test specs are used for linux and mac tests to record metadata for testing
   # instruction; this happens within package.gni for fuchsia tests.
   test_spec_target_name = "${target_name}_spec"
@@ -305,14 +314,12 @@ template("rustc_artifact") {
       forward_variables_from(invoker, [ "testonly" ])
       name = invoker.target_name
       target = invoker.target_name
-      path = test_output_path
+      path = test_output_file
       deps = []
       if (defined(invoker.deps)) {
         deps += invoker.deps
       }
-      if (defined(invoker.non_rust_deps)) {
-        deps += invoker.non_rust_deps
-      }
+      deps += non_rust_deps
       if (defined(invoker.test_environments)) {
         environments = invoker.test_environments
       }
@@ -325,86 +332,9 @@ template("rustc_artifact") {
       not_needed(invoker, [ "test_environments" ])
     }
   }
+  # }}} END test_spec
 
-  # Iterate through the deps collecting a list of the outputs
-  # of their build targets, which will be passed to rustc as
-  # `--extern` crates.
-  # Note: keep this code in sync with "Iterate through..." below.
-  dep_info_paths = []
-  dep_info_sources = []
-  if (defined(invoker.deps)) {
-    foreach(dep, invoker.deps) {
-      dep_target_name = get_label_info(dep, "name")
-      dep_dir = get_label_info(dep, "dir")
-      dep_build_target = "${dep_dir}:${dep_target_name}_build"
-      dep_out_dir = get_label_info(dep_build_target, "target_out_dir")
-      dep_info_path = "${dep_out_dir}/${dep_target_name}_info.json"
-      dep_info_paths += [
-        "--dep-data",
-        rebase_path(dep_info_path),
-      ]
-      dep_info_sources += [ rebase_path(dep_info_path) ]
-    }
-  }
-
-  if (defined(invoker.source_root)) {
-    root_file = invoker.source_root
-  }
-  root_file = rebase_path(root_file)
-
-  cargo_toml_dir = "$target_gen_dir/$target_name"
-
-  # Collect the lib_dirs we should be getting from //zircon/public/lib deps.
-  zircon_lib_dirs_file = "$target_gen_dir/${target_name}_build_zircon_libs"
-  extra_args = [
-    "--lib-dir-file",
-    rebase_path(zircon_lib_dirs_file),
-  ]
-  extra_deps = [ ":${target_name}_build_zircon_libs" ]
-  extra_inputs = [ zircon_lib_dirs_file ]
-  generated_file("${target_name}_build_zircon_libs") {
-    forward_variables_from(invoker, [ "testonly" ])
-
-    # Clear possibly inherited visibility before setting our own.
-    visibility = []
-    if (!only_unit_tests) {
-      visibility += [ ":$build_target_name" ]
-    }
-    if (with_unit_tests) {
-      visibility += [ ":$build_test_target_name" ]
-    }
-    deps = [
-      third_party_build,
-    ]
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-    }
-    if (defined(invoker.non_rust_deps)) {
-      deps += invoker.non_rust_deps
-    }
-    outputs = [
-      zircon_lib_dirs_file,
-    ]
-    data_keys = [ "zircon_lib_dirs" ]
-    output_conversion = "list lines"
-  }
-
-  # Declare the action targets that perform the build itself
-  rustc_target_script = "//build/rust/build_rustc_target.py"
-  rustc_target_pool = "//build/rust:pool($default_toolchain)"
-
-  rustc_target_deps = []
-  if (defined(invoker.deps)) {
-    rustc_target_deps += invoker.deps
-  }
-  rustc_target_deps += [ third_party_build ]
-  rustc_target_inputs = [ root_file ]
-
-  rustc_target_public_deps = []
-  if (defined(invoker.non_rust_deps)) {
-    rustc_target_public_deps += invoker.non_rust_deps
-  }
-
+  # BEGIN calculate unstable_rust_features {{{
   # The set of unstable features permitted as per
   # https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/development/languages/rust/unstable.md
   unstable_rust_features = []
@@ -416,77 +346,27 @@ template("rustc_artifact") {
         invoker.__unstable_netstack3_only_specialization_bypass
   }
 
-  # Make builds independent of absolute file path.  The file names
-  # embedded in debugging information will be expressed as relative to
-  # the build directory, e.g. "../.." for an "out/subdir" under //.
-  absolute_path = rebase_path("//.")
-  relative_path = rebase_path("//.", root_build_dir)
-
-  rustc_target_args = [
-    "--crate-root",
-    rebase_path(root_file),
-    "--crate-type",
-    type,
-    "--crate-name",
-    crate_name,
-    "--root-out-dir",
-    rebase_path(root_out_dir),
-    "--first-party-crate-root",
-    rebase_path(first_party_crate_root),
-    "--third-party-crate-root",
-    rebase_path(third_party_crate_root),
-    "--edition",
-    edition,
-    "--cap-lints",
-    rust_cap_lints,
-    "--remap-path-prefix",
-    "$absolute_path=$relative_path",
-    "--opt-level",
-    rust_opt_level,
-  ]
-
-  if (host_os == "mac") {
-    rustc_target_args += [ "--mac-host" ]
+  rust_unstable_feature_arg = "-Zallow-features="
+  foreach(unstable_rust_feature, unstable_rust_features) {
+    rust_unstable_feature_arg += unstable_rust_feature + ","
   }
+  # }}} END calculate unstable_rust_features
 
+  # BEGIN calculate cfg_feature_args {{{
+  cfg_feature_args = []
   if (defined(invoker.features)) {
     foreach(feature, invoker.features) {
-      rustc_target_args += [
-        "--feature",
-        feature,
+      cfg_feature_args += [
+        "--cfg",
+        "feature=\"" + feature + "\"",
       ]
     }
   }
+  # }}} END calculate cfg_feature_args
 
-  foreach(unstable_rust_feature, unstable_rust_features) {
-    rustc_target_args += [
-      "--unstable-rust-feature",
-      unstable_rust_feature,
-    ]
-  }
+  cargo_toml_dir = "$target_gen_dir/$target_name"
 
-  rustc_target_args += rust_build_args + extra_args
-  rustc_target_deps += rust_build_deps + extra_deps
-  rustc_target_inputs += rust_build_inputs + extra_inputs
-
-  if (with_lto != "none") {
-    rustc_target_args += [
-      "--lto",
-      with_lto,
-    ]
-  }
-
-  if (defined(invoker.non_rust_deps)) {
-    foreach(dep, invoker.non_rust_deps) {
-      rustc_target_args += [
-        "--lib-dir",
-        rebase_path(get_label_info(dep, "target_out_dir")),
-      ]
-    }
-  }
-
-  rustc_target_args += dep_info_paths
-
+  # BEGIN write info.json {{{
   info_target_name = "${target_name}_info"
   generated_file(info_target_name) {
     # Write out static information about the target to be used by
@@ -506,162 +386,168 @@ template("rustc_artifact") {
     output_conversion = "json"
   }
   group_deps += [ ":${info_target_name}" ]
+  # }}} END write info.json
 
+  build_target_deps = []
+  if (defined(invoker.deps)) {
+    build_target_deps += invoker.deps
+  }
+  # from build/rust/config.gni
+  build_target_deps += std_deps
+  build_target_deps += sysroot_deps
+  shared_rflags = [
+      rust_opt_level_arg,
+      rust_unstable_feature_arg,
+      "--edition=${invoker.edition}",
+      # from build/rust/config.gni
+      "--target",
+      target,
+      "-Cdebuginfo=" + symbol_level,
+      "--cap-lints",
+      rust_cap_lints,
+  ] + rust_lto_args + cfg_feature_args
+  if (is_mac) {
+    # For mac_sdk_min:
+    import("//build/config/mac/mac_sdk.gni")
+    shared_rflags += ["-Clink-arg=-mmacosx-version-min=" + mac_sdk_min]
+  }
+  if (is_fuchsia) {
+    shared_rflags += [
+      "-L",
+      sysroot + "/lib",
+      "-Clinker=" + clang_prefix_rebased + "/lld",
+      "-Clink-arg=--pack-dyn-relocs=relr",
+      "-Clink-arg=--sysroot=" + sysroot,
+      "-Clink-arg=-L" + sysroot + "/lib",
+      "-Clink-arg=-L" + clang_resource_dir + "/" + target + "/lib",
+      "-Clink-arg=--threads",
+      "-Clink-arg=-dynamic-linker=ld.so.1",
+      "-Clink-arg=--icf=all",
+    ]
+    if (current_cpu == "arm64") {
+      shared_rflags += ["-Clink-arg=--fix-cortex-a53-843419"]
+    }
+  } else {
+    shared_rflags += [
+      "-Clinker=" + clang_prefix_rebased + "/clang",
+    ]
+    if (current_cpu == "arm64") {
+      shared_rflags += ["-Clink-arg=-Wl,--fix-cortex-a53-843419"]
+    }
+    if (current_os == "linux") {
+      shared_rflags += ["-Clink-arg=-Wl,--build-id"]
+    }
+    if (current_os != "mac") {
+      shared_rflags += ["-Clink-arg=-Wl,--threads", "-Clink-arg=-Wl,--icf=all"]
+    }
+  }
+  if (defined(invoker.allow_deprecated) && invoker.allow_deprecated) {
+    shared_rflags += ["-A", "deprecated"]
+  }
+
+  # BEGIN build target {{{
   if (!only_unit_tests) {
-    action(build_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+    rflags = shared_rflags
 
-      script = rustc_target_script
-      pool = rustc_target_pool
+    if (current_toolchain == fidl_toolchain) {
+      # If rustc is unset in the current toolchain, we need to make
+      # a fake output so that our target still compiles
+      not_needed(["root_file", "non_rust_deps", "rflags"])
+      generated_file(build_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        outputs = [ output_file ]
+        deps = build_target_deps
+        contents = "dummy rust file for toolchains without rustc"
+      }
+    } else if (type == "bin") {
+      executable(build_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        crate_root = root_file
+        crate_name = crate_name
+        deps = build_target_deps
+        output_name = output_filename
+        public_deps = non_rust_deps
+        rustflags = rflags
+      }
+    } else if (type == "rlib") {
+      rust_library(build_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        crate_root = root_file
+        crate_name = crate_name
+        deps = build_target_deps
+        output_name = output_filename
+        public_deps = non_rust_deps
+        rustflags = rflags
+      }
+    } else if (type == "proc-macro") { # or cdylib, if we used those
+      rust_proc_macro(build_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        crate_root = root_file
+        crate_name = crate_name
+        deps = build_target_deps
+        output_name = output_filename
+        public_deps = non_rust_deps
+        rustflags = rflags
+      }
+    } else if (type == "staticlib") {
+      static_library(build_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        crate_root = root_file
+        crate_name = crate_name
+        deps = build_target_deps
+        output_name = output_filename
+        public_deps = non_rust_deps
+        rustflags = rflags
+      }
+    } else {
+      assert(false, "unsupported crate type, should've been caught above-- report this issue to the toolchain team")
+    }
+  }
+  # }}} END buildtarget
 
-      args = rustc_target_args
-      args += [
-        "--output-file",
-        rebase_path(output_file),
-        "--depfile",
-        rebase_path(output_depfile),
-      ]
+  # BEGIN test target {{{
+  if (with_unit_tests) {
+    if (current_toolchain == fidl_toolchain) {
+      # If rustc is unset in the current toolchain, we need to make
+      # a fake output so that our target still compiles
+      not_needed(["rust_opt_level_arg", "rust_unstable_feature_arg", "cfg_feature_args", "rust_lto_args", "non_rust_deps"])
+      generated_file(build_test_target_name) {
+        outputs = [ test_output_file ]
+        deps = build_target_deps
+        contents = "dummy rust file for toolchains without rustc"
+        testonly = true
+      }
+    } else {
+      test_target_deps = []
+      if (defined(invoker.test_deps)) {
+        test_target_deps += invoker.test_deps
+      }
 
-      inputs = rustc_target_inputs
-      outputs = [
-        output_file,
-      ]
-
-      depfile = output_depfile
-      deps = rustc_target_deps
-      public_deps = rustc_target_public_deps
-
-      if (type == "bin") {
-        metadata = {
-          binaries = [
-            {
-              type = "executable"
-              label =
-                  get_label_info(":$build_target_name", "label_with_toolchain")
-              cpu = current_cpu
-              os = current_os
-              debug = rebase_path(output_file, root_build_dir)
-              dist = rebase_path(output_path, root_build_dir)
-              if (current_os != "mac" && current_os != "win") {
-                elf_build_id =
-                    rebase_path("$output_path.build-id.stamp", root_build_dir)
-              }
-              if (output_breakpad_syms && current_os == "fuchsia") {
-                breakpad = rebase_path("$output_path.sym", root_build_dir)
-              }
-            },
-          ]
-          if (is_host) {
-            tool_paths = [
-              {
-                cpu = current_cpu
-                label = get_label_info(":$build_target_name",
-                                       "label_with_toolchain")
-                name = output_filename
-                os = current_os
-                path = rebase_path(output_path, root_build_dir)
-              },
-            ]
-          }
+      executable(build_test_target_name) {
+        crate_root = root_file
+        crate_name = crate_name
+        testonly = true
+        output_name = test_filename
+        rustflags = shared_rflags + [
+          "--test",
+          "--crate-type",
+          type,
+        ]
+        deps = build_target_deps + test_target_deps + non_rust_deps
+        if (is_linux || is_mac) {
+          deps += [ ":$test_spec_target_name" ]
+        }
+        if (defined(invoker.test_deps)) {
+          deps += invoker.test_deps
         }
       }
     }
   }
+  # }}} END test target
 
-  test_dep_info_paths = []
-  if (with_unit_tests) {
-    test_deps = []
-    test_dep_args = []
-
-    # Note: keep this code in sync with "Iterate through..." above.
-    # Iterate through test-only dependencies and add them to flags and deps.
-    if (defined(invoker.test_deps)) {
-      test_deps = invoker.test_deps
-      foreach(dep, invoker.test_deps) {
-        dep_target_name = get_label_info(dep, "name")
-        dep_dir = get_label_info(dep, "dir")
-        dep_build_target = "${dep_dir}:${dep_target_name}_build"
-        dep_out_dir = get_label_info(dep_build_target, "target_out_dir")
-        dep_info_path = "${dep_out_dir}/${dep_target_name}_info.json"
-        test_dep_args += [
-          "--dep-data",
-          rebase_path(dep_info_path),
-        ]
-        test_dep_info_paths += [
-          "--test-only-dep-data",
-          rebase_path(dep_info_path),
-        ]
-        dep_info_sources += [ rebase_path(dep_info_path) ]
-      }
-    }
-
-    action(build_test_target_name) {
-      script = rustc_target_script
-      pool = rustc_target_pool
-
-      args = rustc_target_args + test_dep_args
-      args += [
-        "--test",
-        "--output-file",
-        rebase_path(test_output_file),
-        "--depfile",
-        rebase_path(test_depfile),
-      ]
-
-      inputs = rustc_target_inputs
-      outputs = [
-        test_output_file,
-      ]
-
-      testonly = true
-      depfile = test_depfile
-      deps = rustc_target_deps + test_deps
-      if (is_linux || is_mac) {
-        deps += [ ":$test_spec_target_name" ]
-      }
-      if (defined(invoker.test_deps)) {
-        deps += invoker.test_deps
-      }
-      public_deps = rustc_target_public_deps
-
-      metadata = {
-        binaries = [
-          {
-            type = "executable"
-            label = get_label_info(":$build_test_target_name",
-                                   "label_with_toolchain")
-            cpu = current_cpu
-            os = current_os
-            debug = rebase_path(test_output_file, root_build_dir)
-            dist = rebase_path(test_output_path, root_build_dir)
-            if (current_os != "mac" && current_os != "win") {
-              elf_build_id = rebase_path("$test_output_path.build-id.stamp",
-                                         root_build_dir)
-            }
-          },
-        ]
-      }
-    }
-  }
-
+  # BEGIN strip binary and create sdk atom {{{
   if (type == "bin" && !only_unit_tests) {
-    # strip staticlibs and binaries from "exe.unstripped" and put the results
-    # in the root_out_dir
-    strip_target_name = "${target_name}_strip"
-    group_deps += [ ":${strip_target_name}" ]
-    copy_with_build_id(strip_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-
-      deps = [
-        ":${build_target_name}",
-      ]
-      sources = [
-        output_file,
-      ]
-      outputs = [
-        output_path,
-      ]
-    }
+    group_deps += [ ":${build_target_name}" ]
 
     # if appropriate, create an SDK atom for the binary that we just stripped
     if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded" &&
@@ -687,7 +573,7 @@ template("rustc_artifact") {
 
         files = [
           {
-            source = output_path
+            source = "${root_out_dir}/${output_filename}"
             dest = file_base
           },
         ]
@@ -696,33 +582,54 @@ template("rustc_artifact") {
           deps = invoker.sdk_deps
         }
 
-        non_sdk_deps = [ ":$strip_target_name" ]
+        non_sdk_deps = [ ":$build_target_name" ]
       }
     }
   }
+  # }}} END strip binary and create sdk atom
 
-  if (with_unit_tests) {
-    strip_test_target_name = "${target_name}_test_strip"
-    test_group_deps += [ ":${strip_test_target_name}" ]
+  # BEGIN generate Cargo.toml {{{
+  cargo_toml_target_name = "${target_name}_cargo"
+  group_deps += [ ":${cargo_toml_target_name}" ]
 
-    copy_with_build_id(strip_test_target_name) {
-      testonly = true
-      deps = [
-        ":${build_test_target_name}",
+  # Iterate through the deps collecting a list of the outputs
+  # of their build targets to use for calculating the dep data needed
+  # to produce Cargo.toml files.
+
+  dep_info_paths = []
+  dep_info_sources = []
+  if (defined(invoker.deps)) {
+    foreach(dep, invoker.deps) {
+      dep_target_name = get_label_info(dep, "name")
+      dep_dir = get_label_info(dep, "dir")
+      dep_build_target = "${dep_dir}:${dep_target_name}_build"
+      dep_out_dir = get_label_info(dep_build_target, "target_out_dir")
+      dep_info_path = "${dep_out_dir}/${dep_target_name}_info.json"
+      dep_info_paths += [
+        "--dep-data",
+        rebase_path(dep_info_path),
       ]
-      sources = [
-        test_output_file,
-      ]
-      outputs = [
-        test_output_path,
-      ]
+      dep_info_sources += [ rebase_path(dep_info_path) ]
     }
   }
 
-  # proc macros are stripped and copied inside `rustc_macro.gni`.
+  test_dep_info_paths = []
+  test_dep_info_sources = []
+  if (defined(invoker.test_deps)) {
+    foreach(dep, invoker.test_deps) {
+      dep_target_name = get_label_info(dep, "name")
+      dep_dir = get_label_info(dep, "dir")
+      dep_build_target = "${dep_dir}:${dep_target_name}_build"
+      dep_out_dir = get_label_info(dep_build_target, "target_out_dir")
+      dep_info_path = "${dep_out_dir}/${dep_target_name}_info.json"
+      test_dep_info_paths += [
+        "--test-only-dep-data",
+        rebase_path(dep_info_path),
+      ]
+      dep_info_sources += [ rebase_path(dep_info_path) ]
+    }
+  }
 
-  cargo_toml_target_name = "${target_name}_cargo"
-  group_deps += [ ":${cargo_toml_target_name}" ]
   action(cargo_toml_target_name) {
     script = "//build/rust/write_cargo_toml.py"
     forward_variables_from(invoker, [ "testonly" ])
@@ -759,7 +666,7 @@ template("rustc_artifact") {
       "--version",
       version,
       "--edition",
-      edition,
+      invoker.edition,
       "--third-party-deps-data",
       rebase_path(third_party_deps_data),
     ]
@@ -784,11 +691,14 @@ template("rustc_artifact") {
     args += dep_info_paths
     args += test_dep_info_paths
     sources = dep_info_sources
+    sources += test_dep_info_sources
     outputs = [
       "${cargo_toml_dir}/Cargo.toml",
     ]
   }
+  # }}} END generate Cargo.toml
 
+  # BEGIN declare test_target_name group {{{
   if (with_unit_tests) {
     test_target_name = "${target_name}_test"
     group(test_target_name) {
@@ -800,6 +710,7 @@ template("rustc_artifact") {
       group_deps += [ ":${test_target_name}" ]
     }
   }
+  # }}} END test_target_name group
 
   group(target_name) {
     forward_variables_from(invoker, [ "testonly" ])

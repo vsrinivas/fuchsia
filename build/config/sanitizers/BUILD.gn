@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
 import("//build/toolchain/variant.gni")
 
 config("frame_pointers") {
@@ -31,6 +32,31 @@ declare_args() {
 
 variant("asan") {
   common_flags = [ "-fsanitize=address" ]
+  # TODO(phosek): use runtime.json instead of invoking Clang.
+  if (is_fuchsia) {
+    extension = ".so"
+  } else if (is_linux) {
+    extension = ".a"
+  } else if (is_mac) {
+    extension = "_osx_dynamic.dylib"
+  } else {
+    extension = ".a"
+  }
+  libclang_rt_asan = exec_script("/usr/bin/env",
+                                 [
+                                   "${clang_prefix}/clang",
+                                   "--target=${clang_target}",
+                                   "-print-file-name=libclang_rt.asan${extension}",
+                                 ],
+                                 "trim string")
+  rustflags = [
+    "-Clink-arg=${libclang_rt_asan}",
+  ]
+  if (is_fuchsia) {
+    rustflags += [
+      "-Clink-arg=-dynamic-linker=asan/ld.so.1",
+    ]
+  }
 
   # ASan wants frame pointers because it captures stack traces
   # on allocations and such, not just on errors.

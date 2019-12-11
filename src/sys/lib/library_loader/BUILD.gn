@@ -13,6 +13,7 @@ rustc_library("library_loader") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",

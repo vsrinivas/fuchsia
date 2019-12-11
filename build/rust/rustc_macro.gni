@@ -67,22 +67,13 @@ template("rustc_macro") {
   proc_macro_target = "${target_name}_proc_macro"
   proc_macro_host_target = ":${proc_macro_target}($host_toolchain)"
 
-  if (defined(invoker.name)) {
-    rustc_artifact_name = invoker.name
-  } else {
-    rustc_artifact_name = target_name
-  }
-
-  crate_name = string_replace(rustc_artifact_name, "-", "_")
-
-  if (host_os == "mac") {
-    macro_extension = ".dylib"
-  } else {
-    macro_extension = ".so"
-  }
-
   # The actual host-target build of the proc macro crate.
   if (current_toolchain == host_toolchain) {
+    if (defined(invoker.name)) {
+      rustc_artifact_name = invoker.name
+    } else {
+      rustc_artifact_name = target_name
+    }
     rustc_artifact(proc_macro_target) {
       forward_variables_from(invoker,
                              [
@@ -96,7 +87,7 @@ template("rustc_macro") {
                              ])
       name = rustc_artifact_name
       type = "proc-macro"
-      output_file_override = "lib${crate_name}_proc_macro${macro_extension}"
+      output_filename_suffix = "_proc_macro"
     }
   } else {
     not_needed(invoker, "*")
@@ -137,31 +128,10 @@ template("rustc_macro") {
     ]
   }
 
-  # Copy the generated `.so`.
-  copy_binary_target = "${target_name}_copy_binary"
-  proc_macro_target_root_out_dir =
-      get_label_info(proc_macro_host_target, "root_out_dir")
-  proc_macro_target_out_bin_path = "$proc_macro_target_root_out_dir/rust_crates/lib${crate_name}_proc_macro${macro_extension}"
-  out_bin_path =
-      "${root_out_dir}/rust_crates/lib${crate_name}${macro_extension}"
-  copy_with_build_id(copy_binary_target) {
-    forward_variables_from(invoker, [ "testonly " ])
-    deps = [
-      proc_macro_host_target,
-    ]
-    sources = [
-      proc_macro_target_out_bin_path,
-    ]
-    outputs = [
-      out_bin_path,
-    ]
-    override_os = host_os
-  }
-
   # Group all of the `copy` targets into one group which is publicly exposed.
   group(target_name) {
     public_deps = [
-      ":$copy_binary_target",
+      proc_macro_host_target,
       ":$copy_build_info_target",
       ":$copy_cargo_toml_target",
     ]

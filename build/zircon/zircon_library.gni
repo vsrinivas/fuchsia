@@ -122,17 +122,8 @@ template("zircon_library") {
     include_dirs = include
     if (is_fuchsia) {
       libs = library_libs
-
-      # Rust targets ignore lib_dirs and libs and can't handle explicit
-      # files as link inputs.  Instead they require -Lnative=... and -l...
-      # switches as the only way to find non-Rust link inputs.
-      rustflags = []
-      foreach(dir, zx_lib_dirs) {
-        rustflags += [ "-Lnative=$dir" ]
-      }
-      foreach(lib, zx_libs) {
-        rustflags += [ "-l$lib" ]
-      }
+      lib_dirs = zx_lib_dirs
+      not_needed(["zx_libs"])
     } else {
       not_needed([
                    "library_libs",

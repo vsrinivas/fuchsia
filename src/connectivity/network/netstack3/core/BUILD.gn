@@ -15,7 +15,6 @@ rustc_library("netstack3-core") {
     "//garnet/lib/rust/never",
     "//garnet/public/rust/mundane",
     "//garnet/public/rust/zerocopy",
-    "//garnet/public/rust/zerocopy/zerocopy-derive",
     "//src/connectivity/lib/internet-checksum",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet",

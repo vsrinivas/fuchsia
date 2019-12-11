@@ -40,7 +40,7 @@ rustc_library("driver") {
 
 test_package("shortcut-e2e") {
   deps = [
-    ":driver_test_strip_copy",
+    ":driver_test",
     "//src/ui/bin/root_presenter",
     "//src/ui/bin/shortcut",
   ]

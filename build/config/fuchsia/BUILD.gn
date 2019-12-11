@@ -20,6 +20,9 @@ config("werror") {
 
       # Do not add additional -Wno-error to this config.
     ]
+    rustflags = [
+      "-Dwarnings",
+    ]
   }
 }
 

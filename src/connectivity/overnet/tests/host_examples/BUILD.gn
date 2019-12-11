@@ -9,15 +9,15 @@ copy("copy_test_commands") {
   sources = [
     get_label_info(
             "//src/connectivity/overnet/examples/echo:bin($host_toolchain)",
-            "root_out_dir") + "/exe.unstripped/overnet_echo",
+            "root_out_dir") + "/overnet_echo",
     get_label_info(
             "//src/connectivity/overnet/examples/interface_passing:bin($host_toolchain)",
-            "root_out_dir") + "/exe.unstripped/overnet_interface_passing",
+            "root_out_dir") + "/overnet_interface_passing",
     get_label_info(
             "//src/connectivity/overnet/tools/ascendd:bin($host_toolchain)",
-            "root_out_dir") + "/exe.unstripped/ascendd",
+            "root_out_dir") + "/ascendd",
     get_label_info("//src/connectivity/overnet/tools/onet:bin($host_toolchain)",
-                   "root_out_dir") + "/exe.unstripped/onet",
+                   "root_out_dir") + "/onet",
   ]
 
   outputs = [
@@ -62,7 +62,7 @@ rustc_binary("bin") {
 group("tests") {
   testonly = true
   deps = [
-    ":bin_test_strip($host_toolchain)",
-    ":bin_strip($host_toolchain)"
+    ":bin_test($host_toolchain)",
+    ":bin($host_toolchain)"
   ]
 }

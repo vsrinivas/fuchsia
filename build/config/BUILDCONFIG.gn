@@ -237,6 +237,9 @@ set_defaults("static_library") {
 set_defaults("shared_library") {
   configs = default_shared_library_configs
 }
+set_defaults("proc_macro") {
+  configs = default_shared_library_configs
+}
 set_defaults("loadable_module") {
   configs = default_shared_library_configs
 }
@@ -595,6 +598,9 @@ declare_args() {
             # TODO(TO-666): replace futility & cgpt with 1p tools
             "//third_party/vboot_reference",
             "//garnet/tools/vboot_reference",
+
+            # TODO(38228): Fix leak in font_info_test.
+            "//src/fonts/font_info",
           ]
         },
         {

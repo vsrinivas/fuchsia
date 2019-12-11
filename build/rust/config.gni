@@ -6,15 +6,18 @@ import("//build/config/clang/clang.gni")
 import("//build/config/compiler.gni")
 import("//build/config/sysroot.gni")
 import("//build/fidl/toolchain.gni")
+
 if (is_mac) {
   # For mac_sdk_min:
   import("//build/config/mac/mac_sdk.gni")
 }
 
+default_rustc_prefix = rebase_path("//prebuilt/third_party/rust/${host_platform}/bin", root_build_dir)
+
 declare_args() {
   # Sets a custom base directory for `rustc` and `cargo`.
   # This can be used to test custom Rust toolchains.
-  rustc_prefix = "//prebuilt/third_party/rust/${host_platform}/bin"
+  rustc_prefix = default_rustc_prefix
 
   # Sets the default LTO type for rustc bulids.
   rust_lto = ""
@@ -39,18 +42,18 @@ declare_args() {
 }
 
 _sysroot = sysroot
-_sysroot_deps = []
+sysroot_deps = []
 
 # TODO(BLD-230): sysroot.gni should provide the correct label and path to the Fuchsia sysroot.
 if (is_fuchsia) {
-  _sysroot_deps = [ "//sdk:zircon_sysroot_export" ]
+  sysroot_deps = [ "//sdk:zircon_sysroot_export" ]
   _sysroot = rebase_path(
           "$root_out_dir/sdk/exported/zircon_sysroot/arch/$target_cpu/sysroot")
 }
 
-_std_deps = []
+std_deps = []
 if (is_fuchsia) {
-  _std_deps += [
+  std_deps += [
     # These libraries are required by libstd.
     "//zircon/public/lib/backtrace",
     "//zircon/public/lib/fdio",
@@ -68,17 +71,17 @@ if (is_mac) {
 assert(current_os == "mac" || current_os == "linux" || current_os == "fuchsia",
        "current_os was neither mac, linux, nor fuchsia")
 if (current_os == "mac") {
-  _target = "x86_64-apple-darwin"
+  target = "x86_64-apple-darwin"
   assert(current_cpu == "x64")
 } else if (current_os == "linux") {
   assert(current_cpu == "x64")
-  _target = "x86_64-unknown-linux-gnu"
+  target = "x86_64-unknown-linux-gnu"
 } else if (current_os == "fuchsia") {
   assert(current_cpu == "x64" || current_cpu == "arm64")
   if (current_cpu == "x64") {
-    _target = "x86_64-$rust_toolchain_triple_suffix"
+    target = "x86_64-$rust_toolchain_triple_suffix"
   } else if (current_cpu == "arm64") {
-    _target = "aarch64-$rust_toolchain_triple_suffix"
+    target = "aarch64-$rust_toolchain_triple_suffix"
   }
 }
 
@@ -97,34 +100,35 @@ clang_prefix_rebased = rebase_path(clang_prefix, "", root_build_dir)
 
 clang_resource_dir = exec_script(rebase_path("$clang_prefix_rebased/clang"),
                                  [
-                                   "--target=$_target",
+                                   "--target=$target",
                                    "-print-resource-dir",
                                  ],
                                  "trim string",
                                  [])
 
 # rust_config collects common arguments and dependencies for rustc builds
+cmake_dir = rebase_path("//prebuilt/third_party/cmake/${host_platform}/bin")
 rust_build_args =
     [
       "--rustc",
-      rebase_path("$rustc_prefix/rustc"),
+      "$rustc_prefix/rustc",
       "--cmake-dir",
-      rebase_path("//prebuilt/third_party/cmake/${host_platform}/bin"),
+      cmake_dir,
       "--lib-dir",
       rebase_path(get_label_info(":any($shlib_toolchain)", "root_out_dir")),
       "--target",
-      _target,
+      target,
       "--sysroot",
       _sysroot,
       "--clang_prefix",
-      rebase_path(clang_prefix_rebased, "", root_build_dir),
+      clang_prefix_rebased,
       "--clang-resource-dir",
       clang_resource_dir,
       "--symbol-level",
       "$symbol_level",
     ] + _platform_args
 
-rust_build_deps = _sysroot_deps + _std_deps
+rust_build_deps = sysroot_deps + std_deps
 
 # We want to force a recompile of the Rust world whenever Rust toolchain
 # changes since artifacts from an older version of the toolchain may or

@@ -49,6 +49,6 @@ group("service") {
 group("tests") {
   testonly = true
   public_deps = [
-    ":bin_test_strip_copy",
+    ":bin_test",
   ]
 }

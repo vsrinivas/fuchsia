@@ -131,11 +131,17 @@ mod tests {
             directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
         },
         std::iter,
+        std::path::Path,
     };
 
     #[fasync::run_singlethreaded(test)]
+    // TODO: Use a synthetic /pkg/lib in this test so it doesn't depend on the package layout
     async fn load_objects_test() -> Result<(), Error> {
-        let pkg_lib = io_util::open_directory_in_namespace("/pkg/lib", OPEN_RIGHT_READABLE)?;
+        let mut pkg_lib = io_util::open_directory_in_namespace("/pkg/lib", OPEN_RIGHT_READABLE)?;
+        let entries = list_directory(&pkg_lib).await;
+        if entries.iter().any(|f| &f as &str == "asan") {
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("asan"), OPEN_RIGHT_READABLE)?;
+        }
         let (client_chan, service_chan) = zx::Channel::create()?;
         start(pkg_lib, service_chan);
 
@@ -161,14 +167,21 @@ mod tests {
         ] {
             let (res, o_vmo) = loader.load_object(obj_name).await?;
             if should_succeed {
-                assert_eq!(zx::sys::ZX_OK, res);
+                assert_eq!(zx::sys::ZX_OK, res, "loading {} did not succeed", obj_name);
                 assert!(o_vmo.is_some());
             } else {
-                assert_ne!(zx::sys::ZX_OK, res);
+                assert_ne!(zx::sys::ZX_OK, res, "loading {} did not fail", obj_name);
                 assert!(o_vmo.is_none());
             }
         }
         Ok(())
+    }
+
+    async fn list_directory<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
+        let dir = io_util::clone_directory(&root_proxy, CLONE_FLAG_SAME_RIGHTS)
+            .expect("Failed to clone DirectoryProxy");
+        let entries = files_async::readdir(&dir).await.expect("readdir failed");
+        entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>()
     }
 
     #[fasync::run_singlethreaded(test)]

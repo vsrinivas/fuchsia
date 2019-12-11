@@ -96,23 +96,13 @@ template("rustc_staticlib") {
   }
 
   header_target = "_${target_name}_staticlib_headers"
-  config_target = "_${target_name}_staticlib_config"
 
   source_set(header_target) {
     public = public_hdrs
     visibility = [ ":$group_target" ]
   }
 
-  crate_name = string_replace(rustc_artifact_name, "-", "_")
-  build_output = "${root_out_dir}/staticlib${crate_name}.a"
-
-  config(config_target) {
-    libs = [ build_output ]
-    visibility = [ ":$group_target" ]
-  }
-
   group(target_name) {
-    public_configs = [ ":$config_target" ]
     public_deps = [
       ":$header_target",
       ":$rustc_target",

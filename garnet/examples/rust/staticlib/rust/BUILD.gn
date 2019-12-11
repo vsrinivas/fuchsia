@@ -5,6 +5,7 @@
 import("//build/rust/rustc_staticlib.gni")
 
 rustc_staticlib("crust") {
+  name = "crust_rust"
   edition = "2018"
   public = [
     "crust.h",

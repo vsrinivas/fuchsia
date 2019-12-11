@@ -83,3 +83,41 @@ action("build-third-party") {
     out_deps_data,
   ]
 }
+
+# Add all the search paths from cargo's output we should look in for deps
+config("search_path_config") {
+  search_path_suffixes = ["debug/deps", "release/deps"]
+  targets = [
+    "x86_64-fuchsia",
+    "aarch64-fuchsia",
+    "x86_64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+  ]
+  # add in e.g. x86_64-unknown-linux/release/deps
+  search_path_suffixes_p2 = []
+  foreach(target, targets) {
+    foreach(suffix, search_path_suffixes) {
+      search_path_suffixes_p2 += [suffix]
+      search_path_suffixes_p2 += [target + "/" + suffix]
+    }
+  }
+  # both of these xxx_crate_root variables are from rustc_artifact.gni
+  rebased_3p_root = rebase_path(third_party_crate_root, root_build_dir)
+  search_paths = [
+    rebase_path(first_party_crate_root, root_build_dir),
+    rebased_3p_root,
+  ]
+  foreach(suffix, search_path_suffixes_p2) {
+    search_paths += [rebased_3p_root + "/" + suffix]
+  }
+
+  rustflags = []
+  foreach(search_path, search_paths) {
+    rustflags += ["-Ldependency=" + search_path]
+  }
+
+  shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
+  lib_dirs = [
+    shared_out_dir,
+  ]
+}
