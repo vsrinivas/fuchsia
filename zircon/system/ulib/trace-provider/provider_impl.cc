@@ -25,6 +25,8 @@
 namespace trace {
 namespace internal {
 
+constexpr bool kVerboseTraceErrors = false;
+
 TraceProviderImpl::TraceProviderImpl(async_dispatcher_t* dispatcher, zx::channel channel)
     : dispatcher_(dispatcher), connection_(this, std::move(channel)) {}
 
@@ -249,8 +251,10 @@ EXPORT trace_provider_t* trace_provider_create_with_name(zx_handle_t to_service_
   status = fuchsia_tracing_provider_RegistryRegisterProvider(
       to_service.get(), provider_client.release(), trace::internal::GetPid(), name, strlen(name));
   if (status != ZX_OK) {
-    fprintf(stderr, "TraceProvider: registry failed: status=%d(%s)\n", status,
+    if (trace::internal::kVerboseTraceErrors) {
+      fprintf(stderr, "TraceProvider: registry failed: status=%d(%s)\n", status,
             zx_status_get_string(status));
+    }
     return nullptr;
   }
   // Note: |to_service| can be closed now. Let it close as a consequence
