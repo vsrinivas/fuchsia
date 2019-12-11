@@ -34,7 +34,7 @@ bool compiling() {
 library fidl.test.xunions;
 
 xunion Foo {
-    int64 i;
+    1: int64 i;
 };
 )FIDL"));
 
@@ -154,10 +154,10 @@ struct struct {
 };
 
 xunion Foo {
-    int64 xunion;
-    bool library;
-    uint32 uint32;
-    struct member;
+    1: int64 xunion;
+    2: bool library;
+    3: uint32 uint32;
+    4: struct member;
 };
 )FIDL"));
 
@@ -166,8 +166,8 @@ xunion Foo {
 library fidl.test.xunions;
 
 xunion Value {
-  bool bool_value;
-  vector<Value?> list_value;
+  1: bool bool_value;
+  2: vector<Value?> list_value;
 };
 )FIDL"));
 
@@ -176,7 +176,7 @@ xunion Value {
 library fidl.test.xunions;
 
 xunion Foo {
-  Bar bar;
+  1: Bar bar;
 };
 
 struct Bar {
@@ -194,7 +194,7 @@ bool no_directly_recursive_xunions() {
 library example;
 
 xunion Value {
-  Value value;
+  1: Value value;
 };
 
 )FIDL");
@@ -281,7 +281,7 @@ bool no_nullable_members_in_xunions() {
 library example;
 
 xunion Foo {
-  string? bar;
+  1: string? bar;
 };
 
 )FIDL");
@@ -334,9 +334,9 @@ bool write_ordinal_hashed() {
 library test;
 
 xunion Foo {
-  uint8 bar;
-  bool baz;
-  string qux;
+  1: uint8 bar;
+  2: bool baz;
+  3: string qux;
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());

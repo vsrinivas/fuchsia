@@ -86,246 +86,246 @@ enum MessageType : byte {
 /// * ClientIdentifier - value always selected by the DHCP client.
 xunion Option {
     /// A 32-bit IPv4 subnet mask.
-    fuchsia.net.Ipv4Address subnet_mask;
+    1: fuchsia.net.Ipv4Address subnet_mask;
 
     /// The client's offset from UTC in seconds. A positive offset is east of the zero meridian, and
     /// a negative offset is west of the zero meridian.
-    int32 time_offset;
+    2: int32 time_offset;
 
     /// A list of the routers in a client's subnet, listed in order of preference.
-    Addresses router;
+    3: Addresses router;
 
     /// A list of time servers available to the client, in order of preference.
-    Addresses time_server;
+    4: Addresses time_server;
 
     /// A list of IEN 116 Name servers available to the client, in order of preference.
-    Addresses name_server;
+    5: Addresses name_server;
 
     /// A list of Domain Name System servers available to the client, in order of preference;
-    Addresses domain_name_server;
+    6: Addresses domain_name_server;
 
     /// A list of MIT-LCS UDP Log servers available to the client, in order of preference.
-    Addresses log_server;
+    7: Addresses log_server;
 
     /// A list of RFC 865 Cookie servers available to the client, in order of preference.
-    Addresses cookie_server;
+    8: Addresses cookie_server;
 
     /// A list of RFC 1179 Line Printer servers available to the client, in order of preference.
-    Addresses lpr_server;
+    9: Addresses lpr_server;
 
     /// A list of Imagen Impress servers available to the client, in order of preference.
-    Addresses impress_server;
+    10: Addresses impress_server;
 
     /// A list of RFC 887 Resource Location servers available to the client, in order of preference.
-    Addresses resource_location_server;
+    11: Addresses resource_location_server;
 
     /// The host name of the client, which may or may not be qualified with the local domain name.
-    AsciiString host_name;
+    12: AsciiString host_name;
 
     /// The size of the client's default boot image in 512-octet blocks.
-    uint16 boot_file_size;
+    13: uint16 boot_file_size;
 
     /// The path name to the client's core dump in the event the client crashes.
-    AsciiString merit_dump_file;
+    14: AsciiString merit_dump_file;
 
     /// The client's domain name for use in resolving hostnames in the DNS.
-    AsciiString domain_name;
+    15: AsciiString domain_name;
 
     /// The address of the client's swap server.
-    fuchsia.net.Ipv4Address swap_server;
+    16: fuchsia.net.Ipv4Address swap_server;
 
     /// The path name to the client's root disk.
-    AsciiString root_path;
+    17: AsciiString root_path;
 
     /// The path name to a TFTP-retrievable file. This file contains data which can be interpreted
     /// as the BOOTP vendor-extension field. Unlike the BOOTP vendor-extension field, this file has
     /// an unconstrained length and any references to Tag 18 are ignored.
-    AsciiString extensions_path;
+    18: AsciiString extensions_path;
 
     /// A flag which will enabled IP layer packet forwarding when true.
-    bool ip_forwarding;
+    19: bool ip_forwarding;
 
     /// A flag which will enable forwarding of IP packets with non-local source routes.
-    bool non_local_source_routing;
+    20: bool non_local_source_routing;
 
     /// Policy filters for non-local source routing.
     /// A list of IP Address and Subnet Mask pairs. If an incoming source-routed packet has a
     /// next-hop that does not match one of these pairs, then the packet will be dropped.
-    Addresses policy_filter;
+    21: Addresses policy_filter;
 
     /// The maximum sized datagram that the client should be able to reassemble, in octets. The
     /// minimum legal value is 576.
-    uint16 max_datagram_reassembly_size;
+    22: uint16 max_datagram_reassembly_size;
 
     /// The default time-to-live to use on outgoing IP datagrams. The value must be between 1 and
     /// 255.
-    byte default_ip_ttl;
+    23: byte default_ip_ttl;
 
     /// The timeout to be used when aging Path MTU values by the mechanism in RFC 1191.
-    Duration path_mtu_aging_timeout;
+    24: Duration path_mtu_aging_timeout;
 
     /// Table of MTU sizes for Path MTU Discovery.
     /// A list of MTU sizes, ordered from smallest to largest. The smallest value cannot be smaller
     /// than 68.
-    vector<uint16>:127 path_mtu_plateau_table;
+    25: vector<uint16>:127 path_mtu_plateau_table;
 
     /// The MTU for the client's interface. Minimum value of 68.
-    uint16 interface_mtu;
+    26: uint16 interface_mtu;
 
     /// A flag indicating if all subents of the IP network to which the client is connected have the
     /// same MTU.
-    bool all_subnets_local;
+    27: bool all_subnets_local;
 
     /// The broadcast address of the client's subnet. Legal values are defined in RFC 1122.
-    fuchsia.net.Ipv4Address broadcast_address;
+    28: fuchsia.net.Ipv4Address broadcast_address;
 
     /// A flag indicating whether the client should perform subnet mask discovery via ICMP.
-    bool perform_mask_discovery;
+    29: bool perform_mask_discovery;
 
     /// A flag indicating whether the client should respond to subnet mask discovery requests via
     /// ICMP.
-    bool mask_supplier;
+    30: bool mask_supplier;
 
     /// A flag indicating whether the client should solicit routers using Router Discovery as
     /// defined in RFC 1256.
-    bool perform_router_discovery;
+    31: bool perform_router_discovery;
 
     /// The address to which the client should transmit Router Solicitation requests.
-    fuchsia.net.Ipv4Address router_solicitation_address;
+    32: fuchsia.net.Ipv4Address router_solicitation_address;
 
     /// Static Routes which the host should put in its routing cache.
     /// A list of Destination address/Next-hop address pairs defining static routes for the client's
     /// routing table. The routes should be listed in descending order of priority. It is illegal
     /// to use 0.0.0.0 as the destination in a static route.
-    Addresses static_route;
+    33: Addresses static_route;
 
     /// A flag specifying whether the client negotiate the use of trailers when using ARP, per RFC
     /// 893.
-    bool trailer_encapsulation;
+    34: bool trailer_encapsulation;
 
     /// The timeout for ARP cache entries.
-    Duration arp_cache_timeout;
+    35: Duration arp_cache_timeout;
 
     /// A flag specifying that the client should use Ethernet v2 encapsulation when false, and IEEE
     /// 802.3 encapsulation when true.
-    bool ethernet_encapsulation;
+    36: bool ethernet_encapsulation;
 
     /// The default time-to-live that the client should use for outgoing TCP segments. The minimum
     /// value is 1.
-    byte tcp_default_ttl;
+    37: byte tcp_default_ttl;
 
     /// The interval the client should wait before sending a TCP keepalive message. A
     /// value of 0 indicates that the client should not send keepalive messages unless specifically
     /// requested by an application.
-    Duration tcp_keepalive_interval;
+    38: Duration tcp_keepalive_interval;
 
     /// A flag specifying whether the client should send TCP keepalive messages with an octet of
     /// garbage for compatibility with older implementations.
-    bool tcp_keepalive_garbage;
+    39: bool tcp_keepalive_garbage;
 
     /// The name of the client's Network Information Service domain.
-    AsciiString network_information_service_domain;
+    40: AsciiString network_information_service_domain;
 
     /// A list of Network Information Service server addresses available to the client, listed in
     /// order of preference.
-    Addresses network_information_servers;
+    41: Addresses network_information_servers;
 
     /// A list of Network Time Protocol (NTP) server addresses available to the client, listed in
     /// order of preference.
-    Addresses network_time_protocol_servers;
+    42: Addresses network_time_protocol_servers;
 
     /// An opaque object of octets for exchanging vendor-specific information.
-    bytes:255 vendor_specific_information;
+    43: bytes:255 vendor_specific_information;
 
     /// A list of NetBIOS name server addresses available to the client, listed in order of
     /// preference.
-    Addresses netbios_over_tcpip_name_server;
+    44: Addresses netbios_over_tcpip_name_server;
 
     /// A list of NetBIOS datagram distribution servers available to the client, listed in order of
     /// preference.
-    Addresses netbios_over_tcpip_datagram_distribution_server;
+    45: Addresses netbios_over_tcpip_datagram_distribution_server;
 
     /// The NetBIOS node type which should be used by the client.
-    NodeTypes netbios_over_tcpip_node_type;
+    46: NodeTypes netbios_over_tcpip_node_type;
 
     /// The NetBIOS over TCP/IP scope parameter, as defined in RFC 1001, for the client.
-    AsciiString netbios_over_tcpip_scope;
+    47: AsciiString netbios_over_tcpip_scope;
 
     /// A list of X Window System Font server addresses available to the client, listed in order of
     /// preference.
-    Addresses x_window_system_font_server;
+    48: Addresses x_window_system_font_server;
 
     /// A list of X Window System Display Manager system addresses available to the client, listed
     /// in order of preference.
-    Addresses x_window_system_display_manager;
+    49: Addresses x_window_system_display_manager;
 
     /// The name of the client's Network Information System+ domain.
-    AsciiString network_information_service_plus_domain;
+    50: AsciiString network_information_service_plus_domain;
 
     /// A list of Network Information System+ server addresses available to the client, listed in
     /// order of preference.
-    Addresses network_information_service_plus_servers;
+    51: Addresses network_information_service_plus_servers;
 
     /// A list of mobile IP home agent addresses available to the client, listed in order of
     /// preference.
-    Addresses mobile_ip_home_agent;
+    52: Addresses mobile_ip_home_agent;
 
     /// A list of Simple Mail Transport Protocol (SMTP) server address available to the client,
     /// listed in order of preference.
-    Addresses smtp_server;
+    53: Addresses smtp_server;
 
     /// A list of Post Office Protocol (POP3) server addresses available to the client, listed in
     /// order of preference.
-    Addresses pop3_server;
+    54: Addresses pop3_server;
 
     /// A list Network News Transport Protocol (NNTP) server addresses available to the client,
     /// listed in order of preference.
-    Addresses nntp_server;
+    55: Addresses nntp_server;
 
     /// A list of default World Wide Web (WWW) server addresses available to the client, listed in
     /// order of preference.
-    Addresses default_www_server;
+    56: Addresses default_www_server;
 
     /// A list of default Finger server addresses available to the client, listed in order of
     /// preference.
-    Addresses default_finger_server;
+    57: Addresses default_finger_server;
 
     /// A list of Internet Relay Chat server addresses available to the client, listed in order of
     /// preference.
-    Addresses default_irc_server;
+    58: Addresses default_irc_server;
 
     /// A list of StreetTalk server addresses available to the client, listed in order of
     /// preference.
-    Addresses streettalk_server;
+    59: Addresses streettalk_server;
 
     /// A list of StreetTalk Directory Assistance server addresses available to the client, listed
     /// in order of preference.
-    Addresses streettalk_directory_assistance_server;
+    60: Addresses streettalk_directory_assistance_server;
 
     /// An option specifying whether the `sname`, `file`, or both fields have been overloaded to
     /// carry DHCP options. If this option is present, the client interprets the additional fields
     /// after it concludes interpreting standard option fields.
-    OptionOverloadValue option_overload;
+    61: OptionOverloadValue option_overload;
 
     /// The TFTP server name available to the client. This option should be used when the `sname`
     /// field has been overloaded to carry options.
-    AsciiString tftp_server_name;
+    62: AsciiString tftp_server_name;
 
     /// The bootfile name for the client. This option should be used when the `file` field has been
     /// overloaded to carry options.
-    AsciiString bootfile_name;
+    63: AsciiString bootfile_name;
 
     /// The maximum length in octets of a DHCP message that the participant is willing to accept.
     /// The minimum value is 576.
-    uint16 max_dhcp_message_size;
+    64: uint16 max_dhcp_message_size;
 
     /// The time interval after address assignment at which the client will transition
     /// to the Renewing state.
-    Duration renewal_time_value;
+    65: Duration renewal_time_value;
 
     /// The time interval after address assignment at which the client will transition
     /// to the Rebinding state.
-    Duration rebinding_time_value;
+    66: Duration rebinding_time_value;
 };
 
 /// The code of a DHCP option to be retrieved by Server.GetOption(). The code

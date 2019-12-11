@@ -33,11 +33,11 @@ xunion StringSelector {
     ///   eg: a*b will match any string that starts with a and ends with b.
     ///   eg: a*b*c will match any string that starts with a and ends with c, with `b`
     ///       in the middle.
-    string:MAXIMUM_STRING_SELECTOR_LENGTH string_pattern;
+    1: string:MAXIMUM_STRING_SELECTOR_LENGTH string_pattern;
 
     ///  This is a provided string that defines an exact string to match against. No
     ///  characters are treated as special, or carry special syntax.
-    string:MAXIMUM_STRING_SELECTOR_LENGTH exact_match;
+    2: string:MAXIMUM_STRING_SELECTOR_LENGTH exact_match;
 };
 
 /// ComponentSelector encodes path to a component that is being selected for.

@@ -9,8 +9,8 @@ protocol FidlCodecXUnion {
 };
 
 xunion NowAsXUnion {
-    uint8 variant_u8;
-    uint16 variant_u16;
+    1: uint8 variant_u8;
+    2: uint16 variant_u16;
 };
 
 union OriginalUnion {

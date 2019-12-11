@@ -55,7 +55,7 @@ union MyExplicitUnion {
 };
 
 xunion MyXUnion { // super annoying!
-    string? s;
+    1: string? s;
 };
 
 xunion MyExplicitXUnion {

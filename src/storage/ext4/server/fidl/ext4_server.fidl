@@ -34,13 +34,13 @@ xunion MountVmoResult {
 
     /// The server has managed to read the image far enough to load the
     /// root directory and none of the early validation checks have failed.
-    Success success;
+    1: Success success;
 
     /// Error reading the VMO.
-    zx.status vmo_read_failure;
+    2: zx.status vmo_read_failure;
 
     /// Failure during the initial parsing of the image.
-    ParseFailure parse_failure;
+    3: ParseFailure parse_failure;
 };
 
 [Discoverable]

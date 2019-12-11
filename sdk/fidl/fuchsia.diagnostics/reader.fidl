@@ -31,7 +31,7 @@ enum ReaderError {
 xunion SelectorArgument {
     /// A Selector defining a pattern-matcher which selects for components within a hierarchy
     /// and properties in a data hierarchy namespaced by component.
-    Selector structured_selector;
+    1: Selector structured_selector;
 
     /// The Archive protocol parses the raw_selector
     /// into a structured [fuchsia.diagnostics/Selector]
@@ -40,7 +40,7 @@ xunion SelectorArgument {
     /// NOTE: All StringSelectors parsed from the raw_selector will be interperetted in
     ///       string_pattern mode, giving significance to special characters.
     /// TODO(4601): Link to in-tree documentation for raw selector strings.
-    string:MAXIMUM_RAW_SELECTOR_LENGTH raw_selector;
+    2: string:MAXIMUM_RAW_SELECTOR_LENGTH raw_selector;
 };
 
 /// A fidl union containing a complete hierarchy of structured diagnostics
@@ -51,12 +51,12 @@ xunion FormattedContent {
     /// of the structured diagnostics data on the system.
     /// The VMO will contain up to 1mb of diagnostics data,
     /// with dropped subtrees if the hierarchy is too large.
-    fuchsia.mem.Buffer formatted_json_hierarchy;
+    1: fuchsia.mem.Buffer formatted_json_hierarchy;
 
     /// A complete formatted data hierarchy encoded as text.
     /// The VMO will contain up to 1mb of diagnostics data,
     /// with dropped subtrees if the hierarchy is too large.
-    fuchsia.mem.Buffer formatted_text_hierarchy;
+    2: fuchsia.mem.Buffer formatted_text_hierarchy;
 };
 
 /// Outer protocol for interacting with the different diagnostics data sources.

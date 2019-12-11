@@ -115,7 +115,7 @@ table RepositoryConfig {
 /// The only supported algorithm at the moment is ed25519.
 xunion RepositoryKeyConfig {
     /// The raw ed25519 public key as binary data.
-    bytes ed25519_key;
+    1: bytes ed25519_key;
 };
 
 /// Describes a key used to decrypt blobs.
@@ -123,7 +123,7 @@ xunion RepositoryKeyConfig {
 /// The only supported algorithm at the moment is aes.
 xunion RepositoryBlobKey {
     /// A raw aes key as binary data.
-    bytes aes_key;
+    1: bytes aes_key;
 };
 
 /// Describes the configuration necessary to connect to a mirror.

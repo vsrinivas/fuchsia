@@ -8,7 +8,7 @@
 library fidl.test.unionmigration;
 
 xunion BasicXUnion {
-    int32 i32;
+    1: int32 i32;
 };
 
 union BasicUnion {

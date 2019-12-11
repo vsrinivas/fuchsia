@@ -33,8 +33,8 @@ struct Buffer {
 /// need to be provided out-of-line in a `Buffer`).
 xunion Data {
     /// The binary data provided inline in the message.
-    bytes bytes;
+    1: bytes bytes;
 
     /// The binary data provided out-of-line in a `Buffer`.
-    Buffer buffer;
+    2: Buffer buffer;
 };

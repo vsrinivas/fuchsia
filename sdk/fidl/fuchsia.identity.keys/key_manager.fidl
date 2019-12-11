@@ -269,7 +269,7 @@ protocol KeyManager {
 xunion Key {
     /// An unstructured random key of the length specified in
     /// `KeySingletonProperties.key_length` or `KeySetProperties.key_length`.
-    bytes:MAX_KEY_LEN random_key;
+    1: bytes:MAX_KEY_LEN random_key;
 };
 
 /// Specifies the properties of a `KeySingleton`. These properties are provided

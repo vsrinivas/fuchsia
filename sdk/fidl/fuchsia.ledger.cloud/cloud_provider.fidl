@@ -135,10 +135,10 @@ table Commit {
 /// Specification of a page state used as base for a diff.
 xunion PageState {
     /// The state is the empty page.
-    EmptyPage empty_page;
+    1: EmptyPage empty_page;
     /// The state is the content of a page at the commit with the given
     /// identifier.
-    CommitIdentifier at_commit;
+    2: CommitIdentifier at_commit;
 };
 
 struct EmptyPage {

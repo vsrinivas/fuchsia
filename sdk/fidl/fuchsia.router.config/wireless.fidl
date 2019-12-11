@@ -11,14 +11,15 @@ enum ChannelWidth {
     WIDTH_80_MHZ = 3;
     WIDTH_160_MHZ = 4;
 };
-bits Band:uint8 {
+
+bits Band : uint8 {
     BAND_2400_MHZ = 1;
     BAND_5000_MHZ = 2;
 };
 
 xunion ChannelNumber {
-    uint32 number;
-    Band auto_band;
+    1: uint32 number;
+    2: Band auto_band;
 };
 
 struct Channel {

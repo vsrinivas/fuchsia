@@ -1,25 +1,25 @@
 library test.name;
 
 xunion OlderSimpleUnion {
-    int64 i;
-    float32 f;
+    1: int64 i;
+    2: float32 f;
 };
 
 xunion NewerSimpleUnion {
     // float f;  // removed
 
-    int64 i; // unchanged
+    1: int64 i; // unchanged
 
-    string s; // added
-    vector<string> v; // added
+    2: string s; // added
+    3: vector<string> v; // added
 };
 
 // 1. This xunion is currently unused by code, and for tracking changes in the goldens only.
 // 2. There's no FlexibleSimpleXUnion, since that's covered by OlderSimpleUnion above.
 strict xunion StrictSimpleXUnion {
-    int32 i;
-    float32 f;
-    string s;
+    1: int32 i;
+    2: float32 f;
+    3: string s;
 };
 
 struct Empty {
@@ -28,11 +28,11 @@ struct Empty {
 xunion XUnionContainingEmptyStruct {
     // This is a test to prevent regressions for FIDL-762. Note that we need FIDL-758 to be resolved
     // to ensure this actually works, since goldens aren't currently compiled.
-    Empty empty;
+    1: Empty empty;
 };
 
 strict xunion StrictBoundedXUnion {
-    vector<uint8>:10 v;
+    1: vector<uint8>:10 v;
 };
 
 protocol TestProtocol {

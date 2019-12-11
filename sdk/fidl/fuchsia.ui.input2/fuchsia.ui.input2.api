@@ -1,5 +1,5 @@
 {
-  "fidl/fuchsia.ui.input2/events.fidl": "b9f2ffb454287cd3c098043c4346871b",
+  "fidl/fuchsia.ui.input2/events.fidl": "d2c77f85c34b18743ed70cca6143c32d",
   "fidl/fuchsia.ui.input2/keyboard.fidl": "805a239b5e0224c604d7f8a3ae82deaa",
   "fidl/fuchsia.ui.input2/keys.fidl": "6a1528f5afcc79a5a91daf5b1c302d7e",
   "fidl/fuchsia.ui.input2/layout.fidl": "861d652da7e0a75f2c180d91e2ea8e33",

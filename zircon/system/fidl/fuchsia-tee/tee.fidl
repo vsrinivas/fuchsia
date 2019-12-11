@@ -75,9 +75,9 @@ table Value {
 };
 
 xunion Parameter {
-    None none;
-    Buffer buffer;
-    Value value;
+    1: None none;
+    2: Buffer buffer;
+    3: Value value;
 };
 
 const uint32 MAX_PARAMETERSET_COUNT = 4;

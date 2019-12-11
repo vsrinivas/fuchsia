@@ -20,8 +20,8 @@ union TestUnion {
 };
 
 xunion TestXUnion {
-    int32 primitive;
-    CopyableStruct copyable;
+    1: int32 primitive;
+    2: CopyableStruct copyable;
 };
 
 /// Verifies that user code can manipulate these bits.
@@ -49,9 +49,11 @@ protocol TestInterface {
 struct FooRequest {
     int32 bar;
 };
+
 struct FooResponse {
     int32 bar;
 };
+
 protocol Baz {
     Foo(FooRequest req) -> (FooResponse res);
 };

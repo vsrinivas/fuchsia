@@ -5,12 +5,12 @@
 library fidl.rust.test.compilation;
 
 xunion TestXUnion {
-  bool variant;
+    1: bool variant;
 };
 
-enum ErrorReturn: uint32 {
-  OK = 0x00;
-  CHANGED = 0x0D;
+enum ErrorReturn : uint32 {
+    OK = 0x00;
+    CHANGED = 0x0D;
 };
 
 [FragileBase]
@@ -21,18 +21,18 @@ protocol TestInterface {
 };
 
 struct HasBigArray {
-  array<uint8>:256 big_arr;
+    array<uint8>:256 big_arr;
 };
 
 union HasStructWithBigArray {
-  1: HasBigArray variant;
-  2: uint8 variant2;
+    1: HasBigArray variant;
+    2: uint8 variant2;
 };
 
 struct Result {
-  string ensure_that_type_named_result_compiles;
+    string ensure_that_type_named_result_compiles;
 };
 
 struct HasHostFidlHandleStubbing {
-  handle<debuglog> log;
+    handle<debuglog> log;
 };

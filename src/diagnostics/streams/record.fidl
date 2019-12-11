@@ -39,11 +39,11 @@ struct Argument {
 [MaxHandles = "0"]
 xunion Value {
     /// A signed integral argument.
-    int64 signed;
+    1: int64 signed;
     /// An unsigned integral argument.
-    uint64 unsigned;
+    2: uint64 unsigned;
     /// A double-precision floating-point argument.
-    float64 floating;
+    3: float64 floating;
     /// A UTF8 text argument.
-    string:MAX_TEXT_ARG_LENGTH text;
+    4: string:MAX_TEXT_ARG_LENGTH text;
 };

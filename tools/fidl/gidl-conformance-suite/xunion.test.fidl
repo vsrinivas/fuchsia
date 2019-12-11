@@ -18,15 +18,15 @@ union SimpleUnion {
 };
 
 xunion SampleXUnion {
-    uint32 u;
-    SimpleUnion su;
-    SimpleTable st;
+    1: uint32 u;
+    2: SimpleUnion su;
+    3: SimpleTable st;
 };
 
 strict xunion SampleStrictXUnion {
-    uint32 u;
-    SimpleUnion su;
-    SimpleTable st;
+    1: uint32 u;
+    2: SimpleUnion su;
+    3: SimpleTable st;
 };
 
 struct TestInlineXUnionInStruct {

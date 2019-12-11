@@ -85,13 +85,13 @@ struct Empty {
 /// Information required to connect to a protected network.
 xunion Credential {
     /// The network does not use credentials (open networks).
-    Empty none;
+    1: Empty none;
 
     /// Plaintext password (handled as binary data).
-    bytes password;
+    2: bytes password;
 
     /// Hash representation of the network passphrase (handled as binary data).
-    bytes psk;
+    3: bytes psk;
 };
 
 struct ConnectRequest {

@@ -21,16 +21,16 @@ table UrlRequestRewriteRule {
 
 xunion UrlRequestRewrite {
     /// Adds a set of headers to a URL request.
-    UrlRequestRewriteAddHeaders add_headers;
+    1: UrlRequestRewriteAddHeaders add_headers;
 
     /// Removes a header based on the presence of a pattern in the URL query.
-    UrlRequestRewriteRemoveHeader remove_header;
+    2: UrlRequestRewriteRemoveHeader remove_header;
 
     /// Substitutes a pattern in the URL query.
-    UrlRequestRewriteSubstituteQueryPattern substitute_query_pattern;
+    3: UrlRequestRewriteSubstituteQueryPattern substitute_query_pattern;
 
     /// Replaces a URL if the original URL ends with a pattern.
-    UrlRequestRewriteReplaceUrl replace_url;
+    4: UrlRequestRewriteReplaceUrl replace_url;
 };
 
 /// Adds `headers` to the URL request. If a header is already present in the original URL request,

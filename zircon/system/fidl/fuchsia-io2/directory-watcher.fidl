@@ -34,18 +34,18 @@ table DirectoryWatchOptions {
 /// Events returned from [`DirectoryWatcher.GetNext`].
 xunion DirectoryWatchedEvent {
     /// Indicates a node already existed in the directory when watching started.
-    DirectoryEntry existing;
+    1: DirectoryEntry existing;
 
     /// Indicates that no more `existing` events will be sent.
-    IdleEvent idle;
+    2: IdleEvent idle;
 
     /// Indicates a node has been created (either new or moved) into a
     /// directory.
-    DirectoryEntry added;
+    3: DirectoryEntry added;
 
     /// Indicates a node has been removed (either deleted or moved) from the
     /// directory.
-    Name removed;
+    4: Name removed;
 };
 
 /// Used by [`fuchsia.io2/Directory.Watch`] to indicate the types of events

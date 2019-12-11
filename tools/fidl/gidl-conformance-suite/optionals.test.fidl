@@ -14,7 +14,7 @@ table TableWithEmptyStruct {
 };
 
 xunion XUnionWithEmptyStruct {
-    EmptyStruct s;
+    1: EmptyStruct s;
 };
 
 union UnionWithEmptyStruct {

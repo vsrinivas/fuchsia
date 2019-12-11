@@ -13,8 +13,8 @@ union this_is_a_union {
 };
 
 xunion this_is_a_xunion {
-    string s;
-    int32 i;
+    1: string s;
+    2: int32 i;
 };
 
 protocol this_is_a_protocol {

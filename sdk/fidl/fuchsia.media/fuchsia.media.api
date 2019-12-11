@@ -7,9 +7,9 @@
   "fidl/fuchsia.media/audio_renderer.fidl": "a4d436007816beea238c5e72107786ec",
   "fidl/fuchsia.media/metadata.fidl": "b9960fdbc41d5c2d5a56ebb8c68091cb",
   "fidl/fuchsia.media/stream.fidl": "889a1a68bb4082833da8a8621b67ac48",
-  "fidl/fuchsia.media/stream_common.fidl": "65611e4b7c3ceed6ecf2ec9358eca183",
+  "fidl/fuchsia.media/stream_common.fidl": "f66663a3e6babdd003b43ef62ee1b5dd",
   "fidl/fuchsia.media/stream_processor.fidl": "067883769294d51675a5424968f73f9e",
   "fidl/fuchsia.media/stream_type.fidl": "0ce4b7bb67ad89c7d6a4437d78c0486f",
   "fidl/fuchsia.media/timeline_function.fidl": "10e9c5225e1b4596150724cf45d2a8a4",
-  "fidl/fuchsia.media/usage_reporter.fidl": "a6edde0921f0adb903a4c37f9aa2b13a"
+  "fidl/fuchsia.media/usage_reporter.fidl": "eb02fbb609c9566300c9ce4c9e663da9"
 }

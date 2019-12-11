@@ -21,8 +21,8 @@ table this_is_a_table {
 };
 
 xunion this_is_a_xunion {
-    string s;
-    bool b;
+    1: string s;
+    2: bool b;
 };
 
 struct primitive_types {
@@ -513,27 +513,27 @@ table AllTypesTable {
 
 // This xunion has members all different FIDL types.
 xunion AllTypesXunion {
-    bool bool_member;
-    int8 int8_member;
-    int16 int16_member;
-    int32 int32_member;
-    int64 int64_member;
-    uint8 uint8_member;
-    uint16 uint16_member;
-    uint32 uint32_member;
-    uint64 uint64_member;
-    float32 float32_member;
-    float64 float64_member;
-    default_enum enum_member;
-    default_bits bits_member;
-    handle handle_member;
-    string string_member;
-    this_is_a_struct struct_member;
-    this_is_a_union union_member;
-    array<uint32>:arrays_size array_member;
-    vector<uint32> vector_member;
-    this_is_a_table table_member;
-    this_is_a_xunion xunion_member;
+     1: bool bool_member;
+     2: int8 int8_member;
+     3: int16 int16_member;
+     4: int32 int32_member;
+     5: int64 int64_member;
+     6: uint8 uint8_member;
+     7: uint16 uint16_member;
+     8: uint32 uint32_member;
+     9: uint64 uint64_member;
+    10: float32 float32_member;
+    11: float64 float64_member;
+    12: default_enum enum_member;
+    13: default_bits bits_member;
+    14: handle handle_member;
+    15: string string_member;
+    16: this_is_a_struct struct_member;
+    17: this_is_a_union union_member;
+    18: array<uint32>:arrays_size array_member;
+    19: vector<uint32> vector_member;
+    20: this_is_a_table table_member;
+    21: this_is_a_xunion xunion_member;
 };
 
 enum RespondWith {

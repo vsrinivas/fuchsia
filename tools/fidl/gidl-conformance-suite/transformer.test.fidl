@@ -190,7 +190,7 @@ struct Table_UnionWithVector_StructSandwichStruct {
 };
 
 xunion XUnionWithStruct {
-    StructSize3Align1 s;
+    1: StructSize3Align1 s;
 };
 
 struct XUnionWithStructStruct {
@@ -198,7 +198,7 @@ struct XUnionWithStructStruct {
 };
 
 xunion XUnionWithXUnion {
-    XUnionWithStruct xu;
+    1: XUnionWithStruct xu;
 };
 
 struct XUnionWithXUnionStruct {
@@ -206,8 +206,8 @@ struct XUnionWithXUnionStruct {
 };
 
 xunion XUnionWithUnions {
-    UnionSize8Align4 u1;
-    UnionSize12Align4 u2;
+    1: UnionSize8Align4 u1;
+    2: UnionSize12Align4 u2;
 };
 
 struct Size5Alignment1 {

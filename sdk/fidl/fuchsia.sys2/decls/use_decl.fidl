@@ -9,11 +9,11 @@ using fuchsia.io2;
 /// Declares a capability used by a component, which was offered to the
 /// component's environment.
 xunion UseDecl {
-    UseServiceDecl service;
-    UseServiceProtocolDecl service_protocol;
-    UseDirectoryDecl directory;
-    UseStorageDecl storage;
-    UseRunnerDecl runner;
+    1: UseServiceDecl service;
+    2: UseServiceProtocolDecl service_protocol;
+    3: UseDirectoryDecl directory;
+    4: UseStorageDecl storage;
+    5: UseRunnerDecl runner;
 };
 
 /// Declares a service used by a component, which was offered to the component's

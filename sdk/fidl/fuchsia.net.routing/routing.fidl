@@ -56,11 +56,11 @@ table RouteTableEntry {
 /// A choice of route change action.
 xunion RouteChange {
     /// Add a new Route to the table. If the Route already exists, an error is returned.
-    RouteTableEntry add;
+    1: RouteTableEntry add;
     /// Delete a Route from the table. If the Route does not exist, an error is returned.
-    Route delete;
+    2: Route delete;
     /// Update the properties of a given Route. If the Route does not exist, an error is returned.
-    RouteTableEntry update;
+    3: RouteTableEntry update;
 };
 
 enum Error {

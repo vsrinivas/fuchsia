@@ -33,10 +33,9 @@ table CidrAddress {
     2: uint8 prefix_length;
 };
 
-
 table Credentials {
-   1: string user;
-   2: string password;
+    1: string user;
+    2: string password;
 };
 
 table Pppoe {
@@ -54,9 +53,9 @@ table L2tp {
 };
 
 xunion ConnectionParameters {
-    Pppoe pppoe;
-    Pptp pptp;
-    L2tp l2tp;
+    1: Pppoe pppoe;
+    2: Pptp pptp;
+    3: L2tp l2tp;
 };
 
 /// WanProperties holds the configuration associated to a WAN interface.

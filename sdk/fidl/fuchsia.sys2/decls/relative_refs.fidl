@@ -7,19 +7,21 @@ library fuchsia.sys2;
 /// A reference to a capability source or destination relative to this
 /// component.
 xunion Ref {
-    RealmRef realm;
-    SelfRef self;
-    ChildRef child;
-    CollectionRef collection;
-    StorageRef storage;
-    FrameworkRef framework;
+    1: RealmRef realm;
+    2: SelfRef self;
+    3: ChildRef child;
+    4: CollectionRef collection;
+    5: StorageRef storage;
+    6: FrameworkRef framework;
 };
 
 /// A reference to a component’s containing realm, i.e. the parent component.
-struct RealmRef {};
+struct RealmRef {
+};
 
 /// A reference to the component itself.
-struct SelfRef {};
+struct SelfRef {
+};
 
 /// A reference to one of the component's child instances.
 struct ChildRef {
@@ -44,4 +46,5 @@ struct StorageRef {
 };
 
 /// A reference to the component framework itself.
-struct FrameworkRef {};
+struct FrameworkRef {
+};

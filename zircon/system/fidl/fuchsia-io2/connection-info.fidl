@@ -56,31 +56,31 @@ bits ConnectionInfoQuery : uint64 {
 /// [`NodeProtocolSet`].
 xunion Representation {
     /// See [`NodeProtocolSet.CONNECTOR`].
-    ConnectorInfo connector;
+    1: ConnectorInfo connector;
 
     /// See [`NodeProtocolSet.DIRECTORY`].
-    DirectoryInfo directory;
+    2: DirectoryInfo directory;
 
     /// See [`NodeProtocolSet.FILE`].
-    FileInfo file;
+    3: FileInfo file;
 
     /// See [`NodeProtocolSet.MEMORY`].
-    MemoryInfo memory;
+    4: MemoryInfo memory;
 
     /// See [`NodeProtocolSet.POSIX_SOCKET`].
-    PosixSocketInfo posix_socket;
+    5: PosixSocketInfo posix_socket;
 
     /// See [`NodeProtocolSet.PIPE`].
-    PipeInfo pipe;
+    6: PipeInfo pipe;
 
     /// See [`NodeProtocolSet.DEBUGLOG`].
-    DebuglogInfo debuglog;
+    7: DebuglogInfo debuglog;
 
     [Deprecated = "devices will be services in the future"]
-    DeviceInfo device;
+    8: DeviceInfo device;
 
     [Deprecated = "tty may not be useful"]
-    TtyInfo tty;
+    9: TtyInfo tty;
 };
 
 /// A node may have multiple supported representations when opening, even though

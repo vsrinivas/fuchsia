@@ -18,9 +18,9 @@ struct ZirconChannelMessage {
 /// Not all Zircon types are supported.
 strict xunion ZirconHandle {
     /// A proxied channel.
-    ChannelHandle channel;
+    1: ChannelHandle channel;
     /// A proxied socket.
-    SocketHandle socket;
+    2: SocketHandle socket;
 };
 
 /// A proxied channel.

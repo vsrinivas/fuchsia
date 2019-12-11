@@ -72,8 +72,8 @@ enum StreamError : uint32 {
 };
 
 xunion AudioCompressedFormat {
-    AudioCompressedFormatAac aac;
-    AudioCompressedFormatSbc sbc;
+    1: AudioCompressedFormatAac aac;
+    2: AudioCompressedFormatSbc sbc;
 };
 
 enum AudioBitrateMode {
@@ -437,8 +437,8 @@ table DecryptedFormat {
 ///
 /// Crypto (encrypted or decrypted) format details.
 xunion CryptoFormat {
-    EncryptedFormat encrypted;
-    DecryptedFormat decrypted;
+    1: EncryptedFormat encrypted;
+    2: DecryptedFormat decrypted;
 };
 
 /// DomainFormat
@@ -507,9 +507,9 @@ struct AacTransportAdts {
 };
 
 xunion AacTransport {
-    AacTransportRaw raw;
-    AacTransportLatm latm;
-    AacTransportAdts adts;
+    1: AacTransportRaw raw;
+    2: AacTransportLatm latm;
+    3: AacTransportAdts adts;
 };
 
 enum AacChannelMode {
@@ -554,8 +554,8 @@ struct AacEncoderSettings {
 /// Settings for encoders that tell them how to encode raw
 /// formats.
 xunion EncoderSettings {
-    SbcEncoderSettings sbc;
-    AacEncoderSettings aac;
+    1: SbcEncoderSettings sbc;
+    2: AacEncoderSettings aac;
 };
 
 /// FormatDetails

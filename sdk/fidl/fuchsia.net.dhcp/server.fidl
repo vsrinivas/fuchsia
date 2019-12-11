@@ -46,28 +46,28 @@ table StaticAssignment {
 xunion Parameter {
     /// The IP addresses to which the server is bound. The vector bound has been
     /// arbitrarily selected as a generous upper limit.
-    vector<fuchsia.net.Ipv4Address>:256 ip_addrs;
+    1: vector<fuchsia.net.Ipv4Address>:256 ip_addrs;
     /// The server's pool of managed addresses. Changing the address pool will not cancel existing
     /// leases because the DHCP protocol does not provide a mechanism for doing so. Administrators
     /// should take care when changing the address pool for a server with active leases.
-    AddressPool address_pool;
+    2: AddressPool address_pool;
     /// The duration of leases issued by dhcpd.
-    LeaseLength lease;
+    3: LeaseLength lease;
     /// The client MAC addresses which the server will issue leases to. By default,
     /// the server will not have a permitted MAC list, in which case it will attempt to
     /// issue a lease to every client which requests one. If permitted_macs has a non-zero length
     /// then the server will only respond to lease requests from clients with a MAC in the list. The
     /// vector bound has been arbitrarily selected as a generous upper limit.
-    vector<fuchsia.net.MacAddress>:256 permitted_macs;
+    4: vector<fuchsia.net.MacAddress>:256 permitted_macs;
     /// Addresses statically assigned to specific hosts or devices. Typically, a network
     /// administrator will statically assign addresses to always-on network
     /// devices which should always have the same IP address, such as network printers. The vector
     /// bound has been arbitrarily selected as a generous upper limit.
-    vector<StaticAssignment>:256 statically_assigned_addrs;
+    5: vector<StaticAssignment>:256 statically_assigned_addrs;
     /// Enables server behavior where the server ARPs an IP address prior to issuing
     /// it in a lease. If the server receives a response, the server will mark the
     /// address as in-use and try again with a different address.
-    bool arp_probe;
+    6: bool arp_probe;
 };
 
 /// The name of the Parameter to be retrieved by Server.GetParameter().

@@ -204,11 +204,11 @@ table WebMessage {
 };
 
 xunion OutgoingTransferable {
-    request<MessagePort> message_port;
+    1: request<MessagePort> message_port;
 };
 
 xunion IncomingTransferable {
-    MessagePort message_port;
+    1: MessagePort message_port;
 };
 
 /// Represents one end of an HTML5 MessageChannel. Can be used to send and exchange Messages with

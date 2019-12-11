@@ -22,9 +22,9 @@ table UsageStateMuted {
 
 /// The state of audio policy enforcement on a stream or set of streams.
 xunion UsageState {
-    UsageStateUnadjusted unadjusted;
-    UsageStateDucked ducked;
-    UsageStateMuted muted;
+    1: UsageStateUnadjusted unadjusted;
+    2: UsageStateDucked ducked;
+    3: UsageStateMuted muted;
 };
 
 /// A protocol for listening to changes to the policy state of an audio usage.

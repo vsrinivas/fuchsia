@@ -63,9 +63,9 @@ struct InspectSource {
 // into Cobalt metrics
 xunion InspectConfig {
     // Inline configuration information.
-    fuchsia.mem.Buffer buffer;
+    1: fuchsia.mem.Buffer buffer;
 
     // Reference to a broker built-in project ID that contains the config data. This is useful
     // for components that do not have access to filesystems.
-    string:100 project_name;
+    2: string:100 project_name;
 };

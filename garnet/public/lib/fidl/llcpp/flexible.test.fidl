@@ -5,8 +5,8 @@
 library llcpptest.flexible.test;
 
 xunion FlexibleXUnion {
-    array<uint8>:30 want_more_than_30_bytes;
-    array<handle?>:4 want_more_than_4_handles;
+    1: array<uint8>:30 want_more_than_30_bytes;
+    2: array<handle?>:4 want_more_than_4_handles;
 };
 
 /// Only one of the fields will be set by the server. This allows
@@ -39,11 +39,11 @@ protocol ReceiveFlexibleEnvelope {
 };
 
 strict xunion StrictBoundedXUnion {
-    vector<uint8>:200 v;
+    1: vector<uint8>:200 v;
 };
 
 strict xunion StrictUnboundedXUnion {
-    vector<uint8> v;
+    1: vector<uint8> v;
 };
 
 // TODO(yifeit): Test strict tables once they are supported in fidlc.

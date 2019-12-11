@@ -56,13 +56,13 @@ table CrashReport {
 /// attachments for a given type of crashes, e.g., a `RuntimeCrashReport` for Javascript.
 xunion SpecificCrashReport {
     /// Intended for arbitrary crashes, e.g., OOM, out-of-disk.
-    GenericCrashReport generic;
+    1: GenericCrashReport generic;
 
     /// Intended for a native exception.
-    NativeCrashReport native;
+    2: NativeCrashReport native;
 
     /// Intended for a Dart exception.
-    RuntimeCrashReport dart;
+    3: RuntimeCrashReport dart;
 };
 
 const uint32 MAX_CRASH_SIGNATURE_LENGTH = 128;

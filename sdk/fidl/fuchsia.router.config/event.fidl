@@ -8,21 +8,21 @@ library fuchsia.router.config;
 /// The event contains only the object that has changed; for example, if a new forwarding rule
 /// is added the event only contains that route, not the full routing table.
 xunion Event {
-    Id deleted_element;    // Set when an element (i.e. route, firewall rule, etc) is deleted.
-    Lif lif;
-    Port port;
-    Route route;
-    SecurityFeatures security_features;
-    PortForwardingRule forwarding_rule;
-    PortTriggerRule trigger_rule;
-    FilterRule filter_rule;
-    Ipv6PinHoleRule ipv6_pin_hole;
-    DmzHost dhz_host;
-    DhcpServerOptions dhcp_options;
-    DhcpReservation dhcp_reservation;
-    DnsResolverConfig dns_resolver;
-    DnsForwarder dns_forwarder;
-    SystemConfig system_config;
+    1: Id deleted_element; // Set when an element (i.e. route, firewall rule, etc) is deleted.
+    2: Lif lif;
+    3: Port port;
+    4: Route route;
+    5: SecurityFeatures security_features;
+    6: PortForwardingRule forwarding_rule;
+    7: PortTriggerRule trigger_rule;
+    8: FilterRule filter_rule;
+    9: Ipv6PinHoleRule ipv6_pin_hole;
+    10: DmzHost dhz_host;
+    11: DhcpServerOptions dhcp_options;
+    12: DhcpReservation dhcp_reservation;
+    13: DnsResolverConfig dns_resolver;
+    14: DnsForwarder dns_forwarder;
+    15: SystemConfig system_config;
 };
 
 // TODO(dpradilla): Need to add  events reflecting network state changes, such as link state

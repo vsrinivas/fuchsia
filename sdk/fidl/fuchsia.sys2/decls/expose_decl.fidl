@@ -9,10 +9,10 @@ using fuchsia.io2;
 /// Declares a capability exposed to either a component's containing realm or to the framework.
 /// For example, a legacy service exposed by the component at runtime.
 xunion ExposeDecl {
-    ExposeServiceDecl service;
-    ExposeServiceProtocolDecl service_protocol;
-    ExposeDirectoryDecl directory;
-    ExposeRunnerDecl runner;
+    1: ExposeServiceDecl service;
+    2: ExposeServiceProtocolDecl service_protocol;
+    3: ExposeDirectoryDecl directory;
+    4: ExposeRunnerDecl runner;
 };
 
 /// Declares a service exposed to a component's containing realm, such as a

@@ -12,10 +12,10 @@ using WorkId = string:MAX_WORK_ID_LENGTH;
 /// Different ways to specify when to schedule a work item for the first time.
 xunion Start {
     /// A non-negative delay to wait before scheduling work.
-    zx.duration delay;
+    1: zx.duration delay;
     /// A fixed point in time to start scheduling work, interpreted like `ZX_CLOCK_MONOTONIC`:
     /// number of nanoseconds since the system was powered on.
-    zx.time monotonic_time;
+    2: zx.time monotonic_time;
 };
 
 /// Parameters for a new piece of work to be scheduled.

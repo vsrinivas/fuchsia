@@ -77,7 +77,7 @@ struct LiteralRule {
 
 /// A rewrite rule, represented as an xunion for future compatibility.
 xunion Rule {
-    LiteralRule literal;
+    1: LiteralRule literal;
 };
 
 /// Manages fuchsia-pkg:// rewrite rules.

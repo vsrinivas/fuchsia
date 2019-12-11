@@ -28,10 +28,10 @@ enum KeyEventPhase {
 ///     "`" or "]" or "<", depending on key layout
 xunion SemanticKey {
     /// For symbolic keys: string representing character typed.
-    string:16 symbol;
+    1: string:16 symbol;
 
     /// For non-symbolic keys: meaning of the key pressed.
-    SemanticKeyAction action;
+    2: SemanticKeyAction action;
 };
 
 /// Direct key mapping from hardware code (USB HID).

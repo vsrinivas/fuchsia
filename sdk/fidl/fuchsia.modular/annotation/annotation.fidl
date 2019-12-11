@@ -50,9 +50,9 @@ using AnnotationKey = string:MAX_ANNOTATION_KEY_LENGTH;
 /// The size of `buffer` is limited to
 /// `MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES` bytes.
 xunion AnnotationValue {
-    string:MAX_ANNOTATION_VALUE_LENGTH text;
-    vector<uint8>:MAX_ANNOTATION_VALUE_LENGTH bytes;
-    fuchsia.mem.Buffer buffer;
+    1: string:MAX_ANNOTATION_VALUE_LENGTH text;
+    2: vector<uint8>:MAX_ANNOTATION_VALUE_LENGTH bytes;
+    3: fuchsia.mem.Buffer buffer;
 };
 
 /// Error returned from calls to Annotate().

@@ -11,12 +11,12 @@ const uint64 MAX_SERVICE_NAME_LENGTH = 255;
 /// Client quic connections send this xunion to servers over quic stream 0.
 xunion PeerMessage {
     /// Request to create a channel to a service exported by this peer.
-    ConnectToService connect_to_service;
+    1: ConnectToService connect_to_service;
     /// Update this peers description on the server.
-    PeerDescription update_node_description;
+    2: PeerDescription update_node_description;
     /// Update information about a link that this peer knows about on the
     /// remote peer.
-    UpdateLinkStatus update_link_status;
+    3: UpdateLinkStatus update_link_status;
 };
 
 /// Overall connection configuration request
@@ -32,7 +32,7 @@ table ConfigResponse {
 /// The ConfigResponse message must have been sent already.
 xunion PeerReply {
     /// Acknowledge an UpdateLinkStatus message
-    Empty update_link_status_ack;
+    1: Empty update_link_status_ack;
 };
 
 struct Empty {

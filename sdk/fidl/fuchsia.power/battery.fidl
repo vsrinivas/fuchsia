@@ -59,13 +59,13 @@ enum HealthStatus {
 /// The time remaining while actively charging or discharging.
 xunion TimeRemaining {
     /// Representation of indeterminate state with zero duration.
-    zx.duration indeterminate;
+    1: zx.duration indeterminate;
 
     /// Remaining battery life while discharging
-    zx.duration battery_life;
+    2: zx.duration battery_life;
 
     /// Remaining time until full while charging
-    zx.duration full_charge;
+    3: zx.duration full_charge;
 };
 
 /// Current battery state information

@@ -20,8 +20,8 @@ struct TextSettings {
 /// Criteria for how to format
 /// the selected Inspect data.
 xunion DisplaySettings {
-    JsonSettings json;
-    TextSettings text;
+    1: JsonSettings json;
+    2: TextSettings text;
 };
 
 // Specify settings for printing Inspect data.
@@ -47,7 +47,7 @@ xunion ReaderSelector {
     /// has access to, returning a potential subset, but not superset,
     /// of what would be returned by selection using only the system
     /// configuration.
-    Selector structured_selector;
+    1: Selector structured_selector;
 
     /// The reader parses the string-based selector
     /// string_selector into a structured selector and then will apply
@@ -55,7 +55,7 @@ xunion ReaderSelector {
     /// data that it has access to, returning a potential subset, but
     /// not a superset of what would be returned by selection using only the
     /// system configuration.
-    string:1024 string_selector;
+    2: string:1024 string_selector;
 };
 
 [Discoverable]

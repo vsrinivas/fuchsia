@@ -40,13 +40,13 @@ table NetworkConfig {
 /// Information used to verify access to a target network.
 xunion Credential {
     /// The network does not use credentials (open networks).
-    Empty none;
+    1: Empty none;
 
     /// Plaintext password (handled as binary data).
-    bytes password;
+    2: bytes password;
 
     /// Hash representation of the network passphrase (handled as binary data).
-    bytes psk;
+    3: bytes psk;
 };
 
 /// Operating band for wlan control request and status updates.

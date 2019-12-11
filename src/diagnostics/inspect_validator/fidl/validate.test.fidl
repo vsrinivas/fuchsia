@@ -50,9 +50,9 @@ enum NumberType : uint8 {
 };
 
 xunion Number {
-    int64 int_t;
-    uint64 uint_t;
-    float64 double_t;
+    1: int64 int_t;
+    2: uint64 uint_t;
+    3: float64 double_t;
 };
 
 /// Tells the puppet to create a property with the given numeric value.
@@ -167,25 +167,25 @@ struct InsertMultiple {
 
 /// Tells the puppet to do something to modify the VMO.
 xunion Action {
-    CreateNode create_node;
-    DeleteNode delete_node;
-    CreateNumericProperty create_numeric_property;
-    CreateBytesProperty create_bytes_property;
-    CreateStringProperty create_string_property;
-    DeleteProperty delete_property;
-    SetNumber set_number;
-    SetString set_string;
-    SetBytes set_bytes;
-    AddNumber add_number;
-    SubtractNumber subtract_number;
-    CreateArrayProperty create_array_property;
-    ArraySet array_set;
-    ArrayAdd array_add;
-    ArraySubtract array_subtract;
-    CreateLinearHistogram create_linear_histogram;
-    CreateExponentialHistogram create_exponential_histogram;
-    Insert insert;
-    InsertMultiple insert_multiple;
+     1: CreateNode create_node;
+     2: DeleteNode delete_node;
+     3: CreateNumericProperty create_numeric_property;
+     4: CreateBytesProperty create_bytes_property;
+     5: CreateStringProperty create_string_property;
+     6: DeleteProperty delete_property;
+     7: SetNumber set_number;
+     8: SetString set_string;
+     9: SetBytes set_bytes;
+    10: AddNumber add_number;
+    11: SubtractNumber subtract_number;
+    12: CreateArrayProperty create_array_property;
+    13: ArraySet array_set;
+    14: ArrayAdd array_add;
+    15: ArraySubtract array_subtract;
+    16: CreateLinearHistogram create_linear_histogram;
+    17: CreateExponentialHistogram create_exponential_histogram;
+    18: Insert insert;
+    19: InsertMultiple insert_multiple;
 };
 
 [Discoverable]

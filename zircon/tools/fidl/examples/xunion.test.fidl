@@ -9,12 +9,12 @@ table t {
 };
 
 xunion xu {
-    int32 i;
-    float32 f;
-    string s;
-    [Selector = "v2"] vector<int64> v;
-    array<int32>:5 a;
-    handle h;
-    handle<channel> c;
-    handle<event> e;
+    1: int32 i;
+    2: float32 f;
+    3: string s;
+    [Selector = "v2"] 4: vector<int64> v;
+    5: array<int32>:5 a;
+    6: handle h;
+    7: handle<channel> c;
+    8: handle<event> e;
 };

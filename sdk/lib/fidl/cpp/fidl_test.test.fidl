@@ -32,7 +32,7 @@ struct Empty {
 };
 
 xunion XUnionContainingEmptyStruct {
-    Empty empty;
+    1: Empty empty;
 };
 
 struct EmptyStructSandwich {
@@ -83,9 +83,9 @@ table ComplexTable {
 };
 
 xunion SampleXUnion {
-    int32 i;
-    SimpleUnion su;
-    SimpleTable st;
+    1: int32 i;
+    2: SimpleUnion su;
+    3: SimpleTable st;
 };
 
 struct SampleXUnionInStruct {

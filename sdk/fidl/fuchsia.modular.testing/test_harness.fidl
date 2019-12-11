@@ -73,9 +73,9 @@ protocol TestHarness {
 
 /// Describes which service to connect to using `ConnectToModularService()`.
 strict xunion ModularService {
-    request<fuchsia.modular.PuppetMaster> puppet_master;
-    request<fuchsia.modular.ComponentContext> component_context;
-    request<fuchsia.modular.AgentContext> agent_context;
+    1: request<fuchsia.modular.PuppetMaster> puppet_master;
+    2: request<fuchsia.modular.ComponentContext> component_context;
+    3: request<fuchsia.modular.AgentContext> agent_context;
 };
 
 /// InterceptedComponent represents an intercepted component's lifecycle.

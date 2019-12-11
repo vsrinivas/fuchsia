@@ -17,13 +17,13 @@ table TableOnlyPrimitives {
 };
 
 xunion UnionOnlyPrimitives {
-    int32 i;
-    bool b;
-    uint16 u;
+    1: int32 i;
+    2: bool b;
+    3: uint16 u;
 };
 
 xunion UnionWithTableStructString {
-    StructOnlyPrimitives struct;
-    TableOnlyPrimitives table;
-    UnionOnlyPrimitives union;
+    1: StructOnlyPrimitives struct;
+    2: TableOnlyPrimitives table;
+    3: UnionOnlyPrimitives union;
 };

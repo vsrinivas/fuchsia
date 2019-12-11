@@ -29,7 +29,6 @@ enum MessagingErrorCode {
     INVALID_TOPIC_NAME = 8;
 };
 
-
 /// From https://github.com/grpc/grpc/blob/master/doc/statuscodes.md.
 enum CoreErrorCode {
     /// Not an error; returned on success.
@@ -119,10 +118,10 @@ struct ServiceError {
 };
 
 xunion ErrorValue {
-    MessagingErrorCode messaging;
-    CoreErrorCode core;
-    uint32 http;
-    ServiceError service;
+    1: MessagingErrorCode messaging;
+    2: CoreErrorCode core;
+    3: uint32 http;
+    4: ServiceError service;
 };
 
 struct Error {

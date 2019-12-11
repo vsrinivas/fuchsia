@@ -58,7 +58,7 @@ union MyExplicitUnion {
     3: int32 y; 4: reserved; };
 
         xunion MyXUnion {  // super annoying!
-      string? s;
+      1: string? s;
  }    ;
 
 xunion MyExplicitXUnion { 4: reserved

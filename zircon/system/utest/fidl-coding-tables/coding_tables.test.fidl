@@ -12,13 +12,13 @@ struct SomeStruct {
 };
 
 xunion MyXUnion {
-    bool foo;
-    int32 bar;
+    1: bool foo;
+    2: int32 bar;
 };
 
 strict xunion MyStrictXUnion {
-    bool foo;
-    int32 bar;
+    1: bool foo;
+    2: int32 bar;
 };
 
 table MyTable {

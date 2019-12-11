@@ -10,11 +10,11 @@ using fuchsia.io2;
 /// may have been offered by the component's containing realm, the component
 /// itself, or one of its other children.
 xunion OfferDecl {
-    OfferServiceDecl service;
-    OfferServiceProtocolDecl service_protocol;
-    OfferDirectoryDecl directory;
-    OfferStorageDecl storage;
-    OfferRunnerDecl runner;
+    1: OfferServiceDecl service;
+    2: OfferServiceProtocolDecl service_protocol;
+    3: OfferDirectoryDecl directory;
+    4: OfferStorageDecl storage;
+    5: OfferRunnerDecl runner;
 };
 
 /// Declares a service offered by a component to one of its children, which may

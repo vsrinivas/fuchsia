@@ -301,16 +301,16 @@ struct SimpleTableArrayStruct {
 };
 
 xunion XUnionWithStruct {
-    StructSize3Alignment1 s;
+    1: StructSize3Alignment1 s;
 };
 
 xunion XUnionWithXUnion {
-    XUnionWithStruct xu;
+    1: XUnionWithStruct xu;
 };
 
 xunion XUnionWithUnions {
-    UnionSize8Aligned4 u1;
-    UnionSize12Aligned4 u2;
+    1: UnionSize8Aligned4 u1;
+    2: UnionSize12Aligned4 u2;
 };
 
 struct Size5Alignment1 {
@@ -403,8 +403,8 @@ table this_is_a_table {
 };
 
 xunion this_is_a_xunion {
-    string s; // 0x3BC5BEBD
-    bool b;
+    1: string s; // 0x3BC5BEBD
+    2: bool b;
 };
 
 table AllTypesTable {
@@ -434,7 +434,7 @@ union UnionAtTheBottom {
 };
 
 xunion XUnionOfUnion {
-    UnionAtTheBottom variant; // 0x5F67105B
+    1: UnionAtTheBottom variant; // 0x5F67105B
 };
 
 table TableOfXUnionThenUnion {
@@ -443,7 +443,7 @@ table TableOfXUnionThenUnion {
 };
 
 xunion XUnionOfTableThenXUnionThenUnion {
-    TableOfXUnionThenUnion variant; //0x5B15934E
+    1: TableOfXUnionThenUnion variant; //0x5B15934E
 };
 
 union UnionOfXUnionThenTableThenXUnionThenUnion {
