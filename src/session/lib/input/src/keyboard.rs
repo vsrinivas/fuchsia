@@ -42,12 +42,17 @@ impl input_device::InputDeviceBinding for KeyboardBinding {
         self.report_sender.clone()
     }
 
-    fn input_reports(&mut self) -> &mut Receiver<fidl_fuchsia_input_report::InputReport> {
+    fn input_report_stream(&mut self) -> &mut Receiver<fidl_fuchsia_input_report::InputReport> {
         return &mut self.report_receiver;
     }
 
-    async fn default_input_device() -> Result<InputDeviceProxy, Error> {
-        input_device::get_device(input_device::InputDeviceType::Keyboard).await
+    async fn any_input_device() -> Result<InputDeviceProxy, Error> {
+        let mut devices = Self::all_devices().await?;
+        devices.pop().ok_or(format_err!("Couldn't find a default keyboard."))
+    }
+
+    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error> {
+        input_device::all_devices(input_device::InputDeviceType::Keyboard).await
     }
 
     async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {

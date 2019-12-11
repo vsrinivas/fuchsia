@@ -43,7 +43,13 @@ pub trait InputDeviceBinding: Sized {
     ///
     /// # Errors
     /// If no default device exists.
-    async fn default_input_device() -> Result<InputDeviceProxy, Error>;
+    async fn any_input_device() -> Result<InputDeviceProxy, Error>;
+
+    /// Retrieves a list of proxies to all devices of type `Self`.
+    ///
+    /// # Errors
+    /// If no devices of the correct type exist.
+    async fn all_devices() -> Result<Vec<InputDeviceProxy>, Error>;
 
     /// Binds the provided input device to a new instance of `Self`.
     ///
@@ -63,7 +69,7 @@ pub trait InputDeviceBinding: Sized {
     async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error>;
 
     /// Returns a stream of input events generated from the bound device.
-    fn input_reports(&mut self) -> &mut Receiver<fidl_fuchsia_input_report::InputReport>;
+    fn input_report_stream(&mut self) -> &mut Receiver<fidl_fuchsia_input_report::InputReport>;
 
     /// Returns the input event stream's sender.
     fn input_report_sender(&self) -> Sender<InputReport>;
@@ -76,7 +82,7 @@ pub trait InputDeviceBinding: Sized {
     /// # Errors
     /// If there was an error finding or binding to the default input device.
     async fn new() -> Result<Self, Error> {
-        let device_proxy: InputDeviceProxy = Self::default_input_device().await?;
+        let device_proxy: InputDeviceProxy = Self::any_input_device().await?;
         let device_binding = Self::bind_device(&device_proxy).await?;
         device_binding.initialize_report_stream(device_proxy);
 
@@ -108,39 +114,31 @@ pub trait InputDeviceBinding: Sized {
     }
 }
 
-/// Returns a proxy to the first InputDevice of type `device_type` in `input_report_path`.
+/// Returns all the devices of the given device type.
 ///
 /// # Parameters
-/// - `device_type`: The type of device to get.
+/// - `device_type`: The type of devices to return.
 ///
 /// # Errors
-/// If there is an error reading `input_report_path`, or no input device of type `device_type`
-/// is found.
-pub async fn get_device(
+/// If the input device directory cannot be read.
+pub async fn all_devices(
     device_type: InputDeviceType,
-) -> Result<fidl_fuchsia_input_report::InputDeviceProxy, Error> {
+) -> Result<Vec<fidl_fuchsia_input_report::InputDeviceProxy>, Error> {
     let input_report_dir = Path::new(INPUT_REPORT_PATH);
     let entries: ReadDir = read_dir(input_report_dir)
-        .with_context(|_| format!("Failed to read {}", INPUT_REPORT_PATH))?;
+        .with_context(|_| format!("Failed to read input report directory {}", INPUT_REPORT_PATH))?;
 
-    for entry in entries {
-        let entry_path: PathBuf = entry?.path();
+    let mut devices: Vec<fidl_fuchsia_input_report::InputDeviceProxy> = vec![];
+    for entry in entries.filter_map(Result::ok) {
+        let entry_path = entry.path();
         if let Ok(input_device) = get_device_from_dir_entry_path(&entry_path) {
             if is_device_type(&input_device, device_type).await {
-                return Ok(input_device);
-                // NOTE: if there are multiple keyboards (e.g., a physical keyboard and a virtual
-                // keyboard connected via something like Chrome Remote Desktop), returning just
-                // one match is an arbitrary decision, and there's no way to know which one is
-                // the "active" keyboard. (In fact, multiple keyboards could be equally active
-                // in some configurations as well.)
-                // This method of selecting the "first" keyboard in the directory is not
-                // practical. But if you call this, you might consider whether to skip
-                // the first keyboard if there is more than one.
+                devices.push(input_device);
             }
         }
     }
 
-    Err(format_err!("No input devices found."))
+    Ok(devices)
 }
 
 #[derive(Clone, Copy)]

@@ -15,6 +15,6 @@ async fn main() -> Result<(), Error> {
 
     let mut mouse: MouseBinding = InputDeviceBinding::new().await?;
 
-    while let Some(_report) = mouse.input_reports().next().await {}
+    while let Some(_report) = mouse.input_report_stream().next().await {}
     Ok(())
 }
