@@ -95,7 +95,7 @@ source_set("lib") {
   ]
 
   deps = [
-    ":accessibility",
+    ":color_transform",
     ":displays",
     ":factory_reset_manager",
     ":renderer_params",
@@ -166,10 +166,10 @@ source_set("factory_reset_manager") {
   ]
 }
 
-source_set("accessibility") {
+source_set("color_transform") {
   sources = [
-    "a11y_settings_watcher.cc",
-    "a11y_settings_watcher.h",
+    "color_transform_handler.cc",
+    "color_transform_handler.h",
   ]
 
   public_deps = [

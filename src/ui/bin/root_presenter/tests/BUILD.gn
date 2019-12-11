@@ -35,8 +35,8 @@ executable("root_presenter_unittests") {
   testonly = true
 
   sources = [
-    "a11y_settings_watcher_unittest.cc",
     "activity_notifier_test.cc",
+    "color_transform_handler_unittest.cc",
     "display_configuration_unittest.cc",
     "factory_reset_manager_test.cc",
     "media_buttons_handler_unittest.cc",
@@ -58,7 +58,7 @@ executable("root_presenter_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/settings",
-    "//src/ui/bin/root_presenter:accessibility",
+    "//src/ui/bin/root_presenter:color_transform",
     "//src/ui/bin/root_presenter:displays",
     "//src/ui/bin/root_presenter:factory_reset_manager",
     "//src/ui/bin/root_presenter:lib",

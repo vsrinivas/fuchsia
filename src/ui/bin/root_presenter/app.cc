@@ -329,17 +329,15 @@ void App::InitializeServices() {
       }
     });
 
-    // Add Accessibility Settings Watcher.
-    // When multiple compositors are supported in future, following code need
-    // to be updated to support that change.
-    a11y_settings_watchers_ = std::make_unique<A11ySettingsWatcher>(
+    // Add Color Transform Handler.
+    color_transform_handler_ = std::make_unique<ColorTransformHandler>(
         *component_context_.get(), compositor_->id(), session_.get());
   }
 }
 
 void App::Reset() {
-  presentations_.clear();           // must be first, holds pointers to services
-  a11y_settings_watchers_.reset();  // session_ ptr may not be valid
+  presentations_.clear();            // must be first, holds pointers to services
+  color_transform_handler_.reset();  // session_ ptr may not be valid
   active_presentation_idx_ = std::numeric_limits<size_t>::max();
   layer_stack_ = nullptr;
   compositor_ = nullptr;

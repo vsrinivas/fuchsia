@@ -25,8 +25,8 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/input/input_device_impl.h"
-#include "src/ui/bin/root_presenter/a11y_settings_watcher.h"
 #include "src/ui/bin/root_presenter/activity_notifier.h"
+#include "src/ui/bin/root_presenter/color_transform_handler.h"
 #include "src/ui/bin/root_presenter/factory_reset_manager.h"
 #include "src/ui/bin/root_presenter/media_buttons_handler.h"
 #include "src/ui/bin/root_presenter/presentation.h"
@@ -153,7 +153,7 @@ class App : public fuchsia::ui::policy::Presenter,
   // support.
   MediaButtonsHandler media_buttons_handler_;
 
-  std::unique_ptr<A11ySettingsWatcher> a11y_settings_watchers_;
+  std::unique_ptr<ColorTransformHandler> color_transform_handler_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

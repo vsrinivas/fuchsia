@@ -19,7 +19,7 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   FakeScenic();
   ~FakeScenic() override;
 
-  //  scenic::Session* session() { return fake_session_.value().GetSession(); }
+  FakeSession* fakeSession() { return &fake_session_; }
 
   void NotImplemented_(const std::string& name) final {}
 
