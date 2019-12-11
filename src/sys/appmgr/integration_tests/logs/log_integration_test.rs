@@ -27,42 +27,44 @@ const OBSERVER_URL: &str = "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cm
 
 #[fasync::run(2)]
 async fn main() {
-    let mut builder = AppBuilder::new(OBSERVER_URL);
-    let observer_dir_req = Arc::clone(builder.directory_request().unwrap());
-    let our_launcher = connect_to_service::<LauncherMarker>().unwrap();
-    let observer = builder.spawn(&our_launcher).unwrap();
+    if false {
+        let mut builder = AppBuilder::new(OBSERVER_URL);
+        let observer_dir_req = Arc::clone(builder.directory_request().unwrap());
+        let our_launcher = connect_to_service::<LauncherMarker>().unwrap();
+        let observer = builder.spawn(&our_launcher).unwrap();
 
-    let mut child_fs = ServiceFs::<ServiceObj<'_, ()>>::new();
-    child_fs.add_proxy_service_to::<LogSinkMarker, _>(observer_dir_req);
-    let observed_env = child_fs.create_salted_nested_environment("appmgr_log_tests").unwrap();
-    let observed_launcher = observed_env.launcher();
-    fasync::spawn(Box::pin(async move {
-        child_fs.collect::<()>().await;
-    }));
+        let mut child_fs = ServiceFs::<ServiceObj<'_, ()>>::new();
+        child_fs.add_proxy_service_to::<LogSinkMarker, _>(observer_dir_req);
+        let observed_env = child_fs.create_salted_nested_environment("appmgr_log_tests").unwrap();
+        let observed_launcher = observed_env.launcher();
+        fasync::spawn(Box::pin(async move {
+            child_fs.collect::<()>().await;
+        }));
 
-    let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
+        let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
 
-    let child = async {
-        AppBuilder::new(CHILD_WITH_LOGS_URL)
-            .spawn(&observed_launcher)
-            .expect("launching child")
-            .wait()
-            .await
-            .expect("child execution");
-    };
+        let child = async {
+            AppBuilder::new(CHILD_WITH_LOGS_URL)
+                .spawn(&observed_launcher)
+                .expect("launching child")
+                .wait()
+                .await
+                .expect("child execution");
+        };
 
-    let validator = validate_log_stream(
-        vec![LogMessage {
-            severity: 0,
-            tags: vec!["log_emitter_for_test".into()],
-            msg: "hello, diagnostics!".into(),
-            pid: 0,
-            tid: 0,
-            time: 0,
-            dropped_logs: 0,
-        }],
-        log_proxy,
-        None,
-    );
-    futures::future::join(child, validator).await;
+        let validator = validate_log_stream(
+            vec![LogMessage {
+                severity: 0,
+                tags: vec!["log_emitter_for_test".into()],
+                msg: "hello, diagnostics!".into(),
+                pid: 0,
+                tid: 0,
+                time: 0,
+                dropped_logs: 0,
+            }],
+            log_proxy,
+            None,
+        );
+        futures::future::join(child, validator).await;
+    }
 }
