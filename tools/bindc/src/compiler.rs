@@ -457,9 +457,9 @@ impl<'a> Compiler<'a> {
                     let rhs_symbol = self.lookup_value(rhs)?;
                     let instruction = match op {
                         ConditionOp::Equals => {
-                            SymbolicInstruction::AbortIfEqual { lhs: lhs_symbol, rhs: rhs_symbol }
+                            SymbolicInstruction::AbortIfNotEqual { lhs: lhs_symbol, rhs: rhs_symbol }
                         }
-                        ConditionOp::NotEquals => SymbolicInstruction::AbortIfNotEqual {
+                        ConditionOp::NotEquals => SymbolicInstruction::AbortIfEqual {
                             lhs: lhs_symbol,
                             rhs: rhs_symbol,
                         },
@@ -906,7 +906,7 @@ mod test {
         assert_eq!(
             compile_statements(program.statements, &symbol_table),
             Ok(vec![
-                SymbolicInstruction::AbortIfEqual {
+                SymbolicInstruction::AbortIfNotEqual {
                     lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
                     rhs: Symbol::NumberValue(42)
                 },
@@ -1002,7 +1002,7 @@ mod test {
                     rhs: Symbol::NumberValue(1),
                     label: 1
                 },
-                SymbolicInstruction::AbortIfEqual {
+                SymbolicInstruction::AbortIfNotEqual {
                     lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
                     rhs: Symbol::NumberValue(2)
                 },
@@ -1013,13 +1013,13 @@ mod test {
                     rhs: Symbol::NumberValue(2),
                     label: 2
                 },
-                SymbolicInstruction::AbortIfEqual {
+                SymbolicInstruction::AbortIfNotEqual {
                     lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
                     rhs: Symbol::NumberValue(3)
                 },
                 SymbolicInstruction::UnconditionalJump { label: 0 },
                 SymbolicInstruction::Label(2),
-                SymbolicInstruction::AbortIfEqual {
+                SymbolicInstruction::AbortIfNotEqual {
                     lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
                     rhs: Symbol::NumberValue(3)
                 },
