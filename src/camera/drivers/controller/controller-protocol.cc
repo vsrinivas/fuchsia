@@ -90,7 +90,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   InternalConfigInfo* internal_config;
   status = GetInternalConfiguration(config_index, &internal_config);
   if (status != ZX_OK) {
-    FX_LOGST(ERROR, TAG) << "Unable to get Internal configuration" << status;
+    FX_PLOGST(ERROR, TAG, status) << "Unable to get Internal configuration";
     return;
   }
 
@@ -112,7 +112,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   // Configure the stream pipeline
   status = pipeline_manager_.ConfigureStreamPipeline(&info, stream);
   if (status != ZX_OK) {
-    FX_LOGST(ERROR, TAG) << "Unable to create Stream Pipeline" << status;
+    FX_PLOGST(ERROR, TAG, status) << "Unable to create Stream Pipeline";
     return;
   }
 

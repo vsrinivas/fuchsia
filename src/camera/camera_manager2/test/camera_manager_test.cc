@@ -114,10 +114,9 @@ TEST_F(CameraManagerTest, CanConnectToStream) {
 
   bool passed = false;
   bool stream_failure = false;
-  // Set an error handler so that if the stream fails, the test can be stopped:
   stream.set_error_handler([&stream_failure](zx_status_t status) {
     stream_failure = true;
-    FX_LOGS(ERROR) << "Stream failed with error " << status;
+    FX_PLOGS(ERROR, status) << "Stream failed with error ";
   });
   stream.events().OnFrameAvailable = [&passed](fuchsia::camera2::FrameAvailableInfo frame) {
     passed = true;

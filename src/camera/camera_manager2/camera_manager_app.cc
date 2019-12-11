@@ -24,11 +24,10 @@ std::unique_ptr<CameraManagerApp> CameraManagerApp::Create(
   FX_LOGS(INFO) << "Starting";
 
   auto camera_manager = std::make_unique<CameraManagerApp>(std::move(context));
-
   zx_status_t status =
       camera_manager->context_->svc()->Connect(camera_manager->sysmem_allocator_.NewRequest());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to connect to sysmem service. status " << status;
+    FX_PLOGS(ERROR, status) << "Failed to connect to sysmem service";
     return nullptr;
   }
 
@@ -36,7 +35,7 @@ std::unique_ptr<CameraManagerApp> CameraManagerApp::Create(
   status = camera_manager->plug_detector_.Start(
       fbl::BindMember(camera_manager.get(), &CameraManagerApp::OnDeviceFound));
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to start plug_detector. status " << status;
+    FX_PLOGS(ERROR, status) << "Failed to start plug_detector";
     return nullptr;
   }
 
@@ -87,11 +86,7 @@ void CameraManagerApp::ConnectToStream(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     fidl::InterfaceRequest<fuchsia::camera2::Stream> client_request,
     fuchsia::camera2::Manager::ConnectToStreamCallback callback) {
-  auto cleanup = fbl::MakeAutoCall([&callback]() {
-    FX_LOGS(ERROR) << "Failed to connect to stream";
-    ::fuchsia::sysmem::ImageFormat_2 ret;
-    callback(ret);
-  });
+  auto cleanup = fbl::MakeAutoCall([&callback]() { callback({}); });
 
   // 1: Check that the camera exists:
   auto device = GetActiveDevice(camera_id);
@@ -107,9 +102,10 @@ void CameraManagerApp::ConnectToStream(
   // 3: Pick a config, stream and image_format_index
   zx_status_t status = device->MatchConstraints(constraints, &config_index, &stream_type);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to match constraints. status: " << status;
+    FX_PLOGS(ERROR, status) << "Failed to match constraints";
     return;
   }
+
   FX_LOGS(INFO) << "Picked config " << config_index << " stream index: " << stream_type
                 << " format index: " << image_format_index;
   // Get configs from the device:
@@ -134,7 +130,7 @@ void CameraManagerApp::ConnectToStream(
   status =
       sysmem_allocator_->BindSharedCollection(std::move(token), sysmem_collection.NewRequest());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to connect to BindSharedCollection.";
+    FX_PLOGS(ERROR, status) << "BindSharedCollection failed";
     return;
   }
 
@@ -142,7 +138,7 @@ void CameraManagerApp::ConnectToStream(
   status = device->CreateStream(config_index, stream_type, image_format_index,
                                 std::move(sysmem_collection), std::move(client_request));
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to connect to create stream.";
+    FX_PLOGS(ERROR, status) << "CreateStream failed";
     return;
   }
 

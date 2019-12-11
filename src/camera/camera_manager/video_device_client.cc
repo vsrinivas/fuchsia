@@ -43,14 +43,16 @@ std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(int dir_fd, const s
   }
 
   zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0u, &local, &remote);
-  FX_CHECK(status == ZX_OK) << "Failed to create channel. status " << status;
+  auto err = zx::channel::create(0u, &local, &remote);
+  if (err) {
+    FX_PLOGS(ERROR, err) << "Failed to create channel";
+    return nullptr;
+  }
 
   fzl::FdioCaller dev(std::move(dev_node));
-  zx_status_t res =
-      fuchsia_hardware_camera_DeviceGetChannel(dev.borrow_channel(), remote.release());
-  if (res != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to obtain channel (res " << res << ")";
+  err = fuchsia_hardware_camera_DeviceGetChannel(dev.borrow_channel(), remote.release());
+  if (err) {
+    FX_PLOGS(ERROR, err) << "Failed to obtain channel";
     return nullptr;
   }
 
@@ -142,7 +144,7 @@ std::unique_ptr<VideoDeviceClient::VideoStream> VideoDeviceClient::VideoStream::
   // since the camera manager does not retain control of the stream channel.
   zx_status_t status = zx::eventpair::create(0, &stream->stream_token_, driver_token);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't create driver token. status: " << status;
+    FX_PLOGS(ERROR, status) << "Couldn't create driver token";
     return nullptr;
   }
   // Create a waiter that waits for the stream_token to be closed.
@@ -161,7 +163,7 @@ std::unique_ptr<VideoDeviceClient::VideoStream> VideoDeviceClient::VideoStream::
 
   status = stream->stream_token_waiter_->Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't begin stream_token_waiter_ wait. status: " << status;
+    FX_PLOGS(ERROR, status) << "Couldn't begin stream_token_waiter_ wait";
     return nullptr;
   }
 

@@ -16,7 +16,7 @@ namespace camera {
 std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
     fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller) {
   if (!controller.is_valid()) {
-    FX_LOGS(ERROR) << __func__ << " Received invalid InterfaceHandle.";
+    FX_LOGS(ERROR) << " Received invalid InterfaceHandle";
     return nullptr;
   }
 
@@ -26,8 +26,9 @@ std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
   // Since the interface is synchronous, just gather info here.
   // TODO(41395): Handle the stalled driver scenario so that one bad device
   // doesn't hose the manager.
-  if (device->GetInitialInfo() != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't get configs or info for device";
+  auto err = device->GetInitialInfo();
+  if (err) {
+    FX_PLOGS(ERROR, err) << "Couldn't get configs or info for device";
     return nullptr;
   }
 
@@ -39,7 +40,7 @@ zx_status_t VideoDeviceClient::CreateStream(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollection> sysmem_collection,
     ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream) {
   if (config_index >= configs_.size()) {
-    FX_LOGS(ERROR) << "Requested config " << config_index << " Does not exist.";
+    FX_LOGS(WARNING) << "Requested config " << config_index << " Does not exist.";
     return ZX_ERR_INVALID_ARGS;
   }
   if (stream_type >= configs_[config_index].stream_configs.size()) {
@@ -54,34 +55,33 @@ zx_status_t VideoDeviceClient::CreateStream(
     return ZX_ERR_INVALID_ARGS;
   }
   if (!sysmem_collection.is_valid()) {
-    FX_LOGS(ERROR) << __func__ << " Received invalid InterfaceHandle for buffer collection.";
+    FX_LOGS(ERROR) << " Received invalid InterfaceHandle for buffer collection.";
     return ZX_ERR_INVALID_ARGS;
   }
   auto sysmem_collection_ptr = sysmem_collection.BindSync();
   auto &stream_config = configs_[config_index].stream_configs[stream_type];
   zx_status_t status = sysmem_collection_ptr->SetConstraints(true, stream_config.constraints);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to connect to SetConstraints.";
+  if (status) {
+    FX_PLOGS(ERROR, status) << "SetContraints failed";
     return status;
   }
 
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
-  status =
-      sysmem_collection_ptr->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  status = sysmem_collection_ptr->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
   if (allocation_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to allocate buffers.";
+    FX_PLOGS(ERROR, allocation_status) << "Failed to allocate buffers.";
     return allocation_status;
   }
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to call WaitForBuffersAllocated.";
+    FX_PLOGS(ERROR, status) << "WaitForBuffersAllocated failed";
     return status;
   }
 
   status = camera_control_->CreateStream(config_index, stream_type, image_format_index,
-                                         std::move(buffer_collection_info), std::move(stream));
+                                      std::move(buffer_collection_info), std::move(stream));
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to call CreateStream.";
+    FX_PLOGS(ERROR, status) << "Failed to call CreateStream.";
     return status;
   }
 
@@ -159,14 +159,13 @@ zx_status_t VideoDeviceClient::MatchConstraints(
 zx_status_t VideoDeviceClient::GetInitialInfo() {
   zx_status_t out_status;
   fidl::VectorPtr<fuchsia::camera2::hal::Config> out_configs;
-  zx_status_t fidl_status = camera_control_->GetConfigs(&out_configs, &out_status);
-
-  if (fidl_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't get Camera Configs. fidl status: " << fidl_status;
-    return fidl_status;
+  auto err = camera_control_->GetConfigs(&out_configs, &out_status);
+  if (err) {
+    FX_PLOGS(ERROR, err) << "Couldn't get Camera Configs";
+    return err;
   }
   if (out_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't get Camera Configs. status: " << out_status;
+    FX_PLOGS(ERROR, out_status) << "Couldn't get Camera Configs";
     return out_status;
   }
   if (!out_configs) {
@@ -210,10 +209,10 @@ zx_status_t VideoDeviceClient::GetInitialInfo() {
   // now we have configs, copy the vector to member variable.
   configs_ = std::move(out_configs.value());
 
-  fidl_status = camera_control_->GetDeviceInfo(&device_info_);
-  if (fidl_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't get device info for device ";
-    return fidl_status;
+  err = camera_control_->GetDeviceInfo(&device_info_);
+  if (err) {
+    FX_PLOGS(ERROR, err) << "Couldn't get device info for device ";
+    return err;
   }
   return ZX_OK;
 }

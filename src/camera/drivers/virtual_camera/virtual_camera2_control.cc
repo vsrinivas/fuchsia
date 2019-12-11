@@ -165,12 +165,12 @@ void VirtualCamera2ControllerImpl::CreateStream(
   // If we fail here we return, which drops the stream request, closing the channel.
   zx_status_t status = buffers_.Init(vmos.data(), buffer_collection.buffer_count);
   if (status != ZX_OK) {
-    FX_LOGST(ERROR, TAG) << "Init buffers failed!" << status;
+    FX_PLOGST(ERROR, TAG, status) << "Init buffers failed!";
     return;
   }
   status = buffers_.MapVmos();
   if (status != ZX_OK) {
-    FX_LOGST(ERROR, TAG) << "Map buffers failed!" << status;
+    FX_PLOGST(ERROR, TAG, status) << "Map buffers failed!";
     return;
   }
 
