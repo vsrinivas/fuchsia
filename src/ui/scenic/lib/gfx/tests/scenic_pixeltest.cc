@@ -1243,6 +1243,102 @@ TEST_F(ScenicPixelTest, DISABLED_ProtectedImage) {
   EXPECT_EQ(scenic::Color({255, 0, 255, 255}), screenshot.ColorAt(.25f, .25f));
 }
 
+TEST_F(ScenicPixelTest, LinearImagePipe) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  test_session->SetUpCamera().SetProjection(0);
+
+  fuchsia::images::ImagePipe2Ptr image_pipe;
+  const uint32_t kImagePipeId = session->next_resource_id();
+  session->Enqueue(scenic::NewCreateImagePipe2Cmd(kImagePipeId, image_pipe.NewRequest()));
+
+  const uint32_t kMaterialId = kImagePipeId + 1;
+  session->Enqueue(scenic::NewCreateMaterialCmd(kMaterialId));
+  session->Enqueue(scenic::NewSetTextureCmd(kMaterialId, kImagePipeId));
+
+  const uint32_t kShapeNodeId = kMaterialId + 1;
+  session->Enqueue(scenic::NewCreateShapeNodeCmd(kShapeNodeId));
+  session->Enqueue(scenic::NewSetMaterialCmd(kShapeNodeId, kMaterialId));
+  const uint32_t kShapeId = kShapeNodeId + 1;
+  session->Enqueue(scenic::NewCreateRectangleCmd(kShapeId, display_width, display_height));
+  session->Enqueue(scenic::NewSetShapeCmd(kShapeNodeId, kShapeId));
+  session->Enqueue(scenic::NewAddChildCmd(test_session->scene.id(), kShapeNodeId));
+  Present(session);
+
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
+  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
+                                            sysmem_allocator.NewRequest().TakeChannel().release());
+  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
+  status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
+  status = local_token->Duplicate(std::numeric_limits<uint32_t>::max(), dup_token.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  status = local_token->Sync();
+  EXPECT_EQ(status, ZX_OK);
+  const uint32_t kBufferId = 1;
+  image_pipe->AddBufferCollection(kBufferId, std::move(dup_token));
+
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
+  status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                  buffer_collection.NewRequest());
+  EXPECT_EQ(status, ZX_OK);
+  fuchsia::sysmem::BufferCollectionConstraints constraints;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
+  constraints.buffer_memory_constraints.ram_domain_supported = true;
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWriteOften;
+
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] =
+      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+  image_constraints.pixel_format.has_format_modifier = true;
+  image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+  image_constraints.required_max_coded_width = 1;
+  image_constraints.required_max_coded_height = 1;
+
+  status = buffer_collection->SetConstraints(true, constraints);
+  EXPECT_EQ(status, ZX_OK);
+  zx_status_t allocation_status = ZX_OK;
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
+  status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  EXPECT_EQ(ZX_OK, allocation_status);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_FALSE(buffer_collection_info.settings.buffer_settings.is_secure);
+  status = buffer_collection->Close();
+  EXPECT_EQ(status, ZX_OK);
+
+  // R=255 G=0 B=255 in BGRA32
+  constexpr uint32_t kColor = 0xffff00ff;
+  uint32_t kPixelSize = 4;
+  EXPECT_EQ(ZX_OK, buffer_collection_info.buffers[0].vmo.write(&kColor, 0, kPixelSize));
+  if (buffer_collection_info.settings.buffer_settings.coherency_domain ==
+      fuchsia::sysmem::CoherencyDomain::RAM) {
+    EXPECT_EQ(ZX_OK, buffer_collection_info.buffers[0].vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0,
+                                                                    kPixelSize, nullptr, 0));
+  }
+  fuchsia::sysmem::ImageFormat_2 image_format = {};
+  image_format.coded_width = 1;
+  image_format.coded_height = 1;
+  const uint32_t kImageId = 1;
+  image_pipe->AddImage(kImageId, kBufferId, 0, image_format);
+  image_pipe->PresentImage(kImageId, zx_clock_get_monotonic(), std::vector<zx::event>(),
+                           std::vector<zx::event>(),
+                           [this](fuchsia::images::PresentationInfo pinfo) { this->QuitLoop(); });
+  // Ensure an image with contents will be presented to the screen.
+  ASSERT_FALSE(RunLoopWithTimeout(zx::sec(15)));
+  Present(session);
+
+  scenic::Screenshot screenshot = TakeScreenshot();
+  ASSERT_FALSE(screenshot.empty());
+  EXPECT_EQ(scenic::Color({255, 0, 255, 255}), screenshot.ColorAt(.25f, .25f));
+}
+
 // This test ensures that detaching a view holder ceases rendering the view. Finer grained
 // functionality is covered in node and view unit tests.
 TEST_F(ScenicPixelTest, ViewHolderDetach) {
