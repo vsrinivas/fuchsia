@@ -4,8 +4,6 @@
 
 library fuchsia.identity.authentication;
 
-using fuchsia.auth;
-
 /// A stateless interface serving an authentication mechanism capable of
 /// supplying pre-key material for use with storage unlock. Clients are
 /// responsible for managing and persisting enrollments. Enrollment
@@ -13,29 +11,23 @@ using fuchsia.auth;
 /// authentication.
 ///
 /// NOTE: This protocol may not be discoverable in the future.
+// TODO(42836): Supply UI for system authentication.
 [Discoverable]
 protocol StorageUnlockMechanism {
     /// Interactively requests the user to authenticate against any of the
     /// provided enrollments.
     ///
     /// `enrollments`      A list of enrollments that will be accepted.
-    /// `ui_context`       A UI Context used to overlay a view in which the user
-    ///                    can interactively authenticate.
     ///
     /// Returns: `attempt` An `AttemptedEvent` where the `enrollment_id` refers
     ///                    to one of the provided enrollments, and the optional
     ///                    `updated_enrollment_data` indicates that the
     ///                    enrollment with said id must also be updated if the
     ///                    attempt is successful.
-    Authenticate(
-        vector<Enrollment>:MAX_ENROLLMENTS enrollments,
-        fuchsia.auth.AuthenticationUIContext ui_context)
+    Authenticate(vector<Enrollment>:MAX_ENROLLMENTS enrollments)
         -> (AttemptedEvent attempt) error Error;
 
     /// Interactively run the enrollment flow for a single enrollment.
-    ///
-    /// `ui_context`       A UI Context used to overlay a view in which the user
-    ///                    can interactively enroll.
     ///
     /// Returns: `enrollment_data` Data associated with this enrollment,
     ///                            to be provided during authentication in
@@ -43,10 +35,7 @@ protocol StorageUnlockMechanism {
     ///          `prekey_material` The the pre-key material that will be
     ///                            produced by successfully authenticating
     ///                            against this enrollment.
-    Enroll(
-        fuchsia.auth.AuthenticationUIContext context_provider)
-        -> (EnrollmentData enrollment_data, PrekeyMaterial prekey_material)
-        error Error;
+    Enroll() -> (EnrollmentData enrollment_data, PrekeyMaterial prekey_material) error Error;
 
     // TODO(dnordstrom): Add method for initilizing authentication event,
     // in order to support user initiated authentication mode.
