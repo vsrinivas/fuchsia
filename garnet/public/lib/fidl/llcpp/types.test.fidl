@@ -24,6 +24,11 @@ xunion TestXUnion {
     2: CopyableStruct copyable;
 };
 
+strict xunion TestStrictXUnion {
+    int32 primitive;
+    CopyableStruct copyable;
+};
+
 /// Verifies that user code can manipulate these bits.
 ///
 /// We use a uint8 since most bitwise operations will cast their operands to

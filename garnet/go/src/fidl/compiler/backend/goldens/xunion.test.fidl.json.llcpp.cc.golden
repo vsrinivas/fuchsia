@@ -8,30 +8,10 @@ namespace llcpp {
 namespace test {
 namespace name {
 
-auto ::llcpp::test::name::StrictSimpleXUnion::which() const -> Tag {
-  switch (ordinal_) {
-  case Tag::kI:
-  case Tag::kF:
-  case Tag::kS:
-    return ordinal_;
-  default:
-    return Tag::kUnknown;
-  }
-}
-
 void ::llcpp::test::name::StrictSimpleXUnion::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(StrictSimpleXUnion) == sizeof(fidl_xunion_t));
   static_assert(offsetof(StrictSimpleXUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(StrictSimpleXUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
-}
-
-auto ::llcpp::test::name::StrictBoundedXUnion::which() const -> Tag {
-  switch (ordinal_) {
-  case Tag::kV:
-    return ordinal_;
-  default:
-    return Tag::kUnknown;
-  }
 }
 
 void ::llcpp::test::name::StrictBoundedXUnion::SizeAndOffsetAssertionHelper() {
@@ -39,12 +19,12 @@ void ::llcpp::test::name::StrictBoundedXUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(StrictBoundedXUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(StrictBoundedXUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
 auto ::llcpp::test::name::OlderSimpleUnion::which() const -> Tag {
+  ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-  case Tag::kI:
-  case Tag::kF:
-    return ordinal_;
+  case Ordinal::kI:
+  case Ordinal::kF:
+    return static_cast<Tag>(ordinal_);
   default:
     return Tag::kUnknown;
   }
@@ -355,13 +335,13 @@ void TestProtocol::SetTransactionHeaderFor::FlexibleXUnionHenceResponseMustBeHea
 void TestProtocol::SetTransactionHeaderFor::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(const ::fidl::DecodedMessage<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
 }
-
 auto ::llcpp::test::name::NewerSimpleUnion::which() const -> Tag {
+  ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-  case Tag::kI:
-  case Tag::kS:
-  case Tag::kV:
-    return ordinal_;
+  case Ordinal::kI:
+  case Ordinal::kS:
+  case Ordinal::kV:
+    return static_cast<Tag>(ordinal_);
   default:
     return Tag::kUnknown;
   }
@@ -372,12 +352,12 @@ void ::llcpp::test::name::NewerSimpleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(NewerSimpleUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(NewerSimpleUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
 auto ::llcpp::test::name::ExplicitXUnion::which() const -> Tag {
+  ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-  case Tag::kI:
-  case Tag::kF:
-    return ordinal_;
+  case Ordinal::kI:
+  case Ordinal::kF:
+    return static_cast<Tag>(ordinal_);
   default:
     return Tag::kUnknown;
   }
@@ -388,11 +368,11 @@ void ::llcpp::test::name::ExplicitXUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(ExplicitXUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof(ExplicitXUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
 auto ::llcpp::test::name::XUnionContainingEmptyStruct::which() const -> Tag {
+  ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-  case Tag::kEmpty:
-    return ordinal_;
+  case Ordinal::kEmpty:
+    return static_cast<Tag>(ordinal_);
   default:
     return Tag::kUnknown;
   }

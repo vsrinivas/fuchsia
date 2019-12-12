@@ -17,18 +17,23 @@ extern "C" const fidl_type_t {{ .V1TableType }};
 //{{ . }}
 {{- end}}
 struct {{ .Name }} {
-  {{ .Name }}() : ordinal_(Tag::kUnknown), envelope_{} {}
+  {{ .Name }}() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   enum class Tag : fidl_xunion_tag_t {
-    kUnknown = 0,
   {{- range .Members }}
     {{ .TagName }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
   {{- end }}
+  {{- if .IsFlexible }}
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  {{- end }}
   };
+
+{{/* TODO(fxb/42311): rename to something more appropriate */}}
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
   {{- range $index, $member := .Members }}
 
-  bool is_{{ .Name }}() const { return ordinal_ == Tag::{{ .TagName }}; }
+  bool is_{{ .Name }}() const { return ordinal_ == Ordinal::{{ .TagName }}; }
 
   static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.LLDecl }}* val) {
     {{ $.Name }} result;
@@ -40,7 +45,7 @@ struct {{ .Name }} {
   //{{ . }}
   {{- end }}
   void set_{{ .Name }}({{ .Type.LLDecl }}* elem) {
-    ordinal_ = Tag::{{ .TagName }};
+    ordinal_ = Ordinal::{{ .TagName }};
     envelope_.data = static_cast<void*>(elem);
   }
 {{ "" }}
@@ -48,16 +53,29 @@ struct {{ .Name }} {
   //{{ . }}
   {{- end }}
   {{ .Type.LLDecl }}& mutable_{{ .Name }}() {
-    ZX_ASSERT(ordinal_ == Tag::{{ .TagName }});
+    ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
     return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data);
   }
   const {{ .Type.LLDecl }}& {{ .Name }}() const {
-    ZX_ASSERT(ordinal_ == Tag::{{ .TagName }});
+    ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
     return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data);
   }
   {{- end }}
 
+  {{- if .IsFlexible }}
+  void* unknownData() const {
+    ZX_ASSERT(which() == Tag::kUnknown);
+    return envelope_.data;
+  }
+  {{- end }}
+  {{- if .IsFlexible }}
   Tag which() const;
+  {{- else }}
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+  {{- end }}
 
   static constexpr const fidl_type_t* Type = &{{ .TableType }};
   static constexpr const fidl_type_t* AltType = &{{ .V1TableType }};
@@ -70,10 +88,16 @@ struct {{ .Name }} {
   static constexpr uint32_t AltMaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
 
  private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+  {{- range .Members }}
+    {{ .TagName }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
+  {{- end }}
+  };
   static void SizeAndOffsetAssertionHelper();
 
   {{- /* All fields are private to maintain standard layout */}}
-  Tag ordinal_;
+  Ordinal ordinal_;
   FIDL_ALIGNDECL
   fidl_envelope_t envelope_;
 };
@@ -81,16 +105,19 @@ struct {{ .Name }} {
 
 {{- define "XUnionDefinition" }}
 
+{{- if .IsFlexible }}
 auto {{ .Namespace }}::{{ .Name }}::which() const -> Tag {
+  ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
   {{- range .Members }}
-  case Tag::{{ .TagName }}:
+  case Ordinal::{{ .TagName }}:
   {{- end }}
-    return ordinal_;
+    return static_cast<Tag>(ordinal_);
   default:
     return Tag::kUnknown;
   }
 }
+{{- end }}
 
 void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
   {{ $union := . -}}

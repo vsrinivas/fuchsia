@@ -43,7 +43,7 @@ class RewriteTransaction : public fidl::Transaction {
   }
 
   void Close(zx_status_t epitaph) override {
-    ZX_ASSERT_MSG(false, "Never called");
+    ZX_ASSERT_MSG(false, "Transaction::Close called with epitaph %d", epitaph);
   }
 
   void Reply(fidl::Message indicator_msg) override {

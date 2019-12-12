@@ -36,15 +36,18 @@ extern "C" const fidl_type_t v1_fuchsia_mem_DataTable;
 // `bytes`) but also need to support arbitrary amounts of data (i.e., which
 // need to be provided out-of-line in a `Buffer`).
 struct Data {
-  Data() : ordinal_(Tag::kUnknown), envelope_{} {}
+  Data() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   enum class Tag : fidl_xunion_tag_t {
-    kUnknown = 0,
     kBytes = 835814982,  // 0x31d18646
     kBuffer = 1925873109,  // 0x72ca7dd5
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  bool is_bytes() const { return ordinal_ == Tag::kBytes; }
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_bytes() const { return ordinal_ == Ordinal::kBytes; }
 
   static Data WithBytes(::fidl::VectorView<uint8_t>* val) {
     Data result;
@@ -54,21 +57,21 @@ struct Data {
 
   // The binary data provided inline in the message.
   void set_bytes(::fidl::VectorView<uint8_t>* elem) {
-    ordinal_ = Tag::kBytes;
+    ordinal_ = Ordinal::kBytes;
     envelope_.data = static_cast<void*>(elem);
   }
 
   // The binary data provided inline in the message.
   ::fidl::VectorView<uint8_t>& mutable_bytes() {
-    ZX_ASSERT(ordinal_ == Tag::kBytes);
+    ZX_ASSERT(ordinal_ == Ordinal::kBytes);
     return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
   }
   const ::fidl::VectorView<uint8_t>& bytes() const {
-    ZX_ASSERT(ordinal_ == Tag::kBytes);
+    ZX_ASSERT(ordinal_ == Ordinal::kBytes);
     return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
   }
 
-  bool is_buffer() const { return ordinal_ == Tag::kBuffer; }
+  bool is_buffer() const { return ordinal_ == Ordinal::kBuffer; }
 
   static Data WithBuffer(::llcpp::fuchsia::mem::Buffer* val) {
     Data result;
@@ -78,20 +81,23 @@ struct Data {
 
   // The binary data provided out-of-line in a `Buffer`.
   void set_buffer(::llcpp::fuchsia::mem::Buffer* elem) {
-    ordinal_ = Tag::kBuffer;
+    ordinal_ = Ordinal::kBuffer;
     envelope_.data = static_cast<void*>(elem);
   }
 
   // The binary data provided out-of-line in a `Buffer`.
   ::llcpp::fuchsia::mem::Buffer& mutable_buffer() {
-    ZX_ASSERT(ordinal_ == Tag::kBuffer);
+    ZX_ASSERT(ordinal_ == Ordinal::kBuffer);
     return *static_cast<::llcpp::fuchsia::mem::Buffer*>(envelope_.data);
   }
   const ::llcpp::fuchsia::mem::Buffer& buffer() const {
-    ZX_ASSERT(ordinal_ == Tag::kBuffer);
+    ZX_ASSERT(ordinal_ == Ordinal::kBuffer);
     return *static_cast<::llcpp::fuchsia::mem::Buffer*>(envelope_.data);
   }
-
+  void* unknownData() const {
+    ZX_ASSERT(which() == Tag::kUnknown);
+    return envelope_.data;
+  }
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &fuchsia_mem_DataTable;
@@ -105,8 +111,13 @@ struct Data {
   static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kBytes = 835814982,  // 0x31d18646
+    kBuffer = 1925873109,  // 0x72ca7dd5
+  };
   static void SizeAndOffsetAssertionHelper();
-  Tag ordinal_;
+  Ordinal ordinal_;
   FIDL_ALIGNDECL
   fidl_envelope_t envelope_;
 };

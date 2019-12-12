@@ -140,13 +140,13 @@ auto ::llcpp::fuchsia::tee::Buffer::Builder::set_size(uint64_t* elem) -> Builder
   }
   return std::move(*this);
 }
-
 auto ::llcpp::fuchsia::tee::Parameter::which() const -> Tag {
+  ZX_ASSERT(!has_invalid_tag());
   switch (ordinal_) {
-  case Tag::kNone:
-  case Tag::kBuffer:
-  case Tag::kValue:
-    return ordinal_;
+  case Ordinal::kNone:
+  case Ordinal::kBuffer:
+  case Ordinal::kValue:
+    return static_cast<Tag>(ordinal_);
   default:
     return Tag::kUnknown;
   }

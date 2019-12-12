@@ -445,16 +445,19 @@ extern "C" const fidl_type_t fuchsia_tee_ParameterTable;
 extern "C" const fidl_type_t v1_fuchsia_tee_ParameterTable;
 
 struct Parameter {
-  Parameter() : ordinal_(Tag::kUnknown), envelope_{} {}
+  Parameter() : ordinal_(Ordinal::Invalid), envelope_{} {}
 
   enum class Tag : fidl_xunion_tag_t {
-    kUnknown = 0,
     kNone = 614881370,  // 0x24a6585a
     kBuffer = 526330047,  // 0x1f5f28bf
     kValue = 483243862,  // 0x1ccdb756
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  bool is_none() const { return ordinal_ == Tag::kNone; }
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_none() const { return ordinal_ == Ordinal::kNone; }
 
   static Parameter WithNone(::llcpp::fuchsia::tee::None* val) {
     Parameter result;
@@ -463,20 +466,20 @@ struct Parameter {
   }
 
   void set_none(::llcpp::fuchsia::tee::None* elem) {
-    ordinal_ = Tag::kNone;
+    ordinal_ = Ordinal::kNone;
     envelope_.data = static_cast<void*>(elem);
   }
 
   ::llcpp::fuchsia::tee::None& mutable_none() {
-    ZX_ASSERT(ordinal_ == Tag::kNone);
+    ZX_ASSERT(ordinal_ == Ordinal::kNone);
     return *static_cast<::llcpp::fuchsia::tee::None*>(envelope_.data);
   }
   const ::llcpp::fuchsia::tee::None& none() const {
-    ZX_ASSERT(ordinal_ == Tag::kNone);
+    ZX_ASSERT(ordinal_ == Ordinal::kNone);
     return *static_cast<::llcpp::fuchsia::tee::None*>(envelope_.data);
   }
 
-  bool is_buffer() const { return ordinal_ == Tag::kBuffer; }
+  bool is_buffer() const { return ordinal_ == Ordinal::kBuffer; }
 
   static Parameter WithBuffer(::llcpp::fuchsia::tee::Buffer* val) {
     Parameter result;
@@ -485,20 +488,20 @@ struct Parameter {
   }
 
   void set_buffer(::llcpp::fuchsia::tee::Buffer* elem) {
-    ordinal_ = Tag::kBuffer;
+    ordinal_ = Ordinal::kBuffer;
     envelope_.data = static_cast<void*>(elem);
   }
 
   ::llcpp::fuchsia::tee::Buffer& mutable_buffer() {
-    ZX_ASSERT(ordinal_ == Tag::kBuffer);
+    ZX_ASSERT(ordinal_ == Ordinal::kBuffer);
     return *static_cast<::llcpp::fuchsia::tee::Buffer*>(envelope_.data);
   }
   const ::llcpp::fuchsia::tee::Buffer& buffer() const {
-    ZX_ASSERT(ordinal_ == Tag::kBuffer);
+    ZX_ASSERT(ordinal_ == Ordinal::kBuffer);
     return *static_cast<::llcpp::fuchsia::tee::Buffer*>(envelope_.data);
   }
 
-  bool is_value() const { return ordinal_ == Tag::kValue; }
+  bool is_value() const { return ordinal_ == Ordinal::kValue; }
 
   static Parameter WithValue(::llcpp::fuchsia::tee::Value* val) {
     Parameter result;
@@ -507,19 +510,22 @@ struct Parameter {
   }
 
   void set_value(::llcpp::fuchsia::tee::Value* elem) {
-    ordinal_ = Tag::kValue;
+    ordinal_ = Ordinal::kValue;
     envelope_.data = static_cast<void*>(elem);
   }
 
   ::llcpp::fuchsia::tee::Value& mutable_value() {
-    ZX_ASSERT(ordinal_ == Tag::kValue);
+    ZX_ASSERT(ordinal_ == Ordinal::kValue);
     return *static_cast<::llcpp::fuchsia::tee::Value*>(envelope_.data);
   }
   const ::llcpp::fuchsia::tee::Value& value() const {
-    ZX_ASSERT(ordinal_ == Tag::kValue);
+    ZX_ASSERT(ordinal_ == Ordinal::kValue);
     return *static_cast<::llcpp::fuchsia::tee::Value*>(envelope_.data);
   }
-
+  void* unknownData() const {
+    ZX_ASSERT(which() == Tag::kUnknown);
+    return envelope_.data;
+  }
   Tag which() const;
 
   static constexpr const fidl_type_t* Type = &fuchsia_tee_ParameterTable;
@@ -533,8 +539,14 @@ struct Parameter {
   static constexpr uint32_t AltMaxOutOfLine = 112;
 
  private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kNone = 614881370,  // 0x24a6585a
+    kBuffer = 526330047,  // 0x1f5f28bf
+    kValue = 483243862,  // 0x1ccdb756
+  };
   static void SizeAndOffsetAssertionHelper();
-  Tag ordinal_;
+  Ordinal ordinal_;
   FIDL_ALIGNDECL
   fidl_envelope_t envelope_;
 };
