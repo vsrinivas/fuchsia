@@ -7,7 +7,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <fbl/auto_lock.h>
 #include <src/lib/fxl/logging.h>
 
 #include "stream_protocol.h"

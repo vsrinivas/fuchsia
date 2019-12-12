@@ -280,8 +280,53 @@ PipelineManager::FindNodeToAttachNewStream(PipelineInfo* info,
 zx_status_t PipelineManager::AppendToExistingGraph(
     PipelineInfo* info, ProcessNode* graph_head,
     fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
-  // TODO(braval): Add support for appending new nodes to existing graph.
-  return ZX_ERR_NOT_SUPPORTED;
+  auto result = FindNodeToAttachNewStream(info, info->node, graph_head);
+  if (result.is_error()) {
+    FX_PLOGS(ERROR, result.error()) << "Failed FindNodeToAttachNewStream";
+    return result.error();
+  }
+
+  // If the next node is an output node, we currently do not support
+  // this. Currently we expect that the clients would request for streams in a fixed order.
+  // TODO(42241): Remove this check when 42241 is fixed.
+  auto next_node_internal = GetNextNodeInPipeline(info, result.value().first);
+  if (!next_node_internal) {
+    FX_PLOGS(ERROR, ZX_ERR_INTERNAL) << "Failed to get next node";
+    return ZX_ERR_INTERNAL;
+  }
+
+  if (next_node_internal->type == NodeType::kOutputStream) {
+    FX_PLOGS(ERROR, ZX_ERR_NOT_SUPPORTED)
+        << "Cannot create this stream due to unexpected ordering of stream create requests";
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto node_to_be_appended = result.value().second;
+  auto output_node_result = CreateGraph(info, result.value().first, node_to_be_appended);
+  if (output_node_result.is_error()) {
+    FX_PLOGS(ERROR, output_node_result.error()) << "Failed to CreateGraph";
+    return output_node_result.error();
+  }
+
+  auto output_node = output_node_result.value();
+  auto status = output_node->client_stream()->Attach(stream.TakeChannel(), [this, info]() {
+    FX_LOGS(INFO) << "Stream client disconnected";
+    OnClientStreamDisconnect(info);
+  });
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to bind output stream";
+    return status;
+  }
+
+  // Push this new requested stream to all pre-existing nodes |configured_streams| vector
+  auto requested_stream_type = info->stream_config->properties.stream_type();
+  auto current_node = node_to_be_appended;
+  while (current_node) {
+    current_node->configured_streams().push_back(requested_stream_type);
+    current_node = current_node->parent_node();
+  }
+
+  return status;
 }
 
 zx_status_t PipelineManager::ConfigureStreamPipeline(

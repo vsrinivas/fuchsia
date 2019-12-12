@@ -413,6 +413,175 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_NO_FATAL_FAILURE(graph_result.value()->client_stream()->Start());
   }
 
+  void TestConfigure_MonitorConfig_MultiStreamFR_BadOrdering() {
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
+    ASSERT_NE(nullptr, stream_config_node);
+
+    PipelineInfo info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+    auto result = GetInputNode(kStreamTypeDS | kStreamTypeML, &info);
+    __UNUSED auto graph_result = GetGraphNode(&info, result.value().get());
+
+    // Change the requested stream type.
+    stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
+    info.stream_config = &stream_config;
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
+
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED,
+              pipeline_manager_->AppendToExistingGraph(&info, result.value().get(), stream));
+  }
+
+  void TestConfigure_MonitorConfig_MultiStreamFR() {
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeFR | kStreamTypeML);
+    EXPECT_NE(nullptr, stream_config_node);
+
+    PipelineInfo info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+    auto result = GetInputNode(kStreamTypeFR | kStreamTypeML, &info);
+    auto graph_result = GetGraphNode(&info, result.value().get());
+
+    // Change the requested stream type.
+    stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
+    info.stream_config = &stream_config;
+
+    auto append_result =
+        pipeline_manager_->FindNodeToAttachNewStream(&info, info.node, result.value().get());
+    EXPECT_EQ(true, append_result.is_ok());
+
+    auto output_node_result = pipeline_manager_->CreateGraph(&info, append_result.value().first,
+                                                             append_result.value().second);
+    EXPECT_EQ(true, output_node_result.is_ok());
+
+    // Push this new requested stream to all pre-existing nodes |configured_streams| vector.
+    auto requested_stream_type = info.stream_config->properties.stream_type();
+    auto current_node = append_result.value().second;
+    while (current_node) {
+      current_node->configured_streams().push_back(requested_stream_type);
+      current_node = current_node->parent_node();
+    }
+
+    auto ml_fr_output = graph_result.value();
+    auto ml_ds_output = output_node_result.value();
+
+    EXPECT_EQ(ml_ds_output->type(), NodeType::kOutputStream);
+    EXPECT_TRUE(HasAllStreams(ml_ds_output->supported_streams(), {kStreamTypeDS | kStreamTypeML}));
+
+    EXPECT_EQ(ml_ds_output->parent_node()->type(), NodeType::kGdc);
+    EXPECT_TRUE(HasAllStreams(ml_ds_output->parent_node()->supported_streams(),
+                              {kStreamTypeDS | kStreamTypeML}));
+
+    EXPECT_EQ(ml_ds_output->parent_node()->parent_node()->type(), NodeType::kInputStream);
+    EXPECT_TRUE(HasAllStreams(ml_ds_output->parent_node()->parent_node()->supported_streams(),
+                              {kStreamTypeDS | kStreamTypeML, kStreamTypeFR | kStreamTypeML}));
+    EXPECT_TRUE(HasAllStreams(ml_ds_output->parent_node()->parent_node()->configured_streams(),
+                              {kStreamTypeDS | kStreamTypeML, kStreamTypeFR | kStreamTypeML}));
+
+    // Test Streaming On for ML FR stream.
+    ml_fr_output->client_stream()->Start();
+    EXPECT_TRUE(ml_fr_output->enabled());
+    EXPECT_TRUE(ml_fr_output->parent_node()->enabled());
+    // Expect the ML DS stream to be disabled.
+    EXPECT_FALSE(ml_ds_output->enabled());
+    EXPECT_FALSE(ml_ds_output->parent_node()->enabled());
+    EXPECT_TRUE(ml_ds_output->parent_node()->parent_node()->enabled());
+
+    // Now test the streaming on for ML DS stream.
+    ml_ds_output->client_stream()->Start();
+    EXPECT_TRUE(ml_ds_output->enabled());
+    EXPECT_TRUE(ml_ds_output->parent_node()->enabled());
+    EXPECT_TRUE(ml_ds_output->parent_node()->parent_node()->enabled());
+    // ML FR should still be streaming.
+    EXPECT_TRUE(ml_fr_output->enabled());
+    EXPECT_TRUE(ml_fr_output->parent_node()->enabled());
+
+    // Stop ML FR stream.
+    ml_fr_output->client_stream()->Stop();
+    EXPECT_FALSE(ml_fr_output->enabled());
+    EXPECT_TRUE(ml_fr_output->parent_node()->enabled());
+    // Expect the ML DS stream to be enabled.
+    EXPECT_TRUE(ml_ds_output->enabled());
+    EXPECT_TRUE(ml_ds_output->parent_node()->enabled());
+    EXPECT_TRUE(ml_ds_output->parent_node()->parent_node()->enabled());
+
+    // Stop ML DS stream.
+    ml_ds_output->client_stream()->Stop();
+    EXPECT_FALSE(ml_ds_output->enabled());
+    EXPECT_FALSE(ml_ds_output->parent_node()->enabled());
+    EXPECT_FALSE(ml_ds_output->parent_node()->parent_node()->enabled());
+    // ML FR should be disabled.
+    EXPECT_FALSE(ml_fr_output->enabled());
+    EXPECT_FALSE(ml_fr_output->parent_node()->enabled());
+  }
+
+  void TestInUseBufferCounts() {
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeFR | kStreamTypeML);
+    EXPECT_NE(nullptr, stream_config_node);
+
+    PipelineInfo info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+    auto result = GetInputNode(kStreamTypeFR | kStreamTypeML, &info);
+    auto graph_result = GetGraphNode(&info, result.value().get());
+
+    // Change the requested stream type.
+    stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
+    info.stream_config = &stream_config;
+
+    auto append_result =
+        pipeline_manager_->FindNodeToAttachNewStream(&info, info.node, result.value().get());
+    EXPECT_EQ(true, append_result.is_ok());
+
+    auto output_node_result = pipeline_manager_->CreateGraph(&info, append_result.value().first,
+                                                             append_result.value().second);
+    EXPECT_EQ(true, output_node_result.is_ok());
+
+    // Push this new requested stream to all pre-existing nodes |configured_streams| vector.
+    auto requested_stream_type = info.stream_config->properties.stream_type();
+    auto current_node = append_result.value().second;
+    while (current_node) {
+      current_node->configured_streams().push_back(requested_stream_type);
+      current_node = current_node->parent_node();
+    }
+
+    auto ml_fr_output = graph_result.value();
+    auto ml_ds_output = output_node_result.value();
+    auto isp_node = ml_fr_output->parent_node();
+
+    auto isp_stream_protocol = std::make_unique<camera::IspStreamProtocol>();
+    fake_isp_.PopulateStreamProtocol(isp_stream_protocol->protocol());
+    isp_node->set_isp_stream_protocol(std::move(isp_stream_protocol));
+
+    // Start streaming both streams.
+    ml_fr_output->client_stream()->Start();
+    ml_ds_output->client_stream()->Start();
+
+    // Disable the output node so we do not client.
+    // This is needed for tests.
+    ml_fr_output->set_enabled(false);
+    ml_ds_output->set_enabled(false);
+
+    // ISP is single parent for two nodes.
+    // Invoke OnFrameAvailable() for the ISP node. Buffer index = 1.
+    EXPECT_NO_FATAL_FAILURE(isp_node->OnFrameAvailable(1));
+
+    EXPECT_EQ(isp_node->get_in_use_buffer_count(1), 1u);
+    EXPECT_EQ(isp_node->get_in_use_buffer_count(0), 0u);
+
+    EXPECT_NO_FATAL_FAILURE(isp_node->OnReleaseFrame(1));
+    EXPECT_EQ(isp_node->get_in_use_buffer_count(1), 0u);
+
+    ml_fr_output->client_stream()->Stop();
+    ml_ds_output->client_stream()->Stop();
+  }
+
   FakeIsp fake_isp_;
   FakeGdc fake_gdc_;
   async::Loop loop_;
@@ -451,6 +620,16 @@ TEST_F(ControllerProtocolTest, TestConfigureVideoConfigStream1) {
 TEST_F(ControllerProtocolTest, TestHasStreamType) { TestHasStreamType(); }
 
 TEST_F(ControllerProtocolTest, TestMultipleStartStreaming) { TestMultipleStartStreaming(); }
+
+TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_MultiStreamFR_BadOrdering) {
+  TestConfigure_MonitorConfig_MultiStreamFR_BadOrdering();
+}
+
+TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_MultiStreamFR) {
+  TestConfigure_MonitorConfig_MultiStreamFR();
+}
+
+TEST_F(ControllerProtocolTest, TestInUseBufferCounts) { TestInUseBufferCounts(); }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS

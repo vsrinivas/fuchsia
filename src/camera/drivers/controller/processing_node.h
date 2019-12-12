@@ -12,6 +12,7 @@
 
 #include <ddktl/protocol/gdc.h>
 #include <ddktl/protocol/isp.h>
+#include <fbl/auto_lock.h>
 
 #include "configs/sherlock/internal-config.h"
 #include "fbl/macros.h"
@@ -113,6 +114,7 @@ class ProcessNode {
     client_stream_ = std::move(client_stream);
   }
   void set_task_index(uint32_t task_index) { hw_accelerator_task_index_ = task_index; }
+  void set_enabled(bool enabled) { enabled_ = enabled; }
 
   std::unique_ptr<camera::StreamImpl>& client_stream() { return client_stream_; }
   std::unique_ptr<camera::IspStreamProtocol>& isp_stream_protocol() { return isp_stream_protocol_; }
@@ -137,8 +139,17 @@ class ProcessNode {
 
   ProcessNode* parent_node() { return parent_node_; }
 
-  std::vector<fuchsia::camera2::CameraStreamType> configured_streams() {
+  std::vector<fuchsia::camera2::CameraStreamType>& configured_streams() {
     return configured_streams_;
+  }
+
+  // For tests.
+  uint32_t get_in_use_buffer_count(uint32_t buffer_index) {
+    {
+      fbl::AutoLock al(&in_use_buffer_lock_);
+      ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
+      return in_use_buffer_count_[buffer_index];
+    }
   }
 
   std::vector<fuchsia::camera2::CameraStreamType> supported_streams() { return supported_streams_; }

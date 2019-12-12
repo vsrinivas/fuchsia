@@ -24,8 +24,16 @@ class FakeIsp {
     return {ZX_PROTOCOL_ISP, *reinterpret_cast<const fake_ddk::Protocol*>(&isp_protocol_)};
   }
 
+  void PopulateStreamProtocol(output_stream_protocol_t* out_s) {
+    out_s->ctx = this;
+    out_s->ops->start = Start;
+    out_s->ops->stop = Stop;
+    out_s->ops->release_frame = ReleaseFrame;
+  }
+
   zx_status_t Start() { return ZX_OK; }
   zx_status_t Stop() { return ZX_OK; }
+  zx_status_t ReleaseFrame(uint32_t buffer_index) { return ZX_OK; }
 
   // |ZX_PROTOCOL_ISP|
   zx_status_t IspCreateOutputStream2(const buffer_collection_info_2_t* buffer_collection,
@@ -36,6 +44,7 @@ class FakeIsp {
     out_s->ctx = this;
     out_s->ops->start = Start;
     out_s->ops->stop = Stop;
+    out_s->ops->release_frame = ReleaseFrame;
     return ZX_OK;
   }
 
@@ -51,6 +60,7 @@ class FakeIsp {
   }
   static zx_status_t Start(void* ctx) { return static_cast<FakeIsp*>(ctx)->Start(); }
   static zx_status_t Stop(void* ctx) { return static_cast<FakeIsp*>(ctx)->Stop(); }
+  static zx_status_t ReleaseFrame(void* ctx, uint32_t index) { return static_cast<FakeIsp*>(ctx)->ReleaseFrame(index); }
 
   const output_stream_callback_t* callback_;
   isp_protocol_t isp_protocol_ = {};
