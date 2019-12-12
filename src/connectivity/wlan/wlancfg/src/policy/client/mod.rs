@@ -11,7 +11,7 @@
 ///!       get closed.
 ///!
 use {
-    crate::{fuse_pending::FusePending, known_ess_store::KnownEssStore},
+    crate::{config_manager::SavedNetworksManager, fuse_pending::FusePending},
     failure::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
@@ -97,19 +97,18 @@ type InternalMsgSink = mpsc::UnboundedSender<InternalMsg>;
 
 // This number was chosen arbitrarily.
 const MAX_CONCURRENT_LISTENERS: usize = 1000;
-const PSK_HEX_STRING_LENGTH: usize = 64;
 
 type ClientRequests = fidl::endpoints::ServerEnd<fidl_policy::ClientControllerMarker>;
-type EssStorePtr = Arc<KnownEssStore>;
+type SavedNetworksPtr = Arc<SavedNetworksManager>;
 type ClientPtr = Arc<Mutex<Client>>;
 
 pub fn spawn_provider_server(
     client: ClientPtr,
     update_sender: listener::MessageSender,
-    ess_store: EssStorePtr,
+    saved_networks: SavedNetworksPtr,
     requests: fidl_policy::ClientProviderRequestStream,
 ) {
-    fasync::spawn(serve_provider_requests(client, update_sender, ess_store, requests));
+    fasync::spawn(serve_provider_requests(client, update_sender, saved_networks, requests));
 }
 
 pub fn spawn_listener_server(
@@ -125,7 +124,7 @@ pub fn spawn_listener_server(
 async fn serve_provider_requests(
     client: ClientPtr,
     update_sender: listener::MessageSender,
-    ess_store: EssStorePtr,
+    saved_networks: SavedNetworksPtr,
     mut requests: fidl_policy::ClientProviderRequestStream,
 ) {
     let (internal_messages_sink, mut internal_messages_stream) = mpsc::unbounded();
@@ -146,7 +145,7 @@ async fn serve_provider_requests(
                         Arc::clone(&client),
                         internal_messages_sink.clone(),
                         update_sender.clone(),
-                        Arc::clone(&ess_store),
+                        Arc::clone(&saved_networks),
                         req
                     );
                     controller_reqs.push(fut);
@@ -190,13 +189,13 @@ async fn handle_provider_request(
     client: ClientPtr,
     internal_msg_sink: InternalMsgSink,
     update_sender: listener::MessageSender,
-    ess_store: EssStorePtr,
+    saved_networks: SavedNetworksPtr,
     req: fidl_policy::ClientProviderRequest,
 ) -> Result<(), fidl::Error> {
     match req {
         fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
             register_listener(update_sender, updates.into_proxy()?);
-            handle_client_requests(client, internal_msg_sink, ess_store, requests).await?;
+            handle_client_requests(client, internal_msg_sink, saved_networks, requests).await?;
             Ok(())
         }
     }
@@ -206,7 +205,7 @@ async fn handle_provider_request(
 async fn handle_client_requests(
     client: ClientPtr,
     internal_msg_sink: InternalMsgSink,
-    ess_store: EssStorePtr,
+    saved_networks: SavedNetworksPtr,
     requests: ClientRequests,
 ) -> Result<(), fidl::Error> {
     let mut request_stream = requests.into_stream()?;
@@ -215,7 +214,7 @@ async fn handle_client_requests(
             fidl_policy::ClientControllerRequest::Connect { id, responder, .. } => {
                 match handle_client_request_connect(
                     Arc::clone(&client),
-                    Arc::clone(&ess_store),
+                    Arc::clone(&saved_networks),
                     &id,
                 )
                 .await
@@ -272,15 +271,16 @@ async fn handle_sme_connect_response(
 /// The network's configuration must have been stored before issuing a connect request.
 async fn handle_client_request_connect(
     client: ClientPtr,
-    ess_store: EssStorePtr,
+    saved_networks: SavedNetworksPtr,
     network: &fidl_policy::NetworkIdentifier,
 ) -> Result<fidl_sme::ConnectTransactionProxy, RequestError> {
-    let network_config = ess_store.lookup(&network.ssid[..]).ok_or_else(|| {
-        RequestError::new().with_cause(format_err!(
-            "error network not found: {}",
-            String::from_utf8_lossy(&network.ssid)
-        ))
-    })?;
+    let network_config =
+        saved_networks.lookup((network.ssid.clone(), network.type_)).pop().ok_or_else(|| {
+            RequestError::new().with_cause(format_err!(
+                "error network not found: {}",
+                String::from_utf8_lossy(&network.ssid)
+            ))
+        })?;
 
     // TODO(hahnr): Discuss whether every request should verify the existence of a Client, or
     // whether that should be handled by either, closing the currently active controller if a
@@ -291,11 +291,7 @@ async fn handle_client_request_connect(
         RequestError::new().with_cause(format_err!("error no active client interface"))
     })?;
 
-    // TODO(hahnr): The credential type from the given NetworkIdentifier is currently ignored.
-    // Instead the credentials are derived from the saved |network_config| which is looked-up.
-    // There has to be a decision how the case of two different credential types should be handled.
-
-    let credential = credential_from_bytes(network_config.password);
+    let credential = sme_credential_from_policy(&network_config.credential);
     let mut request = fidl_sme::ConnectRequest {
         ssid: network.ssid.to_vec(),
         credential,
@@ -313,6 +309,15 @@ async fn handle_client_request_connect(
     client_sme.connect(&mut request, Some(remote))?;
 
     Ok(local)
+}
+
+// convert from policy fidl Credential to sme fidl Credential
+pub fn sme_credential_from_policy(cred: &fidl_policy::Credential) -> fidl_sme::Credential {
+    match cred {
+        fidl_policy::Credential::Password(pwd) => fidl_sme::Credential::Password(pwd.clone()),
+        fidl_policy::Credential::Psk(psk) => fidl_sme::Credential::Psk(psk.clone()),
+        _ => fidl_sme::Credential::None(fidl_sme::Empty {}),
+    }
 }
 
 /// Handle inbound requests to register an additional ClientStateUpdates listener.
@@ -337,21 +342,6 @@ fn register_listener(
     let _ignored = update_sender.unbounded_send(listener::Message::NewListener(listener));
 }
 
-/// Returns:
-/// - an Open-Credential instance iff `bytes` is empty,
-/// - a PSK-Credential instance iff `bytes` holds exactly 64 bytes,
-/// - a Password-Credential in all other cases.
-/// In the PSK case, the provided bytes must represent the PSK in hex format.
-/// Note: This function is of temporary nature until Wlancfg's ESS-Store supports richer
-/// credential types beyond plain passwords.
-fn credential_from_bytes(bytes: Vec<u8>) -> fidl_sme::Credential {
-    match bytes.len() {
-        0 => fidl_sme::Credential::None(fidl_sme::Empty),
-        PSK_HEX_STRING_LENGTH => fidl_sme::Credential::Psk(bytes),
-        _ => fidl_sme::Credential::Password(bytes),
-    }
-}
-
 /// Rejects a ClientProvider request by sending a corresponding Epitaph via the |requests| and
 /// |updates| channels.
 fn reject_provider_request(req: fidl_policy::ClientProviderRequest) -> Result<(), fidl::Error> {
@@ -368,7 +358,7 @@ fn reject_provider_request(req: fidl_policy::ClientProviderRequest) -> Result<()
 mod tests {
     use {
         super::*,
-        crate::known_ess_store::KnownEss,
+        crate::config_manager::{credential_from_bytes, SavedNetworksManager},
         fidl::{
             endpoints::{create_proxy, create_request_stream},
             Error,
@@ -380,18 +370,21 @@ mod tests {
     };
 
     /// Creates an ESS Store holding entries for protected and unprotected networks.
-    fn create_ess_store(path: &Path) -> EssStorePtr {
-        let ess_store = Arc::new(
-            KnownEssStore::new_with_paths(path.join("store.json"), path.join("store.json.tmp"))
+    fn create_network_store(path: &Path) -> SavedNetworksPtr {
+        let saved_networks = Arc::new(
+            SavedNetworksManager::new_with_paths(path.join("store.json"))
                 .expect("Failed to create a KnownEssStore"),
         );
-        ess_store
-            .store(b"foobar".to_vec(), KnownEss { password: vec![] })
+        saved_networks
+            .store(b"foobar".to_vec(), credential_from_bytes(vec![]))
             .expect("error saving network");
-        ess_store
-            .store(b"foobar-protected".to_vec(), KnownEss { password: b"supersecure".to_vec() })
+        saved_networks
+            .store(b"foobar-protected".to_vec(), credential_from_bytes(b"supersecure".to_vec()))
             .expect("error saving network");
-        ess_store
+        saved_networks
+            .store(b"foobar-psk".to_vec(), credential_from_bytes(vec![64; 64]))
+            .expect("error saving network foobar-psk");
+        saved_networks
     }
 
     /// Requests a new ClientController from the given ClientProvider.
@@ -421,7 +414,7 @@ mod tests {
     fn connect_request_unknown_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
+        let saved_networks = create_network_store(temp_dir.path());
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -429,7 +422,7 @@ mod tests {
 
         let (client, _sme_stream) = create_client();
         let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -458,7 +451,7 @@ mod tests {
     fn connect_request_open_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
+        let saved_networks = create_network_store(temp_dir.path());
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -466,7 +459,7 @@ mod tests {
 
         let (client, mut sme_stream) = create_client();
         let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -505,7 +498,7 @@ mod tests {
     fn connect_request_protected_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
+        let saved_networks = create_network_store(temp_dir.path());
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -513,7 +506,7 @@ mod tests {
 
         let (update_sender, _listener_updates) = mpsc::unbounded();
         let (client, mut sme_stream) = create_client();
-        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -526,7 +519,7 @@ mod tests {
         // Issue connect request.
         let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
             ssid: b"foobar-protected".to_vec(),
-            type_: fidl_policy::SecurityType::None,
+            type_: fidl_policy::SecurityType::Wpa2,
         });
         pin_mut!(connect_fut);
 
@@ -550,10 +543,58 @@ mod tests {
     }
 
     #[test]
+    fn connect_request_protected_psk_network() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let saved_networks = create_network_store(temp_dir.path());
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (update_sender, _listener_updates) = mpsc::unbounded();
+        let (client, mut sme_stream) = create_client();
+        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Issue connect request.
+        let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
+            ssid: b"foobar-psk".to_vec(),
+            type_: fidl_policy::SecurityType::Wpa2,
+        });
+        pin_mut!(connect_fut);
+
+        // Process connect request and verify connect response.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
+        );
+
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
+                req, ..
+            }))) => {
+                assert_eq!(b"foobar-psk", &req.ssid[..]);
+                assert_eq!(fidl_sme::Credential::Psk([64;64].to_vec()), req.credential);
+                // TODO(hahnr): Send connection response.
+            }
+        );
+    }
+
+    #[test]
     fn connect_request_success() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
+        let saved_networks = create_network_store(temp_dir.path());
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -561,7 +602,7 @@ mod tests {
 
         let (client, mut sme_stream) = create_client();
         let (update_sender, mut listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -622,7 +663,7 @@ mod tests {
     fn connect_request_failure() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
+        let saved_networks = create_network_store(temp_dir.path());
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -630,7 +671,7 @@ mod tests {
 
         let (client, mut sme_stream) = create_client();
         let (update_sender, mut listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -676,7 +717,7 @@ mod tests {
     fn register_update_listener() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
+        let saved_networks = create_network_store(temp_dir.path());
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -684,7 +725,7 @@ mod tests {
 
         let (client, _sme_stream) = create_client();
         let (update_sender, mut listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -731,7 +772,7 @@ mod tests {
     fn multiple_controllers_write_attempt() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
+        let saved_networks = create_network_store(temp_dir.path());
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -739,7 +780,7 @@ mod tests {
 
         let (client, _sme_stream) = create_client();
         let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -808,7 +849,7 @@ mod tests {
     fn multiple_controllers_epitaph() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
+        let saved_networks = create_network_store(temp_dir.path());
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -816,7 +857,7 @@ mod tests {
 
         let (client, _sme_stream) = create_client();
         let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -851,7 +892,7 @@ mod tests {
     fn no_client_interface() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
+        let saved_networks = create_network_store(temp_dir.path());
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -859,7 +900,7 @@ mod tests {
 
         let client = Arc::new(Mutex::new(Client::new_empty()));
         let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, ess_store, requests);
+        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -882,13 +923,5 @@ mod tests {
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
         );
-    }
-
-    #[test]
-    fn test_credential_from_bytes() {
-        assert_eq!(credential_from_bytes(vec![1]), fidl_sme::Credential::Password(vec![1]));
-        assert_eq!(credential_from_bytes(vec![2; 63]), fidl_sme::Credential::Password(vec![2; 63]));
-        assert_eq!(credential_from_bytes(vec![2; 64]), fidl_sme::Credential::Psk(vec![2; 64]));
-        assert_eq!(credential_from_bytes(vec![]), fidl_sme::Credential::None(fidl_sme::Empty));
     }
 }

@@ -84,6 +84,8 @@ impl KnownEssStore {
         Ok(KnownEssStore { storage_path, tmp_storage_path, ess_by_ssid })
     }
 
+    // still used in the below tests
+    #[cfg(test)]
     pub fn lookup(&self, ssid: &[u8]) -> Option<KnownEss> {
         self.ess_by_ssid.lock().get(ssid).map(Clone::clone)
     }
@@ -102,6 +104,8 @@ impl KnownEssStore {
         self.write(guard)
     }
 
+    //still used in the below tests
+    #[cfg(test)]
     pub fn known_network_count(&self) -> usize {
         self.ess_by_ssid.lock().len()
     }

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
 use {
     crate::{
         known_ess_store::EssJsonRead,
@@ -76,8 +75,7 @@ impl SavedNetworksManager {
             },
         };
 
-        let mut saved_networks =
-            HashMap::<NetworkIdentifier, Vec<NetworkConfig>>::new();
+        let mut saved_networks = HashMap::<NetworkIdentifier, Vec<NetworkConfig>>::new();
         for config in config_list {
             // Choose appropriate unknown values based on password and how known
             // ESS have been used for connections.

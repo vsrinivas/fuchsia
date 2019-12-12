@@ -19,6 +19,10 @@ const CURRENT_VERSION: u16 = 1;
 /// The maximum number of denied connection reasons we will store for one network at a time.
 /// For now this number is chosen arbitrarily.
 const NUM_DENY_REASONS: usize = 10;
+/// constants for the constraints on valid credential values
+const MIN_PASSWORD_LEN: usize = 8;
+const MAX_PASSWORD_LEN: usize = 63;
+const PSK_LEN: usize = 64;
 
 /// The network identifier is the SSID and security policy of the network, and it is used to
 /// distinguish networks. It mirrors the NetworkIdentifier in fidl_fuchsia_wlan_policy.
@@ -149,12 +153,12 @@ fn check_config_errors(
         }
         Wpa | Wpa2 | Wpa3 => match &credential {
             fidl_policy::Credential::Password(pwd) => {
-                if pwd.clone().len() < 8 || pwd.clone().len() > 63 {
+                if pwd.clone().len() < MIN_PASSWORD_LEN || pwd.clone().len() > MAX_PASSWORD_LEN {
                     return Some(SaveError::GeneralError);
                 }
             }
             fidl_policy::Credential::Psk(psk) => {
-                if psk.clone().len() != 64 {
+                if psk.clone().len() != PSK_LEN {
                     return Some(SaveError::GeneralError);
                 }
             }

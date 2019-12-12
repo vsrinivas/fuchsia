@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{client, config::Config, known_ess_store::KnownEssStore, shim};
+use crate::{
+    client, config::Config, config_manager::SavedNetworksManager, known_ess_store::KnownEssStore,
+    shim,
+};
 
 use failure::{bail, format_err};
 use fidl::endpoints::create_proxy;
@@ -25,6 +28,7 @@ pub async fn handle_event(
     listener: &Listener,
     evt: DeviceWatcherEvent,
     ess_store: Arc<KnownEssStore>,
+    saved_networks: Arc<SavedNetworksManager>,
 ) {
     println!("wlancfg got event: {:?}", evt);
     match evt {
@@ -37,7 +41,7 @@ pub async fn handle_event(
             println!("wlancfg: phy removed: {}", phy_id);
         }
         DeviceWatcherEvent::OnIfaceAdded { iface_id } => {
-            if let Err(e) = on_iface_added(listener, iface_id, ess_store).await {
+            if let Err(e) = on_iface_added(listener, iface_id, ess_store, saved_networks).await {
                 println!("wlancfg: error adding new iface {}: {}", iface_id, e);
             }
         }
@@ -77,7 +81,10 @@ async fn on_phy_added(listener: &Listener, phy_id: u16) -> Result<(), failure::E
 
 async fn query_phy(listener: &Listener, phy_id: u16) -> Result<wlan::PhyInfo, failure::Error> {
     let req = &mut wlan_service::QueryPhyRequest { phy_id };
-    let (status, query_resp) = listener.proxy.query_phy(req).await
+    let (status, query_resp) = listener
+        .proxy
+        .query_phy(req)
+        .await
         .map_err(|e| format_err!("failed to send a query request: {:?}", e))?;
     if let Err(e) = zx::Status::ok(status) {
         bail!("query_phy returned an error: {:?}", e);
@@ -92,18 +99,21 @@ async fn on_iface_added(
     listener: &Listener,
     iface_id: u16,
     ess_store: Arc<KnownEssStore>,
+    saved_networks: Arc<SavedNetworksManager>,
 ) -> Result<(), failure::Error> {
     let service = listener.proxy.clone();
     let legacy_client = listener.legacy_client.clone();
     let (sme, remote) =
         create_proxy().map_err(|e| format_err!("Failed to create a FIDL channel: {}", e))?;
 
-    let status = service.get_client_sme(iface_id, remote).await
+    let status = service
+        .get_client_sme(iface_id, remote)
+        .await
         .map_err(|e| format_err!("Failed to get client SME: {}", e))?;
 
     zx::Status::ok(status).map_err(|e| format_err!("GetClientSme returned an error: {}", e))?;
 
-    let (c, fut) = client::new_client(iface_id, sme.clone(), ess_store);
+    let (c, fut) = client::new_client(iface_id, sme.clone(), ess_store, saved_networks);
     fasync::spawn(fut);
     let lc = shim::Client { service, client: c, sme, iface_id };
     legacy_client.set_if_empty(lc);
