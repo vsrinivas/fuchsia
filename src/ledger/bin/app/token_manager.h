@@ -6,8 +6,7 @@
 #define SRC_LEDGER_BIN_APP_TOKEN_MANAGER_H_
 
 #include <lib/fit/function.h>
-
-#include <trace/event.h>
+#include <lib/trace/event.h>
 
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/app/types.h"

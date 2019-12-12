@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
@@ -23,8 +24,6 @@
 #include <optional>
 #include <set>
 #include <utility>
-
-#include <trace/event.h>
 
 #include "lib/async/cpp/task.h"
 #include "src/ledger/bin/cobalt/cobalt.h"

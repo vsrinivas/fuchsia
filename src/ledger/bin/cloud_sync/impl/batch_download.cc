@@ -5,10 +5,9 @@
 #include "src/ledger/bin/cloud_sync/impl/batch_download.h"
 
 #include <lib/fit/function.h>
+#include <lib/trace/event.h>
 
 #include <utility>
-
-#include <trace/event.h>
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/ledger/bin/storage/public/types.h"

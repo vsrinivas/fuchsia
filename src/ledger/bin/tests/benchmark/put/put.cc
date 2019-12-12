@@ -6,13 +6,12 @@
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
 
 #include <iostream>
 #include <memory>
 #include <set>
-
-#include <trace/event.h>
 
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"

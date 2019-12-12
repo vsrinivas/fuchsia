@@ -6,10 +6,9 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <lib/trace/event.h>
 
 #include <utility>
-
-#include <trace/event.h>
 
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"

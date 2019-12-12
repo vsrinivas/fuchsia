@@ -7,12 +7,11 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
 
 #include <iostream>
 #include <vector>
-
-#include <trace/event.h>
 
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"

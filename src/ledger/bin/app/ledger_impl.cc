@@ -6,13 +6,12 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/optional.h>
+#include <lib/trace/event.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
 #include <string>
 #include <utility>
-
-#include <trace/event.h>
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/page_impl.h"

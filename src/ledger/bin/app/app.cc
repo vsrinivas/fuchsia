@@ -9,13 +9,12 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/trace-provider/provider.h>
 #include <unistd.h>
 #include <zircon/device/vfs.h>
 
 #include <memory>
 #include <utility>
-
-#include <trace-provider/provider.h>
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/flags.h"

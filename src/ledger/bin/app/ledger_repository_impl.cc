@@ -5,10 +5,9 @@
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/trace/event.h>
 
 #include <set>
-
-#include <trace/event.h>
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/db_view_factory.h"

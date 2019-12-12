@@ -7,9 +7,8 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
+#include <lib/trace/event.h>
 #include <lib/zx/time.h>
-
-#include <trace/event.h>
 
 #include "fuchsia/ledger/cpp/fidl.h"
 #include "src/ledger/bin/storage/public/types.h"

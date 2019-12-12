@@ -10,13 +10,12 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
+#include <lib/trace/event.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
-
-#include <trace/event.h>
 
 #include "src/ledger/bin/app/background_sync_manager.h"
 #include "src/ledger/bin/app/constants.h"

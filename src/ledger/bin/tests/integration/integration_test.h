@@ -8,10 +8,9 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/trace-provider/provider.h>
 
 #include <functional>
-
-#include <trace-provider/provider.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl/include/types.h"

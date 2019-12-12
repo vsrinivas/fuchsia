@@ -10,10 +10,9 @@
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
 #include <lib/fit/scope.h>
+#include <lib/trace/event.h>
 
 #include <mutex>
-
-#include <trace/event.h>
 
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"

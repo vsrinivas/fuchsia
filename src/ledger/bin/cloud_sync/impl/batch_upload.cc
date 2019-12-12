@@ -5,12 +5,11 @@
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 
 #include <lib/fit/function.h>
+#include <lib/trace/event.h>
 
 #include <algorithm>
 #include <set>
 #include <utility>
-
-#include <trace/event.h>
 
 #include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
 #include "src/ledger/bin/cloud_sync/impl/status.h"

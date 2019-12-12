@@ -6,13 +6,12 @@
 
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
+#include <lib/trace/event.h>
 #include <zircon/errors.h>
 
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <trace/event.h>
 
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/constants.h"
