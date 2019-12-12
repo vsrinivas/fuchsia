@@ -61,6 +61,7 @@ impl Iterator for Enumeration {
         let mut len: i32 = 0;
         let mut status = common::Error::OK_CODE;
         // Requires that self.rep is a valid pointer to a sys::UEnumeration.
+        assert!(self.rep.is_null() == false, "nullness: {:?}", self.rep.is_null());
         let raw = unsafe { versioned_function!(uenum_next)(self.rep, &mut len, &mut status) };
         if raw.is_null() {
             // No more elements to iterate over.
@@ -138,6 +139,7 @@ pub fn open_time_zones() -> Result<crate::Enumeration, common::Error> {
         versioned_function!(ucal_openTimeZones)(&mut status)
     };
     common::Error::ok_or_warning(status)?;
+    assert!(!raw_enum.is_null(), "status: {:?}", status);
     Ok(crate::Enumeration { raw: None, rep: raw_enum })
 }
 

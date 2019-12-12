@@ -240,6 +240,9 @@ extern "C" {
     ) -> *const UChar;
 }
 extern "C" {
+    pub fn u_cleanup_64();
+}
+extern "C" {
     pub fn uenum_next_64(
         en: *mut UEnumeration,
         resultLength: *mut i32,

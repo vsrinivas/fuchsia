@@ -19,6 +19,12 @@ pub struct UDataMemory {
     buf: Vec<u8>,
 }
 
+impl Drop for UDataMemory {
+    fn drop(&mut self) {
+        unsafe { versioned_function!(u_cleanup)() };
+    }
+}
+
 impl TryFrom<Vec<u8>> for crate::UDataMemory {
     type Error = common::Error;
     /// Makes a UDataMemory out of a buffer.

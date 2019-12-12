@@ -164,6 +164,7 @@ impl Loader {
 
 #[cfg(test)]
 mod tests {
+    use rust_icu_uenum as uenum;
     use super::*;
 
     // [START loader_example]
@@ -171,7 +172,8 @@ mod tests {
     fn initialization() {
         let _loader = Loader::new().expect("loader is constructed with success");
         let _loader2 = Loader::new().expect("loader is just fine with a second initialization");
-
+        let tz: String = uenum::open_time_zones().unwrap().take(1).map(|e| e.unwrap()).collect();
+        assert_eq!(tz, "ACT");
         // The library will be cleaned up after the last of the loaders goes out of scope.
     }
 
@@ -180,6 +182,22 @@ mod tests {
         let _loader = Loader::new().expect("loader is constructed with success");
         let _loader2 = Loader::new().expect("loader is just fine with a second initialization");
         let _loader3 = _loader2.clone();
+        let tz: String = uenum::open_time_zones().unwrap().take(1).map(|e| e.unwrap()).collect();
+        assert_eq!(tz, "ACT");
+    }
+
+    #[test]
+    fn two_initializations_in_a_row() {
+        {
+          let _loader = Loader::new().expect("loader is constructed with success");
+          let tz: String = uenum::open_time_zones().unwrap().take(1).map(|e| e.unwrap()).collect();
+          assert_eq!(tz, "ACT");
+        }
+        {
+          let _loader2 = Loader::new().expect("loader is just fine with a second initialization");
+          let tz: String = uenum::open_time_zones().unwrap().take(1).map(|e| e.unwrap()).collect();
+          assert_eq!(tz, "ACT");
+        }
     }
     // [START loader_example]
 }
