@@ -96,7 +96,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/device_settings:device_settings_manager", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/pkg_cache", "//garnet/bin/pkg_cache:config", "//garnet/bin/pkg_ctl", "//garnet/bin/pkg_resolver", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/system-update-checker", "//garnet/bin/system-update-checker:system-update-checker-config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/bin/timezone", "//garnet/go/src/amber", "//garnet/go/src/amber:config", "//garnet/go/src/amber:pkgfs", "//garnet/lib/root_ssl_certificates", "//src/diagnostics/archivist:with_default_config", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network/netstack", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/pkg/bin/update:update-bin", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/device_settings:device_settings_manager", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/pkg_cache", "//garnet/bin/pkg_cache:config", "//garnet/bin/pkg_ctl", "//garnet/bin/pkg_resolver", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/system-update-checker", "//garnet/bin/system-update-checker:system-update-checker-config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/bin/timezone", "//garnet/go/src/amber", "//garnet/go/src/amber:config", "//garnet/go/src/amber:pkgfs", "//garnet/lib/root_ssl_certificates", "//src/diagnostics/archivist:with_default_config", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network/netstack", "//src/connectivity/lowpan/service", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/pkg/bin/update:update-bin", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -104,7 +104,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:19
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/device_settings:device_settings_manager", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/pkg_cache", "//garnet/bin/pkg_cache:config", "//garnet/bin/pkg_ctl", "//garnet/bin/pkg_resolver", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/system-update-checker", "//garnet/bin/system-update-checker:system-update-checker-config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/bin/timezone", "//garnet/go/src/amber", "//garnet/go/src/amber:config", "//garnet/go/src/amber:pkgfs", "//garnet/lib/root_ssl_certificates", "//src/diagnostics/archivist:with_default_config", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network/netstack", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/pkg/bin/update:update-bin", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/device_settings:device_settings_manager", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/pkg_cache", "//garnet/bin/pkg_cache:config", "//garnet/bin/pkg_ctl", "//garnet/bin/pkg_resolver", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/system-update-checker", "//garnet/bin/system-update-checker:system-update-checker-config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/bin/timezone", "//garnet/go/src/amber", "//garnet/go/src/amber:config", "//garnet/go/src/amber:pkgfs", "//garnet/lib/root_ssl_certificates", "//src/diagnostics/archivist:with_default_config", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network/netstack", "//src/connectivity/lowpan/service", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/pkg/bin/update:update-bin", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -290,7 +290,7 @@ From //build/images/BUILD.gn:534
 
 **Current value (from the default):** `false`
 
-From //garnet/examples/media/BUILD.gn:10
+From //src/media/codec/examples/BUILD.gn:10
 
 ### build_info_board
 Board configuration of the current build
@@ -366,7 +366,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:81
+From //products/core.gni:82
 
 **Overridden from the default:** `[]`
 
@@ -374,7 +374,7 @@ From //BUILD.gn:27
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/core.gni:81
+From //products/core.gni:82
 
 **Overridden from the default:** `[]`
 
@@ -469,13 +469,13 @@ From //build/config/BUILD.gn:10
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/3e4d6a9b7f39387a3dc2feac51094b1d9beba8e1/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/c6153f0b6e72d0ca187bc6d00009232bd49770d0/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/3e4d6a9b7f39387a3dc2feac51094b1d9beba8e1/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/c6153f0b6e72d0ca187bc6d00009232bd49770d0/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -557,7 +557,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/d98fddb18d52e1219f556eb8f788cfed9daff8e5/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/a288cf1924244775199042be050294f85841aaeb/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -572,7 +572,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/d98fddb18d52e1219f556eb8f788cfed9daff8e5/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/a288cf1924244775199042be050294f85841aaeb/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -622,7 +622,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/d98fddb18d52e1219f556eb8f788cfed9daff8e5/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/a288cf1924244775199042be050294f85841aaeb/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -822,7 +822,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:537
+From //build/config/BUILDCONFIG.gn:558
 
 ### fastboot_product
 
@@ -843,20 +843,20 @@ From //build/fidl/wireformat.gni:9
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/d98fddb18d52e1219f556eb8f788cfed9daff8e5/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/a288cf1924244775199042be050294f85841aaeb/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/d98fddb18d52e1219f556eb8f788cfed9daff8e5/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/a288cf1924244775199042be050294f85841aaeb/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/d98fddb18d52e1219f556eb8f788cfed9daff8e5/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/a288cf1924244775199042be050294f85841aaeb/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1099,7 +1099,7 @@ From //build/config/BUILDCONFIG.gn:25
 
 ### kernel_cmdline_args
 List of kernel command line arguments to bake into the boot image.
-See also //docs/reference/kernel/kernel_cmdline.md and
+See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
 **Current value for `target_cpu = "arm64"`:** `["kernel.enable-debugging-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
@@ -1239,7 +1239,7 @@ Each element of the list is one variant, which is a scope defining:
 }
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
   toolchain_args = {
-  asan_default_options = "alloc_dealloc_mismatch=0"
+  asan_default_options = "alloc_dealloc_mismatch=0:allocator_may_return_null=1:check_malloc_usable_size=0:detect_leaks=0:detect_odr_violation=0:malloc_context_size=128:max_uar_stack_size_log=16:print_scariness=1:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0:clear_shadow_mmap_threshold=0"
   use_scudo = false
 }
 }, {
@@ -1248,7 +1248,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:468
+From //build/config/BUILDCONFIG.gn:471
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1524,7 +1524,7 @@ Default app id will always return no update.
 
 **Current value (from the default):** `"fuchsia-test:no-update"`
 
-From //src/sys/pkg/bin/omaha-client/BUILD.gn:105
+From //src/sys/pkg/bin/omaha-client/BUILD.gn:106
 
 ### output_breakpad_syms
 Sets if we should output breakpad symbols for Fuchsia binaries.
@@ -1583,20 +1583,20 @@ is only for use during local development.
 From //src/identity/bin/account_manager/BUILD.gn:12
 
 ### rust_cap_lints
-Sets whether Rust compiler warnings cause errors or not.
-"deny" will make all warnings into errors, "warn" presents them as warnings, while "allow" will
-ignore warnings
+Sets the maximum lint level.
+"deny" will make all warnings into errors, "warn" preserves them as warnings, and "allow" will
+ignore warnings.
 
 **Current value (from the default):** `"deny"`
 
-From //build/rust/config.gni:28
+From //build/rust/config.gni:31
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:20
+From //build/rust/config.gni:23
 
 ### rust_override_lto
 Overrides the LTO setting for all Rust builds, regardless of
@@ -1605,7 +1605,7 @@ Valid values are "none", "thin", and "fat".
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:38
+From //build/rust/config.gni:41
 
 ### rust_override_opt
 Overrides the optimization level for all Rust builds, regardless of
@@ -1614,22 +1614,22 @@ Valid values are 0-3, o, and z.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:33
+From //build/rust/config.gni:36
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
 
 **Current value (from the default):** `"fuchsia"`
 
-From //build/rust/config.gni:23
+From //build/rust/config.gni:26
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
 This can be used to test custom Rust toolchains.
 
-**Current value (from the default):** `"//prebuilt/third_party/rust/linux-x64/bin"`
+**Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64/bin"`
 
-From //build/rust/config.gni:17
+From //build/rust/config.gni:20
 
 ### scenic_display_frame_number
 Draws the current frame number in the top-left corner.
@@ -1716,9 +1716,9 @@ The selector matches if and only if all of its criteria match.
 If none of these is defined, then the selector always matches.
 
 The first selector in the list to match wins and then the rest of
-the list is ignored.  So construct more complex rules by using a
-"blacklist" selector with `variant=false` before a catch-all or
-"whitelist" selector that names a variant.
+the list is ignored.  To construct more complex rules, use a blocklist
+selector with `variant=false` before a catch-all default variant, or
+a list of specific variants before a catch-all false variant.
 
 Each "[strings]" criterion is a list of strings, and the criterion
 is satisfied if any of the strings matches against the candidate string.
@@ -1748,7 +1748,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:739
+From //build/config/BUILDCONFIG.gn:763
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1757,7 +1757,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:744
+From //build/config/BUILDCONFIG.gn:768
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1771,7 +1771,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 [{
   name = "host_asan"
   select_variant = [{
-  dir = ["//third_party/yasm", "//third_party/vboot_reference", "//garnet/tools/vboot_reference"]
+  dir = ["//third_party/yasm", "//third_party/vboot_reference", "//garnet/tools/vboot_reference", "//src/fonts/font_info"]
   host = true
   variant = "asan_no_detect_leaks"
 }, {
@@ -1781,7 +1781,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:583
+From //build/config/BUILDCONFIG.gn:604
 
 ### signed_image
 
@@ -1996,7 +1996,7 @@ From //build/config/BUILDCONFIG.gn:100
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:557
+From //build/config/BUILDCONFIG.gn:578
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2008,7 +2008,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:83
+From //products/core.gni:84
 
 **Overridden from the default:** `[]`
 
@@ -2016,7 +2016,7 @@ From //BUILD.gn:35
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:83
+From //products/core.gni:84
 
 **Overridden from the default:** `[]`
 
@@ -2067,7 +2067,7 @@ From //build/config/lto/config.gni:7
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/9bbeb05f86e64d522c8fa91f8fa6ad6c35e636de/src/intel/vulkan/BUILD.gn#25)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/decb4346f3c7424ac1e7448f4f0bcddb5b66b124/src/intel/vulkan/BUILD.gn#25)
 
 ### use_nnbd
 Whether to use the NNBD fork of the SDK core libraries.
@@ -2208,7 +2208,7 @@ From //build/config/fuchsia/zbi.gni:11
 
 ### zedboot_cmdline_args
 List of kernel command line arguments to bake into the Zedboot image.
-See //docs/zircon/kernel_cmdline.md and
+See //docs/reference/kernel_cmdline.md and
 [`zedboot_devmgr_config`](#zedboot_devmgr_config).
 
 **Current value (from the default):** `[]`
@@ -2276,7 +2276,7 @@ From //BUILD.gn:84
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:223
+From //build/config/fuchsia/BUILD.gn:226
 
 ### zircon_b_partition
 
