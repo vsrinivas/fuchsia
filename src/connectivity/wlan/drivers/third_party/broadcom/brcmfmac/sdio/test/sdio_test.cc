@@ -245,29 +245,7 @@ TEST(Sdio, RamRw) {
    fifth line is the second piece, middle three are txns made in
    brcmf_sdiod_set_backplane_window()
    */
-  EXPECT_OK(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00007fe0, nullptr, 0x00000040));
-  sdio1.VerifyAndClear();
-}
-
-// This test case verifies that whether an error will returned when transfer size is
-// not divisible by 4.
-TEST(Sdio, AlignSize) {
-  brcmf_sdio_dev sdio_dev = {};
-  sdio_func func1 = {};
-  pthread_mutex_init(&func1.lock, nullptr);
-
-  MockSdio sdio1;
-
-  sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
-  sdio_dev.func1 = &func1;
-
-  sdio1.ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x00008000, 0x00000020, true, true));
-
-  // 4-byte-aligned size should success.
-  EXPECT_OK(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00000000, nullptr, 0x00000020));
-  // non-4-byte-aligned size should fail and return ZX_ERR_INVALID_ARGS.
-  EXPECT_EQ(brcmf_sdiod_ramrw(&sdio_dev, true, 0x00000000, nullptr, 0x00000021),
-            ZX_ERR_INVALID_ARGS);
+  EXPECT_OK(brcmf_sdiod_ramrw(&sdio_dev, true, 0x000007fe0, nullptr, 0x00000040));
   sdio1.VerifyAndClear();
 }
 

@@ -932,7 +932,7 @@ static bool brcmf_fws_tim_update(struct brcmf_fws_info* fws, struct brcmf_fws_ma
     /* bitmap info will automatically be attached to that packet */
     len = BRCMF_FWS_TYPE_PKTTAG_LEN + 2 + BRCMF_FWS_TYPE_SEQ_LEN +
           BRCMF_FWS_TYPE_PENDING_TRAFFIC_BMP_LEN + 2 + 4 + fws->drvr->hdrlen;
-    netbuf = brcmu_pkt_buf_get_netbuf((len + 3) & ~3);
+    netbuf = brcmu_pkt_buf_get_netbuf(len);
     if (netbuf == NULL) {
       return false;
     }
