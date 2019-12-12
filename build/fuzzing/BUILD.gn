@@ -5,3 +5,7 @@
 config("fuzzing_build_mode_unsafe_for_production") {
   defines = [ "FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION" ]
 }
+
+config("fuzzing_verbose_logging") {
+  defines = [ "FUZZING_VERBOSE_LOGGING" ]
+}

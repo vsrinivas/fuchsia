@@ -11,22 +11,30 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <stdio.h>
-
 using namespace ::fuzzing;
 using namespace ::test::name;
+
+// Add //build/fuzzing:fuzzing_verbose_logging to a GN target's configs to enable.
+#if FUZZING_VERBOSE_LOGGING
+#include <stdio.h>
+#define xprintf(fmt...) printf(fmt)
+#else
+#define xprintf(fmt...) \
+  do {                  \
+  } while (0)
+#endif
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   static ::async::Loop* loop_ = nullptr;
 
   if (loop_ == nullptr) {
-    printf("Starting client async loop\n");
+    xprintf("Starting client async loop\n");
     loop_ = new ::async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
   }
 
   // Must fuzz some interface; first two bytes used to select protocol and method.
   if (size_ < 2) {
-    printf("Early exit: Input too small: %zu\n", size_);
+    xprintf("Early exit: Input too small: %zu\n", size_);
     return 0;
   }
   size_ -= 2;
@@ -34,33 +42,33 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   uint8_t iface_selector_ = data_[0];
   uint8_t iface_selection_ = iface_selector_ % 1;
 
-  printf("Starting fuzzer with %zu bytes of data\n", size_);
+  xprintf("Starting fuzzer with %zu bytes of data\n", size_);
 
   // Hardcode mutually-exclusive if blocks that selects exactly one interface.
   zx_status_t status_;
   if (iface_selection_ == 0) {
 #if !defined(PROTOCOL_test_name_Interface)
     // Selected interface from FIDL file that is not part of this fuzzer.
-    printf("Early exit: Chose disabled protocol: test_name_Interface\n");
+    xprintf("Early exit: Chose disabled protocol: test_name_Interface\n");
     return 0;
 #else
 
     ::fidl::InterfacePtr<::test::name::Interface> iface_;
 
-    printf("Starting test_name_Interface service\n");
+    xprintf("Starting test_name_Interface service\n");
     ::fidl::fuzzing::Fuzzer<::test::name::Interface> fuzzer_(loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {
-      printf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
+      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
       return 0;
     }
 
     if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      printf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n", status_);
       return 0;
     }
 
     if ((status_ = fuzzer_.BindClient(&iface_, loop_->dispatcher())) != ZX_OK) {
-      printf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n", status_);
       return 0;
     }
 
@@ -71,50 +79,50 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     if (method_selection_ == 0) {
 #if !(ALL_METHODS || defined(METHOD_Method))
       // Selected method from interface that is not part of this fuzzer.
-      printf("Early exit: Chose disabled method: Method\n");
+      xprintf("Early exit: Chose disabled method: Method\n");
       return 0;
 #else
       const size_t min_size_ = ;
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
 
-      printf("Invoking method test_name_Interface.Method\n");
+      xprintf("Invoking method test_name_Interface.Method\n");
       iface_->Method();
 #endif
     }
     if (method_selection_ == 1) {
 #if !(ALL_METHODS || defined(METHOD_OnEvent))
       // Selected method from interface that is not part of this fuzzer.
-      printf("Early exit: Chose disabled method: OnEvent\n");
+      xprintf("Early exit: Chose disabled method: OnEvent\n");
       return 0;
 #else
       const size_t min_size_ = ;
 
       // Must have enough bytes for input.
       if (size_ < min_size_) {
-        printf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
+        xprintf("Early exit: Input size too small: %zu < %zu\n", size_, min_size_);
         return 0;
       }
 
       const size_t slack_size_ = size_ - min_size_;
       const size_t slack_size_per_param = slack_size_ / 0;
 
-      printf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
+      xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
 
-      printf("Invoking method test_name_Interface.OnEvent\n");
+      xprintf("Invoking method test_name_Interface.OnEvent\n");
       iface_->OnEvent();
 #endif
     }
@@ -122,14 +130,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     loop_->RunUntilIdle();
 
     if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
-      printf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
+      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
     }
 
     iface_.Unbind();
 #endif
   }
 
-  printf("Fuzzer stopped!\n");
+  xprintf("Fuzzer stopped!\n");
 
   return 0;
 }
