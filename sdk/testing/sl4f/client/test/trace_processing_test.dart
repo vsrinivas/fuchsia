@@ -468,4 +468,12 @@ void main(List<String> args) {
     expect(results[0].values[0], _closeTo(1234.00));
     expect(results[0].values[1], _closeTo(5678.00));
   });
+
+  test('Input latency metric', () async {
+    final model = createModelFromJsonString(inputLatencyTraceJsonString);
+    final metricsSpec = MetricsSpec(name: 'input_latency');
+    final results = inputLatencyMetricsProcessor(model, metricsSpec);
+
+    expect(computeMean(results[0].values), _closeTo(77.39932275));
+  });
 }

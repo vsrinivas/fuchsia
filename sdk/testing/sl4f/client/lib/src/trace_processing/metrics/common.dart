@@ -96,19 +96,14 @@ List<Event> getFollowingEvents(Event event) {
   return result;
 }
 
-/// Find the first "VSYNC" event that [vsyncCallback] is connected to.
+/// Find the first "VSYNC" event that [durationEvent] is connected to.
 ///
 /// Returns [null] if no "VSYNC" is found.
-DurationEvent findFollowingVsync(DurationEvent vsyncCallback) {
-  if (!(vsyncCallback.category == 'flutter' &&
-      vsyncCallback.name == 'vsync callback')) {
-    throw ArgumentError(
-        'Unexpected name and category for vsync callback event: '
-        '(${vsyncCallback.category}, ${vsyncCallback.name})');
-  }
-  final followingEvents = getFollowingEvents(vsyncCallback);
-  final followingVsyncs = filterEventsTyped<DurationEvent>(followingEvents,
-      category: 'gfx', name: 'Display::Controller::OnDisplayVsync');
+DurationEvent findFollowingVsync(DurationEvent durationEvent) {
+  final followingVsyncs = filterEventsTyped<DurationEvent>(
+      getFollowingEvents(durationEvent),
+      category: 'gfx',
+      name: 'Display::Controller::OnDisplayVsync');
   if (followingVsyncs.isEmpty) {
     return null;
   }

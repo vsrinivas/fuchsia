@@ -7,6 +7,7 @@ import 'package:meta/meta.dart';
 import 'metrics/cpu_metrics.dart';
 import 'metrics/drm_fps.dart';
 import 'metrics/flutter_frame_stats.dart';
+import 'metrics/input_latency.dart';
 import 'metrics/memory_metrics.dart';
 import 'metrics/scenic_frame_stats.dart';
 import 'metrics/temperature_metrics.dart';
@@ -41,6 +42,7 @@ const defaultMetricsRegistry = {
   'cpu': cpuMetricsProcessor,
   'drm_fps': drmFpsMetricsProcessor,
   'flutter_frame_stats': flutterFrameStatsMetricsProcessor,
+  'input_latency': inputLatencyMetricsProcessor,
   'memory': memoryMetricsProcessor,
   'scenic_frame_stats': scenicFrameStatsMetricsProcessor,
   'temperature': temperatureMetricsProcessor,
