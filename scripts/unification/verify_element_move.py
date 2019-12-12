@@ -95,11 +95,15 @@ class FileDataSet(object):
         self.files = {}
 
     def add(self, name, file):
+        if name == 'lib/libdriver.so':
+            # libdriver is a complicated hydra whose many heads we don't need to
+            # worry about here.
+            return
         if name in self.files and file != self.files[name]:
             print('Error: different file under path ' + name + ':')
-            print(' - ' + file)
-            print(' - ' + self.files[name])
-            return False
+            print(' - ' + str(file))
+            print(' - ' + str(self.files[name]))
+            return
         self.files[name] = file
 
     def filenames(self):
@@ -180,13 +184,12 @@ def compare_summaries(reference, current):
         # Missing and new files.
         if reference_names != current_names:
             type_match = False
-            print(('-------[ ' + type + ' ]').ljust(32, '-'))
             removed = reference_names - current_names
             if removed:
                 print('Elements that have been removed:')
                 for element in removed:
                     print(' - ' + element)
-            added = reference_names - current_names
+            added = current_names - reference_names
             if added:
                 print('Elements that have been added:')
                 for element in added:
