@@ -84,9 +84,8 @@ class ManagedContainer {
    public:
     Element() {}
     virtual ~Element() {}
-
-   private:
-    FXL_DISALLOW_COPY_AND_ASSIGN(Element);
+    Element(const Element&) = delete;
+    Element& operator=(const Element&) = delete;
   };
 
   template <typename A>
