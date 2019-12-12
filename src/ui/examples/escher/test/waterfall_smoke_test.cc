@@ -10,7 +10,7 @@
 static constexpr uint32_t kFramebufferWidth = 1024;
 static constexpr uint32_t kFramebufferHeight = 1024;
 
-VK_TEST(WaterfallDemo, SmokeTest) {
+VK_TEST(WaterfallDemo, DISABLED_SmokeTest) {
   WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
   auto escher = demo.escher();
 
@@ -35,14 +35,14 @@ VK_TEST(WaterfallDemo, SmokeTest) {
   EXPECT_TRUE(frame_done);
 }
 
-VK_TEST(WaterfallDemo, OffscreenBenchmark) {
+VK_TEST(WaterfallDemo, DISABLED_OffscreenBenchmark) {
   WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
   constexpr size_t kNumFrames = 20;
   Demo::RunOffscreenBenchmark(&demo, kFramebufferWidth, kFramebufferHeight,
                               vk::Format::eB8G8R8A8Unorm, kNumFrames);
 }
 
-VK_TEST(WaterfallDemo, KeyPresses) {
+VK_TEST(WaterfallDemo, DISABLED_KeyPresses) {
   WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
   escher::PaperRenderer* renderer = demo.renderer();
 
