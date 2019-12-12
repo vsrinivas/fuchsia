@@ -602,9 +602,10 @@ Platforms GetPlatform() {
   strncpy(board_name, result.value().name.data(), sysinfo::SYSINFO_BOARD_NAME_LEN);
   board_name[sysinfo::SYSINFO_BOARD_NAME_LEN] = '\0';
 
-  if (strstr(result.value().name.data(), "pc") ||
-      strstr(result.value().name.data(), "chromebook-x64") ||
-      strstr(result.value().name.data(), "Eve") || strstr(result.value().name.data(), "Nocturne")) {
+  if (!strcmp(result.value().name.data(), "pc") ||
+      !strcmp(result.value().name.data(), "chromebook-x64") ||
+      !strcmp(result.value().name.data(), "Eve") ||
+      strstr(result.value().name.data(), "Nocturne") || strstr(result.value().name.data(), "NUC")) {
     return INTEL_PLATFORM;
   }
   if (strstr(result.value().name.data(), "astro") ||
