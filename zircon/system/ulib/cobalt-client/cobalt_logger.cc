@@ -61,18 +61,6 @@ bool CobaltLogger::TryObtainLogger() {
     return false;
   }
 
-  // Deprecated support for loading from project name.
-  if (options_.project_name.size() > 0) {
-    // Obtain a logger service for the project name.
-    auto create_logger_result =
-        ::llcpp::fuchsia::cobalt::LoggerFactory::Call::CreateLoggerFromProjectName(
-            zx::unowned_channel(logger_factory_client), fidl::StringView(options_.project_name),
-            static_cast<::llcpp::fuchsia::cobalt::ReleaseStage>(options_.release_stage),
-            std::move(logger_svr));
-    return create_logger_result.status() == ZX_OK &&
-           create_logger_result->status == ::llcpp::fuchsia::cobalt::Status::OK;
-  }
-
   // Obtain a logger service for the project ID.
   auto create_logger_result =
       ::llcpp::fuchsia::cobalt::LoggerFactory::Call::CreateLoggerFromProjectId(

@@ -34,11 +34,6 @@ struct CollectorOptions {
   // Returns a |Collector| whose data will be logged for Debug release stage.
   static CollectorOptions Debug();
 
-  // The name used to register the project with cobalt. This will be used to route the metrics
-  // to the right project.
-  // DEPRECATED: use project_id instead.
-  std::string project_name;
-
   // The ID used to register the project with cobalt. This will be used to route the metrics
   // to the right project.
   uint32_t project_id;

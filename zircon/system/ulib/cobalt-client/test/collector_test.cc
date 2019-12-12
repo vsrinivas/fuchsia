@@ -104,7 +104,6 @@ class StallingFlushable final : public internal::FlushInterface {
 };
 
 // Default Params for Collector Options.
-constexpr std::string_view kProjectName = "SomeProject";
 constexpr uint32_t kProjectId = 1234;
 
 TEST(CollectorOptionsTest, DebugSetsCorrectReleaseStage) {
@@ -130,14 +129,6 @@ TEST(CollectorOptionsTest, GeneralAvailabilitySetsCorrectReleaseStage) {
 TEST(CollectorTest, CreateFromOptionsIsSuccessfull) {
   ASSERT_NO_DEATH([] {
     CollectorOptions options = CollectorOptions::Debug();
-    options.project_name = kProjectName;
-    Collector collector(options);
-  });
-}
-
-TEST(CollectorTest, CreateFromOptionsWithProjectIdIsSuccessfull) {
-  ASSERT_NO_DEATH([] {
-    CollectorOptions options = CollectorOptions::Debug();
     options.project_id = kProjectId;
     Collector collector(options);
   });
@@ -146,7 +137,6 @@ TEST(CollectorTest, CreateFromOptionsWithProjectIdIsSuccessfull) {
 TEST(CollectorTest, CreateFromInvalidOptionsTriggersAssert) {
   ASSERT_DEATH([] {
     CollectorOptions options = CollectorOptions::Debug();
-    options.project_name = "";
     options.project_id = 0;
     Collector collector(options);
   });
