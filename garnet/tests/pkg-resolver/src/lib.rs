@@ -7,9 +7,8 @@
 use {
     failure::Error,
     fdio,
-    fidl::endpoints::{ClientEnd, DiscoverableService},
+    fidl::endpoints::ClientEnd,
     fidl_fuchsia_amber::ControlMarker as AmberMarker,
-    fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_pkg::{
         ExperimentToggle as Experiment, PackageCacheMarker, PackageResolverAdminMarker,
@@ -25,14 +24,14 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_inspect::reader::NodeHierarchy,
+    fuchsia_inspect::reader::{NodeHierarchy, PartialNodeHierarchy},
     fuchsia_pkg_testing::{serve::ServedRepository, Package, PackageBuilder},
     fuchsia_zircon::{self as zx, Status},
     futures::{compat::Stream01CompatExt, prelude::*},
     hyper::Body,
     pkgfs_ramdisk::PkgfsRamdisk,
     serde_derive::Serialize,
-    std::{fs::File, io::BufWriter},
+    std::{convert::TryFrom, fs::File, io::BufWriter},
     tempfile::TempDir,
 };
 
@@ -283,10 +282,34 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     async fn pkg_resolver_inspect_hierarchy(&self) -> NodeHierarchy {
+        // When `glob` is matching a path component that is a string literal, it uses
+        // `std::fs::metadata()` to test the existence of the path instead of listing the parent dir.
+        // `metadata()` calls `stat`, which creates and destroys an fd in fdio.
+        // When the fd is for "root.inspect", which is a VMO, destroying the fd calls
+        // `zxio_vmofile_release`, which makes a fuchsia.io.File.Seek FIDL call.
+        // This FIDL call is received by `ServiceFs`, which, b/c "root.inspect" was opened
+        // by fdio with `OPEN_FLAG_NODE_REFERENCE`, is treating the zircon channel as a stream of
+        // Node requests.
+        // `ServiceFs` then closes the channel and logs a
+        // "ServiceFs failed to parse an incoming node request: UnknownOrdinal" error (with
+        // the File.Seek ordinal).
+        // `ServiceFs` closing the channel is seen by `metadata` as a `BrokenPipe` error, which
+        // `glob` interprets as there being nothing at "root.inspect", so the VMO is not found.
+        // To work around this, we use a trivial pattern in the "root.inspect" path component,
+        // which prevents the `metadata` shortcut.
+        //
+        // To fix this, `zxio_vmofile_release` probably shouldn't be unconditionally calling
+        // `fuchsia.io.File.Seek`, because, per a comment in `io.fidl`, that is not a valid
+        // method to be called on a `Node` opened with `OPEN_FLAG_NODE_REFERENCE`.
+        // `zxio_vmofile_release` could determine if the `Node` were opened with
+        // `OPEN_FLAG_NODE_REFERENCE` (by calling `Node.NodeGetFlags` or `File.GetFlags`).
+        // Note that if `zxio_vmofile_release` starts calling `File.GetFlags`, `ServiceFs`
+        // will need to stop unconditionally treating `Node`s opened with `OPEN_FLAG_NODE_REFERNCE`
+        // as `Node`s.
+        // TODO(fxb/40888)
         let pattern = format!(
-            "/hub/r/{}/*/c/pkg_resolver.cmx/*/out/diagnostics/{}",
-            glob::Pattern::escape(&self.nested_environment_label),
-            TreeMarker::SERVICE_NAME,
+            "/hub/r/{}/*/c/pkg_resolver.cmx/*/out/objects/root.i[n]spect",
+            glob::Pattern::escape(&self.nested_environment_label)
         );
         let paths = glob::glob_with(
             &pattern,
@@ -301,11 +324,10 @@ impl<P: PkgFs> TestEnv<P> {
         assert_eq!(paths.len(), 1, "{:?}", paths);
         let path = paths.pop().unwrap();
 
-        let (tree, server_end) =
-            fidl::endpoints::create_proxy::<TreeMarker>().expect("failed to create Tree proxy");
-        fdio::service_connect(&path.to_string_lossy().to_string(), server_end.into_channel())
-            .expect("failed to connect to Tree service");
-        NodeHierarchy::try_from_tree(&tree).await.expect("failed to get inspect hierarchy")
+        let vmo_file = File::open(path).expect("file exists");
+        let vmo = fdio::get_vmo_copy_from_file(&vmo_file).expect("vmo exists");
+
+        PartialNodeHierarchy::try_from(&vmo).unwrap().into()
     }
 }
 

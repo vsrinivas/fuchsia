@@ -31,7 +31,7 @@ async fn main() -> Result<(), Error> {
     });
 
     let mut fs = ServiceFs::new();
-    component::inspector().serve(&mut fs)?;
+    component::inspector().serve_tree(&mut fs)?;
     fs.take_and_serve_directory_handle()?;
 
     fs.collect::<()>().await;

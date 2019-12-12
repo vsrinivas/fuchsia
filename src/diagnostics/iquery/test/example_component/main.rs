@@ -179,7 +179,7 @@ async fn main() -> Result<(), Error> {
             eprintln!("Failed to expose vmo. Error: {:?}", e);
         });
 
-    inspector.serve(&mut fs)?;
+    inspector.serve_tree(&mut fs)?;
     fs.take_and_serve_directory_handle()?;
 
     Ok(fs.collect().await)
