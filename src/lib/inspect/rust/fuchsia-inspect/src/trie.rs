@@ -4,7 +4,7 @@
 use {
     core::marker::PhantomData,
     std::collections::HashMap,
-    std::{cmp::Eq, hash::Hash},
+    std::{cmp::Eq, fmt::Debug, hash::Hash},
 };
 
 //TODO(38342): Move this mod to its own lib to avoid leaking its existance in the
@@ -55,12 +55,59 @@ where
         }
     }
 
+    fn remove_helper(curr_node: &mut TrieNode<K, V>, key: &Vec<K>, level: usize) -> bool
+    where
+        K: Hash + Eq + Debug,
+    {
+        if level == key.len() {
+            curr_node.values = Vec::new();
+            return curr_node.children.is_empty();
+        }
+        let mut delete_self: bool = false;
+        if let Some(mut child_node) = curr_node.children.get_mut(&key[level]) {
+            // TODO(lukenicholson): Consider implementing as stack and provide
+            // limits to stack size?
+            if Trie::remove_helper(&mut child_node, key, level + 1) {
+                curr_node.children.remove(&key[level]);
+            }
+
+            if curr_node.children.is_empty() && curr_node.values.is_empty() {
+                delete_self = true;
+            }
+        }
+        delete_self
+    }
+
+    /// Takes a key fragment sequence in vector form and removes the node identified
+    /// by that key fragment sequence if it exists. Removes all values that exist on the
+    /// node.
+    pub fn remove(&mut self, key: Vec<K>)
+    where
+        K: Hash + Eq + Debug,
+    {
+        if key.len() < 1 {
+            return;
+        }
+
+        Trie::remove_helper(&mut self.root, &key, 0);
+    }
+
+    /// Retrieves a node identified by the key fragment vector `key` if it
+    /// exists in the prefix trie, else None.
+    pub fn get(&mut self, key: Vec<K>) -> Option<&TrieNode<K, V>>
+    where
+        K: Hash + Eq + Debug,
+    {
+        key.into_iter()
+            .try_fold(&self.root, |curr_node, key_fragment| curr_node.children.get(&key_fragment))
+    }
+
     /// Takes a key fragment sequence in vector form, and a value defined by the
     /// key sequence, and populates the trie creating new nodes where needed, before
     /// inserting the value into the vector of values defined by the provided sequence.
     pub fn insert(&mut self, key: Vec<K>, value: V)
     where
-        K: Hash + Eq + std::fmt::Debug,
+        K: Hash + Eq + Debug,
     {
         let key_trie_node = key.into_iter().fold(&mut self.root, |curr_node, key_fragment| {
             curr_node.children.entry(key_fragment).or_insert_with(|| TrieNode::new())
@@ -344,6 +391,7 @@ mod tests {
         let mut test_trie: TestTrie = TestTrie::new();
         test_trie.insert("test".to_string().chars().collect(), "a".to_string());
         test_trie.insert("test1".to_string().chars().collect(), "b".to_string());
+
         let mut curr_node = test_trie.get_root();
         assert!(curr_node.get_values().is_empty());
         curr_node = curr_node.get_children().get(&'t').unwrap();
@@ -356,6 +404,47 @@ mod tests {
         assert_eq!(curr_node.get_values().len(), 1);
         curr_node = curr_node.get_children().get(&'1').unwrap();
         assert_eq!(curr_node.get_values().len(), 1);
+
+        let test_node = test_trie.get("test".to_string().chars().collect());
+        assert!(test_node.is_some());
+        assert_eq!(test_node.unwrap().get_values().len(), 1);
+        assert_eq!(test_node.unwrap().get_values()[0 as usize], "a".to_string());
+
+        let test1_node = test_trie.get("test1".to_string().chars().collect());
+        assert!(test1_node.is_some());
+        assert_eq!(test1_node.unwrap().get_values().len(), 1);
+        assert_eq!(test1_node.unwrap().get_values()[0 as usize], "b".to_string());
+    }
+
+    #[test]
+    fn test_sequence_trie_removal() {
+        type TestTrie = Trie<char, String>;
+        let mut test_trie: TestTrie = TestTrie::new();
+        test_trie.insert("test".to_string().chars().collect(), "a".to_string());
+        test_trie.insert("test1".to_string().chars().collect(), "b".to_string());
+        test_trie.insert("text".to_string().chars().collect(), "c".to_string());
+        test_trie.insert("text12".to_string().chars().collect(), "d".to_string());
+
+        test_trie.remove("test".to_string().chars().collect());
+        test_trie.remove("".to_string().chars().collect());
+        test_trie.remove("text12".to_string().chars().collect());
+
+        let test_node = test_trie.get("test".to_string().chars().collect());
+        assert!(test_node.is_some());
+        assert!(test_node.unwrap().get_values().is_empty());
+
+        let test1_node = test_trie.get("test1".to_string().chars().collect());
+        assert!(test1_node.is_some());
+        assert_eq!(test1_node.unwrap().get_values().len(), 1);
+        assert_eq!(test1_node.unwrap().get_values()[0], "b".to_string());
+
+        let text_node = test_trie.get("text".to_string().chars().collect());
+        assert!(text_node.is_some());
+        assert_eq!(text_node.unwrap().get_values().len(), 1);
+        assert_eq!(text_node.unwrap().get_values()[0], "c".to_string());
+
+        let text1_node = test_trie.get("text1".to_string().chars().collect());
+        assert!(text1_node.is_none());
     }
 
     #[test]
