@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_MOCKS_MOCK_HANDLER_H_
-#define SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_MOCKS_MOCK_HANDLER_H_
+#ifndef SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_MOCKS_MOCK_MAGNIFICATION_HANDLER_H_
+#define SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_MOCKS_MOCK_MAGNIFICATION_HANDLER_H_
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/accessibility/cpp/fidl_test_base.h>
@@ -18,9 +18,10 @@ namespace accessibility_test {
 
 constexpr zx::duration kFramePeriod = zx::sec(1) / 60;
 
-class MockHandler : public fuchsia::accessibility::testing::MagnificationHandler_TestBase {
+class MockMagnificationHandler
+    : public fuchsia::accessibility::testing::MagnificationHandler_TestBase {
  public:
-  MockHandler();
+  MockMagnificationHandler();
 
   fidl::InterfaceHandle<fuchsia::accessibility::MagnificationHandler> NewBinding();
 
@@ -45,4 +46,4 @@ class MockHandler : public fuchsia::accessibility::testing::MagnificationHandler
 
 }  // namespace accessibility_test
 
-#endif  // SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_MOCKS_MOCK_HANDLER_H_
+#endif  // SRC_UI_A11Y_LIB_MAGNIFIER_TESTS_MOCKS_MOCK_MAGNIFICATION_HANDLER_H_

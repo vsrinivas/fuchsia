@@ -6,7 +6,7 @@ group("mocks") {
   testonly = true
 
   public_deps = [
-    ":mock_handler",
+    ":mock_magnification_handler",
     ":mock_magnifier",
   ]
 }
@@ -31,15 +31,15 @@ source_set("mock_magnifier") {
   ]
 }
 
-source_set("mock_handler") {
+source_set("mock_magnification_handler") {
   testonly = true
 
   public = [
-    "mock_handler.h",
+    "mock_magnification_handler.h",
   ]
 
   sources = [
-    "mock_handler.cc",
+    "mock_magnification_handler.cc",
   ]
 
   public_deps = [

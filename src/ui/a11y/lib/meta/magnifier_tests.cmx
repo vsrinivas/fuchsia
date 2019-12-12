@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/magnifier_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

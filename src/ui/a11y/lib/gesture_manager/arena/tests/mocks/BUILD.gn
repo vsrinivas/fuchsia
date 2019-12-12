@@ -16,5 +16,6 @@ source_set("mocks") {
 
   deps = [
     "//src/lib/syslog/cpp",
+    "//third_party/googletest:gtest",
   ]
 }

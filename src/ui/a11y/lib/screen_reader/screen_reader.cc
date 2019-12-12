@@ -8,13 +8,22 @@
 
 namespace a11y {
 
-ScreenReader::ScreenReader(a11y::SemanticsManager* semantics_manager, a11y::TtsManager* tts_manager,
-                           a11y::GestureManager* gesture_manager)
-    : tts_manager_(tts_manager), gesture_manager_(gesture_manager) {
+ScreenReader::ScreenReader(a11y::SemanticsManager* semantics_manager, a11y::TtsManager* tts_manager)
+    : tts_manager_(tts_manager) {
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->semantics_manager = semantics_manager;
 
   InitializeServicesAndAction();
+}
+
+void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
+  gesture_handler->BindOneFingerTapAction(
+      [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+        ScreenReaderAction::ActionData action_data;
+        action_data.koid = viewref_koid;
+        action_data.local_point = point;
+        ExecuteAction("explore_action", action_data);
+      });
 }
 
 void ScreenReader::InitializeServicesAndAction() {
@@ -29,14 +38,6 @@ void ScreenReader::InitializeServicesAndAction() {
 
   // Initialize Screen reader supported "Actions".
   actions_.insert({"explore_action", std::make_unique<a11y::ExploreAction>(action_context_.get())});
-
-  gesture_manager_->gesture_handler()->BindOneFingerTapAction(
-      [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.koid = viewref_koid;
-        action_data.local_point = point;
-        ExecuteAction("explore_action", action_data);
-      });
 }
 
 bool ScreenReader::ExecuteAction(std::string action_name,

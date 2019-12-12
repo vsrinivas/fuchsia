@@ -23,10 +23,11 @@ class ContestMember;
 //     - As an interaction with the touch screen happens, it will first receive a
 //     |ContestMember| object from |OnContestStarted|, which allows the recognizer to subscribe
 //     to events and mark acceptance or rejection.
-//     - Recognizers can have then four main states: not started, possible gesture, not possible,
+//     - Recognizers can then have four main states: not started, possible gesture, not possible,
 //     detected.
-//     - The recognizer can declare a win or defeat via the |ContestMember| depending on which
-//     state it's in. The arena itself can also declare this recognizer a win or defeat.
+//     - The recognizer can claim a win or declare defeat via the |ContestMember| depending on which
+//     state it's in. Declarations of defeat are handled immediately, while win claimers may be
+//     awarded win or defeat by the arena.
 //     - This recognizer will continue receiving pointer events until it releases the
 //     |ContestMember| or is defeated. A new contest starts on the first interaction after the
 //     winner releases its |ContestMember|.

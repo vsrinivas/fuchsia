@@ -19,6 +19,7 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_settings_provider.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_setui_accessibility.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
 #include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/util/util.h"
 
@@ -58,33 +59,36 @@ class AppUnitTest : public gtest::TestLoopFixture {
     });
   }
 
-  void SendPointerEvents(PointerEventListener* listener, const std::vector<PointerParams>& events) {
-    for (const auto& params : events) {
-      SendPointerEvent(listener, params);
-    }
-  }
-
-  void SendPointerEvent(PointerEventListener* listener, const PointerParams& params) {
-    listener->OnEvent(ToPointerEvent(params, input_event_time_++));
-  }
-
-  // Sends a gesture that wouldn't be recognized by any accessibility feature, for testing arena
-  // configuration.
-  //
-  // Returns the |handled| argument of the (last) resulting |OnStreamHandled| invocation.
+  // Sends pointer events and returns the |handled| argument of the (last) resulting
+  // |OnStreamHandled| invocation.
   //
   // Yo dawg, I heard you like pointer event listener pointers, so I took a pointer to your pointer
   // event listener pointer so you can receive events while you receive events (while honoring the
   // C++ style guide).
-  std::optional<EventHandling> SendUnrecognizedGesture(PointerEventListenerPtr* listener) {
+  std::optional<EventHandling> SendPointerEvents(PointerEventListenerPtr* listener,
+                                                 const std::vector<PointerParams>& events) {
     std::optional<EventHandling> event_handling;
     listener->events().OnStreamHandled =
         [&event_handling](uint32_t, uint32_t, EventHandling handled) { event_handling = handled; };
 
-    SendPointerEvents(listener->get(), Zip({TapEvents(1, {}), TapEvents(2, {})}));
+    for (const auto& params : events) {
+      SendPointerEvent(listener->get(), params);
+    }
 
-    RunLoopUntilIdle();
     return event_handling;
+  }
+
+  void SendPointerEvent(PointerEventListener* listener, const PointerParams& params) {
+    listener->OnEvent(ToPointerEvent(params, input_event_time_++));
+
+    // Simulate trivial passage of time (can expose edge cases with posted async tasks).
+    RunLoopUntilIdle();
+  }
+
+  // Sends a gesture that wouldn't be recognized by any accessibility feature, for testing arena
+  // configuration.
+  std::optional<EventHandling> SendUnrecognizedGesture(PointerEventListenerPtr* listener) {
+    return SendPointerEvents(listener, Zip({TapEvents(1, {}), TapEvents(2, {})}));
   }
 
   zx::eventpair eventpair_, eventpair_peer_;
@@ -275,6 +279,8 @@ TEST_F(AppUnitTest, ListenerForMagnifier) {
   setui.Set(std::move(settings), [](auto) {});
 
   RunLoopUntilIdle();
+  EXPECT_TRUE(app.state().magnifier_enabled());
+
   ASSERT_TRUE(registry.listener());
   EXPECT_EQ(SendUnrecognizedGesture(&registry.listener()), EventHandling::REJECTED);
 }
@@ -312,8 +318,8 @@ TEST_F(AppUnitTest, NoListenerAfterAllRemoved) {
   EXPECT_FALSE(registry.listener());
 }
 
-// Covers a couple additional edge cases around the listener ref count.
-TEST_F(AppUnitTest, ListenerRefCount) {
+// Covers a couple additional edge cases around removing listeners.
+TEST_F(AppUnitTest, ListenerRemoveOneByOne) {
   MockPointerEventRegistry registry(&context_provider_);
   MockSetUIAccessibility setui(&context_provider_);
   a11y_manager::App app(context_provider_.TakeContext());
@@ -340,6 +346,32 @@ TEST_F(AppUnitTest, ListenerRefCount) {
 
   RunLoopUntilIdle();
   EXPECT_FALSE(registry.listener());
+}
+
+// Makes sure gesture priorities are right. If they're not, screen reader would intercept this
+// gesture.
+TEST_F(AppUnitTest, MagnifierGestureWithScreenReader) {
+  MockPointerEventRegistry registry(&context_provider_);
+  MockSetUIAccessibility setui(&context_provider_);
+  a11y_manager::App app(context_provider_.TakeContext());
+
+  MockMagnificationHandler mag_handler;
+  fidl::Binding<fuchsia::accessibility::MagnificationHandler> mag_handler_binding(&mag_handler);
+  {
+    fuchsia::accessibility::MagnifierPtr magnifier;
+    context_provider_.ConnectToPublicService(magnifier.NewRequest());
+    magnifier->RegisterHandler(mag_handler_binding.NewBinding());
+  }
+
+  fuchsia::settings::AccessibilitySettings settings;
+  settings.set_screen_reader(true);
+  settings.set_enable_magnification(true);
+  setui.Set(std::move(settings), [](auto) {});
+
+  SendPointerEvents(&registry.listener(), 3 * TapEvents(1, {}));
+  RunLoopFor(a11y::Magnifier::kTransitionPeriod);
+
+  EXPECT_GT(mag_handler.transform().scale, 1);
 }
 
 // This test makes sure that the accessibility manager is watching for settings updates from setUI.

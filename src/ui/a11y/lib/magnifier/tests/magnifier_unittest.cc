@@ -12,12 +12,10 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
-#include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
-#include "src/ui/a11y/lib/magnifier/tests/mocks/mock_handler.h"
+#include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_contest_member.h"
+#include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
 #include "src/ui/a11y/lib/testing/formatting.h"
 #include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
@@ -29,7 +27,6 @@
 // drag detection threshold.
 
 namespace accessibility_test {
-
 namespace {
 
 using fuchsia::ui::input::accessibility::EventHandling;
@@ -39,58 +36,11 @@ constexpr zx::duration kTestTransitionPeriod = a11y::Magnifier::kTransitionPerio
 constexpr zx::duration kFrameEpsilon = zx::msec(1);
 static_assert(kFramePeriod > kFrameEpsilon);
 
-// A passive recognizer to obtain an arena member to inspect/affect arena state.
-class TestRecognizer : public a11y::GestureRecognizer {
- public:
-  // |GestureRecognizer|
-  void OnContestStarted(std::unique_ptr<a11y::ContestMember> contest_member) override {
-    contest_member_ = std::move(contest_member);
-  }
-  // |GestureRecognizer|
-  void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent&) override {}
-  // |GestureRecognizer|
-  std::string DebugName() const override { return "TestRecognizer"; }
-
-  const a11y::ContestMember* contest_member() const {
-    FX_CHECK(contest_member_);
-    return contest_member_.get();
-  }
-
-  a11y::ContestMember* contest_member() {
-    FX_CHECK(contest_member_);
-    return contest_member_.get();
-  }
-
-  void Reset() { contest_member_.reset(); }
-
- private:
-  std::unique_ptr<a11y::ContestMember> contest_member_;
-};
-
 class MagnifierTest : public gtest::TestLoopFixture {
  public:
-  MagnifierTest()
-      : arena_([this](auto, auto, EventHandling handled) { input_handling_ = handled; }) {
-    arena_.Add(&magnifier_);
-    arena_.Add(&test_recognizer_);
-  }
+  MagnifierTest() { arena_.Add(&magnifier_); }
 
   a11y::Magnifier* magnifier() { return &magnifier_; }
-
-  std::optional<EventHandling>& input_handling() { return input_handling_; }
-
-  bool is_arena_contending() const {
-    return test_recognizer_.contest_member()->status() == a11y::ContestMember::Status::kContending;
-  }
-
-  bool is_arena_ceded() const {
-    return test_recognizer_.contest_member()->status() == a11y::ContestMember::Status::kWinner;
-  }
-
-  // Causes the test arena member to win the arena, denying the gesture to Magnifier.
-  void DenyArena() { test_recognizer_.contest_member()->Accept(); }
-
-  void ResetArena() { test_recognizer_.Reset(); }
 
   void SendPointerEvents(const std::vector<PointerParams>& events) {
     for (const auto& params : events) {
@@ -109,15 +59,12 @@ class MagnifierTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  TestRecognizer test_recognizer_;
   a11y::GestureArena arena_;
-
   a11y::Magnifier magnifier_;
 
   // We don't actually use these times. If we did, we'd want to more closely correlate them with
   // fake time.
   uint64_t input_event_time_ = 0;
-  std::optional<EventHandling> input_handling_;
 };
 
 // Ensure that a trigger + (temporary) pan gesture without a registered handler doesn't crash
@@ -131,7 +78,7 @@ TEST_F(MagnifierTest, WithoutHandler) {
 // anything.
 TEST_F(MagnifierTest, WithClosedHandler) {
   {
-    MockHandler handler;
+    MockMagnificationHandler handler;
     magnifier()->RegisterHandler(handler.NewBinding());
     RunLoopFor(kFramePeriod);
   }
@@ -142,7 +89,7 @@ TEST_F(MagnifierTest, WithClosedHandler) {
 
 // Ensures that unactivated interaction does not touch a handler.
 TEST_F(MagnifierTest, NoTrigger) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(DownEvents(1, {0, 0}) + MoveEvents(1, {0, 0}, {.25f, 0}, 5));
@@ -158,7 +105,7 @@ TEST_F(MagnifierTest, NoTrigger) {
 
 // Ensure that a 3x1 tap triggers magnification.
 TEST_F(MagnifierTest, Trigger3x1) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(3 * TapEvents(1, {}));
@@ -168,7 +115,7 @@ TEST_F(MagnifierTest, Trigger3x1) {
 
 // Ensure that a 2x3 tap triggers magnification.
 TEST_F(MagnifierTest, Trigger2x3) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(2 * Zip({TapEvents(1, {}), TapEvents(2, {}), TapEvents(3, {})}));
@@ -178,7 +125,7 @@ TEST_F(MagnifierTest, Trigger2x3) {
 
 // Ensure that a 4x1 stays magnified.
 TEST_F(MagnifierTest, Trigger4x1) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(4 * TapEvents(1, {}));
@@ -189,7 +136,7 @@ TEST_F(MagnifierTest, Trigger4x1) {
 // Ensures that when a new handler is registered, it receives the up-to-date transform.
 TEST_F(MagnifierTest, LateHandler) {
   SendPointerEvents(3 * TapEvents(1, {}));
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
   // If there was no handler, we shouldn't have waited for the animation.
   RunLoopUntilIdle();
@@ -201,7 +148,7 @@ TEST_F(MagnifierTest, LateHandler) {
 // changed while magnified (e.g. a pan gesture is issued), the new handler would end up unmagnified.
 TEST_F(MagnifierTest, InteractionBeforeLateHandler) {
   {
-    MockHandler h1;
+    MockMagnificationHandler h1;
     magnifier()->RegisterHandler(h1.NewBinding());
     SendPointerEvents(3 * TapEvents(1, {}));
     RunLoopFor(kTestTransitionPeriod);
@@ -224,7 +171,7 @@ TEST_F(MagnifierTest, InteractionBeforeLateHandler) {
   SendPointerEvents(jitterDrag);
   RunLoopUntilIdle();
 
-  MockHandler h2;
+  MockMagnificationHandler h2;
   magnifier()->RegisterHandler(h2.NewBinding());
   RunLoopUntilIdle();
 
@@ -234,7 +181,7 @@ TEST_F(MagnifierTest, InteractionBeforeLateHandler) {
 // Ensures that switching a handler causes transition updates to be delivered only to the new
 // handler, still throttled at the framerate but relative to when the switch took place.
 TEST_F(MagnifierTest, SwitchHandlerDuringTransition) {
-  MockHandler h1, h2;
+  MockMagnificationHandler h1, h2;
   magnifier()->RegisterHandler(h1.NewBinding());
   SendPointerEvents(3 * TapEvents(1, {}));
   RunLoopFor(kFramePeriod * 3 / 2);
@@ -252,7 +199,7 @@ TEST_F(MagnifierTest, SwitchHandlerDuringTransition) {
 
 // Ensure that a 3x1 trigger focuses on the tap coordinate.
 TEST_F(MagnifierTest, TriggerFocus) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   static constexpr glm::vec2 tap_coordinate{.5f, -.25f};
@@ -265,7 +212,7 @@ TEST_F(MagnifierTest, TriggerFocus) {
 
 // Ensure that a 3x1 trigger animates smoothly at the framerate.
 TEST_F(MagnifierTest, TriggerTransition) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
   // Drain the initial SetClipSpaceTransform and wait until the next frame can be presented so that
   // we can begin testing the animation right away.
@@ -306,7 +253,7 @@ TEST_F(MagnifierTest, TriggerTransition) {
 
 // Ensure that panning during a transition integrates smoothly.
 TEST_F(MagnifierTest, TransitionWithPan) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(3 * TapEvents(1, {}));
@@ -335,7 +282,7 @@ TEST_F(MagnifierTest, TransitionWithPan) {
 // Ensure that a temporary pan during a transtion integrates smoothly and continues to focus the
 // pointer.
 TEST_F(MagnifierTest, TransitionWithTemporaryPan) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(2 * TapEvents(1, {}) + DownEvents(1, {}));
@@ -369,7 +316,7 @@ TEST_F(MagnifierTest, TransitionWithTemporaryPan) {
 // Ensure that panning magnification clamps to display edges, i.e. that the display area remains
 // covered by content.
 TEST_F(MagnifierTest, ClampPan) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   // Focus on the upper right.
@@ -384,7 +331,7 @@ TEST_F(MagnifierTest, ClampPan) {
 }
 
 TEST_F(MagnifierTest, Pan) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   // Focus on the upper right.
@@ -406,7 +353,7 @@ TEST_F(MagnifierTest, Pan) {
 }
 
 TEST_F(MagnifierTest, PanTemporary) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   // Segue from an activation 3x1 in the upper right to a drag to the lower left.
@@ -423,7 +370,7 @@ TEST_F(MagnifierTest, PanTemporary) {
 }
 
 TEST_F(MagnifierTest, PinchZoom) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(3 * TapEvents(1, {}));
@@ -442,7 +389,7 @@ TEST_F(MagnifierTest, PinchZoom) {
 // Ensures that after pinching zoom and toggling magnification, the magnification level is restored
 // to the adjusted level.
 TEST_F(MagnifierTest, RememberZoom) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(3 * TapEvents(1, {}));
@@ -462,7 +409,7 @@ TEST_F(MagnifierTest, RememberZoom) {
 }
 
 TEST_F(MagnifierTest, MinZoom) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(3 * TapEvents(1, {}));
@@ -477,7 +424,7 @@ TEST_F(MagnifierTest, MinZoom) {
 }
 
 TEST_F(MagnifierTest, MaxZoom) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(3 * TapEvents(1, {}));
@@ -494,7 +441,7 @@ TEST_F(MagnifierTest, MaxZoom) {
 // Ensures that zooming at the edge of the screen does not violate clamping; pan should adjust to
 // compensate.
 TEST_F(MagnifierTest, ClampZoom) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(3 * TapEvents(1, {1, 0}));
@@ -519,7 +466,7 @@ TEST_F(MagnifierTest, ClampZoom) {
 
 // Ensures that transitioning out of a non-default magnification animates smoothly.
 TEST_F(MagnifierTest, TransitionOut) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(3 * TapEvents(1, {}));
@@ -556,9 +503,22 @@ TEST_F(MagnifierTest, TransitionOut) {
   EXPECT_EQ(handler.update_count(), update_count);
 }
 
+// Also include coverage for 2x3 zoom-out.
+TEST_F(MagnifierTest, ZoomOut2x3) {
+  MockMagnificationHandler handler;
+  magnifier()->RegisterHandler(handler.NewBinding());
+
+  SendPointerEvents(3 * TapEvents(1, {}));
+  RunLoopFor(kTestTransitionPeriod);
+
+  SendPointerEvents(2 * Zip({TapEvents(1, {}), TapEvents(2, {}), TapEvents(3, {})}));
+  RunLoopFor(kTestTransitionPeriod);
+  EXPECT_EQ(handler.transform(), ClipSpaceTransform::identity());
+}
+
 // Magnification should cease after a temporary magnification gesture is released.
 TEST_F(MagnifierTest, TemporaryRelease) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(2 * TapEvents(1, {}) + DownEvents(1, {}));
@@ -581,7 +541,7 @@ TEST_F(MagnifierTest, TemporaryRelease) {
 
 // Segueing a trigger gesture into a pan should behave as a temporary magnification.
 TEST_F(MagnifierTest, TemporaryPanRelease) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
 
   SendPointerEvents(2 * TapEvents(1, {}) + DownEvents(1, {}) + MoveEvents(1, {}, {.5f, .5f}));
@@ -594,7 +554,7 @@ TEST_F(MagnifierTest, TemporaryPanRelease) {
 
 // Ensure that rapid input does not trigger updates faster than the framerate.
 TEST_F(MagnifierTest, InputFrameThrottling) {
-  MockHandler handler;
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
   // Go ahead and send the initial SetClipSpaceTransform so that we can ensure that the initial
   // input handling below doesn't somehow schedule another Present immediately.
@@ -609,195 +569,280 @@ TEST_F(MagnifierTest, InputFrameThrottling) {
   EXPECT_EQ(handler.update_count(), 3u);
 }
 
-using MagnifierArenaTest = MagnifierTest;
+class MagnifierRecognizerTest : public gtest::TestLoopFixture {
+ public:
+  MockContestMember* member() { return &member_; }
+  a11y::Magnifier* magnifier() { return &magnifier_; }
+
+  void SendPointerEvents(const std::vector<PointerParams>& events) {
+    for (const auto& params : events) {
+      SendPointerEvent(params);
+    }
+  }
+
+ private:
+  void SendPointerEvent(const PointerParams& params) {
+    if (member_.is_held()) {
+      magnifier_.HandleEvent(ToPointerEvent(params, input_event_time_));
+    }
+
+    // Run the loop to simulate a trivial passage of time. (This is realistic for everything but ADD
+    // + DOWN and UP + REMOVE.)
+    //
+    // This covers a bug discovered during manual testing where the temporary zoom threshold timeout
+    // was posted without a delay and triggered any time the third tap took nonzero time.
+    RunLoopUntilIdle();
+    ++input_event_time_;
+  }
+
+  MockContestMember member_;
+  a11y::Magnifier magnifier_;
+
+  // We don't actually use these times. If we did, we'd want to more closely correlate them with
+  // fake time.
+  uint64_t input_event_time_ = 0;
+};
 
 constexpr zx::duration kTriggerEpsilon = zx::msec(1);
 static_assert(a11y::Magnifier::kTriggerMaxDelay > kTriggerEpsilon);
 
-TEST_F(MagnifierArenaTest, Reject1x4Immediately) {
+TEST_F(MagnifierRecognizerTest, Reject1x4Immediately) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
   SendPointerEvents(DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {}) + DownEvents(4, {}));
-  EXPECT_TRUE(is_arena_ceded());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
-// TODO(40943): In several cases below, input_handling() would ideally be CONSUMED earlier. When we
-// support that, we might also want to add another state assertion at the end of interactions, if
-// that's our responsibility.
+// 3x1 should be accepted as soon as the last tap begins and released at the end.
+TEST_F(MagnifierRecognizerTest, Accept3x1) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
 
-// 3x1 should be accepted as soon as the last tap begins.
-TEST_F(MagnifierArenaTest, Accept3x1) {
   SendPointerEvents(2 * TapEvents(1, {}) + DownEvents(1, {}));
-  EXPECT_FALSE(is_arena_contending());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
+  ASSERT_TRUE(member()->is_held());
   SendPointerEvents(UpEvents(1, {}));
-  EXPECT_EQ(input_handling(), EventHandling::CONSUMED);
+  EXPECT_FALSE(member()->is_held());
 }
 
-// 2x3 should be accepted as soon as the last pointer of the last tap comes down.
-TEST_F(MagnifierArenaTest, Accept2x3) {
+// 2x3 should be accepted as soon as the last pointer of the last tap comes down and released at the
+// end.
+TEST_F(MagnifierRecognizerTest, Accept2x3) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
   SendPointerEvents(Zip({TapEvents(1, {}), TapEvents(2, {}), TapEvents(3, {})}) +
                     DownEvents(1, {}) + DownEvents(2, {}));
-  EXPECT_FALSE(input_handling());
   SendPointerEvents(DownEvents(3, {}));
-  EXPECT_FALSE(is_arena_contending());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
   SendPointerEvents(UpEvents(3, {}) + UpEvents(2, {}));
-  EXPECT_FALSE(is_arena_contending());
+  ASSERT_TRUE(member()->is_held());
   SendPointerEvents(UpEvents(1, {}));
-  EXPECT_EQ(input_handling(), EventHandling::CONSUMED);
+  EXPECT_FALSE(member()->is_held());
 }
 
-TEST_F(MagnifierArenaTest, Reject2x1AfterTimeout) {
+TEST_F(MagnifierRecognizerTest, Reject2x1AfterTimeout) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
   SendPointerEvents(2 * TapEvents(1, {}));
   RunLoopFor(a11y::Magnifier::kTriggerMaxDelay - kTriggerEpsilon);
-  EXPECT_TRUE(is_arena_contending()) << "Boundary condition: held before timeout.";
+  EXPECT_TRUE(member()->is_held()) << "Boundary condition: held before timeout.";
   RunLoopFor(kTriggerEpsilon);
-  EXPECT_TRUE(is_arena_ceded());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Ensures that a 3x1 with a long wait between taps (but shorter than the timeout) is accepted.
-TEST_F(MagnifierArenaTest, Accept3x1UnderTimeout) {
+TEST_F(MagnifierRecognizerTest, Accept3x1UnderTimeout) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
   SendPointerEvents(TapEvents(1, {}));
   RunLoopFor(a11y::Magnifier::kTriggerMaxDelay - kTriggerEpsilon);
   SendPointerEvents(TapEvents(1, {}));
   RunLoopFor(a11y::Magnifier::kTriggerMaxDelay - kTriggerEpsilon);
   SendPointerEvents(TapEvents(1, {}));
-  EXPECT_EQ(input_handling(), EventHandling::CONSUMED);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 // Ensures that a long press after a 3x1 trigger is rejected after the tap timeout.
-TEST_F(MagnifierArenaTest, Reject4x1LongPressAfterTimeout) {
-  SendPointerEvents(3 * TapEvents(1, {}) + DownEvents(1, {}));
-  EXPECT_TRUE(is_arena_contending());
+TEST_F(MagnifierRecognizerTest, Reject4x1LongPressAfterTimeout) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
+  SendPointerEvents(3 * TapEvents(1, {}));
+  // At this point as verified by |Accept3x1|, we have accepted and released.
+  magnifier()->OnWin();
+
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
+  SendPointerEvents(DownEvents(1, {}));
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
   RunLoopFor(a11y::Magnifier::kTriggerMaxDelay);
-  EXPECT_TRUE(is_arena_ceded());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Ensures that a fourth tap after a 3x1 trigger is rejected after the tap timeout.
-TEST_F(MagnifierArenaTest, Reject4x1AfterTimeout) {
-  SendPointerEvents(4 * TapEvents(1, {}));
-  EXPECT_TRUE(is_arena_contending());
+TEST_F(MagnifierRecognizerTest, Reject4x1AfterTimeout) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
+  SendPointerEvents(3 * TapEvents(1, {}));
+  // At this point as verified by |Accept3x1|, we have accepted and released.
+  magnifier()->OnWin();
+
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
+  SendPointerEvents(TapEvents(1, {}));
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
   RunLoopFor(a11y::Magnifier::kTriggerMaxDelay);
-  EXPECT_TRUE(is_arena_ceded());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
-TEST_F(MagnifierArenaTest, RejectUnmagnified1Drag) {
-  SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, {.25f, 0}, 1));
-  EXPECT_TRUE(is_arena_ceded());
-}
+// Covers an edge regression where the second 3-tap in a zoom-out might be allowed to take forever.
+TEST_F(MagnifierRecognizerTest, Reject2x3ZoomOutAfterTimeout) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
 
-TEST_F(MagnifierArenaTest, RejectMagnified1Drag) {
   SendPointerEvents(3 * TapEvents(1, {}));
+  // At this point as verified by |Accept3x1|, we have accepted and released.
+  magnifier()->OnWin();
+
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
+  SendPointerEvents(Zip({TapEvents(1, {}), TapEvents(2, {}), TapEvents(3, {})}));
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
+  RunLoopFor(a11y::Magnifier::kTriggerMaxDelay);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
+}
+
+TEST_F(MagnifierRecognizerTest, RejectUnmagnified1Drag) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
   SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, {.25f, 0}, 1));
-  EXPECT_TRUE(is_arena_ceded());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
-TEST_F(MagnifierArenaTest, RejectUnmagnified2Drag) {
-  SendPointerEvents(DownEvents(1, {}) + TapEvents(2, {}) + MoveEvents(1, {}, {.25f, 0}, 1));
-  EXPECT_TRUE(is_arena_ceded());
-}
+TEST_F(MagnifierRecognizerTest, RejectMagnified1Drag) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
 
-TEST_F(MagnifierArenaTest, AcceptMagnified2Drag) {
   SendPointerEvents(3 * TapEvents(1, {}));
-  input_handling() = std::nullopt;
+
+  magnifier()->OnContestStarted(member()->TakeInterface());
+  SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, {.25f, 0}, 1));
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
+}
+
+TEST_F(MagnifierRecognizerTest, RejectUnmagnified2Drag) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
 
   SendPointerEvents(DownEvents(1, {}) + TapEvents(2, {}) + MoveEvents(1, {}, {.25f, 0}, 1));
-  EXPECT_FALSE(is_arena_contending());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
+}
+
+TEST_F(MagnifierRecognizerTest, AcceptMagnified2Drag) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
+  SendPointerEvents(3 * TapEvents(1, {}));
+  magnifier()->OnWin();
+
+  magnifier()->OnContestStarted(member()->TakeInterface());
+  SendPointerEvents(DownEvents(1, {}) + TapEvents(2, {}) + MoveEvents(1, {}, {.25f, 0}, 1));
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
+  ASSERT_TRUE(member()->is_held());
   SendPointerEvents(UpEvents(1, {}));
-  EXPECT_EQ(input_handling(), EventHandling::CONSUMED);
+  EXPECT_FALSE(member()->is_held());
 }
 
-TEST_F(MagnifierArenaTest, RejectUnmagnified1LongPress) {
+TEST_F(MagnifierRecognizerTest, RejectUnmagnified1LongPress) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
   SendPointerEvents(DownEvents(1, {}));
   RunLoopFor(a11y::Magnifier::kTriggerMaxDelay);
-  EXPECT_TRUE(is_arena_ceded());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
-TEST_F(MagnifierArenaTest, RejectMagnified1LongPress) {
+TEST_F(MagnifierRecognizerTest, RejectMagnified1LongPress) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
   SendPointerEvents(3 * TapEvents(1, {}));
+  magnifier()->OnWin();
 
+  magnifier()->OnContestStarted(member()->TakeInterface());
   SendPointerEvents(DownEvents(1, {}));
   RunLoopFor(a11y::Magnifier::kTriggerMaxDelay);
-  EXPECT_TRUE(is_arena_ceded());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
-TEST_F(MagnifierArenaTest, RejectUnmagnified2LongPress) {
+TEST_F(MagnifierRecognizerTest, RejectUnmagnified2LongPress) {
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
   SendPointerEvents(DownEvents(1, {}) + DownEvents(2, {}));
   RunLoopFor(a11y::Magnifier::kTriggerMaxDelay);
-  EXPECT_TRUE(is_arena_ceded());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
-TEST_F(MagnifierArenaTest, RejectMagnified2LongPress) {
+// Ensures that transitions don't happen until we've won.
+TEST_F(MagnifierRecognizerTest, TriggerWaitForWin) {
+  MockMagnificationHandler handler;
+  magnifier()->RegisterHandler(handler.NewBinding());
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
   SendPointerEvents(3 * TapEvents(1, {}));
-  input_handling() = std::nullopt;
+  RunLoopFor(kTestTransitionPeriod);
+  EXPECT_EQ(handler.transform(), ClipSpaceTransform::identity());
 
-  SendPointerEvents(DownEvents(1, {}) + DownEvents(2, {}));
-  EXPECT_FALSE(is_arena_contending());
-  SendPointerEvents(UpEvents(1, {}));
-  EXPECT_FALSE(is_arena_contending());
-  SendPointerEvents(UpEvents(2, {}));
-  EXPECT_EQ(input_handling(), EventHandling::CONSUMED);
+  magnifier()->OnWin();
+  RunLoopFor(kTestTransitionPeriod);
+  EXPECT_EQ(handler.transform().scale, a11y::Magnifier::kDefaultScale);
 }
 
-// Ensures that if another recognizer claims an in-progress gesture, magnifier does not magnify, and
-// its recognizer resets for the next gesture.
-TEST_F(MagnifierArenaTest, InterruptingCowBetweenTaps) {
-  MockHandler handler;
+// Ensures that if another recognizer wins after we accept, magnifier does not enable.
+TEST_F(MagnifierRecognizerTest, AbortOnLoss) {
+  MockMagnificationHandler handler;
   magnifier()->RegisterHandler(handler.NewBinding());
+  magnifier()->OnContestStarted(member()->TakeInterface());
 
-  SendPointerEvents(2 * TapEvents(1, {}));
-  DenyArena();
-  SendPointerEvents(TapEvents(1, {}));
+  SendPointerEvents(3 * TapEvents(1, {}));
+
+  magnifier()->OnDefeat();
+  RunLoopFor(kTestTransitionPeriod);
+  EXPECT_EQ(handler.transform(), ClipSpaceTransform::identity());
+}
+
+// Ensures that drags don't start until we've won.
+TEST_F(MagnifierRecognizerTest, PanWaitForWin) {
+  MockMagnificationHandler handler;
+  magnifier()->RegisterHandler(handler.NewBinding());
+  magnifier()->OnContestStarted(member()->TakeInterface());
+
+  SendPointerEvents(3 * TapEvents(1, {}));
+  magnifier()->OnWin();
+
   RunLoopFor(kTestTransitionPeriod);
 
-  EXPECT_EQ(handler.transform(), ClipSpaceTransform::identity());
-  ResetArena();
+  ClipSpaceTransform transform = handler.transform();
 
-  SendPointerEvents(2 * TapEvents(1, {}));
+  magnifier()->OnContestStarted(member()->TakeInterface());
+  SendPointerEvents(Zip({DownEvents(1, {}), TapEvents(2, {})}) + MoveEvents(1, {}, {.5f, .5f}));
+
   RunLoopFor(kFramePeriod);
-  // Make sure we don't jump the gun.
-  EXPECT_EQ(handler.transform(), ClipSpaceTransform::identity());
-  SendPointerEvents(TapEvents(1, {}));
-  RunLoopUntilIdle();
-  EXPECT_GT(handler.transform().scale, 1);
-}
+  EXPECT_EQ(handler.transform(), transform);
 
-// Ensures that if another recognizer claims an in-progress gesture, magnifier does not magnify, and
-// its recognizer resets for the next gesture.
-TEST_F(MagnifierArenaTest, InterruptingCowWithinTap) {
-  MockHandler handler;
-  magnifier()->RegisterHandler(handler.NewBinding());
+  magnifier()->OnWin();
 
-  SendPointerEvents(TapEvents(1, {}) + DownEvents(1, {}));
-  DenyArena();
-  SendPointerEvents(UpEvents(1, {}));
-  RunLoopFor(kTestTransitionPeriod);
+  // There are at least two or three reasonable interpretations here:
+  // * buffer the pan until we win and then snap to the most up-to-date position
+  // * delay accumulation until we win
+  // * buffer the pan until we win and transition smoothly to the most up-to-date position
+  // For simplicity and consistency with trigger gestures, we pick the first for now. In practice
+  // the win should be awarded almost immediately for the magnifier if it is competing against
+  // screen reader.
 
-  EXPECT_EQ(handler.transform(), ClipSpaceTransform::identity());
-  ResetArena();
-
-  SendPointerEvents(2 * TapEvents(1, {}));
   RunLoopFor(kFramePeriod);
-  // Make sure we don't jump the gun.
-  EXPECT_EQ(handler.transform(), ClipSpaceTransform::identity());
-  SendPointerEvents(TapEvents(1, {}));
-  RunLoopUntilIdle();
-  EXPECT_GT(handler.transform().scale, 1);
-}
+  transform.x = .5f;
+  transform.y = .5f;
+  EXPECT_EQ(handler.transform(), transform);
 
-// Ensures that if another recognizer claims a series of taps and then another begins, we don't
-// train wreck on tap timeouts.
-TEST_F(MagnifierArenaTest, InterruptingCowWithinTimeout) {
-  SendPointerEvents(2 * TapEvents(1, {}));
-  RunLoopFor(a11y::Magnifier::kTriggerMaxDelay * 2 / 3);
-  DenyArena();
-  ResetArena();
-
-  SendPointerEvents(DownEvents(1, {}));
-  // At this point, if we're train-wrecking on timeouts, the last one would expire in 1/3 of the
-  // expected duration. If by 2/3 of the expected duration we've spuriously rejected, we know we're
-  // making a mistake.
-  RunLoopFor(a11y::Magnifier::kTriggerMaxDelay * 2 / 3);
-  EXPECT_TRUE(is_arena_contending());
+  SendPointerEvents(MoveEvents(1, {.5f, .5f}, {1, 1}));
+  RunLoopFor(kFramePeriod);
+  transform.x = 1;
+  transform.y = 1;
+  EXPECT_EQ(handler.transform(), transform);
 }
 
 }  // namespace
-
 }  // namespace accessibility_test

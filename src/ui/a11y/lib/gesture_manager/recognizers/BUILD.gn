@@ -4,6 +4,8 @@
 
 source_set("recognizers") {
   sources = [
+    "any_recognizer.cc",
+    "any_recognizer.h",
     "directional_swipe_recognizers.cc",
     "directional_swipe_recognizers.h",
     "one_finger_drag_recognizer.cc",

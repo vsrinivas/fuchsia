@@ -14,20 +14,13 @@ class MockContestMember {
   // Creates an |a11y::ContestMember| that fronts this mock. Only one may be active per mock.
   std::unique_ptr<a11y::ContestMember> TakeInterface();
 
-  operator bool() const { return held_; }
-  void SetStatus(a11y::ContestMember::Status status) { status_ = status; }
-  // Sets the return value for |Accept|.
-  void SetAccept(bool accept) { accept_ = accept; }
-  bool IsAcceptCalled() const { return accept_called_; }
-  bool IsRejectCalled() const { return reject_called_; }
+  bool is_held() const { return held_; }
+  a11y::ContestMember::Status status() const { return status_; }
 
  private:
   class ContestMember;
 
-  bool held_ = false;
-  bool accept_ = true;
-  bool accept_called_ = false;
-  bool reject_called_ = false;
+  bool held_ = false, owned_ = false;
   a11y::ContestMember::Status status_;
 };
 

@@ -16,44 +16,42 @@ namespace a11y {
 //
 // Recognizers receive updates for a gesture as long as they hold their |ContestMember| instance and
 // have not been defeated. They must release their |ContestMember| when they no longer want events.
-// Recognizers may call |Accept()| when they want to win the arena or |Reject()| when they want to
-// cede the arena.
+// Recognizers may call |Accept()| when they want to claim a win or |Reject()| when they want to
+// cede the arena. Only the first call to |Accept()| or |Reject()| has any effect.
 //
-// If a |ContestMember| is released while contending, it becomes passive and can only be awared a
-// win by sweep.
+// If a |ContestMember| is released while still contending, it automatically rejects.
 //
-// For a group of recognizers in an arena, it is also true:
-// 1. Multiple recognizers are kContending -> One becomes kWinner, remainder kDefeated.
-// 2. Multiple recognizers are kContending -> All but the last declare kDefeated, the last is
-// assigned kWinner.
-// 3. The winner can also declare defeat by calling Reject(), which causes the arena to be empty.
+// Contest resolution does not occur until all members have claimed a win or declared defeat. When
+// resolution occurs the highest priority claimant is awarded the win. All other claimants are
+// informed of their loss.
 //
-// Contending |ContestMember|s hold the contest open. If the winning |ContestMember| is released, a
-// subsequent interaction starts a new contest and new |ContestMember| instances will be issued to
-// all recognizers. Any defeated |ContestMember|s still held have no effect. It is recommended that
-// recognizers reset their state and release their |ContestMember| on defeat.
+// The contest is reset after the winner releases its |ContestMember| or if
+// all members declare defeat. A subsequent interaction will start a new contest and new
+// |ContestMember| instances will be issued to all recognizers. Any defeated |ContestMember|s still
+// held have no effect. It is recommended that recognizers reset their state and release their
+// |ContestMember| on defeat.
+//
+// In the future, we may support dispatching multiple wins to recognizers that claim multiple wins
+// while a longer-running recognizer eventually declares defeat. E.g., 2 single taps and a long
+// press recognized after a 3x1 tap recognizer rejects due to the long press.
 class ContestMember {
  public:
+  // While these states are not exposed on the |ContestMember| interface, they are useful for
+  // implementations and for testing.
   enum class Status {
-    kContending,  // Competing to handle the gesture.
-    kWinner,      // Won the arena for the gesture.
-    kDefeated,    // Lost the arena for this gesture.
-    kObsolete,    // Contest over.
+    kUndecided,
+    kAccepted,
+    kRejected,
   };
 
   virtual ~ContestMember() = default;
 
-  // Returns the status of this |ContestMember| in the contest.
-  virtual Status status() const = 0;
+  // Claims a win in this contest. Resolution does not occur until all members have claimed a win
+  // or declared defeat, at which point the corresponding |GestureRecognizer| method will be called.
+  virtual void Accept() = 0;
 
-  // Claims a win in this contest. If this results in this recognizer winning, the recognizer
-  // receives a call to |OnWin()|. Returns true if this recognizer has won, whether due to this
-  // claim or if it has already won, and false if it has already lost or the arena has been
-  // destroyed.
-  virtual bool Accept() = 0;
-
-  // Declares defeat in this contest. If this results in this recognizer being defeated, the
-  // recognizer receives a call to |OnDefeat()|.
+  // Declares defeat in this contest. The recognizer receives a call to |OnDefeat()| before this
+  // returns.
   virtual void Reject() = 0;
 };
 

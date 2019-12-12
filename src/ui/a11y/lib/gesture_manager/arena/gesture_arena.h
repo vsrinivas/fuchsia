@@ -7,9 +7,9 @@
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 
+#include <list>
 #include <map>
 #include <set>
-#include <vector>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
@@ -31,12 +31,13 @@ class PointerStreamTracker {
   explicit PointerStreamTracker(OnStreamHandledCallback on_stream_handled_callback);
   ~PointerStreamTracker() = default;
 
-  // Rejects all pointer event streams received by the tracker, causing it to become inactive.
+  // Resets the handled status for subsequent pointer event streams.
+  void Reset();
+
+  // Rejects all pointer event streams received by the tracker until reset.
   void RejectPointerEvents();
 
-  // Consumes all pointer event streams received by the tracker. This does not
-  // cause the tracker to become inactive, as it will continue to receive the
-  // pointer events for each consumed stream until it finishes.
+  // Consumes all pointer event streams received by the tracker until reset.
   void ConsumePointerEvents();
 
   // Adds or removes a pointer stream for the given event. For ADD events, also caches the callback
@@ -71,58 +72,61 @@ class PointerStreamTracker {
   // Holds the streams in progress tracked by the tracker. A stream of pointer events is considered
   // to be active when an event with phase ADD was seen, but not an event with phase REMOVE yet.
   std::set<StreamID> active_streams_;
+  std::optional<fuchsia::ui::input::accessibility::EventHandling> handled_;
 };
 
 class GestureRecognizer;
 
 // The Gesture Arena for accessibility services.
 //
-// The Gesture Arena manages several recognizers which are trying to interpret a
-// gesture that is being performed. It respects the following rules:
-// 1. The first recognizer to claim a win, wins.
-// 2. The last recognizer to be in the arena wins.
-// 3. If the arena is not held and no recognizer won by the end of an
-// interaction, sweeps the arena and turn the first recognizer the winner.
+// The Gesture Arena manages several recognizers which are trying to interpret a gesture that is
+// being performed. It respects the following rules:
+//  * Contests begin when a touch pointer is added and continue until every member has either
+//    claimed a win or declared defeat.
+//  * Of the members that claim a win, the win is awarded to the highest priority member.
 //
-// Any recognizer can declare win or defeat at any time. Once a recognizer has
-// won the arena for that gesture, it receives incoming pointer events until it releases its
-// |ContestMember|.
+// All members must eventually claim a win or declare defeat. Once a member has claimed a win or
+// declared defeat, it may not change its declaration.
 //
-// The order in which recognizers are added to the arena is important. When
-// routing pointer events to recognizers, they see the event in order they were
-// added. Then they have the chance to claim a win before the next recognizer in
-// the list has the chance to act.
-// If a recognizer claims a win and is successful, this means that all other
-// recognizers will be defeated and will be notified via a OnDefeat() call.
+// Recognizers continue to receive incoming pointer events until they release their |ContestMember|
+// or are defeated. After the winning recognizer releases its |ContestMember|, the next interaction
+// will begin a new contest.
 //
-// In this model, it is important to notice that there are two layers of
-// abstraction:
-// 1. Raw pointer events, which come from the input system, arrive at the arena
-// and are dispatched to arena members via a PointerStreamTracker.
-// 2. Gestures, which are sequences of pointer events with a semantic meaning,
-// are identified by recognizers.
+// The order in which recognizers are added to the arena determines event dispatch order and win
+// priority. When routing pointer events to recognizers, they see the event in order they were
+// added. Then they have the chance to claim a win before the next recognizer in the list has the
+// chance to act. Then, during resolution, if multiple recognizers claim a win, the one that was
+// added first is awarded the win.
 //
-// With that in mind, each recognizer defines the semantic meaning for the
-// sequence of pointer events that it is receiving. In another words, it is
-// expected that a recognizer could identify a single tap, another a double tap,
-// and so on.
+// In this model, it is important to notice that there are two layers of abstraction:
+// 1. Raw pointer events, which come from the input system, arrive at the arena and are dispatched
+//    to recognizers via a PointerStreamTracker.
+// 2. Gestures, which are sequences of pointer events with a semantic meaning, are identified by
+//    recognizers.
 //
-// For this reason, winning the gesture arena **does not mean** that the
-// recognizer identified a gesture. It only means that it has the right to
-// interpret the raw pointer events, and give a semantic meaning to them if it
-// wants to.
-// Consider an arena with only one recognizer, which, by the rules above, would
-// be a winner by the default. It would process incoming pointer events and
-// detect its gesture only when the gesture actually occurred.
+// With that in mind, each recognizer defines the semantic meaning for the sequence of pointer
+// events that it is receiving. In another words, it is expected that a recognizer could identify a
+// single tap, another a double tap, and so on.
+//
+// Claiming a win indicates that a recognizer identified a gesture. However, the win will not
+// necessarily be awarded to that recognizer. Recognizers are free to handle their events
+// optimistically, but if they do then they must undo/reset any changes they effect if they are
+// eventually defeated.
 //
 // Recognizers should not destroy the arena.
 //
-// Implementation notes: this arena is heavily influenced by Fluttter's gesture
-// arena: https://flutter.dev/docs/development/ui/advanced/gestures
-// For those familiar how Flutter version works, here are the important main
-// differences:
-// - The arena here is not per finger (AKA per pointer ID), which means that
-// recognizers receive the whole interaction with the screen.
+// If any member claims a win, the input system is immediately notified that the pointer event
+// streams were consumed (as would be any new pointer event streams until the end of the gesture).
+// If no member claims a win, the input system is notified that the pointer event streams were
+// rejected.
+//
+// Implementation notes: this arena is heavily influenced by Fluttter's gesture arena:
+// https://flutter.dev/docs/development/ui/advanced/gestures For those familiar how Flutter version
+// works, here are the important main differences:
+// - The arena here is not per finger (a.k.a. per pointer ID), which means that
+//   recognizers receive the whole interaction with the screen.
+// - There are not default wins or mutiple levels of acceptance. Recognizers must be certain when
+//   they claim a win.
 class GestureArena {
  public:
   enum class State {
@@ -131,23 +135,15 @@ class GestureArena {
     kEmpty,                 // All recognizers have left the arena.
   };
 
-  enum class EventHandlingPolicy {
-    kConsumeEvents,  // All events will be consumed by this arena even when it becomes empty.
-    kRejectEvents,   // All events will be rejected by this arena when it becomes empty.
-  };
-
   // This arena takes |on_stream_handled_callback|, which is called whenever a
   // stream of pointer events is handled (e.g., is consumed or rejected).
-  explicit GestureArena(
-      PointerStreamTracker::OnStreamHandledCallback on_stream_handled_callback = [](auto...) {},
-      EventHandlingPolicy event_handling_policy = EventHandlingPolicy::kRejectEvents);
+  explicit GestureArena(PointerStreamTracker::OnStreamHandledCallback on_stream_handled_callback =
+                            [](auto...) {});
   ~GestureArena() = default;
 
-  // Adds a new recognizer to participate in the arena.
+  // Adds a new recognizer to the arena. The new recognizer starts participating in the next
+  // contest.
   void Add(GestureRecognizer* recognizer);
-
-  // Changes the event handling policy for empty arenas.
-  void event_handling_policy(EventHandlingPolicy value) { event_handling_policy_ = value; }
 
   // Dispatches a new pointer event to this arena. This event gets sent to all arena members which
   // are active at the moment.
@@ -155,45 +151,28 @@ class GestureArena {
 
   // Tries to resolve the arena if it is not resolved already.
   // It follows two rules:
-  // 1. If a recognizer declared a win, it wins.
-  // 2. If a recognizer is the last one active, it wins.
-  // A resolved arena will continue to be so until the interaction is over and
-  // the arena is not held, which restarts the arena for a new contest.
+  //  * Contests continue until every member has either claimed a win or declared defeat.
+  //  * Of the members that claim a win, the win is awarded to the highest priority member.
+  // A resolved arena will continue to be so until the winner releases its |ContestMember|, which
+  // resets the arena for a new contest.
   void TryToResolve();
-
-  // Resets the arena for a new contest.
-  void Reset();
-
-  // Returns true if there is any non-defeated arena member holding the arena.
-  bool IsHeld() const;
 
  private:
   class ArenaContestMember;
 
-  // Tracks the state of a recognizer in an arena and backs the state of a |ContestMmeber| during a
+  // Tracks the state of a recognizer in an arena and backs the state of a |ContestMember| during a
   // contest.
   struct ArenaMember {
     GestureRecognizer* recognizer;
     ContestMember::Status status;
-
-    void SetWin();
-    void SetDefeat();
-  };
-
-  // Holds pointers to arena members in different states.
-  // If winner is not nullptr, contending is empty. If contending is not empty, winner is nullptr.
-  struct ClassifiedArenaMembers {
-    ArenaMember* winner = nullptr;
-    std::vector<ArenaMember*> contending;
+    fxl::WeakPtr<ArenaContestMember> contest_member;
   };
 
   // Dispatches the pointer event to active arena members and purges inactive contest members.
   void DispatchEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
-  // Classifies the arena members into winner and contending.
-  // Example:
-  // auto [winner, contending] = ClassifyArenaMembers();
-  ClassifiedArenaMembers ClassifyArenaMembers();
+  // Returns whether there are any contest members wanting events.
+  bool IsHeld() const;
 
   // Returns true if the arena is not held and the interaction is finished.
   bool IsIdle() const;
@@ -201,18 +180,13 @@ class GestureArena {
   // Resets the arena and notify members that a new contest has started.
   void StartNewContest();
 
-  // Sweeps the arena granting the win to the first recognizer that is contending.
-  void Sweep();
-
-  // Handles how accessibility pointer events will be used by this arena. This depends on the policy
-  // in which it was configured during its construction.
+  // Informs Scenic of whether input event streams involved in the current contest should be
+  // consumed or rejected.
   void HandleEvents(bool consumed_by_member);
 
   PointerStreamTracker streams_;
-  std::vector<ArenaMember> arena_members_;
-  std::vector<fxl::WeakPtr<ArenaContestMember>> contest_members_;
-  State state_ = State::kContendingInProgress;
-  EventHandlingPolicy event_handling_policy_ = EventHandlingPolicy::kConsumeEvents;
+  std::list<ArenaMember> arena_members_;
+  size_t undecided_members_ = 0;
 
   fxl::WeakPtrFactory<GestureArena> weak_ptr_factory_;
 };

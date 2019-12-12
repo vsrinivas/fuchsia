@@ -48,6 +48,9 @@ class GestureHandler {
   // Binds the action defined in |callback| with the gesture |kOneFingerTap|.
   void BindOneFingerTapAction(OnGestureCallback callback);
 
+  // Binds a recognizer that consumes everything.
+  void ConsumeAll();
+
  private:
   // Calls an action bound to |gesture_type| if it exists and returns true, false otherwise.
   bool OnGesture(GestureType gesture_type, GestureArguments args);

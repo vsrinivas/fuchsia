@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/magnifier/tests/mocks/mock_handler.h"
+#include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
 
 #include <gtest/gtest.h>
 
 namespace accessibility_test {
 
-MockHandler::MockHandler() : binding_(this) {}
+MockMagnificationHandler::MockMagnificationHandler() : binding_(this) {}
 
-fidl::InterfaceHandle<fuchsia::accessibility::MagnificationHandler> MockHandler::NewBinding() {
+fidl::InterfaceHandle<fuchsia::accessibility::MagnificationHandler>
+MockMagnificationHandler::NewBinding() {
   return binding_.NewBinding();
 }
 
-void MockHandler::NotImplemented_(const std::string& name) {
+void MockMagnificationHandler::NotImplemented_(const std::string& name) {
   FAIL() << name << " is not implemented";
 }
 
-void MockHandler::SetClipSpaceTransform(float x, float y, float scale,
-                                        SetClipSpaceTransformCallback callback) {
+void MockMagnificationHandler::SetClipSpaceTransform(float x, float y, float scale,
+                                                     SetClipSpaceTransformCallback callback) {
   transform_ = {x, y, scale};
   ++update_count_;
 

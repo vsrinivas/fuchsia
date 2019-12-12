@@ -19,12 +19,13 @@ executable("gesture_recognizers_tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main_with_syslog",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/arena/tests/mocks",
     "//src/ui/a11y/lib/gesture_manager/recognizers",
     "//src/ui/a11y/lib/testing:input",
     "//src/ui/lib/glm_workaround",
+    "//third_party/googletest:gtest",
   ]
 }

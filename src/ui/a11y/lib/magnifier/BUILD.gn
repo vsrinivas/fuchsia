@@ -16,6 +16,7 @@ source_set("magnifier") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
     "//src/lib/callback",
+    "//src/lib/fxl",
     "//src/lib/ui/input:gesture",
     "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/lib/glm_workaround",

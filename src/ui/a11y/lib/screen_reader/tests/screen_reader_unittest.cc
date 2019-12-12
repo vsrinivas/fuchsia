@@ -8,6 +8,7 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
@@ -35,8 +36,10 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   ScreenReaderTest()
       : tts_manager_(context_provider_.context()),
         semantics_manager_(context_provider_.context()),
-        screen_reader_(&semantics_manager_, &tts_manager_, &gesture_manager_),
-        semantic_provider_(&semantics_manager_) {}
+        screen_reader_(&semantics_manager_, &tts_manager_),
+        semantic_provider_(&semantics_manager_) {
+    screen_reader_.BindGestures(gesture_manager_.gesture_handler());
+  }
 
   AccessibilityPointerEvent GetDefaultPointerEvent();
   void CreateOnOneFingerTapAction();

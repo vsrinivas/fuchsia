@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "src/lib/callback/scoped_task_runner.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/ui/input/gesture_detector.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
@@ -46,6 +47,17 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
 
   // Used when magnification is toggled off, to restore the presentation to an umagnified state.
   void ZoomOutIfMagnified();
+
+  // |GestureRecognizer|
+  void OnWin() override;
+  // |GestureRecognizer|
+  void OnDefeat() override;
+  // |GestureRecognizer|
+  void OnContestStarted(std::unique_ptr<ContestMember> contest_member) override;
+  // |GestureRecognizer|
+  void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) override;
+  // |GestureRecognizer|
+  std::string DebugName() const override;
 
  private:
   // Magnification is enabled by a triple 1-finger tap or a double 3-finger tap.
@@ -93,14 +105,21 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
 
   class Interaction;
 
-  // |GestureRecognizer|
-  void OnDefeat() override;
-  // |GestureRecognizer|
-  void OnContestStarted(std::unique_ptr<ContestMember> contest_member) override;
-  // |GestureRecognizer|
-  void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) override;
-  // |GestureRecognizer|
-  std::string DebugName() const override;
+  // Represents current and pending state resulting from control gestures (not including animation
+  // progress). We may choose to remove this structure after Magnifier is broken into component
+  // recognizers with their own post-win event streaming.
+  struct ControlState {
+    float transition_rate = 0;
+    float magnified_scale = kDefaultScale;
+    glm::vec2 magnified_translation = {0, 0};
+
+    bool operator==(const ControlState& o) const;
+    bool operator!=(const ControlState& o) const;
+
+    // Helper that sets the magnified translation to focus on the given screen coordinate. This does
+    // not call |UpdateTransform|.
+    void FocusOn(const glm::vec2& focus);
+  };
 
   // |input::GestureDetector::Delegate|
   std::unique_ptr<input::GestureDetector::Interaction> BeginInteraction(
@@ -114,32 +133,38 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
   // the |Magnifier|).
   void ResetTaps();
 
-  // Helper that sets the magnified translation to focus on the given screen coordinate. This does
-  // not call |UpdateTransform|.
-  void FocusOn(const glm::vec2& focus);
   // Sends the updated transform to the handler.
   void UpdateTransform();
-  void TransitionIntoZoom();
-  void TransitionOutOfZoom();
+  // Sends the updated transform if it is the |current_transform_|.
+  void UpdateIfActive(const ControlState* state);
+  void TransitionIntoZoom(ControlState* state);
+  void TransitionOutOfZoom(ControlState* state);
 
-  bool is_magnified() const;
+  bool is_magnified(const ControlState* state) const;
 
-  std::unique_ptr<ContestMember> contest_member_;
   fuchsia::accessibility::MagnificationHandlerPtr handler_;
 
   input::GestureDetector gesture_detector_;
+  fxl::WeakPtr<Interaction> interaction_;
 
   float transition_progress_ = 0;
-  float transition_rate_ = 0;
+  // Double-buffered state allows us to defer updates from gestures until after we've won.
+  ControlState buffered_state_[2];
+  // Represents committed control state resulting from winning gestures. This is a pointer to allow
+  // ongoing interactions to route updates independent from when the gesture is awarded a win.
+  ControlState* current_state_ = &buffered_state_[0];
+  // Represents pending control state accumulated by contending gestures.
+  ControlState* pending_state_ = &buffered_state_[1];
   bool update_in_progress_ = false, update_pending_ = false;
-  float magnified_scale_ = kDefaultScale;
-  glm::vec2 magnified_translation_ = {0, 0};
 
   Trigger trigger_;
 
   callback::ScopedTaskRunner handler_scope_;
   // Task that handles timeouts to reject unfulfilled multitap gestures.
   async::TaskClosureMethod<Magnifier, &Magnifier::ResetTaps> reset_taps_;
+
+  // This should be last as destroying it can trigger cleanup actions that depend on other state.
+  std::unique_ptr<ContestMember> contest_member_;
 };
 
 }  // namespace a11y

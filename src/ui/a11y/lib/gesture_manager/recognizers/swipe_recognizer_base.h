@@ -5,7 +5,6 @@
 #ifndef SRC_UI_A11Y_LIB_GESTURE_MANAGER_RECOGNIZERS_SWIPE_RECOGNIZER_BASE_H_
 #define SRC_UI_A11Y_LIB_GESTURE_MANAGER_RECOGNIZERS_SWIPE_RECOGNIZER_BASE_H_
 
-#include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
 
 #include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
@@ -41,17 +40,12 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // swipe. Callback is invoked when swipe gesture is detected and the recognizer is the winner in
   // gesture arena.
   SwipeRecognizerBase(SwipeGestureCallback callback, zx::duration swipe_gesture_timeout);
+  ~SwipeRecognizerBase() override;
 
-  // Processes incoming pointer events.
   void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) override;
-
-  // This method gets called when the recognizer has lost the arena.
-  // It resets the state of the recognizer.
+  void OnWin() override;
   void OnDefeat() override;
-
   void OnContestStarted(std::unique_ptr<ContestMember> contest_member) override;
-
-  // A human-readable string name for the recognizer to be used in logs only.
   std::string DebugName() const override = 0;
 
  protected:
@@ -65,11 +59,9 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // given slope value falls within that range.
   virtual bool ValidateSwipeSlopeAndDirection(float x_displacement, float y_displacement) = 0;
 
-  // Helper function to Reset the state of all the variables.
-  void ResetState();
-
-  // Helper function to reject a gesture in the arena and reset the state of the recognizer.
-  void AbandonGesture();
+ private:
+  // Represents state internal to a contest, i.e. contest member, hold timeout, and tap state.
+  struct Contest;
 
   // Determines whether a gesture's is close enough to up, down, left, or right to be
   // remain in consideration as a swipe. Returns true if so, false otherwise.
@@ -79,17 +71,11 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // range.
   bool ValidateSwipeDistance(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
-  // Indicates that a down event has been detected.
-  bool in_progress_ = false;
-
   // Stores the Gesture Context which is required to execute the callback.
   GestureContext gesture_context_;
 
   // Callback which will be executed when gesture is executed.
   SwipeGestureCallback swipe_gesture_callback_;
-
-  // Async task used to schedule gesture timeout.
-  async::TaskClosureMethod<SwipeRecognizerBase, &SwipeRecognizerBase::AbandonGesture> abandon_task_;
 
   // Swipe gesture timeout(in milliseconds). If the gesture is not completed within this time
   // period, then it won't be recognized.
@@ -99,7 +85,7 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // performed.
   GestureInfo gesture_start_info_;
 
-  std::unique_ptr<ContestMember> contest_member_;
+  std::unique_ptr<Contest> contest_;
 };
 
 }  // namespace a11y

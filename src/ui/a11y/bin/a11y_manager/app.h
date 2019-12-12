@@ -89,6 +89,16 @@ class App {
   A11yManagerState state() { return state_; };
 
  private:
+  // If gesture manager/handler/arena ever get idempotent operations, we can remove this.
+
+  struct GestureState {
+    bool screen_reader_gestures = false;
+    bool magnifier_gestures = false;
+
+    bool has_any() const { return screen_reader_gestures || magnifier_gestures; }
+    bool operator==(GestureState o) const;
+  };
+
   // Callback for Setui's Watch() method.
   void SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result result);
 
@@ -126,6 +136,7 @@ class App {
   // The gesture manager is instantiated whenever a11y manager starts listening
   // for pointer events, and destroyed when the listener disconnects.
   std::unique_ptr<a11y::GestureManager> gesture_manager_;
+  GestureState gesture_state_;
   a11y::Magnifier magnifier_;
 
   // TODO(17180): This will be removed and replaced this with smaller configuration APIs.

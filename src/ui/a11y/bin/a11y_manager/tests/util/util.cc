@@ -4,6 +4,12 @@
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fdio/fd.h>
+
+#include <gtest/gtest.h>
+
 namespace accessibility_test {
 
 char *ReadFile(vfs::internal::Node *node, int length, char *buffer) {

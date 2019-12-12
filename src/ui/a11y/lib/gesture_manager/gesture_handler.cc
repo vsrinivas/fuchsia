@@ -5,9 +5,17 @@
 #include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/any_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_tap_recognizer.h"
 
 namespace a11y {
+
+namespace {
+
+// This recognizer is stateless and trivial, so it makes sense as static.
+AnyRecognizer consume_all;
+
+}  // namespace
 
 GestureHandler::GestureHandler(GestureArena* arena) : arena_(arena) {}
 
@@ -39,5 +47,7 @@ void GestureHandler::BindOneFingerTapAction(OnGestureCallback callback) {
     arena_->Add(gesture_recognizers_[kOneFingerTap].get());
   }
 }
+
+void GestureHandler::ConsumeAll() { arena_->Add(&consume_all); }
 
 }  // namespace a11y

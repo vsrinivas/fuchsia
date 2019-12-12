@@ -55,11 +55,11 @@ App::~App() = default;
 void App::SetState(A11yManagerState state) {
   state_ = state;
 
-  // Screen Reader and Magnifier depend on gesture manager state being correct.
-  UpdateGestureManagerState();
-
   UpdateScreenReaderState();
   UpdateMagnifierState();
+
+  // May rely on screen reader existence.
+  UpdateGestureManagerState();
 }
 
 void App::UpdateScreenReaderState() {
@@ -68,9 +68,7 @@ void App::UpdateScreenReaderState() {
 
   if (state_.screen_reader_enabled()) {
     if (!screen_reader_) {
-      // TODO:(fxb/41769) We should move more of the enable/disable logic outside of screen reader.
-      screen_reader_ = std::make_unique<a11y::ScreenReader>(&semantics_manager_, &tts_manager_,
-                                                            gesture_manager_.get());
+      screen_reader_ = std::make_unique<a11y::ScreenReader>(&semantics_manager_, &tts_manager_);
     }
   } else {
     screen_reader_.reset();
@@ -84,29 +82,33 @@ void App::UpdateMagnifierState() {
 }
 
 void App::UpdateGestureManagerState() {
-  bool no_active_users = !state_.magnifier_enabled() && !state_.screen_reader_enabled();
+  GestureState new_state = {.screen_reader_gestures = state_.screen_reader_enabled(),
+                            .magnifier_gestures = state_.magnifier_enabled()};
 
-  if (no_active_users) {
+  if (new_state == gesture_state_)
+    return;
+
+  gesture_state_ = new_state;
+
+  // For now the easiest way to properly set up all gestures with the right priorities is to rebuild
+  // the gesture manager when the gestures change.
+
+  if (!gesture_state_.has_any()) {
     // Shut down and clean up if no users
     gesture_manager_.reset();
   } else {
-    // Initialize if not initialized
-    if (!gesture_manager_) {
-      gesture_manager_ = std::make_unique<a11y::GestureManager>();
-      pointer_event_registry_->Register(gesture_manager_->binding().NewBinding());
+    gesture_manager_ = std::make_unique<a11y::GestureManager>();
+    pointer_event_registry_->Register(gesture_manager_->binding().NewBinding());
+
+    // The ordering of these recognizers is significant, as it signifies priority.
+
+    if (gesture_state_.magnifier_gestures) {
       gesture_manager_->arena()->Add(&magnifier_);
     }
 
-    // Current logic for event handling policy is as follows:
-    // Screen reader only: consume events
-    // Screen reader and magnifier enabled: consume events
-    // Just magnifier enabled: reject events
-    if (state_.screen_reader_enabled()) {
-      gesture_manager_->arena()->event_handling_policy(
-          a11y::GestureArena::EventHandlingPolicy::kConsumeEvents);
-    } else {
-      gesture_manager_->arena()->event_handling_policy(
-          a11y::GestureArena::EventHandlingPolicy::kRejectEvents);
+    if (gesture_state_.screen_reader_gestures) {
+      screen_reader_->BindGestures(gesture_manager_->gesture_handler());
+      gesture_manager_->gesture_handler()->ConsumeAll();
     }
   }
 }
@@ -156,6 +158,11 @@ void App::UpdateInternalSettings(const fuchsia::settings::AccessibilitySettings&
         break;
     }
   }
+}
+
+bool App::GestureState::operator==(GestureState o) const {
+  return screen_reader_gestures == o.screen_reader_gestures &&
+         magnifier_gestures == o.magnifier_gestures;
 }
 
 void App::SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result result) {

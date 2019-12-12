@@ -9,7 +9,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
 #include "src/ui/a11y/lib/screen_reader/explore_action.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
@@ -31,9 +31,10 @@ class ScreenReader {
   // Pointers to Semantics Manager, TTS Manager and Gesture Manager must outlive
   // screen reader. A11y App is responsible for creating these pointers along
   // with Screen Reader object.
-  ScreenReader(a11y::SemanticsManager* semantics_manager_impl, a11y::TtsManager* tts_manager,
-               a11y::GestureManager* gesture_manager);
+  ScreenReader(a11y::SemanticsManager* semantics_manager_impl, a11y::TtsManager* tts_manager);
   ~ScreenReader() = default;
+
+  void BindGestures(a11y::GestureHandler* gesture_handler);
 
  private:
   // Initializes services TTS Engine and binds actions to gesture manager.
@@ -53,9 +54,6 @@ class ScreenReader {
 
   // Pointer to TTS Manager.
   a11y::TtsManager* tts_manager_;
-
-  // Pointer to Gesture Manager.
-  a11y::GestureManager* gesture_manager_;
 };
 
 }  // namespace a11y
