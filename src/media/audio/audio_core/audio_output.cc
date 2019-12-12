@@ -221,7 +221,7 @@ void AudioOutput::ForEachSource(TaskType task_type, zx::time ref_time) {
       // Now process the packet at the front of the renderer's queue. If the packet has been
       // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
       release_buffer = (task_type == TaskType::Mix)
-                           ? ProcessMix(link->GetSource(), mixer, *stream_buffer)
+                           ? ProcessMix(stream.get(), mixer, *stream_buffer)
                            : ProcessTrim(*stream_buffer);
 
       // If we have mixed enough destination frames, we are done with this mix, regardless of what
@@ -260,8 +260,7 @@ void AudioOutput::SetupMix(Mixer* mixer) {
   cur_mix_job_.frames_produced = 0;
 }
 
-bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,
-                             const Stream::Buffer& source_buffer) {
+bool AudioOutput::ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& source_buffer) {
   TRACE_DURATION("audio", "AudioOutput::ProcessMix");
   // Bookkeeping should contain: the rechannel matrix (eventually).
 
@@ -328,8 +327,8 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
     auto clock_mono_late = zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
         source_frac_frames_late.raw_value()));
 
-    source->UnderflowOccurred(frac_source_for_first_packet_frame,
-                              frac_source_for_first_mix_job_frame, clock_mono_late);
+    stream->ReportUnderflow(frac_source_for_first_packet_frame, frac_source_for_first_mix_job_frame,
+                            clock_mono_late);
 
     return true;
   }
@@ -372,7 +371,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
 
     frac_source_offset_64 += FractionalFrames<int64_t>::FromRaw(dest_to_src.Scale(dest_offset_64));
 
-    source->PartialUnderflowOccurred(frac_source_offset_64, dest_offset_64);
+    stream->ReportPartialUnderflow(frac_source_offset_64, dest_offset_64);
   }
 
   FX_DCHECK(dest_offset_64 >= 0);

@@ -40,6 +40,11 @@ class PacketQueue : public Stream {
   std::optional<Stream::Buffer> LockBuffer() override;
   void UnlockBuffer(bool release_buffer) override;
   std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const override;
+  void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
+                       FractionalFrames<int64_t> frac_source_mix_point,
+                       zx::duration underflow_duration) override;
+  void ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_offset,
+                              int64_t dest_mix_offset) override;
 
  private:
   std::mutex flush_mutex_;
@@ -52,6 +57,8 @@ class PacketQueue : public Stream {
   bool flushed_ FXL_GUARDED_BY(pending_mutex_) = true;
   bool processing_in_progress_ FXL_GUARDED_BY(pending_mutex_) = false;
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_;
+  std::atomic<uint16_t> underflow_count_ = {0};
+  std::atomic<uint16_t> partial_underflow_count_ = {0};
 };
 
 }  // namespace media::audio

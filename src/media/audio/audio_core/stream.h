@@ -65,6 +65,16 @@ class Stream : public fbl::RefCounted<Stream> {
   // Reads the function that converts reference clock to fractional stream frames.
   virtual std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const = 0;
 
+  // Hooks to add logging or metrics for [Partial] Underflow events.
+  //
+  // TODO(42674): Remove these methods and update any streams that may underflow to detect this
+  // underflow in |LockBuffer| directly.
+  virtual void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
+                               FractionalFrames<int64_t> frac_source_mix_point,
+                               zx::duration underflow_duration) {}
+  virtual void ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_offset,
+                                      int64_t dest_mix_offset) {}
+
   const Format& format() const { return format_; }
 
  private:

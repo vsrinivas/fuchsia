@@ -4,13 +4,34 @@
 
 #include "src/media/audio/audio_core/packet_queue.h"
 
+#include <iomanip>
+
 #include <trace/event.h>
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/format.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
+namespace {
+
+// To what extent should client-side underflows be logged? (A "client-side underflow" refers to when
+// all or part of a packet's data is discarded because its start timestamp has already passed.)
+// For each packet queue, we will log the first underflow. For subsequent occurrences, depending on
+// audio_core's logging level, we throttle how frequently these are displayed. If log_level is set
+// to TRACE or SPEW, all client-side underflows are logged -- at log_level -1: VLOG TRACE -- as
+// specified by kUnderflowTraceInterval. If set to INFO, we log less often, at log_level 1: INFO,
+// throttling by the factor kUnderflowInfoInterval. If set to WARNING or higher, we throttle these
+// even more, specified by kUnderflowErrorInterval. Note: by default we set NDEBUG builds to WARNING
+// and DEBUG builds to INFO. To disable all logging of client-side underflows, set kLogUnderflow to
+// false.
+static constexpr bool kLogUnderflow = true;
+static constexpr uint16_t kUnderflowTraceInterval = 1;
+static constexpr uint16_t kUnderflowInfoInterval = 10;
+static constexpr uint16_t kUnderflowErrorInterval = 100;
+
+}  // namespace
 
 PacketQueue::PacketQueue(Format format) : PacketQueue(format, nullptr) {}
 
@@ -129,6 +150,80 @@ std::pair<TimelineFunction, uint32_t> PacketQueue::ReferenceClockToFractionalFra
     return std::make_pair(TimelineFunction(), kInvalidGenerationId);
   }
   return timeline_function_->get();
+}
+
+void PacketQueue::ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
+                                  FractionalFrames<int64_t> frac_source_mix_point,
+                                  zx::duration underflow_duration) {
+  TRACE_INSTANT("audio", "PacketQueue::ReportUnderflow", TRACE_SCOPE_PROCESS);
+  uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
+
+  if constexpr (kLogUnderflow) {
+    auto underflow_msec = static_cast<double>(underflow_duration.to_nsecs()) / ZX_MSEC(1);
+
+    if ((kUnderflowErrorInterval > 0) && (underflow_count % kUnderflowErrorInterval == 0)) {
+      FX_LOGS(ERROR) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
+                     << kUnderflowErrorInterval << "): source-start 0x" << std::hex
+                     << frac_source_start.raw_value() << " missed mix-point 0x"
+                     << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
+                     << underflow_msec << " ms";
+
+    } else if ((kUnderflowInfoInterval > 0) && (underflow_count % kUnderflowInfoInterval == 0)) {
+      FX_LOGS(INFO) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
+                    << kUnderflowErrorInterval << "): source-start 0x" << std::hex
+                    << frac_source_start.raw_value() << " missed mix-point 0x"
+                    << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
+                    << underflow_msec << " ms";
+
+    } else if ((kUnderflowTraceInterval > 0) && (underflow_count % kUnderflowTraceInterval == 0)) {
+      FX_VLOGS(TRACE) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
+                      << kUnderflowErrorInterval << "): source-start 0x" << std::hex
+                      << frac_source_start.raw_value() << " missed mix-point 0x"
+                      << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
+                      << underflow_msec << " ms";
+    }
+  }
+}
+
+void PacketQueue::ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_offset,
+                                         int64_t dest_mix_offset) {
+  TRACE_INSTANT("audio", "PacketQueue::ReportPartialUnderflow", TRACE_SCOPE_PROCESS);
+
+  // Shifts by less than four source frames do not necessarily indicate underflow. A shift of this
+  // duration can be caused by the round-to-nearest-dest-frame step, when our rate-conversion ratio
+  // is sufficiently large (it can be as large as 4:1).
+  if (frac_source_offset >= 4) {
+    auto partial_underflow_count = std::atomic_fetch_add<uint16_t>(&partial_underflow_count_, 1u);
+    if constexpr (kLogUnderflow) {
+      if ((kUnderflowErrorInterval > 0) &&
+          (partial_underflow_count % kUnderflowErrorInterval == 0)) {
+        FX_LOGS(WARNING) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
+                         << kUnderflowErrorInterval << "): shifted by "
+                         << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
+                         << abs(frac_source_offset.raw_value()) << " source subframes and "
+                         << std::dec << dest_mix_offset << " mix (output) frames";
+      } else if ((kUnderflowInfoInterval > 0) &&
+                 (partial_underflow_count % kUnderflowInfoInterval == 0)) {
+        FX_LOGS(INFO) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
+                      << kUnderflowInfoInterval << "): shifted by "
+                      << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
+                      << abs(frac_source_offset.raw_value()) << " source subframes and " << std::dec
+                      << dest_mix_offset << " mix (output) frames";
+      } else if ((kUnderflowTraceInterval > 0) &&
+                 (partial_underflow_count % kUnderflowTraceInterval == 0)) {
+        FX_VLOGS(TRACE) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
+                        << kUnderflowTraceInterval << "): shifted by "
+                        << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
+                        << abs(frac_source_offset.raw_value()) << " source subframes and "
+                        << std::dec << dest_mix_offset << " mix (output) frames";
+      }
+    }
+  } else {
+    if constexpr (kLogUnderflow) {
+      FX_VLOGS(TRACE) << "shifted " << dest_mix_offset
+                      << " mix (output) frames to align with source packet";
+    }
+  }
 }
 
 }  // namespace media::audio

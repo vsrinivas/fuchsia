@@ -137,11 +137,6 @@ class AudioRendererImpl : public AudioObject,
 
   // |media::audio::AudioObject|
   void OnLinkAdded() override;
-  void UnderflowOccurred(FractionalFrames<int64_t> frac_source_start,
-                         FractionalFrames<int64_t> frac_source_mix_point,
-                         zx::duration underflow_duration) final;
-  void PartialUnderflowOccurred(FractionalFrames<int64_t> frac_source_offset,
-                                int64_t dest_mix_offset) final;
   const fbl::RefPtr<Format>& format() const final { return format_; }
   zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link) override;
   void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) override;
@@ -183,9 +178,6 @@ class AudioRendererImpl : public AudioObject,
   bool min_lead_time_events_enabled_ = false;
 
   fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames_;
-
-  std::atomic<uint16_t> underflow_count_;
-  std::atomic<uint16_t> partial_underflow_count_;
 
   std::unordered_map<AudioLink*, fbl::RefPtr<PacketQueue>> packet_queues_;
 

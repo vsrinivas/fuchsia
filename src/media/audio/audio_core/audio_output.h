@@ -98,8 +98,8 @@ class AudioOutput : public AudioDevice {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   void SetupMix(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-  bool ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,
-                  const Stream::Buffer& buffer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  bool ProcessMix(Stream* stream, Mixer* mixer, const Stream::Buffer& buffer)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   void SetupTrim(Mixer* mixer, zx::time trim_point)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
