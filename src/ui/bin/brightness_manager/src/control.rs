@@ -7,7 +7,8 @@ use std::sync::Arc;
 use failure::Error;
 use fidl_fuchsia_ui_brightness::{
     BrightnessPoint, BrightnessTable, ControlRequest as BrightnessControlRequest,
-    ControlWatchAutoBrightnessResponder, ControlWatchCurrentBrightnessResponder,
+    ControlWatchAutoBrightnessOffsetResponder, ControlWatchAutoBrightnessResponder,
+    ControlWatchCurrentBrightnessResponder,
 };
 use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
@@ -32,19 +33,19 @@ const AUTO_MINIMUM_BRIGHTNESS: f32 = 0.004;
 //This is the default table, and a default curve will be generated base on this table.
 //This will be replaced once SetBrightnessTable is called.
 lazy_static! {
-    static ref BRIGHTNESS_TABLE: BrightnessTable = {
+    static ref BRIGHTNESS_TABLE: Arc<Mutex<BrightnessTable>> = {
         let mut lux_to_nits = Vec::new();
         lux_to_nits.push(BrightnessPoint { ambient_lux: 0., display_nits: 0. });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 10. });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 30., display_nits: 20. });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 60., display_nits: 40. });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 100., display_nits: 70. });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 150., display_nits: 110. });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 210., display_nits: 160. });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 250., display_nits: 200. });
-        lux_to_nits.push(BrightnessPoint { ambient_lux: 300., display_nits: 250. });
-
-        BrightnessTable { points: lux_to_nits }
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 3.33 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 30., display_nits: 13.02 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 60., display_nits: 26.19 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 100., display_nits: 36.87 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 150., display_nits: 54.12 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 210., display_nits: 112.34 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 250., display_nits: 124.16 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 300., display_nits: 162.96 });
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 340., display_nits: 300. });
+        Arc::new(Mutex::new(BrightnessTable { points: lux_to_nits }))
     };
 }
 
@@ -72,6 +73,18 @@ impl Sender<bool> for WatcherAutoResponder {
     }
 }
 
+pub struct WatcherOffsetResponder {
+    watcher_offset_responder: ControlWatchAutoBrightnessOffsetResponder,
+}
+
+impl Sender<f32> for WatcherOffsetResponder {
+    fn send_response(self, data: f32) {
+        if let Err(e) = self.watcher_offset_responder.send(data) {
+            fx_log_err!("Failed to reply to WatchAutoBrightnessOffset: {}", e);
+        }
+    }
+}
+
 pub struct Control {
     sensor: Arc<Mutex<dyn SensorControl>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
@@ -80,22 +93,24 @@ pub struct Control {
     spline: Spline<f32, f32>,
     current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
     auto_sender_channel: Arc<Mutex<SenderChannel<bool>>>,
+    offset_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
 }
 
 impl Control {
-    pub fn new(
+    pub async fn new(
         sensor: Arc<Mutex<dyn SensorControl>>,
         backlight: Arc<Mutex<dyn BacklightControl>>,
         current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
         auto_sender_channel: Arc<Mutex<SenderChannel<bool>>>,
+        offset_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
     ) -> Control {
         fx_log_info!("New Control class");
 
         let set_brightness_abort_handle = None::<AbortHandle>;
 
-        let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
+        let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
         let brightness_table = BrightnessTable { points: points.to_vec() };
-        let spline_arg = generate_spline(brightness_table);
+        let spline_arg = generate_spline(&brightness_table);
 
         // Startup auto-brightness loop
         let initial_auto_brightness_abort_handle = None::<AbortHandle>;
@@ -115,6 +130,7 @@ impl Control {
             spline: spline_arg,
             current_sender_channel,
             auto_sender_channel,
+            offset_sender_channel,
         }
     }
 
@@ -123,10 +139,10 @@ impl Control {
         request: BrightnessControlRequest,
         watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
         watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
+        watch_offset_handler: Arc<Mutex<WatchHandler<f32, WatcherOffsetResponder>>>,
     ) {
         // TODO(kpt): "Consider adding additional tests against the resulting FIDL service itself so
         // that you can ensure it continues serving clients correctly."
-        // TODO(kpt): Make each match a testable function when hanging gets are implemented
         match request {
             BrightnessControlRequest::SetAutoBrightness { control_handle: _ } => {
                 self.set_auto_brightness().await;
@@ -153,9 +169,24 @@ impl Control {
                 }
             }
             BrightnessControlRequest::SetBrightnessTable { table, control_handle: _ } => {
-                self.set_brightness_table(table).await;
+                self.set_brightness_table(&table).await;
+                *BRIGHTNESS_TABLE.lock().await = table;
             }
-            _ => fx_log_err!("received {:?}", request),
+
+            BrightnessControlRequest::SetAutoBrightnessOffset { offset, control_handle: _ } => {
+                self.set_auto_brightness_offset(offset).await;
+            }
+            BrightnessControlRequest::WatchAutoBrightnessOffset { responder } => {
+                let watch_offset_result =
+                    self.watch_auto_brightness_offset(watch_offset_handler, responder).await;
+                match watch_offset_result {
+                    Ok(_v) => fx_log_info!("Sent the current value"),
+                    Err(e) => fx_log_info!(
+                        "Didn't watch auto brightness offset successfully, got err {}",
+                        e
+                    ),
+                }
+            }
         }
     }
 
@@ -165,6 +196,10 @@ impl Control {
 
     pub async fn add_auto_sender_channel(&mut self, sender: UnboundedSender<bool>) {
         self.auto_sender_channel.lock().await.add_sender_channel(sender).await;
+    }
+
+    pub async fn add_offset_sender_channel(&mut self, sender: UnboundedSender<f32>) {
+        self.offset_sender_channel.lock().await.add_sender_channel(sender).await;
     }
 
     pub fn get_backlight_and_auto_brightness_on(
@@ -234,8 +269,7 @@ impl Control {
         Ok(())
     }
 
-    /// auto brightness need to stop at this point or not
-    async fn set_brightness_table(&mut self, table: BrightnessTable) {
+    async fn set_brightness_table(&mut self, table: &BrightnessTable) {
         fx_log_info!("Setting brightness table.");
         self.spline = generate_spline(table);
 
@@ -249,6 +283,34 @@ impl Control {
             );
         }
     }
+
+    async fn set_auto_brightness_offset(&mut self, offset: f32) {
+        let old_table = {
+            let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
+            BrightnessTable { points: points.to_vec() }
+        };
+        let BrightnessTable { points } = &old_table;
+        let mut new_table = Vec::new();
+        for brightness_point in points {
+            new_table.push(BrightnessPoint {
+                ambient_lux: brightness_point.ambient_lux,
+                display_nits: brightness_point.display_nits * offset,
+            });
+        }
+        let new_table = BrightnessTable { points: new_table };
+        self.set_brightness_table(&new_table).await;
+        self.offset_sender_channel.lock().await.send_value(offset);
+    }
+
+    async fn watch_auto_brightness_offset(
+        &mut self,
+        watch_offset_handler: Arc<Mutex<WatchHandler<f32, WatcherOffsetResponder>>>,
+        responder: ControlWatchAutoBrightnessOffsetResponder,
+    ) -> Result<(), Error> {
+        let mut hanging_get_lock = watch_offset_handler.lock().await;
+        hanging_get_lock.watch(WatcherOffsetResponder { watcher_offset_responder: responder })?;
+        Ok(())
+    }
 }
 
 #[async_trait(?Send)]
@@ -258,9 +320,11 @@ pub trait ControlTrait {
         request: BrightnessControlRequest,
         watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
         watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
+        watch_offset_handler: Arc<Mutex<WatchHandler<f32, WatcherOffsetResponder>>>,
     );
     async fn add_current_sender_channel(&mut self, sender: UnboundedSender<f32>);
     async fn add_auto_sender_channel(&mut self, sender: UnboundedSender<bool>);
+    async fn add_offset_sender_channel(&mut self, sender: UnboundedSender<f32>);
     fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<Mutex<dyn BacklightControl>>, bool);
 }
 
@@ -271,8 +335,15 @@ impl ControlTrait for Control {
         request: BrightnessControlRequest,
         watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
         watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
+        watch_offset_handler: Arc<Mutex<WatchHandler<f32, WatcherOffsetResponder>>>,
     ) {
-        self.handle_request(request, watch_current_handler, watch_auto_handler).await;
+        self.handle_request(
+            request,
+            watch_current_handler,
+            watch_auto_handler,
+            watch_offset_handler,
+        )
+        .await;
     }
 
     async fn add_current_sender_channel(&mut self, sender: UnboundedSender<f32>) {
@@ -281,6 +352,10 @@ impl ControlTrait for Control {
 
     async fn add_auto_sender_channel(&mut self, sender: UnboundedSender<bool>) {
         self.add_auto_sender_channel(sender).await;
+    }
+
+    async fn add_offset_sender_channel(&mut self, sender: UnboundedSender<f32>) {
+        self.add_offset_sender_channel(sender).await;
     }
 
     fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<Mutex<dyn BacklightControl>>, bool) {
@@ -292,8 +367,8 @@ impl ControlTrait for Control {
 // for the creation of this code the reviewer can see more easily that the code is unchanged
 // after the extraction from main.rs.
 
-fn generate_spline(table: BrightnessTable) -> Spline<f32, f32> {
-    let BrightnessTable { points } = &table;
+fn generate_spline(table: &BrightnessTable) -> Spline<f32, f32> {
+    let BrightnessTable { points } = table;
     let mut lux_to_nits_table_to_splines = Vec::new();
     for brightness_point in points {
         lux_to_nits_table_to_splines.push(Key::new(
@@ -506,11 +581,11 @@ mod tests {
         (sensor, backlight)
     }
 
-    fn generate_control_struct() -> Control {
+    async fn generate_control_struct() -> Control {
         let (sensor, _backlight) = set_mocks(400, 0.5);
         let set_brightness_abort_handle = None::<AbortHandle>;
         let auto_brightness_abort_handle = None::<AbortHandle>;
-        let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
+        let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
         let brightness_table_old = BrightnessTable { points: points.to_vec() };
         let spline_arg = generate_spline(brightness_table_old.clone());
 
@@ -519,6 +594,9 @@ mod tests {
 
         let auto_sender_channel: SenderChannel<bool> = SenderChannel::new();
         let auto_sender_channel = Arc::new(Mutex::new(auto_sender_channel));
+
+        let offset_sender_channel: SenderChannel<f32> = SenderChannel::new();
+        let offset_sender_channel = Arc::new(Mutex::new(offset_sender_channel));
         Control {
             sensor,
             backlight: _backlight,
@@ -527,6 +605,7 @@ mod tests {
             spline: spline_arg,
             current_sender_channel,
             auto_sender_channel,
+            offset_sender_channel,
         }
     }
 
@@ -549,25 +628,37 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_brightness_curve() {
-        let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
+        let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
         let brightness_table = BrightnessTable { points: points.to_vec() };
         let spline = generate_spline(brightness_table);
 
         assert_eq!(cmp_float(0., brightness_curve_lux_to_nits(0, &spline).await), true);
-        assert_eq!(cmp_float(1., brightness_curve_lux_to_nits(1, &spline).await), true);
-        assert_eq!(cmp_float(2., brightness_curve_lux_to_nits(2, &spline).await), true);
-        assert_eq!(cmp_float(12.5, brightness_curve_lux_to_nits(15, &spline).await), true);
-        assert_eq!(cmp_float(13., brightness_curve_lux_to_nits(16, &spline).await), true);
-        assert_eq!(cmp_float(70., brightness_curve_lux_to_nits(100, &spline).await), true);
-        assert_eq!(cmp_float(110., brightness_curve_lux_to_nits(150, &spline).await), true);
-        assert_eq!(cmp_float(151.66, brightness_curve_lux_to_nits(200, &spline).await), true);
-        assert_eq!(cmp_float(190., brightness_curve_lux_to_nits(240, &spline).await), true);
-        assert_eq!(cmp_float(250., brightness_curve_lux_to_nits(300, &spline).await), true);
+        assert_eq!(cmp_float(0.333, brightness_curve_lux_to_nits(1, &spline).await), true);
+        assert_eq!(cmp_float(0.666, brightness_curve_lux_to_nits(2, &spline).await), true);
+        assert_eq!(cmp_float(5.75, brightness_curve_lux_to_nits(15, &spline).await), true);
+        assert_eq!(cmp_float(6.23, brightness_curve_lux_to_nits(16, &spline).await), true);
+        assert_eq!(cmp_float(36.87, brightness_curve_lux_to_nits(100, &spline).await), true);
+        assert_eq!(cmp_float(54.12, brightness_curve_lux_to_nits(150, &spline).await), true);
+        assert_eq!(cmp_float(102.63, brightness_curve_lux_to_nits(200, &spline).await), true);
+        assert_eq!(cmp_float(121.2, brightness_curve_lux_to_nits(240, &spline).await), true);
+        assert_eq!(cmp_float(162.96, brightness_curve_lux_to_nits(300, &spline).await), true);
+        assert_eq!(cmp_float(300., brightness_curve_lux_to_nits(340, &spline).await), true);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_brightness_curve_after_set_new_brightness_table() {
-        let mut control = generate_control_struct();
+        let mut control = generate_control_struct().await;
+        let points = {
+            let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
+            let mut points_vec = Vec::new();
+            for point in points {
+                points_vec.push(BrightnessPoint {
+                    ambient_lux: point.ambient_lux,
+                    display_nits: point.display_nits,
+                });
+            }
+            points_vec
+        };
         let brightness_table = {
             let mut lux_to_nits = Vec::new();
             lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 50. });
@@ -581,17 +672,51 @@ mod tests {
 
             BrightnessTable { points: lux_to_nits }
         };
-        control.set_brightness_table(brightness_table).await;
-        assert_eq!(50.0, brightness_curve_lux_to_nits(0, &control.spline).await);
-        assert_eq!(50.0, brightness_curve_lux_to_nits(1, &control.spline).await);
-        assert_eq!(50.0, brightness_curve_lux_to_nits(2, &control.spline).await);
-        assert_eq!(50.0, brightness_curve_lux_to_nits(15, &control.spline).await);
-        assert_eq!(50.0, brightness_curve_lux_to_nits(16, &control.spline).await);
-        assert_eq!(50.0, brightness_curve_lux_to_nits(100, &control.spline).await);
-        assert_eq!(50.0, brightness_curve_lux_to_nits(150, &control.spline).await);
-        assert_eq!(50.0, brightness_curve_lux_to_nits(200, &control.spline).await);
-        assert_eq!(50.0, brightness_curve_lux_to_nits(240, &control.spline).await);
-        assert_eq!(50.0, brightness_curve_lux_to_nits(300, &control.spline).await);
+        control.set_brightness_table(&brightness_table).await;
+        assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(0, &control.spline).await), true);
+        assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(1, &control.spline).await), true);
+        assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(2, &control.spline).await), true);
+        assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(15, &control.spline).await), true);
+        assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(16, &control.spline).await), true);
+        assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(100, &control.spline).await), true);
+        assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(150, &control.spline).await), true);
+        assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(200, &control.spline).await), true);
+        assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(240, &control.spline).await), true);
+        assert_eq!(cmp_float(50.0, brightness_curve_lux_to_nits(300, &control.spline).await), true);
+        *BRIGHTNESS_TABLE.lock().await = BrightnessTable { points };
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brightness_table_after_set_an_offset() {
+        let mut control = generate_control_struct().await;
+        control.set_auto_brightness_offset(0.3).await;
+
+        assert_eq!(cmp_float(0.0, brightness_curve_lux_to_nits(0, &control.spline).await), true);
+        assert_eq!(cmp_float(0.099, brightness_curve_lux_to_nits(1, &control.spline).await), true);
+        assert_eq!(cmp_float(0.199, brightness_curve_lux_to_nits(2, &control.spline).await), true);
+        assert_eq!(cmp_float(1.725, brightness_curve_lux_to_nits(15, &control.spline).await), true);
+        assert_eq!(cmp_float(1.871, brightness_curve_lux_to_nits(16, &control.spline).await), true);
+        assert_eq!(
+            cmp_float(11.061, brightness_curve_lux_to_nits(100, &control.spline).await),
+            true
+        );
+        assert_eq!(
+            cmp_float(16.236, brightness_curve_lux_to_nits(150, &control.spline).await),
+            true
+        );
+        assert_eq!(
+            cmp_float(30.791, brightness_curve_lux_to_nits(200, &control.spline).await),
+            true
+        );
+        assert_eq!(
+            cmp_float(36.361, brightness_curve_lux_to_nits(240, &control.spline).await),
+            true
+        );
+        assert_eq!(
+            cmp_float(48.888, brightness_curve_lux_to_nits(300, &control.spline).await),
+            true
+        );
+        assert_eq!(cmp_float(90., brightness_curve_lux_to_nits(340, &control.spline).await), true);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -651,17 +776,17 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sensor_and_get_brightness_bright() {
-        let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
+        let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
         let brightness_table = BrightnessTable { points: points.to_vec() };
         let spline = generate_spline(brightness_table);
-        let (sensor, _backlight) = set_mocks(400, 1.2);
+        let (sensor, _backlight) = set_mocks(400, 1.5);
         let value = read_sensor_and_get_brightness(sensor, &spline, 250.0).await;
-        assert_eq!(cmp_float(1.0, value), true);
+        assert_eq!(cmp_float(1.2, value), true);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sensor_and_get_brightness_low_light() {
-        let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
+        let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
         let brightness_table = BrightnessTable { points: points.to_vec() };
         let spline = generate_spline(brightness_table);
         let (sensor, _backlight) = set_mocks(0, 0.0);
