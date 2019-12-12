@@ -170,6 +170,105 @@ TEST_F(spinel_vk, path_builder_lost)
 }
 
 //
+// go/fxr/344936
+//
+TEST_F(spinel_vk, dispatch_implicit_rasters_flush)
+{
+  //
+  // create the builders
+  //
+  spn_path_builder_t pb;
+
+  spn(path_builder_create(context, &pb));
+
+  spn_raster_builder_t rb;
+
+  spn(raster_builder_create(context, &rb));
+
+  //
+  // how many to trip bug?
+  //
+  uint32_t const count = 255 * 2 + 1; // +0 succeeds
+
+  //
+  // Create paths
+  //
+  spn_path_t paths[count];
+
+  for (uint32_t ii = 0; ii < count; ii++)
+    {
+      spn(path_builder_begin(pb));
+
+      spn(path_builder_move_to(pb, 0.0f + ii, 0.0f));
+      spn(path_builder_line_to(pb, 8.0f + ii, 8.0f));
+      spn(path_builder_line_to(pb, 0.0f + ii, 8.0f));
+      spn(path_builder_line_to(pb, 0.0f + ii, 0.0f));
+
+      spn(path_builder_end(pb, paths + ii));
+    }
+
+  //
+  // Create rasters
+  //
+  // Note that a raster cohort is limited to 255 rasters.
+  //
+  // This results in the first 255 being flushed which, in turn, forces
+  // the path builder to flush.
+  //
+  spn_raster_t rasters[count];
+
+  spn_transform_weakref_t transform_weakref = SPN_TRANSFORM_WEAKREF_INVALID;
+  spn_transform_t const   transform  //
+    = { 32.0f, 0.00f, 0.00f,         //
+        0.00f, 32.0f, 0.00f,         //
+        0.00f, 0.00f };
+
+  spn_clip_weakref_t clip_weakref = SPN_CLIP_WEAKREF_INVALID;
+  spn_clip_t const   clip  //
+    = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+  for (uint32_t ii = 0; ii < count; ii++)
+    {
+      spn(raster_builder_begin(rb));
+
+      spn(raster_builder_add(rb,  //
+                             paths + ii,
+                             &transform_weakref,
+                             &transform,
+                             &clip_weakref,
+                             &clip,
+                             1));
+
+      spn(raster_builder_end(rb, rasters + ii));
+    }
+
+  //
+  // force flush -- not normally done
+  //
+  spn(raster_builder_flush(rb));
+
+  //
+  // drain everything
+  //
+  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L));
+  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L));
+
+  //
+  // release everything
+  //
+  spn(raster_release(context, rasters, count));
+  spn(path_release(context, paths, count));
+
+  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L));
+
+  //
+  // release the builders
+  //
+  spn(raster_builder_release(rb));
+  spn(path_builder_release(pb));
+}
+
+//
 //
 //
 

@@ -25,12 +25,9 @@
 #include "queue_pool.h"
 #include "ring.h"
 #include "spinel_assert.h"
+#include "status.h"
 #include "vk_target.h"
 #include "weakref.h"
-
-#ifndef NDEBUG
-#include "status.h"  // FIXME(allanmac): for debugging
-#endif
 
 //
 // The raster builder prepares fill commands, transforms and clips for
@@ -489,10 +486,6 @@ struct spn_rbi_complete_payload_1
 static void
 spn_rbi_complete_2(void * pfn_payload)
 {
-#if 0
-  return;
-#endif
-
   struct spn_rbi_complete_payload_2 const * const payload_2 = pfn_payload;
   struct spn_raster_builder_impl * const          impl      = payload_2->impl;
   struct spn_device * const                       device    = impl->device;
@@ -555,7 +548,7 @@ spn_rbi_complete_2(void * pfn_payload)
 }
 
 //
-// TODO(allanmac): SPN-50
+//
 //
 
 static void
@@ -758,11 +751,6 @@ spn_rbi_complete_1(void * pfn_payload)
                                               impl->mapped.cf.ring.size,
                                               dispatch->cf.span,
                                               dispatch->cf.head);
-
-#if 0
-  spn_device_get_status(device);
-  exit(EXIT_FAILURE);
-#endif
 }
 
 //
@@ -874,6 +862,9 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   struct spn_device * const device = impl->device;
 
+  // reset the flush arg associated with the dispatch id
+  spn_device_dispatch_reset_flush_arg(device, dispatch->id);
+
   ////////////////////////////////////////////////////////////////
   //
   // COMMAND BUFFER 1
@@ -901,18 +892,6 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
 
   // first command buffer
   VkCommandBuffer cb = spn_device_dispatch_get_cb(device, id_1);
-
-  //
-  // Declare that this dispatch can't start until after the paths
-  // handles are materialized.
-  //
-  spn_device_dispatch_happens_after_handles(device,
-                                            (spn_dispatch_flush_pfn_t)spn_pbi_flush,
-                                            id_1,
-                                            impl->paths.extent,
-                                            impl->mapped.cf.ring.size,
-                                            dispatch->cf.span,
-                                            dispatch->cf.head);
 
   ////////////////////////////////////////////////////////////////
   //
@@ -1238,9 +1217,16 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   vk_barrier_transfer_w_to_host_r(cb);
 
   //
-  // submit the dispatch
+  // Declare that this dispatch can't start until the path handles are
+  // materialized
   //
-  spn_device_dispatch_submit(device, id_1);
+  spn_device_dispatch_happens_after_handles_and_submit(device,
+                                                       (spn_dispatch_flush_pfn_t)spn_pbi_flush,
+                                                       id_1,
+                                                       impl->paths.extent,
+                                                       impl->mapped.cf.ring.size,
+                                                       dispatch->cf.span,
+                                                       dispatch->cf.head);
 
   //
   // the current dispatch is now "in flight" so drop it and try to
@@ -1286,7 +1272,7 @@ spn_rbi_end(struct spn_raster_builder_impl * const impl, spn_raster_t * const ra
   // get the head dispatch
   struct spn_rbi_dispatch * const dispatch = spn_rbi_dispatch_head(impl);
 
-  // register handle with wip dispatch
+  // register raster handle with wip dispatch
   spn_device_dispatch_register_handle(impl->device, dispatch->id, raster->handle);
 
   // save raster to ring
@@ -1309,7 +1295,9 @@ spn_rbi_end(struct spn_raster_builder_impl * const impl, spn_raster_t * const ra
   //
   // flush if the cohort size limit has been reached
   //
-  if (dispatch->rc.span == impl->config->raster_builder.size.cohort)
+  bool const is_full = (dispatch->rc.span == impl->config->raster_builder.size.cohort);
+
+  if (is_full)
     {
       return spn_rbi_flush(impl);
     }

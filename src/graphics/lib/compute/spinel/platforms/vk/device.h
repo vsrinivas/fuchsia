@@ -92,8 +92,7 @@ spn_device_wait(struct spn_device * const device);
 //
 //
 
-#define SPN_DEVICE_WAIT_DEBUG_DISABLED
-#ifndef SPN_DEVICE_WAIT_DEBUG_DISABLED
+#ifdef SPN_DEVICE_DEBUG_WAIT_VERBOSE
 
 spn_result_t
 spn_device_wait_verbose(struct spn_device * const device,
@@ -108,10 +107,6 @@ spn_device_wait_verbose(struct spn_device * const device,
 #define SPN_DEVICE_WAIT(device_) spn_device_wait(device_)
 
 #endif
-
-//
-//
-//
 
 //
 //

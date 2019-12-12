@@ -326,7 +326,7 @@ void
 spn_device_dispatch_submit(struct spn_device * const device, spn_dispatch_id_t const id);
 
 //
-// Declare a dispatch happens-after another dispatch
+// Declare a dispatch happens after another dispatch
 //
 
 void
@@ -335,17 +335,17 @@ spn_device_dispatch_happens_after(struct spn_device * const device,
                                   spn_dispatch_id_t const   id_before);
 
 //
-// Declare a dispatch happens-after handles are materialized
+// Declare a dispatch happens after a span of handles are materialized
 //
 
 void
-spn_device_dispatch_happens_after_handles(struct spn_device * const      device,
-                                          spn_dispatch_flush_pfn_t const flush_pfn,
-                                          spn_dispatch_id_t const        id_after,
-                                          spn_handle_t const * const     handles,
-                                          uint32_t const                 size,
-                                          uint32_t const                 span,
-                                          uint32_t const                 head);
+spn_device_dispatch_happens_after_handles_and_submit(struct spn_device * const      device,
+                                                     spn_dispatch_flush_pfn_t const flush_pfn,
+                                                     spn_dispatch_id_t const        id_after,
+                                                     spn_handle_t const * const     handles,
+                                                     uint32_t const                 size,
+                                                     uint32_t const                 span,
+                                                     uint32_t const                 head);
 
 //
 // Called after handles are materialized

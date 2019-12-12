@@ -491,6 +491,9 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   //
   struct spn_device * const device = impl->device;
 
+  // reset the flush arg associated with the dispatch id
+  spn_device_dispatch_reset_flush_arg(device, dispatch->id);
+
   //
   // DISPATCH
   //

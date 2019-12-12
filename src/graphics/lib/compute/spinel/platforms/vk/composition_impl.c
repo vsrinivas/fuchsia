@@ -380,25 +380,6 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   struct spn_device * const device = impl->device;
 
   //
-  // Wait for reset
-  //
-  if (impl->state == SPN_CI_STATE_RESETTING)
-    {
-      spn_device_dispatch_happens_after(device, dispatch->id, impl->id_resetting);
-    }
-
-  //
-  // Wait for rasters associated with this dispatch to materialize
-  //
-  spn_device_dispatch_happens_after_handles(device,
-                                            (spn_dispatch_flush_pfn_t)spn_rbi_flush,
-                                            dispatch->id,
-                                            impl->rasters.extent + dispatch->rd.head,
-                                            UINT32_MAX,
-                                            dispatch->cp.span,
-                                            0);
-
-  //
   // get the cb associated with the wip dispatch
   //
   VkCommandBuffer cb = spn_device_dispatch_get_cb(device, dispatch->id);
@@ -535,10 +516,23 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   vkCmdDispatch(cb, place_wgs, 1, 1);
 
   //
-  // submit the dispatch
+  // Wait for reset
   //
-  spn_device_dispatch_submit(device, dispatch->id);
+  if (impl->state == SPN_CI_STATE_RESETTING)
+    {
+      spn_device_dispatch_happens_after(device, dispatch->id, impl->id_resetting);
+    }
 
+  //
+  // Wait for rasters associated with this dispatch to materialize
+  //
+  spn_device_dispatch_happens_after_handles_and_submit(device,
+                                                       (spn_dispatch_flush_pfn_t)spn_rbi_flush,
+                                                       dispatch->id,
+                                                       impl->rasters.extent + dispatch->rd.head,
+                                                       UINT32_MAX,
+                                                       dispatch->cp.span,
+                                                       0);
   //
   // The current dispatch is now "in flight" so drop it and try to
   // acquire and initialize the next.
@@ -1174,7 +1168,7 @@ spn_ci_place(struct spn_composition_impl * const impl,
   //
   // validate layer ids
   //
-  for (uint_32_t ii=0; ii<count; ii++) {
+  for (uint32_t ii=0; ii<count; ii++) {
     if (layer_ids[ii] > SPN_TTCK_LAYER_MAX) {
       return SPN_ERROR_LAYER_ID_INVALID;
     }

@@ -502,6 +502,24 @@ spn_device_dispatch_process_executing(struct spn_device * const   device,
         break;
 
       case VK_TIMEOUT:
+#ifndef NDEBUG
+        fprintf(stderr,
+                "VK_TIMEOUT counts:\n"
+                "  available: %u\n"
+                "  executing: %u\n"
+                "  complete : %u\n"
+#ifdef SPN_DISPATCH_TRACK_WAITING
+                "  waiting  : %u\n"
+#endif
+                ,
+                dispatch->counts.available,
+                dispatch->counts.executing,
+                dispatch->counts.complete,
+#ifdef SPN_DISPATCH_TRACK_WAITING
+                dispatch->counts.waiting
+#endif
+        );
+#endif
         return SPN_TIMEOUT;
 
       default:
@@ -588,17 +606,23 @@ spn_device_wait(struct spn_device * const device)
   return spn_device_wait_all(device, false);
 }
 
+//
+//
+//
+
+#ifdef SPN_DEVICE_DEBUG_WAIT_VERBOSE
+
 spn_result_t
 spn_device_wait_verbose(struct spn_device * const device,
                         char const * const        file_line,
                         char const * const        func_name)
 {
-#ifndef SPN_DEVICE_WAIT_DEBUG_DISABLED
   fprintf(stderr, "%s %s() calls %s()\n", file_line, func_name, __func__);
-#endif
 
   return spn_device_wait_all(device, false);
 }
+
+#endif
 
 //
 //
@@ -631,15 +655,18 @@ spn_device_dispatch_acquire(struct spn_device * const  device,
 
   memset(signal, 0, sizeof(*signal));
 
-  // zero the wait count
-  dispatch->wait_counts[*id] = 0;
-
-  // NULL the completion pfn
-  dispatch->completions[*id].pfn = NULL;
+  // NULL the flush arg
+  dispatch->flushes[*id].arg = NULL;
 
   // set up default pfn/data
   dispatch->submitters[*id] =
     (struct spn_dispatch_submitter){ .pfn = spn_device_dispatch_submitter_default, .data = NULL };
+
+  // NULL the completion pfn
+  dispatch->completions[*id].pfn = NULL;
+
+  // zero the wait count
+  dispatch->wait_counts[*id] = 0;
 
   return SPN_SUCCESS;
 }
@@ -808,76 +835,6 @@ spn_device_dispatch_happens_after(struct spn_device * const device,
 //
 
 static void
-spn_dispatch_flush_dword(struct spn_dispatch * const    dispatch,
-                         spn_dispatch_flush_pfn_t const flush_pfn,
-                         uint32_t const                 bitmap_base,
-                         uint32_t                       bitmap_dword)
-{
-  do
-    {
-      uint32_t const lsb_plus_1 = __builtin_ffs(bitmap_dword);
-      uint32_t const lsb        = lsb_plus_1 - 1;
-      uint32_t const mask       = 1u << lsb;
-
-      // mask off lsb
-      bitmap_dword &= ~mask;
-
-      // which dispatch?
-      uint32_t const idx = bitmap_base + lsb;
-
-      // invoke flush once
-      struct spn_dispatch_flush * const flush = dispatch->flushes + idx;
-
-      if (flush->arg != NULL)
-        {
-          flush_pfn(flush->arg);
-
-          flush->arg = NULL;
-        }
-    }
-  while (bitmap_dword != 0);
-}
-
-//
-//
-//
-
-static void
-spn_dispatch_flush(struct spn_dispatch * const              dispatch,
-                   spn_dispatch_flush_pfn_t const           flush_pfn,
-                   struct spn_dispatch_signal const * const signal)
-{
-  // anything to do?
-  if (signal->index == 0)
-    return;
-
-  //
-  // for all dispatch ids in the bitmap
-  //   - if the flush pfn is not NULL then invoke
-  //
-  uint32_t index = signal->index;
-
-  do
-    {
-      // which bit is lit?
-      uint32_t const lsb_plus_1 = __builtin_ffs(index);
-      uint32_t const lsb        = lsb_plus_1 - 1;
-      uint32_t const mask       = 1u << lsb;
-
-      // mask off lsb
-      index &= ~mask;
-
-      // process one dword of the bitmap
-      spn_dispatch_flush_dword(dispatch, flush_pfn, lsb * 32, signal->bitmap[lsb]);
-    }
-  while (index != 0);
-}
-
-//
-//
-//
-
-static void
 spn_dispatch_happens_after_dword(struct spn_dispatch * const dispatch,
                                  uint32_t const              bitmap_after_index_mask,
                                  uint32_t const              bitmap_after_dword_idx,
@@ -920,11 +877,18 @@ spn_dispatch_accumulate_stage_ids(uint32_t * const                bitmap,
                                   spn_handle_t const * const      handles,
                                   uint32_t const                  count)
 {
+  spn_dispatch_stage_id_t stage_id_prev = SPN_DISPATCH_STAGE_ID_INVALID;
+
   for (uint32_t ii = 0; ii < count; ii++)
     {
       spn_handle_t const handle = handles[ii];
 
       spn_dispatch_stage_id_t const stage_id = stage_ids[handle];
+
+      if (stage_id == stage_id_prev)
+        continue;
+
+      stage_id_prev = stage_id;
 
       if (stage_id < SPN_DISPATCH_STAGE_ID_INVALID)
         {
@@ -933,6 +897,55 @@ spn_dispatch_accumulate_stage_ids(uint32_t * const                bitmap,
           uint32_t const bitmap_dword_mask = 1u << bitmap_dword_bit;
 
           bitmap[bitmap_dword_idx] |= bitmap_dword_mask;
+        }
+    }
+}
+
+//
+//
+//
+
+static void
+spn_dispatch_flush_stage_ids(struct spn_dispatch * const     dispatch,
+                             spn_dispatch_flush_pfn_t const  flush_pfn,
+                             uint32_t * const                bitmap,
+                             spn_dispatch_stage_id_t * const stage_ids,
+                             spn_handle_t const * const      handles,
+                             uint32_t const                  count)
+{
+  spn_dispatch_stage_id_t stage_id_prev = SPN_DISPATCH_STAGE_ID_INVALID;
+
+  for (uint32_t ii = 0; ii < count; ii++)
+    {
+      spn_handle_t const handle = handles[ii];
+
+      spn_dispatch_stage_id_t const stage_id = stage_ids[handle];
+
+      if (stage_id == stage_id_prev)
+        continue;
+
+      stage_id_prev = stage_id;
+
+      if (stage_id < SPN_DISPATCH_STAGE_ID_INVALID)
+        {
+          uint32_t const bitmap_dword_idx  = stage_id / 32;
+          uint32_t const bitmap_dword_bit  = stage_id & 31;
+          uint32_t const bitmap_dword_mask = 1u << bitmap_dword_bit;
+          uint32_t const bitmap_dword_prev = bitmap[bitmap_dword_idx];
+
+          // only probe once
+          if ((bitmap_dword_prev & bitmap_dword_mask) == 0)
+            {
+              bitmap[bitmap_dword_idx] = bitmap_dword_prev | bitmap_dword_mask;
+
+              struct spn_dispatch_flush * const flush_ptr = dispatch->flushes + stage_id;
+              struct spn_dispatch_flush const   flush     = *flush_ptr;
+
+              if (flush.arg != NULL)
+                {
+                  flush_pfn(flush.arg);  // flush is cleared by flush_pfn
+                }
+            }
         }
     }
 }
@@ -948,19 +961,19 @@ spn_dispatch_accumulate_stage_ids(uint32_t * const                bitmap,
 //
 
 void
-spn_device_dispatch_happens_after_handles(struct spn_device * const      device,
-                                          spn_dispatch_flush_pfn_t const flush_pfn,
-                                          spn_dispatch_id_t const        id_after,
-                                          spn_handle_t const * const     handles,
-                                          uint32_t const                 size,
-                                          uint32_t const                 span,
-                                          uint32_t const                 head)
+spn_device_dispatch_happens_after_handles_and_submit(struct spn_device * const      device,
+                                                     spn_dispatch_flush_pfn_t const flush_pfn,
+                                                     spn_dispatch_id_t const        id_after,
+                                                     spn_handle_t const * const     handles,
+                                                     uint32_t const                 size,
+                                                     uint32_t const                 span,
+                                                     uint32_t const                 head)
 {
+  struct spn_dispatch * const dispatch = device->dispatch;
+
   //
   // accumulate all dependencies to bitmap
   //
-  struct spn_dispatch * const dispatch = device->dispatch;
-
   struct spn_dispatch_signal signal_before = { 0 };
 
   uint32_t const count_lo = MIN_MACRO(uint32_t, head + span, size) - head;
@@ -996,9 +1009,6 @@ spn_device_dispatch_happens_after_handles(struct spn_device * const      device,
 
       if (bitmap_before_dword != 0)
         {
-          // update index
-          signal_before.index |= (1u << ii);
-
           // accumulate count
           wait_count += __builtin_popcount(bitmap_before_dword);
 
@@ -1021,9 +1031,33 @@ spn_device_dispatch_happens_after_handles(struct spn_device * const      device,
     }
 
   //
+  // submit the dispatch
+  //
+  spn_device_dispatch_submit(device, id_after);
+
+  //
   // flush all dependencies
   //
-  spn_dispatch_flush(dispatch, flush_pfn, &signal_before);
+  struct spn_dispatch_signal flush_before = { 0 };
+
+  spn_dispatch_flush_stage_ids(dispatch,
+                               flush_pfn,
+                               flush_before.bitmap,
+                               dispatch->handle_stage_ids,
+                               handles + head,
+                               count_lo);
+
+  if (span > count_lo)
+    {
+      uint32_t const count_hi = span - count_lo;
+
+      spn_dispatch_flush_stage_ids(dispatch,
+                                   flush_pfn,
+                                   flush_before.bitmap,
+                                   dispatch->handle_stage_ids,
+                                   handles,
+                                   count_hi);
+    }
 }
 
 //
